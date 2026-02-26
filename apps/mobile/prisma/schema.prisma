@@ -1,0 +1,360 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  ADMIN
+  TRAINER
+  CLIENT
+}
+
+enum InviteStatus {
+  PENDING
+  COMPLETED
+  REVOKED
+  EXPIRED
+}
+
+enum PaymentMethod {
+  CASH
+  CARD
+  COMPANY
+  QR
+  MANUAL_ONLINE
+}
+
+enum BillingStatus {
+  PENDING
+  CONFIRMED
+  CANCELED
+}
+
+enum SessionStatus {
+  SCHEDULED
+  CANCELED
+  COMPLETED
+}
+
+enum NotificationType {
+  BOOKING_CONFIRMED
+  SESSION_UPDATED
+  TRAINER_NOTE
+  GENERAL
+}
+
+enum AppLocale {
+  sr
+  en
+}
+
+model User {
+  id           String               @id @default(uuid())
+  email        String               @unique
+  fullName     String
+  emailVerified Boolean             @default(false)
+  image        String?
+  phone        String?
+  role         UserRole
+  isActive     Boolean              @default(true)
+  passwordHash String?
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
+  clientProfile ClientProfile?
+  trainerProfile TrainerProfile?
+  authSessions AuthSession[]
+  authAccounts AuthAccount[]
+  invitesSent  UserInvite[]         @relation("InviteCreatedBy")
+  invitesReceived UserInvite[]      @relation("InvitedUser")
+  passwordResets PasswordResetToken[]
+  notificationPreference NotificationPreference?
+  pushTokens   PushToken[]
+  notifications NotificationLog[]
+  trainerNotesAuthored TrainerNote[] @relation("TrainerNoteAuthor")
+}
+
+model ClientProfile {
+  id                  String   @id @default(uuid())
+  userId              String   @unique
+  notes               String?
+  activePackageStatus String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bookings            Booking[]
+  waits               WaitlistEntry[]
+  packageSessions     SessionConsumption[]
+  packages            ClientPackage[]
+  packagePauses       PackagePause[]
+  trainerNotes        TrainerNote[]
+}
+
+model TrainerProfile {
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model UserInvite {
+  id             String      @id @default(uuid())
+  email          String
+  fullName       String
+  phone          String?
+  role           UserRole    @default(CLIENT)
+  tokenHash      String      @unique
+  status         InviteStatus @default(PENDING)
+  expiresAt      DateTime
+  invitedUserId  String?
+  invitedUser    User?       @relation("InvitedUser", fields: [invitedUserId], references: [id])
+  createdById    String?
+  createdBy      User?       @relation("InviteCreatedBy", fields: [createdById], references: [id])
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  @@index([email, status])
+}
+
+model PasswordResetToken {
+  id         String   @id @default(uuid())
+  userId     String
+  tokenHash  String   @unique
+  expiresAt  DateTime
+  usedAt     DateTime?
+  createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model AuthSession {
+  id        String   @id @default(uuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model AuthAccount {
+  id                    String    @id @default(uuid())
+  userId                String
+  accountId             String
+  providerId            String
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([providerId, accountId])
+  @@index([userId])
+}
+
+model AuthVerification {
+  id         String   @id @default(uuid())
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+}
+
+model ClassType {
+  id           String   @id @default(uuid())
+  name         String
+  maxClients   Int
+  durationMins Int
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  sessions     Session[]
+}
+
+model StudioRoom {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  capacity  Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  sessions  Session[]
+}
+
+model Session {
+  id            String        @id @default(uuid())
+  classTypeId   String
+  roomId        String?
+  trainerUserId String?
+  startsAt      DateTime
+  endsAt        DateTime
+  capacity      Int
+  status        SessionStatus @default(SCHEDULED)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  classType     ClassType     @relation(fields: [classTypeId], references: [id], onDelete: Restrict)
+  room          StudioRoom?   @relation(fields: [roomId], references: [id], onDelete: SetNull)
+  bookings      Booking[]
+  waitlist      WaitlistEntry[]
+  consumptions  SessionConsumption[]
+  trainerNotes  TrainerNote[]
+
+  @@index([startsAt])
+  @@index([trainerUserId, startsAt])
+}
+
+model Booking {
+  id              String        @id @default(uuid())
+  sessionId       String
+  clientProfileId String
+  clientPackageId String?
+  createdAt       DateTime      @default(now())
+  canceledAt      DateTime?
+  session         Session       @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  clientProfile   ClientProfile @relation(fields: [clientProfileId], references: [id], onDelete: Cascade)
+  clientPackage   ClientPackage? @relation(fields: [clientPackageId], references: [id], onDelete: SetNull)
+
+  @@unique([sessionId, clientProfileId])
+}
+
+model WaitlistEntry {
+  id              String        @id @default(uuid())
+  sessionId       String
+  clientProfileId String
+  position        Int
+  createdAt       DateTime      @default(now())
+  session         Session       @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  clientProfile   ClientProfile @relation(fields: [clientProfileId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, clientProfileId])
+}
+
+model PackageType {
+  id                  String   @id @default(uuid())
+  name                String
+  sessionCount        Int
+  validityDays        Int
+  lateCancelHours     Int      @default(12)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  clientPackages      ClientPackage[]
+}
+
+model ClientPackage {
+  id                String              @id @default(uuid())
+  clientProfileId   String
+  packageTypeId     String
+  startsAt          DateTime
+  expiresAt         DateTime
+  sessionsRemaining Int
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  clientProfile     ClientProfile       @relation(fields: [clientProfileId], references: [id], onDelete: Cascade)
+  packageType       PackageType         @relation(fields: [packageTypeId], references: [id], onDelete: Restrict)
+  bookings          Booking[]
+}
+
+model PackagePause {
+  id              String        @id @default(uuid())
+  clientProfileId String
+  startsAt        DateTime
+  endsAt          DateTime
+  reason          String?
+  createdAt       DateTime      @default(now())
+  clientProfile   ClientProfile @relation(fields: [clientProfileId], references: [id], onDelete: Cascade)
+}
+
+model SessionConsumption {
+  id                String        @id @default(uuid())
+  clientProfileId   String
+  sessionId         String
+  consumedAt        DateTime      @default(now())
+  clientProfile     ClientProfile @relation(fields: [clientProfileId], references: [id], onDelete: Cascade)
+  session           Session       @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@unique([clientProfileId, sessionId])
+}
+
+model NotificationPreference {
+  id               String   @id @default(uuid())
+  userId           String   @unique
+  pushEnabled      Boolean  @default(true)
+  inAppEnabled     Boolean  @default(true)
+  marketingOptIn   Boolean  @default(false)
+  preferredLocale  AppLocale?  // null => default "sr" for notifications
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model PushToken {
+  id            String   @id @default(uuid())
+  userId        String
+  deviceId      String
+  expoPushToken String   @unique
+  isActive      Boolean  @default(true)
+  lastSeenAt    DateTime @default(now())
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, deviceId])
+  @@index([userId, isActive])
+}
+
+model NotificationLog {
+  id          String           @id @default(uuid())
+  userId      String
+  notificationKey String?      @unique
+  type        NotificationType @default(GENERAL)
+  title       String
+  body        String
+  payload     Json?
+  pushSent    Boolean          @default(false)
+  pushStatus  String?
+  readAt      DateTime?
+  createdAt   DateTime         @default(now())
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+}
+
+model TrainerNote {
+  id              String        @id @default(uuid())
+  sessionId       String
+  clientProfileId String
+  trainerUserId   String
+  note            String
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  session         Session       @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  clientProfile   ClientProfile @relation(fields: [clientProfileId], references: [id], onDelete: Cascade)
+  trainer         User          @relation("TrainerNoteAuthor", fields: [trainerUserId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId, createdAt])
+  @@index([clientProfileId, createdAt])
+}
+
+model BillingRecord {
+  id            String        @id @default(uuid())
+  clientUserId  String
+  amount        Int
+  method        PaymentMethod
+  status        BillingStatus @default(PENDING)
+  notes         String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+}

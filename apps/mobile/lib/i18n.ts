@@ -1,0 +1,57 @@
+import i18n from "i18next";
+import { initReactI18next } from "react-i18next";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
+import sr from "@/locales/sr.json";
+import en from "@/locales/en.json";
+
+const STORAGE_KEY = "app.preferredLocale";
+
+const supportedLngs = ["sr", "en"] as const;
+export type Locale = (typeof supportedLngs)[number];
+
+i18n.use(initReactI18next).init({
+  resources: { sr: { translation: sr }, en: { translation: en } },
+  lng: "sr",
+  fallbackLng: "sr",
+  supportedLngs: [...supportedLngs],
+  interpolation: { escapeValue: false },
+  compatibilityJSON: "v4",
+});
+
+export default i18n;
+
+/**
+ * Load stored locale from AsyncStorage and apply it. Call from app root after mount.
+ */
+export async function loadStoredLocale(): Promise<void> {
+  try {
+    const stored = await AsyncStorage.getItem(STORAGE_KEY);
+    if (stored && (stored === "sr" || stored === "en")) {
+      await i18n.changeLanguage(stored);
+    }
+  } catch {
+    // ignore
+  }
+}
+
+/**
+ * Persist chosen locale and optionally return it for API sync.
+ */
+export async function setLocale(locale: Locale): Promise<void> {
+  await i18n.changeLanguage(locale);
+  try {
+    await AsyncStorage.setItem(STORAGE_KEY, locale);
+  } catch {
+    // ignore
+  }
+}
+
+/**
+ * BCP 47 locale for date/number formatting (e.g. toLocaleDateString).
+ */
+export function getDateLocale(): string {
+  return i18n.language === "en" ? "en-US" : "sr-RS";
+}
+
+export { STORAGE_KEY };

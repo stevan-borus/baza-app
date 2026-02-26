@@ -1,0 +1,97 @@
+import { createSessionInputSchema } from "@baza/types";
+import { UserRole } from "@/generated/prisma";
+import { requireRole } from "@/lib/server/auth-guards";
+import { fail, ok } from "@/lib/server/http";
+import { prisma } from "@/lib/server/prisma";
+import { tryCatch } from "@/lib/server/try-catch";
+
+export async function GET(request: Request) {
+  const guard = await requireRole(request, [UserRole.ADMIN, UserRole.TRAINER]);
+  if (!guard.ok) return guard.response;
+
+  // Trainers see only their assigned sessions; admins see all. Cap at 200.
+  const sessions = await prisma.session.findMany({
+    where:
+      guard.user.role === UserRole.TRAINER
+        ? {
+            trainerUserId: guard.user.id,
+          }
+        : undefined,
+    orderBy: { startsAt: "asc" },
+    take: 200,
+    include: {
+      classType: { select: { name: true } },
+      room: { select: { name: true } },
+      _count: {
+        select: {
+          bookings: {
+            where: { canceledAt: null },
+          },
+        },
+      },
+    },
+  });
+
+  return ok({
+    success: true,
+    sessions: sessions.map((item: (typeof sessions)[number]) => ({
+      id: item.id,
+      classTypeName: item.classType.name,
+      roomName: item.room?.name ?? null,
+      startsAt: item.startsAt,
+      endsAt: item.endsAt,
+      status: item.status,
+      capacity: item.capacity,
+      trainerUserId: item.trainerUserId,
+      bookings: item._count.bookings,
+    })),
+  });
+}
+
+export async function POST(request: Request) {
+  const guard = await requireRole(request, [UserRole.ADMIN, UserRole.TRAINER]);
+  if (!guard.ok) return guard.response;
+
+  const bodyResult = await tryCatch(request.json());
+  const body = bodyResult.error ? null : bodyResult.data;
+  const parsed = createSessionInputSchema.safeParse(body);
+  if (!parsed.success) return fail("Invalid payload", 400, parsed.error);
+
+  const startsAt = new Date(parsed.data.startsAt);
+  const endsAt = new Date(parsed.data.endsAt);
+  if (Number.isNaN(startsAt.getTime()) || Number.isNaN(endsAt.getTime()) || endsAt <= startsAt) {
+    return fail("Invalid schedule range", 400);
+  }
+
+  // Trainers cannot create sessions for other trainers.
+  if (
+    guard.user.role === UserRole.TRAINER &&
+    parsed.data.trainerUserId &&
+    parsed.data.trainerUserId !== guard.user.id
+  ) {
+    return fail("Trainers can only create sessions assigned to themselves", 403);
+  }
+
+  const session = await prisma.session.create({
+    data: {
+      classTypeId: parsed.data.classTypeId,
+      roomId: parsed.data.roomId,
+      trainerUserId:
+        guard.user.role === UserRole.TRAINER
+          ? guard.user.id
+          : parsed.data.trainerUserId,
+      startsAt,
+      endsAt,
+      capacity: parsed.data.capacity,
+    },
+    select: {
+      id: true,
+      startsAt: true,
+      endsAt: true,
+      capacity: true,
+      status: true,
+    },
+  });
+
+  return ok({ success: true, session }, 201);
+}

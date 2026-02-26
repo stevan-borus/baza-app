@@ -1,0 +1,2 @@
+apps/mobile/generated/**
+packages/types/src/generated/prisma-zod/**
