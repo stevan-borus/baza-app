@@ -4,8 +4,8 @@ import { useTranslation } from "react-i18next";
 import { ScrollView } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Calendar, type ICalendarEventBase } from "react-native-big-calendar";
-import { Text, XStack, YStack, useTheme } from "tamagui";
-import { useColorScheme } from "@/components/useColorScheme";
+import { Text, XStack, YStack } from "tamagui";
+import { useCalendarTheme } from "@/lib/calendar-theme";
 import { AppSheet } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -48,9 +48,7 @@ export default function AdminSchedule() {
   const [showEdit, setShowEdit] = useState<SessionEvent | null>(null);
   const [isRecurring, setIsRecurring] = useState(false);
   const locale = getDateLocale().startsWith("en") ? "en" : "sr";
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === "dark";
-  const theme = useTheme();
+  const cal = useCalendarTheme();
 
   const availabilityQuery = useQuery(
     sessionsQueries.availabilityByMonth(month),
@@ -170,7 +168,6 @@ export default function AdminSchedule() {
   return (
     <YStack
       flex={1}
-      bg="$background"
       style={{ paddingTop: insets.top + HEADER_HEIGHT + 12 }}
     >
       <YStack px="$5" gap="$3">
@@ -213,59 +210,14 @@ export default function AdminSchedule() {
                   ? "week"
                   : "month"
             }
-            theme={{
-              palette: {
-                primary: {
-                  main: "#2e5b42",
-                  contrastText: "#ffffff",
-                },
-                nowIndicator: "#2e5b42",
-                gray: {
-                  100: isDark ? "#111827" : "#f3f4f6",
-                  200: isDark ? "#1f2937" : "#e5e7eb",
-                  300: isDark ? "#374151" : "#d1d5db",
-                  500: isDark ? "#9ca3af" : "#6b7280",
-                  800: isDark ? "#e5e7eb" : "#111827",
-                },
-                moreLabel: isDark ? "#e5e7eb" : "#374151",
-              },
-              typography: {
-                sm: { fontWeight: "500", fontSize: 12 },
-                xl: { fontWeight: "600", fontSize: 13 },
-                moreLabel: { fontWeight: "600", fontSize: 11 },
-              },
-            }}
-            calendarContainerStyle={{
-              borderRadius: 12,
-              backgroundColor: isDark ? "#0f172a" : "#ffffff",
-            }}
-            bodyContainerStyle={{
-              backgroundColor: isDark ? "#0f172a" : "#ffffff",
-            }}
-            headerContainerStyle={{
-              borderBottomColor: isDark
-                ? "rgba(255,255,255,0.08)"
-                : "rgba(15,23,42,0.08)",
-              borderBottomWidth: 1,
-            }}
-            eventCellStyle={{
-              backgroundColor: "#2e5b42",
-              borderRadius: 10,
-              borderWidth: 0,
-              paddingHorizontal: 6,
-              paddingVertical: 4,
-            }}
-            eventCellTextColor="#ffffff"
-            calendarCellStyle={{
-              backgroundColor: isDark ? "#0f172a" : "#ffffff",
-              borderColor: isDark
-                ? "rgba(255,255,255,0.08)"
-                : "rgba(15,23,42,0.08)",
-              borderWidth: 1,
-            }}
-            calendarCellTextStyle={{
-              color: theme.color.val,
-            }}
+            theme={cal.calendarTheme}
+            calendarContainerStyle={cal.calendarContainerStyle}
+            bodyContainerStyle={cal.bodyContainerStyle}
+            headerContainerStyle={cal.headerContainerStyle}
+            eventCellStyle={cal.eventCellStyle}
+            eventCellTextColor={cal.eventCellTextColor}
+            calendarCellStyle={cal.calendarCellStyle}
+            calendarCellTextStyle={cal.calendarCellTextStyle}
             date={calendarDate}
             onPressEvent={(event) => handleEventPress(event as SessionEvent)}
             onSwipeEnd={handleDateChange}
@@ -279,7 +231,7 @@ export default function AdminSchedule() {
       {/* Create Session Sheet */}
       <AppSheet open={showCreate} onOpenChange={setShowCreate}>
         <ScrollView keyboardShouldPersistTaps="handled">
-          <YStack gap="$4" pb="$4">
+          <YStack gap="$5" pb="$5">
             <Text
               fontSize="$6"
               fontWeight="700"
@@ -457,7 +409,7 @@ export default function AdminSchedule() {
       {/* Edit Session Sheet */}
       <AppSheet open={!!showEdit} onOpenChange={() => setShowEdit(null)}>
         <ScrollView keyboardShouldPersistTaps="handled">
-          <YStack gap="$4" pb="$4">
+          <YStack gap="$5" pb="$5">
             <Text
               fontSize="$6"
               fontWeight="700"

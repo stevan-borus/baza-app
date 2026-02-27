@@ -27,9 +27,9 @@ export default function AdminReports() {
       keyboardShouldPersistTaps="handled"
       contentContainerStyle={{
         paddingTop: insets.top + HEADER_HEIGHT + 12,
-        paddingHorizontal: 20,
+        paddingHorizontal: 24,
         paddingBottom: TAB_BAR_HEIGHT + 16,
-        gap: 16,
+        gap: 20,
       }}
     >
       {summaryQuery.isError ? (
@@ -73,7 +73,7 @@ export default function AdminReports() {
       ) : null}
 
       <YStack gap="$2">
-        <Text fontWeight="600" fontSize="$3" color="$color">
+        <Text fontWeight="600" fontSize="$5" color="$color">
           {t("admin.manage.monthlyRevenue")}
         </Text>
         {revenueQuery.isError ? (
@@ -99,7 +99,7 @@ export default function AdminReports() {
       </YStack>
 
       <YStack gap="$2">
-        <Text fontWeight="600" fontSize="$3" color="$color">
+        <Text fontWeight="600" fontSize="$5" color="$color">
           {t("admin.manage.utilization")}
         </Text>
         {utilizationQuery.isError ? (
@@ -126,7 +126,7 @@ export default function AdminReports() {
       </YStack>
 
       <YStack gap="$2">
-        <Text fontWeight="600" fontSize="$3" color="$color">
+        <Text fontWeight="600" fontSize="$5" color="$color">
           {t("admin.manage.bookings")}
         </Text>
         {bookingsQuery.isError ? (

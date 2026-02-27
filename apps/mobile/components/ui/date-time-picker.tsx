@@ -4,7 +4,6 @@ import FontAwesome from "@expo/vector-icons/FontAwesome";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
 import { useTranslation } from "react-i18next";
 import { XStack, Text, useTheme } from "tamagui";
-import { useThemeName } from "@tamagui/core";
 import { useColorScheme } from "@/components/useColorScheme";
 import { getDateLocale } from "@/lib/i18n";
 
@@ -33,8 +32,6 @@ export function DateTimePicker({
 }: DateTimePickerProps) {
   const [isVisible, setIsVisible] = useState(false);
   const { i18n } = useTranslation();
-  const themeName = useThemeName();
-  const isDark = String(themeName).includes("dark");
   const colorScheme = useColorScheme();
   const theme = useTheme();
 
@@ -86,11 +83,11 @@ export function DateTimePicker({
         disabled={disabled}
       >
         <XStack
-          backgroundColor={isDark ? "$colorTransparent" : "$background"}
-          borderColor={isDark ? "$accent9" : "$borderColor"}
-          borderWidth={1}
-          borderRadius={11}
-          height={44}
+          bg={colorScheme === "dark" ? "rgba(255,255,255,0.08)" : "$color2"}
+          borderColor={colorScheme === "dark" ? "rgba(255,255,255,0.08)" : "$color2"}
+          borderWidth={2}
+          borderRadius={16}
+          height={52}
           paddingHorizontal="$4"
           alignItems="center"
           justifyContent="space-between"
@@ -98,15 +95,7 @@ export function DateTimePicker({
         >
           <Text
             fontSize="$3"
-            color={
-              displayValue
-                ? isDark
-                  ? "$white"
-                  : "$color"
-                : isDark
-                  ? "$white"
-                  : "$color10"
-            }
+            color={displayValue ? "$color" : "$color9"}
             opacity={displayValue ? 1 : 0.6}
           >
             {displayValue || placeholder}
@@ -114,7 +103,7 @@ export function DateTimePicker({
           <FontAwesome
             name="calendar"
             size={16}
-            color={theme.color10?.val ?? "#737373"}
+            color={theme.color9?.val ?? "#737373"}
           />
         </XStack>
       </Pressable>
@@ -133,11 +122,10 @@ export function DateTimePicker({
         locale={locale}
         confirmTextIOS={i18n.language === "en" ? "Confirm" : "Potvrdi"}
         cancelTextIOS={i18n.language === "en" ? "Cancel" : "Otkaži"}
-        accentColor="#16a34a"
-        buttonTextColorIOS="#16a34a"
+        accentColor="#2e5b42"
+        buttonTextColorIOS="#2e5b42"
         pickerContainerStyleIOS={{ paddingHorizontal: 16 }}
       />
     </>
   );
 }
-

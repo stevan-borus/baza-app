@@ -17,7 +17,7 @@ export function TabIcon(props: {
 export function AppTabLoading({ isDark }: { isDark: boolean }) {
   return (
     <YStack flex={1} bg="$background" items="center" justify="center">
-      <ActivityIndicator size="large" color={isDark ? "#4ade80" : "#264D3B"} />
+      <ActivityIndicator size="large" color={isDark ? "#4ade80" : "#2e5b42"} />
     </YStack>
   );
 }
@@ -61,11 +61,11 @@ export function FloatingTabBar(
       <View
         style={{
           width: barWidth,
-          height: Platform.OS === "ios" ? 62 : 58,
+          height: Platform.OS === "ios" ? 66 : 62,
           borderRadius: 999,
           overflow: "hidden",
           borderWidth: 1,
-          borderColor: isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)",
+          borderColor: isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)",
         }}
       >
         <BlurView
@@ -80,11 +80,11 @@ export function FloatingTabBar(
             left: 4,
             top: 2,
             width: itemWidth - 8,
-            height: (Platform.OS === "ios" ? 62 : 58) - 6,
+            height: (Platform.OS === "ios" ? 66 : 62) - 6,
             borderRadius: 999,
             backgroundColor: isDark
               ? "rgba(255,255,255,0.08)"
-              : "rgba(0,0,0,0.08)",
+              : "rgba(0,0,0,0.06)",
             transform: [{ translateX: indicatorX }],
           }}
         />
@@ -95,7 +95,9 @@ export function FloatingTabBar(
             const descriptor = descriptors[route.key];
             const options = descriptor?.options ?? {};
 
-            const color = isFocused ? "#16a34a" : isDark ? "#fff" : "#8e8e93";
+            const color = isFocused
+              ? isDark ? "#4ade80" : "#2e5b42"
+              : isDark ? "rgba(255,255,255,0.5)" : "rgba(0,0,0,0.35)";
 
             const icon = options.tabBarIcon?.({
               focused: isFocused,
@@ -138,8 +140,8 @@ export function FloatingTabBar(
 export function getAppTabScreenOptions(isDark: boolean) {
   return {
     headerShown: false,
-    tabBarActiveTintColor: isDark ? "#4ade80" : "#264D3B",
-    tabBarInactiveTintColor: isDark ? "#6b7280" : "#8e8e93",
+    tabBarActiveTintColor: isDark ? "#4ade80" : "#2e5b42",
+    tabBarInactiveTintColor: isDark ? "rgba(255,255,255,0.5)" : "rgba(0,0,0,0.35)",
     tabBarShowLabel: false,
     tabBarStyle: {
       position: "absolute" as const,
@@ -149,6 +151,11 @@ export function getAppTabScreenOptions(isDark: boolean) {
       height: 0,
     },
     tabBarBackground: () => null,
+    sceneContainerStyle: {
+      backgroundColor: isDark
+        ? "hsla(151, 30%, 5%, 1)"
+        : "hsla(30, 25%, 98%, 1)",
+    },
   };
 }
 
@@ -169,7 +176,9 @@ export function getNativeHeaderOptions(isDark: boolean) {
           style={[
             StyleSheet.absoluteFill,
             {
-              backgroundColor: isDark ? "rgba(0,0,0,0.16)" : "rgba(38,78,59)",
+              backgroundColor: isDark
+                ? "rgba(14,36,22,0.3)"
+                : "rgba(38,78,59,0.85)",
               borderBottomWidth: StyleSheet.hairlineWidth,
               borderBottomColor: isDark
                 ? "rgba(255,255,255,0.12)"
@@ -188,4 +197,3 @@ export function getNativeHeaderOptions(isDark: boolean) {
     },
   };
 }
-

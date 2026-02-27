@@ -45,7 +45,7 @@ export default function TrainerNotes() {
 
   return (
     <ScreenContainerRaw>
-      <YStack px="$5" gap="$3">
+      <YStack px="$5" gap="$4">
         <SectionHeader title={t("trainer.notes.title")} />
         <ActionButton icon="plus" label={t("trainer.notes.newNote")} onPress={() => setShowCreate(true)} />
       </YStack>
@@ -97,7 +97,7 @@ export default function TrainerNotes() {
       </YStack>
 
       <AppSheet open={showCreate} onOpenChange={setShowCreate}>
-        <YStack gap="$4">
+        <YStack gap="$5">
           <Text fontSize="$6" fontWeight="700" color="$color" letterSpacing={-0.3}>
             {t("trainer.notes.sheetTitle")}
           </Text>

@@ -13,14 +13,14 @@ export function BentoStatChip({ label, icon, accentColor }: StatChipProps) {
     <XStack items="center" gap="$2">
       {icon ? (
         <YStack
-          width={34}
-          height={34}
-          rounded={10}
+          width={40}
+          height={40}
+          rounded={12}
           bg={accentColor ?? "$accent1"}
           items="center"
           justify="center"
         >
-          <FontAwesome name={icon} size={16} color="#ffffff" />
+          <FontAwesome name={icon} size={18} color="#ffffff" />
         </YStack>
       ) : null}
       <Text fontSize="$2" color="$color10" fontWeight="500" flex={1}>
@@ -29,4 +29,3 @@ export function BentoStatChip({ label, icon, accentColor }: StatChipProps) {
     </XStack>
   );
 }
-

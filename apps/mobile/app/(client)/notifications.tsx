@@ -50,7 +50,7 @@ export default function ClientNotifications() {
 
   return (
     <ScreenContainerRaw>
-      <YStack px="$5" pb="$3" gap="$3">
+      <YStack px="$6" pb="$3" gap="$4">
         <XStack justify="space-between" items="center">
           <SectionHeader title={t("client.notifications.title")} />
           <Button
@@ -64,18 +64,18 @@ export default function ClientNotifications() {
       </YStack>
 
       {notificationsQuery.isError ? (
-        <YStack px="$5">
+        <YStack px="$6">
           <ErrorState message={t("client.notifications.error")} />
         </YStack>
       ) : null}
 
       {notifications.length === 0 && !notificationsQuery.isLoading ? (
-        <YStack px="$5">
+        <YStack px="$6">
           <EmptyState title={t("client.notifications.empty")} />
         </YStack>
       ) : null}
 
-      <YStack flex={1} px="$5">
+      <YStack flex={1} px="$6">
         <LegendList
           data={notifications}
           keyExtractor={(item) => item.id}
@@ -128,8 +128,8 @@ export default function ClientNotifications() {
                         l={0}
                         t={12}
                         b={12}
-                        style={{ width: 3 }}
-                        bg="$accent1"
+                        style={{ width: 4 }}
+                        bg="#2e5b42"
                         rounded={999}
                       />
                     ) : null}
@@ -162,7 +162,7 @@ export default function ClientNotifications() {
                   <Switch
                     value={prefs.pushEnabled}
                     onValueChange={(v) => updatePrefsMutation.mutate({ pushEnabled: v })}
-                    trackColor={{ false: "#404040", true: "#22c55e" }}
+                    trackColor={{ false: "#404040", true: "#2e5b42" }}
                   />
                 </XStack>
                 <XStack justify="space-between" items="center" py="$2">
@@ -170,7 +170,7 @@ export default function ClientNotifications() {
                   <Switch
                     value={prefs.inAppEnabled}
                     onValueChange={(v) => updatePrefsMutation.mutate({ inAppEnabled: v })}
-                    trackColor={{ false: "#404040", true: "#22c55e" }}
+                    trackColor={{ false: "#404040", true: "#2e5b42" }}
                   />
                 </XStack>
                 <XStack justify="space-between" items="center" py="$2">
@@ -178,7 +178,7 @@ export default function ClientNotifications() {
                   <Switch
                     value={prefs.marketingOptIn}
                     onValueChange={(v) => updatePrefsMutation.mutate({ marketingOptIn: v })}
-                    trackColor={{ false: "#404040", true: "#22c55e" }}
+                    trackColor={{ false: "#404040", true: "#2e5b42" }}
                   />
                 </XStack>
               </YStack>

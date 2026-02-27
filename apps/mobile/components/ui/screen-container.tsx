@@ -12,9 +12,9 @@ export function ScreenContainer({ children }: PropsWithChildren) {
     <YStack
       flex={1}
       bg="$background"
-      px="$5"
+      px="$6"
       pb={TAB_BAR_HEIGHT + 16}
-      gap="$5"
+      gap="$6"
       style={{ paddingTop: topPadding }}
     >
       {children}
@@ -37,4 +37,3 @@ export function ScreenContainerRaw({ children }: PropsWithChildren) {
     </YStack>
   );
 }
-

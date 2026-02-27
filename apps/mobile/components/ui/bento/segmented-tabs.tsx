@@ -20,7 +20,7 @@ export function BentoSegmentedTabs<T extends string>({
       onValueChange={(next) => onValueChange(next as T)}
       orientation="horizontal"
     >
-      <Tabs.List bg="$backgroundHover" rounded={10} p="$1">
+      <Tabs.List bg="$color2" rounded={14} p="$1">
         {segments.map((segment) => {
           const isActive = segment.value === value;
           return (
@@ -28,7 +28,7 @@ export function BentoSegmentedTabs<T extends string>({
               key={segment.value}
               value={segment.value}
               bg={isActive ? "$background" : "transparent"}
-              rounded={8}
+              rounded={12}
               py="$2"
               px={fullWidth ? "$3" : "$2.5"}
               flex={fullWidth ? 1 : undefined}
@@ -49,4 +49,3 @@ export function BentoSegmentedTabs<T extends string>({
     </Tabs>
   );
 }
-

@@ -39,13 +39,13 @@ export default function TrainerClients() {
         {scheduledSessions.length === 0 ? (
           <EmptyState title={t("trainer.clients.noSessions")} />
         ) : (
-          <YStack gap="$4" pb="$8">
+          <YStack gap="$5" pb="$8">
             {scheduledSessions.map((session) => (
               <YStack key={session.id} gap="$2">
                 <Card>
                   <YStack gap="$2">
                     <XStack justify="space-between" items="center">
-                      <Text fontWeight="600" fontSize="$3" color="$color">
+                      <Text fontWeight="600" fontSize="$4" color="$color">
                         {session.classType?.name ??
                           t("trainer.clients.sessionName")}
                       </Text>
@@ -71,7 +71,7 @@ export default function TrainerClients() {
                     {clients.map((client) => (
                       <Card key={client.id}>
                         <YStack gap="$1">
-                          <Text fontWeight="500" fontSize="$3" color="$color">
+                          <Text fontWeight="500" fontSize="$4" color="$color">
                             {client.user.fullName}
                           </Text>
                           <Text fontSize="$2" color="$color10">

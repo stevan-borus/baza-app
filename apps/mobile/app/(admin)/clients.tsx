@@ -54,7 +54,7 @@ export default function AdminClients() {
 
   return (
     <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-      <YStack px="$5" gap="$5" style={{ paddingTop: insets.top + HEADER_HEIGHT + 12, paddingBottom: TAB_BAR_HEIGHT + 16 }}>
+      <YStack px="$5" gap="$6" style={{ paddingTop: insets.top + HEADER_HEIGHT + 12, paddingBottom: TAB_BAR_HEIGHT + 16 }}>
         <SegmentedControl
           segments={[
             { value: "clients" as const, label: t("admin.clients.tabClients", { count: clients.length }) },
@@ -100,7 +100,7 @@ export default function AdminClients() {
                       </Text>
                     </YStack>
                   ) : null}
-                  <XStack gap="$2" flexWrap="wrap">
+                  <XStack gap="$3" flexWrap="wrap">
                     <ActionButton
                       icon="pencil"
                       label={t("admin.clients.edit")}
@@ -179,7 +179,7 @@ export default function AdminClients() {
             <Input placeholder={t("admin.clients.placeholderNotes")} multiline value={editForm.notes} onChangeText={(v) => setEditForm((s) => ({ ...s, notes: v }))} />
             <XStack items="center" gap="$3" py="$2">
               <Text fontSize="$3" color="$color">{t("admin.clients.active")}</Text>
-              <Switch value={editForm.isActive} onValueChange={(v) => setEditForm((s) => ({ ...s, isActive: v }))} trackColor={{ false: "#404040", true: "#22c55e" }} />
+              <Switch value={editForm.isActive} onValueChange={(v) => setEditForm((s) => ({ ...s, isActive: v }))} trackColor={{ false: "#404040", true: "#2e5b42" }} />
             </XStack>
             <Button disabled={updateClientMutation.isPending} onPress={() => showEditClient && updateClientMutation.mutate({ id: showEditClient, fullName: editForm.fullName, phone: editForm.phone || undefined, notes: editForm.notes || undefined, isActive: editForm.isActive })}>
               {t("admin.clients.save")}

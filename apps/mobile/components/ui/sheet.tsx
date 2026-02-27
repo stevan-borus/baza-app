@@ -41,16 +41,13 @@ export function AppSheet({
           opacity={1}
         />
         <Sheet.Frame
-          bg={isDark ? "rgba(12,12,14,0.98)" : "$background"}
-          borderTopLeftRadius={22}
-          borderTopRightRadius={22}
-          px="$4"
-          pt="$3"
+          bg={isDark ? "hsla(151, 18%, 13%, 1)" : "$background"}
+          borderTopLeftRadius={26}
+          borderTopRightRadius={26}
+          px="$5"
+          pt="$4"
           pb="$8"
-          borderTopWidth={1}
-          borderColor={
-            isDark ? "rgba(255,255,255,0.12)" : "rgba(38,77,59,0.22)"
-          }
+          borderWidth={0}
         >
           {children}
         </Sheet.Frame>
@@ -58,4 +55,3 @@ export function AppSheet({
     </Sheet>
   );
 }
-

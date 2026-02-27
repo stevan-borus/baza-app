@@ -2,25 +2,23 @@ import React, { useState } from "react";
 import { Pressable } from "react-native";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { Input as TInput, XStack, useTheme } from "tamagui";
-import { useThemeName } from "@tamagui/core";
+import { useColorScheme } from "@/components/useColorScheme";
 
 export function Input(props: React.ComponentProps<typeof TInput>) {
-  const themeName = useThemeName();
-  const isDark = String(themeName).includes("dark");
-
+  const isDark = useColorScheme() === "dark";
   return (
     <TInput
-      backgroundColor={isDark ? "$colorTransparent" : "$background"}
-      borderColor={isDark ? "$accent9" : "$borderColor"}
-      borderWidth={1}
-      rounded={11}
-      height={44}
+      bg={isDark ? "rgba(255,255,255,0.08)" : "$color2"}
+      borderColor={isDark ? "rgba(255,255,255,0.08)" : "$color2"}
+      borderWidth={2}
+      rounded={16}
+      height={52}
       paddingHorizontal="$4"
       fontSize="$3"
-      color={isDark ? "$white" : "$color"}
-      placeholderTextColor={isDark ? "$white" : "$color10"}
+      color={isDark ? "#ffffff" : "$color"}
+      placeholderTextColor={isDark ? "rgba(255,255,255,0.4)" : "$color9"}
       focusStyle={{
-        borderColor: isDark ? "$accent1" : "$accent8",
+        borderColor: "$accent1",
         borderWidth: 2,
       }}
       {...props}
@@ -29,10 +27,13 @@ export function Input(props: React.ComponentProps<typeof TInput>) {
 }
 
 export function PasswordInput(
-  props: Omit<React.ComponentProps<typeof TInput>, "secureTextEntry">,
+  props: Omit<React.ComponentProps<typeof TInput>, "secureTextEntry"> & {
+    iconColor?: string;
+  },
 ) {
   const [visible, setVisible] = useState(false);
   const theme = useTheme();
+  const { iconColor, ...inputProps } = props;
 
   return (
     <XStack position="relative">
@@ -42,7 +43,7 @@ export function PasswordInput(
         autoComplete="password"
         flex={1}
         pr="$10"
-        {...props}
+        {...inputProps}
       />
       <Pressable
         onPress={() => setVisible((v) => !v)}
@@ -51,7 +52,7 @@ export function PasswordInput(
           right: 0,
           top: 0,
           bottom: 0,
-          width: 48,
+          width: 52,
           alignItems: "center",
           justifyContent: "center",
         }}
@@ -60,10 +61,9 @@ export function PasswordInput(
         <FontAwesome
           name={visible ? "eye" : "eye-slash"}
           size={18}
-          color={theme.colorSubtle?.val ?? "#737373"}
+          color={iconColor ?? theme.color9?.val ?? "#737373"}
         />
       </Pressable>
     </XStack>
   );
 }
-

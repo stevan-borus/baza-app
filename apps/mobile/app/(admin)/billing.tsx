@@ -85,9 +85,9 @@ export default function AdminBilling() {
       keyboardShouldPersistTaps="handled"
       contentContainerStyle={{
         paddingTop: insets.top + HEADER_HEIGHT + 12,
-        paddingHorizontal: 20,
+        paddingHorizontal: 24,
         paddingBottom: TAB_BAR_HEIGHT + 16,
-        gap: 12,
+        gap: 16,
       }}
     >
       <ActionButton
@@ -112,7 +112,7 @@ export default function AdminBilling() {
                 <Card>
                   <YStack gap="$2">
                     <XStack justify="space-between" items="center">
-                      <Text fontWeight="700" fontSize="$4" color="$color">
+                      <Text fontWeight="800" fontSize="$6" color="$color">
                         {item.amount} RSD
                       </Text>
                       <Badge
@@ -190,7 +190,7 @@ export default function AdminBilling() {
               onChangeText={(v) => setForm((s) => ({ ...s, amount: v }))}
             />
             <SectionLabel>{t("admin.manage.paymentMethod")}</SectionLabel>
-            <XStack gap="$2" flexWrap="wrap">
+            <XStack gap="$3" flexWrap="wrap">
               {methods.map((m) => (
                 <Button
                   key={m}

@@ -1,11 +1,13 @@
 import { useState } from "react";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
+import { Image } from "expo-image";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
+import { useColorScheme } from "@/components/useColorScheme";
 import { ScrollView, TouchableOpacity } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Text, XStack, YStack } from "tamagui";
+import { Text, XStack, YStack, useTheme } from "tamagui";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { ThemeSwitcher } from "@/components/ThemeSwitcher";
 import { AppSheet } from "@/components/ui/sheet";
@@ -17,6 +19,8 @@ import { useThemePreference } from "@/lib/theme-preference";
 
 export default function AdminSettingsIndex() {
   const { t, i18n } = useTranslation();
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === "dark";
   const { preference } = useThemePreference();
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -58,16 +62,26 @@ export default function AdminSettingsIndex() {
         paddingBottom: TAB_BAR_HEIGHT + 32,
       }}
     >
-      <YStack px="$5" gap="$8">
-        <YStack>
-          <SectionDividerLabel label={t("settings.accountSection")} />
-          <YStack pl="$1">
+      <YStack px="$5" gap="$6">
+        <YStack gap="$2">
+          <Text
+            fontSize="$2"
+            fontWeight="600"
+            color="$color9"
+            textTransform="uppercase"
+            letterSpacing={0.8}
+            pl="$4"
+          >
+            {t("settings.accountSection")}
+          </Text>
+          <YStack bg="$color2" rounded={16} overflow="hidden">
             <SettingsRow
               icon="moon-o"
               label={t("settings.theme")}
               value={currentThemeLabel}
               onPress={() => setShowThemeModal(true)}
             />
+            <YStack height={1} bg="$borderColor" mx="$4" />
             <SettingsRow
               icon="globe"
               label={t("settings.language")}
@@ -77,14 +91,24 @@ export default function AdminSettingsIndex() {
           </YStack>
         </YStack>
 
-        <YStack>
-          <SectionDividerLabel label={t("settings.studioSection")} />
-          <YStack pl="$1">
+        <YStack gap="$2">
+          <Text
+            fontSize="$2"
+            fontWeight="600"
+            color="$color9"
+            textTransform="uppercase"
+            letterSpacing={0.8}
+            pl="$4"
+          >
+            {t("settings.studioSection")}
+          </Text>
+          <YStack bg="$color2" rounded={16} overflow="hidden">
             <SettingsRow
               icon="list"
               label={t("admin.manage.classTypes")}
               onPress={() => router.push("/(admin)/settings/class-types")}
             />
+            <YStack height={1} bg="$borderColor" mx="$4" />
             <SettingsRow
               icon="building-o"
               label={t("admin.manage.rooms")}
@@ -93,16 +117,34 @@ export default function AdminSettingsIndex() {
           </YStack>
         </YStack>
 
-        <YStack>
-          <SectionDividerLabel label={t("settings.otherSection")} />
-          <YStack pl="$1">
+        <YStack gap="$2">
+          <Text
+            fontSize="$2"
+            fontWeight="600"
+            color="$color9"
+            textTransform="uppercase"
+            letterSpacing={0.8}
+            pl="$4"
+          >
+            {t("settings.otherSection")}
+          </Text>
+          <YStack bg="$color2" rounded={16} overflow="hidden">
             <SettingsRow
               icon="sign-out"
               label={t("settings.logOut")}
               onPress={() => signOutMutation.mutate()}
+              destructive
             />
           </YStack>
         </YStack>
+      </YStack>
+
+      <YStack items="center" pt="$6" pb="$2">
+        <Image
+          source={isDark ? require("@/assets/images/logo-white.png") : require("@/assets/images/logo-green.png")}
+          style={{ width: 100, height: 34 }}
+          contentFit="contain"
+        />
       </YStack>
 
       <AppSheet open={showThemeModal} onOpenChange={setShowThemeModal}>
@@ -130,52 +172,39 @@ export default function AdminSettingsIndex() {
   );
 }
 
-function SectionDividerLabel({ label }: { label: string }) {
-  return (
-    <XStack items="center" gap="$3" mb="$2">
-      <Text
-        fontSize="$2"
-        fontWeight="600"
-        color="$color10"
-        textTransform="uppercase"
-        letterSpacing={0.5}
-      >
-        {label}
-      </Text>
-      <YStack flex={1} height={1} bg="$borderColor" />
-    </XStack>
-  );
-}
-
 function SettingsRow({
   icon,
   label,
   value,
   onPress,
+  destructive,
 }: {
   icon: React.ComponentProps<typeof FontAwesome>["name"];
   label: string;
   value?: string;
   onPress: () => void;
+  destructive?: boolean;
 }) {
+  const theme = useTheme();
+  const isDarkMode = useColorScheme() === "dark";
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.6}>
-      <XStack py="$3.5" items="center" justify="space-between">
+      <XStack px="$4" py="$3.5" items="center" justify="space-between">
         <XStack items="center" gap="$3.5">
-          <YStack width={28} items="center">
-            <FontAwesome name={icon} size={18} color="#64748b" />
+          <YStack width={30} height={30} rounded={8} bg={destructive ? "$red3" : "$accent5"} items="center" justify="center">
+            <FontAwesome name={icon} size={15} color={destructive ? (isDarkMode ? "#ffffff" : "#ef4444") : "#fff"} />
           </YStack>
-          <Text fontSize="$4" fontWeight="500" color="$color">
+          <Text fontSize="$4" fontWeight="500" color={destructive ? "$red10" : "$color"}>
             {label}
           </Text>
         </XStack>
         <XStack items="center" gap="$2">
           {value ? (
-            <Text fontSize="$3" color="$color10">
+            <Text fontSize="$3" color="$color9">
               {value}
             </Text>
           ) : null}
-          <FontAwesome name="chevron-right" size={13} color="#4b5563" />
+          <FontAwesome name="chevron-right" size={12} color={theme.color9?.val ?? "#999"} />
         </XStack>
       </XStack>
     </TouchableOpacity>

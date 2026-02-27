@@ -29,9 +29,9 @@ export function ActionButton({
       style={{ opacity: disabled ? 0.4 : 1 }}
     >
       <XStack
-        bg={variant === "danger" ? "$red3" : "$backgroundHover"}
-        rounded={10}
-        px="$3"
+        bg={variant === "danger" ? "$red3" : "$color2"}
+        rounded={12}
+        px="$3.5"
         py="$2.5"
         items="center"
         gap="$2"

@@ -4,7 +4,7 @@ import { Calendar, type ICalendarEventBase } from "react-native-big-calendar";
 import dayjs from "dayjs";
 import { useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
-import { Text, YStack, useTheme } from "tamagui";
+import { Text, YStack } from "tamagui";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { useColorScheme } from "@/components/useColorScheme";
 import { AppSheet } from "@/components/ui/sheet";
@@ -14,6 +14,7 @@ import { ListRow, ErrorState } from "@/components/ui/states";
 import { ScreenContainerRaw } from "@/components/ui/screen-container";
 import { SegmentedControl } from "@/components/ui/tabs";
 import { SectionHeader } from "@/components/ui/typography";
+import { useCalendarTheme } from "@/lib/calendar-theme";
 import { getDateLocale } from "@/lib/i18n";
 import { authQueries } from "@/lib/queries/auth-queries-factory";
 import { sessionsQueries } from "@/lib/queries/sessions-queries-factory";
@@ -47,7 +48,7 @@ export default function TrainerSchedule() {
   const locale = getDateLocale().startsWith("en") ? "en" : "sr";
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
-  const theme = useTheme();
+  const cal = useCalendarTheme();
 
   const meQuery = useQuery(authQueries.me());
   const availabilityQuery = useQuery(sessionsQueries.availabilityByMonth(month));
@@ -86,7 +87,7 @@ export default function TrainerSchedule() {
 
   return (
     <ScreenContainerRaw>
-      <YStack px="$5" gap="$3">
+      <YStack px="$5" gap="$4">
         <SectionHeader
           title={t("trainer.schedule.title")}
           subtitle={meQuery.data ? meQuery.data.user.email : undefined}
@@ -136,59 +137,14 @@ export default function TrainerSchedule() {
             events={events}
             height={480}
             mode={viewMode === "day" ? "day" : viewMode === "week" ? "week" : "month"}
-            theme={{
-              palette: {
-                primary: {
-                  main: "#2e5b42",
-                  contrastText: "#ffffff",
-                },
-                nowIndicator: "#2e5b42",
-                gray: {
-                  100: isDark ? "#111827" : "#f3f4f6",
-                  200: isDark ? "#1f2937" : "#e5e7eb",
-                  300: isDark ? "#374151" : "#d1d5db",
-                  500: isDark ? "#9ca3af" : "#6b7280",
-                  800: isDark ? "#e5e7eb" : "#111827",
-                },
-                moreLabel: isDark ? "#e5e7eb" : "#374151",
-              },
-              typography: {
-                sm: { fontWeight: "500", fontSize: 12 },
-                xl: { fontWeight: "600", fontSize: 13 },
-                moreLabel: { fontWeight: "600", fontSize: 11 },
-              },
-            }}
-            calendarContainerStyle={{
-              borderRadius: 12,
-              backgroundColor: isDark ? "#0f172a" : "#ffffff",
-            }}
-            bodyContainerStyle={{
-              backgroundColor: isDark ? "#0f172a" : "#ffffff",
-            }}
-            headerContainerStyle={{
-              borderBottomColor: isDark
-                ? "rgba(255,255,255,0.08)"
-                : "rgba(15,23,42,0.08)",
-              borderBottomWidth: 1,
-            }}
-            eventCellStyle={{
-              backgroundColor: "#2e5b42",
-              borderRadius: 10,
-              borderWidth: 0,
-              paddingHorizontal: 6,
-              paddingVertical: 4,
-            }}
-            eventCellTextColor="#ffffff"
-            calendarCellStyle={{
-              backgroundColor: isDark ? "#0f172a" : "#ffffff",
-              borderColor: isDark
-                ? "rgba(255,255,255,0.08)"
-                : "rgba(15,23,42,0.08)",
-              borderWidth: 1,
-            }}
-            calendarCellTextStyle={{
-              color: theme.color.val,
-            }}
+            theme={cal.calendarTheme}
+            calendarContainerStyle={cal.calendarContainerStyle}
+            bodyContainerStyle={cal.bodyContainerStyle}
+            headerContainerStyle={cal.headerContainerStyle}
+            eventCellStyle={cal.eventCellStyle}
+            eventCellTextColor={cal.eventCellTextColor}
+            calendarCellStyle={cal.calendarCellStyle}
+            calendarCellTextStyle={cal.calendarCellTextStyle}
             date={calendarDate}
             onPressEvent={(event) => setSelectedEvent(event as SessionEvent)}
             onSwipeEnd={handleDateChange}
@@ -199,7 +155,7 @@ export default function TrainerSchedule() {
         </Card>
       </YStack>
 
-      <YStack px="$5" pb="$4" gap="$3">
+      <YStack px="$5" pb="$4" gap="$4">
         <Card>
           <LanguageSwitcher />
         </Card>

@@ -46,9 +46,9 @@ export default function AdminPackages() {
       keyboardShouldPersistTaps="handled"
       contentContainerStyle={{
         paddingTop: insets.top + HEADER_HEIGHT + 12,
-        paddingHorizontal: 20,
+        paddingHorizontal: 24,
         paddingBottom: TAB_BAR_HEIGHT + 16,
-        gap: 12,
+        gap: 16,
       }}
     >
       <ActionButton

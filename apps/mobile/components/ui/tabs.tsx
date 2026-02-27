@@ -13,13 +13,13 @@ export function AppTabs({
 }) {
   return (
     <Tabs value={value} onValueChange={onValueChange}>
-      <Tabs.List bg="$backgroundHover" rounded={12} p="$1">
+      <Tabs.List bg="$color2" rounded={14} p="$1">
         {tabs.map((tab) => (
           <Tabs.Tab
             key={tab.value}
             value={tab.value}
             bg={value === tab.value ? "$background" : "transparent"}
-            rounded={10}
+            rounded={12}
             py="$2"
             px="$3"
           >
@@ -58,4 +58,3 @@ export function SegmentedControl<T extends string>({
     />
   );
 }
-

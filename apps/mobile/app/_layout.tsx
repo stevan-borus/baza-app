@@ -89,19 +89,19 @@ function RootLayoutNav() {
             colors={
               isDark
                 ? [
-                    "rgba(255,255,255,0)",
-                    "rgba(155,155,155,0.08)",
-                    "rgba(255,255,255,0.1)",
+                    "rgba(46,91,66,0.06)",
+                    "rgba(46,91,66,0.10)",
+                    "rgba(46,91,66,0.03)",
                   ]
                 : [
-                    "rgba(255,255,255,0.3)",
-                    "rgba(140,140,140,0.16)",
-                    "rgba(255,255,255,0.26)",
+                    "rgba(255,248,240,0.3)",
+                    "rgba(46,91,66,0.03)",
+                    "rgba(255,248,240,0.2)",
                   ]
             }
-            locations={[0, 0.52, 1]}
-            start={{ x: 0.04, y: 0.06 }}
-            end={{ x: 0.96, y: 0.94 }}
+            locations={[0, 0.5, 1]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
           />
         </YStack>
       </Providers>
@@ -121,7 +121,7 @@ function AppNavigator({ isDark }: { isDark: boolean }) {
       <YStack flex={1} bg="$background" items="center" justify="center">
         <ActivityIndicator
           size="large"
-          color={isDark ? "#4ade80" : "#16a34a"}
+          color={isDark ? "#4ade80" : "#2e5b42"}
         />
       </YStack>
     );

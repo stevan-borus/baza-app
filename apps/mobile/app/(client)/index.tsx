@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
+import { Image } from "expo-image";
 import { ScrollView } from "react-native";
 import { useTranslation } from "react-i18next";
 import { Text, XStack, YStack } from "tamagui";
@@ -53,34 +54,32 @@ export default function ClientOverview() {
         ) : null}
 
         {/* Active Package */}
-        <YStack gap="$3">
+        <YStack gap="$6">
           <SectionLabel>{t("client.package.myPackage")}</SectionLabel>
           {packagesQuery.isError ? <ErrorState message={t("client.package.error")} /> : null}
           {activePackage ? (
-            <Card>
-              <YStack gap="$3">
-                <XStack justify="space-between" items="center">
-                  <Text fontWeight="600" fontSize="$4" color="$color">
-                    {activePackage.packageType?.name ?? t("client.package.packageName")}
-                  </Text>
-                  <Badge variant="soft">{t("client.package.active")}</Badge>
-                </XStack>
-                <XStack gap="$3">
-                  <YStack flex={1}>
-                    <StatCard
-                      label={t("client.package.sessionsRemaining")}
-                      value={activePackage.sessionsRemaining}
-                    />
-                  </YStack>
-                  <YStack flex={1}>
-                    <StatCard
-                      label={t("client.package.validUntil")}
-                      value={new Date(activePackage.expiresAt).toLocaleDateString(dateLocale)}
-                    />
-                  </YStack>
-                </XStack>
-              </YStack>
-            </Card>
+            <YStack gap="$4">
+              <XStack justify="space-between" items="center">
+                <Text fontWeight="600" fontSize="$4" color="$color">
+                  {activePackage.packageType?.name ?? t("client.package.packageName")}
+                </Text>
+                <Badge variant="soft">{t("client.package.active")}</Badge>
+              </XStack>
+              <XStack gap="$3">
+                <YStack flex={1}>
+                  <StatCard
+                    label={t("client.package.sessionsRemaining")}
+                    value={activePackage.sessionsRemaining}
+                  />
+                </YStack>
+                <YStack flex={1}>
+                  <StatCard
+                    label={t("client.package.validUntil")}
+                    value={new Date(activePackage.expiresAt).toLocaleDateString(dateLocale)}
+                  />
+                </YStack>
+              </XStack>
+            </YStack>
           ) : (
             <EmptyState title={t("client.package.noActive")} />
           )}
@@ -88,7 +87,7 @@ export default function ClientOverview() {
 
         {/* All Packages */}
         {packages.length > 1 ? (
-          <YStack gap="$3">
+          <YStack gap="$4">
             <SectionLabel>{t("client.package.allPackages")}</SectionLabel>
             {packages.map((pkg: ClientPackage) => (
               <Card key={pkg.id}>
@@ -109,21 +108,16 @@ export default function ClientOverview() {
         ) : null}
 
         {/* Training History */}
-        <YStack gap="$3">
+        <YStack gap="$4">
           <SectionLabel>{t("client.history.title")}</SectionLabel>
           {notesQuery.isError ? <ErrorState message={t("client.history.error")} /> : null}
           {notes.length === 0 ? (
             <EmptyState title={t("client.history.noNotes")} />
           ) : (
             <Card>
-              <YStack>
-                {notes.slice(0, 20).map((note: TrainerNote, index: number) => (
-                  <YStack
-                    key={note.id}
-                    py="$3"
-                    borderBottomWidth={index < Math.min(notes.length, 20) - 1 ? 1 : 0}
-                    borderColor="$borderColor"
-                  >
+              <YStack gap="$4">
+                {notes.slice(0, 20).map((note: TrainerNote) => (
+                  <YStack key={note.id} py="$1">
                     <Text fontWeight="500" fontSize="$3" color="$color">
                       {note.note}
                     </Text>
@@ -150,7 +144,7 @@ export default function ClientOverview() {
         </YStack>
 
         {/* Settings */}
-        <YStack gap="$3">
+        <YStack gap="$4">
           <SectionLabel>{t("settings.language")}</SectionLabel>
           <Card>
             <YStack gap="$4">
@@ -163,6 +157,13 @@ export default function ClientOverview() {
               </Button>
             </YStack>
           </Card>
+        </YStack>
+        <YStack items="center" pt="$4">
+          <Image
+            source={require("@/assets/images/logo-green.png")}
+            style={{ width: 80, height: 28 }}
+            contentFit="contain"
+          />
         </YStack>
       </ScreenContainer>
     </ScrollView>

@@ -1,4 +1,5 @@
 import React, { PropsWithChildren } from "react";
+import Animated, { FadeInLeft } from "react-native-reanimated";
 import { Text, YStack } from "tamagui";
 
 type LinkTextProps = React.ComponentProps<typeof Text> & {
@@ -26,7 +27,7 @@ type LabelProps = React.ComponentProps<typeof Text> & {
 
 export function Label({ children, ...props }: LabelProps) {
   return (
-    <Text fontSize="$4" fontWeight="600" color="$color" {...props}>
+    <Text fontSize="$5" fontWeight="600" color="$color" {...props}>
       {children}
     </Text>
   );
@@ -40,23 +41,25 @@ export function SectionHeader({
   subtitle?: string;
 }) {
   return (
-    <YStack gap="$1">
-      <Text color="$color" fontSize="$6" fontWeight="700" letterSpacing={-0.3}>
-        {title}
-      </Text>
-      {subtitle ? (
-        <Text color="$color10" fontSize="$3">
-          {subtitle}
+    <Animated.View entering={FadeInLeft.duration(400).springify()}>
+      <YStack gap="$1">
+        <Text color="$color" fontSize="$8" fontWeight="700" letterSpacing={-0.5}>
+          {title}
         </Text>
-      ) : null}
-    </YStack>
+        {subtitle ? (
+          <Text color="$color10" fontSize="$3">
+            {subtitle}
+          </Text>
+        ) : null}
+      </YStack>
+    </Animated.View>
   );
 }
 
 export function SectionLabel({ children }: PropsWithChildren) {
   return (
     <Text
-      fontSize="$2"
+      fontSize="$3"
       fontWeight="600"
       color="$color10"
       textTransform="uppercase"
@@ -66,4 +69,3 @@ export function SectionLabel({ children }: PropsWithChildren) {
     </Text>
   );
 }
-

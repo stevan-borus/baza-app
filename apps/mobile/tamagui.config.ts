@@ -3,26 +3,69 @@ import { green, greenDark, red, redDark, yellow, yellowDark } from "@tamagui/col
 import { createV5Theme, defaultChildrenThemes, defaultConfig, v5ComponentThemes } from "@tamagui/config/v5";
 import { createFont, createTamagui } from "@tamagui/core";
 
-const darkPalette = ["hsla(0, 0%, 0%, 1)", "hsla(0, 0%, 5%, 1)", "hsla(0, 0%, 10%, 1)", "hsla(0, 0%, 16%, 1)", "hsla(0, 0%, 22%, 1)", "hsla(0, 0%, 29%, 1)", "hsla(0, 0%, 35%, 1)", "hsla(0, 0%, 42%, 1)", "hsla(0, 0%, 48%, 1)", "hsla(0, 0%, 55%, 1)", "hsla(0, 0%, 94%, 1)", "hsla(0, 0%, 100%, 1)"];
-const lightPalette = ["hsla(0, 0%, 100%, 1)", "hsla(0, 0%, 96%, 1)", "hsla(0, 0%, 92%, 1)", "hsla(0, 0%, 87%, 1)", "hsla(0, 0%, 82%, 1)", "hsla(0, 0%, 75%, 1)", "hsla(0, 0%, 67%, 1)", "hsla(0, 0%, 60%, 1)", "hsla(0, 0%, 52%, 1)", "hsla(0, 0%, 45%, 1)", "hsla(0, 0%, 8%, 1)", "hsla(0, 0%, 0%, 1)"];
+// Warm off-white light palette (hue 30°)
+const lightPalette = [
+  "hsla(30, 25%, 98%, 1)",  // background
+  "hsla(30, 16%, 92%, 1)",  // color2 - card surface (visible lift from bg)
+  "hsla(30, 14%, 88%, 1)",
+  "hsla(30, 12%, 83%, 1)",
+  "hsla(30, 10%, 78%, 1)",
+  "hsla(30, 8%, 70%, 1)",
+  "hsla(30, 7%, 62%, 1)",
+  "hsla(30, 6%, 55%, 1)",
+  "hsla(30, 4%, 47%, 1)",
+  "hsla(30, 3%, 40%, 1)",
+  "hsla(30, 5%, 12%, 1)",   // color11 - near-black text
+  "hsla(30, 8%, 6%, 1)",    // color12
+];
 
+// Green-tinted dark palette — Apple Health-style contrast
+// Deep green-black background with clearly elevated card surfaces
+const darkPalette = [
+  "hsla(151, 30%, 5%, 1)",  // background - very deep green-black
+  "hsla(151, 18%, 13%, 1)", // color2 - card surface (clear lift from bg)
+  "hsla(151, 14%, 17%, 1)", // color3 - elevated surface / hover
+  "hsla(151, 11%, 21%, 1)",
+  "hsla(151, 9%, 26%, 1)",
+  "hsla(151, 7%, 32%, 1)",
+  "hsla(151, 6%, 42%, 1)",
+  "hsla(151, 5%, 52%, 1)",
+  "hsla(0, 0%, 65%, 1)",
+  "hsla(0, 0%, 78%, 1)",
+  "hsla(0, 0%, 100%, 1)",   // color11 - pure white text
+  "hsla(0, 0%, 100%, 1)",   // color12 - pure white
+];
+
+// Proper forest-green accent gradient (12 steps) — maintains green hue throughout
 const accentLight = {
-  accent1: "hsla(151, 33%, 24%, 1)",
-  accent2: "hsla(151, 22%, 24%, 1)",
-  accent3: "hsla(151, 11%, 25%, 1)",
-  accent4: "hsla(151, 0%, 25%, 1)",
-  accent5: "hsla(121, 0%, 30%, 1)",
-  accent6: "hsla(91, 0%, 35%, 1)",
-  accent7: "hsla(60, 0%, 40%, 1)",
-  accent8: "hsla(30, 0%, 45%, 1)",
-  accent9: "hsla(0, 0%, 50%, 1)",
-  accent10: "hsla(0, 0%, 88%, 1)",
-  accent11: "hsla(0, 0%, 94%, 1)",
-  accent12: "hsla(0, 0%, 100%, 1)",
+  accent1: "hsla(151, 33%, 27%, 1)",   // brand forest green #2e5b42
+  accent2: "hsla(151, 30%, 30%, 1)",
+  accent3: "hsla(151, 28%, 34%, 1)",
+  accent4: "hsla(151, 25%, 38%, 1)",
+  accent5: "hsla(151, 22%, 42%, 1)",
+  accent6: "hsla(151, 20%, 47%, 1)",
+  accent7: "hsla(151, 18%, 52%, 1)",
+  accent8: "hsla(151, 16%, 58%, 1)",
+  accent9: "hsla(151, 14%, 64%, 1)",
+  accent10: "hsla(151, 12%, 72%, 1)",
+  accent11: "hsla(151, 10%, 85%, 1)",
+  accent12: "hsla(151, 8%, 95%, 1)",
 } as const;
 
+// Dark mode gets brighter green for readability
 const accentDark = {
-  ...accentLight,
+  accent1: "hsla(151, 40%, 35%, 1)",   // brighter green for dark mode
+  accent2: "hsla(151, 36%, 32%, 1)",
+  accent3: "hsla(151, 32%, 29%, 1)",
+  accent4: "hsla(151, 28%, 26%, 1)",
+  accent5: "hsla(151, 24%, 23%, 1)",
+  accent6: "hsla(151, 20%, 20%, 1)",
+  accent7: "hsla(151, 16%, 18%, 1)",
+  accent8: "hsla(151, 12%, 16%, 1)",
+  accent9: "hsla(151, 10%, 14%, 1)",
+  accent10: "hsla(151, 8%, 12%, 1)",
+  accent11: "hsla(151, 6%, 10%, 1)",
+  accent12: "hsla(151, 4%, 8%, 1)",
 } as const;
 
 const builtThemes = createV5Theme({
@@ -60,6 +103,8 @@ const inter = createFont({
     6: 24,
     7: 30,
     8: 36,
+    9: 40,
+    10: 48,
     true: 15,
   },
   lineHeight: {
@@ -71,6 +116,8 @@ const inter = createFont({
     6: 32,
     7: 38,
     8: 44,
+    9: 48,
+    10: 56,
     true: 22,
   },
   weight: {
@@ -88,24 +135,26 @@ const inter = createFont({
     6: -0.3,
     7: -0.4,
     8: -0.5,
+    9: -0.8,
+    10: -1.0,
     true: 0,
   },
 });
 
 export const navigationThemeColors = {
   light: {
-    background: builtThemes.light.background,
-    card: builtThemes.light.background,
-    text: builtThemes.light.color,
-    border: builtThemes.light.borderColor,
+    background: builtThemes.light.background ?? lightPalette[0],
+    card: builtThemes.light.background ?? lightPalette[0],
+    text: builtThemes.light.color ?? lightPalette[11],
+    border: builtThemes.light.borderColor ?? lightPalette[4],
     primary: accentLight.accent1,
     notification: builtThemes.light.red10,
   },
   dark: {
-    background: builtThemes.dark.background,
-    card: builtThemes.dark.background,
-    text: builtThemes.dark.color,
-    border: builtThemes.dark.borderColor,
+    background: darkPalette[0],
+    card: darkPalette[0],
+    text: darkPalette[11],
+    border: darkPalette[4],
     primary: accentDark.accent1,
     notification: builtThemes.dark.red10,
   },
@@ -143,6 +192,25 @@ const config = createTamagui({
       damping: 20,
       mass: 1.2,
       stiffness: 250,
+    },
+    gentle: {
+      damping: 15,
+      mass: 0.8,
+      stiffness: 120,
+    },
+    snappy: {
+      damping: 22,
+      mass: 0.6,
+      stiffness: 300,
+    },
+    fade: {
+      damping: 20,
+      stiffness: 80,
+    },
+    springy: {
+      damping: 8,
+      mass: 0.7,
+      stiffness: 150,
     },
   }),
 });
