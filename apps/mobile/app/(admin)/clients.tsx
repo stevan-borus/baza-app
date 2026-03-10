@@ -18,6 +18,29 @@ import { clientsQueries } from "@/lib/queries/clients-queries-factory";
 import { invitesQueries, type Invite } from "@/lib/queries/invites-queries-factory";
 import { packagesQueries } from "@/lib/queries/packages-queries-factory";
 
+function InitialsAvatar({ name }: { name: string }) {
+  const initials = name
+    .split(" ")
+    .map((w) => w[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
+  return (
+    <YStack
+      width={40}
+      height={40}
+      rounded={20}
+      bg="$accent5"
+      items="center"
+      justify="center"
+    >
+      <Text color="white" fontSize="$2" fontWeight="700">
+        {initials}
+      </Text>
+    </YStack>
+  );
+}
+
 export default function AdminClients() {
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
@@ -90,15 +113,18 @@ export default function AdminClients() {
             {clients.map((client) => (
               <Card key={client.id}>
                 <YStack gap="$2.5">
-                  <YStack>
-                    <Text fontWeight="600" fontSize="$3" color="$color">
-                      {client.user.fullName}
-                    </Text>
-                    <Text fontSize="$2" color="$color10">
-                      {client.user.email}
-                      {client.user.phone ? ` · ${client.user.phone}` : ""}
-                    </Text>
-                  </YStack>
+                  <XStack gap="$3" items="center">
+                    <InitialsAvatar name={client.user.fullName} />
+                    <YStack flex={1}>
+                      <Text fontWeight="600" fontSize="$3" color="$color">
+                        {client.user.fullName}
+                      </Text>
+                      <Text fontSize="$2" color="$color10">
+                        {client.user.email}
+                        {client.user.phone ? ` · ${client.user.phone}` : ""}
+                      </Text>
+                    </YStack>
+                  </XStack>
                   {client.notes ? (
                     <YStack
                       bg="$backgroundHover"
@@ -147,7 +173,7 @@ export default function AdminClients() {
                       <Text fontWeight="600" fontSize="$3" color="$color">{invite.fullName}</Text>
                       <Text fontSize="$2" color="$color10">{invite.email}</Text>
                     </YStack>
-                    <Badge color={invite.status === "COMPLETED" ? "$accent1" : invite.status === "PENDING" ? "$accent8" : "$red10"}>
+                    <Badge status={invite.status === "COMPLETED" ? "success" : invite.status === "PENDING" ? "warning" : "danger"}>
                       {inviteStatusKeys[invite.status] ? t(inviteStatusKeys[invite.status]) : invite.status}
                     </Badge>
                   </XStack>
@@ -185,8 +211,11 @@ export default function AdminClients() {
             <Text fontSize="$6" fontWeight="700" color="$color" letterSpacing={-0.3}>
               {t("admin.clients.sheetEdit")}
             </Text>
+            <SectionLabel>{t("admin.clients.placeholderFullName")}</SectionLabel>
             <Input placeholder={t("admin.clients.placeholderFullName")} value={editForm.fullName} onChangeText={(v) => setEditForm((s) => ({ ...s, fullName: v }))} />
+            <SectionLabel>{t("admin.clients.placeholderPhoneRequired")}</SectionLabel>
             <Input placeholder={t("admin.clients.placeholderPhoneRequired")} keyboardType="phone-pad" value={editForm.phone} onChangeText={(v) => setEditForm((s) => ({ ...s, phone: v }))} />
+            <SectionLabel>{t("admin.clients.placeholderNotes")}</SectionLabel>
             <Input placeholder={t("admin.clients.placeholderNotes")} multiline value={editForm.notes} onChangeText={(v) => setEditForm((s) => ({ ...s, notes: v }))} />
             <XStack items="center" gap="$3" py="$2">
               <Text fontSize="$3" color="$color">{t("admin.clients.active")}</Text>
