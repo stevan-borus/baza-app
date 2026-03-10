@@ -1,17 +1,21 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { RefreshControl, ScrollView } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Text, YStack } from "tamagui";
+import dayjs from "dayjs";
+import { Text, XStack, YStack } from "tamagui";
 import { ActionButton } from "@/components/ui/action-button";
 import { AppSheet } from "@/components/ui/sheet";
-import { Card } from "@/components/ui/card";
+import { Badge, Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { EmptyState, ErrorState } from "@/components/ui/states";
 import { Input } from "@/components/ui/input";
+import { SectionHeader } from "@/components/ui/typography";
 import { packagesQueries } from "@/lib/queries/packages-queries-factory";
 import { TAB_BAR_HEIGHT, HEADER_HEIGHT } from "@/components/ui/constants";
+
+type AssignmentFilter = "all" | "expiring" | "expired";
 
 export default function AdminPackages() {
   const { t } = useTranslation();
@@ -19,6 +23,7 @@ export default function AdminPackages() {
   const queryClient = useQueryClient();
   const [showCreate, setShowCreate] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [assignmentFilter, setAssignmentFilter] = useState<AssignmentFilter>("all");
   const [form, setForm] = useState({
     name: "",
     sessionCount: "",
@@ -28,11 +33,30 @@ export default function AdminPackages() {
 
   async function handleRefresh() {
     setRefreshing(true);
-    await queryClient.invalidateQueries({ queryKey: ["packages", "types"] });
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["packages", "types"] }),
+      queryClient.invalidateQueries({ queryKey: ["packages", "client-packages"] }),
+    ]);
     setRefreshing(false);
   }
 
   const typesQuery = useQuery(packagesQueries.types());
+  const clientPackagesQuery = useQuery(packagesQueries.clientPackages());
+  const allAssignments = clientPackagesQuery.data?.packages ?? [];
+
+  const filteredAssignments = useMemo(() => {
+    const now = dayjs();
+    if (assignmentFilter === "expiring") {
+      return allAssignments.filter((p) => {
+        const exp = dayjs(p.expiresAt);
+        return exp.isAfter(now) && exp.diff(now, "day") <= 7;
+      });
+    }
+    if (assignmentFilter === "expired") {
+      return allAssignments.filter((p) => dayjs(p.expiresAt).isBefore(now));
+    }
+    return allAssignments;
+  }, [allAssignments, assignmentFilter]);
   const createMutation = useMutation({
     ...packagesQueries.createType(),
     onSuccess: async () => {
@@ -59,6 +83,7 @@ export default function AdminPackages() {
         gap: 16,
       }}
     >
+      <SectionHeader title={t("admin.manage.packageTypes")} />
       <ActionButton
         icon="plus"
         label={t("admin.manage.newPackageType")}
@@ -88,6 +113,51 @@ export default function AdminPackages() {
           </YStack>
         </Card>
       ))}
+
+      <SectionHeader title={t("admin.manage.activeAssignments")} />
+      <XStack gap="$2" flexWrap="wrap">
+        {(["all", "expiring", "expired"] as const).map((f) => (
+          <Button
+            key={f}
+            size="small"
+            variant={assignmentFilter === f ? "primary" : "secondary"}
+            onPress={() => setAssignmentFilter(f)}
+          >
+            {t(`admin.manage.filter${f.charAt(0).toUpperCase() + f.slice(1)}` as any)}
+          </Button>
+        ))}
+      </XStack>
+      {clientPackagesQuery.isError ? (
+        <ErrorState message={t("admin.manage.packagesError")} />
+      ) : null}
+      {filteredAssignments.length === 0 && !clientPackagesQuery.isLoading ? (
+        <EmptyState title={t("admin.manage.packagesEmpty")} />
+      ) : null}
+      {filteredAssignments.map((pkg) => {
+        const isExpired = dayjs(pkg.expiresAt).isBefore(dayjs());
+        const isExpiring = !isExpired && dayjs(pkg.expiresAt).diff(dayjs(), "day") <= 7;
+        return (
+          <Card key={pkg.id}>
+            <YStack gap="$1.5">
+              <XStack justify="space-between" items="center">
+                <Text fontWeight="600" fontSize="$3" color="$color">
+                  {pkg.packageType?.name ?? pkg.packageTypeId}
+                </Text>
+                <Badge status={isExpired ? "danger" : isExpiring ? "warning" : "success"}>
+                  {isExpired ? t("client.profileTab.expired") : isExpiring ? t("admin.manage.filterExpiring") : t("client.package.active")}
+                </Badge>
+              </XStack>
+              <Text fontSize="$2" color="$color10">
+                {t("admin.manage.sessionsRemaining", { count: pkg.sessionsRemaining })}
+              </Text>
+              <Text fontSize="$2" color="$color9">
+                {t("admin.manage.expiresOn", { date: dayjs(pkg.expiresAt).format("MMM D, YYYY") })}
+              </Text>
+            </YStack>
+          </Card>
+        );
+      })}
+
       <AppSheet open={showCreate} onOpenChange={setShowCreate}>
         <YStack gap="$4">
           <Text
