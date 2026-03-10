@@ -18,10 +18,10 @@ export function useCalendarTheme() {
     calendarTheme: {
       palette: {
         primary: {
-          main: isDark ? "#4ade80" : "#2e5b42",
+          main: isDark ? "#2e5b42" : "#2e5b42",
           contrastText: "#ffffff",
         },
-        nowIndicator: isDark ? "#4ade80" : "#2e5b42",
+        nowIndicator: isDark ? "#2e5b42" : "#2e5b42",
         gray: {
           100: isDark ? "rgba(255,255,255,0.04)" : "hsla(30, 18%, 92%, 1)",
           200: isDark ? "rgba(255,255,255,0.06)" : "hsla(30, 15%, 87%, 1)",
@@ -49,7 +49,7 @@ export function useCalendarTheme() {
       borderBottomWidth: 1,
     },
     eventCellStyle: {
-      backgroundColor: isDark ? "#4ade80" : "#2e5b42",
+      backgroundColor: isDark ? "#2e5b42" : "#2e5b42",
       borderRadius: 10,
       borderWidth: 0,
       paddingHorizontal: 8,

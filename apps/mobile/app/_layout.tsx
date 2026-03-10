@@ -121,7 +121,7 @@ function AppNavigator({ isDark }: { isDark: boolean }) {
       <YStack flex={1} bg="$background" items="center" justify="center">
         <ActivityIndicator
           size="large"
-          color={isDark ? "#4ade80" : "#2e5b42"}
+          color="#2e5b42"
         />
       </YStack>
     );
