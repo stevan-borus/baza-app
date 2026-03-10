@@ -1,6 +1,7 @@
-import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { ScrollView } from "react-native";
+import { RefreshControl, ScrollView } from "react-native";
 import { Text, XStack, YStack } from "tamagui";
 import { Badge, Card } from "@/components/ui/card";
 import { EmptyState, ErrorState } from "@/components/ui/states";
@@ -12,9 +13,20 @@ import { sessionsQueries } from "@/lib/queries/sessions-queries-factory";
 
 export default function TrainerClients() {
   const { t } = useTranslation();
+  const queryClient = useQueryClient();
+  const [refreshing, setRefreshing] = useState(false);
   const clientsQuery = useQuery(clientsQueries.list());
   const sessionsQuery = useQuery(sessionsQueries.list());
   const dateLocale = getDateLocale();
+
+  async function handleRefresh() {
+    setRefreshing(true);
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["clients"] }),
+      queryClient.invalidateQueries({ queryKey: ["sessions"] }),
+    ]);
+    setRefreshing(false);
+  }
 
   const clients = clientsQuery.data?.clients ?? [];
   const scheduledSessions = (sessionsQuery.data?.sessions ?? []).filter(
@@ -25,6 +37,7 @@ export default function TrainerClients() {
     <ScrollView
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
     >
       <ScreenContainer>
         <SectionHeader title={t("trainer.clients.title")} />

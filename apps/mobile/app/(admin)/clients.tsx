@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { ScrollView, Switch } from "react-native";
+import { RefreshControl, ScrollView, Switch } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Text, XStack, YStack } from "tamagui";
 import { ActionButton } from "@/components/ui/action-button";
@@ -12,6 +12,7 @@ import { EmptyState, ErrorState } from "@/components/ui/states";
 import { Input } from "@/components/ui/input";
 import { SectionLabel } from "@/components/ui/typography";
 import { TAB_BAR_HEIGHT, HEADER_HEIGHT } from "@/components/ui/constants";
+import { ACCENT } from "@/components/ui/tokens";
 import { SegmentedControl } from "@/components/ui/tabs";
 import { clientsQueries } from "@/lib/queries/clients-queries-factory";
 import { invitesQueries, type Invite } from "@/lib/queries/invites-queries-factory";
@@ -26,6 +27,7 @@ export default function AdminClients() {
   const [showEditClient, setShowEditClient] = useState<string | null>(null);
   const [showAssignPackage, setShowAssignPackage] = useState<string | null>(null);
   const [showPause, setShowPause] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   const [inviteForm, setInviteForm] = useState({ email: "", fullName: "", phone: "" });
   const [clientForm, setClientForm] = useState({ email: "", fullName: "", phone: "" });
@@ -49,11 +51,20 @@ export default function AdminClients() {
   const clients = clientsQuery.data?.clients ?? [];
   const invites = invitesQuery.data?.invites ?? [];
 
+  async function handleRefresh() {
+    setRefreshing(true);
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["clients"] }),
+      queryClient.invalidateQueries({ queryKey: ["invites"] }),
+    ]);
+    setRefreshing(false);
+  }
+
   const inviteStatusKeys: Record<string, string> = { PENDING: "admin.clients.inviteStatusPending", COMPLETED: "admin.clients.inviteStatusCompleted", REVOKED: "admin.clients.inviteStatusRevoked", EXPIRED: "admin.clients.inviteStatusExpired" };
   const { t } = useTranslation();
 
   return (
-    <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+    <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}>
       <YStack px="$5" gap="$6" style={{ paddingTop: insets.top + HEADER_HEIGHT + 12, paddingBottom: TAB_BAR_HEIGHT + 16 }}>
         <SegmentedControl
           segments={[
@@ -179,7 +190,7 @@ export default function AdminClients() {
             <Input placeholder={t("admin.clients.placeholderNotes")} multiline value={editForm.notes} onChangeText={(v) => setEditForm((s) => ({ ...s, notes: v }))} />
             <XStack items="center" gap="$3" py="$2">
               <Text fontSize="$3" color="$color">{t("admin.clients.active")}</Text>
-              <Switch value={editForm.isActive} onValueChange={(v) => setEditForm((s) => ({ ...s, isActive: v }))} trackColor={{ false: "#404040", true: "#2e5b42" }} />
+              <Switch value={editForm.isActive} onValueChange={(v) => setEditForm((s) => ({ ...s, isActive: v }))} trackColor={{ false: "#404040", true: ACCENT }} />
             </XStack>
             <Button disabled={updateClientMutation.isPending} onPress={() => showEditClient && updateClientMutation.mutate({ id: showEditClient, fullName: editForm.fullName, phone: editForm.phone || undefined, notes: editForm.notes || undefined, isActive: editForm.isActive })}>
               {t("admin.clients.save")}

@@ -7,6 +7,7 @@ import { LegendList } from "@legendapp/list";
 import { Text, XStack, YStack } from "tamagui";
 import { AppSheet } from "@/components/ui/sheet";
 import { GlassCard } from "@/components/ui/glass-card";
+import { ACCENT } from "@/components/ui/tokens";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState, ErrorState } from "@/components/ui/states";
 import { ScreenContainerRaw } from "@/components/ui/screen-container";
@@ -151,7 +152,7 @@ export default function ClientNotifications() {
                   <Switch
                     value={prefs.pushEnabled}
                     onValueChange={(v) => updatePrefsMutation.mutate({ pushEnabled: v })}
-                    trackColor={{ false: "#404040", true: "#2e5b42" }}
+                    trackColor={{ false: "#404040", true: ACCENT }}
                   />
                 </XStack>
                 <XStack justify="space-between" items="center" py="$2">
@@ -159,7 +160,7 @@ export default function ClientNotifications() {
                   <Switch
                     value={prefs.inAppEnabled}
                     onValueChange={(v) => updatePrefsMutation.mutate({ inAppEnabled: v })}
-                    trackColor={{ false: "#404040", true: "#2e5b42" }}
+                    trackColor={{ false: "#404040", true: ACCENT }}
                   />
                 </XStack>
                 <XStack justify="space-between" items="center" py="$2">
@@ -167,7 +168,7 @@ export default function ClientNotifications() {
                   <Switch
                     value={prefs.marketingOptIn}
                     onValueChange={(v) => updatePrefsMutation.mutate({ marketingOptIn: v })}
-                    trackColor={{ false: "#404040", true: "#2e5b42" }}
+                    trackColor={{ false: "#404040", true: ACCENT }}
                   />
                 </XStack>
               </YStack>

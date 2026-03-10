@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useMutation, useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { ActivityIndicator } from "react-native";
+import { ActivityIndicator, RefreshControl } from "react-native";
 import { LegendList } from "@legendapp/list";
 import { Text, XStack, YStack } from "tamagui";
 import { ActionButton } from "@/components/ui/action-button";
@@ -22,6 +22,7 @@ export default function TrainerNotes() {
   const queryClient = useQueryClient();
   const [showCreate, setShowCreate] = useState(false);
   const [form, setForm] = useState({ sessionId: "", clientProfileId: "", note: "" });
+  const [refreshing, setRefreshing] = useState(false);
   const dateLocale = getDateLocale();
 
   const notesQuery = useInfiniteQuery(trainerNotesQueries.listInfinite());
@@ -38,6 +39,12 @@ export default function TrainerNotes() {
   });
 
   const notes = notesQuery.data?.pages.flatMap((p) => p.notes) ?? [];
+
+  async function handleRefresh() {
+    setRefreshing(true);
+    await queryClient.invalidateQueries({ queryKey: ["trainer-notes"] });
+    setRefreshing(false);
+  }
 
   function handleEndReached() {
     if (notesQuery.hasNextPage && !notesQuery.isFetchingNextPage) notesQuery.fetchNextPage();
@@ -65,6 +72,7 @@ export default function TrainerNotes() {
         <LegendList
           data={notes}
           keyExtractor={(item) => item.id}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
           renderItem={({ item }: { item: TrainerNote }) => (
             <YStack py="$1.5">
               <Card>

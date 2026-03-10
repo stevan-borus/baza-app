@@ -45,6 +45,13 @@ export default function TrainerLayout() {
           tabBarIcon: ({ color }) => <TabIcon name="pencil" color={color} />,
         }}
       />
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: t("tabs.profile"),
+          tabBarIcon: ({ color }) => <TabIcon name="user" color={color} />,
+        }}
+      />
     </Tabs>
   );
 }

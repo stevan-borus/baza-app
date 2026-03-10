@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { ScrollView } from "react-native";
+import { RefreshControl, ScrollView } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Text, YStack } from "tamagui";
 import { ActionButton } from "@/components/ui/action-button";
@@ -18,12 +18,19 @@ export default function AdminPackages() {
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const [showCreate, setShowCreate] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [form, setForm] = useState({
     name: "",
     sessionCount: "",
     validityDays: "",
     lateCancelHours: "12",
   });
+
+  async function handleRefresh() {
+    setRefreshing(true);
+    await queryClient.invalidateQueries({ queryKey: ["packages", "types"] });
+    setRefreshing(false);
+  }
 
   const typesQuery = useQuery(packagesQueries.types());
   const createMutation = useMutation({
@@ -44,6 +51,7 @@ export default function AdminPackages() {
     <ScrollView
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
       contentContainerStyle={{
         paddingTop: insets.top + HEADER_HEIGHT + 12,
         paddingHorizontal: 24,

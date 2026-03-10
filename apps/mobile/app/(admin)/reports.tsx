@@ -1,6 +1,7 @@
-import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { ScrollView } from "react-native";
+import { RefreshControl, ScrollView } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Text, XStack, YStack } from "tamagui";
 import { Card, StatCard } from "@/components/ui/card";
@@ -10,7 +11,15 @@ import { TAB_BAR_HEIGHT, HEADER_HEIGHT } from "@/components/ui/constants";
 
 export default function AdminReports() {
   const { t } = useTranslation();
+  const queryClient = useQueryClient();
+  const [refreshing, setRefreshing] = useState(false);
   const insets = useSafeAreaInsets();
+
+  async function handleRefresh() {
+    setRefreshing(true);
+    await queryClient.invalidateQueries({ queryKey: ["reports"] });
+    setRefreshing(false);
+  }
   const summaryQuery = useQuery(reportsQueries.summary());
   const revenueQuery = useQuery(reportsQueries.revenue({ period: "month" }));
   const utilizationQuery = useQuery(
@@ -25,6 +34,7 @@ export default function AdminReports() {
     <ScrollView
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
       contentContainerStyle={{
         paddingTop: insets.top + HEADER_HEIGHT + 12,
         paddingHorizontal: 24,

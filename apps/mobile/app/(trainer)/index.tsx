@@ -1,88 +1,85 @@
 import { useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Calendar, type ICalendarEventBase } from "react-native-big-calendar";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import dayjs from "dayjs";
-import { useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
-import { Text, YStack } from "tamagui";
-import { LanguageSwitcher } from "@/components/LanguageSwitcher";
-import { useColorScheme } from "@/components/useColorScheme";
+import { RefreshControl, ScrollView } from "react-native";
+import FontAwesome from "@expo/vector-icons/FontAwesome";
+import { Text, XStack, YStack } from "tamagui";
 import { AppSheet } from "@/components/ui/sheet";
 import { Badge, Card, StatCard } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { ListRow, ErrorState } from "@/components/ui/states";
+import { SessionCard } from "@/components/ui/session-card";
+import { WeekStrip } from "@/components/ui/week-strip";
+import { EmptyState, ErrorState, ListRow } from "@/components/ui/states";
 import { ScreenContainerRaw } from "@/components/ui/screen-container";
-import { SegmentedControl } from "@/components/ui/tabs";
-import { SectionHeader } from "@/components/ui/typography";
-import { useCalendarTheme } from "@/lib/calendar-theme";
-import { getDateLocale } from "@/lib/i18n";
+import { SectionHeader, SectionLabel } from "@/components/ui/typography";
 import { authQueries } from "@/lib/queries/auth-queries-factory";
 import { sessionsQueries } from "@/lib/queries/sessions-queries-factory";
 import { notificationsQueries, type Notification } from "@/lib/queries/notifications-queries-factory";
-import { signOutWithPushCleanup } from "@/lib/sign-out";
 
-type ViewMode = "day" | "week" | "month";
-
-interface SessionEvent extends ICalendarEventBase {
-  sessionId: string;
-  classTypeName: string;
-  roomName: string | null;
-  bookedCount: number;
-  capacity: number;
-  availableSlots: number;
-}
-
-function currentMonthKey() {
-  const now = new Date();
-  return `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}`;
+function monthKeyFromDate(d: dayjs.Dayjs) {
+  return d.format("YYYY-MM");
 }
 
 export default function TrainerSchedule() {
   const { t } = useTranslation();
-  const router = useRouter();
   const queryClient = useQueryClient();
-  const [month, setMonth] = useState(() => currentMonthKey());
-  const [viewMode, setViewMode] = useState<ViewMode>("week");
-  const [calendarDate, setCalendarDate] = useState(new Date());
-  const [selectedEvent, setSelectedEvent] = useState<SessionEvent | null>(null);
-  const locale = getDateLocale().startsWith("en") ? "en" : "sr";
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === "dark";
-  const cal = useCalendarTheme();
+  const [selectedDate, setSelectedDate] = useState(dayjs().format("YYYY-MM-DD"));
+  const [month, setMonth] = useState(() => monthKeyFromDate(dayjs()));
+  const [selectedSession, setSelectedSession] = useState<{
+    sessionId: string;
+    classTypeName: string;
+    roomName: string | null;
+    bookedCount: number;
+    capacity: number;
+    availableSlots: number;
+    startsAt: Date;
+    endsAt: Date;
+  } | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const displayDate = dayjs(selectedDate);
 
   const meQuery = useQuery(authQueries.me());
   const availabilityQuery = useQuery(sessionsQueries.availabilityByMonth(month));
   const notifsQuery = useQuery(notificationsQueries.list());
 
-  const signOutMutation = useMutation({
-    mutationFn: async () => {
-      await signOutWithPushCleanup();
-    },
-    onSuccess: async () => {
-      queryClient.clear();
-      router.replace("/sign-in");
-    },
-  });
-
   const sessions = availabilityQuery.data?.sessions ?? [];
-  const sessionNotifs = (notifsQuery.data?.notifications ?? []).filter((n: Notification) => n.type === "SESSION_UPDATED");
+  const sessionNotifs = (notifsQuery.data?.notifications ?? []).filter(
+    (n: Notification) => n.type === "SESSION_UPDATED",
+  );
 
-  const events: SessionEvent[] = sessions.map((s) => ({
-    sessionId: s.id,
-    title: `${s.classTypeName} (${s.bookedCount}/${s.capacity})`,
-    start: new Date(s.startsAt),
-    end: new Date(s.endsAt),
-    classTypeName: s.classTypeName,
-    roomName: s.roomName,
-    bookedCount: s.bookedCount,
-    capacity: s.capacity,
-    availableSlots: s.availableSlots,
-  }));
+  // Filter sessions for selected day
+  const daySessions = sessions.filter(
+    (s) => dayjs(s.startsAt).format("YYYY-MM-DD") === selectedDate,
+  );
 
-  function handleDateChange(date: Date) {
-    const key = `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}`;
-    if (key !== month) setMonth(key);
-    setCalendarDate(date);
+  // Build activity map for WeekStrip
+  const activityByDate: Record<string, "booked" | "available"> = {};
+  for (const s of sessions) {
+    const dateKey = dayjs(s.startsAt).format("YYYY-MM-DD");
+    activityByDate[dateKey] = "available";
+  }
+
+  function handleDateSelect(date: string) {
+    setSelectedDate(date);
+    const newMonth = monthKeyFromDate(dayjs(date));
+    if (newMonth !== month) setMonth(newMonth);
+  }
+
+  function navigateMonth(direction: -1 | 1) {
+    const newDate = displayDate.add(direction, "month").startOf("month");
+    setSelectedDate(newDate.format("YYYY-MM-DD"));
+    setMonth(monthKeyFromDate(newDate));
+  }
+
+  async function handleRefresh() {
+    setRefreshing(true);
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["sessions"] }),
+      queryClient.invalidateQueries({ queryKey: ["notifications"] }),
+      queryClient.invalidateQueries({ queryKey: ["auth"] }),
+    ]);
+    setRefreshing(false);
   }
 
   return (
@@ -94,19 +91,7 @@ export default function TrainerSchedule() {
         />
 
         <Card>
-          <YStack gap="$3">
-            <SegmentedControl
-              segments={[
-                { value: "day" as const, label: t("trainer.schedule.viewDay") },
-                { value: "week" as const, label: t("trainer.schedule.viewWeek") },
-                { value: "month" as const, label: t("trainer.schedule.viewMonth") },
-              ]}
-              value={viewMode}
-              onValueChange={setViewMode}
-            />
-
-            <StatCard label={t("trainer.schedule.sessionsThisMonth")} value={sessions.length} />
-          </YStack>
+          <StatCard label={t("trainer.schedule.sessionsThisMonth")} value={sessions.length} />
         </Card>
 
         {sessionNotifs.length > 0 ? (
@@ -125,59 +110,96 @@ export default function TrainerSchedule() {
         ) : null}
       </YStack>
 
+      {/* Month/year header with arrows */}
+      <XStack px="$5" py="$3" justify="space-between" items="center">
+        <FontAwesome
+          name="chevron-left"
+          size={16}
+          color="#a1a1aa"
+          onPress={() => navigateMonth(-1)}
+        />
+        <Text fontSize="$5" fontWeight="700" color="$color" letterSpacing={-0.3}>
+          {displayDate.format("MMMM YYYY")}
+        </Text>
+        <FontAwesome
+          name="chevron-right"
+          size={16}
+          color="#a1a1aa"
+          onPress={() => navigateMonth(1)}
+        />
+      </XStack>
+
+      {/* WeekStrip */}
+      <YStack px="$5" pb="$3">
+        <WeekStrip
+          selectedDate={selectedDate}
+          onSelectDate={handleDateSelect}
+          activityByDate={activityByDate}
+        />
+      </YStack>
+
       {availabilityQuery.isError ? (
         <YStack px="$5">
           <ErrorState message={t("trainer.schedule.error")} />
         </YStack>
       ) : null}
 
-      <YStack flex={1} minHeight={500} px="$5">
-        <Card>
-          <Calendar
-            events={events}
-            height={480}
-            mode={viewMode === "day" ? "day" : viewMode === "week" ? "week" : "month"}
-            theme={cal.calendarTheme}
-            calendarContainerStyle={cal.calendarContainerStyle}
-            bodyContainerStyle={cal.bodyContainerStyle}
-            headerContainerStyle={cal.headerContainerStyle}
-            eventCellStyle={cal.eventCellStyle}
-            eventCellTextColor={cal.eventCellTextColor}
-            calendarCellStyle={cal.calendarCellStyle}
-            calendarCellTextStyle={cal.calendarCellTextStyle}
-            date={calendarDate}
-            onPressEvent={(event) => setSelectedEvent(event as SessionEvent)}
-            onSwipeEnd={handleDateChange}
-            swipeEnabled
-            weekStartsOn={1}
-            locale={locale}
-          />
-        </Card>
-      </YStack>
+      {/* Day sessions list */}
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 24 }}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+        }
+      >
+        <SectionLabel>
+          {displayDate.format("dddd, D MMMM")}
+        </SectionLabel>
+        <YStack gap="$3" pt="$3">
+          {daySessions.length === 0 ? (
+            <EmptyState title={t("client.dayView.noSessions")} />
+          ) : (
+            daySessions.map((session) => (
+              <SessionCard
+                key={session.id}
+                time={`${dayjs(session.startsAt).format("HH:mm")} - ${dayjs(session.endsAt).format("HH:mm")}`}
+                className={session.classTypeName}
+                room={session.roomName ?? undefined}
+                bookedCount={session.bookedCount}
+                capacity={session.capacity}
+                status={session.availableSlots > 0 ? "available" : "full"}
+                onPress={() =>
+                  setSelectedSession({
+                    sessionId: session.id,
+                    classTypeName: session.classTypeName,
+                    roomName: session.roomName,
+                    bookedCount: session.bookedCount,
+                    capacity: session.capacity,
+                    availableSlots: session.availableSlots,
+                    startsAt: session.startsAt,
+                    endsAt: session.endsAt,
+                  })
+                }
+              />
+            ))
+          )}
+        </YStack>
+      </ScrollView>
 
-      <YStack px="$5" pb="$4" gap="$4">
-        <Card>
-          <LanguageSwitcher />
-        </Card>
-        <Button variant="secondary" onPress={() => signOutMutation.mutate()}>
-          {t("client.signOut")}
-        </Button>
-      </YStack>
-
-      <AppSheet open={!!selectedEvent} onOpenChange={() => setSelectedEvent(null)}>
-        {selectedEvent ? (
+      <AppSheet open={!!selectedSession} onOpenChange={() => setSelectedSession(null)}>
+        {selectedSession ? (
           <YStack gap="$4">
             <Text fontSize="$6" fontWeight="700" color="$color" letterSpacing={-0.3}>
-              {selectedEvent.classTypeName}
+              {selectedSession.classTypeName}
             </Text>
             <Card>
               <YStack gap="$3">
                 <ListRow
-                  title={`${dayjs(selectedEvent.start).format("DD.MM.YYYY HH:mm")} - ${dayjs(selectedEvent.end).format("HH:mm")}`}
-                  subtitle={`${t("trainer.schedule.room")}: ${selectedEvent.roomName ?? "—"} · ${t("trainer.schedule.available")}: ${selectedEvent.availableSlots}`}
+                  title={`${dayjs(selectedSession.startsAt).format("DD.MM.YYYY HH:mm")} - ${dayjs(selectedSession.endsAt).format("HH:mm")}`}
+                  subtitle={`${t("trainer.schedule.room")}: ${selectedSession.roomName ?? "—"} · ${t("trainer.schedule.available")}: ${selectedSession.availableSlots}`}
                 />
                 <Badge variant="soft">
-                  {selectedEvent.bookedCount}/{selectedEvent.capacity} {t("trainer.schedule.booked")}
+                  {selectedSession.bookedCount}/{selectedSession.capacity} {t("trainer.schedule.booked")}
                 </Badge>
               </YStack>
             </Card>
