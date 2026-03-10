@@ -14,7 +14,7 @@ export default function AdminSettingsLayout() {
         name="index"
         options={{
           title: t("tabs.settings"),
-          headerBackVisible: false,
+          headerBackVisible: true,
         }}
       />
       <Stack.Screen

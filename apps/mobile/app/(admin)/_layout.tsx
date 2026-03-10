@@ -70,11 +70,7 @@ export default function AdminLayout() {
       />
       <Tabs.Screen
         name="settings"
-        options={{
-          title: t("tabs.settings"),
-          tabBarIcon: ({ color }) => <TabIcon name="cog" color={color} />,
-          headerShown: false,
-        }}
+        options={{ href: null, headerShown: false }}
       />
     </Tabs>
   );
