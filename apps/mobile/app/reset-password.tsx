@@ -1,33 +1,46 @@
 import { useMutation } from "@tanstack/react-query";
-import { Image } from "expo-image";
-import { LinearGradient } from "expo-linear-gradient";
+import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StatusBar,
-  StyleSheet,
-} from "react-native";
+import { Pressable } from "react-native";
 import Animated, {
-  FadeIn,
   FadeInDown,
   FadeOutLeft,
   SlideInRight,
   SlideOutLeft,
 } from "react-native-reanimated";
-import { Text, Theme, YStack } from "tamagui";
+import { Text, XStack, YStack } from "tamagui";
+import { AuthBackground } from "@/components/auth/auth-background";
 import { Button } from "@/components/ui/button";
+import { GlassCard } from "@/components/ui/glass-card";
 import { ErrorState } from "@/components/ui/states";
 import { Input, PasswordInput } from "@/components/ui/input";
-import { Label, LinkText } from "@/components/ui/typography";
+import { LinkText } from "@/components/ui/typography";
+import { ACCENT } from "@/components/ui/tokens";
 import { sharedEnv } from "@/lib/env.shared";
 
-const logoWhite = require("@/assets/images/logo-white.png");
+type Step = "request" | "reset" | "success";
 
-type Step = "request" | "reset";
+function StepDots({ current }: { current: Step }) {
+  const isFirst = current === "request";
+  return (
+    <XStack gap="$2" justify="center" mt="$3">
+      <YStack
+        width={8}
+        height={8}
+        rounded={4}
+        bg={isFirst ? ACCENT : "rgba(255,255,255,0.2)"}
+      />
+      <YStack
+        width={8}
+        height={8}
+        rounded={4}
+        bg={!isFirst ? ACCENT : "rgba(255,255,255,0.2)"}
+      />
+    </XStack>
+  );
+}
 
 export default function ResetPasswordScreen() {
   const { t } = useTranslation();
@@ -68,214 +81,181 @@ export default function ResetPasswordScreen() {
       if (!response.ok) throw new Error(`Reset failed (${response.status})`);
       return response.json();
     },
-    onSuccess: () => router.replace("/sign-in"),
+    onSuccess: () => setStep("success"),
   });
 
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1 }}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-    >
-      <ScrollView
-        contentContainerStyle={{ flexGrow: 1 }}
-        keyboardShouldPersistTaps="handled"
-        style={{ flex: 1 }}
-      >
-        <Theme name="dark">
-          <StatusBar barStyle="light-content" />
-          <YStack
-            flex={1}
-            px="$6"
+    <AuthBackground>
+      <YStack gap="$6" width="100%">
+        {/* Back arrow */}
+        <Pressable onPress={() => router.back()} hitSlop={12}>
+          <FontAwesome name="arrow-left" size={20} color="#ffffff" />
+        </Pressable>
+
+        {/* Lock icon badge */}
+        <YStack items="center" gap="$2">
+          <GlassCard
+            borderRadius={999}
+            width={64}
+            height={64}
+            items="center"
             justify="center"
-            gap="$6"
-            position="relative"
+            padding={0}
           >
-            {/* Same green-tinted dark gradient as sign-in */}
-            <LinearGradient
-              pointerEvents="none"
-              style={StyleSheet.absoluteFill}
-              colors={[
-                "hsla(151, 30%, 5%, 1)",
-                "hsla(151, 22%, 10%, 1)",
-                "hsla(151, 15%, 5%, 1)",
-              ]}
-              locations={[0, 0.5, 1]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
+            <FontAwesome
+              name={step === "success" ? "check" : "lock"}
+              size={24}
+              color={step === "success" ? ACCENT : "rgba(255,255,255,0.7)"}
             />
+          </GlassCard>
+          {step !== "success" ? <StepDots current={step} /> : null}
+        </YStack>
 
-            {/* Logo + Title */}
-            <YStack gap="$3" items="center" mb="$1">
-              <Animated.View entering={FadeIn.duration(600).springify()}>
-                <Image
-                  source={logoWhite}
-                  style={{ width: 120, height: 40 }}
-                  contentFit="contain"
-                />
-              </Animated.View>
+        {/* Success state */}
+        {step === "success" ? (
+          <Animated.View entering={FadeInDown.duration(400)}>
+            <YStack gap="$4" items="center">
+              <Text fontSize="$5" fontWeight="600" color="#ffffff">
+                {t("auth.passwordUpdated", { defaultValue: "Password updated" })}
+              </Text>
+              <Text fontSize="$3" color="rgba(255,255,255,0.5)" textAlign="center">
+                {t("auth.passwordUpdatedDesc", { defaultValue: "You can now sign in with your new password." })}
+              </Text>
+              <LinkText color="#ffffff" onPress={() => router.replace("/sign-in")}>
+                {t("auth.backToSignIn")}
+              </LinkText>
+            </YStack>
+          </Animated.View>
+        ) : null}
 
-              <Animated.View entering={FadeInDown.delay(200).duration(500)}>
-                <Text
-                  fontSize="$8"
-                  fontWeight="800"
-                  color="#ffffff"
-                  letterSpacing={-0.5}
-                >
+        {/* Step 1 — Request */}
+        {step === "request" ? (
+          <Animated.View
+            key="request-step"
+            entering={FadeInDown.delay(200).duration(500)}
+            exiting={FadeOutLeft.duration(300)}
+          >
+            <YStack gap="$4">
+              <YStack gap="$2" items="center">
+                <Text fontSize="$5" fontWeight="600" color="#ffffff">
                   {t("auth.resetPasswordTitle")}
                 </Text>
-              </Animated.View>
-
-              <Animated.View entering={FadeInDown.delay(300).duration(500)}>
-                <Text fontSize="$3" color="#ffffff" text="center">
-                  {step === "request"
-                    ? t("auth.resetPasswordIntro")
-                    : t("auth.resetTokenIntro")}
+                <Text fontSize="$3" color="rgba(255,255,255,0.5)" textAlign="center">
+                  {t("auth.resetPasswordIntro")}
                 </Text>
-              </Animated.View>
+              </YStack>
+
+              <Input
+                icon="envelope"
+                label={t("auth.email")}
+                autoCapitalize="none"
+                keyboardType="email-address"
+                textContentType="emailAddress"
+                autoComplete="email"
+                value={email}
+                onChangeText={setEmail}
+                color="#ffffff"
+                style={{ color: "#ffffff" }}
+              />
+
+              <Button
+                disabled={requestMutation.isPending || !email}
+                onPress={() => requestMutation.mutate()}
+                size="large"
+              >
+                <Text color="#ffffff" fontWeight="600" fontSize="$4">
+                  {t("auth.sendLink")}
+                </Text>
+              </Button>
+
+              {requestMutation.isError ? (
+                <ErrorState message={t("auth.sendLinkError")} />
+              ) : null}
+
+              {requestMutation.isSuccess ? (
+                <Animated.View entering={FadeInDown.springify()}>
+                  <GlassCard padding="$4">
+                    <Text color={ACCENT} fontWeight="600" fontSize="$3">
+                      {t("auth.resetLinkSent", { email })}
+                    </Text>
+                  </GlassCard>
+                </Animated.View>
+              ) : null}
+
+              <YStack items="center" gap="$3">
+                <LinkText color="rgba(255,255,255,0.6)" onPress={() => setStep("reset")}>
+                  {t("auth.haveToken")}
+                </LinkText>
+                <LinkText color="rgba(255,255,255,0.6)" onPress={() => router.back()}>
+                  {t("auth.backToSignIn")}
+                </LinkText>
+              </YStack>
             </YStack>
+          </Animated.View>
+        ) : null}
 
-            {/* Step forms — animated transitions */}
-            {step === "request" ? (
-              <Animated.View
-                key="request-step"
-                entering={FadeInDown.delay(400).duration(500)}
-                exiting={FadeOutLeft.duration(300)}
+        {/* Step 2 — Reset */}
+        {step === "reset" ? (
+          <Animated.View
+            key="reset-step"
+            entering={SlideInRight.duration(400).springify()}
+            exiting={SlideOutLeft.duration(300)}
+          >
+            <YStack gap="$4">
+              <YStack gap="$2" items="center">
+                <Text fontSize="$5" fontWeight="600" color="#ffffff">
+                  {t("auth.checkEmail", { defaultValue: "Check your email" })}
+                </Text>
+                <Text fontSize="$3" color="rgba(255,255,255,0.5)" textAlign="center">
+                  {t("auth.resetTokenIntro")}
+                </Text>
+              </YStack>
+
+              <Input
+                label={t("auth.tokenPlaceholder")}
+                autoCapitalize="none"
+                value={token}
+                onChangeText={setToken}
+                color="#ffffff"
+                style={{ color: "#ffffff" }}
+              />
+
+              <PasswordInput
+                label={t("auth.newPassword")}
+                textContentType="newPassword"
+                value={password}
+                onChangeText={setPassword}
+                color="#ffffff"
+                style={{ color: "#ffffff" }}
+                iconColor="rgba(255,255,255,0.5)"
+              />
+
+              <Button
+                disabled={resetMutation.isPending || !token || !password}
+                onPress={() => resetMutation.mutate()}
+                size="large"
               >
-                <YStack gap="$4">
-                  <YStack gap="$2">
-                    <Label color="#ffffff">{t("auth.email")}</Label>
-                    <Input
-                      bg="rgba(255,255,255,0.06)"
-                      borderColor="transparent"
-                      autoCapitalize="none"
-                      keyboardType="email-address"
-                      textContentType="emailAddress"
-                      autoComplete="email"
-                      value={email}
-                      onChangeText={setEmail}
-                      placeholderTextColor="$color9"
-                      color="#ffffff"
-                      style={{ color: "#ffffff" }}
-                    />
-                  </YStack>
+                <Text color="#ffffff" fontWeight="600" fontSize="$4">
+                  {t("auth.resetSubmit")}
+                </Text>
+              </Button>
 
-                  <YStack gap="$3">
-                    <Button
-                      disabled={requestMutation.isPending || !email}
-                      onPress={() => requestMutation.mutate()}
-                      size="large"
-                      bg="#2e5b42"
-                      rounded={16}
-                    >
-                      <Text color="#ffffff" fontWeight="600" fontSize="$4">
-                        {t("auth.sendLink")}
-                      </Text>
-                    </Button>
+              {resetMutation.isError ? (
+                <ErrorState message={t("auth.resetError")} />
+              ) : null}
 
-                    {requestMutation.isError ? (
-                      <ErrorState message={t("auth.sendLinkError")} />
-                    ) : null}
-
-                    {requestMutation.isSuccess ? (
-                      <Animated.View entering={FadeInDown.springify()}>
-                        <YStack bg="rgba(74,222,128,0.12)" rounded={16} p="$4">
-                          <Text
-                            color="#4ade80"
-                            fontWeight="600"
-                            fontSize="$3"
-                          >
-                            {t("auth.resetLinkSent", { email })}
-                          </Text>
-                        </YStack>
-                      </Animated.View>
-                    ) : null}
-                  </YStack>
-
-                  <YStack items="center" gap="$3">
-                    <LinkText color="#ffffff" onPress={() => setStep("reset")}>
-                      {t("auth.haveToken")}
-                    </LinkText>
-                    <LinkText color="#ffffff" onPress={() => router.back()}>
-                      {t("auth.backToSignIn")}
-                    </LinkText>
-                  </YStack>
-                </YStack>
-              </Animated.View>
-            ) : (
-              <Animated.View
-                key="reset-step"
-                entering={SlideInRight.duration(400).springify()}
-                exiting={SlideOutLeft.duration(300)}
-              >
-                <YStack gap="$4">
-                  <YStack gap="$2">
-                    <Label color="#ffffff">
-                      {t("auth.tokenPlaceholder")}
-                    </Label>
-                    <Input
-                      bg="rgba(255,255,255,0.06)"
-                      borderColor="transparent"
-                      autoCapitalize="none"
-                      value={token}
-                      onChangeText={setToken}
-                      placeholderTextColor="$color9"
-                      color="#ffffff"
-                      style={{ color: "#ffffff" }}
-                    />
-                  </YStack>
-
-                  <YStack gap="$2">
-                    <Label color="#ffffff">{t("auth.newPassword")}</Label>
-                    <PasswordInput
-                      bg="rgba(255,255,255,0.06)"
-                      borderColor="transparent"
-                      textContentType="newPassword"
-                      value={password}
-                      onChangeText={setPassword}
-                      placeholderTextColor="$color9"
-                      color="#ffffff"
-                      style={{ color: "#ffffff" }}
-                      iconColor="white"
-                    />
-                  </YStack>
-
-                  <YStack gap="$3">
-                    <Button
-                      disabled={
-                        resetMutation.isPending || !token || !password
-                      }
-                      onPress={() => resetMutation.mutate()}
-                      size="large"
-                      bg="#2e5b42"
-                      rounded={16}
-                    >
-                      <Text color="#ffffff" fontWeight="600" fontSize="$4">
-                        {t("auth.resetSubmit")}
-                      </Text>
-                    </Button>
-
-                    {resetMutation.isError ? (
-                      <ErrorState message={t("auth.resetError")} />
-                    ) : null}
-                  </YStack>
-
-                  <YStack items="center" gap="$3">
-                    <LinkText
-                      color="#ffffff"
-                      onPress={() => setStep("request")}
-                    >
-                      {t("auth.backToRequest")}
-                    </LinkText>
-                    <LinkText color="#ffffff" onPress={() => router.back()}>
-                      {t("auth.backToSignIn")}
-                    </LinkText>
-                  </YStack>
-                </YStack>
-              </Animated.View>
-            )}
-          </YStack>
-        </Theme>
-      </ScrollView>
-    </KeyboardAvoidingView>
+              <YStack items="center" gap="$3">
+                <LinkText color="rgba(255,255,255,0.6)" onPress={() => setStep("request")}>
+                  {t("auth.backToRequest")}
+                </LinkText>
+                <LinkText color="rgba(255,255,255,0.6)" onPress={() => router.back()}>
+                  {t("auth.backToSignIn")}
+                </LinkText>
+              </YStack>
+            </YStack>
+          </Animated.View>
+        ) : null}
+      </YStack>
+    </AuthBackground>
   );
 }

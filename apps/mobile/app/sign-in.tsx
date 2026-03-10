@@ -1,27 +1,16 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Image } from "expo-image";
-import { LinearGradient } from "expo-linear-gradient";
 import { Link, useRouter, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StatusBar,
-  StyleSheet,
-  ActivityIndicator,
-} from "react-native";
-import Animated, {
-  FadeIn,
-  FadeInDown,
-  FadeOut,
-} from "react-native-reanimated";
-import { Text, Theme, YStack } from "tamagui";
+import { ActivityIndicator } from "react-native";
+import Animated, { FadeIn, FadeInDown, FadeOut } from "react-native-reanimated";
+import { Text, YStack } from "tamagui";
+import { AuthBackground } from "@/components/auth/auth-background";
 import { Button } from "@/components/ui/button";
-import { ErrorState } from "@/components/ui/states";
+import { GlassCard } from "@/components/ui/glass-card";
 import { Input, PasswordInput } from "@/components/ui/input";
-import { Label, LinkText } from "@/components/ui/typography";
+import { LinkText } from "@/components/ui/typography";
 import { authClient } from "@/lib/auth-client";
 
 const logoWhite = require("@/assets/images/logo-white.png");
@@ -65,124 +54,94 @@ export default function SignInScreen() {
     email.length > 0 && password.length > 0 && !signInMutation.isPending;
 
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1 }}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-    >
-      <ScrollView
-        contentContainerStyle={{ flexGrow: 1 }}
-        keyboardShouldPersistTaps="handled"
-        style={{ flex: 1 }}
-      >
-        <Theme name="dark">
-          <StatusBar barStyle="light-content" />
-          <YStack
-            flex={1}
-            px="$6"
-            justify="center"
-            gap="$6"
-            position="relative"
-          >
-            {/* Rich green-tinted dark gradient */}
-            <LinearGradient
-              pointerEvents="none"
-              style={StyleSheet.absoluteFill}
-              colors={[
-                "hsla(151, 30%, 5%, 1)",
-                "hsla(151, 22%, 10%, 1)",
-                "hsla(151, 15%, 5%, 1)",
-              ]}
-              locations={[0, 0.5, 1]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
+    <AuthBackground>
+      <YStack gap="$6" width="100%">
+        {/* Logo */}
+        <YStack items="center" mt="25%">
+          <Animated.View entering={FadeIn.duration(600).springify()}>
+            <Image
+              source={logoWhite}
+              style={{ width: 180, height: 60 }}
+              contentFit="contain"
+            />
+          </Animated.View>
+        </YStack>
+
+        {/* Heading */}
+        <Animated.View entering={FadeInDown.delay(200).duration(500)}>
+          <YStack gap="$2" items="center">
+            <Text fontSize={28} fontWeight="700" color="#ffffff" letterSpacing={-0.5}>
+              {t("auth.welcomeBack", { defaultValue: "Welcome back" })}
+            </Text>
+            <Text fontSize="$3" color="rgba(255,255,255,0.5)">
+              {t("auth.signInSubtitle", { defaultValue: "Sign in to your account" })}
+            </Text>
+          </YStack>
+        </Animated.View>
+
+        {/* Form */}
+        <Animated.View entering={FadeInDown.delay(300).duration(500)}>
+          <YStack gap="$4">
+            <Input
+              icon="envelope"
+              label={t("auth.email")}
+              autoCapitalize="none"
+              autoCorrect={false}
+              keyboardType="email-address"
+              textContentType="emailAddress"
+              autoComplete="email"
+              value={email}
+              onChangeText={setEmail}
+              color="#ffffff"
+              style={{ color: "#ffffff" }}
             />
 
-            {/* Logo */}
-            <YStack items="center" mb="$2">
-              <Animated.View entering={FadeIn.duration(600).springify()}>
-                <Image
-                  source={logoWhite}
-                  style={{ width: 180, height: 60 }}
-                  contentFit="contain"
-                />
-              </Animated.View>
+            <PasswordInput
+              label={t("auth.password")}
+              value={password}
+              onChangeText={setPassword}
+              color="#ffffff"
+              style={{ color: "#ffffff" }}
+              iconColor="rgba(255,255,255,0.5)"
+            />
+
+            <YStack items="flex-end">
+              <Link href="/reset-password" asChild>
+                <LinkText color="rgba(255,255,255,0.6)" fontSize="$2">
+                  {t("auth.forgotPassword")}
+                </LinkText>
+              </Link>
             </YStack>
 
-            {/* Form — borderless, directly on background */}
-            <Animated.View entering={FadeInDown.delay(300).duration(500)}>
-              <YStack gap="$4">
-                <YStack gap="$2">
-                  <Label color="#ffffff">{t("auth.email")}</Label>
-                  <Input
-                    bg="rgba(255,255,255,0.06)"
-                    borderColor="transparent"
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                    keyboardType="email-address"
-                    textContentType="emailAddress"
-                    autoComplete="email"
-                    value={email}
-                    onChangeText={setEmail}
-                    placeholderTextColor="$color9"
-                    color="#ffffff"
-                    style={{ color: "#ffffff" }}
-                  />
-                </YStack>
+            {signInMutation.isError ? (
+              <Animated.View entering={FadeInDown.duration(300)}>
+                <GlassCard accentBorder="left" borderLeftColor="$red10" padding="$3">
+                  <Text color="$red10" fontSize="$2" fontWeight="500">
+                    {t("auth.signInError")}
+                  </Text>
+                </GlassCard>
+              </Animated.View>
+            ) : null}
 
-                <Animated.View entering={FadeInDown.delay(400).duration(500)}>
-                  <YStack gap="$2">
-                    <Label color="#ffffff">{t("auth.password")}</Label>
-                    <PasswordInput
-                      bg="rgba(255,255,255,0.06)"
-                      borderColor="transparent"
-                      value={password}
-                      onChangeText={setPassword}
-                      placeholderTextColor="$color9"
-                      color="#ffffff"
-                      style={{ color: "#ffffff" }}
-                      iconColor="white"
-                    />
-                  </YStack>
+            <Button
+              disabled={!canSubmit}
+              onPress={() => signInMutation.mutate()}
+              size="large"
+              mt="$2"
+            >
+              {signInMutation.isPending ? (
+                <Animated.View entering={FadeIn.duration(200)} exiting={FadeOut.duration(200)}>
+                  <ActivityIndicator color="#fff" size="small" />
                 </Animated.View>
-
-                <YStack items="flex-end">
-                  <Link href="/reset-password" asChild>
-                    <LinkText color="#ffffff" fontSize="$2">
-                      {t("auth.forgotPassword")}
-                    </LinkText>
-                  </Link>
-                </YStack>
-
-                <YStack gap="$3">
-                  <Button
-                    disabled={!canSubmit}
-                    onPress={() => signInMutation.mutate()}
-                    size="large"
-                    bg="#2e5b42"
-                    rounded={16}
-                  >
-                    {signInMutation.isPending ? (
-                      <Animated.View entering={FadeIn.duration(200)} exiting={FadeOut.duration(200)}>
-                        <ActivityIndicator color="#fff" size="small" />
-                      </Animated.View>
-                    ) : (
-                      <Text color="#ffffff" fontWeight="600" fontSize="$4">
-                        {t("auth.submit")}
-                      </Text>
-                    )}
-                  </Button>
-
-                  {signInMutation.isError ? (
-                    <Animated.View entering={FadeInDown.duration(300)}>
-                      <ErrorState message={t("auth.signInError")} />
-                    </Animated.View>
-                  ) : null}
-                </YStack>
-              </YStack>
-            </Animated.View>
+              ) : (
+                <Text color="#ffffff" fontWeight="600" fontSize="$4">
+                  {t("auth.submit")}
+                </Text>
+              )}
+            </Button>
           </YStack>
-        </Theme>
-      </ScrollView>
-    </KeyboardAvoidingView>
+        </Animated.View>
+      </YStack>
+    </AuthBackground>
   );
 }
