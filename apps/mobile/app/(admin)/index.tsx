@@ -1,14 +1,15 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { ScrollView } from "react-native";
+import { ScrollView, TouchableOpacity } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useRouter } from "expo-router";
 import dayjs from "dayjs";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { Text, XStack, YStack } from "tamagui";
 import { AppSheet } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { Card, StatCard } from "@/components/ui/card";
 import { SessionCard } from "@/components/ui/session-card";
 import { WeekStrip } from "@/components/ui/week-strip";
 import { EmptyState, ErrorState, ListRow } from "@/components/ui/states";
@@ -19,6 +20,7 @@ import { HEADER_HEIGHT } from "@/components/ui/constants";
 import { sessionsQueries } from "@/lib/queries/sessions-queries-factory";
 import { trainingsQueries } from "@/lib/queries/trainings-queries-factory";
 import { roomsQueries } from "@/lib/queries/rooms-queries-factory";
+import { reportsQueries } from "@/lib/queries/reports-queries-factory";
 
 function monthKeyFromDate(d: dayjs.Dayjs) {
   return d.format("YYYY-MM");
@@ -28,6 +30,7 @@ export default function AdminSchedule() {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
+  const router = useRouter();
   const [selectedDate, setSelectedDate] = useState(dayjs().format("YYYY-MM-DD"));
   const [month, setMonth] = useState(() => monthKeyFromDate(dayjs()));
   const [showCreate, setShowCreate] = useState(false);
@@ -51,6 +54,8 @@ export default function AdminSchedule() {
   );
   const classTypesQuery = useQuery(trainingsQueries.classTypes());
   const roomsQuery = useQuery(roomsQueries.list());
+  const summaryQuery = useQuery(reportsQueries.summary());
+  const summary = summaryQuery.data?.summary;
 
   const [newSession, setNewSession] = useState<{
     classTypeId: string;
@@ -181,6 +186,38 @@ export default function AdminSchedule() {
       flex={1}
       style={{ paddingTop: insets.top + HEADER_HEIGHT + 12 }}
     >
+      {/* Gear icon for settings */}
+      <XStack px="$5" pt="$2" justify="flex-end">
+        <TouchableOpacity onPress={() => router.push("/(admin)/settings")} activeOpacity={0.6}>
+          <FontAwesome name="cog" size={22} color="#a1a1aa" />
+        </TouchableOpacity>
+      </XStack>
+
+      {/* Quick stats row */}
+      <XStack px="$5" gap="$3" pb="$3">
+        <YStack flex={1}>
+          <StatCard
+            label={t("admin.dashboard.todaySessions")}
+            value={daySessions.length}
+            icon="calendar"
+          />
+        </YStack>
+        <YStack flex={1}>
+          <StatCard
+            label={t("admin.dashboard.activeClients")}
+            value={summary?.activeClients ?? "—"}
+            icon="users"
+          />
+        </YStack>
+        <YStack flex={1}>
+          <StatCard
+            label={t("admin.dashboard.revenue")}
+            value={summary?.revenue ?? "—"}
+            icon="money"
+          />
+        </YStack>
+      </XStack>
+
       {/* Month/year header with arrows */}
       <XStack px="$5" py="$3" justify="space-between" items="center">
         <FontAwesome
