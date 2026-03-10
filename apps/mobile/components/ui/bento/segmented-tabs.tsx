@@ -1,5 +1,6 @@
 import React from "react";
 import { Tabs, Text } from "tamagui";
+import { GLASS_BG, GLASS_BORDER } from "../tokens";
 
 type BentoSegmentedTabsProps<T extends string> = {
   segments: Array<{ value: T; label: string }>;
@@ -20,14 +21,14 @@ export function BentoSegmentedTabs<T extends string>({
       onValueChange={(next) => onValueChange(next as T)}
       orientation="horizontal"
     >
-      <Tabs.List bg="$color2" rounded={14} p="$1">
+      <Tabs.List bg={GLASS_BG} borderWidth={1} borderColor={GLASS_BORDER} rounded={14} p="$1">
         {segments.map((segment) => {
           const isActive = segment.value === value;
           return (
             <Tabs.Tab
               key={segment.value}
               value={segment.value}
-              bg={isActive ? "$background" : "transparent"}
+              bg={isActive ? "rgba(255,255,255,0.1)" : "transparent"}
               rounded={12}
               py="$2"
               px={fullWidth ? "$3" : "$2.5"}

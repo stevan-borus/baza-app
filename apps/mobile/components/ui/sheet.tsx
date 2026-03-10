@@ -1,6 +1,7 @@
 import React, { PropsWithChildren, useEffect, useState } from "react";
 import { Sheet, Theme } from "tamagui";
 import { useColorScheme } from "@/components/useColorScheme";
+import { GLASS_BORDER } from "./tokens";
 
 export function AppSheet({
   open,
@@ -37,13 +38,15 @@ export function AppSheet({
         <Sheet.Handle
           height={4}
           rounded={999}
-          bg={isDark ? "rgba(255,255,255,0.28)" : "rgba(38,77,59,0.42)"}
+          bg="rgba(255,255,255,0.2)"
           opacity={1}
         />
         <Sheet.Frame
-          bg={isDark ? "hsla(151, 18%, 13%, 1)" : "$background"}
+          bg={isDark ? "rgba(10,15,20,0.95)" : "$background"}
           borderTopLeftRadius={26}
           borderTopRightRadius={26}
+          borderTopWidth={1}
+          borderTopColor={isDark ? GLASS_BORDER : "transparent"}
           px="$5"
           pt="$4"
           pb="$8"

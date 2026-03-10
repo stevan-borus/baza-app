@@ -14,6 +14,7 @@ export function LinkText({ children, ...props }: LinkTextProps) {
       fontWeight="500"
       py="$2"
       pressStyle={{ opacity: 0.7 }}
+      cursor="pointer"
       {...props}
     >
       {children}
@@ -33,6 +34,19 @@ export function Label({ children, ...props }: LabelProps) {
   );
 }
 
+export function ScreenTitle({ children }: PropsWithChildren) {
+  return (
+    <Text
+      color="$color"
+      fontSize={28}
+      fontWeight="700"
+      letterSpacing={-0.5}
+    >
+      {children}
+    </Text>
+  );
+}
+
 export function SectionHeader({
   title,
   subtitle,
@@ -43,7 +57,7 @@ export function SectionHeader({
   return (
     <Animated.View entering={FadeInLeft.duration(400).springify()}>
       <YStack gap="$1">
-        <Text color="$color" fontSize="$8" fontWeight="700" letterSpacing={-0.5}>
+        <Text color="$color" fontSize="$5" fontWeight="600">
           {title}
         </Text>
         {subtitle ? (

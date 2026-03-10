@@ -19,17 +19,16 @@ const lightPalette = [
   "hsla(30, 8%, 6%, 1)",    // color12
 ];
 
-// Green-tinted dark palette — Apple Health-style contrast
-// Deep green-black background with clearly elevated card surfaces
+// Neutral dark palette — #0A0F14 base with clear surface elevation
 const darkPalette = [
-  "hsla(151, 30%, 5%, 1)",  // background - very deep green-black
-  "hsla(151, 18%, 13%, 1)", // color2 - card surface (clear lift from bg)
-  "hsla(151, 14%, 17%, 1)", // color3 - elevated surface / hover
-  "hsla(151, 11%, 21%, 1)",
-  "hsla(151, 9%, 26%, 1)",
-  "hsla(151, 7%, 32%, 1)",
-  "hsla(151, 6%, 42%, 1)",
-  "hsla(151, 5%, 52%, 1)",
+  "#0A0F14",                 // background - deep neutral dark
+  "hsla(210, 15%, 11%, 1)", // color2 - card surface (clear lift from bg)
+  "hsla(210, 12%, 15%, 1)", // color3 - elevated surface / hover
+  "hsla(210, 10%, 19%, 1)",
+  "hsla(210, 8%, 24%, 1)",
+  "hsla(210, 6%, 30%, 1)",
+  "hsla(210, 5%, 40%, 1)",
+  "hsla(210, 4%, 50%, 1)",
   "hsla(0, 0%, 65%, 1)",
   "hsla(0, 0%, 78%, 1)",
   "hsla(0, 0%, 100%, 1)",   // color11 - pure white text
@@ -52,20 +51,20 @@ const accentLight = {
   accent12: "hsla(151, 8%, 95%, 1)",
 } as const;
 
-// Dark mode gets brighter green for readability
+// Dark mode accent — same brand green + lighter variant for readability
 const accentDark = {
-  accent1: "hsla(151, 40%, 35%, 1)",   // brighter green for dark mode
-  accent2: "hsla(151, 36%, 32%, 1)",
-  accent3: "hsla(151, 32%, 29%, 1)",
-  accent4: "hsla(151, 28%, 26%, 1)",
-  accent5: "hsla(151, 24%, 23%, 1)",
-  accent6: "hsla(151, 20%, 20%, 1)",
-  accent7: "hsla(151, 16%, 18%, 1)",
-  accent8: "hsla(151, 12%, 16%, 1)",
-  accent9: "hsla(151, 10%, 14%, 1)",
-  accent10: "hsla(151, 8%, 12%, 1)",
-  accent11: "hsla(151, 6%, 10%, 1)",
-  accent12: "hsla(151, 4%, 8%, 1)",
+  accent1: "hsla(151, 33%, 27%, 1)",   // #2e5b42 - same brand green
+  accent2: "hsla(151, 30%, 30%, 1)",
+  accent3: "hsla(151, 28%, 34%, 1)",
+  accent4: "hsla(151, 25%, 38%, 1)",
+  accent5: "hsla(151, 22%, 42%, 1)",
+  accent6: "hsla(151, 20%, 47%, 1)",
+  accent7: "hsla(151, 18%, 52%, 1)",   // #4a8c6b - accent light variant
+  accent8: "hsla(151, 16%, 58%, 1)",
+  accent9: "hsla(151, 14%, 64%, 1)",
+  accent10: "hsla(151, 12%, 72%, 1)",
+  accent11: "hsla(151, 10%, 85%, 1)",
+  accent12: "hsla(151, 8%, 95%, 1)",
 } as const;
 
 const builtThemes = createV5Theme({
@@ -151,8 +150,8 @@ export const navigationThemeColors = {
     notification: builtThemes.light.red10,
   },
   dark: {
-    background: darkPalette[0],
-    card: darkPalette[0],
+    background: "#0A0F14",
+    card: "#0A0F14",
     text: darkPalette[11],
     border: darkPalette[4],
     primary: accentDark.accent1,
@@ -163,6 +162,11 @@ export const navigationThemeColors = {
 const config = createTamagui({
   ...defaultConfig,
   themes,
+  media: {
+    sm: { maxWidth: 640 },
+    md: { maxWidth: 1024 },
+    lg: { minWidth: 1025 },
+  },
   shorthands: {
     ...defaultConfig.shorthands,
     f: "flex",

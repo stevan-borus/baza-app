@@ -1,7 +1,13 @@
 import React, { PropsWithChildren } from "react";
+import { Platform } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { YStack } from "tamagui";
 import { TAB_BAR_HEIGHT } from "./constants";
+
+const webConstraint =
+  Platform.OS === "web"
+    ? { maxWidth: 480, marginLeft: "auto" as const, marginRight: "auto" as const, width: "100%" as const }
+    : {};
 
 /** Wraps screen content with proper insets for transparent header + absolute tab bar. */
 export function ScreenContainer({ children }: PropsWithChildren) {
@@ -15,7 +21,7 @@ export function ScreenContainer({ children }: PropsWithChildren) {
       px="$6"
       pb={TAB_BAR_HEIGHT + 16}
       gap="$6"
-      style={{ paddingTop: topPadding }}
+      style={{ paddingTop: topPadding, ...webConstraint }}
     >
       {children}
     </YStack>
@@ -31,7 +37,7 @@ export function ScreenContainerRaw({ children }: PropsWithChildren) {
     <YStack
       flex={1}
       bg="$background"
-      style={{ paddingTop: topPadding, paddingBottom: TAB_BAR_HEIGHT }}
+      style={{ paddingTop: topPadding, paddingBottom: TAB_BAR_HEIGHT, ...webConstraint }}
     >
       {children}
     </YStack>

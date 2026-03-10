@@ -8,6 +8,8 @@ import Animated, {
   withSequence,
   withTiming,
 } from "react-native-reanimated";
+import { GlassCard } from "./glass-card";
+import { Button } from "./button";
 
 export function ListRow({
   title,
@@ -30,42 +32,50 @@ export function ListRow({
   );
 }
 
+const AnimatedGlassCard = Animated.createAnimatedComponent(GlassCard);
+
 export function EmptyState({
   title,
   description,
+  ctaLabel,
+  onCtaPress,
 }: {
   title: string;
   description?: string;
+  ctaLabel?: string;
+  onCtaPress?: () => void;
 }) {
   return (
-    <Animated.View entering={FadeInDown.duration(400).springify()}>
+    <AnimatedGlassCard
+      entering={FadeInDown.duration(400).springify()}
+      padding="$6"
+      items="center"
+      gap="$3"
+    >
       <YStack
-        p="$6"
-        rounded={22}
-        bg="$color2"
+        width={56}
+        height={56}
+        rounded={28}
+        bg="rgba(255,255,255,0.05)"
         items="center"
-        gap="$3"
+        justify="center"
       >
-        <YStack
-          width={56}
-          height={56}
-          rounded={28}
-          bg="$color3"
-          items="center"
-          justify="center"
-        >
-          <FontAwesome name="inbox" size={24} color="#9ca3af" />
-        </YStack>
-        <Text fontSize="$5" fontWeight="600" color="$color" text="center">
-          {title}
-        </Text>
-        {description ? (
-          <Text fontSize="$3" color="$color9" text="center">
-            {description}
-          </Text>
-        ) : null}
+        <FontAwesome name="inbox" size={24} color="rgba(255,255,255,0.3)" />
       </YStack>
-    </Animated.View>
+      <Text fontSize="$5" fontWeight="600" color="$color" textAlign="center">
+        {title}
+      </Text>
+      {description ? (
+        <Text fontSize="$3" color="$color9" textAlign="center">
+          {description}
+        </Text>
+      ) : null}
+      {ctaLabel && onCtaPress ? (
+        <Button variant="primary" size="small" onPress={onCtaPress} mt="$2">
+          {ctaLabel}
+        </Button>
+      ) : null}
+    </AnimatedGlassCard>
   );
 }
 
@@ -98,9 +108,41 @@ export function ErrorState({ message }: { message: string }) {
       style={animatedStyle}
     >
       <FontAwesome name="exclamation-circle" size={20} color="#ef4444" />
-      <Text color="$red10" fontSize="$3" fontWeight="500" text="center">
+      <Text color="$red10" fontSize="$3" fontWeight="500" textAlign="center">
         {message}
       </Text>
     </AnimatedYStack>
+  );
+}
+
+export function NetworkError({
+  onRetry,
+}: {
+  onRetry?: () => void;
+}) {
+  return (
+    <YStack flex={1} items="center" justify="center" p="$6" gap="$4">
+      <YStack
+        width={72}
+        height={72}
+        rounded={36}
+        bg="rgba(255,255,255,0.05)"
+        items="center"
+        justify="center"
+      >
+        <FontAwesome name="wifi" size={32} color="rgba(255,255,255,0.3)" />
+      </YStack>
+      <Text fontSize="$5" fontWeight="600" color="$color" textAlign="center">
+        No Connection
+      </Text>
+      <Text fontSize="$3" color="$color9" textAlign="center">
+        Check your internet connection and try again.
+      </Text>
+      {onRetry ? (
+        <Button variant="primary" size="default" onPress={onRetry}>
+          Retry
+        </Button>
+      ) : null}
+    </YStack>
   );
 }

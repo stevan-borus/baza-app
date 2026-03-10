@@ -17,7 +17,7 @@ export function TabIcon(props: {
 export function AppTabLoading({ isDark }: { isDark: boolean }) {
   return (
     <YStack flex={1} bg="$background" items="center" justify="center">
-      <ActivityIndicator size="large" color={isDark ? "#4ade80" : "#2e5b42"} />
+      <ActivityIndicator size="large" color={isDark ? "#2e5b42" : "#2e5b42"} />
     </YStack>
   );
 }
@@ -96,7 +96,7 @@ export function FloatingTabBar(
             const options = descriptor?.options ?? {};
 
             const color = isFocused
-              ? isDark ? "#4ade80" : "#2e5b42"
+              ? isDark ? "#2e5b42" : "#2e5b42"
               : isDark ? "rgba(255,255,255,0.5)" : "rgba(0,0,0,0.35)";
 
             const icon = options.tabBarIcon?.({
@@ -140,7 +140,7 @@ export function FloatingTabBar(
 export function getAppTabScreenOptions(isDark: boolean) {
   return {
     headerShown: false,
-    tabBarActiveTintColor: isDark ? "#4ade80" : "#2e5b42",
+    tabBarActiveTintColor: isDark ? "#2e5b42" : "#2e5b42",
     tabBarInactiveTintColor: isDark ? "rgba(255,255,255,0.5)" : "rgba(0,0,0,0.35)",
     tabBarShowLabel: false,
     tabBarStyle: {
@@ -153,7 +153,7 @@ export function getAppTabScreenOptions(isDark: boolean) {
     tabBarBackground: () => null,
     sceneContainerStyle: {
       backgroundColor: isDark
-        ? "hsla(151, 30%, 5%, 1)"
+        ? "#0A0F14"
         : "hsla(30, 25%, 98%, 1)",
     },
   };

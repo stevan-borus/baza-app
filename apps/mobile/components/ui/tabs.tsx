@@ -1,6 +1,7 @@
 import React from "react";
 import { Tabs, Text } from "tamagui";
 import { BentoSegmentedTabs } from "./bento/segmented-tabs";
+import { GLASS_BG, GLASS_BORDER } from "./tokens";
 
 export function AppTabs({
   tabs,
@@ -13,12 +14,12 @@ export function AppTabs({
 }) {
   return (
     <Tabs value={value} onValueChange={onValueChange}>
-      <Tabs.List bg="$color2" rounded={14} p="$1">
+      <Tabs.List bg={GLASS_BG} borderWidth={1} borderColor={GLASS_BORDER} rounded={14} p="$1">
         {tabs.map((tab) => (
           <Tabs.Tab
             key={tab.value}
             value={tab.value}
-            bg={value === tab.value ? "$background" : "transparent"}
+            bg={value === tab.value ? "rgba(255,255,255,0.1)" : "transparent"}
             rounded={12}
             py="$2"
             px="$3"

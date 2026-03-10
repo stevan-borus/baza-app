@@ -2,6 +2,7 @@ import React from "react";
 import * as Haptics from "expo-haptics";
 import { Button as TButton, Text } from "tamagui";
 import { useColorScheme } from "@/components/useColorScheme";
+import { GLASS_BG, GLASS_BORDER } from "./tokens";
 
 type ButtonVariant = "primary" | "secondary" | "danger" | "ghost";
 type ButtonSize = "small" | "default" | "large";
@@ -38,19 +39,25 @@ export function Button({
   > = {
     primary: {
       bg: "$accent1",
-      pressStyle: { opacity: 0.9, scale: 0.96 },
+      pressStyle: { opacity: 0.9, scale: 0.97 },
+      hoverStyle: { opacity: 0.9 },
     },
     secondary: {
-      bg: isDark ? "rgba(255,255,255,0.08)" : "$color2",
-      pressStyle: { opacity: 0.9, scale: 0.96 },
+      bg: isDark ? GLASS_BG : "$color2",
+      borderWidth: isDark ? 1 : 0,
+      borderColor: isDark ? GLASS_BORDER : undefined,
+      pressStyle: { opacity: 0.9, scale: 0.97 },
+      hoverStyle: { opacity: 0.85 },
     },
     danger: {
       bg: "$red3",
-      pressStyle: { opacity: 0.9, scale: 0.96 },
+      pressStyle: { opacity: 0.9, scale: 0.97 },
+      hoverStyle: { opacity: 0.9 },
     },
     ghost: {
       bg: "transparent",
       pressStyle: { opacity: 0.65 },
+      hoverStyle: { opacity: 0.8 },
     },
   };
 

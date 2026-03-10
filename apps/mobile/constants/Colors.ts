@@ -1,5 +1,5 @@
 const tintColorLight = "#2e5b42";
-const tintColorDark = "#4ade80";
+const tintColorDark = "#2e5b42";
 
 export default {
   light: {
@@ -11,9 +11,9 @@ export default {
   },
   dark: {
     text: "hsla(0, 0%, 93%, 1)",
-    background: "hsla(151, 30%, 5%, 1)",
+    background: "#0A0F14",
     tint: tintColorDark,
-    tabIconDefault: "hsla(151, 5%, 45%, 1)",
+    tabIconDefault: "hsla(210, 5%, 45%, 1)",
     tabIconSelected: tintColorDark,
   },
 };
