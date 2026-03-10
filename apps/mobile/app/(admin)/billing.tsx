@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   useMutation,
   useQuery,
@@ -8,12 +8,15 @@ import {
 import { useTranslation } from "react-i18next";
 import { ActivityIndicator, ScrollView } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import dayjs from "dayjs";
+import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { LegendList } from "@legendapp/list";
 import { Text, XStack, YStack } from "tamagui";
 import { getDateLocale } from "@/lib/i18n";
 import { ActionButton } from "@/components/ui/action-button";
 import { AppSheet } from "@/components/ui/sheet";
-import { Badge, Card } from "@/components/ui/card";
+import { Badge, Card, StatCard } from "@/components/ui/card";
+import { GlassCard } from "@/components/ui/glass-card";
 import { Button } from "@/components/ui/button";
 import { EmptyState, ErrorState } from "@/components/ui/states";
 import { Input } from "@/components/ui/input";
@@ -31,6 +34,7 @@ export default function AdminBilling() {
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const [showCreate, setShowCreate] = useState(false);
+  const [selectedMonth, setSelectedMonth] = useState(() => dayjs());
   const [form, setForm] = useState({
     clientUserId: "",
     amount: "",
@@ -43,6 +47,19 @@ export default function AdminBilling() {
   const clientsQuery = useQuery(clientsQueries.list());
   const packageTypesQuery = useQuery(packagesQueries.types());
   const records = billingQuery.data?.pages.flatMap((p) => p.records) ?? [];
+
+  const summaryStats = useMemo(() => {
+    const confirmed = records.filter((r) => r.status === "CONFIRMED");
+    const totalRevenue = confirmed.reduce((sum, r) => sum + r.amount, 0);
+    const count = confirmed.length;
+    const uniqueClients = new Set(confirmed.map((r) => r.clientUserId)).size;
+    const avg = uniqueClients > 0 ? Math.round(totalRevenue / uniqueClients) : 0;
+    return { totalRevenue, count, avg };
+  }, [records]);
+
+  function navigateBillingMonth(direction: -1 | 1) {
+    setSelectedMonth((m) => m.add(direction, "month"));
+  }
 
   const createMutation = useMutation({
     ...billingQueries.create(),
@@ -90,6 +107,43 @@ export default function AdminBilling() {
         gap: 16,
       }}
     >
+      {/* Period selector */}
+      <XStack justify="space-between" items="center">
+        <FontAwesome
+          name="chevron-left"
+          size={16}
+          color="#a1a1aa"
+          onPress={() => navigateBillingMonth(-1)}
+        />
+        <Text fontSize="$5" fontWeight="700" color="$color" letterSpacing={-0.3}>
+          {selectedMonth.format("MMMM YYYY")}
+        </Text>
+        <FontAwesome
+          name="chevron-right"
+          size={16}
+          color="#a1a1aa"
+          onPress={() => navigateBillingMonth(1)}
+        />
+      </XStack>
+
+      {/* Summary card */}
+      <GlassCard>
+        <XStack justify="space-around" items="center" py="$2">
+          <YStack items="center" gap="$1">
+            <Text fontSize="$2" color="$color10">{t("admin.manage.totalRevenue")}</Text>
+            <Text fontSize="$6" fontWeight="800" color="$color">{summaryStats.totalRevenue}</Text>
+          </YStack>
+          <YStack items="center" gap="$1">
+            <Text fontSize="$2" color="$color10">{t("admin.manage.transactionCount")}</Text>
+            <Text fontSize="$6" fontWeight="800" color="$color">{summaryStats.count}</Text>
+          </YStack>
+          <YStack items="center" gap="$1">
+            <Text fontSize="$2" color="$color10">{t("admin.manage.avgPerClient")}</Text>
+            <Text fontSize="$6" fontWeight="800" color="$color">{summaryStats.avg}</Text>
+          </YStack>
+        </XStack>
+      </GlassCard>
+
       <ActionButton
         icon="plus"
         label={t("admin.manage.sheetNewPayment")}
@@ -116,8 +170,12 @@ export default function AdminBilling() {
                         {item.amount} RSD
                       </Text>
                       <Badge
-                        color={
-                          item.status === "CONFIRMED" ? "$accent1" : "$accent8"
+                        status={
+                          item.status === "CONFIRMED"
+                            ? "success"
+                            : item.status === "PENDING"
+                              ? "warning"
+                              : "danger"
                         }
                       >
                         {statusLabelKeys[item.status]
