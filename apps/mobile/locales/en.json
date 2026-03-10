@@ -39,7 +39,8 @@
     "billing": "Billing",
     "reports": "Reports",
     "settings": "Settings",
-    "notes": "Notes"
+    "notes": "Notes",
+    "profile": "Profile"
   },
   "client": {
     "profile": {
@@ -67,6 +68,46 @@
       "noNotes": "No training notes."
     },
     "signOut": "Sign out",
+    "home": {
+      "greeting": "Hello, {{name}}",
+      "nextClass": "Next class",
+      "noUpcoming": "No upcoming classes",
+      "sessionsLeft": "{{used}}/{{total}} sessions used",
+      "recentNotes": "Recent notes",
+      "in": "in {{time}}"
+    },
+    "onboarding": {
+      "getStarted": "Get started",
+      "profileComplete": "Profile complete",
+      "firstClassBooked": "First class booked",
+      "notificationsOn": "Notifications configured",
+      "allSet": "You're all set!",
+      "dismiss": "Dismiss"
+    },
+    "profileTab": {
+      "myPackages": "My packages",
+      "sessions": "{{remaining}}/{{total}} sessions",
+      "expires": "Expires {{date}}",
+      "trainingHistory": "Training history",
+      "preferences": "Preferences",
+      "language": "Language",
+      "notificationSettings": "Notification settings",
+      "account": "Account",
+      "paused": "Paused",
+      "expired": "Expired"
+    },
+    "dayView": {
+      "noSessions": "No sessions on this day",
+      "sessionDetail": "Session details",
+      "duration": "{{minutes}} min",
+      "trainer": "Trainer",
+      "participants": "{{count}}/{{capacity}} booked",
+      "confirmBook": "Confirm booking?",
+      "confirm": "Confirm",
+      "cancelWarning": "Are you sure you want to cancel?",
+      "joinWaitlist": "Join waitlist",
+      "leaveWaitlist": "Leave waitlist"
+    },
     "calendar": {
       "title": "Calendar",
       "description": "View and book sessions.",

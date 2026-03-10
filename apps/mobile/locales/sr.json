@@ -39,7 +39,8 @@
     "billing": "Naplata",
     "reports": "Izveštaji",
     "settings": "Podešavanja",
-    "notes": "Beleške"
+    "notes": "Beleške",
+    "profile": "Profil"
   },
   "client": {
     "profile": {
@@ -67,6 +68,46 @@
       "noNotes": "Nema zabeleški o treninzima."
     },
     "signOut": "Odjavi se",
+    "home": {
+      "greeting": "Zdravo, {{name}}",
+      "nextClass": "Sledeći trening",
+      "noUpcoming": "Nema predstojećih treninga",
+      "sessionsLeft": "{{used}}/{{total}} sesija iskorišćeno",
+      "recentNotes": "Poslednje beleške",
+      "in": "za {{time}}"
+    },
+    "onboarding": {
+      "getStarted": "Započnite",
+      "profileComplete": "Profil kompletiran",
+      "firstClassBooked": "Prvi trening zakazan",
+      "notificationsOn": "Obaveštenja podešena",
+      "allSet": "Sve je spremno!",
+      "dismiss": "Zatvori"
+    },
+    "profileTab": {
+      "myPackages": "Moji paketi",
+      "sessions": "{{remaining}}/{{total}} sesija",
+      "expires": "Ističe {{date}}",
+      "trainingHistory": "Istorija treninga",
+      "preferences": "Podešavanja",
+      "language": "Jezik",
+      "notificationSettings": "Podešavanja obaveštenja",
+      "account": "Nalog",
+      "paused": "Pauziran",
+      "expired": "Istekao"
+    },
+    "dayView": {
+      "noSessions": "Nema sesija ovog dana",
+      "sessionDetail": "Detalji sesije",
+      "duration": "{{minutes}} min",
+      "trainer": "Trener",
+      "participants": "{{count}}/{{capacity}} zakazano",
+      "confirmBook": "Potvrdite rezervaciju?",
+      "confirm": "Potvrdi",
+      "cancelWarning": "Da li ste sigurni da želite da otkažete?",
+      "joinWaitlist": "Pridruži se listi čekanja",
+      "leaveWaitlist": "Napusti listu čekanja"
+    },
     "calendar": {
       "title": "Kalendar",
       "description": "Pregledajte i zakažite termine.",

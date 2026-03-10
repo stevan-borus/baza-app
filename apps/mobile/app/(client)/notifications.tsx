@@ -2,16 +2,24 @@ import { useState } from "react";
 import { useMutation, useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { ActivityIndicator, Pressable, Switch } from "react-native";
+import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { LegendList } from "@legendapp/list";
 import { Text, XStack, YStack } from "tamagui";
 import { AppSheet } from "@/components/ui/sheet";
-import { Badge, Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { GlassCard } from "@/components/ui/glass-card";
+import { Badge } from "@/components/ui/badge";
 import { EmptyState, ErrorState } from "@/components/ui/states";
 import { ScreenContainerRaw } from "@/components/ui/screen-container";
 import { SectionHeader } from "@/components/ui/typography";
 import { getDateLocale } from "@/lib/i18n";
 import { notificationsQueries, type Notification } from "@/lib/queries/notifications-queries-factory";
+
+const typeBadgeStatus: Record<string, "success" | "info" | "warning" | "neutral"> = {
+  BOOKING_CONFIRMED: "success",
+  SESSION_UPDATED: "info",
+  TRAINER_NOTE: "warning",
+  GENERAL: "neutral",
+};
 
 export default function ClientNotifications() {
   const queryClient = useQueryClient();
@@ -53,13 +61,9 @@ export default function ClientNotifications() {
       <YStack px="$6" pb="$3" gap="$4">
         <XStack justify="space-between" items="center">
           <SectionHeader title={t("client.notifications.title")} />
-          <Button
-            variant="ghost"
-            size="small"
-            onPress={() => setShowPrefs(true)}
-          >
-            {t("client.notifications.settings")}
-          </Button>
+          <Pressable onPress={() => setShowPrefs(true)}>
+            <FontAwesome name="cog" size={22} color="#a1a1aa" />
+          </Pressable>
         </XStack>
       </YStack>
 
@@ -97,15 +101,11 @@ export default function ClientNotifications() {
                 }}
               >
                 <YStack py="$1.5">
-                  <Card>
-                    <YStack
-                      gap="$2"
-                      opacity={isUnread ? 1 : 0.7}
-                    >
+                  <GlassCard accentBorder={isUnread ? "left" : undefined}>
+                    <YStack gap="$2" opacity={isUnread ? 1 : 0.7}>
                       <XStack justify="space-between" items="center">
                         <Badge
-                          variant={isUnread ? "soft" : "soft"}
-                          color={isUnread ? "$accent3" : "$backgroundHover"}
+                          status={typeBadgeStatus[item.type] ?? "neutral"}
                         >
                           {typeLabelKeys[item.type]
                             ? t(typeLabelKeys[item.type])
@@ -122,18 +122,7 @@ export default function ClientNotifications() {
                         {displayBody}
                       </Text>
                     </YStack>
-                    {isUnread ? (
-                      <YStack
-                        position="absolute"
-                        l={0}
-                        t={12}
-                        b={12}
-                        style={{ width: 4 }}
-                        bg="#2e5b42"
-                        rounded={999}
-                      />
-                    ) : null}
-                  </Card>
+                  </GlassCard>
                 </YStack>
               </Pressable>
             );
@@ -155,7 +144,7 @@ export default function ClientNotifications() {
             {t("client.notifications.settingsTitle")}
           </Text>
           {prefs ? (
-            <Card>
+            <GlassCard>
               <YStack gap="$2">
                 <XStack justify="space-between" items="center" py="$2">
                   <Text fontSize="$3" color="$color">{t("client.notifications.pushEnabled")}</Text>
@@ -182,7 +171,7 @@ export default function ClientNotifications() {
                   />
                 </XStack>
               </YStack>
-            </Card>
+            </GlassCard>
           ) : (
             <EmptyState title={t("client.notifications.loadingPrefs")} />
           )}

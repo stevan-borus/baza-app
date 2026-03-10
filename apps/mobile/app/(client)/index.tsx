@@ -1,170 +1,244 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
-import { Image } from "expo-image";
-import { ScrollView } from "react-native";
+import { RefreshControl, ScrollView } from "react-native";
 import { useTranslation } from "react-i18next";
+import FontAwesome from "@expo/vector-icons/FontAwesome";
+import dayjs from "dayjs";
+import relativeTime from "dayjs/plugin/relativeTime";
 import { Text, XStack, YStack } from "tamagui";
-import { LanguageSwitcher } from "@/components/LanguageSwitcher";
-import { Button } from "@/components/ui/button";
-import { Badge, Card, StatCard } from "@/components/ui/card";
-import { EmptyState, ErrorState } from "@/components/ui/states";
+import { GlassCard } from "@/components/ui/glass-card";
+
+import { ProgressRing } from "@/components/ui/progress-ring";
+import { WeekStrip } from "@/components/ui/week-strip";
+import { EmptyState } from "@/components/ui/states";
 import { ScreenContainer } from "@/components/ui/screen-container";
-import { SectionHeader, SectionLabel } from "@/components/ui/typography";
+import { SectionLabel } from "@/components/ui/typography";
+import { OnboardingChecklist } from "@/components/client/onboarding-checklist";
 import { getDateLocale } from "@/lib/i18n";
 import { authQueries } from "@/lib/queries/auth-queries-factory";
 import { packagesQueries, type ClientPackage } from "@/lib/queries/packages-queries-factory";
 import { trainerNotesQueries, type TrainerNote } from "@/lib/queries/trainer-notes-queries-factory";
-import { signOutWithPushCleanup } from "@/lib/sign-out";
+import { sessionsQueries } from "@/lib/queries/sessions-queries-factory";
+import { notificationsQueries } from "@/lib/queries/notifications-queries-factory";
+import { useQueryClient } from "@tanstack/react-query";
 
-export default function ClientOverview() {
+dayjs.extend(relativeTime);
+
+function currentMonthKey() {
+  const now = new Date();
+  return `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}`;
+}
+
+export default function ClientHome() {
   const { t } = useTranslation();
   const router = useRouter();
   const queryClient = useQueryClient();
+  const dateLocale = getDateLocale();
+  const [refreshing, setRefreshing] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(dayjs().format("YYYY-MM-DD"));
+
   const meQuery = useQuery(authQueries.me());
   const packagesQuery = useQuery(packagesQueries.clientPackages());
   const notesQuery = useQuery(trainerNotesQueries.list());
-  const dateLocale = getDateLocale();
-
-  const signOutMutation = useMutation({
-    mutationFn: async () => {
-      await signOutWithPushCleanup();
-    },
-    onSuccess: async () => {
-      queryClient.clear();
-      router.replace("/sign-in");
-    },
-  });
+  const month = currentMonthKey();
+  const availabilityQuery = useQuery(sessionsQueries.availabilityByMonth(month));
+  const notificationsQuery = useQuery(notificationsQueries.list());
 
   const packages = packagesQuery.data?.packages ?? [];
   const activePackage = packages.find(
     (p: ClientPackage) => p.sessionsRemaining > 0 && new Date(p.expiresAt) > new Date(),
   );
   const notes = notesQuery.data?.notes ?? [];
+  const sessions = availabilityQuery.data?.sessions ?? [];
+  const notifications = notificationsQuery.data?.notifications ?? [];
+  const unreadCount = notifications.filter((n) => !n.readAt).length;
+
+  const userName = meQuery.data?.user.email?.split("@")[0] ?? "";
+  const userId = meQuery.data?.user.id ?? "";
+
+  // Find next upcoming session
+  const now = new Date();
+  const upcomingSessions = sessions
+    .filter((s) => new Date(s.startsAt) > now)
+    .sort((a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime());
+  const nextSession = upcomingSessions[0] ?? null;
+
+  // Build activity map for WeekStrip
+  const activityByDate: Record<string, "booked" | "available"> = {};
+  for (const s of sessions) {
+    const dateKey = dayjs(s.startsAt).format("YYYY-MM-DD");
+    if (s.availableSlots > 0) {
+      activityByDate[dateKey] = activityByDate[dateKey] === "booked" ? "booked" : "available";
+    }
+  }
+
+  async function handleRefresh() {
+    setRefreshing(true);
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["auth"] }),
+      queryClient.invalidateQueries({ queryKey: ["packages"] }),
+      queryClient.invalidateQueries({ queryKey: ["trainerNotes"] }),
+      queryClient.invalidateQueries({ queryKey: ["sessions"] }),
+      queryClient.invalidateQueries({ queryKey: ["notifications"] }),
+    ]);
+    setRefreshing(false);
+  }
 
   return (
-    <ScrollView showsVerticalScrollIndicator={false}>
+    <ScrollView
+      showsVerticalScrollIndicator={false}
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+      }
+    >
       <ScreenContainer>
-        {meQuery.data ? (
-          <SectionHeader
-            title={t("client.profile.myProfile")}
-            subtitle={meQuery.data.user.email}
-          />
-        ) : meQuery.isError ? (
-          <ErrorState message={t("client.profile.error")} />
-        ) : null}
+        {/* Greeting row */}
+        <XStack justify="space-between" items="center">
+          <YStack>
+            <Text fontSize="$7" fontWeight="700" color="$color" letterSpacing={-0.5}>
+              {t("client.home.greeting", { name: userName })}
+            </Text>
+            <Text fontSize="$2" color="$color9">
+              {dayjs().format("dddd, D MMMM")}
+            </Text>
+          </YStack>
+          <YStack position="relative">
+            <FontAwesome
+              name="bell-o"
+              size={22}
+              color="#a1a1aa"
+              onPress={() => router.push("/(client)/notifications")}
+            />
+            {unreadCount > 0 ? (
+              <YStack
+                position="absolute"
+                top={-4}
+                right={-6}
+                bg="$accent1"
+                borderRadius={8}
+                minWidth={16}
+                height={16}
+                items="center"
+                justify="center"
+                px="$1"
+              >
+                <Text fontSize={10} fontWeight="700" color="$background">
+                  {unreadCount > 9 ? "9+" : unreadCount}
+                </Text>
+              </YStack>
+            ) : null}
+          </YStack>
+        </XStack>
 
-        {/* Active Package */}
-        <YStack gap="$6">
-          <SectionLabel>{t("client.package.myPackage")}</SectionLabel>
-          {packagesQuery.isError ? <ErrorState message={t("client.package.error")} /> : null}
-          {activePackage ? (
-            <YStack gap="$4">
-              <XStack justify="space-between" items="center">
+        {/* Next class card */}
+        {nextSession ? (
+          <GlassCard accentBorder="left">
+            <YStack gap="$2">
+              <SectionLabel>{t("client.home.nextClass")}</SectionLabel>
+              <Text fontSize="$5" fontWeight="700" color="$color">
+                {nextSession.classTypeName}
+              </Text>
+              <XStack gap="$3" items="center">
+                <Text fontSize="$2" color="$color9">
+                  {dayjs(nextSession.startsAt).format("HH:mm")}
+                </Text>
+                <Text fontSize="$2" color="$accent1">
+                  {t("client.home.in", { time: dayjs(nextSession.startsAt).fromNow(true) })}
+                </Text>
+                {nextSession.roomName ? (
+                  <Text fontSize="$2" color="$color9">
+                    {nextSession.roomName}
+                  </Text>
+                ) : null}
+              </XStack>
+            </YStack>
+          </GlassCard>
+        ) : (
+          <EmptyState title={t("client.home.noUpcoming")} />
+        )}
+
+        {/* Weekly activity strip */}
+        <WeekStrip
+          selectedDate={selectedDate}
+          onSelectDate={setSelectedDate}
+          activityByDate={activityByDate}
+        />
+
+        {/* Package summary card */}
+        {activePackage ? (
+          <GlassCard>
+            <XStack gap="$4" items="center">
+              <ProgressRing
+                progress={
+                  activePackage.packageType
+                    ? (activePackage.packageType.sessionCount - activePackage.sessionsRemaining) /
+                      activePackage.packageType.sessionCount
+                    : 0
+                }
+                size={64}
+                strokeWidth={6}
+                label={String(activePackage.sessionsRemaining)}
+                sublabel="left"
+              />
+              <YStack flex={1} gap="$1">
                 <Text fontWeight="600" fontSize="$4" color="$color">
                   {activePackage.packageType?.name ?? t("client.package.packageName")}
                 </Text>
-                <Badge variant="soft">{t("client.package.active")}</Badge>
-              </XStack>
-              <XStack gap="$3">
-                <YStack flex={1}>
-                  <StatCard
-                    label={t("client.package.sessionsRemaining")}
-                    value={activePackage.sessionsRemaining}
-                  />
-                </YStack>
-                <YStack flex={1}>
-                  <StatCard
-                    label={t("client.package.validUntil")}
-                    value={new Date(activePackage.expiresAt).toLocaleDateString(dateLocale)}
-                  />
-                </YStack>
-              </XStack>
-            </YStack>
-          ) : (
-            <EmptyState title={t("client.package.noActive")} />
-          )}
-        </YStack>
-
-        {/* All Packages */}
-        {packages.length > 1 ? (
-          <YStack gap="$4">
-            <SectionLabel>{t("client.package.allPackages")}</SectionLabel>
-            {packages.map((pkg: ClientPackage) => (
-              <Card key={pkg.id}>
-                <XStack justify="space-between" items="center">
-                  <Text fontWeight="500" color="$color">
-                    {pkg.packageType?.name ?? t("client.package.packageName")}
-                  </Text>
-                </XStack>
-                <Text fontSize="$2" color="$color9" mt="$1">
-                  {t("client.package.sessionsUntil", {
-                    count: pkg.sessionsRemaining,
-                    date: new Date(pkg.expiresAt).toLocaleDateString(dateLocale),
+                <Text fontSize="$2" color="$color9">
+                  {t("client.home.sessionsLeft", {
+                    used: activePackage.packageType
+                      ? activePackage.packageType.sessionCount - activePackage.sessionsRemaining
+                      : 0,
+                    total: activePackage.packageType?.sessionCount ?? "?",
                   })}
                 </Text>
-              </Card>
+                <Text fontSize="$1" color="$color9">
+                  {new Date(activePackage.expiresAt).toLocaleDateString(dateLocale)}
+                </Text>
+              </YStack>
+            </XStack>
+          </GlassCard>
+        ) : null}
+
+        {/* Onboarding checklist */}
+        {userId ? (
+          <OnboardingChecklist
+            userId={userId}
+            userName={userName}
+            bookingCount={upcomingSessions.length}
+            onNavigate={(target) => router.push(`/(client)/${target}`)}
+          />
+        ) : null}
+
+        {/* Recent trainer notes */}
+        {notes.length > 0 ? (
+          <YStack gap="$3">
+            <SectionLabel>{t("client.home.recentNotes")}</SectionLabel>
+            {notes.slice(0, 3).map((note: TrainerNote) => (
+              <GlassCard key={note.id} size="sm">
+                <YStack gap="$1">
+                  <Text fontSize="$3" fontWeight="500" color="$color" numberOfLines={2}>
+                    {note.note}
+                  </Text>
+                  <XStack gap="$2" items="center">
+                    <Text fontSize="$1" color="$color9">
+                      {new Date(note.createdAt).toLocaleDateString(dateLocale)}
+                    </Text>
+                    {note.trainer ? (
+                      <>
+                        <Text fontSize="$1" color="$color9">·</Text>
+                        <Text fontSize="$1" color="$accent1">
+                          {note.trainer.fullName}
+                        </Text>
+                      </>
+                    ) : null}
+                  </XStack>
+                </YStack>
+              </GlassCard>
             ))}
           </YStack>
         ) : null}
-
-        {/* Training History */}
-        <YStack gap="$4">
-          <SectionLabel>{t("client.history.title")}</SectionLabel>
-          {notesQuery.isError ? <ErrorState message={t("client.history.error")} /> : null}
-          {notes.length === 0 ? (
-            <EmptyState title={t("client.history.noNotes")} />
-          ) : (
-            <Card>
-              <YStack gap="$4">
-                {notes.slice(0, 20).map((note: TrainerNote) => (
-                  <YStack key={note.id} py="$1">
-                    <Text fontWeight="500" fontSize="$3" color="$color">
-                      {note.note}
-                    </Text>
-                    <XStack gap="$2" mt="$1.5" items="center">
-                      <Text fontSize="$1" color="$color9">
-                        {new Date(note.createdAt).toLocaleDateString(dateLocale)}
-                      </Text>
-                      {note.trainer ? (
-                        <>
-                          <Text fontSize="$1" color="$color9">
-                            ·
-                          </Text>
-                          <Text fontSize="$1" color="$color10">
-                            {note.trainer.fullName}
-                          </Text>
-                        </>
-                      ) : null}
-                    </XStack>
-                  </YStack>
-                ))}
-              </YStack>
-            </Card>
-          )}
-        </YStack>
-
-        {/* Settings */}
-        <YStack gap="$4">
-          <SectionLabel>{t("settings.language")}</SectionLabel>
-          <Card>
-            <YStack gap="$4">
-              <LanguageSwitcher />
-              <Button
-                variant="secondary"
-                onPress={() => signOutMutation.mutate()}
-              >
-                {t("client.signOut")}
-              </Button>
-            </YStack>
-          </Card>
-        </YStack>
-        <YStack items="center" pt="$4">
-          <Image
-            source={require("@/assets/images/logo-green.png")}
-            style={{ width: 80, height: 28 }}
-            contentFit="contain"
-          />
-        </YStack>
       </ScreenContainer>
     </ScrollView>
   );
