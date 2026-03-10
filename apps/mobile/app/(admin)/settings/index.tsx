@@ -10,7 +10,9 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Text, XStack, YStack, useTheme } from "tamagui";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { ThemeSwitcher } from "@/components/ThemeSwitcher";
+import { GlassCard } from "@/components/ui/glass-card";
 import { AppSheet } from "@/components/ui/sheet";
+import { GLASS_BG } from "@/components/ui/tokens";
 import { HEADER_HEIGHT, TAB_BAR_HEIGHT } from "@/components/ui/constants";
 import { type Locale } from "@/lib/i18n";
 import { notificationsQueries } from "@/lib/queries/notifications-queries-factory";
@@ -74,7 +76,7 @@ export default function AdminSettingsIndex() {
           >
             {t("settings.accountSection")}
           </Text>
-          <YStack bg="$color2" rounded={16} overflow="hidden">
+          <GlassCard rounded={16} overflow="hidden" p={0}>
             <SettingsRow
               icon="moon-o"
               label={t("settings.theme")}
@@ -88,7 +90,7 @@ export default function AdminSettingsIndex() {
               value={currentLanguageLabel}
               onPress={() => setShowLanguageModal(true)}
             />
-          </YStack>
+          </GlassCard>
         </YStack>
 
         <YStack gap="$2">
@@ -102,7 +104,7 @@ export default function AdminSettingsIndex() {
           >
             {t("settings.studioSection")}
           </Text>
-          <YStack bg="$color2" rounded={16} overflow="hidden">
+          <GlassCard rounded={16} overflow="hidden" p={0}>
             <SettingsRow
               icon="list"
               label={t("admin.manage.classTypes")}
@@ -114,7 +116,7 @@ export default function AdminSettingsIndex() {
               label={t("admin.manage.rooms")}
               onPress={() => router.push("/(admin)/settings/rooms")}
             />
-          </YStack>
+          </GlassCard>
         </YStack>
 
         <YStack gap="$2">
@@ -128,14 +130,14 @@ export default function AdminSettingsIndex() {
           >
             {t("settings.otherSection")}
           </Text>
-          <YStack bg="$color2" rounded={16} overflow="hidden">
+          <GlassCard rounded={16} overflow="hidden" p={0}>
             <SettingsRow
               icon="sign-out"
               label={t("settings.logOut")}
               onPress={() => signOutMutation.mutate()}
               destructive
             />
-          </YStack>
+          </GlassCard>
         </YStack>
       </YStack>
 
@@ -191,7 +193,7 @@ function SettingsRow({
     <TouchableOpacity onPress={onPress} activeOpacity={0.6}>
       <XStack px="$4" py="$3.5" items="center" justify="space-between">
         <XStack items="center" gap="$3.5">
-          <YStack width={30} height={30} rounded={8} bg={destructive ? "$red3" : "$accent5"} items="center" justify="center">
+          <YStack width={30} height={30} rounded={8} bg={destructive ? "$red3" : GLASS_BG} items="center" justify="center">
             <FontAwesome name={icon} size={15} color={destructive ? (isDarkMode ? "#ffffff" : "#ef4444") : "#fff"} />
           </YStack>
           <Text fontSize="$4" fontWeight="500" color={destructive ? "$red10" : "$color"}>

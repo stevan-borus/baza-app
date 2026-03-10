@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { ErrorState, ListRow } from "@/components/ui/states";
 import { Input } from "@/components/ui/input";
 import { AppSheet } from "@/components/ui/sheet";
+import { SectionHeader } from "@/components/ui/typography";
 import { HEADER_HEIGHT, TAB_BAR_HEIGHT } from "@/components/ui/constants";
 import { roomsQueries } from "@/lib/queries/rooms-queries-factory";
 
@@ -41,6 +42,7 @@ export default function AdminSettingsRooms() {
         gap: 16,
       }}
     >
+      <SectionHeader title={t("admin.manage.rooms")} />
       <ActionButton
         icon="plus"
         label={t("admin.manage.sheetNewRoom")}
