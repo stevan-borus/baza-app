@@ -4,6 +4,7 @@ import { Animated, Pressable } from "react-native";
 import { useTranslation } from "react-i18next";
 import { Text, XStack, YStack } from "tamagui";
 import { useThemePreference } from "@/lib/theme-preference";
+import { ACCENT } from "@/components/ui/tokens";
 
 export function ThemeSwitcher() {
   const { t } = useTranslation();
@@ -91,7 +92,7 @@ export function ThemeSwitcher() {
             <FontAwesome
               name={resolvedTheme === "dark" ? "moon-o" : "sun-o"}
               size={12}
-              color={resolvedTheme === "dark" ? "#2e5b42" : "#667085"}
+              color={resolvedTheme === "dark" ? ACCENT : "#667085"}
             />
           </Animated.View>
         </Pressable>
@@ -114,7 +115,7 @@ export function ThemeSwitcher() {
           <FontAwesome
             name={isSystem ? "check-circle" : "circle-o"}
             size={15}
-            color={isSystem ? "#2e5b42" : "#6b7280"}
+            color={isSystem ? ACCENT : "#6b7280"}
           />
         </XStack>
       </Pressable>

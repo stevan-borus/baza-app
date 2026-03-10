@@ -2,6 +2,7 @@ import React from "react";
 import { Text, XStack, YStack } from "tamagui";
 import { GlassCard } from "./glass-card";
 import { Badge } from "./badge";
+import { ACCENT } from "./tokens";
 
 type ClassType = "Yoga" | "Pilates" | "HIIT" | string;
 type SessionStatus = "booked" | "waitlisted" | "full" | "available";
@@ -20,7 +21,7 @@ type SessionCardProps = {
 
 const classTypeColors: Record<string, string> = {
   Yoga: "#2dd4bf",    // teal
-  Pilates: "#2e5b42", // green
+  Pilates: ACCENT, // green
   HIIT: "#f87171",    // coral
 };
 
@@ -42,7 +43,7 @@ export function SessionCard({
   status,
   onPress,
 }: SessionCardProps) {
-  const borderColor = classType ? classTypeColors[classType] ?? "#2e5b42" : undefined;
+  const borderColor = classType ? classTypeColors[classType] ?? ACCENT : undefined;
   const config = statusConfig[status];
   const spotsLeft = capacity - bookedCount;
   const badgeLabel =

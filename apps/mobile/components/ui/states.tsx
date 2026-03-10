@@ -1,6 +1,7 @@
 import React, { useEffect } from "react";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { Text, YStack } from "tamagui";
+import { DANGER } from "./tokens";
 import Animated, {
   FadeInDown,
   useSharedValue,
@@ -107,7 +108,7 @@ export function ErrorState({ message }: { message: string }) {
       gap="$2"
       style={animatedStyle}
     >
-      <FontAwesome name="exclamation-circle" size={20} color="#ef4444" />
+      <FontAwesome name="exclamation-circle" size={20} color={DANGER} />
       <Text color="$red10" fontSize="$3" fontWeight="500" textAlign="center">
         {message}
       </Text>

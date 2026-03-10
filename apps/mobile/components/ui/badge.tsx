@@ -1,5 +1,6 @@
 import React, { PropsWithChildren } from "react";
 import { Text, XStack } from "tamagui";
+import { ACCENT_LIGHT, DANGER, WARNING } from "./tokens";
 
 type BadgeStatus = "success" | "warning" | "danger" | "info" | "neutral";
 
@@ -10,9 +11,9 @@ type BadgeProps = PropsWithChildren<{
 }>;
 
 const statusColors = {
-  success: { bg: "rgba(46,91,66,0.25)" as const, text: "#4a8c6b" as const },
-  warning: { bg: "rgba(245,158,11,0.2)" as const, text: "#f59e0b" as const },
-  danger: { bg: "rgba(239,68,68,0.2)" as const, text: "#ef4444" as const },
+  success: { bg: "rgba(46,91,66,0.25)" as const, text: ACCENT_LIGHT },
+  warning: { bg: "rgba(245,158,11,0.2)" as const, text: WARNING },
+  danger: { bg: "rgba(239,68,68,0.2)" as const, text: DANGER },
   info: { bg: "rgba(59,130,246,0.2)" as const, text: "#3b82f6" as const },
   neutral: { bg: "rgba(255,255,255,0.08)" as const, text: "rgba(255,255,255,0.6)" as const },
 } satisfies Record<BadgeStatus, { bg: string; text: string }>;

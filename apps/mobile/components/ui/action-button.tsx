@@ -2,6 +2,7 @@ import React from "react";
 import { TouchableOpacity } from "react-native";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { Text, XStack } from "tamagui";
+import { DANGER } from "./tokens";
 
 /** Compact action row -- icon + label, used for secondary actions. */
 export function ActionButton({
@@ -40,7 +41,7 @@ export function ActionButton({
           <FontAwesome
             name={icon}
             size={14}
-            color={variant === "danger" ? "#ef4444" : undefined}
+            color={variant === "danger" ? DANGER : undefined}
           />
         ) : null}
         <Text

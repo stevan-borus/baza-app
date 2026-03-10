@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 import { XStack, Text, useTheme } from "tamagui";
 import { useColorScheme } from "@/components/useColorScheme";
 import { getDateLocale } from "@/lib/i18n";
+import { ACCENT } from "./tokens";
 
 type DateTimePickerProps = {
   value: Date | null;
@@ -122,8 +123,8 @@ export function DateTimePicker({
         locale={locale}
         confirmTextIOS={i18n.language === "en" ? "Confirm" : "Potvrdi"}
         cancelTextIOS={i18n.language === "en" ? "Cancel" : "Otkaži"}
-        accentColor="#2e5b42"
-        buttonTextColorIOS="#2e5b42"
+        accentColor={ACCENT}
+        buttonTextColorIOS={ACCENT}
         pickerContainerStyleIOS={{ paddingHorizontal: 16 }}
       />
     </>

@@ -1,6 +1,7 @@
 import React from "react";
 import { Text, YStack } from "tamagui";
 import Svg, { Circle } from "react-native-svg";
+import { ACCENT } from "./tokens";
 
 type ProgressRingProps = {
   progress: number; // 0-1
@@ -16,7 +17,7 @@ export function ProgressRing({
   progress,
   size = 100,
   strokeWidth = 8,
-  color = "#2e5b42",
+  color = ACCENT,
   trackColor = "rgba(255,255,255,0.08)",
   label,
   sublabel,

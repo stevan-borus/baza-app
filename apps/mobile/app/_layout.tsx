@@ -22,6 +22,7 @@ import { useSessionAuth } from "@/lib/session-auth";
 import { useColorScheme } from "@/components/useColorScheme";
 import { ThemePreferenceProvider } from "@/lib/theme-preference";
 import { navigationThemeColors } from "@/tamagui.config";
+import { ACCENT } from "@/components/ui/tokens";
 
 export { ErrorBoundary } from "expo-router";
 
@@ -121,7 +122,7 @@ function AppNavigator({ isDark }: { isDark: boolean }) {
       <YStack flex={1} bg="$background" items="center" justify="center">
         <ActivityIndicator
           size="large"
-          color="#2e5b42"
+          color={ACCENT}
         />
       </YStack>
     );

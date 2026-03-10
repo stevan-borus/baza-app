@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { GlassCard } from "@/components/ui/glass-card";
 import { Input, PasswordInput } from "@/components/ui/input";
 import { LinkText } from "@/components/ui/typography";
-import { ACCENT } from "@/components/ui/tokens";
+import { ACCENT, DANGER } from "@/components/ui/tokens";
 import { sharedEnv } from "@/lib/env.shared";
 
 export default function AcceptInviteScreen() {
@@ -60,7 +60,7 @@ export default function AcceptInviteScreen() {
             justify="center"
             padding={0}
           >
-            <FontAwesome name="exclamation-triangle" size={24} color="#ef4444" />
+            <FontAwesome name="exclamation-triangle" size={24} color={DANGER} />
           </GlassCard>
           <Text fontSize="$5" fontWeight="600" color="#ffffff" textAlign="center">
             {t("auth.inviteInvalid", { defaultValue: "Invalid invite link" })}

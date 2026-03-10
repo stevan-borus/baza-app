@@ -6,6 +6,7 @@ import { useEffect, useRef } from "react";
 import { ActivityIndicator } from "react-native";
 import { Animated, Platform, Pressable, StyleSheet, View } from "react-native";
 import { XStack, YStack } from "tamagui";
+import { ACCENT } from "@/components/ui/tokens";
 
 export function TabIcon(props: {
   name: React.ComponentProps<typeof FontAwesome>["name"];
@@ -17,7 +18,7 @@ export function TabIcon(props: {
 export function AppTabLoading({ isDark }: { isDark: boolean }) {
   return (
     <YStack flex={1} bg="$background" items="center" justify="center">
-      <ActivityIndicator size="large" color={isDark ? "#2e5b42" : "#2e5b42"} />
+      <ActivityIndicator size="large" color={ACCENT} />
     </YStack>
   );
 }
@@ -96,7 +97,7 @@ export function FloatingTabBar(
             const options = descriptor?.options ?? {};
 
             const color = isFocused
-              ? isDark ? "#2e5b42" : "#2e5b42"
+              ? ACCENT
               : isDark ? "rgba(255,255,255,0.5)" : "rgba(0,0,0,0.35)";
 
             const icon = options.tabBarIcon?.({
@@ -140,7 +141,7 @@ export function FloatingTabBar(
 export function getAppTabScreenOptions(isDark: boolean) {
   return {
     headerShown: false,
-    tabBarActiveTintColor: isDark ? "#2e5b42" : "#2e5b42",
+    tabBarActiveTintColor: ACCENT,
     tabBarInactiveTintColor: isDark ? "rgba(255,255,255,0.5)" : "rgba(0,0,0,0.35)",
     tabBarShowLabel: false,
     tabBarStyle: {
