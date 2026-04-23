@@ -1,25 +1,28 @@
 import { Link, Stack } from "expo-router";
 import { useTranslation } from "react-i18next";
-import { Text, YStack } from "tamagui";
+import { Text, View } from "react-native";
 
 export default function NotFoundScreen() {
   const { t } = useTranslation();
   return (
     <>
       <Stack.Screen options={{ title: t("notFound.title") }} />
-      <YStack flex={1} bg="$background" items="center" justify="center" px="$6" gap="$4">
-        <Text fontSize="$7" fontWeight="700" color="$color" letterSpacing={-0.4}>
+      <View className="flex-1 bg-background items-center justify-center px-6 gap-4">
+        <Text
+          className="text-[30px] font-bold text-foreground"
+          style={{ letterSpacing: -0.4 }}
+        >
           404
         </Text>
-        <Text fontSize="$3" color="$color10" text="center">
+        <Text className="text-base text-muted text-center">
           {t("notFound.message")}
         </Text>
         <Link href="/">
-          <Text color="$accent1" fontSize="$3" fontWeight="600">
+          <Text className="text-accent text-base font-semibold">
             {t("notFound.goHome")}
           </Text>
         </Link>
-      </YStack>
+      </View>
     </>
   );
 }
