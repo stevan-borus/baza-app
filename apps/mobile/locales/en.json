@@ -21,7 +21,12 @@
     "resetSubmit": "Reset password",
     "resetError": "Reset failed. The token may have expired.",
     "backToRequest": "Back to request",
-    "backToSignIn": "Back to sign in"
+    "backToSignIn": "Back to sign in",
+    "welcomeBack": "Welcome back",
+    "signInSubtitle": "Sign in to your account",
+    "checkEmail": "Check your email",
+    "passwordUpdated": "Password updated",
+    "passwordUpdatedDesc": "You can now sign in with your new password."
   },
   "notFound": {
     "title": "Oops!",

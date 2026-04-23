@@ -21,7 +21,12 @@
     "resetSubmit": "Resetuj lozinku",
     "resetError": "Resetovanje nije uspelo. Token je možda istekao.",
     "backToRequest": "Nazad na zahtev",
-    "backToSignIn": "Nazad na prijavu"
+    "backToSignIn": "Nazad na prijavu",
+    "welcomeBack": "Dobrodošli nazad",
+    "signInSubtitle": "Prijavite se na svoj nalog",
+    "checkEmail": "Proverite email",
+    "passwordUpdated": "Lozinka ažurirana",
+    "passwordUpdatedDesc": "Sada se možete prijaviti sa novom lozinkom."
   },
   "notFound": {
     "title": "Ups!",
