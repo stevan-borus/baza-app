@@ -1,12 +1,11 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
-import { RefreshControl, ScrollView } from "react-native";
+import { RefreshControl, ScrollView, Text, View } from "react-native";
 import { useTranslation } from "react-i18next";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
-import { Text, XStack, YStack } from "tamagui";
 import { GlassCard } from "@/components/ui/glass-card";
 
 import { ProgressRing } from "@/components/ui/progress-ring";
@@ -94,16 +93,19 @@ export default function ClientHome() {
     >
       <ScreenContainer>
         {/* Greeting row */}
-        <XStack justify="space-between" items="center">
-          <YStack>
-            <Text fontSize="$7" fontWeight="700" color="$color" letterSpacing={-0.5}>
+        <View className="flex-row justify-between items-center">
+          <View className="flex-col">
+            <Text
+              className="text-foreground font-bold"
+              style={{ fontSize: 30, letterSpacing: -0.5 }}
+            >
               {t("client.home.greeting", { name: userName })}
             </Text>
-            <Text fontSize="$2" color="$color9">
+            <Text className="text-[13px] text-muted">
               {dayjs().format("dddd, D MMMM")}
             </Text>
-          </YStack>
-          <YStack position="relative">
+          </View>
+          <View style={{ position: "relative" }}>
             <FontAwesome
               name="bell-o"
               size={22}
@@ -111,48 +113,51 @@ export default function ClientHome() {
               onPress={() => router.push("/(client)/notifications")}
             />
             {unreadCount > 0 ? (
-              <YStack
-                position="absolute"
-                top={-4}
-                right={-6}
-                bg="$accent1"
-                borderRadius={8}
-                minWidth={16}
-                height={16}
-                items="center"
-                justify="center"
-                px="$1"
+              <View
+                className="bg-accent items-center justify-center"
+                style={{
+                  position: "absolute",
+                  top: -4,
+                  right: -6,
+                  borderRadius: 8,
+                  minWidth: 16,
+                  height: 16,
+                  paddingHorizontal: 4,
+                }}
               >
-                <Text fontSize={10} fontWeight="700" color="$background">
+                <Text style={{ fontSize: 10, fontWeight: "700", color: "#0A0F14" }}>
                   {unreadCount > 9 ? "9+" : unreadCount}
                 </Text>
-              </YStack>
+              </View>
             ) : null}
-          </YStack>
-        </XStack>
+          </View>
+        </View>
 
         {/* Next class card */}
         {nextSession ? (
           <GlassCard accentBorder="left">
-            <YStack gap="$2">
+            <View className="flex-col gap-2">
               <SectionLabel>{t("client.home.nextClass")}</SectionLabel>
-              <Text fontSize="$5" fontWeight="700" color="$color">
+              <Text
+                className="text-foreground font-bold"
+                style={{ fontSize: 20 }}
+              >
                 {nextSession.classTypeName}
               </Text>
-              <XStack gap="$3" items="center">
-                <Text fontSize="$2" color="$color9">
+              <View className="flex-row gap-3 items-center">
+                <Text className="text-[13px] text-muted">
                   {dayjs(nextSession.startsAt).format("HH:mm")}
                 </Text>
-                <Text fontSize="$2" color="$accent1">
+                <Text className="text-[13px] text-accent">
                   {t("client.home.in", { time: dayjs(nextSession.startsAt).fromNow(true) })}
                 </Text>
                 {nextSession.roomName ? (
-                  <Text fontSize="$2" color="$color9">
+                  <Text className="text-[13px] text-muted">
                     {nextSession.roomName}
                   </Text>
                 ) : null}
-              </XStack>
-            </YStack>
+              </View>
+            </View>
           </GlassCard>
         ) : (
           <EmptyState title={t("client.home.noUpcoming")} />
@@ -168,7 +173,7 @@ export default function ClientHome() {
         {/* Package summary card */}
         {activePackage ? (
           <GlassCard>
-            <XStack gap="$4" items="center">
+            <View className="flex-row gap-4 items-center">
               <ProgressRing
                 progress={
                   activePackage.packageType
@@ -181,11 +186,11 @@ export default function ClientHome() {
                 label={String(activePackage.sessionsRemaining)}
                 sublabel="left"
               />
-              <YStack flex={1} gap="$1">
-                <Text fontWeight="600" fontSize="$4" color="$color">
+              <View className="flex-1 flex-col gap-1">
+                <Text className="font-semibold text-foreground" style={{ fontSize: 17 }}>
                   {activePackage.packageType?.name ?? t("client.package.packageName")}
                 </Text>
-                <Text fontSize="$2" color="$color9">
+                <Text className="text-[13px] text-muted">
                   {t("client.home.sessionsLeft", {
                     used: activePackage.packageType
                       ? activePackage.packageType.sessionCount - activePackage.sessionsRemaining
@@ -193,11 +198,11 @@ export default function ClientHome() {
                     total: activePackage.packageType?.sessionCount ?? "?",
                   })}
                 </Text>
-                <Text fontSize="$1" color="$color9">
+                <Text className="text-[11px] text-muted">
                   {new Date(activePackage.expiresAt).toLocaleDateString(dateLocale)}
                 </Text>
-              </YStack>
-            </XStack>
+              </View>
+            </View>
           </GlassCard>
         ) : null}
 
@@ -213,31 +218,31 @@ export default function ClientHome() {
 
         {/* Recent trainer notes */}
         {notes.length > 0 ? (
-          <YStack gap="$3">
+          <View className="flex-col gap-3">
             <SectionLabel>{t("client.home.recentNotes")}</SectionLabel>
             {notes.slice(0, 3).map((note: TrainerNote) => (
               <GlassCard key={note.id} size="sm">
-                <YStack gap="$1">
-                  <Text fontSize="$3" fontWeight="500" color="$color" numberOfLines={2}>
+                <View className="flex-col gap-1">
+                  <Text className="text-[15px] font-medium text-foreground" numberOfLines={2}>
                     {note.note}
                   </Text>
-                  <XStack gap="$2" items="center">
-                    <Text fontSize="$1" color="$color9">
+                  <View className="flex-row gap-2 items-center">
+                    <Text className="text-[11px] text-muted">
                       {new Date(note.createdAt).toLocaleDateString(dateLocale)}
                     </Text>
                     {note.trainer ? (
                       <>
-                        <Text fontSize="$1" color="$color9">·</Text>
-                        <Text fontSize="$1" color="$accent1">
+                        <Text className="text-[11px] text-muted">·</Text>
+                        <Text className="text-[11px] text-accent">
                           {note.trainer.fullName}
                         </Text>
                       </>
                     ) : null}
-                  </XStack>
-                </YStack>
+                  </View>
+                </View>
               </GlassCard>
             ))}
-          </YStack>
+          </View>
         ) : null}
       </ScreenContainer>
     </ScrollView>

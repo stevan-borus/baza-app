@@ -1,11 +1,10 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ScrollView } from "react-native";
+import { ScrollView, Text, View } from "react-native";
 import dayjs from "dayjs";
 import * as Haptics from "expo-haptics";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { useTranslation } from "react-i18next";
-import { Text, XStack, YStack } from "tamagui";
 import { AppSheet } from "@/components/ui/sheet";
 import { GlassCard } from "@/components/ui/glass-card";
 import { Badge } from "@/components/ui/badge";
@@ -89,14 +88,17 @@ export default function ClientCalendar() {
   return (
     <ScreenContainerRaw>
       {/* Month/year header with arrows */}
-      <XStack px="$6" py="$3" justify="space-between" items="center">
+      <View className="flex-row justify-between items-center px-6 py-3">
         <FontAwesome
           name="chevron-left"
           size={16}
           color="#a1a1aa"
           onPress={() => navigateMonth(-1)}
         />
-        <Text fontSize="$5" fontWeight="700" color="$color" letterSpacing={-0.3}>
+        <Text
+          className="text-foreground font-bold"
+          style={{ fontSize: 20, letterSpacing: -0.3 }}
+        >
           {displayDate.format("MMMM YYYY")}
         </Text>
         <FontAwesome
@@ -105,40 +107,40 @@ export default function ClientCalendar() {
           color="#a1a1aa"
           onPress={() => navigateMonth(1)}
         />
-      </XStack>
+      </View>
 
       {/* WeekStrip */}
-      <YStack px="$6" pb="$3">
+      <View className="px-6 pb-3">
         <WeekStrip
           selectedDate={selectedDate}
           onSelectDate={handleDateSelect}
           activityByDate={activityByDate}
         />
-      </YStack>
+      </View>
 
       {availabilityQuery.isError ? (
-        <YStack px="$6">
+        <View className="px-6">
           <ErrorState message={t("client.calendar.errorSlots")} />
-        </YStack>
+        </View>
       ) : null}
 
       {bookingMutation.isError ? (
-        <YStack px="$6" pb="$3">
+        <View className="px-6 pb-3">
           <ErrorState message={t("client.calendar.bookingError")} />
-        </YStack>
+        </View>
       ) : null}
 
       {bookingMutation.isSuccess && bookingResultState ? (
-        <YStack px="$6" pb="$3">
+        <View className="px-6 pb-3">
           <GlassCard size="sm">
-            <Text fontWeight="600" color="$accent1">
+            <Text className="font-semibold text-accent">
               {bookingResultState === "BOOKED" ? t("client.calendar.bookingBooked") :
                bookingResultState === "WAITLISTED" ? t("client.calendar.bookingWaitlisted") :
                bookingResultState === "CANCELED" ? t("client.calendar.bookingCanceled") :
                bookingResultState}
             </Text>
           </GlassCard>
-        </YStack>
+        </View>
       ) : null}
 
       {/* Day sessions list */}
@@ -146,7 +148,7 @@ export default function ClientCalendar() {
         <SectionLabel>
           {displayDate.format("dddd, D MMMM")}
         </SectionLabel>
-        <YStack gap="$3" pt="$3">
+        <View className="flex-col gap-3 pt-3">
           {daySessions.length === 0 ? (
             <EmptyState title={t("client.dayView.noSessions")} />
           ) : (
@@ -163,7 +165,7 @@ export default function ClientCalendar() {
               />
             ))
           )}
-        </YStack>
+        </View>
       </ScrollView>
 
       {/* Session detail sheet */}
@@ -177,12 +179,15 @@ export default function ClientCalendar() {
         }}
       >
         {selectedSession ? (
-          <YStack gap="$5">
-            <Text fontSize="$6" fontWeight="700" color="$color" letterSpacing={-0.3}>
+          <View className="flex-col gap-5">
+            <Text
+              className="text-foreground font-bold"
+              style={{ fontSize: 24, letterSpacing: -0.3 }}
+            >
               {selectedSession.classTypeName}
             </Text>
             <GlassCard>
-              <YStack gap="$3">
+              <View className="flex-col gap-3">
                 <ListRow
                   title={`${dayjs(selectedSession.startsAt).format("DD.MM.YYYY HH:mm")} - ${dayjs(selectedSession.endsAt).format("HH:mm")}`}
                   subtitle={`${t("client.calendar.room")}: ${selectedSession.roomName ?? "—"}`}
@@ -196,7 +201,7 @@ export default function ClientCalendar() {
                     capacity: selectedSession.capacity,
                   })}
                 />
-                <XStack gap="$2">
+                <View className="flex-row gap-2">
                   <Badge
                     status={selectedSession.availableSlots > 0 ? "success" : "danger"}
                   >
@@ -209,16 +214,16 @@ export default function ClientCalendar() {
                       {t("client.calendar.waitlistShort", { count: selectedSession.waitlistCount })}
                     </Badge>
                   ) : null}
-                </XStack>
-              </YStack>
+                </View>
+              </View>
             </GlassCard>
 
             {/* Two-step booking */}
             {bookingStep === "idle" ? (
-              <XStack gap="$3">
+              <View className="flex-row gap-3">
                 {selectedSession.availableSlots > 0 ? (
                   <Button
-                    flex={1}
+                    className="flex-1"
                     onPress={() => setBookingStep("confirmBook")}
                     disabled={bookingMutation.isPending}
                   >
@@ -226,7 +231,7 @@ export default function ClientCalendar() {
                   </Button>
                 ) : (
                   <Button
-                    flex={1}
+                    className="flex-1"
                     variant="secondary"
                     onPress={() => {
                       bookingMutation.mutate({ sessionId: selectedSession.id, action: "BOOK" });
@@ -237,22 +242,25 @@ export default function ClientCalendar() {
                   </Button>
                 )}
                 <Button
-                  flex={1}
+                  className="flex-1"
                   variant="danger"
                   onPress={() => setBookingStep("confirmCancel")}
                   disabled={bookingMutation.isPending}
                 >
                   {t("client.calendar.cancel")}
                 </Button>
-              </XStack>
+              </View>
             ) : bookingStep === "confirmBook" ? (
-              <YStack gap="$3">
-                <Text fontSize="$3" fontWeight="600" color="$color" textAlign="center">
+              <View className="flex-col gap-3">
+                <Text
+                  className="text-foreground font-semibold text-[15px]"
+                  style={{ textAlign: "center" }}
+                >
                   {t("client.dayView.confirmBook")}
                 </Text>
-                <XStack gap="$3">
+                <View className="flex-row gap-3">
                   <Button
-                    flex={1}
+                    className="flex-1"
                     onPress={() => {
                       bookingMutation.mutate({ sessionId: selectedSession.id, action: "BOOK" });
                     }}
@@ -261,22 +269,25 @@ export default function ClientCalendar() {
                     {t("client.dayView.confirm")}
                   </Button>
                   <Button
-                    flex={1}
+                    className="flex-1"
                     variant="secondary"
                     onPress={() => setBookingStep("idle")}
                   >
                     {t("client.calendar.cancel")}
                   </Button>
-                </XStack>
-              </YStack>
+                </View>
+              </View>
             ) : (
-              <YStack gap="$3">
-                <Text fontSize="$3" fontWeight="600" color="$color" textAlign="center">
+              <View className="flex-col gap-3">
+                <Text
+                  className="text-foreground font-semibold text-[15px]"
+                  style={{ textAlign: "center" }}
+                >
                   {t("client.dayView.cancelWarning")}
                 </Text>
-                <XStack gap="$3">
+                <View className="flex-row gap-3">
                   <Button
-                    flex={1}
+                    className="flex-1"
                     variant="danger"
                     onPress={() => {
                       bookingMutation.mutate({ sessionId: selectedSession.id, action: "CANCEL" });
@@ -286,16 +297,16 @@ export default function ClientCalendar() {
                     {t("client.dayView.confirm")}
                   </Button>
                   <Button
-                    flex={1}
+                    className="flex-1"
                     variant="secondary"
                     onPress={() => setBookingStep("idle")}
                   >
                     {t("client.calendar.cancel")}
                   </Button>
-                </XStack>
-              </YStack>
+                </View>
+              </View>
             )}
-          </YStack>
+          </View>
         ) : null}
       </AppSheet>
     </ScreenContainerRaw>

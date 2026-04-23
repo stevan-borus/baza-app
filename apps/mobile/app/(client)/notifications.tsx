@@ -1,10 +1,9 @@
 import { useState } from "react";
 import { useMutation, useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { ActivityIndicator, Pressable, Switch } from "react-native";
+import { ActivityIndicator, Pressable, Switch, Text, View } from "react-native";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { LegendList } from "@legendapp/list";
-import { Text, XStack, YStack } from "tamagui";
 import { AppSheet } from "@/components/ui/sheet";
 import { GlassCard } from "@/components/ui/glass-card";
 import { ACCENT } from "@/components/ui/tokens";
@@ -15,9 +14,9 @@ import { SectionHeader } from "@/components/ui/typography";
 import { getDateLocale } from "@/lib/i18n";
 import { notificationsQueries, type Notification } from "@/lib/queries/notifications-queries-factory";
 
-const typeBadgeStatus: Record<string, "success" | "info" | "warning" | "neutral"> = {
+const typeBadgeStatus: Record<string, "success" | "neutral" | "warning"> = {
   BOOKING_CONFIRMED: "success",
-  SESSION_UPDATED: "info",
+  SESSION_UPDATED: "neutral",
   TRAINER_NOTE: "warning",
   GENERAL: "neutral",
 };
@@ -59,28 +58,28 @@ export default function ClientNotifications() {
 
   return (
     <ScreenContainerRaw>
-      <YStack px="$6" pb="$3" gap="$4">
-        <XStack justify="space-between" items="center">
+      <View className="px-6 pb-3 gap-4">
+        <View className="flex-row justify-between items-center">
           <SectionHeader title={t("client.notifications.title")} />
           <Pressable onPress={() => setShowPrefs(true)}>
             <FontAwesome name="cog" size={22} color="#a1a1aa" />
           </Pressable>
-        </XStack>
-      </YStack>
+        </View>
+      </View>
 
       {notificationsQuery.isError ? (
-        <YStack px="$6">
+        <View className="px-6">
           <ErrorState message={t("client.notifications.error")} />
-        </YStack>
+        </View>
       ) : null}
 
       {notifications.length === 0 && !notificationsQuery.isLoading ? (
-        <YStack px="$6">
+        <View className="px-6">
           <EmptyState title={t("client.notifications.empty")} />
-        </YStack>
+        </View>
       ) : null}
 
-      <YStack flex={1} px="$6">
+      <View className="flex-1 px-6">
         <LegendList
           data={notifications}
           keyExtractor={(item) => item.id}
@@ -101,10 +100,10 @@ export default function ClientNotifications() {
                   if (isUnread) markReadMutation.mutate(item.id);
                 }}
               >
-                <YStack py="$1.5">
+                <View className="py-1.5">
                   <GlassCard accentBorder={isUnread ? "left" : undefined}>
-                    <YStack gap="$2" opacity={isUnread ? 1 : 0.7}>
-                      <XStack justify="space-between" items="center">
+                    <View className="flex-col gap-2" style={{ opacity: isUnread ? 1 : 0.7 }}>
+                      <View className="flex-row justify-between items-center">
                         <Badge
                           status={typeBadgeStatus[item.type] ?? "neutral"}
                         >
@@ -112,19 +111,22 @@ export default function ClientNotifications() {
                             ? t(typeLabelKeys[item.type])
                             : item.type}
                         </Badge>
-                        <Text fontSize="$1" color="$color9">
+                        <Text className="text-[11px] text-muted">
                           {new Date(item.createdAt).toLocaleDateString(dateLocale)}
                         </Text>
-                      </XStack>
-                      <Text fontWeight={isUnread ? "600" : "400"} fontSize="$3" color="$color">
+                      </View>
+                      <Text
+                        className="text-[15px] text-foreground"
+                        style={{ fontWeight: isUnread ? "600" : "400" }}
+                      >
                         {displayTitle}
                       </Text>
-                      <Text fontSize="$2" color="$color10">
+                      <Text className="text-[13px] text-muted">
                         {displayBody}
                       </Text>
-                    </YStack>
+                    </View>
                   </GlassCard>
-                </YStack>
+                </View>
               </Pressable>
             );
           }}
@@ -137,46 +139,49 @@ export default function ClientNotifications() {
           }
           estimatedItemSize={120}
         />
-      </YStack>
+      </View>
 
       <AppSheet open={showPrefs} onOpenChange={setShowPrefs}>
-        <YStack gap="$5">
-          <Text fontSize="$6" fontWeight="700" color="$color" letterSpacing={-0.3}>
+        <View className="flex-col gap-5">
+          <Text
+            className="text-foreground font-bold"
+            style={{ fontSize: 24, letterSpacing: -0.3 }}
+          >
             {t("client.notifications.settingsTitle")}
           </Text>
           {prefs ? (
             <GlassCard>
-              <YStack gap="$2">
-                <XStack justify="space-between" items="center" py="$2">
-                  <Text fontSize="$3" color="$color">{t("client.notifications.pushEnabled")}</Text>
+              <View className="flex-col gap-2">
+                <View className="flex-row justify-between items-center py-2">
+                  <Text className="text-[15px] text-foreground">{t("client.notifications.pushEnabled")}</Text>
                   <Switch
                     value={prefs.pushEnabled}
                     onValueChange={(v) => updatePrefsMutation.mutate({ pushEnabled: v })}
                     trackColor={{ false: "#404040", true: ACCENT }}
                   />
-                </XStack>
-                <XStack justify="space-between" items="center" py="$2">
-                  <Text fontSize="$3" color="$color">{t("client.notifications.inAppEnabled")}</Text>
+                </View>
+                <View className="flex-row justify-between items-center py-2">
+                  <Text className="text-[15px] text-foreground">{t("client.notifications.inAppEnabled")}</Text>
                   <Switch
                     value={prefs.inAppEnabled}
                     onValueChange={(v) => updatePrefsMutation.mutate({ inAppEnabled: v })}
                     trackColor={{ false: "#404040", true: ACCENT }}
                   />
-                </XStack>
-                <XStack justify="space-between" items="center" py="$2">
-                  <Text fontSize="$3" color="$color">{t("client.notifications.marketing")}</Text>
+                </View>
+                <View className="flex-row justify-between items-center py-2">
+                  <Text className="text-[15px] text-foreground">{t("client.notifications.marketing")}</Text>
                   <Switch
                     value={prefs.marketingOptIn}
                     onValueChange={(v) => updatePrefsMutation.mutate({ marketingOptIn: v })}
                     trackColor={{ false: "#404040", true: ACCENT }}
                   />
-                </XStack>
-              </YStack>
+                </View>
+              </View>
             </GlassCard>
           ) : (
             <EmptyState title={t("client.notifications.loadingPrefs")} />
           )}
-        </YStack>
+        </View>
       </AppSheet>
     </ScreenContainerRaw>
   );

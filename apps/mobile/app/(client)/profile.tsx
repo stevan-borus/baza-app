@@ -1,8 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
-import { RefreshControl, ScrollView } from "react-native";
+import { RefreshControl, ScrollView, Text, View } from "react-native";
 import { useTranslation } from "react-i18next";
-import { Text, XStack, YStack } from "tamagui";
 import { useState } from "react";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { Button } from "@/components/ui/button";
@@ -73,31 +72,32 @@ export default function ClientProfile() {
     >
       <ScreenContainer>
         {/* Header: Avatar + Name + Email */}
-        <YStack items="center" gap="$3" pb="$4">
-          <YStack
-            width={60}
-            height={60}
-            borderRadius={30}
-            bg="$backgroundHover"
-            items="center"
-            justify="center"
+        <View className="items-center gap-3 pb-4">
+          <View
+            className="items-center justify-center"
+            style={{
+              width: 60,
+              height: 60,
+              borderRadius: 30,
+              backgroundColor: "rgba(255,255,255,0.08)",
+            }}
           >
-            <Text fontSize={24} fontWeight="700" color="$accent1">
+            <Text className="text-accent font-bold" style={{ fontSize: 24 }}>
               {userEmail.charAt(0).toUpperCase()}
             </Text>
-          </YStack>
-          <YStack items="center" gap="$1">
-            <Text fontSize="$5" fontWeight="700" color="$color">
+          </View>
+          <View className="items-center gap-1">
+            <Text className="text-foreground font-bold" style={{ fontSize: 20 }}>
               {userEmail.split("@")[0]}
             </Text>
-            <Text fontSize="$2" color="$color9">
+            <Text className="text-[13px] text-muted">
               {userEmail}
             </Text>
-          </YStack>
-        </YStack>
+          </View>
+        </View>
 
         {/* My Packages */}
-        <YStack gap="$4">
+        <View className="flex-col gap-4">
           <SectionLabel>{t("client.profileTab.myPackages")}</SectionLabel>
           {packagesQuery.isError ? (
             <ErrorState message={t("client.package.error")} />
@@ -107,33 +107,33 @@ export default function ClientProfile() {
           ) : null}
           {packages.map((pkg: ClientPackage) => (
             <GlassCard key={pkg.id}>
-              <YStack gap="$2">
-                <XStack justify="space-between" items="center">
-                  <Text fontWeight="600" fontSize="$4" color="$color">
+              <View className="flex-col gap-2">
+                <View className="flex-row justify-between items-center">
+                  <Text className="font-semibold text-foreground" style={{ fontSize: 17 }}>
                     {pkg.packageType?.name ?? t("client.package.packageName")}
                   </Text>
                   <Badge status={getPackageStatus(pkg)}>
                     {getPackageStatusLabel(pkg, t)}
                   </Badge>
-                </XStack>
-                <Text fontSize="$2" color="$color9">
+                </View>
+                <Text className="text-[13px] text-muted">
                   {t("client.profileTab.sessions", {
                     remaining: pkg.sessionsRemaining,
                     total: pkg.packageType?.sessionCount ?? "?",
                   })}
                 </Text>
-                <Text fontSize="$2" color="$color9">
+                <Text className="text-[13px] text-muted">
                   {t("client.profileTab.expires", {
                     date: new Date(pkg.expiresAt).toLocaleDateString(dateLocale),
                   })}
                 </Text>
-              </YStack>
+              </View>
             </GlassCard>
           ))}
-        </YStack>
+        </View>
 
         {/* Training History */}
-        <YStack gap="$4">
+        <View className="flex-col gap-4">
           <SectionLabel>{t("client.profileTab.trainingHistory")}</SectionLabel>
           {notesQuery.isError ? (
             <ErrorState message={t("client.history.error")} />
@@ -142,7 +142,7 @@ export default function ClientProfile() {
             <EmptyState title={t("client.history.noNotes")} />
           ) : (
             <GlassCard>
-              <YStack gap="$3">
+              <View className="flex-col gap-3">
                 {notes.slice(0, 20).map((note: TrainerNote) => (
                   <ListRow
                     key={note.id}
@@ -150,28 +150,28 @@ export default function ClientProfile() {
                     subtitle={`${new Date(note.createdAt).toLocaleDateString(dateLocale)}${note.trainer ? ` · ${note.trainer.fullName}` : ""}`}
                   />
                 ))}
-              </YStack>
+              </View>
             </GlassCard>
           )}
-        </YStack>
+        </View>
 
         {/* Preferences */}
-        <YStack gap="$4">
+        <View className="flex-col gap-4">
           <SectionLabel>{t("client.profileTab.preferences")}</SectionLabel>
           <GlassCard>
-            <YStack gap="$4">
-              <XStack justify="space-between" items="center">
-                <Text fontSize="$3" color="$color">
+            <View className="flex-col gap-4">
+              <View className="flex-row justify-between items-center">
+                <Text className="text-[15px] text-foreground">
                   {t("client.profileTab.language")}
                 </Text>
-              </XStack>
+              </View>
               <LanguageSwitcher />
-            </YStack>
+            </View>
           </GlassCard>
-        </YStack>
+        </View>
 
         {/* Account */}
-        <YStack gap="$4">
+        <View className="flex-col gap-4">
           <SectionLabel>{t("client.profileTab.account")}</SectionLabel>
           <Button
             variant="danger"
@@ -180,7 +180,7 @@ export default function ClientProfile() {
           >
             {t("client.signOut")}
           </Button>
-        </YStack>
+        </View>
       </ScreenContainer>
     </ScrollView>
   );
