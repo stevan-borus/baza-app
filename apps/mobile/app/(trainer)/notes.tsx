@@ -223,7 +223,14 @@ export default function TrainerNotes() {
         <LegendList
           data={filteredNotes}
           keyExtractor={(item) => item.id}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+              tintColor="#2e5b42"
+              colors={["#2e5b42"]}
+            />
+          }
           contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 8, paddingBottom: 100 }}
           renderItem={({ item }: { item: TrainerNote }) => (
             <NoteRow item={item} dateLocale={dateLocale} />

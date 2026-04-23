@@ -213,7 +213,14 @@ export default function AdminClients() {
     <ScrollView
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={handleRefresh}
+          tintColor="#2e5b42"
+          colors={["#2e5b42"]}
+        />
+      }
     >
       <View
         className="px-5 flex-col gap-4"

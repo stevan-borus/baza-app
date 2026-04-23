@@ -23,6 +23,7 @@ import { WeekStrip } from "@/components/ui/week-strip";
 import { EmptyState } from "@/components/ui/states";
 import { ScreenContainer } from "@/components/ui/screen-container";
 import { SectionLabel } from "@/components/ui/typography";
+import { SkeletonCard, SkeletonList } from "@/components/ui/skeleton";
 import { OnboardingChecklist } from "@/components/client/onboarding-checklist";
 import { getDateLocale } from "@/lib/i18n";
 import { authQueries } from "@/lib/queries/auth-queries-factory";
@@ -131,6 +132,22 @@ export default function ClientHome() {
         activePackage.sessionsRemaining
       : 0;
   const packageTotal = activePackage?.packageType?.sessionCount ?? 0;
+
+  const isLoading =
+    meQuery.isPending ||
+    packagesQuery.isPending ||
+    availabilityQuery.isPending;
+
+  if (isLoading) {
+    return (
+      <ScrollView showsVerticalScrollIndicator={false}>
+        <ScreenContainer>
+          <SkeletonCard />
+          <SkeletonList count={3} />
+        </ScreenContainer>
+      </ScrollView>
+    );
+  }
 
   return (
     <ScrollView

@@ -22,6 +22,7 @@ import {
 import { EmptyState, ErrorState } from "@/components/ui/states";
 import { ScreenContainerRaw } from "@/components/ui/screen-container";
 import { SectionLabel } from "@/components/ui/typography";
+import { SkeletonList } from "@/components/ui/skeleton";
 import { BookingSheet } from "@/components/client/booking-sheet";
 import { sessionsQueries } from "@/lib/queries/sessions-queries-factory";
 import { bookingsQueries } from "@/lib/queries/bookings-queries-factory";
@@ -185,7 +186,11 @@ export default function ClientCalendar() {
         </Text>
       </View>
 
-      {daySessions.length === 0 ? (
+      {availabilityQuery.isPending ? (
+        <View className="px-6 pt-2">
+          <SkeletonList count={3} />
+        </View>
+      ) : daySessions.length === 0 ? (
         <View className="px-6 pt-2">
           <EmptyState title={t("client.dayView.noSessions")} />
         </View>

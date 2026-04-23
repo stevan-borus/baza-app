@@ -70,7 +70,12 @@ export default function AdminReports() {
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
       refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={handleRefresh}
+          tintColor="#2e5b42"
+          colors={["#2e5b42"]}
+        />
       }
       contentContainerStyle={{
         paddingTop: insets.top + HEADER_HEIGHT + 12,

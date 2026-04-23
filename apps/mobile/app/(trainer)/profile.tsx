@@ -40,7 +40,12 @@ export default function TrainerProfile() {
     <ScrollView
       showsVerticalScrollIndicator={false}
       refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={handleRefresh}
+          tintColor="#2e5b42"
+          colors={["#2e5b42"]}
+        />
       }
     >
       <ScreenContainer>

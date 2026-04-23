@@ -286,7 +286,12 @@ export default function TrainerSchedule() {
           style={{ flex: 1 }}
           contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 24 }}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+              tintColor="#2e5b42"
+              colors={["#2e5b42"]}
+            />
           }
         >
           <EmptyState title={t("client.dayView.noSessions")} />

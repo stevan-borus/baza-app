@@ -21,6 +21,11 @@ import { Input } from "@/components/ui/input";
 import { DateTimePicker } from "@/components/ui/date-time-picker";
 import { SectionLabel, ScreenTitle } from "@/components/ui/typography";
 import { ScreenContainerRaw } from "@/components/ui/screen-container";
+import {
+  SkeletonCard,
+  SkeletonList,
+  SkeletonStatCard,
+} from "@/components/ui/skeleton";
 import { sessionsQueries } from "@/lib/queries/sessions-queries-factory";
 import { trainingsQueries } from "@/lib/queries/trainings-queries-factory";
 import { roomsQueries } from "@/lib/queries/rooms-queries-factory";
@@ -199,6 +204,33 @@ export default function AdminSchedule() {
     summary && summary.totalSessions > 0
       ? Math.round((summary.activeClients / summary.totalClients) * 100)
       : 0;
+
+  const isDashboardLoading =
+    summaryQuery.isPending || availabilityQuery.isPending;
+
+  if (isDashboardLoading) {
+    return (
+      <ScreenContainerRaw>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 32 }}
+        >
+          <View className="pt-4 flex-col gap-4">
+            <SkeletonCard />
+            <View className="flex-row gap-3">
+              <View className="flex-1">
+                <SkeletonStatCard />
+              </View>
+              <View className="flex-1">
+                <SkeletonStatCard />
+              </View>
+            </View>
+            <SkeletonList count={3} />
+          </View>
+        </ScrollView>
+      </ScreenContainerRaw>
+    );
+  }
 
   return (
     <ScreenContainerRaw>

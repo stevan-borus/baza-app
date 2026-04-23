@@ -153,7 +153,14 @@ export default function TrainerClients() {
     <ScrollView
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={handleRefresh}
+          tintColor="#2e5b42"
+          colors={["#2e5b42"]}
+        />
+      }
     >
       <ScreenContainer>
         {/* ── Title ── */}

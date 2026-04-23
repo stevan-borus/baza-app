@@ -15,6 +15,7 @@ import { AppSheet } from "@/components/ui/sheet";
 import { GlassCard } from "@/components/ui/glass-card";
 import { ACCENT } from "@/components/ui/tokens";
 import { EmptyState, ErrorState } from "@/components/ui/states";
+import { SkeletonList } from "@/components/ui/skeleton";
 import { ScreenContainerRaw } from "@/components/ui/screen-container";
 import { ScreenTitle, SectionLabel } from "@/components/ui/typography";
 import { SegmentedControl } from "@/components/ui/segmented-control";
@@ -211,19 +212,21 @@ export default function ClientNotifications() {
         transition={{ type: "timing", duration: 350, delay: 160 }}
         style={{ flex: 1 }}
       >
-        {notificationsQuery.isError ? (
+        {notificationsQuery.isLoading ? (
+          <View className="px-6">
+            <SkeletonList count={3} />
+          </View>
+        ) : notificationsQuery.isError ? (
           <View className="px-6">
             <ErrorState message={t("client.notifications.error")} />
           </View>
-        ) : null}
-
-        {listData.length === 0 && !notificationsQuery.isLoading ? (
+        ) : listData.length === 0 ? (
           <View className="px-6">
             <EmptyState title={t("client.notifications.empty")} />
           </View>
         ) : null}
 
-        <LegendList
+        {!notificationsQuery.isLoading && <LegendList
           data={listData}
           keyExtractor={(item) =>
             item.kind === "header" ? `header-${item.groupKey}` : item.notification.id
@@ -303,7 +306,7 @@ export default function ClientNotifications() {
             ) : null
           }
           estimatedItemSize={90}
-        />
+        />}
       </MotiView>
 
       {/* Preferences sheet */}
