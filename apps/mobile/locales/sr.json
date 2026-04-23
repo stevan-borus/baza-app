@@ -396,7 +396,8 @@
       "saveError": "Čuvanje beleške nije uspelo.",
       "filterAll": "Sve",
       "filterThisWeek": "Ova nedelja",
-      "filterByClient": "Po klijentu"
+      "filterByClient": "Po klijentu",
+      "unknownClient": "Nepoznat klijent"
     },
     "clients": {
       "title": "Moji klijenti",

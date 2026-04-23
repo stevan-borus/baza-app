@@ -395,7 +395,8 @@
       "saveError": "Saving note failed.",
       "filterAll": "All",
       "filterThisWeek": "This week",
-      "filterByClient": "By client"
+      "filterByClient": "By client",
+      "unknownClient": "Unknown client"
     },
     "clients": {
       "title": "My Clients",

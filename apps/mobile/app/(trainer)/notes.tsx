@@ -172,6 +172,42 @@ export default function TrainerNotes() {
   const allNotes = notesQuery.data?.pages.flatMap((p) => p.notes) ?? [];
   const filteredNotes = useMemo(() => applyFilter(allNotes, filter), [allNotes, filter]);
 
+  // For "By client" grouping we interleave sticky section headers with note rows.
+  type ListItem =
+    | { kind: "header"; clientName: string; id: string }
+    | { kind: "row"; note: TrainerNote; id: string };
+
+  const { listData, stickyIndices } = useMemo<{
+    listData: ListItem[];
+    stickyIndices: number[];
+  }>(() => {
+    if (filter !== "byClient") {
+      return {
+        listData: filteredNotes.map((n) => ({
+          kind: "row" as const,
+          note: n,
+          id: n.id,
+        })),
+        stickyIndices: [],
+      };
+    }
+
+    const items: ListItem[] = [];
+    const stickies: number[] = [];
+    let lastClient: string | null = null;
+    for (const note of filteredNotes) {
+      const name =
+        note.clientProfile?.user.fullName ?? t("trainer.notes.unknownClient");
+      if (name !== lastClient) {
+        stickies.push(items.length);
+        items.push({ kind: "header", clientName: name, id: `h:${name}` });
+        lastClient = name;
+      }
+      items.push({ kind: "row", note, id: note.id });
+    }
+    return { listData: items, stickyIndices: stickies };
+  }, [filteredNotes, filter, t]);
+
   async function handleRefresh() {
     setRefreshing(true);
     await queryClient.invalidateQueries({ queryKey: ["trainer-notes"] });
@@ -238,8 +274,9 @@ export default function TrainerNotes() {
         style={{ flex: 1 }}
       >
         <LegendList
-          data={filteredNotes}
-          keyExtractor={(item) => item.id}
+          data={listData}
+          keyExtractor={(item: ListItem) => item.id}
+          stickyIndices={stickyIndices}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
@@ -249,9 +286,31 @@ export default function TrainerNotes() {
             />
           }
           contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 8, paddingBottom: 100 }}
-          renderItem={({ item }: { item: TrainerNote }) => (
-            <NoteRow item={item} dateLocale={dateLocale} />
-          )}
+          renderItem={({ item }: { item: ListItem }) =>
+            item.kind === "header" ? (
+              <View
+                style={{
+                  backgroundColor: "rgba(10,15,20,0.92)",
+                  paddingVertical: 8,
+                  marginBottom: 4,
+                }}
+              >
+                <Text
+                  style={{
+                    fontSize: 11,
+                    fontWeight: "700",
+                    letterSpacing: 0.8,
+                    textTransform: "uppercase",
+                    color: "rgba(255,255,255,0.55)",
+                  }}
+                >
+                  {item.clientName}
+                </Text>
+              </View>
+            ) : (
+              <NoteRow item={item.note} dateLocale={dateLocale} />
+            )
+          }
           onEndReached={handleEndReached}
           onEndReachedThreshold={0.5}
           ListEmptyComponent={
