@@ -258,6 +258,7 @@
       "filterAll": "Svi",
       "filterActive": "Aktivni",
       "filterExpiring": "Ističu",
+      "filterPaused": "Pauzirani",
       "filterExpired": "Istekli",
       "filterEmpty": "Nema klijenata koji odgovaraju filteru.",
     },

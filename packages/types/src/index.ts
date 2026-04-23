@@ -124,6 +124,7 @@ export type AvailabilityResponse = z.infer<typeof availabilityResponseSchema>;
 export const clientPackageStatusSchema = z.enum([
   "active",
   "expiring",
+  "paused",
   "expired",
   "none",
 ]);

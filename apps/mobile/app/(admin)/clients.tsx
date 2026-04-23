@@ -85,7 +85,7 @@ function InitialsAvatar({ name }: { name: string }) {
 
 // ─── FilterType ───────────────────────────────────────────────────────────────
 
-type FilterType = "all" | "active" | "expiring" | "expired";
+type FilterType = "all" | "active" | "expiring" | "paused" | "expired";
 
 // ─── Main screen ─────────────────────────────────────────────────────────────
 
@@ -208,6 +208,7 @@ export default function AdminClients() {
     { key: "all", labelKey: "admin.clients.filterAll" },
     { key: "active", labelKey: "admin.clients.filterActive" },
     { key: "expiring", labelKey: "admin.clients.filterExpiring" },
+    { key: "paused", labelKey: "admin.clients.filterPaused" },
     { key: "expired", labelKey: "admin.clients.filterExpired" },
   ];
 
@@ -350,6 +351,10 @@ export default function AdminClients() {
                       ) : client.packageStatus === "expiring" ? (
                         <Badge status="warning">
                           {t("admin.clients.filterExpiring")}
+                        </Badge>
+                      ) : client.packageStatus === "paused" ? (
+                        <Badge status="neutral">
+                          {t("admin.clients.filterPaused")}
                         </Badge>
                       ) : client.packageStatus === "expired" ? (
                         <Badge status="danger">

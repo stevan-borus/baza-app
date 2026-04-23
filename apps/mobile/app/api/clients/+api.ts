@@ -45,6 +45,14 @@ export async function GET(request: Request) {
           expiresAt: true,
         },
       },
+      packagePauses: {
+        where: {
+          startsAt: { lte: new Date() },
+          endsAt: { gte: new Date() },
+        },
+        select: { id: true },
+        take: 1,
+      },
     },
     orderBy: { user: { fullName: "asc" } },
   });
@@ -54,11 +62,13 @@ export async function GET(request: Request) {
     now.getTime() + EXPIRING_WINDOW_DAYS * 24 * 60 * 60 * 1000,
   );
 
-  // Compute the most "active" package status per client.
-  // Priority: active > expiring > expired > none.
-  // Note: active package pauses live in a separate PackagePause table; this
-  // computation treats all non-expired, non-zero packages as "active/expiring".
-  const withStatus = clients.map(({ packages, ...rest }) => {
+  // Compute the most meaningful package status per client.
+  // Priority: paused (overrides) > active > expiring > expired > none.
+  const withStatus = clients.map(({ packages, packagePauses, ...rest }) => {
+    if (packagePauses.length > 0) {
+      return { ...rest, packageStatus: "paused" as ClientPackageStatus };
+    }
+
     let status: ClientPackageStatus = "none";
     let hasExpired = false;
 
