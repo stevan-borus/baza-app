@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { TextInput, View, Text, type TextInputProps, Pressable } from "react-native";
-import { MotiText } from "moti";
+import { MotiView } from "moti";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 
 type IconName = React.ComponentProps<typeof FontAwesome>["name"];
@@ -39,16 +39,16 @@ export function Input({
         }`}
       >
         {label ? (
-          <MotiText
-            className="absolute left-4 text-muted"
+          <MotiView
+            className="absolute left-4"
             animate={{
-              top: active ? 6 : 18,
-              fontSize: active ? 11 : 15,
+              translateY: active ? -10 : 0,
+              scale: active ? 0.78 : 1,
             }}
             transition={{ type: "timing", duration: 150 }}
           >
-            {label}
-          </MotiText>
+            <Text className="text-muted text-base">{label}</Text>
+          </MotiView>
         ) : null}
         <View className={`flex-row items-center gap-2 ${label ? "mt-3" : ""}`}>
           {iconName ? (

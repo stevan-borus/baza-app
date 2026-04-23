@@ -7,13 +7,21 @@ type LinkTextProps = React.ComponentProps<typeof Text> & {
 };
 
 export function LinkText({ children, className, style, color, fontSize, ...props }: LinkTextProps & { color?: string; fontSize?: string | number }) {
+  const resolvedFontSize: number | undefined =
+    typeof fontSize === "number"
+      ? fontSize
+      : typeof fontSize === "string" && fontSize.startsWith("$")
+        ? 14
+        : typeof fontSize === "string"
+          ? Number.parseFloat(fontSize) || undefined
+          : undefined;
   return (
     <Text
       className={`text-accent font-medium py-2 ${className ?? ""}`}
       style={[
-        fontSize ? { fontSize: typeof fontSize === 'string' && fontSize.startsWith('$') ? 14 : fontSize } : {},
-        color ? { color } : {},
-        style
+        resolvedFontSize !== undefined ? { fontSize: resolvedFontSize } : null,
+        color ? { color } : null,
+        style,
       ]}
       {...props}
     >
