@@ -3,13 +3,12 @@ import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ActivityIndicator } from "react-native";
-import Animated, { FadeInDown } from "react-native-reanimated";
-import { Text, YStack } from "tamagui";
+import { ActivityIndicator, Text, View } from "react-native";
+import { MotiView } from "moti";
 import { AuthBackground } from "@/components/auth/auth-background";
 import { Button } from "@/components/ui/button";
 import { GlassCard } from "@/components/ui/glass-card";
-import { Input, PasswordInput } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/input";
 import { LinkText } from "@/components/ui/typography";
 import { ACCENT, DANGER } from "@/components/ui/tokens";
 import { sharedEnv } from "@/lib/env.shared";
@@ -51,70 +50,91 @@ export default function AcceptInviteScreen() {
   if (!token) {
     return (
       <AuthBackground>
-        <YStack gap="$6" width="100%" items="center">
+        <View className="flex-col gap-6 w-full items-center">
           <GlassCard
-            borderRadius={999}
-            width={64}
-            height={64}
-            items="center"
-            justify="center"
-            padding={0}
+            style={{
+              borderRadius: 999,
+              width: 64,
+              height: 64,
+              alignItems: "center",
+              justifyContent: "center",
+              padding: 0,
+            }}
           >
             <FontAwesome name="exclamation-triangle" size={24} color={DANGER} />
           </GlassCard>
-          <Text fontSize="$5" fontWeight="600" color="#ffffff" textAlign="center">
+          <Text
+            className="text-white font-semibold text-xl text-center"
+          >
             {t("auth.inviteInvalid", { defaultValue: "Invalid invite link" })}
           </Text>
-          <Text fontSize="$3" color="rgba(255,255,255,0.5)" textAlign="center">
+          <Text
+            className="text-center"
+            style={{ color: "rgba(255,255,255,0.5)", fontSize: 14 }}
+          >
             {t("auth.inviteInvalidDesc", { defaultValue: "This invite link is invalid or has expired." })}
           </Text>
           <LinkText color="#ffffff" onPress={() => router.replace("/sign-in")}>
             {t("auth.backToSignIn")}
           </LinkText>
-        </YStack>
+        </View>
       </AuthBackground>
     );
   }
 
   return (
     <AuthBackground>
-      <YStack gap="$6" width="100%">
+      <View className="flex-col gap-6 w-full">
         {/* Icon */}
-        <YStack items="center">
+        <View className="items-center">
           <GlassCard
-            borderRadius={999}
-            width={64}
-            height={64}
-            items="center"
-            justify="center"
-            padding={0}
+            style={{
+              borderRadius: 999,
+              width: 64,
+              height: 64,
+              alignItems: "center",
+              justifyContent: "center",
+              padding: 0,
+            }}
           >
             <FontAwesome name="envelope-open" size={24} color={ACCENT} />
           </GlassCard>
-        </YStack>
+        </View>
 
         {/* Heading */}
-        <Animated.View entering={FadeInDown.delay(200).duration(500)}>
-          <YStack gap="$2" items="center">
-            <Text fontSize={28} fontWeight="700" color="#ffffff" letterSpacing={-0.5}>
+        <MotiView
+          from={{ opacity: 0, translateY: 12 }}
+          animate={{ opacity: 1, translateY: 0 }}
+          transition={{ type: "timing", duration: 500, delay: 200 }}
+        >
+          <View className="flex-col gap-2 items-center">
+            <Text
+              className="text-white font-bold"
+              style={{ fontSize: 28, letterSpacing: -0.5 }}
+            >
               {t("auth.welcomeInvite", { defaultValue: "Welcome to Baza" })}
             </Text>
-            <Text fontSize="$3" color="rgba(255,255,255,0.5)" textAlign="center">
+            <Text
+              className="text-center"
+              style={{ color: "rgba(255,255,255,0.5)", fontSize: 14 }}
+            >
               {t("auth.inviteSubtitle", { defaultValue: "Create a password to complete your account." })}
             </Text>
-          </YStack>
-        </Animated.View>
+          </View>
+        </MotiView>
 
         {/* Form */}
-        <Animated.View entering={FadeInDown.delay(300).duration(500)}>
-          <YStack gap="$4">
+        <MotiView
+          from={{ opacity: 0, translateY: 12 }}
+          animate={{ opacity: 1, translateY: 0 }}
+          transition={{ type: "timing", duration: 500, delay: 300 }}
+        >
+          <View className="flex-col gap-4">
             <PasswordInput
               label={t("auth.createPassword", { defaultValue: "Create password" })}
               textContentType="newPassword"
               value={password}
               onChangeText={setPassword}
-              color="#ffffff"
-              style={{ color: "#ffffff" }}
               iconColor="rgba(255,255,255,0.5)"
             />
 
@@ -124,14 +144,12 @@ export default function AcceptInviteScreen() {
               value={confirmPassword}
               onChangeText={setConfirmPassword}
               error={passwordError}
-              color="#ffffff"
-              style={{ color: "#ffffff" }}
               iconColor="rgba(255,255,255,0.5)"
             />
 
             {completeMutation.isError ? (
-              <GlassCard accentBorder="left" borderLeftColor="$red10" padding="$3">
-                <Text color="$red10" fontSize="$2" fontWeight="500">
+              <GlassCard accentBorder="left" accentBorderColor="#ef4444" size="sm">
+                <Text style={{ color: "#ef4444", fontSize: 13, fontWeight: "500" }}>
                   {t("auth.inviteError", { defaultValue: "Could not complete registration. The invite may have expired." })}
                 </Text>
               </GlassCard>
@@ -141,28 +159,28 @@ export default function AcceptInviteScreen() {
               disabled={!canSubmit}
               onPress={() => completeMutation.mutate()}
               size="large"
-              mt="$2"
+              className="mt-2"
             >
               {completeMutation.isPending ? (
                 <ActivityIndicator color="#fff" size="small" />
               ) : (
-                <Text color="#ffffff" fontWeight="600" fontSize="$4">
+                <Text className="text-white font-semibold text-base">
                   {t("auth.joinButton", { defaultValue: "Join" })}
                 </Text>
               )}
             </Button>
 
-            <YStack items="center" mt="$2">
-              <LinkText color="rgba(255,255,255,0.4)" fontSize="$1">
+            <View className="flex-col items-center mt-2">
+              <LinkText color="rgba(255,255,255,0.4)" fontSize={12}>
                 {t("auth.alreadyHaveAccount", { defaultValue: "Already have an account?" })}
               </LinkText>
               <LinkText color="rgba(255,255,255,0.6)" onPress={() => router.replace("/sign-in")}>
                 {t("auth.backToSignIn")}
               </LinkText>
-            </YStack>
-          </YStack>
-        </Animated.View>
-      </YStack>
+            </View>
+          </View>
+        </MotiView>
+      </View>
     </AuthBackground>
   );
 }

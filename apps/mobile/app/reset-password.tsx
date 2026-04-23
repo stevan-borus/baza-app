@@ -3,14 +3,8 @@ import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Pressable } from "react-native";
-import Animated, {
-  FadeInDown,
-  FadeOutLeft,
-  SlideInRight,
-  SlideOutLeft,
-} from "react-native-reanimated";
-import { Text, XStack, YStack } from "tamagui";
+import { Pressable, Text, View } from "react-native";
+import { MotiView } from "moti";
 import { AuthBackground } from "@/components/auth/auth-background";
 import { Button } from "@/components/ui/button";
 import { GlassCard } from "@/components/ui/glass-card";
@@ -25,20 +19,24 @@ type Step = "request" | "reset" | "success";
 function StepDots({ current }: { current: Step }) {
   const isFirst = current === "request";
   return (
-    <XStack gap="$2" justify="center" mt="$3">
-      <YStack
-        width={8}
-        height={8}
-        rounded={4}
-        bg={isFirst ? ACCENT : "rgba(255,255,255,0.2)"}
+    <View className="flex-row gap-2 justify-center mt-3">
+      <View
+        style={{
+          width: 8,
+          height: 8,
+          borderRadius: 4,
+          backgroundColor: isFirst ? ACCENT : "rgba(255,255,255,0.2)",
+        }}
       />
-      <YStack
-        width={8}
-        height={8}
-        rounded={4}
-        bg={!isFirst ? ACCENT : "rgba(255,255,255,0.2)"}
+      <View
+        style={{
+          width: 8,
+          height: 8,
+          borderRadius: 4,
+          backgroundColor: !isFirst ? ACCENT : "rgba(255,255,255,0.2)",
+        }}
       />
-    </XStack>
+    </View>
   );
 }
 
@@ -86,21 +84,23 @@ export default function ResetPasswordScreen() {
 
   return (
     <AuthBackground>
-      <YStack gap="$6" width="100%">
+      <View className="flex-col gap-6 w-full">
         {/* Back arrow */}
         <Pressable onPress={() => router.back()} hitSlop={12}>
           <FontAwesome name="arrow-left" size={20} color="#ffffff" />
         </Pressable>
 
         {/* Lock icon badge */}
-        <YStack items="center" gap="$2">
+        <View className="items-center gap-2">
           <GlassCard
-            borderRadius={999}
-            width={64}
-            height={64}
-            items="center"
-            justify="center"
-            padding={0}
+            style={{
+              borderRadius: 999,
+              width: 64,
+              height: 64,
+              alignItems: "center",
+              justifyContent: "center",
+              padding: 0,
+            }}
           >
             <FontAwesome
               name={step === "success" ? "check" : "lock"}
@@ -109,41 +109,52 @@ export default function ResetPasswordScreen() {
             />
           </GlassCard>
           {step !== "success" ? <StepDots current={step} /> : null}
-        </YStack>
+        </View>
 
         {/* Success state */}
         {step === "success" ? (
-          <Animated.View entering={FadeInDown.duration(400)}>
-            <YStack gap="$4" items="center">
-              <Text fontSize="$5" fontWeight="600" color="#ffffff">
+          <MotiView
+            from={{ opacity: 0, translateY: 12 }}
+            animate={{ opacity: 1, translateY: 0 }}
+            transition={{ type: "timing", duration: 400 }}
+          >
+            <View className="flex-col gap-4 items-center">
+              <Text className="text-white font-semibold text-xl">
                 {t("auth.passwordUpdated", { defaultValue: "Password updated" })}
               </Text>
-              <Text fontSize="$3" color="rgba(255,255,255,0.5)" textAlign="center">
+              <Text
+                className="text-center"
+                style={{ color: "rgba(255,255,255,0.5)", fontSize: 14 }}
+              >
                 {t("auth.passwordUpdatedDesc", { defaultValue: "You can now sign in with your new password." })}
               </Text>
               <LinkText color="#ffffff" onPress={() => router.replace("/sign-in")}>
                 {t("auth.backToSignIn")}
               </LinkText>
-            </YStack>
-          </Animated.View>
+            </View>
+          </MotiView>
         ) : null}
 
         {/* Step 1 — Request */}
         {step === "request" ? (
-          <Animated.View
+          <MotiView
             key="request-step"
-            entering={FadeInDown.delay(200).duration(500)}
-            exiting={FadeOutLeft.duration(300)}
+            from={{ opacity: 0, translateY: 12 }}
+            animate={{ opacity: 1, translateY: 0 }}
+            transition={{ type: "timing", duration: 500, delay: 200 }}
           >
-            <YStack gap="$4">
-              <YStack gap="$2" items="center">
-                <Text fontSize="$5" fontWeight="600" color="#ffffff">
+            <View className="flex-col gap-4">
+              <View className="flex-col gap-2 items-center">
+                <Text className="text-white font-semibold text-xl">
                   {t("auth.resetPasswordTitle")}
                 </Text>
-                <Text fontSize="$3" color="rgba(255,255,255,0.5)" textAlign="center">
+                <Text
+                  className="text-center"
+                  style={{ color: "rgba(255,255,255,0.5)", fontSize: 14 }}
+                >
                   {t("auth.resetPasswordIntro")}
                 </Text>
-              </YStack>
+              </View>
 
               <Input
                 icon="envelope"
@@ -154,8 +165,6 @@ export default function ResetPasswordScreen() {
                 autoComplete="email"
                 value={email}
                 onChangeText={setEmail}
-                color="#ffffff"
-                style={{ color: "#ffffff" }}
               />
 
               <Button
@@ -163,7 +172,7 @@ export default function ResetPasswordScreen() {
                 onPress={() => requestMutation.mutate()}
                 size="large"
               >
-                <Text color="#ffffff" fontWeight="600" fontSize="$4">
+                <Text className="text-white font-semibold text-base">
                   {t("auth.sendLink")}
                 </Text>
               </Button>
@@ -173,51 +182,57 @@ export default function ResetPasswordScreen() {
               ) : null}
 
               {requestMutation.isSuccess ? (
-                <Animated.View entering={FadeInDown.springify()}>
-                  <GlassCard padding="$4">
-                    <Text color={ACCENT} fontWeight="600" fontSize="$3">
+                <MotiView
+                  from={{ opacity: 0, translateY: 12 }}
+                  animate={{ opacity: 1, translateY: 0 }}
+                  transition={{ type: "spring" }}
+                >
+                  <GlassCard size="md">
+                    <Text style={{ color: ACCENT, fontWeight: "600", fontSize: 14 }}>
                       {t("auth.resetLinkSent", { email })}
                     </Text>
                   </GlassCard>
-                </Animated.View>
+                </MotiView>
               ) : null}
 
-              <YStack items="center" gap="$3">
+              <View className="flex-col items-center gap-3">
                 <LinkText color="rgba(255,255,255,0.6)" onPress={() => setStep("reset")}>
                   {t("auth.haveToken")}
                 </LinkText>
                 <LinkText color="rgba(255,255,255,0.6)" onPress={() => router.back()}>
                   {t("auth.backToSignIn")}
                 </LinkText>
-              </YStack>
-            </YStack>
-          </Animated.View>
+              </View>
+            </View>
+          </MotiView>
         ) : null}
 
         {/* Step 2 — Reset */}
         {step === "reset" ? (
-          <Animated.View
+          <MotiView
             key="reset-step"
-            entering={SlideInRight.duration(400).springify()}
-            exiting={SlideOutLeft.duration(300)}
+            from={{ opacity: 0, translateY: 12 }}
+            animate={{ opacity: 1, translateY: 0 }}
+            transition={{ type: "spring", duration: 400 }}
           >
-            <YStack gap="$4">
-              <YStack gap="$2" items="center">
-                <Text fontSize="$5" fontWeight="600" color="#ffffff">
+            <View className="flex-col gap-4">
+              <View className="flex-col gap-2 items-center">
+                <Text className="text-white font-semibold text-xl">
                   {t("auth.checkEmail", { defaultValue: "Check your email" })}
                 </Text>
-                <Text fontSize="$3" color="rgba(255,255,255,0.5)" textAlign="center">
+                <Text
+                  className="text-center"
+                  style={{ color: "rgba(255,255,255,0.5)", fontSize: 14 }}
+                >
                   {t("auth.resetTokenIntro")}
                 </Text>
-              </YStack>
+              </View>
 
               <Input
                 label={t("auth.tokenPlaceholder")}
                 autoCapitalize="none"
                 value={token}
                 onChangeText={setToken}
-                color="#ffffff"
-                style={{ color: "#ffffff" }}
               />
 
               <PasswordInput
@@ -225,8 +240,6 @@ export default function ResetPasswordScreen() {
                 textContentType="newPassword"
                 value={password}
                 onChangeText={setPassword}
-                color="#ffffff"
-                style={{ color: "#ffffff" }}
                 iconColor="rgba(255,255,255,0.5)"
               />
 
@@ -235,7 +248,7 @@ export default function ResetPasswordScreen() {
                 onPress={() => resetMutation.mutate()}
                 size="large"
               >
-                <Text color="#ffffff" fontWeight="600" fontSize="$4">
+                <Text className="text-white font-semibold text-base">
                   {t("auth.resetSubmit")}
                 </Text>
               </Button>
@@ -244,18 +257,18 @@ export default function ResetPasswordScreen() {
                 <ErrorState message={t("auth.resetError")} />
               ) : null}
 
-              <YStack items="center" gap="$3">
+              <View className="flex-col items-center gap-3">
                 <LinkText color="rgba(255,255,255,0.6)" onPress={() => setStep("request")}>
                   {t("auth.backToRequest")}
                 </LinkText>
                 <LinkText color="rgba(255,255,255,0.6)" onPress={() => router.back()}>
                   {t("auth.backToSignIn")}
                 </LinkText>
-              </YStack>
-            </YStack>
-          </Animated.View>
+              </View>
+            </View>
+          </MotiView>
         ) : null}
-      </YStack>
+      </View>
     </AuthBackground>
   );
 }
