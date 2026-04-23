@@ -1,10 +1,8 @@
 import React from "react";
-import { Text, XStack, YStack } from "tamagui";
+import { Pressable, Text, View } from "react-native";
 import { GlassCard } from "./glass-card";
 import { Badge } from "./badge";
-import { ACCENT } from "./tokens";
 
-type ClassType = "Yoga" | "Pilates" | "HIIT" | string;
 type SessionStatus = "booked" | "waitlisted" | "full" | "available";
 
 type SessionCardProps = {
@@ -14,22 +12,22 @@ type SessionCardProps = {
   room?: string;
   bookedCount: number;
   capacity: number;
-  classType?: ClassType;
+  classType?: string;
   status: SessionStatus;
   onPress?: () => void;
 };
 
-const classTypeColors: Record<string, string> = {
-  Yoga: "#2dd4bf",    // teal
-  Pilates: ACCENT, // green
-  HIIT: "#f87171",    // coral
+const classTypeBorder: Record<string, string> = {
+  Yoga: "border-l-[#2dd4bf]",
+  Pilates: "border-l-accent",
+  HIIT: "border-l-[#f87171]",
 };
 
-const statusConfig: Record<SessionStatus, { label: string; badgeStatus: "success" | "warning" }> = {
-  booked: { label: "Booked", badgeStatus: "success" },
-  waitlisted: { label: "Waitlisted", badgeStatus: "warning" },
-  full: { label: "Full", badgeStatus: "warning" },
-  available: { label: "", badgeStatus: "success" },
+const statusConfig: Record<SessionStatus, { label: string; status: "success" | "warning" }> = {
+  booked: { label: "Booked", status: "success" },
+  waitlisted: { label: "Waitlisted", status: "warning" },
+  full: { label: "Full", status: "warning" },
+  available: { label: "", status: "success" },
 };
 
 export function SessionCard({
@@ -43,39 +41,39 @@ export function SessionCard({
   status,
   onPress,
 }: SessionCardProps) {
-  const borderColor = classType ? classTypeColors[classType] ?? ACCENT : undefined;
   const config = statusConfig[status];
   const spotsLeft = capacity - bookedCount;
   const badgeLabel =
     status === "available" ? `${spotsLeft} spot${spotsLeft !== 1 ? "s" : ""}` : config.label;
+  const accentBorder = classType && classTypeBorder[classType] ? "left" : undefined;
 
   return (
-    <GlassCard
-      interactive
-      onPress={onPress}
-      borderLeftWidth={borderColor ? 3 : undefined}
-      borderLeftColor={borderColor as any}
-    >
-      <XStack items="center" gap="$3">
-        <Text fontSize="$4" fontWeight="700" color="$color" minWidth={54}>
-          {time}
-        </Text>
-
-        <YStack flex={1} gap="$0.5">
-          <Text fontSize="$3" fontWeight="600" color="$color">
-            {className}
+    <Pressable onPress={onPress} className="active:opacity-80">
+      <GlassCard
+        accentBorder={accentBorder}
+        accentBorderColorClass={
+          classType && classTypeBorder[classType]
+            ? classTypeBorder[classType]
+            : "border-accent"
+        }
+      >
+        <View className="flex-row items-center gap-3">
+          <Text className="text-base font-bold text-foreground min-w-[54px]">
+            {time}
           </Text>
-          {(trainerName || room) ? (
-            <Text fontSize="$2" color="$color9">
-              {[trainerName, room].filter(Boolean).join(" · ")}
+          <View className="flex-1 gap-0.5">
+            <Text className="text-sm font-semibold text-foreground">
+              {className}
             </Text>
-          ) : null}
-        </YStack>
-
-        <Badge status={config.badgeStatus}>
-          {badgeLabel}
-        </Badge>
-      </XStack>
-    </GlassCard>
+            {trainerName || room ? (
+              <Text className="text-xs text-muted">
+                {[trainerName, room].filter(Boolean).join(" · ")}
+              </Text>
+            ) : null}
+          </View>
+          {badgeLabel ? <Badge status={config.status}>{badgeLabel}</Badge> : null}
+        </View>
+      </GlassCard>
+    </Pressable>
   );
 }
