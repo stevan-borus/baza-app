@@ -1,10 +1,9 @@
 import { useState, useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { RefreshControl, ScrollView } from "react-native";
+import { RefreshControl, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import dayjs from "dayjs";
-import { Text, XStack, YStack } from "tamagui";
 import { ActionButton } from "@/components/ui/action-button";
 import { AppSheet } from "@/components/ui/sheet";
 import { Badge, Card } from "@/components/ui/card";
@@ -57,6 +56,7 @@ export default function AdminPackages() {
     }
     return allAssignments;
   }, [allAssignments, assignmentFilter]);
+
   const createMutation = useMutation({
     ...packagesQueries.createType(),
     onSuccess: async () => {
@@ -97,25 +97,25 @@ export default function AdminPackages() {
       ) : null}
       {(typesQuery.data?.packageTypes ?? []).map((pt) => (
         <Card key={pt.id}>
-          <YStack gap="$1">
-            <Text fontWeight="600" fontSize="$3" color="$color">
+          <View className="flex-col gap-1">
+            <Text className="text-foreground font-semibold" style={{ fontSize: 15 }}>
               {pt.name}
             </Text>
-            <Text fontSize="$2" color="$color10">
+            <Text className="text-muted" style={{ fontSize: 13 }}>
               {t("admin.manage.sessionsDays", {
                 count: pt.sessionCount,
                 days: pt.validityDays,
               })}
             </Text>
-            <Text fontSize="$2" color="$color9">
+            <Text className="text-muted" style={{ fontSize: 12 }}>
               {t("admin.manage.lateCancel", { hours: pt.lateCancelHours })}
             </Text>
-          </YStack>
+          </View>
         </Card>
       ))}
 
       <SectionHeader title={t("admin.manage.activeAssignments")} />
-      <XStack gap="$2" flexWrap="wrap">
+      <View className="flex-row flex-wrap gap-2">
         {(["all", "expiring", "expired"] as const).map((f) => (
           <Button
             key={f}
@@ -126,7 +126,7 @@ export default function AdminPackages() {
             {t(`admin.manage.filter${f.charAt(0).toUpperCase() + f.slice(1)}` as any)}
           </Button>
         ))}
-      </XStack>
+      </View>
       {clientPackagesQuery.isError ? (
         <ErrorState message={t("admin.manage.packagesError")} />
       ) : null}
@@ -138,33 +138,31 @@ export default function AdminPackages() {
         const isExpiring = !isExpired && dayjs(pkg.expiresAt).diff(dayjs(), "day") <= 7;
         return (
           <Card key={pkg.id}>
-            <YStack gap="$1.5">
-              <XStack justify="space-between" items="center">
-                <Text fontWeight="600" fontSize="$3" color="$color">
+            <View className="flex-col gap-1.5">
+              <View className="flex-row justify-between items-center">
+                <Text className="text-foreground font-semibold" style={{ fontSize: 15 }}>
                   {pkg.packageType?.name ?? pkg.packageTypeId}
                 </Text>
                 <Badge status={isExpired ? "danger" : isExpiring ? "warning" : "success"}>
                   {isExpired ? t("client.profileTab.expired") : isExpiring ? t("admin.manage.filterExpiring") : t("client.package.active")}
                 </Badge>
-              </XStack>
-              <Text fontSize="$2" color="$color10">
+              </View>
+              <Text className="text-muted" style={{ fontSize: 13 }}>
                 {t("admin.manage.sessionsRemaining", { count: pkg.sessionsRemaining })}
               </Text>
-              <Text fontSize="$2" color="$color9">
+              <Text className="text-muted" style={{ fontSize: 12 }}>
                 {t("admin.manage.expiresOn", { date: dayjs(pkg.expiresAt).format("MMM D, YYYY") })}
               </Text>
-            </YStack>
+            </View>
           </Card>
         );
       })}
 
       <AppSheet open={showCreate} onOpenChange={setShowCreate}>
-        <YStack gap="$4">
+        <View className="flex-col gap-4">
           <Text
-            fontSize="$6"
-            fontWeight="700"
-            color="$color"
-            letterSpacing={-0.3}
+            className="text-foreground font-bold"
+            style={{ fontSize: 20, letterSpacing: -0.3 }}
           >
             {t("admin.manage.sheetNewPackage")}
           </Text>
@@ -214,7 +212,7 @@ export default function AdminPackages() {
           {createMutation.isError ? (
             <ErrorState message={t("admin.manage.createPackageError")} />
           ) : null}
-        </YStack>
+        </View>
       </AppSheet>
     </ScrollView>
   );

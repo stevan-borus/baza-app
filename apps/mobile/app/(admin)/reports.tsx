@@ -1,9 +1,8 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { RefreshControl, ScrollView } from "react-native";
+import { RefreshControl, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Text, XStack, YStack } from "tamagui";
 import { CartesianChart, Bar } from "victory-native";
 import { Card, StatCard } from "@/components/ui/card";
 import { GlassCard } from "@/components/ui/glass-card";
@@ -71,44 +70,44 @@ export default function AdminReports() {
 
       {/* 2x2 stat grid */}
       {summary ? (
-        <YStack gap="$3">
-          <XStack gap="$3">
-            <YStack flex={1}>
+        <View className="flex-col gap-3">
+          <View className="flex-row gap-3">
+            <View className="flex-1">
               <StatCard
                 label={t("admin.dashboard.activeClients")}
                 value={summary.activeClients}
                 icon="check-circle"
               />
-            </YStack>
-            <YStack flex={1}>
+            </View>
+            <View className="flex-1">
               <StatCard
                 label={t("admin.manage.totalClients")}
                 value={summary.totalClients}
                 icon="users"
               />
-            </YStack>
-          </XStack>
-          <XStack gap="$3">
-            <YStack flex={1}>
+            </View>
+          </View>
+          <View className="flex-row gap-3">
+            <View className="flex-1">
               <StatCard
                 label={t("admin.dashboard.revenue")}
                 value={summary.revenue}
                 icon="money"
               />
-            </YStack>
-            <YStack flex={1}>
+            </View>
+            <View className="flex-1">
               <StatCard
                 label={t("admin.manage.payment")}
                 value={summary.totalPayments}
                 icon="credit-card"
               />
-            </YStack>
-          </XStack>
-        </YStack>
+            </View>
+          </View>
+        </View>
       ) : null}
 
       {/* Revenue section */}
-      <YStack gap="$2">
+      <View className="flex-col gap-2">
         <SectionHeader title={t("admin.manage.monthlyRevenue")} />
         {revenueQuery.isError ? (
           <ErrorState message={t("admin.manage.revenueError")} />
@@ -120,27 +119,27 @@ export default function AdminReports() {
         ) : null}
         {(revenueQuery.data?.data ?? []).map((item) => (
           <Card key={item.period}>
-            <XStack justify="space-between" items="center">
-              <Text fontWeight="500" color="$color">
+            <View className="flex-row justify-between items-center">
+              <Text className="text-foreground font-medium">
                 {item.period}
               </Text>
-              <Text fontWeight="600" color="$accent1">
+              <Text className="text-accent font-semibold">
                 {item.revenue} RSD ({item.count})
               </Text>
-            </XStack>
+            </View>
           </Card>
         ))}
-      </YStack>
+      </View>
 
       {/* Bookings chart */}
-      <YStack gap="$2">
+      <View className="flex-col gap-2">
         <SectionHeader title={t("admin.manage.bookings")} />
         {bookingsQuery.isError ? (
           <ErrorState message={t("admin.manage.bookingsError")} />
         ) : null}
         {bookingsData.length > 0 ? (
           <GlassCard>
-            <YStack height={220}>
+            <View style={{ height: 220 }}>
               <CartesianChart
                 data={bookingsData}
                 xKey="x"
@@ -160,15 +159,15 @@ export default function AdminReports() {
                   />
                 )}
               </CartesianChart>
-            </YStack>
+            </View>
           </GlassCard>
         ) : !bookingsQuery.isLoading ? (
           <EmptyState title={t("admin.manage.bookingsEmpty")} />
         ) : null}
-      </YStack>
+      </View>
 
       {/* Utilization with progress rings */}
-      <YStack gap="$2">
+      <View className="flex-col gap-2">
         <SectionHeader title={t("admin.manage.utilization")} />
         {utilizationQuery.isError ? (
           <ErrorState message={t("admin.manage.utilizationError")} />
@@ -180,24 +179,24 @@ export default function AdminReports() {
         ) : null}
         {(utilizationQuery.data?.data ?? []).map((item) => (
           <Card key={item.period}>
-            <XStack items="center" gap="$4">
+            <View className="flex-row items-center gap-4">
               <ProgressRing
                 progress={item.utilization}
                 size={56}
                 strokeWidth={5}
               />
-              <YStack flex={1} gap="$1">
-                <Text fontWeight="600" color="$color">
+              <View className="flex-1 flex-col gap-1">
+                <Text className="text-foreground font-semibold">
                   {item.period}
                 </Text>
-                <Text fontSize="$2" color="$color10">
+                <Text className="text-muted" style={{ fontSize: 13 }}>
                   {item.totalBooked}/{item.totalCapacity} ({Math.round(item.utilization * 100)}%)
                 </Text>
-              </YStack>
-            </XStack>
+              </View>
+            </View>
           </Card>
         ))}
-      </YStack>
+      </View>
     </ScrollView>
   );
 }

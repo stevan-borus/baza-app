@@ -5,9 +5,8 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { useColorScheme } from "@/components/useColorScheme";
-import { ScrollView, TouchableOpacity } from "react-native";
+import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Text, XStack, YStack, useTheme } from "tamagui";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { ThemeSwitcher } from "@/components/ThemeSwitcher";
 import { GlassCard } from "@/components/ui/glass-card";
@@ -64,103 +63,96 @@ export default function AdminSettingsIndex() {
         paddingBottom: TAB_BAR_HEIGHT + 32,
       }}
     >
-      <YStack px="$5" gap="$6">
-        <YStack gap="$2">
+      <View className="px-5 flex-col gap-6">
+        <View className="flex-col gap-2">
           <Text
-            fontSize="$2"
-            fontWeight="600"
-            color="$color9"
-            textTransform="uppercase"
-            letterSpacing={0.8}
-            pl="$4"
+            className="text-muted font-semibold uppercase pl-4"
+            style={{ fontSize: 12, letterSpacing: 0.8 }}
           >
             {t("settings.accountSection")}
           </Text>
-          <GlassCard rounded={16} overflow="hidden" p={0}>
+          <GlassCard style={{ borderRadius: 16, overflow: "hidden", padding: 0 }}>
             <SettingsRow
               icon="moon-o"
               label={t("settings.theme")}
               value={currentThemeLabel}
               onPress={() => setShowThemeModal(true)}
+              isDark={isDark}
             />
-            <YStack height={1} bg="$borderColor" mx="$4" />
+            <View className="h-px bg-white/10 mx-4" />
             <SettingsRow
               icon="globe"
               label={t("settings.language")}
               value={currentLanguageLabel}
               onPress={() => setShowLanguageModal(true)}
+              isDark={isDark}
             />
           </GlassCard>
-        </YStack>
+        </View>
 
-        <YStack gap="$2">
+        <View className="flex-col gap-2">
           <Text
-            fontSize="$2"
-            fontWeight="600"
-            color="$color9"
-            textTransform="uppercase"
-            letterSpacing={0.8}
-            pl="$4"
+            className="text-muted font-semibold uppercase pl-4"
+            style={{ fontSize: 12, letterSpacing: 0.8 }}
           >
             {t("settings.studioSection")}
           </Text>
-          <GlassCard rounded={16} overflow="hidden" p={0}>
+          <GlassCard style={{ borderRadius: 16, overflow: "hidden", padding: 0 }}>
             <SettingsRow
               icon="list"
               label={t("admin.manage.classTypes")}
               onPress={() => router.push("/(admin)/settings/class-types")}
+              isDark={isDark}
             />
-            <YStack height={1} bg="$borderColor" mx="$4" />
+            <View className="h-px bg-white/10 mx-4" />
             <SettingsRow
               icon="building-o"
               label={t("admin.manage.rooms")}
               onPress={() => router.push("/(admin)/settings/rooms")}
+              isDark={isDark}
             />
           </GlassCard>
-        </YStack>
+        </View>
 
-        <YStack gap="$2">
+        <View className="flex-col gap-2">
           <Text
-            fontSize="$2"
-            fontWeight="600"
-            color="$color9"
-            textTransform="uppercase"
-            letterSpacing={0.8}
-            pl="$4"
+            className="text-muted font-semibold uppercase pl-4"
+            style={{ fontSize: 12, letterSpacing: 0.8 }}
           >
             {t("settings.otherSection")}
           </Text>
-          <GlassCard rounded={16} overflow="hidden" p={0}>
+          <GlassCard style={{ borderRadius: 16, overflow: "hidden", padding: 0 }}>
             <SettingsRow
               icon="sign-out"
               label={t("settings.logOut")}
               onPress={() => signOutMutation.mutate()}
               destructive
+              isDark={isDark}
             />
           </GlassCard>
-        </YStack>
-      </YStack>
+        </View>
+      </View>
 
-      <YStack items="center" pt="$6" pb="$2">
+      <View className="items-center pt-6 pb-2">
         <Image
           source={isDark ? require("@/assets/images/logo-white.png") : require("@/assets/images/logo-green.png")}
           style={{ width: 100, height: 34 }}
           contentFit="contain"
         />
-      </YStack>
+      </View>
 
       <AppSheet open={showThemeModal} onOpenChange={setShowThemeModal}>
-        <YStack gap="$3">
-          <Text fontWeight="700" fontSize="$6" color="$color">
+        <View className="flex-col gap-3">
+          <Text className="text-foreground font-bold" style={{ fontSize: 20 }}>
             {t("settings.theme")}
           </Text>
           <ThemeSwitcher />
-        </YStack>
+        </View>
       </AppSheet>
 
       <AppSheet open={showLanguageModal} onOpenChange={setShowLanguageModal}>
-        <YStack gap="$3">
-          <Text fontWeight="700" fontSize="$6" color="$color">
+        <View className="flex-col gap-3">
+          <Text className="text-foreground font-bold" style={{ fontSize: 20 }}>
             {t("settings.language")}
           </Text>
           <LanguageSwitcher
@@ -168,7 +160,7 @@ export default function AdminSettingsIndex() {
               updateLocalePrefsMutation.mutate({ preferredLocale: locale });
             }}
           />
-        </YStack>
+        </View>
       </AppSheet>
     </ScrollView>
   );
@@ -180,35 +172,50 @@ function SettingsRow({
   value,
   onPress,
   destructive,
+  isDark,
 }: {
   icon: React.ComponentProps<typeof FontAwesome>["name"];
   label: string;
   value?: string;
   onPress: () => void;
   destructive?: boolean;
+  isDark: boolean;
 }) {
-  const theme = useTheme();
-  const isDarkMode = useColorScheme() === "dark";
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.6}>
-      <XStack px="$4" py="$3.5" items="center" justify="space-between">
-        <XStack items="center" gap="$3.5">
-          <YStack width={30} height={30} rounded={8} bg={destructive ? "$red3" : GLASS_BG} items="center" justify="center">
-            <FontAwesome name={icon} size={15} color={destructive ? (isDarkMode ? "#ffffff" : "#ef4444") : "#fff"} />
-          </YStack>
-          <Text fontSize="$4" fontWeight="500" color={destructive ? "$red10" : "$color"}>
+      <View className="flex-row px-4 py-3.5 items-center justify-between">
+        <View className="flex-row items-center gap-3.5">
+          <View
+            className="items-center justify-center"
+            style={{
+              width: 30,
+              height: 30,
+              borderRadius: 8,
+              backgroundColor: destructive ? "rgba(239,68,68,0.15)" : GLASS_BG,
+            }}
+          >
+            <FontAwesome
+              name={icon}
+              size={15}
+              color={destructive ? (isDark ? "#ffffff" : "#ef4444") : "#fff"}
+            />
+          </View>
+          <Text
+            className={destructive ? "text-danger" : "text-foreground"}
+            style={{ fontSize: 16, fontWeight: "500" }}
+          >
             {label}
           </Text>
-        </XStack>
-        <XStack items="center" gap="$2">
+        </View>
+        <View className="flex-row items-center gap-2">
           {value ? (
-            <Text fontSize="$3" color="$color9">
+            <Text className="text-muted" style={{ fontSize: 14 }}>
               {value}
             </Text>
           ) : null}
-          <FontAwesome name="chevron-right" size={12} color={theme.color9?.val ?? "#999"} />
-        </XStack>
-      </XStack>
+          <FontAwesome name="chevron-right" size={12} color="#a1a1aa" />
+        </View>
+      </View>
     </TouchableOpacity>
   );
 }

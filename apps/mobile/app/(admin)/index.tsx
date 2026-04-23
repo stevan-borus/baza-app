@@ -1,12 +1,11 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { ScrollView, TouchableOpacity } from "react-native";
+import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import dayjs from "dayjs";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
-import { Text, XStack, YStack } from "tamagui";
 import { AppSheet } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Card, StatCard } from "@/components/ui/card";
@@ -182,51 +181,54 @@ export default function AdminSchedule() {
   }
 
   return (
-    <YStack
-      flex={1}
+    <View
+      className="flex-1 flex-col"
       style={{ paddingTop: insets.top + HEADER_HEIGHT + 12 }}
     >
       {/* Gear icon for settings */}
-      <XStack px="$5" pt="$2" justify="flex-end">
+      <View className="flex-row justify-end px-5 pt-2">
         <TouchableOpacity onPress={() => router.push("/(admin)/settings")} activeOpacity={0.6}>
           <FontAwesome name="cog" size={22} color="#a1a1aa" />
         </TouchableOpacity>
-      </XStack>
+      </View>
 
       {/* Quick stats row */}
-      <XStack px="$5" gap="$3" pb="$3">
-        <YStack flex={1}>
+      <View className="flex-row px-5 gap-3 pb-3">
+        <View className="flex-1">
           <StatCard
             label={t("admin.dashboard.todaySessions")}
             value={daySessions.length}
             icon="calendar"
           />
-        </YStack>
-        <YStack flex={1}>
+        </View>
+        <View className="flex-1">
           <StatCard
             label={t("admin.dashboard.activeClients")}
             value={summary?.activeClients ?? "—"}
             icon="users"
           />
-        </YStack>
-        <YStack flex={1}>
+        </View>
+        <View className="flex-1">
           <StatCard
             label={t("admin.dashboard.revenue")}
             value={summary?.revenue ?? "—"}
             icon="money"
           />
-        </YStack>
-      </XStack>
+        </View>
+      </View>
 
       {/* Month/year header with arrows */}
-      <XStack px="$5" py="$3" justify="space-between" items="center">
+      <View className="flex-row px-5 py-3 justify-between items-center">
         <FontAwesome
           name="chevron-left"
           size={16}
           color="#a1a1aa"
           onPress={() => navigateMonth(-1)}
         />
-        <Text fontSize="$5" fontWeight="700" color="$color" letterSpacing={-0.3}>
+        <Text
+          className="text-foreground font-bold"
+          style={{ fontSize: 18, letterSpacing: -0.3 }}
+        >
           {displayDate.format("MMMM YYYY")}
         </Text>
         <FontAwesome
@@ -235,27 +237,27 @@ export default function AdminSchedule() {
           color="#a1a1aa"
           onPress={() => navigateMonth(1)}
         />
-      </XStack>
+      </View>
 
       {/* WeekStrip */}
-      <YStack px="$5" pb="$3">
+      <View className="px-5 pb-3">
         <WeekStrip
           selectedDate={selectedDate}
           onSelectDate={handleDateSelect}
           activityByDate={activityByDate}
         />
-      </YStack>
+      </View>
 
-      <YStack px="$5" pb="$3">
+      <View className="px-5 pb-3">
         <Button size="small" onPress={() => setShowCreate(true)}>
           {t("admin.schedule.newSession")}
         </Button>
-      </YStack>
+      </View>
 
       {availabilityQuery.isError ? (
-        <YStack px="$5">
+        <View className="px-5">
           <ErrorState message={t("admin.schedule.error")} />
-        </YStack>
+        </View>
       ) : null}
 
       {/* Day sessions list */}
@@ -266,7 +268,7 @@ export default function AdminSchedule() {
         <SectionLabel>
           {displayDate.format("dddd, D MMMM")}
         </SectionLabel>
-        <YStack gap="$3" pt="$3">
+        <View className="flex-col gap-3 pt-3">
           {daySessions.length === 0 ? (
             <EmptyState title={t("client.dayView.noSessions")} />
           ) : (
@@ -283,26 +285,24 @@ export default function AdminSchedule() {
               />
             ))
           )}
-        </YStack>
+        </View>
       </ScrollView>
 
       {/* Create Session Sheet */}
       <AppSheet open={showCreate} onOpenChange={setShowCreate}>
         <ScrollView keyboardShouldPersistTaps="handled">
-          <YStack gap="$5" pb="$5">
+          <View className="flex-col gap-5 pb-5">
             <Text
-              fontSize="$6"
-              fontWeight="700"
-              color="$color"
-              letterSpacing={-0.3}
+              className="text-foreground font-bold"
+              style={{ fontSize: 20, letterSpacing: -0.3 }}
             >
               {isRecurring
                 ? t("admin.schedule.sheetRecurring")
                 : t("admin.schedule.sheetNew")}
             </Text>
-            <XStack gap="$2">
+            <View className="flex-row gap-2">
               <Button
-                flex={1}
+                className="flex-1"
                 size="small"
                 variant={!isRecurring ? "primary" : "secondary"}
                 onPress={() => setIsRecurring(false)}
@@ -310,14 +310,14 @@ export default function AdminSchedule() {
                 {t("admin.schedule.once")}
               </Button>
               <Button
-                flex={1}
+                className="flex-1"
                 size="small"
                 variant={isRecurring ? "primary" : "secondary"}
                 onPress={() => setIsRecurring(true)}
               >
                 {t("admin.schedule.recurring")}
               </Button>
-            </XStack>
+            </View>
 
             <SectionLabel>{t("admin.schedule.classType")}</SectionLabel>
             {classTypesQuery.data?.classTypes.map((ct) => (
@@ -460,19 +460,17 @@ export default function AdminSchedule() {
             {createMutation.isError || createRecurringMutation.isError ? (
               <ErrorState message={t("admin.schedule.createError")} />
             ) : null}
-          </YStack>
+          </View>
         </ScrollView>
       </AppSheet>
 
       {/* Edit Session Sheet */}
       <AppSheet open={!!showEdit} onOpenChange={() => setShowEdit(null)}>
         <ScrollView keyboardShouldPersistTaps="handled">
-          <YStack gap="$5" pb="$5">
+          <View className="flex-col gap-5 pb-5">
             <Text
-              fontSize="$6"
-              fontWeight="700"
-              color="$color"
-              letterSpacing={-0.3}
+              className="text-foreground font-bold"
+              style={{ fontSize: 20, letterSpacing: -0.3 }}
             >
               {showEdit
                 ? t("admin.schedule.editTitle", {
@@ -567,9 +565,9 @@ export default function AdminSchedule() {
             {updateMutation.isError ? (
               <ErrorState message={t("admin.schedule.updateError")} />
             ) : null}
-          </YStack>
+          </View>
         </ScrollView>
       </AppSheet>
-    </YStack>
+    </View>
   );
 }

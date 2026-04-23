@@ -1,9 +1,8 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { RefreshControl, ScrollView, Switch } from "react-native";
+import { RefreshControl, ScrollView, Switch, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Text, XStack, YStack } from "tamagui";
 import { ActionButton } from "@/components/ui/action-button";
 import { AppSheet } from "@/components/ui/sheet";
 import { Badge, Card } from "@/components/ui/card";
@@ -26,18 +25,19 @@ function InitialsAvatar({ name }: { name: string }) {
     .toUpperCase()
     .slice(0, 2);
   return (
-    <YStack
-      width={40}
-      height={40}
-      rounded={20}
-      bg="$accent5"
-      items="center"
-      justify="center"
+    <View
+      className="items-center justify-center"
+      style={{
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: "rgba(46,91,66,0.35)",
+      }}
     >
-      <Text color="white" fontSize="$2" fontWeight="700">
+      <Text className="text-white font-bold" style={{ fontSize: 14 }}>
         {initials}
       </Text>
-    </YStack>
+    </View>
   );
 }
 
@@ -87,8 +87,15 @@ export default function AdminClients() {
   const { t } = useTranslation();
 
   return (
-    <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}>
-      <YStack px="$5" gap="$6" style={{ paddingTop: insets.top + HEADER_HEIGHT + 12, paddingBottom: TAB_BAR_HEIGHT + 16 }}>
+    <ScrollView
+      showsVerticalScrollIndicator={false}
+      keyboardShouldPersistTaps="handled"
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
+    >
+      <View
+        className="px-5 flex-col gap-6"
+        style={{ paddingTop: insets.top + HEADER_HEIGHT + 12, paddingBottom: TAB_BAR_HEIGHT + 16 }}
+      >
         <SegmentedControl
           segments={[
             { value: "clients" as const, label: t("admin.clients.tabClients", { count: clients.length }) },
@@ -99,45 +106,43 @@ export default function AdminClients() {
         />
 
         {tab === "clients" ? (
-          <YStack gap="$3">
+          <View className="flex-col gap-3">
             <Card>
-              <YStack gap="$3">
+              <View className="flex-col gap-3">
                 <SectionLabel>{t("admin.clients.title")}</SectionLabel>
-                <XStack gap="$2">
+                <View className="flex-row gap-2">
                   <ActionButton icon="plus" label={t("admin.clients.newClient")} onPress={() => setShowCreateClient(true)} />
-                </XStack>
-              </YStack>
+                </View>
+              </View>
             </Card>
             {clientsQuery.isError ? <ErrorState message={t("admin.clients.error")} /> : null}
             {clients.length === 0 ? <EmptyState title={t("admin.clients.empty")} /> : null}
             {clients.map((client) => (
               <Card key={client.id}>
-                <YStack gap="$2.5">
-                  <XStack gap="$3" items="center">
+                <View className="flex-col gap-2.5">
+                  <View className="flex-row gap-3 items-center">
                     <InitialsAvatar name={client.user.fullName} />
-                    <YStack flex={1}>
-                      <Text fontWeight="600" fontSize="$3" color="$color">
+                    <View className="flex-1 flex-col">
+                      <Text className="text-foreground font-semibold" style={{ fontSize: 15 }}>
                         {client.user.fullName}
                       </Text>
-                      <Text fontSize="$2" color="$color10">
+                      <Text className="text-muted" style={{ fontSize: 13 }}>
                         {client.user.email}
                         {client.user.phone ? ` · ${client.user.phone}` : ""}
                       </Text>
-                    </YStack>
-                  </XStack>
+                    </View>
+                  </View>
                   {client.notes ? (
-                    <YStack
-                      bg="$backgroundHover"
-                      rounded={10}
-                      px="$3"
-                      py="$2"
+                    <View
+                      className="rounded-lg px-3 py-2"
+                      style={{ backgroundColor: "rgba(255,255,255,0.05)" }}
                     >
-                      <Text fontSize="$2" color="$color9">
+                      <Text className="text-muted" style={{ fontSize: 13 }}>
                         {t("admin.clients.notes", { text: client.notes })}
                       </Text>
-                    </YStack>
+                    </View>
                   ) : null}
-                  <XStack gap="$3" flexWrap="wrap">
+                  <View className="flex-row flex-wrap gap-3">
                     <ActionButton
                       icon="pencil"
                       label={t("admin.clients.edit")}
@@ -148,51 +153,51 @@ export default function AdminClients() {
                     />
                     <ActionButton icon="gift" label={t("admin.clients.assignPackage")} onPress={() => setShowAssignPackage(client.id)} />
                     <ActionButton icon="pause" label={t("admin.clients.pause")} onPress={() => setShowPause(client.id)} />
-                  </XStack>
-                </YStack>
+                  </View>
+                </View>
               </Card>
             ))}
-          </YStack>
+          </View>
         ) : (
-          <YStack gap="$3">
+          <View className="flex-col gap-3">
             <Card>
-              <YStack gap="$3">
+              <View className="flex-col gap-3">
                 <SectionLabel>{t("admin.clients.tabInvites", { count: invites.length })}</SectionLabel>
                 <Button size="small" onPress={() => setShowInviteForm(true)}>
                   {t("admin.clients.newInvite")}
                 </Button>
-              </YStack>
+              </View>
             </Card>
             {invitesQuery.isError ? <ErrorState message={t("admin.clients.invitesError")} /> : null}
             {invites.length === 0 ? <EmptyState title={t("admin.clients.invitesEmpty")} /> : null}
             {invites.map((invite: Invite) => (
               <Card key={invite.id}>
-                <YStack gap="$2.5">
-                  <XStack justify="space-between" items="center">
-                    <YStack flex={1}>
-                      <Text fontWeight="600" fontSize="$3" color="$color">{invite.fullName}</Text>
-                      <Text fontSize="$2" color="$color10">{invite.email}</Text>
-                    </YStack>
+                <View className="flex-col gap-2.5">
+                  <View className="flex-row justify-between items-center">
+                    <View className="flex-1 flex-col">
+                      <Text className="text-foreground font-semibold" style={{ fontSize: 15 }}>{invite.fullName}</Text>
+                      <Text className="text-muted" style={{ fontSize: 13 }}>{invite.email}</Text>
+                    </View>
                     <Badge status={invite.status === "COMPLETED" ? "success" : invite.status === "PENDING" ? "warning" : "danger"}>
                       {inviteStatusKeys[invite.status] ? t(inviteStatusKeys[invite.status]) : invite.status}
                     </Badge>
-                  </XStack>
+                  </View>
                   {invite.status === "PENDING" ? (
-                    <XStack gap="$2">
+                    <View className="flex-row gap-2">
                       <ActionButton icon="refresh" label={t("admin.clients.resend")} onPress={() => resendMutation.mutate(invite.id)} disabled={resendMutation.isPending} />
                       <ActionButton icon="ban" label={t("admin.clients.revoke")} onPress={() => revokeMutation.mutate(invite.id)} disabled={revokeMutation.isPending} variant="danger" />
-                    </XStack>
+                    </View>
                   ) : null}
-                </YStack>
+                </View>
               </Card>
             ))}
-          </YStack>
+          </View>
         )}
 
         {/* Create Client Sheet */}
         <AppSheet open={showCreateClient} onOpenChange={setShowCreateClient}>
-          <YStack gap="$4">
-            <Text fontSize="$6" fontWeight="700" color="$color" letterSpacing={-0.3}>
+          <View className="flex-col gap-4">
+            <Text className="text-foreground font-bold" style={{ fontSize: 20, letterSpacing: -0.3 }}>
               {t("admin.clients.sheetNewClient")}
             </Text>
             <Input placeholder={t("admin.clients.placeholderEmail")} autoCapitalize="none" keyboardType="email-address" value={clientForm.email} onChangeText={(v) => setClientForm((s) => ({ ...s, email: v }))} />
@@ -202,13 +207,13 @@ export default function AdminClients() {
               {t("admin.clients.createClient")}
             </Button>
             {createClientMutation.isError ? <ErrorState message={t("admin.clients.createError")} /> : null}
-          </YStack>
+          </View>
         </AppSheet>
 
         {/* Edit Client Sheet */}
         <AppSheet open={!!showEditClient} onOpenChange={() => setShowEditClient(null)}>
-          <YStack gap="$4">
-            <Text fontSize="$6" fontWeight="700" color="$color" letterSpacing={-0.3}>
+          <View className="flex-col gap-4">
+            <Text className="text-foreground font-bold" style={{ fontSize: 20, letterSpacing: -0.3 }}>
               {t("admin.clients.sheetEdit")}
             </Text>
             <SectionLabel>{t("admin.clients.placeholderFullName")}</SectionLabel>
@@ -217,21 +222,21 @@ export default function AdminClients() {
             <Input placeholder={t("admin.clients.placeholderPhoneRequired")} keyboardType="phone-pad" value={editForm.phone} onChangeText={(v) => setEditForm((s) => ({ ...s, phone: v }))} />
             <SectionLabel>{t("admin.clients.placeholderNotes")}</SectionLabel>
             <Input placeholder={t("admin.clients.placeholderNotes")} multiline value={editForm.notes} onChangeText={(v) => setEditForm((s) => ({ ...s, notes: v }))} />
-            <XStack items="center" gap="$3" py="$2">
-              <Text fontSize="$3" color="$color">{t("admin.clients.active")}</Text>
+            <View className="flex-row items-center gap-3 py-2">
+              <Text className="text-foreground" style={{ fontSize: 15 }}>{t("admin.clients.active")}</Text>
               <Switch value={editForm.isActive} onValueChange={(v) => setEditForm((s) => ({ ...s, isActive: v }))} trackColor={{ false: "#404040", true: ACCENT }} />
-            </XStack>
+            </View>
             <Button disabled={updateClientMutation.isPending} onPress={() => showEditClient && updateClientMutation.mutate({ id: showEditClient, fullName: editForm.fullName, phone: editForm.phone || undefined, notes: editForm.notes || undefined, isActive: editForm.isActive })}>
               {t("admin.clients.save")}
             </Button>
             {updateClientMutation.isError ? <ErrorState message={t("admin.clients.updateError")} /> : null}
-          </YStack>
+          </View>
         </AppSheet>
 
         {/* Invite Sheet */}
         <AppSheet open={showInviteForm} onOpenChange={setShowInviteForm}>
-          <YStack gap="$4">
-            <Text fontSize="$6" fontWeight="700" color="$color" letterSpacing={-0.3}>
+          <View className="flex-col gap-4">
+            <Text className="text-foreground font-bold" style={{ fontSize: 20, letterSpacing: -0.3 }}>
               {t("admin.clients.sheetInvite")}
             </Text>
             <Input placeholder={t("admin.clients.placeholderEmail")} autoCapitalize="none" keyboardType="email-address" value={inviteForm.email} onChangeText={(v) => setInviteForm((s) => ({ ...s, email: v }))} />
@@ -241,13 +246,13 @@ export default function AdminClients() {
               {t("admin.clients.sendInvite")}
             </Button>
             {createInviteMutation.isError ? <ErrorState message={t("admin.clients.inviteError")} /> : null}
-          </YStack>
+          </View>
         </AppSheet>
 
         {/* Assign Package Sheet */}
         <AppSheet open={!!showAssignPackage} onOpenChange={() => setShowAssignPackage(null)}>
-          <YStack gap="$4">
-            <Text fontSize="$6" fontWeight="700" color="$color" letterSpacing={-0.3}>
+          <View className="flex-col gap-4">
+            <Text className="text-foreground font-bold" style={{ fontSize: 20, letterSpacing: -0.3 }}>
               {t("admin.clients.sheetAssign")}
             </Text>
             <SectionLabel>{t("admin.clients.packageType")}</SectionLabel>
@@ -266,13 +271,13 @@ export default function AdminClients() {
               {t("admin.clients.assign")}
             </Button>
             {assignPackageMutation.isError ? <ErrorState message={t("admin.clients.assignError")} /> : null}
-          </YStack>
+          </View>
         </AppSheet>
 
         {/* Pause Package Sheet */}
         <AppSheet open={!!showPause} onOpenChange={() => setShowPause(null)}>
-          <YStack gap="$4">
-            <Text fontSize="$6" fontWeight="700" color="$color" letterSpacing={-0.3}>
+          <View className="flex-col gap-4">
+            <Text className="text-foreground font-bold" style={{ fontSize: 20, letterSpacing: -0.3 }}>
               {t("admin.clients.sheetPause")}
             </Text>
             <Input placeholder={t("admin.clients.pauseStart")} value={pauseForm.startsAt} onChangeText={(v) => setPauseForm((s) => ({ ...s, startsAt: v }))} />
@@ -282,10 +287,10 @@ export default function AdminClients() {
               {t("admin.clients.pauseSubmit")}
             </Button>
             {pauseMutation.isError ? <ErrorState message={t("admin.clients.pauseError")} /> : null}
-          </YStack>
+          </View>
         </AppSheet>
 
-      </YStack>
+      </View>
     </ScrollView>
   );
 }

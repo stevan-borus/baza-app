@@ -6,12 +6,11 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { ActivityIndicator, ScrollView } from "react-native";
+import { ActivityIndicator, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import dayjs from "dayjs";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { LegendList } from "@legendapp/list";
-import { Text, XStack, YStack } from "tamagui";
 import { getDateLocale } from "@/lib/i18n";
 import { ActionButton } from "@/components/ui/action-button";
 import { AppSheet } from "@/components/ui/sheet";
@@ -108,14 +107,17 @@ export default function AdminBilling() {
       }}
     >
       {/* Period selector */}
-      <XStack justify="space-between" items="center">
+      <View className="flex-row justify-between items-center">
         <FontAwesome
           name="chevron-left"
           size={16}
           color="#a1a1aa"
           onPress={() => navigateBillingMonth(-1)}
         />
-        <Text fontSize="$5" fontWeight="700" color="$color" letterSpacing={-0.3}>
+        <Text
+          className="text-foreground font-bold"
+          style={{ fontSize: 18, letterSpacing: -0.3 }}
+        >
           {selectedMonth.format("MMMM YYYY")}
         </Text>
         <FontAwesome
@@ -124,24 +126,24 @@ export default function AdminBilling() {
           color="#a1a1aa"
           onPress={() => navigateBillingMonth(1)}
         />
-      </XStack>
+      </View>
 
       {/* Summary card */}
       <GlassCard>
-        <XStack justify="space-around" items="center" py="$2">
-          <YStack items="center" gap="$1">
-            <Text fontSize="$2" color="$color10">{t("admin.manage.totalRevenue")}</Text>
-            <Text fontSize="$6" fontWeight="800" color="$color">{summaryStats.totalRevenue}</Text>
-          </YStack>
-          <YStack items="center" gap="$1">
-            <Text fontSize="$2" color="$color10">{t("admin.manage.transactionCount")}</Text>
-            <Text fontSize="$6" fontWeight="800" color="$color">{summaryStats.count}</Text>
-          </YStack>
-          <YStack items="center" gap="$1">
-            <Text fontSize="$2" color="$color10">{t("admin.manage.avgPerClient")}</Text>
-            <Text fontSize="$6" fontWeight="800" color="$color">{summaryStats.avg}</Text>
-          </YStack>
-        </XStack>
+        <View className="flex-row justify-around items-center py-2">
+          <View className="flex-col items-center gap-1">
+            <Text className="text-muted" style={{ fontSize: 13 }}>{t("admin.manage.totalRevenue")}</Text>
+            <Text className="text-foreground font-extrabold" style={{ fontSize: 22 }}>{summaryStats.totalRevenue}</Text>
+          </View>
+          <View className="flex-col items-center gap-1">
+            <Text className="text-muted" style={{ fontSize: 13 }}>{t("admin.manage.transactionCount")}</Text>
+            <Text className="text-foreground font-extrabold" style={{ fontSize: 22 }}>{summaryStats.count}</Text>
+          </View>
+          <View className="flex-col items-center gap-1">
+            <Text className="text-muted" style={{ fontSize: 13 }}>{t("admin.manage.avgPerClient")}</Text>
+            <Text className="text-foreground font-extrabold" style={{ fontSize: 22 }}>{summaryStats.avg}</Text>
+          </View>
+        </View>
       </GlassCard>
 
       <ActionButton
@@ -157,16 +159,16 @@ export default function AdminBilling() {
       ) : null}
 
       {records.length > 0 ? (
-        <YStack height={400}>
+        <View style={{ height: 400 }}>
           <LegendList
             data={records}
             keyExtractor={(item) => item.id}
             renderItem={({ item }: { item: BillingRecord }) => (
-              <YStack px="$1" py="$1.5">
+              <View className="px-1 py-1.5">
                 <Card>
-                  <YStack gap="$2">
-                    <XStack justify="space-between" items="center">
-                      <Text fontWeight="800" fontSize="$6" color="$color">
+                  <View className="flex-col gap-2">
+                    <View className="flex-row justify-between items-center">
+                      <Text className="text-foreground font-extrabold" style={{ fontSize: 20 }}>
                         {item.amount} RSD
                       </Text>
                       <Badge
@@ -182,27 +184,27 @@ export default function AdminBilling() {
                           ? t(statusLabelKeys[item.status])
                           : item.status}
                       </Badge>
-                    </XStack>
-                    <XStack justify="space-between" items="center">
-                      <Text fontSize="$2" color="$color10">
+                    </View>
+                    <View className="flex-row justify-between items-center">
+                      <Text className="text-muted" style={{ fontSize: 13 }}>
                         {methodLabelKeys[item.method]
                           ? t(methodLabelKeys[item.method])
                           : item.method}
                       </Text>
-                      <Text fontSize="$2" color="$color9">
+                      <Text className="text-muted" style={{ fontSize: 12 }}>
                         {new Date(item.createdAt).toLocaleDateString(
                           dateLocale,
                         )}
                       </Text>
-                    </XStack>
+                    </View>
                     {item.notes ? (
-                      <Text fontSize="$2" color="$color9">
+                      <Text className="text-muted" style={{ fontSize: 12 }}>
                         {item.notes}
                       </Text>
                     ) : null}
-                  </YStack>
+                  </View>
                 </Card>
-              </YStack>
+              </View>
             )}
             onEndReached={handleEndReached}
             onEndReachedThreshold={0.5}
@@ -212,17 +214,15 @@ export default function AdminBilling() {
               ) : null
             }
           />
-        </YStack>
+        </View>
       ) : null}
 
       <AppSheet open={showCreate} onOpenChange={setShowCreate}>
         <ScrollView>
-          <YStack gap="$4">
+          <View className="flex-col gap-4">
             <Text
-              fontSize="$6"
-              fontWeight="700"
-              color="$color"
-              letterSpacing={-0.3}
+              className="text-foreground font-bold"
+              style={{ fontSize: 20, letterSpacing: -0.3 }}
             >
               {t("admin.manage.sheetNewPayment")}
             </Text>
@@ -248,7 +248,7 @@ export default function AdminBilling() {
               onChangeText={(v) => setForm((s) => ({ ...s, amount: v }))}
             />
             <SectionLabel>{t("admin.manage.paymentMethod")}</SectionLabel>
-            <XStack gap="$3" flexWrap="wrap">
+            <View className="flex-row flex-wrap gap-3">
               {methods.map((m) => (
                 <Button
                   key={m}
@@ -259,7 +259,7 @@ export default function AdminBilling() {
                   {t(methodLabelKeys[m])}
                 </Button>
               ))}
-            </XStack>
+            </View>
             <SectionLabel>{t("admin.manage.packageOptional")}</SectionLabel>
             {(packageTypesQuery.data?.packageTypes ?? []).map((pt) => (
               <Button
@@ -304,7 +304,7 @@ export default function AdminBilling() {
             {createMutation.isError ? (
               <ErrorState message={t("admin.manage.createPaymentError")} />
             ) : null}
-          </YStack>
+          </View>
         </ScrollView>
       </AppSheet>
     </ScrollView>

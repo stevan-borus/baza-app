@@ -1,9 +1,8 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { ScrollView } from "react-native";
+import { ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Text, YStack } from "tamagui";
 import { ActionButton } from "@/components/ui/action-button";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -55,8 +54,11 @@ export default function AdminSettingsRooms() {
       ))}
 
       <AppSheet open={showCreate} onOpenChange={setShowCreate}>
-        <YStack gap="$4">
-          <Text fontSize="$6" fontWeight="700" color="$color" letterSpacing={-0.3}>
+        <View className="flex-col gap-4">
+          <Text
+            className="text-foreground font-bold"
+            style={{ fontSize: 20, letterSpacing: -0.3 }}
+          >
             {t("admin.manage.sheetNewRoom")}
           </Text>
           <Input
@@ -84,9 +86,8 @@ export default function AdminSettingsRooms() {
           {createMutation.isError ? (
             <ErrorState message={t("admin.manage.createError")} />
           ) : null}
-        </YStack>
+        </View>
       </AppSheet>
     </ScrollView>
   );
 }
-
