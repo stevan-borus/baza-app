@@ -95,16 +95,15 @@ function groupByDay(notifications: Notification[]): GroupedNotifications[] {
   }));
 }
 
-/** Relative time label: "2h", "Yesterday", "Apr 15" */
-function relativeTime(createdAt: string): string {
+/**
+ * Relative time label: localized via dayjs (e.g. "2h ago" / "pre 2 sata").
+ * Uses dayjs.fromNow() which respects the locale set in lib/i18n.ts.
+ * Falls back to "MMM D" / "D. MMM" for older-than-a-week dates.
+ */
+function formatRelativeTime(createdAt: string): string {
   const d = dayjs(createdAt);
-  const diffHours = dayjs().diff(d, "hour");
-  if (diffHours < 24) {
-    if (diffHours < 1) return `${dayjs().diff(d, "minute")}m`;
-    return `${diffHours}h`;
-  }
   const diffDays = dayjs().diff(d, "day");
-  if (diffDays === 1) return "Yesterday";
+  if (diffDays < 7) return d.fromNow();
   return d.format("MMM D");
 }
 
@@ -282,7 +281,7 @@ export default function ClientNotifications() {
                             {displayTitle}
                           </Text>
                           <Text className="text-[11px] text-muted">
-                            {relativeTime(n.createdAt)}
+                            {formatRelativeTime(n.createdAt)}
                           </Text>
                         </View>
                         <Text

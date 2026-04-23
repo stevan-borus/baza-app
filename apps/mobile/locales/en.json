@@ -317,6 +317,7 @@
       "statusPending": "Pending",
       "statusConfirmed": "Confirmed",
       "statusCanceled": "Canceled",
+      "filterAll": "All",
       "sheetNewPayment": "New payment",
       "client": "Client",
       "placeholderAmount": "Amount (RSD)",

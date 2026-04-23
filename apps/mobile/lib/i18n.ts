@@ -1,9 +1,15 @@
 import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import dayjs from "dayjs";
+import relativeTime from "dayjs/plugin/relativeTime";
+import "dayjs/locale/sr";
+import "dayjs/locale/en";
 
 import sr from "@/locales/sr.json";
 import en from "@/locales/en.json";
+
+dayjs.extend(relativeTime);
 
 const STORAGE_KEY = "app.preferredLocale";
 
@@ -18,6 +24,13 @@ i18n.use(initReactI18next).init({
   interpolation: { escapeValue: false },
   compatibilityJSON: "v4",
 });
+
+// Keep dayjs locale in sync with i18n so .fromNow(), .format() etc. are localized.
+function syncDayjsLocale(lng: string) {
+  dayjs.locale(lng === "sr" ? "sr" : "en");
+}
+syncDayjsLocale(i18n.language);
+i18n.on("languageChanged", syncDayjsLocale);
 
 export default i18n;
 

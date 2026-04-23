@@ -318,6 +318,7 @@
       "statusPending": "Na čekanju",
       "statusConfirmed": "Potvrđen",
       "statusCanceled": "Otkazan",
+      "filterAll": "Sve",
       "sheetNewPayment": "Nova uplata",
       "client": "Klijent",
       "placeholderAmount": "Iznos (RSD)",

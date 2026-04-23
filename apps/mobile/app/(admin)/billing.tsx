@@ -36,14 +36,7 @@ import {
 import { clientsQueries } from "@/lib/queries/clients-queries-factory";
 import { TAB_BAR_HEIGHT, HEADER_HEIGHT } from "@/components/ui/constants";
 
-type FilterTab = "all" | "confirmed" | "refunded" | "pending";
-
-const FILTER_TABS: { value: FilterTab; label: string }[] = [
-  { value: "all", label: "All" },
-  { value: "confirmed", label: "Success" },
-  { value: "refunded", label: "Refunded" },
-  { value: "pending", label: "Pending" },
-];
+type FilterTab = "all" | "confirmed" | "canceled" | "pending";
 
 export default function AdminBilling() {
   const { t } = useTranslation();
@@ -52,6 +45,12 @@ export default function AdminBilling() {
   const [showCreate, setShowCreate] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState(() => dayjs());
   const [activeFilter, setActiveFilter] = useState<FilterTab>("all");
+  const filterTabs: { value: FilterTab; label: string }[] = [
+    { value: "all", label: t("admin.manage.filterAll") },
+    { value: "confirmed", label: t("admin.manage.statusConfirmed") },
+    { value: "pending", label: t("admin.manage.statusPending") },
+    { value: "canceled", label: t("admin.manage.statusCanceled") },
+  ];
   const [form, setForm] = useState({
     clientUserId: "",
     amount: "",
@@ -80,8 +79,7 @@ export default function AdminBilling() {
       return records.filter((r) => r.status === "CONFIRMED");
     if (activeFilter === "pending")
       return records.filter((r) => r.status === "PENDING");
-    // "refunded" maps to CANCELED since the API doesn't have a REFUNDED status
-    if (activeFilter === "refunded")
+    if (activeFilter === "canceled")
       return records.filter((r) => r.status === "CANCELED");
     return records;
   }, [records, activeFilter]);
@@ -216,7 +214,7 @@ export default function AdminBilling() {
       >
         <View className="gap-3">
           <SegmentedControl
-            options={FILTER_TABS}
+            options={filterTabs}
             value={activeFilter}
             onChange={setActiveFilter}
           />
