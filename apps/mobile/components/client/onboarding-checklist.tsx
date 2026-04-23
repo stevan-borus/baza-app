@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
+import { Text, View } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useTranslation } from "react-i18next";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
-import { Text, XStack, YStack } from "tamagui";
 import { GlassCard } from "@/components/ui/glass-card";
 import { Button } from "@/components/ui/button";
 
@@ -17,20 +17,20 @@ const STORAGE_PREFIX = "baza_onboarding_";
 
 function CheckRow({ done, label }: { done: boolean; label: string }) {
   return (
-    <XStack gap="$3" items="center" py="$2">
+    <View className="flex-row items-center gap-3 py-2">
       <FontAwesome
         name={done ? "check-circle" : "circle-o"}
         size={20}
         color={done ? "#4ade80" : "#6b7280"}
       />
       <Text
-        fontSize="$3"
-        color={done ? "$color" : "$color9"}
-        textDecorationLine={done ? "line-through" : "none"}
+        className={`text-base ${
+          done ? "text-foreground line-through" : "text-muted"
+        }`}
       >
         {label}
       </Text>
-    </XStack>
+    </View>
   );
 }
 
@@ -72,14 +72,14 @@ export function OnboardingChecklist({
   if (allDone) {
     return (
       <GlassCard>
-        <YStack gap="$3" items="center">
-          <Text fontSize="$5" fontWeight="700" color="$accent1">
+        <View className="flex-col items-center gap-3">
+          <Text className="text-2xl font-bold text-accent">
             {t("client.onboarding.allSet")}
           </Text>
           <Button variant="ghost" size="small" onPress={handleDismiss}>
             {t("client.onboarding.dismiss")}
           </Button>
-        </YStack>
+        </View>
       </GlassCard>
     );
   }
@@ -89,19 +89,17 @@ export function OnboardingChecklist({
 
   return (
     <GlassCard>
-      <YStack gap="$3">
-        <Text fontSize="$5" fontWeight="700" color="$color">
+      <View className="flex-col gap-3">
+        <Text className="text-2xl font-bold text-foreground">
           {t("client.onboarding.getStarted")}
         </Text>
         {/* Progress bar */}
-        <YStack height={4} bg="$backgroundHover" borderRadius={2} overflow="hidden">
-          <YStack
-            height={4}
-            bg="$accent1"
-            borderRadius={2}
-            width={`${progress * 100}%` as `${number}%`}
+        <View className="h-1 bg-surface-2 rounded-[2px] overflow-hidden">
+          <View
+            className="h-1 bg-accent rounded-[2px]"
+            style={{ width: `${progress * 100}%` }}
           />
-        </YStack>
+        </View>
         <CheckRow done={profileCompleted} label={t("client.onboarding.profileComplete")} />
         <CheckRow
           done={firstClassBooked}
@@ -111,7 +109,7 @@ export function OnboardingChecklist({
           done={notificationsConfigured}
           label={t("client.onboarding.notificationsOn")}
         />
-      </YStack>
+      </View>
     </GlassCard>
   );
 }
