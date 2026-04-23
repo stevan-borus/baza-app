@@ -43,7 +43,15 @@ function applyFilter(notes: TrainerNote[], filter: FilterValue): TrainerNote[] {
     const weekStart = startOfWeek().getTime();
     return notes.filter((n) => new Date(n.createdAt).getTime() >= weekStart);
   }
-  // "byClient" — same data set, just visual label; grouping would require more work
+  if (filter === "byClient") {
+    // Stable sort by client full name, then by createdAt desc within each client.
+    return [...notes].sort((a, b) => {
+      const aName = a.clientProfile?.user.fullName ?? "";
+      const bName = b.clientProfile?.user.fullName ?? "";
+      if (aName !== bName) return aName.localeCompare(bName);
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
+  }
   return notes;
 }
 
@@ -102,16 +110,25 @@ function NoteRow({ item, dateLocale }: { item: TrainerNote; dateLocale: string }
     <View style={{ marginBottom: 10 }}>
       <GlassCard size="md" accentBorder="left">
         <View style={{ gap: 6 }}>
-          {/* Meta row: trainer name · date */}
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+          {/* Meta row: client name · trainer · date */}
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+            {item.clientProfile ? (
+              <Text
+                style={{ fontSize: 12, fontWeight: "600", color: "rgba(255,255,255,0.9)" }}
+                numberOfLines={1}
+              >
+                {item.clientProfile.user.fullName}
+              </Text>
+            ) : null}
+            {item.clientProfile && item.trainer ? (
+              <Text style={{ fontSize: 11, color: "rgba(255,255,255,0.35)" }}>·</Text>
+            ) : null}
             {item.trainer ? (
               <Text style={{ fontSize: 12, fontWeight: "600", color: "#4caf80" }}>
                 {item.trainer.fullName}
               </Text>
             ) : null}
-            {item.trainer ? (
-              <Text style={{ fontSize: 11, color: "rgba(255,255,255,0.35)" }}>·</Text>
-            ) : null}
+            <Text style={{ fontSize: 11, color: "rgba(255,255,255,0.35)" }}>·</Text>
             <Text style={{ fontSize: 12, color: "rgba(255,255,255,0.45)" }}>{dateStr}</Text>
           </View>
 

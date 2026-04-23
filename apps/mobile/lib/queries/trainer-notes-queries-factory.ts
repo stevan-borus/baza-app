@@ -15,6 +15,14 @@ const trainerNoteSchema = z.object({
       fullName: z.string(),
     })
     .optional(),
+  clientProfile: z
+    .object({
+      user: z.object({
+        id: z.string(),
+        fullName: z.string(),
+      }),
+    })
+    .optional(),
 });
 
 const trainerNotesResponseSchema = z.object({
