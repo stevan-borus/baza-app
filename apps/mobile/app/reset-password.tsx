@@ -17,7 +17,7 @@ import { useRouter } from "expo-router";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ActivityIndicator, Pressable, Text, View } from "react-native";
-import { MotiView } from "moti";
+import { MotiView } from "@/components/ui/styled";
 import { AuthBackground } from "@/components/auth/auth-background";
 import { Button } from "@/components/ui/button";
 import { Input, PasswordInput } from "@/components/ui/input";

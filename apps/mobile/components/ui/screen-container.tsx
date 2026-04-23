@@ -1,7 +1,7 @@
 import React, { PropsWithChildren } from "react";
 import { Platform, View, type ViewProps } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { SafeAreaView } from "./styled";
 import { TAB_BAR_HEIGHT } from "./constants";
 
 const webConstraint =

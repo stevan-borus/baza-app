@@ -7,7 +7,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { MotiView } from "moti";
+import { MotiView } from "@/components/ui/styled";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import dayjs from "dayjs";
 import { AppSheet } from "@/components/ui/sheet";

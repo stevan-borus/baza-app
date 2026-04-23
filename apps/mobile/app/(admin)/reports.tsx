@@ -10,7 +10,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { RefreshControl, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { MotiView } from "moti";
+import { MotiView } from "@/components/ui/styled";
 import { CartesianChart, Bar } from "victory-native";
 import { GlassCard } from "@/components/ui/glass-card";
 import { HeroCard } from "@/components/ui/hero-card";

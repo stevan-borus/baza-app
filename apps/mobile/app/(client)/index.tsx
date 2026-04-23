@@ -11,7 +11,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { RefreshControl, ScrollView, Text, View } from "react-native";
-import { MotiView } from "moti";
+import { MotiView } from "@/components/ui/styled";
 import { useTranslation } from "react-i18next";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import dayjs from "dayjs";

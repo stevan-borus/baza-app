@@ -14,7 +14,7 @@ import { ActivityIndicator, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import dayjs from "dayjs";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
-import { MotiView } from "moti";
+import { MotiView } from "@/components/ui/styled";
 import { LegendList } from "@legendapp/list";
 import { getDateLocale } from "@/lib/i18n";
 import { ActionButton } from "@/components/ui/action-button";

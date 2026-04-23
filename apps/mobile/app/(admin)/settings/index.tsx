@@ -18,7 +18,7 @@ import { useTranslation } from "react-i18next";
 import { useColorScheme } from "@/components/useColorScheme";
 import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { MotiView } from "moti";
+import { MotiView } from "@/components/ui/styled";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { ThemeSwitcher } from "@/components/ThemeSwitcher";
 import { GlassCard } from "@/components/ui/glass-card";

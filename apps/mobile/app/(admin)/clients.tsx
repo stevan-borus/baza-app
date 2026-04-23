@@ -14,7 +14,7 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { MotiView } from "moti";
+import { MotiView } from "@/components/ui/styled";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { AppSheet } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";

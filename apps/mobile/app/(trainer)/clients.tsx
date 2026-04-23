@@ -8,7 +8,7 @@ import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
-import { MotiView } from "moti";
+import { MotiView } from "@/components/ui/styled";
 import { GlassCard } from "@/components/ui/glass-card";
 import { HeroCard } from "@/components/ui/hero-card";
 import { Badge } from "@/components/ui/badge";

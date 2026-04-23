@@ -1,6 +1,6 @@
 import React from "react";
 import { Pressable, Text, View } from "react-native";
-import { MotiView } from "moti";
+import { MotiView } from "@/components/ui/styled";
 
 type Props<T extends string> = {
   options: { value: T; label: string }[];

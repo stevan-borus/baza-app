@@ -13,7 +13,7 @@ import { useTranslation } from "react-i18next";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
-import { MotiView } from "moti";
+import { MotiView } from "@/components/ui/styled";
 import { Button } from "@/components/ui/button";
 import { ErrorState } from "@/components/ui/states";
 import { GlassCard } from "@/components/ui/glass-card";

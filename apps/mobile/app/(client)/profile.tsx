@@ -21,7 +21,7 @@ import { useRouter } from "expo-router";
 import { RefreshControl, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { useTranslation } from "react-i18next";
 import { useState } from "react";
-import { MotiView } from "moti";
+import { MotiView } from "@/components/ui/styled";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { Button } from "@/components/ui/button";

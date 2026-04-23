@@ -9,7 +9,7 @@ import { useMutation, useInfiniteQuery, useQuery, useQueryClient } from "@tansta
 import { useTranslation } from "react-i18next";
 import { ActivityIndicator, Pressable, Switch, Text, View } from "react-native";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
-import { MotiView } from "moti";
+import { MotiView } from "@/components/ui/styled";
 import { LegendList } from "@legendapp/list";
 import { AppSheet } from "@/components/ui/sheet";
 import { GlassCard } from "@/components/ui/glass-card";

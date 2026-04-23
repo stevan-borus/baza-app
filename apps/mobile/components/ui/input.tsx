@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { TextInput, View, Text, type TextInputProps, Pressable } from "react-native";
-import { MotiView } from "moti";
+import { MotiView } from "@/components/ui/styled";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 
 type IconName = React.ComponentProps<typeof FontAwesome>["name"];

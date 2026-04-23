@@ -2,10 +2,10 @@ import React, { useCallback, useEffect, useMemo, useRef } from "react";
 import { Platform, View } from "react-native";
 import BottomSheet, {
   BottomSheetBackdrop,
-  BottomSheetView,
   type BottomSheetBackdropProps,
 } from "@gorhom/bottom-sheet";
 import { BlurView } from "expo-blur";
+import { BottomSheetView } from "./styled";
 
 type AppSheetProps = {
   open: boolean;

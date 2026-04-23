@@ -19,7 +19,7 @@ import dayjs from "dayjs";
 import { useTranslation } from "react-i18next";
 import { RefreshControl, ScrollView, Text, View } from "react-native";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
-import { MotiView } from "moti";
+import { MotiView } from "@/components/ui/styled";
 import { AppSheet } from "@/components/ui/sheet";
 import { Badge, Card, StatCard } from "@/components/ui/card";
 import { ListRow } from "@/components/ui/states";

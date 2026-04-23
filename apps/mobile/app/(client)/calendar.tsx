@@ -8,7 +8,7 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Text, View } from "react-native";
-import { MotiView } from "moti";
+import { MotiView } from "@/components/ui/styled";
 import dayjs from "dayjs";
 import * as Haptics from "expo-haptics";
 import FontAwesome from "@expo/vector-icons/FontAwesome";

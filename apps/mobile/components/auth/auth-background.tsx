@@ -1,7 +1,7 @@
 import React from "react";
 import { View, KeyboardAvoidingView, Platform, ScrollView } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView } from "@/components/ui/styled";
 
 export function AuthBackground({ children }: { children: React.ReactNode }) {
   return (

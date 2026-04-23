@@ -8,7 +8,7 @@
  */
 import React, { useState } from "react";
 import { Text, View } from "react-native";
-import { MotiView } from "moti";
+import { MotiView } from "@/components/ui/styled";
 import dayjs from "dayjs";
 import { useTranslation } from "react-i18next";
 import FontAwesome from "@expo/vector-icons/FontAwesome";

@@ -5,7 +5,7 @@ import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { useRouter } from "expo-router";
 import dayjs from "dayjs";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
-import { MotiView } from "moti";
+import { MotiView } from "@/components/ui/styled";
 import { AppSheet } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
