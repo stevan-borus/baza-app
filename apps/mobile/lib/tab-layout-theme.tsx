@@ -5,7 +5,6 @@ import { Tabs } from "expo-router";
 import { useEffect, useRef } from "react";
 import { ActivityIndicator } from "react-native";
 import { Animated, Platform, Pressable, StyleSheet, View } from "react-native";
-import { XStack, YStack } from "tamagui";
 import { ACCENT } from "@/components/ui/tokens";
 
 export function TabIcon(props: {
@@ -15,11 +14,11 @@ export function TabIcon(props: {
   return <FontAwesome size={22} {...props} />;
 }
 
-export function AppTabLoading({ isDark }: { isDark: boolean }) {
+export function AppTabLoading({ isDark: _isDark }: { isDark: boolean }) {
   return (
-    <YStack flex={1} bg="$background" items="center" justify="center">
+    <View className="flex-1 bg-background items-center justify-center">
       <ActivityIndicator size="large" color={ACCENT} />
-    </YStack>
+    </View>
   );
 }
 
@@ -90,7 +89,7 @@ export function FloatingTabBar(
           }}
         />
 
-        <XStack flex={1}>
+        <View style={{ flexDirection: "row", flex: 1 }}>
           {state.routes.map((route, index) => {
             const isFocused = state.index === index;
             const descriptor = descriptors[route.key];
@@ -132,7 +131,7 @@ export function FloatingTabBar(
               </Pressable>
             );
           })}
-        </XStack>
+        </View>
       </View>
     </View>
   );
