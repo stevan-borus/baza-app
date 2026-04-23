@@ -2,24 +2,38 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { ScrollView, Text, TouchableOpacity, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import dayjs from "dayjs";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
+import { MotiView } from "moti";
 import { AppSheet } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { Card, StatCard } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
+import { GlassCard } from "@/components/ui/glass-card";
+import { HeroCard } from "@/components/ui/hero-card";
+import { StatTile } from "@/components/ui/stat-tile";
+import { NumberRollup } from "@/components/ui/number-rollup";
+import { SegmentedControl } from "@/components/ui/segmented-control";
 import { SessionCard } from "@/components/ui/session-card";
 import { WeekStrip } from "@/components/ui/week-strip";
 import { EmptyState, ErrorState, ListRow } from "@/components/ui/states";
 import { Input } from "@/components/ui/input";
 import { DateTimePicker } from "@/components/ui/date-time-picker";
-import { SectionLabel } from "@/components/ui/typography";
-import { HEADER_HEIGHT } from "@/components/ui/constants";
+import { SectionLabel, ScreenTitle } from "@/components/ui/typography";
+import { ScreenContainerRaw } from "@/components/ui/screen-container";
 import { sessionsQueries } from "@/lib/queries/sessions-queries-factory";
 import { trainingsQueries } from "@/lib/queries/trainings-queries-factory";
 import { roomsQueries } from "@/lib/queries/rooms-queries-factory";
 import { reportsQueries } from "@/lib/queries/reports-queries-factory";
+
+/**
+ * Design references (from docs/inspiration/):
+ * - Stripe Dashboard ios Jun 2023/ — numbers-first hero, dashboard density
+ * - Linear Mobile ios Apr 2026/ — segmented control + list density
+ * - WHOOP ios Apr 2024/ — 2×2 stat grouping
+ */
+
+type ScheduleTab = "day" | "week" | "month";
 
 function monthKeyFromDate(d: dayjs.Dayjs) {
   return d.format("YYYY-MM");
@@ -27,11 +41,11 @@ function monthKeyFromDate(d: dayjs.Dayjs) {
 
 export default function AdminSchedule() {
   const { t } = useTranslation();
-  const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const router = useRouter();
   const [selectedDate, setSelectedDate] = useState(dayjs().format("YYYY-MM-DD"));
   const [month, setMonth] = useState(() => monthKeyFromDate(dayjs()));
+  const [scheduleTab, setScheduleTab] = useState<ScheduleTab>("day");
   const [showCreate, setShowCreate] = useState(false);
   const [showEdit, setShowEdit] = useState<{
     sessionId: string;
@@ -180,112 +194,208 @@ export default function AdminSchedule() {
     });
   }
 
+  const revenueValue = summary?.revenue ?? 0;
+  const attendanceRate =
+    summary && summary.totalSessions > 0
+      ? Math.round((summary.activeClients / summary.totalClients) * 100)
+      : 0;
+
   return (
-    <View
-      className="flex-1 flex-col"
-      style={{ paddingTop: insets.top + HEADER_HEIGHT + 12 }}
-    >
-      {/* Gear icon for settings */}
-      <View className="flex-row justify-end px-5 pt-2">
-        <TouchableOpacity onPress={() => router.push("/(admin)/settings")} activeOpacity={0.6}>
-          <FontAwesome name="cog" size={22} color="#a1a1aa" />
-        </TouchableOpacity>
-      </View>
-
-      {/* Quick stats row */}
-      <View className="flex-row px-5 gap-3 pb-3">
-        <View className="flex-1">
-          <StatCard
-            label={t("admin.dashboard.todaySessions")}
-            value={daySessions.length}
-            icon="calendar"
-          />
-        </View>
-        <View className="flex-1">
-          <StatCard
-            label={t("admin.dashboard.activeClients")}
-            value={summary?.activeClients ?? "—"}
-            icon="users"
-          />
-        </View>
-        <View className="flex-1">
-          <StatCard
-            label={t("admin.dashboard.revenue")}
-            value={summary?.revenue ?? "—"}
-            icon="money"
-          />
-        </View>
-      </View>
-
-      {/* Month/year header with arrows */}
-      <View className="flex-row px-5 py-3 justify-between items-center">
-        <FontAwesome
-          name="chevron-left"
-          size={16}
-          color="#a1a1aa"
-          onPress={() => navigateMonth(-1)}
-        />
-        <Text
-          className="text-foreground font-bold"
-          style={{ fontSize: 18, letterSpacing: -0.3 }}
-        >
-          {displayDate.format("MMMM YYYY")}
-        </Text>
-        <FontAwesome
-          name="chevron-right"
-          size={16}
-          color="#a1a1aa"
-          onPress={() => navigateMonth(1)}
-        />
-      </View>
-
-      {/* WeekStrip */}
-      <View className="px-5 pb-3">
-        <WeekStrip
-          selectedDate={selectedDate}
-          onSelectDate={handleDateSelect}
-          activityByDate={activityByDate}
-        />
-      </View>
-
-      <View className="px-5 pb-3">
-        <Button size="small" onPress={() => setShowCreate(true)}>
-          {t("admin.schedule.newSession")}
-        </Button>
-      </View>
-
-      {availabilityQuery.isError ? (
-        <View className="px-5">
-          <ErrorState message={t("admin.schedule.error")} />
-        </View>
-      ) : null}
-
-      {/* Day sessions list */}
+    <ScreenContainerRaw>
       <ScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 24 }}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 32 }}
       >
-        <SectionLabel>
-          {displayDate.format("dddd, D MMMM")}
-        </SectionLabel>
-        <View className="flex-col gap-3 pt-3">
-          {daySessions.length === 0 ? (
-            <EmptyState title={t("client.dayView.noSessions")} />
-          ) : (
-            daySessions.map((session) => (
-              <SessionCard
-                key={session.id}
-                time={`${dayjs(session.startsAt).format("HH:mm")} - ${dayjs(session.endsAt).format("HH:mm")}`}
-                className={session.classTypeName}
-                room={session.roomName ?? undefined}
-                bookedCount={session.bookedCount}
-                capacity={session.capacity}
-                status={session.availableSlots > 0 ? "available" : "full"}
-                onPress={() => handleEventPress(session)}
+        {/* ── Header row ─────────────────────────────────────────────── */}
+        <MotiView
+          from={{ opacity: 0, translateY: -8 }}
+          animate={{ opacity: 1, translateY: 0 }}
+          transition={{ type: "timing", duration: 350 }}
+        >
+          <View className="flex-row items-center justify-between px-6 pb-4">
+            <ScreenTitle>Dashboard</ScreenTitle>
+            <TouchableOpacity
+              onPress={() => router.push("/(admin)/settings")}
+              activeOpacity={0.6}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <FontAwesome name="cog" size={22} color="#a1a1aa" />
+            </TouchableOpacity>
+          </View>
+
+          {/* ── Revenue hero card ───────────────────────────────────── */}
+          <View className="px-6 pb-4">
+            <HeroCard tone="default">
+              <SectionLabel className="mb-2">Revenue this month</SectionLabel>
+              <NumberRollup
+                value={revenueValue}
+                formatter={(n) =>
+                  `RSD ${Math.round(n).toLocaleString("sr-RS")}`
+                }
+                className="text-foreground font-bold"
+                style={{ fontSize: 44, letterSpacing: -1 }}
               />
-            ))
+            </HeroCard>
+          </View>
+        </MotiView>
+
+        {/* ── 2×2 Stat grid ──────────────────────────────────────────── */}
+        <MotiView
+          from={{ opacity: 0, translateY: -8 }}
+          animate={{ opacity: 1, translateY: 0 }}
+          transition={{ type: "timing", duration: 350, delay: 120 }}
+        >
+          <View className="px-6 pb-4 gap-3">
+            {/* Row 1 */}
+            <View className="flex-row gap-3">
+              <View className="flex-1">
+                <StatTile
+                  label="Sessions today"
+                  value={daySessions.length}
+                />
+              </View>
+              <View className="flex-1">
+                <StatTile
+                  label="Active clients"
+                  value={summary?.activeClients ?? "—"}
+                />
+              </View>
+            </View>
+            {/* Row 2 */}
+            <View className="flex-row gap-3">
+              <View className="flex-1">
+                <StatTile
+                  label="New clients (mo)"
+                  value={
+                    summary
+                      ? summary.totalClients - summary.inactiveClients
+                      : "—"
+                  }
+                />
+              </View>
+              <View className="flex-1">
+                <StatTile
+                  label="Attendance rate"
+                  value={summary ? `${attendanceRate}%` : "—"}
+                />
+              </View>
+            </View>
+          </View>
+        </MotiView>
+
+        {/* ── Schedule section ───────────────────────────────────────── */}
+        <MotiView
+          from={{ opacity: 0, translateY: -8 }}
+          animate={{ opacity: 1, translateY: 0 }}
+          transition={{ type: "timing", duration: 350, delay: 240 }}
+        >
+          {/* Segmented control */}
+          <View className="px-6 pb-4">
+            <SegmentedControl<ScheduleTab>
+              options={[
+                { value: "day", label: "Day" },
+                { value: "week", label: "Week" },
+                { value: "month", label: "Month" },
+              ]}
+              value={scheduleTab}
+              onChange={setScheduleTab}
+            />
+          </View>
+
+          {/* Section header row */}
+          <View className="flex-row items-center justify-between px-6 pb-3">
+            <SectionLabel>Today's schedule</SectionLabel>
+            <Text
+              className="text-xs font-semibold text-muted"
+              style={{ letterSpacing: 0.3 }}
+            >
+              {daySessions.length} classes
+            </Text>
+          </View>
+
+          {scheduleTab === "day" ? (
+            <>
+              {/* Month/year header with arrows */}
+              <View className="flex-row px-6 pb-3 justify-between items-center">
+                <FontAwesome
+                  name="chevron-left"
+                  size={16}
+                  color="#a1a1aa"
+                  onPress={() => navigateMonth(-1)}
+                />
+                <Text
+                  className="text-foreground font-bold"
+                  style={{ fontSize: 18, letterSpacing: -0.3 }}
+                >
+                  {displayDate.format("MMMM YYYY")}
+                </Text>
+                <FontAwesome
+                  name="chevron-right"
+                  size={16}
+                  color="#a1a1aa"
+                  onPress={() => navigateMonth(1)}
+                />
+              </View>
+
+              {/* WeekStrip */}
+              <View className="px-6 pb-3">
+                <WeekStrip
+                  selectedDate={selectedDate}
+                  onSelectDate={handleDateSelect}
+                  activityByDate={activityByDate}
+                />
+              </View>
+
+              <View className="px-6 pb-3">
+                <Button size="small" onPress={() => setShowCreate(true)}>
+                  {t("admin.schedule.newSession")}
+                </Button>
+              </View>
+
+              {availabilityQuery.isError ? (
+                <View className="px-6">
+                  <ErrorState message={t("admin.schedule.error")} />
+                </View>
+              ) : null}
+
+              {/* Day sessions list */}
+              <View className="px-6">
+                <SectionLabel className="pb-3">
+                  {displayDate.format("dddd, D MMMM")}
+                </SectionLabel>
+                <View className="flex-col gap-3">
+                  {daySessions.length === 0 ? (
+                    <EmptyState title={t("client.dayView.noSessions")} />
+                  ) : (
+                    daySessions.map((session) => (
+                      <SessionCard
+                        key={session.id}
+                        time={`${dayjs(session.startsAt).format("HH:mm")} - ${dayjs(session.endsAt).format("HH:mm")}`}
+                        className={session.classTypeName}
+                        room={session.roomName ?? undefined}
+                        bookedCount={session.bookedCount}
+                        capacity={session.capacity}
+                        status={session.availableSlots > 0 ? "available" : "full"}
+                        onPress={() => handleEventPress(session)}
+                      />
+                    ))
+                  )}
+                </View>
+              </View>
+            </>
+          ) : (
+            <View className="px-6">
+              <GlassCard>
+                <Text
+                  className="text-muted text-sm text-center"
+                  style={{ paddingVertical: 24 }}
+                >
+                  {scheduleTab === "week" ? "Week view" : "Month view"} — coming soon
+                </Text>
+              </GlassCard>
+            </View>
           )}
-        </View>
+        </MotiView>
       </ScrollView>
 
       {/* Create Session Sheet */}
@@ -568,6 +678,6 @@ export default function AdminSchedule() {
           </View>
         </ScrollView>
       </AppSheet>
-    </View>
+    </ScreenContainerRaw>
   );
 }
