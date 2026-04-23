@@ -1,5 +1,5 @@
 import React from "react";
-import { Text, YStack } from "tamagui";
+import { View, Text } from "react-native";
 import Svg, { Circle } from "react-native-svg";
 import { ACCENT } from "./tokens";
 
@@ -29,11 +29,9 @@ export function ProgressRing({
   const percentage = Math.round(clampedProgress * 100);
 
   return (
-    <YStack
-      items="center"
-      justify="center"
-      width={size}
-      height={size}
+    <View
+      className="flex-col items-center justify-center"
+      style={{ width: size, height: size }}
       accessibilityRole="progressbar"
       accessibilityValue={{ min: 0, max: 100, now: percentage }}
       accessibilityLabel={`${percentage}% complete`}
@@ -61,16 +59,16 @@ export function ProgressRing({
           origin={`${size / 2}, ${size / 2}`}
         />
       </Svg>
-      <YStack position="absolute" items="center" gap="$0.5">
-        <Text fontSize="$5" fontWeight="700" color="$color">
+      <View className="absolute flex-col items-center" style={{ gap: 4 }}>
+        <Text className="text-lg font-bold text-white" numberOfLines={1}>
           {label ?? `${percentage}%`}
         </Text>
         {sublabel ? (
-          <Text fontSize="$1" color="$color9">
+          <Text className="text-xs text-white" style={{ opacity: 0.5 }} numberOfLines={1}>
             {sublabel}
           </Text>
         ) : null}
-      </YStack>
-    </YStack>
+      </View>
+    </View>
   );
 }
