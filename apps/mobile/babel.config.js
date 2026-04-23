@@ -12,16 +12,7 @@ module.exports = function (api) {
         },
       ],
     ],
-    plugins: [
-      [
-        "@tamagui/babel-plugin",
-        {
-          components: ["tamagui"],
-          config: "./tamagui.config.ts",
-        },
-      ],
-      "react-native-worklets/plugin",
-    ],
+    plugins: ["react-native-worklets/plugin"],
   };
 };
 
