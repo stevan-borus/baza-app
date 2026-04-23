@@ -1,4 +1,4 @@
-import "@tamagui/native/setup-zeego";
+import "../global.css";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import {
   DarkTheme,
@@ -10,8 +10,9 @@ import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
-import { ActivityIndicator, StyleSheet } from "react-native";
-import { YStack } from "tamagui";
+import { ActivityIndicator, StyleSheet, View } from "react-native";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 import "react-native-reanimated";
 
 import "@/lib/i18n";
@@ -21,18 +22,24 @@ import { Providers } from "@/lib/providers";
 import { useSessionAuth } from "@/lib/session-auth";
 import { useColorScheme } from "@/components/useColorScheme";
 import { ThemePreferenceProvider } from "@/lib/theme-preference";
-import { navigationThemeColors } from "@/tamagui.config";
-import { ACCENT } from "@/components/ui/tokens";
 
 export { ErrorBoundary } from "expo-router";
 
 SplashScreen.preventAutoHideAsync();
 
+const ACCENT = "#2e5b42";
+const BG_DARK = "#0A0F14";
+const BG_LIGHT = "#fafaf8";
+
 const CustomDarkTheme = {
   ...DarkTheme,
   colors: {
     ...DarkTheme.colors,
-    ...navigationThemeColors.dark,
+    background: BG_DARK,
+    card: BG_DARK,
+    primary: ACCENT,
+    text: "rgba(255,255,255,0.9)",
+    border: "rgba(255,255,255,0.08)",
   },
 };
 
@@ -40,7 +47,9 @@ const CustomLightTheme = {
   ...DefaultTheme,
   colors: {
     ...DefaultTheme.colors,
-    ...navigationThemeColors.light,
+    background: BG_LIGHT,
+    card: BG_LIGHT,
+    primary: ACCENT,
   },
 };
 
@@ -55,56 +64,47 @@ export default function RootLayout() {
   }, [error]);
 
   useEffect(() => {
-    if (loaded) {
-      SplashScreen.hideAsync();
-    }
+    if (loaded) SplashScreen.hideAsync();
   }, [loaded]);
 
   useEffect(() => {
     loadStoredLocale();
   }, []);
 
-  if (!loaded) {
-    return null;
-  }
+  if (!loaded) return null;
 
   return (
-    <ThemePreferenceProvider>
-      <RootLayoutNav />
-    </ThemePreferenceProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider>
+        <ThemePreferenceProvider>
+          <RootLayoutNav />
+        </ThemePreferenceProvider>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }
 
 function RootLayoutNav() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
-
   return (
     <ThemeProvider value={isDark ? CustomDarkTheme : CustomLightTheme}>
       <Providers colorScheme={isDark ? "dark" : "light"}>
-        <YStack flex={1}>
+        <View className="flex-1">
           <AppNavigator isDark={isDark} />
           <LinearGradient
             pointerEvents="none"
             style={StyleSheet.absoluteFill}
             colors={
               isDark
-                ? [
-                    "rgba(46,91,66,0.06)",
-                    "rgba(46,91,66,0.10)",
-                    "rgba(46,91,66,0.03)",
-                  ]
-                : [
-                    "rgba(255,248,240,0.3)",
-                    "rgba(46,91,66,0.03)",
-                    "rgba(255,248,240,0.2)",
-                  ]
+                ? ["rgba(46,91,66,0.06)", "rgba(46,91,66,0.10)", "rgba(46,91,66,0.03)"]
+                : ["rgba(255,248,240,0.3)", "rgba(46,91,66,0.03)", "rgba(255,248,240,0.2)"]
             }
             locations={[0, 0.5, 1]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
           />
-        </YStack>
+        </View>
       </Providers>
     </ThemeProvider>
   );
@@ -114,17 +114,13 @@ function AppNavigator({ isDark }: { isDark: boolean }) {
   const session = useSessionAuth();
   const isAuthenticated =
     !session.error && !!session.data?.session && !!session.role;
-
   usePushRegistration({ isAuthenticated });
 
   if (session.isPending) {
     return (
-      <YStack flex={1} bg="$background" items="center" justify="center">
-        <ActivityIndicator
-          size="large"
-          color={ACCENT}
-        />
-      </YStack>
+      <View className="flex-1 bg-background items-center justify-center">
+        <ActivityIndicator size="large" color={ACCENT} />
+      </View>
     );
   }
 
@@ -132,24 +128,7 @@ function AppNavigator({ isDark }: { isDark: boolean }) {
     <Stack
       screenOptions={{
         headerShown: false,
-        headerShadowVisible: false,
-        headerTintColor: isDark
-          ? navigationThemeColors.dark.primary
-          : navigationThemeColors.light.primary,
-        headerStyle: {
-          backgroundColor: isDark
-            ? navigationThemeColors.dark.background
-            : navigationThemeColors.light.background,
-        },
-        headerTitleStyle: {
-          fontWeight: "600",
-          fontSize: 17,
-        },
-        contentStyle: {
-          backgroundColor: isDark
-            ? navigationThemeColors.dark.background
-            : navigationThemeColors.light.background,
-        },
+        contentStyle: { backgroundColor: isDark ? BG_DARK : BG_LIGHT },
       }}
     >
       <Stack.Protected guard={session.role === "ADMIN"}>
@@ -162,21 +141,10 @@ function AppNavigator({ isDark }: { isDark: boolean }) {
         <Stack.Screen name="(client)" />
       </Stack.Protected>
       <Stack.Protected guard={!isAuthenticated}>
-        <Stack.Screen
-          name="sign-in"
-          options={{
-            headerShown: false,
-          }}
-        />
-        <Stack.Screen
-          name="reset-password"
-          options={{
-            headerShown: false,
-          }}
-        />
+        <Stack.Screen name="sign-in" />
+        <Stack.Screen name="reset-password" />
       </Stack.Protected>
       <Stack.Screen name="index" />
     </Stack>
   );
 }
-
