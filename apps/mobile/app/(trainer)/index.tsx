@@ -1,16 +1,37 @@
+/**
+ * Trainer schedule screen — redesigned (P2-T12).
+ *
+ * Design references (from docs/inspiration/):
+ * - Fresha ios Oct 2024/ — appointment list density, trainer-facing layout
+ * - Google Calendar ios May 2021/ — time-axis day view pattern
+ *
+ * Structure:
+ *   ScreenContainerRaw
+ *   ├─ Greeting row: "Hello, <trainer name>" + today's date
+ *   ├─ HeroCard: "Today's stats" — sessions · clients · hours
+ *   ├─ Month nav + WeekStrip
+ *   ├─ TimeAxisDayView (session blocks → detail sheet on tap)
+ *   └─ Session detail AppSheet (kept verbatim from previous implementation)
+ */
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import dayjs from "dayjs";
 import { useTranslation } from "react-i18next";
 import { RefreshControl, ScrollView, Text, View } from "react-native";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
+import { MotiView } from "moti";
 import { AppSheet } from "@/components/ui/sheet";
 import { Badge, Card, StatCard } from "@/components/ui/card";
-import { SessionCard } from "@/components/ui/session-card";
+import { ListRow } from "@/components/ui/states";
 import { WeekStrip } from "@/components/ui/week-strip";
-import { EmptyState, ErrorState, ListRow } from "@/components/ui/states";
+import { HeroCard } from "@/components/ui/hero-card";
+import {
+  TimeAxisDayView,
+  type SessionBlock,
+} from "@/components/ui/time-axis-day-view";
+import { EmptyState, ErrorState } from "@/components/ui/states";
 import { ScreenContainerRaw } from "@/components/ui/screen-container";
-import { SectionHeader, SectionLabel } from "@/components/ui/typography";
+import { SectionLabel } from "@/components/ui/typography";
 import { authQueries } from "@/lib/queries/auth-queries-factory";
 import { sessionsQueries } from "@/lib/queries/sessions-queries-factory";
 import { notificationsQueries, type Notification } from "@/lib/queries/notifications-queries-factory";
@@ -37,20 +58,28 @@ export default function TrainerSchedule() {
   const [refreshing, setRefreshing] = useState(false);
 
   const displayDate = dayjs(selectedDate);
+  const isToday = selectedDate === dayjs().format("YYYY-MM-DD");
 
   const meQuery = useQuery(authQueries.me());
   const availabilityQuery = useQuery(sessionsQueries.availabilityByMonth(month));
   const notifsQuery = useQuery(notificationsQueries.list());
 
   const sessions = availabilityQuery.data?.sessions ?? [];
-  const sessionNotifs = (notifsQuery.data?.notifications ?? []).filter(
-    (n: Notification) => n.type === "SESSION_UPDATED",
-  );
 
   // Filter sessions for selected day
   const daySessions = sessions.filter(
     (s) => dayjs(s.startsAt).format("YYYY-MM-DD") === selectedDate,
   );
+
+  // --- Hero stats (computed from daySessions) ---
+  // "Clients today" = total booked spots across today's sessions (unique bookings count)
+  const clientsToday = daySessions.reduce((sum, s) => sum + s.bookedCount, 0);
+  // "Hours tracked" = total duration of today's sessions in hours (1 decimal)
+  const hoursToday = daySessions.reduce((sum, s) => {
+    const mins = dayjs(s.endsAt).diff(dayjs(s.startsAt), "minute");
+    return sum + mins;
+  }, 0) / 60;
+  const hoursDisplay = hoursToday > 0 ? hoursToday.toFixed(1) : "0";
 
   // Build activity map for WeekStrip
   const activityByDate: Record<string, "booked" | "available"> = {};
@@ -58,6 +87,18 @@ export default function TrainerSchedule() {
     const dateKey = dayjs(s.startsAt).format("YYYY-MM-DD");
     activityByDate[dateKey] = "available";
   }
+
+  // Map to TimeAxisDayView SessionBlock shape
+  const timeAxisSessions: SessionBlock[] = daySessions.map((s) => ({
+    id: s.id,
+    startsAt: typeof s.startsAt === "string" ? s.startsAt : s.startsAt.toISOString(),
+    endsAt: typeof s.endsAt === "string" ? s.endsAt : s.endsAt.toISOString(),
+    classTypeName: s.classTypeName,
+    roomName: s.roomName,
+    bookedCount: s.bookedCount,
+    capacity: s.capacity,
+    status: s.availableSlots > 0 ? "available" : "full",
+  }));
 
   function handleDateSelect(date: string) {
     setSelectedDate(date);
@@ -81,113 +122,187 @@ export default function TrainerSchedule() {
     setRefreshing(false);
   }
 
+  function handleSessionPress(block: SessionBlock) {
+    // Find the original session to get all detail fields
+    const full = sessions.find((s) => s.id === block.id);
+    if (!full) return;
+    setSelectedSession({
+      sessionId: full.id,
+      classTypeName: full.classTypeName,
+      roomName: full.roomName,
+      bookedCount: full.bookedCount,
+      capacity: full.capacity,
+      availableSlots: full.availableSlots,
+      startsAt: full.startsAt instanceof Date ? full.startsAt : new Date(full.startsAt),
+      endsAt: full.endsAt instanceof Date ? full.endsAt : new Date(full.endsAt),
+    });
+  }
+
+  const trainerName = meQuery.data?.user?.email ?? "";
+  const greetingName = trainerName.split("@")[0] ?? trainerName;
+
   return (
     <ScreenContainerRaw>
-      <View className="flex-col px-5 gap-4">
-        <SectionHeader
-          title={t("trainer.schedule.title")}
-          subtitle={meQuery.data ? meQuery.data.user.email : undefined}
-        />
+      {/* ── Greeting row ── */}
+      <MotiView
+        from={{ opacity: 0, translateY: -8 }}
+        animate={{ opacity: 1, translateY: 0 }}
+        transition={{ type: "timing", duration: 400, delay: 0 }}
+      >
+        <View className="flex-row items-center justify-between px-6 pt-2 pb-1">
+          <View className="flex-col gap-0.5">
+            <Text
+              className="text-foreground font-bold"
+              style={{ fontSize: 22, letterSpacing: -0.4 }}
+            >
+              {t("trainer.schedule.greeting", { name: greetingName, defaultValue: `Hello, ${greetingName}` })}
+            </Text>
+            <Text className="text-muted text-sm">
+              {dayjs().format("dddd, D MMMM YYYY")}
+            </Text>
+          </View>
+        </View>
+      </MotiView>
 
-        <Card>
-          <StatCard label={t("trainer.schedule.sessionsThisMonth")} value={sessions.length} />
-        </Card>
-
-        {sessionNotifs.length > 0 ? (
-          <Card>
-            <View className="flex-col gap-2">
-              <Text className="font-semibold text-base text-foreground">
-                {t("trainer.schedule.sessionChanges")}
-              </Text>
-              {sessionNotifs.slice(0, 5).map((n: Notification) => (
-                <Text key={n.id} className="text-sm text-muted">
-                  {n.title}: {n.body}
-                </Text>
-              ))}
+      {/* ── Hero stats card ── */}
+      <MotiView
+        from={{ opacity: 0, translateY: 8 }}
+        animate={{ opacity: 1, translateY: 0 }}
+        transition={{ type: "timing", duration: 400, delay: 80 }}
+      >
+        <View className="px-6 pb-3">
+          <HeroCard tone="default">
+            <View className="flex-col gap-3">
+              <SectionLabel>{t("trainer.schedule.todayStats", { defaultValue: "Today's stats" })}</SectionLabel>
+              <View className="flex-row justify-between">
+                {/* Sessions today */}
+                <View className="flex-col items-center gap-1 flex-1">
+                  <Text
+                    className="text-foreground font-bold"
+                    style={{ fontSize: 28, letterSpacing: -0.5 }}
+                  >
+                    {daySessions.length}
+                  </Text>
+                  <Text className="text-muted text-xs text-center">
+                    {t("trainer.schedule.sessions", { defaultValue: "Sessions" })}
+                  </Text>
+                </View>
+                {/* Divider */}
+                <View className="w-px bg-glass-border self-stretch mx-1" />
+                {/* Clients today */}
+                <View className="flex-col items-center gap-1 flex-1">
+                  <Text
+                    className="text-foreground font-bold"
+                    style={{ fontSize: 28, letterSpacing: -0.5 }}
+                  >
+                    {clientsToday}
+                  </Text>
+                  <Text className="text-muted text-xs text-center">
+                    {t("trainer.schedule.clients", { defaultValue: "Clients" })}
+                  </Text>
+                </View>
+                {/* Divider */}
+                <View className="w-px bg-glass-border self-stretch mx-1" />
+                {/* Hours tracked */}
+                <View className="flex-col items-center gap-1 flex-1">
+                  <Text
+                    className="text-foreground font-bold"
+                    style={{ fontSize: 28, letterSpacing: -0.5 }}
+                  >
+                    {hoursDisplay}
+                  </Text>
+                  <Text className="text-muted text-xs text-center">
+                    {t("trainer.schedule.hours", { defaultValue: "Hours" })}
+                  </Text>
+                </View>
+              </View>
             </View>
-          </Card>
-        ) : null}
-      </View>
+          </HeroCard>
+        </View>
+      </MotiView>
 
-      {/* Month/year header with arrows */}
-      <View className="flex-row px-5 py-3 justify-between items-center">
-        <FontAwesome
-          name="chevron-left"
-          size={16}
-          color="#a1a1aa"
-          onPress={() => navigateMonth(-1)}
-        />
-        <Text
-          className="text-foreground font-bold"
-          style={{ fontSize: 20, letterSpacing: -0.3 }}
-        >
-          {displayDate.format("MMMM YYYY")}
-        </Text>
-        <FontAwesome
-          name="chevron-right"
-          size={16}
-          color="#a1a1aa"
-          onPress={() => navigateMonth(1)}
-        />
-      </View>
+      {/* ── Month nav + WeekStrip ── */}
+      <MotiView
+        from={{ opacity: 0, translateY: 8 }}
+        animate={{ opacity: 1, translateY: 0 }}
+        transition={{ type: "timing", duration: 400, delay: 160 }}
+      >
+        <View className="flex-row px-6 py-2 justify-between items-center">
+          <FontAwesome
+            name="chevron-left"
+            size={16}
+            color="#a1a1aa"
+            onPress={() => navigateMonth(-1)}
+          />
+          <Text
+            className="text-foreground font-bold"
+            style={{ fontSize: 18, letterSpacing: -0.3 }}
+          >
+            {displayDate.format("MMMM YYYY")}
+          </Text>
+          <FontAwesome
+            name="chevron-right"
+            size={16}
+            color="#a1a1aa"
+            onPress={() => navigateMonth(1)}
+          />
+        </View>
 
-      {/* WeekStrip */}
-      <View className="flex-col px-5 pb-3">
-        <WeekStrip
-          selectedDate={selectedDate}
-          onSelectDate={handleDateSelect}
-          activityByDate={activityByDate}
-        />
-      </View>
+        <View className="px-6 pb-3">
+          <WeekStrip
+            selectedDate={selectedDate}
+            onSelectDate={handleDateSelect}
+            activityByDate={activityByDate}
+          />
+        </View>
+      </MotiView>
 
+      {/* ── Error state ── */}
       {availabilityQuery.isError ? (
-        <View className="flex-col px-5">
+        <View className="px-6">
           <ErrorState message={t("trainer.schedule.error")} />
         </View>
       ) : null}
 
-      {/* Day sessions list */}
-      <ScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 24 }}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
-        }
+      {/* ── Day label + session count ── */}
+      <MotiView
+        from={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ type: "timing", duration: 400, delay: 240 }}
       >
-        <SectionLabel>
-          {displayDate.format("dddd, D MMMM")}
-        </SectionLabel>
-        <View className="flex-col gap-3 pt-3">
-          {daySessions.length === 0 ? (
-            <EmptyState title={t("client.dayView.noSessions")} />
-          ) : (
-            daySessions.map((session) => (
-              <SessionCard
-                key={session.id}
-                time={`${dayjs(session.startsAt).format("HH:mm")} - ${dayjs(session.endsAt).format("HH:mm")}`}
-                className={session.classTypeName}
-                room={session.roomName ?? undefined}
-                bookedCount={session.bookedCount}
-                capacity={session.capacity}
-                status={session.availableSlots > 0 ? "available" : "full"}
-                onPress={() =>
-                  setSelectedSession({
-                    sessionId: session.id,
-                    classTypeName: session.classTypeName,
-                    roomName: session.roomName,
-                    bookedCount: session.bookedCount,
-                    capacity: session.capacity,
-                    availableSlots: session.availableSlots,
-                    startsAt: session.startsAt,
-                    endsAt: session.endsAt,
-                  })
-                }
-              />
-            ))
-          )}
+        <View className="px-6 pb-2 flex-row items-baseline justify-between">
+          <SectionLabel>{displayDate.format("dddd, D MMMM")}</SectionLabel>
+          {daySessions.length > 0 ? (
+            <Text className="text-xs text-muted">
+              {daySessions.length} {t("trainer.schedule.sessionsLabel", { defaultValue: "sessions" })}
+            </Text>
+          ) : null}
         </View>
-      </ScrollView>
+      </MotiView>
 
+      {/* ── TimeAxisDayView or empty state ── */}
+      {daySessions.length === 0 ? (
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 24 }}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+          }
+        >
+          <EmptyState title={t("client.dayView.noSessions")} />
+        </ScrollView>
+      ) : (
+        <View style={{ flex: 1 }}>
+          <TimeAxisDayView
+            date={selectedDate}
+            sessions={timeAxisSessions}
+            onSessionPress={handleSessionPress}
+            showNowLine={isToday}
+          />
+        </View>
+      )}
+
+      {/* ── Session detail sheet (kept verbatim) ── */}
       <AppSheet open={!!selectedSession} onOpenChange={() => setSelectedSession(null)}>
         {selectedSession ? (
           <View className="flex-col gap-4">
