@@ -182,8 +182,10 @@ export default function AdminClients() {
       )
     : clients;
 
-  // Client data doesn't carry package status — non-"all" filters produce empty list
-  const filteredClients = filter === "all" ? searchedClients : [];
+  const filteredClients =
+    filter === "all"
+      ? searchedClients
+      : searchedClients.filter((c) => c.packageStatus === filter);
 
   // ── Refresh ───────────────────────────────────────────────────────────────
   async function handleRefresh() {
@@ -341,7 +343,19 @@ export default function AdminClients() {
                       </Text>
                     </View>
                     <View className="flex-row items-center gap-2">
-                      <Badge status="success">{t("admin.clients.filterActive")}</Badge>
+                      {client.packageStatus === "active" ? (
+                        <Badge status="success">
+                          {t("admin.clients.filterActive")}
+                        </Badge>
+                      ) : client.packageStatus === "expiring" ? (
+                        <Badge status="warning">
+                          {t("admin.clients.filterExpiring")}
+                        </Badge>
+                      ) : client.packageStatus === "expired" ? (
+                        <Badge status="danger">
+                          {t("admin.clients.filterExpired")}
+                        </Badge>
+                      ) : null}
                       <Pressable
                         onPress={() => {
                           setEditForm({

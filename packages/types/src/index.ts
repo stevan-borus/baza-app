@@ -121,12 +121,21 @@ export const availabilityResponseSchema = z.object({
 });
 export type AvailabilityResponse = z.infer<typeof availabilityResponseSchema>;
 
+export const clientPackageStatusSchema = z.enum([
+  "active",
+  "expiring",
+  "expired",
+  "none",
+]);
+export type ClientPackageStatus = z.infer<typeof clientPackageStatusSchema>;
+
 export const clientsResponseSchema = z.object({
   success: z.boolean(),
   clients: z.array(
     z.object({
       id: z.string(),
       notes: z.optional(z.nullable(z.string())),
+      packageStatus: clientPackageStatusSchema,
       user: z.object({
         id: z.string(),
         fullName: z.string(),
