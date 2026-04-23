@@ -1,9 +1,8 @@
 import { useState } from "react";
 import { useMutation, useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { ActivityIndicator, RefreshControl } from "react-native";
+import { ActivityIndicator, RefreshControl, Text, View } from "react-native";
 import { LegendList } from "@legendapp/list";
-import { Text, XStack, YStack } from "tamagui";
 import { ActionButton } from "@/components/ui/action-button";
 import { AppSheet } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
@@ -52,61 +51,64 @@ export default function TrainerNotes() {
 
   return (
     <ScreenContainerRaw>
-      <YStack px="$5" gap="$4">
+      <View className="flex-col px-5 gap-4">
         <SectionHeader title={t("trainer.notes.title")} />
         <ActionButton icon="plus" label={t("trainer.notes.newNote")} onPress={() => setShowCreate(true)} />
-      </YStack>
+      </View>
 
       {notesQuery.isError ? (
-        <YStack px="$5" pt="$3">
+        <View className="flex-col px-5 pt-3">
           <ErrorState message={t("trainer.notes.error")} />
-        </YStack>
+        </View>
       ) : null}
       {notes.length === 0 && !notesQuery.isLoading ? (
-        <YStack px="$5" pt="$3">
+        <View className="flex-col px-5 pt-3">
           <EmptyState title={t("trainer.notes.empty")} />
-        </YStack>
+        </View>
       ) : null}
 
-      <YStack flex={1} px="$5" pt="$2">
+      <View className="flex-1 px-5 pt-2">
         <LegendList
           data={notes}
           keyExtractor={(item) => item.id}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
           renderItem={({ item }: { item: TrainerNote }) => (
-            <YStack py="$1.5">
+            <View className="flex-col py-1.5">
               <Card>
-                <YStack gap="$1.5">
-                  <Text fontWeight="500" fontSize="$3" color="$color">
+                <View className="flex-col gap-1.5">
+                  <Text className="font-medium text-base text-foreground">
                     {item.note}
                   </Text>
-                  <XStack gap="$2" items="center">
-                    <Text fontSize="$1" color="$color9">
+                  <View className="flex-row gap-2 items-center">
+                    <Text className="text-xs text-muted">
                       {new Date(item.createdAt).toLocaleDateString(dateLocale)}
                     </Text>
                     {item.trainer ? (
                       <>
-                        <Text fontSize="$1" color="$color9">·</Text>
-                        <Text fontSize="$1" color="$color10">
+                        <Text className="text-xs text-muted">·</Text>
+                        <Text className="text-xs text-muted">
                           {item.trainer.fullName}
                         </Text>
                       </>
                     ) : null}
-                  </XStack>
-                </YStack>
+                  </View>
+                </View>
               </Card>
-            </YStack>
+            </View>
           )}
           onEndReached={handleEndReached}
           onEndReachedThreshold={0.5}
           ListFooterComponent={notesQuery.isFetchingNextPage ? <ActivityIndicator style={{ padding: 16 }} /> : null}
           estimatedItemSize={80}
         />
-      </YStack>
+      </View>
 
       <AppSheet open={showCreate} onOpenChange={setShowCreate}>
-        <YStack gap="$5">
-          <Text fontSize="$6" fontWeight="700" color="$color" letterSpacing={-0.3}>
+        <View className="flex-col gap-5">
+          <Text
+            className="text-foreground font-bold"
+            style={{ fontSize: 24, letterSpacing: -0.3 }}
+          >
             {t("trainer.notes.sheetTitle")}
           </Text>
 
@@ -145,7 +147,7 @@ export default function TrainerNotes() {
             {t("admin.clients.save")}
           </Button>
           {createMutation.isError ? <ErrorState message={t("trainer.notes.saveError")} /> : null}
-        </YStack>
+        </View>
       </AppSheet>
     </ScreenContainerRaw>
   );

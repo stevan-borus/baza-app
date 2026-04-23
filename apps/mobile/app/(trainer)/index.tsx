@@ -2,9 +2,8 @@ import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import dayjs from "dayjs";
 import { useTranslation } from "react-i18next";
-import { RefreshControl, ScrollView } from "react-native";
+import { RefreshControl, ScrollView, Text, View } from "react-native";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
-import { Text, XStack, YStack } from "tamagui";
 import { AppSheet } from "@/components/ui/sheet";
 import { Badge, Card, StatCard } from "@/components/ui/card";
 import { SessionCard } from "@/components/ui/session-card";
@@ -84,7 +83,7 @@ export default function TrainerSchedule() {
 
   return (
     <ScreenContainerRaw>
-      <YStack px="$5" gap="$4">
+      <View className="flex-col px-5 gap-4">
         <SectionHeader
           title={t("trainer.schedule.title")}
           subtitle={meQuery.data ? meQuery.data.user.email : undefined}
@@ -96,29 +95,32 @@ export default function TrainerSchedule() {
 
         {sessionNotifs.length > 0 ? (
           <Card>
-            <YStack gap="$2">
-              <Text fontWeight="600" fontSize="$3" color="$color">
+            <View className="flex-col gap-2">
+              <Text className="font-semibold text-base text-foreground">
                 {t("trainer.schedule.sessionChanges")}
               </Text>
               {sessionNotifs.slice(0, 5).map((n: Notification) => (
-                <Text key={n.id} fontSize="$2" color="$color10">
+                <Text key={n.id} className="text-sm text-muted">
                   {n.title}: {n.body}
                 </Text>
               ))}
-            </YStack>
+            </View>
           </Card>
         ) : null}
-      </YStack>
+      </View>
 
       {/* Month/year header with arrows */}
-      <XStack px="$5" py="$3" justify="space-between" items="center">
+      <View className="flex-row px-5 py-3 justify-between items-center">
         <FontAwesome
           name="chevron-left"
           size={16}
           color="#a1a1aa"
           onPress={() => navigateMonth(-1)}
         />
-        <Text fontSize="$5" fontWeight="700" color="$color" letterSpacing={-0.3}>
+        <Text
+          className="text-foreground font-bold"
+          style={{ fontSize: 20, letterSpacing: -0.3 }}
+        >
           {displayDate.format("MMMM YYYY")}
         </Text>
         <FontAwesome
@@ -127,21 +129,21 @@ export default function TrainerSchedule() {
           color="#a1a1aa"
           onPress={() => navigateMonth(1)}
         />
-      </XStack>
+      </View>
 
       {/* WeekStrip */}
-      <YStack px="$5" pb="$3">
+      <View className="flex-col px-5 pb-3">
         <WeekStrip
           selectedDate={selectedDate}
           onSelectDate={handleDateSelect}
           activityByDate={activityByDate}
         />
-      </YStack>
+      </View>
 
       {availabilityQuery.isError ? (
-        <YStack px="$5">
+        <View className="flex-col px-5">
           <ErrorState message={t("trainer.schedule.error")} />
-        </YStack>
+        </View>
       ) : null}
 
       {/* Day sessions list */}
@@ -155,7 +157,7 @@ export default function TrainerSchedule() {
         <SectionLabel>
           {displayDate.format("dddd, D MMMM")}
         </SectionLabel>
-        <YStack gap="$3" pt="$3">
+        <View className="flex-col gap-3 pt-3">
           {daySessions.length === 0 ? (
             <EmptyState title={t("client.dayView.noSessions")} />
           ) : (
@@ -183,27 +185,30 @@ export default function TrainerSchedule() {
               />
             ))
           )}
-        </YStack>
+        </View>
       </ScrollView>
 
       <AppSheet open={!!selectedSession} onOpenChange={() => setSelectedSession(null)}>
         {selectedSession ? (
-          <YStack gap="$4">
-            <Text fontSize="$6" fontWeight="700" color="$color" letterSpacing={-0.3}>
+          <View className="flex-col gap-4">
+            <Text
+              className="text-foreground font-bold"
+              style={{ fontSize: 24, letterSpacing: -0.3 }}
+            >
               {selectedSession.classTypeName}
             </Text>
             <Card>
-              <YStack gap="$3">
+              <View className="flex-col gap-3">
                 <ListRow
                   title={`${dayjs(selectedSession.startsAt).format("DD.MM.YYYY HH:mm")} - ${dayjs(selectedSession.endsAt).format("HH:mm")}`}
                   subtitle={`${t("trainer.schedule.room")}: ${selectedSession.roomName ?? "—"} · ${t("trainer.schedule.available")}: ${selectedSession.availableSlots}`}
                 />
-                <Badge variant="soft">
+                <Badge status="neutral">
                   {selectedSession.bookedCount}/{selectedSession.capacity} {t("trainer.schedule.booked")}
                 </Badge>
-              </YStack>
+              </View>
             </Card>
-          </YStack>
+          </View>
         ) : null}
       </AppSheet>
     </ScreenContainerRaw>

@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { RefreshControl, ScrollView } from "react-native";
-import { Text, XStack, YStack } from "tamagui";
+import { RefreshControl, ScrollView, Text, View } from "react-native";
 import { Badge, Card } from "@/components/ui/card";
 import { EmptyState, ErrorState } from "@/components/ui/states";
 import { ScreenContainer } from "@/components/ui/screen-container";
@@ -52,23 +51,23 @@ export default function TrainerClients() {
         {scheduledSessions.length === 0 ? (
           <EmptyState title={t("trainer.clients.noSessions")} />
         ) : (
-          <YStack gap="$5" pb="$8">
+          <View className="flex-col gap-5 pb-8">
             {scheduledSessions.map((session) => (
-              <YStack key={session.id} gap="$2">
+              <View key={session.id} className="flex-col gap-2">
                 <Card>
-                  <YStack gap="$2">
-                    <XStack justify="space-between" items="center">
-                      <Text fontWeight="600" fontSize="$4" color="$color">
+                  <View className="flex-col gap-2">
+                    <View className="flex-row justify-between items-center">
+                      <Text className="font-semibold text-lg text-foreground">
                         {session.classType?.name ??
                           t("trainer.clients.sessionName")}
                       </Text>
-                      <Badge variant="soft">
+                      <Badge status="neutral">
                         {t("trainer.clients.seats", {
                           count: session.capacity,
                         })}
                       </Badge>
-                    </XStack>
-                    <Text fontSize="$2" color="$color10">
+                    </View>
+                    <Text className="text-sm text-muted">
                       {new Date(session.startsAt).toLocaleDateString(
                         dateLocale,
                       )}{" "}
@@ -77,39 +76,38 @@ export default function TrainerClients() {
                         { hour: "2-digit", minute: "2-digit" },
                       )}
                     </Text>
-                  </YStack>
+                  </View>
                 </Card>
                 {clients.length > 0 ? (
-                  <YStack ml="$4" gap="$1.5">
+                  <View className="flex-col ml-4 gap-1.5">
                     {clients.map((client) => (
                       <Card key={client.id}>
-                        <YStack gap="$1">
-                          <Text fontWeight="500" fontSize="$4" color="$color">
+                        <View className="flex-col gap-1">
+                          <Text className="font-medium text-lg text-foreground">
                             {client.user.fullName}
                           </Text>
-                          <Text fontSize="$2" color="$color10">
+                          <Text className="text-sm text-muted">
                             {client.user.email}
                           </Text>
                           {client.notes ? (
-                            <Text fontSize="$2" color="$color9">
+                            <Text className="text-sm text-muted">
                               {t("admin.clients.notes", { text: client.notes })}
                             </Text>
                           ) : null}
-                        </YStack>
+                        </View>
                       </Card>
                     ))}
-                  </YStack>
+                  </View>
                 ) : (
-                  <Text color="$color9" ml="$4" fontSize="$2">
+                  <Text className="text-muted ml-4 text-sm">
                     {t("trainer.clients.noClients")}
                   </Text>
                 )}
-              </YStack>
+              </View>
             ))}
-          </YStack>
+          </View>
         )}
       </ScreenContainer>
     </ScrollView>
   );
 }
-

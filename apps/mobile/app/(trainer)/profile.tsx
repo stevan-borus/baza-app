@@ -1,8 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
-import { RefreshControl, ScrollView } from "react-native";
+import { RefreshControl, ScrollView, Text, View } from "react-native";
 import { useTranslation } from "react-i18next";
-import { Text, YStack } from "tamagui";
 import { useState } from "react";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { Button } from "@/components/ui/button";
@@ -46,44 +45,45 @@ export default function TrainerProfile() {
     >
       <ScreenContainer>
         {/* Header: Avatar + Email */}
-        <YStack items="center" gap="$3" pb="$4">
-          <YStack
-            width={60}
-            height={60}
-            borderRadius={30}
-            bg="$backgroundHover"
-            items="center"
-            justify="center"
+        <View className="items-center gap-3 pb-4">
+          <View
+            className="items-center justify-center"
+            style={{
+              width: 60,
+              height: 60,
+              borderRadius: 30,
+              backgroundColor: "rgba(255,255,255,0.08)",
+            }}
           >
-            <Text fontSize={24} fontWeight="700" color="$accent1">
+            <Text className="text-accent font-bold" style={{ fontSize: 24 }}>
               {userEmail.charAt(0).toUpperCase()}
             </Text>
-          </YStack>
-          <YStack items="center" gap="$1">
-            <Text fontSize="$5" fontWeight="700" color="$color">
+          </View>
+          <View className="items-center gap-1">
+            <Text className="text-foreground font-bold" style={{ fontSize: 20 }}>
               {userEmail.split("@")[0]}
             </Text>
-            <Text fontSize="$2" color="$color9">
+            <Text className="text-[13px] text-muted">
               {userEmail}
             </Text>
-          </YStack>
-        </YStack>
+          </View>
+        </View>
 
         {/* Preferences */}
-        <YStack gap="$4">
+        <View className="flex-col gap-4">
           <SectionLabel>{t("client.profileTab.preferences")}</SectionLabel>
           <GlassCard>
-            <YStack gap="$4">
-              <Text fontSize="$3" color="$color">
+            <View className="flex-col gap-4">
+              <Text className="text-base text-foreground">
                 {t("client.profileTab.language")}
               </Text>
               <LanguageSwitcher />
-            </YStack>
+            </View>
           </GlassCard>
-        </YStack>
+        </View>
 
         {/* Account */}
-        <YStack gap="$4">
+        <View className="flex-col gap-4">
           <SectionLabel>{t("client.profileTab.account")}</SectionLabel>
           <Button
             variant="danger"
@@ -92,7 +92,7 @@ export default function TrainerProfile() {
           >
             {t("client.signOut")}
           </Button>
-        </YStack>
+        </View>
       </ScreenContainer>
     </ScrollView>
   );
