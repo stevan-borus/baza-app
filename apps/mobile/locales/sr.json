@@ -374,13 +374,15 @@
       "saveError": "Čuvanje beleške nije uspelo."
     },
     "clients": {
-      "title": "Klijenti po sesijama",
+      "title": "Moji klijenti",
+      "todayLabel": "Danas",
+      "todayStats": "{{sessions}} sesija danas · {{clients}} klijenata danas",
       "error": "Nije moguće učitati klijente.",
       "sessionsError": "Nije moguće učitati sesije.",
       "noSessions": "Nema zakazanih sesija.",
       "seats": "{{count}} mesta",
       "sessionName": "Sesija",
-      "noClients": "Nema prijavljenih klijenata",
+      "noClients": "Nema prijavljenih klijenata"
     }
   },
   "notifications": {

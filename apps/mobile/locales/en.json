@@ -373,13 +373,15 @@
       "saveError": "Saving note failed."
     },
     "clients": {
-      "title": "Clients by session",
+      "title": "My Clients",
+      "todayLabel": "Today",
+      "todayStats": "{{sessions}} sessions today · {{clients}} clients today",
       "error": "Unable to load clients.",
       "sessionsError": "Unable to load sessions.",
       "noSessions": "No scheduled sessions.",
       "seats": "{{count}} seats",
       "sessionName": "Session",
-      "noClients": "No registered clients",
+      "noClients": "No registered clients"
     }
   },
   "notifications": {
