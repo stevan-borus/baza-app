@@ -234,6 +234,12 @@
       "pauseReason": "Razlog (opciono)",
       "pauseSubmit": "Pauziraj",
       "pauseError": "Pauziranje nije uspelo.",
+      "searchPlaceholder": "Pretraži klijente…",
+      "filterAll": "Svi",
+      "filterActive": "Aktivni",
+      "filterExpiring": "Ističu",
+      "filterExpired": "Istekli",
+      "filterEmpty": "Nema klijenata koji odgovaraju filteru.",
     },
     "schedule": {
       "title": "Raspored",

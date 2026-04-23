@@ -233,6 +233,12 @@
       "pauseReason": "Reason (optional)",
       "pauseSubmit": "Pause",
       "pauseError": "Pausing failed.",
+      "searchPlaceholder": "Search clients…",
+      "filterAll": "All",
+      "filterActive": "Active",
+      "filterExpiring": "Expiring",
+      "filterExpired": "Expired",
+      "filterEmpty": "No clients match this filter.",
     },
     "schedule": {
       "title": "Schedule",
