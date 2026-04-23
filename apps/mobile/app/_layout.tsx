@@ -91,7 +91,6 @@ function RootLayoutNav() {
     <ThemeProvider value={isDark ? CustomDarkTheme : CustomLightTheme}>
       <Providers colorScheme={isDark ? "dark" : "light"}>
         <View className="flex-1">
-          <AppNavigator isDark={isDark} />
           <LinearGradient
             pointerEvents="none"
             style={StyleSheet.absoluteFill}
@@ -104,6 +103,7 @@ function RootLayoutNav() {
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
           />
+          <AppNavigator isDark={isDark} />
         </View>
       </Providers>
     </ThemeProvider>
