@@ -1,3 +1,14 @@
+/**
+ * Admin Settings index screen.
+ * Design references (from docs/inspiration/):
+ * - Linear Mobile ios Apr 2026/ — grouped settings with chevrons
+ * - Apple Fitness ios Feb 2026/ — preferences-style section grouping
+ *
+ * Structure:
+ *   Studio section  → Class Types, Rooms
+ *   Preferences     → Language, Theme
+ *   Account         → Sign out
+ */
 import { useState } from "react";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { Image } from "expo-image";
@@ -7,16 +18,20 @@ import { useTranslation } from "react-i18next";
 import { useColorScheme } from "@/components/useColorScheme";
 import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { MotiView } from "moti";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { ThemeSwitcher } from "@/components/ThemeSwitcher";
 import { GlassCard } from "@/components/ui/glass-card";
 import { AppSheet } from "@/components/ui/sheet";
+import { SectionLabel } from "@/components/ui/typography";
 import { GLASS_BG } from "@/components/ui/tokens";
 import { HEADER_HEIGHT, TAB_BAR_HEIGHT } from "@/components/ui/constants";
 import { type Locale } from "@/lib/i18n";
 import { notificationsQueries } from "@/lib/queries/notifications-queries-factory";
 import { signOutWithPushCleanup } from "@/lib/sign-out";
 import { useThemePreference } from "@/lib/theme-preference";
+
+const STAGGER = [0, 80, 160, 240];
 
 export default function AdminSettingsIndex() {
   const { t, i18n } = useTranslation();
@@ -38,6 +53,7 @@ export default function AdminSettingsIndex() {
       router.replace("/sign-in");
     },
   });
+
   const updateLocalePrefsMutation = useMutation({
     ...notificationsQueries.updatePreferences(),
     onSuccess: () =>
@@ -50,6 +66,7 @@ export default function AdminSettingsIndex() {
       : preference === "light"
         ? t("settings.themeLight")
         : t("settings.themeSystem");
+
   const currentLanguageLabel = i18n.language?.startsWith("sr")
     ? t("common.languageSr")
     : t("common.languageEn");
@@ -64,83 +81,101 @@ export default function AdminSettingsIndex() {
       }}
     >
       <View className="px-5 flex-col gap-6">
-        <View className="flex-col gap-2">
-          <Text
-            className="text-muted font-semibold uppercase pl-4"
-            style={{ fontSize: 12, letterSpacing: 0.8 }}
-          >
-            {t("settings.accountSection")}
-          </Text>
-          <GlassCard style={{ borderRadius: 16, overflow: "hidden", padding: 0 }}>
-            <SettingsRow
-              icon="moon-o"
-              label={t("settings.theme")}
-              value={currentThemeLabel}
-              onPress={() => setShowThemeModal(true)}
-              isDark={isDark}
-            />
-            <View className="h-px bg-white/10 mx-4" />
-            <SettingsRow
-              icon="globe"
-              label={t("settings.language")}
-              value={currentLanguageLabel}
-              onPress={() => setShowLanguageModal(true)}
-              isDark={isDark}
-            />
-          </GlassCard>
-        </View>
+        {/* Studio section */}
+        <MotiView
+          from={{ opacity: 0, translateY: 12 }}
+          animate={{ opacity: 1, translateY: 0 }}
+          transition={{ type: "timing", duration: 380, delay: STAGGER[0] }}
+        >
+          <View className="flex-col gap-2">
+            <SectionLabel className="pl-4">{t("settings.studioSection")}</SectionLabel>
+            <GlassCard style={{ borderRadius: 16, overflow: "hidden", padding: 0 }}>
+              <SettingsRow
+                icon="list"
+                label={t("admin.manage.classTypes")}
+                onPress={() => router.push("/(admin)/settings/class-types")}
+                isDark={isDark}
+              />
+              <View className="h-px bg-white/10 mx-4" />
+              <SettingsRow
+                icon="building-o"
+                label={t("admin.manage.rooms")}
+                onPress={() => router.push("/(admin)/settings/rooms")}
+                isDark={isDark}
+              />
+            </GlassCard>
+          </View>
+        </MotiView>
 
-        <View className="flex-col gap-2">
-          <Text
-            className="text-muted font-semibold uppercase pl-4"
-            style={{ fontSize: 12, letterSpacing: 0.8 }}
-          >
-            {t("settings.studioSection")}
-          </Text>
-          <GlassCard style={{ borderRadius: 16, overflow: "hidden", padding: 0 }}>
-            <SettingsRow
-              icon="list"
-              label={t("admin.manage.classTypes")}
-              onPress={() => router.push("/(admin)/settings/class-types")}
-              isDark={isDark}
-            />
-            <View className="h-px bg-white/10 mx-4" />
-            <SettingsRow
-              icon="building-o"
-              label={t("admin.manage.rooms")}
-              onPress={() => router.push("/(admin)/settings/rooms")}
-              isDark={isDark}
-            />
-          </GlassCard>
-        </View>
+        {/* Preferences section */}
+        <MotiView
+          from={{ opacity: 0, translateY: 12 }}
+          animate={{ opacity: 1, translateY: 0 }}
+          transition={{ type: "timing", duration: 380, delay: STAGGER[1] }}
+        >
+          <View className="flex-col gap-2">
+            <SectionLabel className="pl-4">{t("settings.accountSection")}</SectionLabel>
+            <GlassCard style={{ borderRadius: 16, overflow: "hidden", padding: 0 }}>
+              <SettingsRow
+                icon="moon-o"
+                label={t("settings.theme")}
+                value={currentThemeLabel}
+                onPress={() => setShowThemeModal(true)}
+                isDark={isDark}
+              />
+              <View className="h-px bg-white/10 mx-4" />
+              <SettingsRow
+                icon="globe"
+                label={t("settings.language")}
+                value={currentLanguageLabel}
+                onPress={() => setShowLanguageModal(true)}
+                isDark={isDark}
+              />
+            </GlassCard>
+          </View>
+        </MotiView>
 
-        <View className="flex-col gap-2">
-          <Text
-            className="text-muted font-semibold uppercase pl-4"
-            style={{ fontSize: 12, letterSpacing: 0.8 }}
-          >
-            {t("settings.otherSection")}
-          </Text>
-          <GlassCard style={{ borderRadius: 16, overflow: "hidden", padding: 0 }}>
-            <SettingsRow
-              icon="sign-out"
-              label={t("settings.logOut")}
-              onPress={() => signOutMutation.mutate()}
-              destructive
-              isDark={isDark}
-            />
-          </GlassCard>
-        </View>
+        {/* Account section */}
+        <MotiView
+          from={{ opacity: 0, translateY: 12 }}
+          animate={{ opacity: 1, translateY: 0 }}
+          transition={{ type: "timing", duration: 380, delay: STAGGER[2] }}
+        >
+          <View className="flex-col gap-2">
+            <SectionLabel className="pl-4">{t("settings.otherSection")}</SectionLabel>
+            <GlassCard style={{ borderRadius: 16, overflow: "hidden", padding: 0 }}>
+              <SettingsRow
+                icon="sign-out"
+                label={t("settings.logOut")}
+                onPress={() => signOutMutation.mutate()}
+                destructive
+                isDark={isDark}
+              />
+            </GlassCard>
+          </View>
+        </MotiView>
       </View>
 
-      <View className="items-center pt-6 pb-2">
-        <Image
-          source={isDark ? require("@/assets/images/logo-white.png") : require("@/assets/images/logo-green.png")}
-          style={{ width: 100, height: 34 }}
-          contentFit="contain"
-        />
-      </View>
+      {/* Logo footer */}
+      <MotiView
+        from={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ type: "timing", duration: 500, delay: STAGGER[3] }}
+      >
+        <View className="items-center pt-6 pb-2">
+          <Image
+            source={
+              isDark
+                ? require("@/assets/images/logo-white.png")
+                : require("@/assets/images/logo-green.png")
+            }
+            style={{ width: 100, height: 34 }}
+            contentFit="contain"
+          />
+        </View>
+      </MotiView>
 
+      {/* Theme sheet */}
       <AppSheet open={showThemeModal} onOpenChange={setShowThemeModal}>
         <View className="flex-col gap-3">
           <Text className="text-foreground font-bold" style={{ fontSize: 20 }}>
@@ -150,6 +185,7 @@ export default function AdminSettingsIndex() {
         </View>
       </AppSheet>
 
+      {/* Language sheet */}
       <AppSheet open={showLanguageModal} onOpenChange={setShowLanguageModal}>
         <View className="flex-col gap-3">
           <Text className="text-foreground font-bold" style={{ fontSize: 20 }}>
@@ -165,6 +201,10 @@ export default function AdminSettingsIndex() {
     </ScrollView>
   );
 }
+
+// ---------------------------------------------------------------------------
+// SettingsRow
+// ---------------------------------------------------------------------------
 
 function SettingsRow({
   icon,
@@ -184,6 +224,7 @@ function SettingsRow({
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.6}>
       <View className="flex-row px-4 py-3.5 items-center justify-between">
+        {/* Left: icon + label */}
         <View className="flex-row items-center gap-3.5">
           <View
             className="items-center justify-center"
@@ -207,13 +248,16 @@ function SettingsRow({
             {label}
           </Text>
         </View>
+        {/* Right: current value + chevron */}
         <View className="flex-row items-center gap-2">
           {value ? (
             <Text className="text-muted" style={{ fontSize: 14 }}>
               {value}
             </Text>
           ) : null}
-          <FontAwesome name="chevron-right" size={12} color="#a1a1aa" />
+          {!destructive && (
+            <FontAwesome name="chevron-right" size={12} color="#a1a1aa" />
+          )}
         </View>
       </View>
     </TouchableOpacity>
