@@ -371,7 +371,10 @@
       "session": "Sesija",
       "client": "Klijent",
       "placeholder": "Beleška...",
-      "saveError": "Čuvanje beleške nije uspelo."
+      "saveError": "Čuvanje beleške nije uspelo.",
+      "filterAll": "Sve",
+      "filterThisWeek": "Ova nedelja",
+      "filterByClient": "Po klijentu"
     },
     "clients": {
       "title": "Moji klijenti",

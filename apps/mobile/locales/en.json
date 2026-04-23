@@ -370,7 +370,10 @@
       "session": "Session",
       "client": "Client",
       "placeholder": "Note...",
-      "saveError": "Saving note failed."
+      "saveError": "Saving note failed.",
+      "filterAll": "All",
+      "filterThisWeek": "This week",
+      "filterByClient": "By client"
     },
     "clients": {
       "title": "My Clients",
