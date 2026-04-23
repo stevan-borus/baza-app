@@ -130,7 +130,10 @@
       "waitlistShort": "Č. lista: {{count}}",
       "book": "Zakaži",
       "cancel": "Otkaži",
-      "slotsShort": "sl."
+      "slotsShort": "sl.",
+      "classCount_one": "{{count}} čas",
+      "classCount_few": "{{count}} časa",
+      "classCount_other": "{{count}} časova"
     },
     "notifications": {
       "title": "Obaveštenja",
