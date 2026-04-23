@@ -259,7 +259,7 @@
       "filterExpiring": "Expiring",
       "filterPaused": "Paused",
       "filterExpired": "Expired",
-      "filterEmpty": "No clients match this filter.",
+      "filterEmpty": "No clients match this filter."
     },
     "schedule": {
       "title": "Schedule",

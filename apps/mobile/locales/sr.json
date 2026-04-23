@@ -260,7 +260,7 @@
       "filterExpiring": "Ističu",
       "filterPaused": "Pauzirani",
       "filterExpired": "Istekli",
-      "filterEmpty": "Nema klijenata koji odgovaraju filteru.",
+      "filterEmpty": "Nema klijenata koji odgovaraju filteru."
     },
     "schedule": {
       "title": "Raspored",
