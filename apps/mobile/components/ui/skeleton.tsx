@@ -1,5 +1,5 @@
 import React, { useEffect } from "react";
-import { YStack, XStack } from "tamagui";
+import { View } from "react-native";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -7,8 +7,6 @@ import Animated, {
   withTiming,
   Easing,
 } from "react-native-reanimated";
-
-const AnimatedYStack = Animated.createAnimatedComponent(YStack);
 
 function usePulse() {
   const opacity = useSharedValue(0.3);
@@ -38,12 +36,17 @@ export function Skeleton({
   const pulseStyle = usePulse();
 
   return (
-    <AnimatedYStack
-      bg="rgba(255,255,255,0.06)"
-      width={width as any}
-      height={height}
-      rounded={rounded}
-      style={pulseStyle}
+    <Animated.View
+      style={[
+        // eslint-disable-next-line react-native/no-inline-styles
+        {
+          backgroundColor: "rgba(255,255,255,0.06)",
+          width: width as any,
+          height,
+          borderRadius: rounded,
+        },
+        pulseStyle,
+      ]}
     />
   );
 }
@@ -56,7 +59,7 @@ export function SkeletonText({
   lines?: number;
 }) {
   return (
-    <YStack gap="$2">
+    <View className="flex-col gap-2">
       {Array.from({ length: lines }).map((_, i) => (
         <Skeleton
           key={i}
@@ -65,7 +68,7 @@ export function SkeletonText({
           rounded={7}
         />
       ))}
-    </YStack>
+    </View>
   );
 }
 
@@ -73,23 +76,27 @@ export function SkeletonCard() {
   const pulseStyle = usePulse();
 
   return (
-    <AnimatedYStack
-      bg="rgba(255,255,255,0.03)"
-      rounded={22}
-      p="$4"
-      gap="$3"
-      borderWidth={1}
-      borderColor="rgba(255,255,255,0.05)"
-      style={pulseStyle}
+    <Animated.View
+      style={[
+        {
+          backgroundColor: "rgba(255,255,255,0.03)",
+          borderRadius: 22,
+          padding: 16,
+          gap: 12,
+          borderWidth: 1,
+          borderColor: "rgba(255,255,255,0.05)",
+        },
+        pulseStyle,
+      ]}
     >
-      <XStack items="center" gap="$3">
+      <View className="flex-row items-center gap-3">
         <Skeleton width={40} height={40} rounded={12} />
-        <YStack flex={1} gap="$2">
+        <View className="flex-1 flex-col gap-2">
           <Skeleton width="60%" height={14} />
           <Skeleton width="40%" height={12} />
-        </YStack>
-      </XStack>
-    </AnimatedYStack>
+        </View>
+      </View>
+    </Animated.View>
   );
 }
 
@@ -97,28 +104,32 @@ export function SkeletonStatCard() {
   const pulseStyle = usePulse();
 
   return (
-    <AnimatedYStack
-      bg="rgba(255,255,255,0.03)"
-      rounded={22}
-      p="$5"
-      gap="$2"
-      borderWidth={1}
-      borderColor="rgba(255,255,255,0.05)"
-      style={pulseStyle}
+    <Animated.View
+      style={[
+        {
+          backgroundColor: "rgba(255,255,255,0.03)",
+          borderRadius: 22,
+          padding: 20,
+          gap: 8,
+          borderWidth: 1,
+          borderColor: "rgba(255,255,255,0.05)",
+        },
+        pulseStyle,
+      ]}
     >
       <Skeleton width={40} height={40} rounded={12} />
       <Skeleton width="50%" height={14} />
       <Skeleton width={80} height={32} rounded={8} />
-    </AnimatedYStack>
+    </Animated.View>
   );
 }
 
 export function SkeletonList({ count = 3 }: { count?: number }) {
   return (
-    <YStack gap="$3">
+    <View className="flex-col gap-3">
       {Array.from({ length: count }).map((_, i) => (
         <SkeletonCard key={i} />
       ))}
-    </YStack>
+    </View>
   );
 }

@@ -1,5 +1,5 @@
 import React from "react";
-import { Tabs, Text } from "tamagui";
+import { View, Text, Pressable, ScrollView } from "react-native";
 import { BentoSegmentedTabs } from "./bento/segmented-tabs";
 import { GLASS_BG, GLASS_BORDER } from "./tokens";
 
@@ -13,28 +13,43 @@ export function AppTabs({
   onValueChange: (value: string) => void;
 }) {
   return (
-    <Tabs value={value} onValueChange={onValueChange}>
-      <Tabs.List bg={GLASS_BG} borderWidth={1} borderColor={GLASS_BORDER} rounded={14} p="$1">
-        {tabs.map((tab) => (
-          <Tabs.Tab
+    <View
+      style={{
+        backgroundColor: GLASS_BG,
+        borderWidth: 1,
+        borderColor: GLASS_BORDER,
+        borderRadius: 14,
+        padding: 4,
+        flexDirection: "row",
+      }}
+    >
+      {tabs.map((tab) => {
+        const isActive = value === tab.value;
+        return (
+          <Pressable
             key={tab.value}
-            value={tab.value}
-            bg={value === tab.value ? "rgba(255,255,255,0.1)" : "transparent"}
-            rounded={12}
-            py="$2"
-            px="$3"
+            onPress={() => onValueChange(tab.value)}
+            style={{
+              flex: 1,
+              backgroundColor: isActive ? "rgba(255,255,255,0.1)" : "transparent",
+              borderRadius: 12,
+              paddingVertical: 8,
+              paddingHorizontal: 12,
+              alignItems: "center",
+            }}
           >
             <Text
-              fontWeight={value === tab.value ? "600" : "400"}
-              color={value === tab.value ? "$color" : "$color10"}
-              fontSize="$2"
+              className={[
+                "text-xs",
+                isActive ? "font-semibold text-foreground" : "font-normal text-muted",
+              ].join(" ")}
             >
               {tab.label}
             </Text>
-          </Tabs.Tab>
-        ))}
-      </Tabs.List>
-    </Tabs>
+          </Pressable>
+        );
+      })}
+    </View>
   );
 }
 

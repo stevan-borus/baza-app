@@ -17,10 +17,10 @@ type SessionCardProps = {
   onPress?: () => void;
 };
 
-const classTypeBorder: Record<string, string> = {
-  Yoga: "border-l-[#2dd4bf]",
-  Pilates: "border-l-accent",
-  HIIT: "border-l-[#f87171]",
+const classTypeAccentColor: Record<string, string> = {
+  Yoga: "#2dd4bf",
+  Pilates: "#2e5b42",
+  HIIT: "#f87171",
 };
 
 const statusConfig: Record<SessionStatus, { label: string; status: "success" | "warning" }> = {
@@ -45,18 +45,15 @@ export function SessionCard({
   const spotsLeft = capacity - bookedCount;
   const badgeLabel =
     status === "available" ? `${spotsLeft} spot${spotsLeft !== 1 ? "s" : ""}` : config.label;
-  const accentBorder = classType && classTypeBorder[classType] ? "left" : undefined;
+  const accentBorder = classType && classTypeAccentColor[classType] ? "left" : undefined;
+  const accentBorderColor =
+    classType && classTypeAccentColor[classType]
+      ? classTypeAccentColor[classType]
+      : "#2e5b42";
 
   return (
     <Pressable onPress={onPress} className="active:opacity-80">
-      <GlassCard
-        accentBorder={accentBorder}
-        accentBorderColorClass={
-          classType && classTypeBorder[classType]
-            ? classTypeBorder[classType]
-            : "border-accent"
-        }
-      >
+      <GlassCard accentBorder={accentBorder} accentBorderColor={accentBorderColor}>
         <View className="flex-row items-center gap-3">
           <Text className="text-base font-bold text-foreground min-w-[54px]">
             {time}

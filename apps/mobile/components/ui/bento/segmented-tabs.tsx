@@ -1,5 +1,5 @@
 import React from "react";
-import { Tabs, Text } from "tamagui";
+import { View, Text, Pressable } from "react-native";
 import { GLASS_BG, GLASS_BORDER } from "../tokens";
 
 type BentoSegmentedTabsProps<T extends string> = {
@@ -16,37 +16,44 @@ export function BentoSegmentedTabs<T extends string>({
   fullWidth = true,
 }: BentoSegmentedTabsProps<T>) {
   return (
-    <Tabs
-      value={value}
-      onValueChange={(next) => onValueChange(next as T)}
-      orientation="horizontal"
+    <View
+      style={{
+        backgroundColor: GLASS_BG,
+        borderWidth: 1,
+        borderColor: GLASS_BORDER,
+        borderRadius: 14,
+        padding: 4,
+        flexDirection: "row",
+      }}
     >
-      <Tabs.List bg={GLASS_BG} borderWidth={1} borderColor={GLASS_BORDER} rounded={14} p="$1">
-        {segments.map((segment) => {
-          const isActive = segment.value === value;
-          return (
-            <Tabs.Tab
-              key={segment.value}
-              value={segment.value}
-              bg={isActive ? "rgba(255,255,255,0.1)" : "transparent"}
-              rounded={12}
-              py="$2"
-              px={fullWidth ? "$3" : "$2.5"}
-              flex={fullWidth ? 1 : undefined}
-              minWidth={fullWidth ? undefined : 88}
-              flexShrink={0}
+      {segments.map((segment) => {
+        const isActive = segment.value === value;
+        return (
+          <Pressable
+            key={segment.value}
+            onPress={() => onValueChange(segment.value)}
+            style={{
+              flex: fullWidth ? 1 : undefined,
+              minWidth: fullWidth ? undefined : 88,
+              flexShrink: 0,
+              backgroundColor: isActive ? "rgba(255,255,255,0.1)" : "transparent",
+              borderRadius: 12,
+              paddingVertical: 8,
+              paddingHorizontal: fullWidth ? 12 : 10,
+              alignItems: "center",
+            }}
+          >
+            <Text
+              className={[
+                isActive ? "font-semibold text-foreground" : "font-normal text-muted",
+                fullWidth ? "text-xs" : "text-[11px]",
+              ].join(" ")}
             >
-              <Text
-                fontSize={fullWidth ? "$2" : "$1"}
-                fontWeight={isActive ? "600" : "400"}
-                color={isActive ? "$color" : "$color10"}
-              >
-                {segment.label}
-              </Text>
-            </Tabs.Tab>
-          );
-        })}
-      </Tabs.List>
-    </Tabs>
+              {segment.label}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </View>
   );
 }

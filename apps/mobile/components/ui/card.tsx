@@ -1,6 +1,7 @@
 import React, { PropsWithChildren } from "react";
+import { View } from "react-native";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
-import { Text, YStack } from "tamagui";
+import { Text } from "react-native";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { GlassCard, type GlassCardProps } from "./glass-card";
 import { BentoStatChip } from "./bento/stat-chip";
@@ -33,17 +34,17 @@ export function StatCard({
   label: string;
   value: string | number;
   icon?: React.ComponentProps<typeof FontAwesome>["name"];
-  accentColor?: React.ComponentProps<typeof YStack>["bg"];
+  accentColor?: string;
 }) {
   return (
     <Animated.View entering={FadeInDown.duration(400).springify()}>
       <GlassCard>
-        <YStack gap="$2">
+        <View className="flex-col gap-2">
           <BentoStatChip label={label} icon={icon} accentColor={accentColor} />
-          <Text fontSize="$8" fontWeight="800" color="$color" letterSpacing={-0.5}>
+          <Text className="text-4xl font-extrabold text-foreground tracking-tight">
             {String(value)}
           </Text>
-        </YStack>
+        </View>
       </GlassCard>
     </Animated.View>
   );
@@ -52,7 +53,7 @@ export function StatCard({
 export function CalendarPrimitive({ month }: { month: string }) {
   return (
     <GlassCard size="md">
-      <Text fontWeight="700" fontSize="$4" color="$color">
+      <Text className="font-bold text-base text-foreground">
         {month}
       </Text>
     </GlassCard>

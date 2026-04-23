@@ -1,6 +1,5 @@
 import React from "react";
-import { ScrollView } from "react-native";
-import { Text, XStack, YStack } from "tamagui";
+import { ScrollView, View, Text, Pressable } from "react-native";
 import { ACCENT, GLASS_BORDER } from "./tokens";
 
 type ActivityStatus = "booked" | "available";
@@ -42,7 +41,7 @@ export function WeekStrip({ selectedDate, onSelectDate, activityByDate = {} }: W
 
   return (
     <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-      <XStack gap="$2" py="$1" px="$1">
+      <View className="flex-row gap-2 py-1 px-1">
         {weekDates.map((dateStr) => {
           const isSelected = dateStr === selectedDate;
           const today = isToday(dateStr);
@@ -50,51 +49,58 @@ export function WeekStrip({ selectedDate, onSelectDate, activityByDate = {} }: W
           const activity = activityByDate[dateStr];
 
           return (
-            <YStack
+            <Pressable
               key={dateStr}
-              items="center"
-              gap="$1.5"
-              py="$2.5"
-              px="$3"
-              rounded={16}
-              bg={isSelected ? ACCENT : "transparent"}
-              borderWidth={!isSelected && today ? 1 : 0}
-              borderColor={GLASS_BORDER}
-              pressStyle={{ opacity: 0.7 }}
               onPress={() => onSelectDate(dateStr)}
-              cursor="pointer"
-              minWidth={48}
+              className="active:opacity-70"
+              style={{
+                alignItems: "center",
+                gap: 6,
+                paddingVertical: 10,
+                paddingHorizontal: 12,
+                borderRadius: 16,
+                backgroundColor: isSelected ? ACCENT : "transparent",
+                borderWidth: !isSelected && today ? 1 : 0,
+                borderColor: GLASS_BORDER,
+                minWidth: 48,
+              }}
             >
               <Text
-                fontSize="$1"
-                fontWeight="500"
-                color={isSelected ? "#ffffff" : "$color9"}
+                style={{
+                  fontSize: 11,
+                  fontWeight: "500",
+                  color: isSelected ? "#ffffff" : "rgba(255,255,255,0.5)",
+                }}
               >
                 {dayName}
               </Text>
               <Text
-                fontSize="$4"
-                fontWeight="700"
-                color={isSelected ? "#ffffff" : "$color"}
+                style={{
+                  fontSize: 16,
+                  fontWeight: "700",
+                  color: isSelected ? "#ffffff" : "rgba(255,255,255,0.9)",
+                }}
               >
                 {dayNum}
               </Text>
               {activity ? (
-                <YStack
-                  width={6}
-                  height={6}
-                  rounded={3}
-                  bg={activity === "booked" ? ACCENT : "transparent"}
-                  borderWidth={activity === "available" ? 1 : 0}
-                  borderColor={ACCENT}
+                <View
+                  style={{
+                    width: 6,
+                    height: 6,
+                    borderRadius: 3,
+                    backgroundColor: activity === "booked" ? ACCENT : "transparent",
+                    borderWidth: activity === "available" ? 1 : 0,
+                    borderColor: ACCENT,
+                  }}
                 />
               ) : (
-                <YStack width={6} height={6} />
+                <View style={{ width: 6, height: 6 }} />
               )}
-            </YStack>
+            </Pressable>
           );
         })}
-      </XStack>
+      </View>
     </ScrollView>
   );
 }

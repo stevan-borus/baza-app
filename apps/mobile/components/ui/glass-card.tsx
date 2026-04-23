@@ -1,74 +1,79 @@
 import React from "react";
-import { Platform } from "react-native";
+import { View, Platform, type ViewProps } from "react-native";
 import { BlurView } from "expo-blur";
-import { styled, YStack, type YStackProps } from "tamagui";
 import { GLASS_BG, GLASS_BORDER, GLASS_BG_ANDROID } from "./tokens";
 
-const GlassCardFrame = styled(YStack, {
-  borderRadius: 22,
-  borderWidth: 1,
-  borderColor: GLASS_BORDER,
-  overflow: "hidden",
-  padding: "$4",
-  position: "relative",
+type AccentBorder = "left" | "top";
+type CardSize = "sm" | "md" | "lg";
 
-  variants: {
-    accentBorder: {
-      left: {
-        borderLeftWidth: 3,
-        borderLeftColor: "$accent1",
-      },
-      top: {
-        borderTopWidth: 3,
-        borderTopColor: "$accent1",
-      },
-    },
-    interactive: {
-      true: {
-        pressStyle: { opacity: 0.8 },
-        hoverStyle: { opacity: 0.9 },
-        cursor: "pointer",
-      },
-    },
-    size: {
-      sm: {
-        padding: "$3",
-        borderRadius: 16,
-      },
-      md: {
-        padding: "$4",
-        borderRadius: 20,
-      },
-      lg: {
-        padding: "$5",
-        borderRadius: 22,
-      },
-    },
-  } as const,
-});
+export type GlassCardProps = ViewProps & {
+  accentBorder?: AccentBorder;
+  /** Override the accent border color (hex/rgb string). Defaults to #2e5b42. */
+  accentBorderColor?: string;
+  interactive?: boolean;
+  size?: CardSize;
+  children?: React.ReactNode;
+};
 
-type GlassCardProps = React.ComponentProps<typeof GlassCardFrame>;
+const sizePadding: Record<CardSize, number> = {
+  sm: 12,
+  md: 16,
+  lg: 20,
+};
 
-export function GlassCard({ children, style, ...props }: GlassCardProps) {
+const sizeBorderRadius: Record<CardSize, number> = {
+  sm: 16,
+  md: 20,
+  lg: 22,
+};
+
+export function GlassCard({
+  children,
+  style,
+  accentBorder,
+  accentBorderColor = "#2e5b42",
+  interactive: _interactive,
+  size = "lg",
+  ...props
+}: GlassCardProps) {
   const isIOS = Platform.OS === "ios";
   const isWeb = Platform.OS === "web";
   const isAndroid = Platform.OS === "android";
 
-  const webGlassStyle = isWeb
-    ? { backdropFilter: "blur(12px)", backgroundColor: GLASS_BG }
-    : undefined;
+  const padding = sizePadding[size];
+  const borderRadius = sizeBorderRadius[size];
 
-  const androidStyle = isAndroid
-    ? { backgroundColor: GLASS_BG_ANDROID }
-    : undefined;
+  const platformBg = isAndroid
+    ? GLASS_BG_ANDROID
+    : isWeb
+      ? GLASS_BG
+      : "transparent";
 
-  const iosStyle = isIOS
-    ? { backgroundColor: "transparent" }
-    : undefined;
+  const webExtra = isWeb ? { backdropFilter: "blur(12px)" } : {};
+
+  const accentBorderStyle =
+    accentBorder === "left"
+      ? { borderLeftWidth: 3, borderLeftColor: accentBorderColor }
+      : accentBorder === "top"
+        ? { borderTopWidth: 3, borderTopColor: accentBorderColor }
+        : {};
 
   return (
-    <GlassCardFrame
-      style={[androidStyle ?? webGlassStyle ?? iosStyle, style] as YStackProps["style"]}
+    <View
+      style={[
+        {
+          borderRadius,
+          borderWidth: 1,
+          borderColor: GLASS_BORDER,
+          overflow: "hidden",
+          padding,
+          position: "relative",
+          backgroundColor: platformBg,
+          ...webExtra,
+          ...accentBorderStyle,
+        },
+        style,
+      ]}
       {...props}
     >
       {isIOS && (
@@ -85,8 +90,6 @@ export function GlassCard({ children, style, ...props }: GlassCardProps) {
         />
       )}
       {children}
-    </GlassCardFrame>
+    </View>
   );
 }
-
-export type { GlassCardProps };

@@ -1,7 +1,6 @@
 import React from "react";
-import { TouchableOpacity } from "react-native";
+import { TouchableOpacity, View, Text } from "react-native";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
-import { Text, XStack } from "tamagui";
 import { DANGER } from "./tokens";
 
 /** Compact action row -- icon + label, used for secondary actions. */
@@ -29,13 +28,11 @@ export function ActionButton({
       activeOpacity={0.7}
       style={{ opacity: disabled ? 0.4 : 1 }}
     >
-      <XStack
-        bg={variant === "danger" ? "$red3" : "$color2"}
-        rounded={12}
-        px="$3.5"
-        py="$2.5"
-        items="center"
-        gap="$2"
+      <View
+        className={[
+          "flex-row items-center rounded-xl px-3.5 py-2.5 gap-2",
+          variant === "danger" ? "bg-danger-soft" : "bg-glass",
+        ].join(" ")}
       >
         {showIcon ? (
           <FontAwesome
@@ -45,14 +42,14 @@ export function ActionButton({
           />
         ) : null}
         <Text
-          fontSize="$2"
-          fontWeight="500"
-          color={variant === "danger" ? "$red10" : "$color"}
+          className={[
+            "text-sm font-medium",
+            variant === "danger" ? "text-danger" : "text-foreground",
+          ].join(" ")}
         >
           {displayLabel}
         </Text>
-      </XStack>
+      </View>
     </TouchableOpacity>
   );
 }
-
