@@ -26,7 +26,18 @@
     "signInSubtitle": "Sign in to your account",
     "checkEmail": "Check your email",
     "passwordUpdated": "Password updated",
-    "passwordUpdatedDesc": "You can now sign in with your new password."
+    "passwordUpdatedDesc": "You can now sign in with your new password.",
+    "welcomeInvite": "Welcome to Baza",
+    "inviteSubtitle": "You've been invited",
+    "invitedBy": "Invited by {{name}}",
+    "yourName": "Your name",
+    "createPassword": "Create password",
+    "confirmPassword": "Confirm password",
+    "passwordsMismatch": "Passwords don't match",
+    "joinButton": "Join Baza",
+    "inviteInvalid": "Invalid invite link",
+    "inviteInvalidDesc": "This invite link is invalid or has expired.",
+    "inviteError": "Could not complete registration. The invite may have expired."
   },
   "notFound": {
     "title": "Oops!",

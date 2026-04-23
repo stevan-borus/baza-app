@@ -26,7 +26,18 @@
     "signInSubtitle": "Prijavite se na svoj nalog",
     "checkEmail": "Proverite email",
     "passwordUpdated": "Lozinka ažurirana",
-    "passwordUpdatedDesc": "Sada se možete prijaviti sa novom lozinkom."
+    "passwordUpdatedDesc": "Sada se možete prijaviti sa novom lozinkom.",
+    "welcomeInvite": "Dobrodošli u Baza",
+    "inviteSubtitle": "Pozvani ste",
+    "invitedBy": "Pozivnica od {{name}}",
+    "yourName": "Vaše ime",
+    "createPassword": "Kreirajte lozinku",
+    "confirmPassword": "Potvrdite lozinku",
+    "passwordsMismatch": "Lozinke se ne podudaraju",
+    "joinButton": "Pridruži se Baza",
+    "inviteInvalid": "Nevažeći link pozivnice",
+    "inviteInvalidDesc": "Ovaj link pozivnice je nevažeći ili je istekao.",
+    "inviteError": "Registracija nije uspela. Pozivnica je možda istekla."
   },
   "notFound": {
     "title": "Ups!",
