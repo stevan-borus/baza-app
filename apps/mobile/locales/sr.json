@@ -354,7 +354,13 @@
       "error": "Nije moguće učitati raspored.",
       "room": "Sala",
       "available": "Slobodno",
-      "booked": "zakazano"
+      "booked": "zakazano",
+      "greeting": "Zdravo, {{name}}",
+      "todayStats": "Danas",
+      "sessions": "Sesije",
+      "clients": "Klijenti",
+      "hours": "Sati",
+      "sessionsLabel": "sesija"
     },
     "notes": {
       "title": "Beleške",

@@ -353,7 +353,13 @@
       "error": "Unable to load schedule.",
       "room": "Room",
       "available": "Available",
-      "booked": "booked"
+      "booked": "booked",
+      "greeting": "Hello, {{name}}",
+      "todayStats": "Today",
+      "sessions": "Sessions",
+      "clients": "Clients",
+      "hours": "Hours",
+      "sessionsLabel": "sessions"
     },
     "notes": {
       "title": "Notes",
