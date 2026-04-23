@@ -147,7 +147,13 @@
       "typeBooking": "Booking",
       "typeSession": "Session",
       "typeNote": "Note",
-      "typeGeneral": "General"
+      "typeGeneral": "General",
+      "segmentAll": "All",
+      "segmentUnread": "Unread",
+      "groupToday": "Today",
+      "groupYesterday": "Yesterday",
+      "groupEarlier": "Earlier",
+      "inbox": "Inbox"
     }
   },
   "settings": {

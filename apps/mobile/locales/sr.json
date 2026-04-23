@@ -148,7 +148,13 @@
       "typeBooking": "Rezervacija",
       "typeSession": "Sesija",
       "typeNote": "Beleška",
-      "typeGeneral": "Opšte"
+      "typeGeneral": "Opšte",
+      "segmentAll": "Sve",
+      "segmentUnread": "Nepročitano",
+      "groupToday": "Danas",
+      "groupYesterday": "Juče",
+      "groupEarlier": "Ranije",
+      "inbox": "Sandučić"
     }
   },
   "settings": {
