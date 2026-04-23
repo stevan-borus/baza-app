@@ -99,7 +99,10 @@
       "notificationSettings": "Podešavanja obaveštenja",
       "account": "Nalog",
       "paused": "Pauziran",
-      "expired": "Istekao"
+      "expired": "Istekao",
+      "totalNotes": "Ukupno sesija",
+      "thisMonth": "Ovaj mesec",
+      "activePkgs": "Aktivni paketi"
     },
     "dayView": {
       "noSessions": "Nema sesija ovog dana",

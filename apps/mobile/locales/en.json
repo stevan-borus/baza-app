@@ -99,7 +99,10 @@
       "notificationSettings": "Notification settings",
       "account": "Account",
       "paused": "Paused",
-      "expired": "Expired"
+      "expired": "Expired",
+      "totalNotes": "Total sessions",
+      "thisMonth": "This month",
+      "activePkgs": "Active packs"
     },
     "dayView": {
       "noSessions": "No sessions on this day",
