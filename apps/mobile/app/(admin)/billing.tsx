@@ -1,3 +1,7 @@
+/**
+ * Design references (from docs/inspiration/):
+ * - Stripe Dashboard ios Jun 2023/ — period selector, hero revenue, transaction list detail
+ */
 import { useState, useMemo } from "react";
 import {
   useMutation,
@@ -10,16 +14,20 @@ import { ActivityIndicator, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import dayjs from "dayjs";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
+import { MotiView } from "moti";
 import { LegendList } from "@legendapp/list";
 import { getDateLocale } from "@/lib/i18n";
 import { ActionButton } from "@/components/ui/action-button";
 import { AppSheet } from "@/components/ui/sheet";
-import { Badge, Card, StatCard } from "@/components/ui/card";
+import { Badge, Card } from "@/components/ui/card";
 import { GlassCard } from "@/components/ui/glass-card";
+import { HeroCard } from "@/components/ui/hero-card";
+import { NumberRollup } from "@/components/ui/number-rollup";
+import { SegmentedControl } from "@/components/ui/segmented-control";
+import { SectionLabel } from "@/components/ui/typography";
 import { Button } from "@/components/ui/button";
 import { EmptyState, ErrorState } from "@/components/ui/states";
 import { Input } from "@/components/ui/input";
-import { SectionLabel } from "@/components/ui/typography";
 import { packagesQueries } from "@/lib/queries/packages-queries-factory";
 import {
   billingQueries,
@@ -28,12 +36,22 @@ import {
 import { clientsQueries } from "@/lib/queries/clients-queries-factory";
 import { TAB_BAR_HEIGHT, HEADER_HEIGHT } from "@/components/ui/constants";
 
+type FilterTab = "all" | "confirmed" | "refunded" | "pending";
+
+const FILTER_TABS: { value: FilterTab; label: string }[] = [
+  { value: "all", label: "All" },
+  { value: "confirmed", label: "Success" },
+  { value: "refunded", label: "Refunded" },
+  { value: "pending", label: "Pending" },
+];
+
 export default function AdminBilling() {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const [showCreate, setShowCreate] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState(() => dayjs());
+  const [activeFilter, setActiveFilter] = useState<FilterTab>("all");
   const [form, setForm] = useState({
     clientUserId: "",
     amount: "",
@@ -55,6 +73,18 @@ export default function AdminBilling() {
     const avg = uniqueClients > 0 ? Math.round(totalRevenue / uniqueClients) : 0;
     return { totalRevenue, count, avg };
   }, [records]);
+
+  const filteredRecords = useMemo(() => {
+    if (activeFilter === "all") return records;
+    if (activeFilter === "confirmed")
+      return records.filter((r) => r.status === "CONFIRMED");
+    if (activeFilter === "pending")
+      return records.filter((r) => r.status === "PENDING");
+    // "refunded" maps to CANCELED since the API doesn't have a REFUNDED status
+    if (activeFilter === "refunded")
+      return records.filter((r) => r.status === "CANCELED");
+    return records;
+  }, [records, activeFilter]);
 
   function navigateBillingMonth(direction: -1 | 1) {
     setSelectedMonth((m) => m.add(direction, "month"));
@@ -95,6 +125,8 @@ export default function AdminBilling() {
   const methods = ["CASH", "CARD", "COMPANY", "QR", "MANUAL_ONLINE"] as const;
   const dateLocale = getDateLocale();
 
+  const periodLabel = selectedMonth.format("MMMM YYYY");
+
   return (
     <ScrollView
       showsVerticalScrollIndicator={false}
@@ -107,45 +139,92 @@ export default function AdminBilling() {
       }}
     >
       {/* Period selector */}
-      <View className="flex-row justify-between items-center">
-        <FontAwesome
-          name="chevron-left"
-          size={16}
-          color="#a1a1aa"
-          onPress={() => navigateBillingMonth(-1)}
-        />
-        <Text
-          className="text-foreground font-bold"
-          style={{ fontSize: 18, letterSpacing: -0.3 }}
-        >
-          {selectedMonth.format("MMMM YYYY")}
-        </Text>
-        <FontAwesome
-          name="chevron-right"
-          size={16}
-          color="#a1a1aa"
-          onPress={() => navigateBillingMonth(1)}
-        />
-      </View>
-
-      {/* Summary card */}
-      <GlassCard>
-        <View className="flex-row justify-around items-center py-2">
-          <View className="flex-col items-center gap-1">
-            <Text className="text-muted" style={{ fontSize: 13 }}>{t("admin.manage.totalRevenue")}</Text>
-            <Text className="text-foreground font-extrabold" style={{ fontSize: 22 }}>{summaryStats.totalRevenue}</Text>
-          </View>
-          <View className="flex-col items-center gap-1">
-            <Text className="text-muted" style={{ fontSize: 13 }}>{t("admin.manage.transactionCount")}</Text>
-            <Text className="text-foreground font-extrabold" style={{ fontSize: 22 }}>{summaryStats.count}</Text>
-          </View>
-          <View className="flex-col items-center gap-1">
-            <Text className="text-muted" style={{ fontSize: 13 }}>{t("admin.manage.avgPerClient")}</Text>
-            <Text className="text-foreground font-extrabold" style={{ fontSize: 22 }}>{summaryStats.avg}</Text>
-          </View>
+      <MotiView
+        from={{ opacity: 0, translateY: -8 }}
+        animate={{ opacity: 1, translateY: 0 }}
+        transition={{ type: "timing", duration: 350, delay: 0 }}
+      >
+        <View className="flex-row justify-between items-center">
+          <FontAwesome
+            name="chevron-left"
+            size={16}
+            color="#a1a1aa"
+            onPress={() => navigateBillingMonth(-1)}
+          />
+          <Text
+            className="text-foreground font-bold"
+            style={{ fontSize: 18, letterSpacing: -0.3 }}
+          >
+            {periodLabel}
+          </Text>
+          <FontAwesome
+            name="chevron-right"
+            size={16}
+            color="#a1a1aa"
+            onPress={() => navigateBillingMonth(1)}
+          />
         </View>
-      </GlassCard>
+      </MotiView>
 
+      {/* Hero revenue card */}
+      <MotiView
+        from={{ opacity: 0, translateY: 12 }}
+        animate={{ opacity: 1, translateY: 0 }}
+        transition={{ type: "timing", duration: 350, delay: 80 }}
+      >
+        <HeroCard tone="default">
+          <View className="gap-3">
+            <SectionLabel>
+              {t("admin.manage.totalRevenue")} · {periodLabel}
+            </SectionLabel>
+            <NumberRollup
+              value={summaryStats.totalRevenue}
+              formatter={(n) =>
+                new Intl.NumberFormat("de-DE", {
+                  style: "currency",
+                  currency: "RSD",
+                  maximumFractionDigits: 0,
+                }).format(Math.round(n))
+              }
+              className="text-foreground font-extrabold"
+              style={{ fontSize: 44, letterSpacing: -1 }}
+            />
+            <View className="flex-row gap-4">
+              <Text className="text-muted text-sm">
+                {summaryStats.count} {t("admin.manage.transactionCount").toLowerCase()}
+              </Text>
+              <Text className="text-muted text-sm">·</Text>
+              <Text className="text-muted text-sm">
+                {t("admin.manage.avgPerClient")}{" "}
+                {new Intl.NumberFormat("de-DE", {
+                  style: "currency",
+                  currency: "RSD",
+                  maximumFractionDigits: 0,
+                }).format(summaryStats.avg)}
+                /client
+              </Text>
+            </View>
+          </View>
+        </HeroCard>
+      </MotiView>
+
+      {/* Segmented filter + section label */}
+      <MotiView
+        from={{ opacity: 0, translateY: 8 }}
+        animate={{ opacity: 1, translateY: 0 }}
+        transition={{ type: "timing", duration: 350, delay: 160 }}
+      >
+        <View className="gap-3">
+          <SegmentedControl
+            options={FILTER_TABS}
+            value={activeFilter}
+            onChange={setActiveFilter}
+          />
+          <SectionLabel>{t("admin.manage.transactions") ?? "Transactions"}</SectionLabel>
+        </View>
+      </MotiView>
+
+      {/* FAB + errors/empty */}
       <ActionButton
         icon="plus"
         label={t("admin.manage.sheetNewPayment")}
@@ -154,14 +233,20 @@ export default function AdminBilling() {
       {billingQuery.isError ? (
         <ErrorState message={t("admin.manage.billingError")} />
       ) : null}
-      {records.length === 0 && !billingQuery.isLoading ? (
+      {filteredRecords.length === 0 && !billingQuery.isLoading ? (
         <EmptyState title={t("admin.manage.billingEmpty")} />
       ) : null}
 
-      {records.length > 0 ? (
-        <View style={{ height: 400 }}>
+      {/* Transaction list */}
+      {filteredRecords.length > 0 ? (
+        <MotiView
+          from={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ type: "timing", duration: 350, delay: 240 }}
+          style={{ height: 400 }}
+        >
           <LegendList
-            data={records}
+            data={filteredRecords}
             keyExtractor={(item) => item.id}
             renderItem={({ item }: { item: BillingRecord }) => (
               <View className="px-1 py-1.5">
@@ -214,9 +299,10 @@ export default function AdminBilling() {
               ) : null
             }
           />
-        </View>
+        </MotiView>
       ) : null}
 
+      {/* Create payment sheet — preserved wholesale */}
       <AppSheet open={showCreate} onOpenChange={setShowCreate}>
         <ScrollView>
           <View className="flex-col gap-4">
