@@ -99,7 +99,7 @@ export function TimeAxisDayView({
               key={h}
               style={{ height: HOUR_HEIGHT, justifyContent: "flex-start" }}
             >
-              <Text className="text-xs text-muted pl-6 -mt-1.5">
+              <Text className="text-xs pl-6 -mt-1.5 text-muted">
                 {h === 12 ? "12 PM" : h > 12 ? `${h - 12} PM` : `${h} AM`}
               </Text>
             </View>
@@ -129,23 +129,26 @@ export function TimeAxisDayView({
                 style={{ top, height }}
               >
                 <View
-                  className="flex-1 rounded-xl overflow-hidden border border-glass-border bg-glass"
-                  style={{ borderLeftWidth: 3, borderLeftColor: color }}
+                  className="flex-1 rounded-xl overflow-hidden border bg-glass border-glass-border"
+                  style={{
+                    borderLeftWidth: 3,
+                    borderLeftColor: color,
+                  }}
                 >
                   <View className="p-2 gap-0.5">
                     <Text
-                      className="text-foreground font-semibold text-sm"
+                      className="font-body-semibold text-sm text-foreground"
                       numberOfLines={1}
                     >
                       {s.classTypeName}
                     </Text>
-                    <Text className="text-muted text-xs" numberOfLines={1}>
+                    <Text className="text-xs text-muted" numberOfLines={1}>
                       {dayjs(s.startsAt).format("HH:mm")}–
                       {dayjs(s.endsAt).format("HH:mm")}
                       {s.roomName ? ` · ${s.roomName}` : ""}
                     </Text>
                     {isFull && height >= 60 ? (
-                      <Text className="text-warning text-xs font-semibold">
+                      <Text className="text-xs font-body-semibold text-warning">
                         Full
                       </Text>
                     ) : null}

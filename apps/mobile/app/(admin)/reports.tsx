@@ -9,7 +9,6 @@ import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { RefreshControl, ScrollView, Text, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { MotiView } from "@/components/ui/styled";
 import { CartesianChart, Bar } from "victory-native";
 import { GlassCard } from "@/components/ui/glass-card";
@@ -18,10 +17,10 @@ import { StatTile } from "@/components/ui/stat-tile";
 import { ProgressRing } from "@/components/ui/progress-ring";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { EmptyState, ErrorState } from "@/components/ui/states";
-import { SectionLabel, ScreenTitle } from "@/components/ui/typography";
+import { SectionLabel } from "@/components/ui/typography";
 import { ACCENT } from "@/components/ui/tokens";
 import { reportsQueries } from "@/lib/queries/reports-queries-factory";
-import { TAB_BAR_HEIGHT, HEADER_HEIGHT } from "@/components/ui/constants";
+import { ScreenContainerRaw, useTabBarBottomPadding } from "@/components/ui/screen-container";
 
 type Period = "week" | "month" | "quarter";
 
@@ -30,9 +29,9 @@ const STAGGER = [0, 80, 160, 240, 320];
 export default function AdminReports() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
+  const bottomPad = useTabBarBottomPadding();
   const [refreshing, setRefreshing] = useState(false);
   const [period, setPeriod] = useState<Period>("month");
-  const insets = useSafeAreaInsets();
 
   async function handleRefresh() {
     setRefreshing(true);
@@ -66,33 +65,25 @@ export default function AdminReports() {
       : 1;
 
   return (
-    <ScrollView
-      showsVerticalScrollIndicator={false}
-      keyboardShouldPersistTaps="handled"
-      refreshControl={
-        <RefreshControl
-          refreshing={refreshing}
-          onRefresh={handleRefresh}
-          tintColor="#2e5b42"
-          colors={["#2e5b42"]}
-        />
-      }
-      contentContainerStyle={{
-        paddingTop: insets.top + HEADER_HEIGHT + 12,
-        paddingHorizontal: 24,
-        paddingBottom: TAB_BAR_HEIGHT + 16,
-        gap: 24,
-      }}
-    >
-      {/* Header */}
-      <MotiView
-        from={{ opacity: 0, translateY: -8 }}
-        animate={{ opacity: 1, translateY: 0 }}
-        transition={{ type: "timing", duration: 350, delay: STAGGER[0] }}
+    <ScreenContainerRaw title={t("admin.manage.tabReports")}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            tintColor="#2e5b42"
+            colors={["#2e5b42"]}
+          />
+        }
+        contentContainerStyle={{
+          paddingTop: 16,
+          paddingHorizontal: 24,
+          paddingBottom: bottomPad,
+          gap: 24,
+        }}
       >
-        <ScreenTitle>{t("admin.manage.tabReports")}</ScreenTitle>
-      </MotiView>
-
       {/* Period selector */}
       <MotiView
         from={{ opacity: 0, translateY: 8 }}
@@ -242,13 +233,13 @@ export default function AdminReports() {
                       }}
                     >
                       <Text
-                        className="text-foreground font-semibold"
+                        className="text-foreground font-body-semibold"
                         style={{ fontSize: 14 }}
                       >
                         {item.period}
                       </Text>
                       <Text
-                        className="text-accent font-semibold"
+                        className="text-accent font-body-semibold"
                         style={{ fontSize: 13 }}
                       >
                         {item.revenue} RSD
@@ -312,7 +303,7 @@ export default function AdminReports() {
                     }}
                   >
                     <Text
-                      className="text-foreground font-semibold"
+                      className="text-foreground font-body-semibold"
                       style={{ fontSize: 14 }}
                     >
                       {item.period}
@@ -349,6 +340,7 @@ export default function AdminReports() {
           ))}
         </View>
       </MotiView>
-    </ScrollView>
+      </ScrollView>
+    </ScreenContainerRaw>
   );
 }

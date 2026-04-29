@@ -8,13 +8,17 @@
     "scheme": "baza",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
-    "splash": {
-      "image": "./assets/images/splash-icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#2e5b42"
-    },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "CFBundleLocalizations": [
+          "sr",
+          "en",
+          "sr",
+          "en"
+        ]
+      },
+      "bundleIdentifier": "com.steva.borus.baza-pilates"
     },
     "android": {
       "adaptiveIcon": {
@@ -39,7 +43,19 @@
       [
         "expo-localization",
         {
-          "supportedLocales": ["sr", "en"]
+          "supportedLocales": [
+            "sr",
+            "en"
+          ]
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/images/splash-icon.png",
+          "imageWidth": 180,
+          "resizeMode": "contain",
+          "backgroundColor": "#2e5b42"
         }
       ]
     ],

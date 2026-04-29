@@ -8,14 +8,14 @@ type BadgeProps = {
   children: React.ReactNode;
 };
 
-const bgCls: Record<Status, string> = {
+const bgClass: Record<Status, string> = {
   success: "bg-success-soft",
   warning: "bg-warning-soft",
   danger: "bg-danger-soft",
   neutral: "bg-glass",
 };
 
-const textCls: Record<Status, string> = {
+const fgClass: Record<Status, string> = {
   success: "text-success",
   warning: "text-warning",
   danger: "text-danger",
@@ -24,8 +24,10 @@ const textCls: Record<Status, string> = {
 
 export function Badge({ status = "neutral", children }: BadgeProps) {
   return (
-    <View className={`px-2.5 py-1 rounded-full ${bgCls[status]}`}>
-      <Text className={`text-xs font-semibold ${textCls[status]}`}>{children}</Text>
+    <View className={`px-2.5 py-1 rounded-full ${bgClass[status]}`}>
+      <Text className={`text-xs font-body-semibold ${fgClass[status]}`}>
+        {children}
+      </Text>
     </View>
   );
 }

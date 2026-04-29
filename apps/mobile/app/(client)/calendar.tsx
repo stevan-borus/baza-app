@@ -11,10 +11,9 @@ import { Text, View } from "react-native";
 import { MotiView } from "@/components/ui/styled";
 import dayjs from "dayjs";
 import * as Haptics from "expo-haptics";
-import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { useTranslation } from "react-i18next";
 import { GlassCard } from "@/components/ui/glass-card";
-import { WeekStrip } from "@/components/ui/week-strip";
+import { WeekStrip, startOfLocaleWeek } from "@/components/ui/week-strip";
 import {
   TimeAxisDayView,
   type SessionBlock,
@@ -39,6 +38,7 @@ export default function ClientCalendar() {
     dayjs().format("YYYY-MM-DD"),
   );
   const [month, setMonth] = useState(() => monthKeyFromDate(dayjs()));
+  const [weekStart, setWeekStart] = useState(() => startOfLocaleWeek(dayjs()));
   const [selectedSession, setSelectedSession] =
     useState<AvailabilitySession | null>(null);
 
@@ -76,15 +76,25 @@ export default function ClientCalendar() {
 
   function handleDateSelect(date: string) {
     Haptics.selectionAsync();
+    // Picking a day must NOT shift the visible week. The week boundary is
+    // owned by `weekStart` and only changes via the arrow buttons below.
     setSelectedDate(date);
     const newMonth = monthKeyFromDate(dayjs(date));
     if (newMonth !== month) setMonth(newMonth);
   }
 
-  function navigateMonth(direction: -1 | 1) {
-    const newDate = displayDate.add(direction, "month").startOf("month");
-    setSelectedDate(newDate.format("YYYY-MM-DD"));
-    setMonth(monthKeyFromDate(newDate));
+  function handlePrevWeek() {
+    const newStart = weekStart.subtract(1, "week");
+    setWeekStart(newStart);
+    const newMonth = newStart.format("YYYY-MM");
+    if (newMonth !== month) setMonth(newMonth);
+  }
+
+  function handleNextWeek() {
+    const newStart = weekStart.add(1, "week");
+    setWeekStart(newStart);
+    const newMonth = newStart.format("YYYY-MM");
+    if (newMonth !== month) setMonth(newMonth);
   }
 
   function handleSessionPress(s: SessionBlock) {
@@ -107,38 +117,20 @@ export default function ClientCalendar() {
   }));
 
   return (
-    <ScreenContainerRaw>
+    <ScreenContainerRaw title={t("tabs.calendar")}>
       <MotiView
         from={{ opacity: 0, translateY: -8 }}
         animate={{ opacity: 1, translateY: 0 }}
         transition={{ type: "timing", duration: 350 }}
       >
-        <View className="flex-row justify-between items-center px-6 py-3">
-          <FontAwesome
-            name="chevron-left"
-            size={16}
-            color="#a1a1aa"
-            onPress={() => navigateMonth(-1)}
-          />
-          <Text
-            className="text-foreground font-bold"
-            style={{ fontSize: 20, letterSpacing: -0.3 }}
-          >
-            {displayDate.format("MMMM YYYY")}
-          </Text>
-          <FontAwesome
-            name="chevron-right"
-            size={16}
-            color="#a1a1aa"
-            onPress={() => navigateMonth(1)}
-          />
-        </View>
-
-        <View className="px-6 pb-3">
+        <View className="px-6 pt-3 pb-3">
           <WeekStrip
+            weekStart={weekStart}
             selectedDate={selectedDate}
             onSelectDate={handleDateSelect}
-            activityByDate={activityByDate}
+            onPrevWeek={handlePrevWeek}
+            onNextWeek={handleNextWeek}
+            activity={activityByDate}
           />
         </View>
       </MotiView>
@@ -163,7 +155,7 @@ export default function ClientCalendar() {
         >
           <View className="px-6 pb-3">
             <GlassCard size="sm">
-              <Text className="font-semibold text-accent">
+              <Text className="font-body-semibold text-accent">
                 {bookingResultState === "BOOKED"
                   ? t("client.calendar.bookingBooked")
                   : bookingResultState === "WAITLISTED"
@@ -186,7 +178,7 @@ export default function ClientCalendar() {
         </Text>
       </View>
 
-      {availabilityQuery.isPending ? (
+      {availabilityQuery.isLoading ? (
         <View className="px-6 pt-2">
           <SkeletonList count={3} />
         </View>

@@ -55,11 +55,11 @@ export function SessionCard({
     <Pressable onPress={onPress} className="active:opacity-80">
       <GlassCard accentBorder={accentBorder} accentBorderColor={accentBorderColor}>
         <View className="flex-row items-center gap-3">
-          <Text className="text-base font-bold text-foreground min-w-[54px]">
+          <Text className="text-base font-body-bold min-w-[54px] text-foreground">
             {time}
           </Text>
           <View className="flex-1 gap-0.5">
-            <Text className="text-sm font-semibold text-foreground">
+            <Text className="text-sm font-body-semibold text-foreground">
               {className}
             </Text>
             {trainerName || room ? (

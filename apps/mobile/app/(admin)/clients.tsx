@@ -13,7 +13,6 @@ import {
   Text,
   View,
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { MotiView } from "@/components/ui/styled";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { AppSheet } from "@/components/ui/sheet";
@@ -24,8 +23,9 @@ import { Input } from "@/components/ui/input";
 import { SectionLabel } from "@/components/ui/typography";
 import { GlassCard } from "@/components/ui/glass-card";
 import { SegmentedControl } from "@/components/ui/tabs";
-import { TAB_BAR_HEIGHT, HEADER_HEIGHT } from "@/components/ui/constants";
 import { ACCENT } from "@/components/ui/tokens";
+import { ScreenContainerRaw, useTabBarBottomPadding } from "@/components/ui/screen-container";
+import { HeaderIconButton } from "@/components/ui/app-header";
 import { clientsQueries } from "@/lib/queries/clients-queries-factory";
 import { invitesQueries, type Invite } from "@/lib/queries/invites-queries-factory";
 import { packagesQueries } from "@/lib/queries/packages-queries-factory";
@@ -49,7 +49,7 @@ function FilterChip({
       }`}
     >
       <Text
-        className={`text-xs font-semibold ${active ? "text-white" : "text-muted"}`}
+        className={`text-xs font-body-semibold ${active ? "text-white" : "text-muted"}`}
       >
         {label}
       </Text>
@@ -76,7 +76,7 @@ function InitialsAvatar({ name }: { name: string }) {
         backgroundColor: "rgba(46,91,66,0.35)",
       }}
     >
-      <Text className="text-accent font-bold" style={{ fontSize: 14 }}>
+      <Text className="text-accent font-body-bold" style={{ fontSize: 14 }}>
         {initials}
       </Text>
     </View>
@@ -90,9 +90,9 @@ type FilterType = "all" | "active" | "expiring" | "paused" | "expired";
 // ─── Main screen ─────────────────────────────────────────────────────────────
 
 export default function AdminClients() {
-  const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const { t } = useTranslation();
+  const bottomPad = useTabBarBottomPadding();
 
   // ── Tab + search + filter state ──────────────────────────────────────────
   const [tab, setTab] = useState<"clients" | "invites">("clients");
@@ -213,47 +213,41 @@ export default function AdminClients() {
   ];
 
   return (
-    <ScrollView
-      showsVerticalScrollIndicator={false}
-      keyboardShouldPersistTaps="handled"
-      refreshControl={
-        <RefreshControl
-          refreshing={refreshing}
-          onRefresh={handleRefresh}
-          tintColor="#2e5b42"
-          colors={["#2e5b42"]}
+    <ScreenContainerRaw
+      title={t("tabs.clients")}
+      rightSlot={
+        <HeaderIconButton
+          icon="plus"
+          onPress={() =>
+            tab === "clients"
+              ? setShowCreateClient(true)
+              : setShowInviteForm(true)
+          }
+          accessibilityLabel={
+            tab === "clients"
+              ? t("admin.clients.sheetNewClient")
+              : t("admin.clients.sheetInvite")
+          }
         />
       }
     >
-      <View
-        className="px-5 flex-col gap-4"
-        style={{ paddingTop: insets.top + HEADER_HEIGHT + 12, paddingBottom: TAB_BAR_HEIGHT + 16 }}
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        contentContainerStyle={{ flexGrow: 1 }}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            tintColor="#2e5b42"
+            colors={["#2e5b42"]}
+          />
+        }
       >
-        {/* ── Header row ─────────────────────────────────────────────────── */}
-        <MotiView
-          from={{ opacity: 0, translateY: -8 }}
-          animate={{ opacity: 1, translateY: 0 }}
-          transition={{ type: "timing", duration: 300, delay: 0 }}
-          style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}
-        >
-          <Text className="text-foreground font-bold" style={{ fontSize: 26, letterSpacing: -0.5 }}>
-            {t("admin.clients.title")}
-          </Text>
-          <Pressable
-            onPress={() => setShowCreateClient(true)}
-            style={{
-              width: 36,
-              height: 36,
-              borderRadius: 18,
-              backgroundColor: ACCENT,
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            <FontAwesome name="plus" size={14} color="#fff" />
-          </Pressable>
-        </MotiView>
-
+      <View
+        className="px-5 flex-col gap-4 flex-1"
+        style={{ paddingTop: 16, paddingBottom: bottomPad }}
+      >
         {/* ── Search input ────────────────────────────────────────────────── */}
         <MotiView
           from={{ opacity: 0, translateY: -6 }}
@@ -332,7 +326,7 @@ export default function AdminClients() {
                     <InitialsAvatar name={client.user.fullName} />
                     <View className="flex-1 flex-col gap-0.5">
                       <Text
-                        className="text-foreground font-semibold"
+                        className="text-foreground font-body-semibold"
                         style={{ fontSize: 15 }}
                         numberOfLines={1}
                       >
@@ -424,14 +418,6 @@ export default function AdminClients() {
             </>
           ) : (
             <>
-              {/* Invite tab header */}
-              <View className="flex-row items-center justify-between mb-1">
-                <SectionLabel>{t("admin.clients.tabInvites", { count: invites.length })}</SectionLabel>
-                <Button size="small" onPress={() => setShowInviteForm(true)}>
-                  {t("admin.clients.newInvite")}
-                </Button>
-              </View>
-
               {invitesQuery.isError ? <ErrorState message={t("admin.clients.invitesError")} /> : null}
               {invites.length === 0 ? <EmptyState title={t("admin.clients.invitesEmpty")} /> : null}
 
@@ -440,7 +426,7 @@ export default function AdminClients() {
                   <View className="flex-col gap-2.5">
                     <View className="flex-row justify-between items-center">
                       <View className="flex-1 flex-col">
-                        <Text className="text-foreground font-semibold" style={{ fontSize: 15 }}>
+                        <Text className="text-foreground font-body-semibold" style={{ fontSize: 15 }}>
                           {invite.fullName}
                         </Text>
                         <Text className="text-muted" style={{ fontSize: 13 }}>
@@ -501,7 +487,7 @@ export default function AdminClients() {
         {/* Create Client Sheet */}
         <AppSheet open={showCreateClient} onOpenChange={setShowCreateClient}>
           <View className="flex-col gap-4">
-            <Text className="text-foreground font-bold" style={{ fontSize: 20, letterSpacing: -0.3 }}>
+            <Text className="text-foreground font-body-bold" style={{ fontSize: 20, letterSpacing: -0.3 }}>
               {t("admin.clients.sheetNewClient")}
             </Text>
             <Input
@@ -541,7 +527,7 @@ export default function AdminClients() {
         {/* Edit Client Sheet */}
         <AppSheet open={!!showEditClient} onOpenChange={() => setShowEditClient(null)}>
           <View className="flex-col gap-4">
-            <Text className="text-foreground font-bold" style={{ fontSize: 20, letterSpacing: -0.3 }}>
+            <Text className="text-foreground font-body-bold" style={{ fontSize: 20, letterSpacing: -0.3 }}>
               {t("admin.clients.sheetEdit")}
             </Text>
             <SectionLabel>{t("admin.clients.placeholderFullName")}</SectionLabel>
@@ -596,7 +582,7 @@ export default function AdminClients() {
         {/* Invite Sheet */}
         <AppSheet open={showInviteForm} onOpenChange={setShowInviteForm}>
           <View className="flex-col gap-4">
-            <Text className="text-foreground font-bold" style={{ fontSize: 20, letterSpacing: -0.3 }}>
+            <Text className="text-foreground font-body-bold" style={{ fontSize: 20, letterSpacing: -0.3 }}>
               {t("admin.clients.sheetInvite")}
             </Text>
             <Input
@@ -636,7 +622,7 @@ export default function AdminClients() {
         {/* Assign Package Sheet */}
         <AppSheet open={!!showAssignPackage} onOpenChange={() => setShowAssignPackage(null)}>
           <View className="flex-col gap-4">
-            <Text className="text-foreground font-bold" style={{ fontSize: 20, letterSpacing: -0.3 }}>
+            <Text className="text-foreground font-body-bold" style={{ fontSize: 20, letterSpacing: -0.3 }}>
               {t("admin.clients.sheetAssign")}
             </Text>
             <SectionLabel>{t("admin.clients.packageType")}</SectionLabel>
@@ -675,7 +661,7 @@ export default function AdminClients() {
         {/* Pause Package Sheet */}
         <AppSheet open={!!showPause} onOpenChange={() => setShowPause(null)}>
           <View className="flex-col gap-4">
-            <Text className="text-foreground font-bold" style={{ fontSize: 20, letterSpacing: -0.3 }}>
+            <Text className="text-foreground font-body-bold" style={{ fontSize: 20, letterSpacing: -0.3 }}>
               {t("admin.clients.sheetPause")}
             </Text>
             <Input
@@ -711,6 +697,7 @@ export default function AdminClients() {
           </View>
         </AppSheet>
       </View>
-    </ScrollView>
+      </ScrollView>
+    </ScreenContainerRaw>
   );
 }

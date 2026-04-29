@@ -5,7 +5,6 @@ import { useColorScheme } from "@/components/useColorScheme";
 import {
   FloatingTabBar,
   getAppTabScreenOptions,
-  getNativeHeaderOptions,
 } from "@/lib/tab-layout-theme";
 
 function TabIcon(props: {
@@ -19,19 +18,17 @@ export default function AdminLayout() {
   const { t } = useTranslation();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
-  const nativeHeader = getNativeHeaderOptions(isDark);
 
   return (
     <Tabs
-      screenOptions={getAppTabScreenOptions(isDark)}
+      screenOptions={{ ...getAppTabScreenOptions(isDark), headerShown: false }}
       tabBar={(props) => <FloatingTabBar {...props} isDark={isDark} />}
     >
       <Tabs.Screen
         name="index"
         options={{
-          title: t("tabs.schedule"),
-          tabBarIcon: ({ color }) => <TabIcon name="calendar" color={color} />,
-          ...nativeHeader,
+          title: t("tabs.dashboard"),
+          tabBarIcon: ({ color }) => <TabIcon name="home" color={color} />,
         }}
       />
       <Tabs.Screen
@@ -39,7 +36,6 @@ export default function AdminLayout() {
         options={{
           title: t("tabs.clients"),
           tabBarIcon: ({ color }) => <TabIcon name="users" color={color} />,
-          ...nativeHeader,
         }}
       />
       <Tabs.Screen
@@ -47,7 +43,6 @@ export default function AdminLayout() {
         options={{
           title: t("tabs.packages"),
           tabBarIcon: ({ color }) => <TabIcon name="archive" color={color} />,
-          ...nativeHeader,
         }}
       />
       <Tabs.Screen
@@ -57,7 +52,6 @@ export default function AdminLayout() {
           tabBarIcon: ({ color }) => (
             <TabIcon name="credit-card" color={color} />
           ),
-          ...nativeHeader,
         }}
       />
       <Tabs.Screen
@@ -65,13 +59,11 @@ export default function AdminLayout() {
         options={{
           title: t("tabs.reports"),
           tabBarIcon: ({ color }) => <TabIcon name="bar-chart" color={color} />,
-          ...nativeHeader,
         }}
       />
-      <Tabs.Screen
-        name="settings"
-        options={{ href: null, headerShown: false }}
-      />
+      {/* Hidden detail routes pushed from the dashboard. */}
+      <Tabs.Screen name="class-types" options={{ href: null }} />
+      <Tabs.Screen name="rooms" options={{ href: null }} />
     </Tabs>
   );
 }

@@ -37,18 +37,19 @@ export default function TrainerProfile() {
   }
 
   return (
-    <ScrollView
-      showsVerticalScrollIndicator={false}
-      refreshControl={
-        <RefreshControl
-          refreshing={refreshing}
-          onRefresh={handleRefresh}
-          tintColor="#2e5b42"
-          colors={["#2e5b42"]}
-        />
-      }
-    >
-      <ScreenContainer>
+    <ScreenContainer title={t("tabs.profile")}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            tintColor="#2e5b42"
+            colors={["#2e5b42"]}
+          />
+        }
+        contentContainerStyle={{ gap: 24 }}
+      >
         {/* Header: Avatar + Email */}
         <View className="items-center gap-3 pb-4">
           <View
@@ -60,12 +61,12 @@ export default function TrainerProfile() {
               backgroundColor: "rgba(255,255,255,0.08)",
             }}
           >
-            <Text className="text-accent font-bold" style={{ fontSize: 24 }}>
+            <Text className="text-accent font-body-bold" style={{ fontSize: 24 }}>
               {userEmail.charAt(0).toUpperCase()}
             </Text>
           </View>
           <View className="items-center gap-1">
-            <Text className="text-foreground font-bold" style={{ fontSize: 20 }}>
+            <Text className="text-foreground font-body-bold" style={{ fontSize: 20 }}>
               {userEmail.split("@")[0]}
             </Text>
             <Text className="text-[13px] text-muted">
@@ -98,7 +99,7 @@ export default function TrainerProfile() {
             {t("client.signOut")}
           </Button>
         </View>
-      </ScreenContainer>
-    </ScrollView>
+      </ScrollView>
+    </ScreenContainer>
   );
 }

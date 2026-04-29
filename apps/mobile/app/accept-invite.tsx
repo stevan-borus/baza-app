@@ -138,7 +138,7 @@ export default function AcceptInviteScreen() {
             </View>
 
             <Text
-              className="text-white font-semibold text-xl text-center"
+              className="text-white font-body-semibold text-xl text-center"
               style={{ letterSpacing: -0.3 }}
             >
               {t("auth.inviteInvalid", { defaultValue: "Invalid invite link" })}
@@ -187,7 +187,7 @@ export default function AcceptInviteScreen() {
           style={{ alignItems: "center", marginTop: 32, marginBottom: 16 }}
         >
           <Text
-            className="text-white font-bold text-center"
+            className="text-white font-body-bold text-center"
             style={{ fontSize: 34, letterSpacing: -0.8, lineHeight: 40 }}
           >
             {t("auth.welcomeInvite", { defaultValue: "Welcome to Baza" })}
@@ -233,112 +233,111 @@ export default function AcceptInviteScreen() {
           <View style={{ marginBottom: 24 }} />
         )}
 
-        {/* ── Glass panel ── */}
+        {/* ── Form ── */}
         <MotiView
           from={{ opacity: 0, translateY: 16 }}
           animate={{ opacity: 1, translateY: 0 }}
           transition={{ type: "timing", duration: 400, delay: 300 }}
+          className="gap-4"
         >
-          <View className="bg-glass border border-glass-border rounded-3xl p-6 gap-4">
-            {/* Pre-filled email — read-only, dimmed */}
-            {prefillEmail ? (
-              <Input
-                icon="envelope"
-                label={t("auth.email")}
-                value={prefillEmail}
-                editable={false}
-                style={{ opacity: 0.5 }}
-                autoCapitalize="none"
-                autoCorrect={false}
-                keyboardType="email-address"
-                textContentType="emailAddress"
-              />
-            ) : null}
-
-            {/* Name input */}
+          {/* Pre-filled email — read-only, dimmed */}
+          {prefillEmail ? (
             <Input
-              icon="user"
-              label={t("auth.yourName", { defaultValue: "Your name" })}
-              autoCapitalize="words"
+              icon="envelope"
+              label={t("auth.email")}
+              value={prefillEmail}
+              editable={false}
+              style={{ opacity: 0.5 }}
+              autoCapitalize="none"
               autoCorrect={false}
-              textContentType="name"
-              value={name}
-              onChangeText={setName}
+              keyboardType="email-address"
+              textContentType="emailAddress"
             />
+          ) : null}
 
-            {/* Create password */}
-            <PasswordInput
-              label={t("auth.createPassword", {
-                defaultValue: "Create password",
-              })}
-              textContentType="newPassword"
-              value={password}
-              onChangeText={setPassword}
-              iconColor="rgba(255,255,255,0.5)"
-            />
+          {/* Name input */}
+          <Input
+            icon="user"
+            label={t("auth.yourName", { defaultValue: "Your name" })}
+            autoCapitalize="words"
+            autoCorrect={false}
+            textContentType="name"
+            value={name}
+            onChangeText={setName}
+          />
 
-            {/* Confirm password */}
-            <PasswordInput
-              label={t("auth.confirmPassword", {
-                defaultValue: "Confirm password",
-              })}
-              textContentType="newPassword"
-              value={confirmPassword}
-              onChangeText={setConfirmPassword}
-              error={passwordError}
-              iconColor="rgba(255,255,255,0.5)"
-            />
+          {/* Create password */}
+          <PasswordInput
+            label={t("auth.createPassword", {
+              defaultValue: "Create password",
+            })}
+            textContentType="newPassword"
+            value={password}
+            onChangeText={setPassword}
+            iconColor="rgba(255,255,255,0.5)"
+          />
 
-            {/* Error banner */}
-            {completeMutation.isError ? (
-              <MotiView
-                from={{ opacity: 0, translateY: -8 }}
-                animate={{ opacity: 1, translateY: 0 }}
-                transition={{ type: "timing", duration: 250 }}
-                style={{
-                  backgroundColor: "rgba(239,68,68,0.12)",
-                  borderWidth: 1,
-                  borderColor: "rgba(239,68,68,0.4)",
-                  borderRadius: 12,
-                  paddingHorizontal: 14,
-                  paddingVertical: 10,
-                }}
-              >
-                <Text
-                  style={{ color: "#ef4444", fontSize: 13, fontWeight: "500" }}
-                >
-                  {t("auth.inviteError", {
-                    defaultValue:
-                      "Could not complete registration. The invite may have expired.",
-                  })}
-                </Text>
-              </MotiView>
-            ) : null}
+          {/* Confirm password */}
+          <PasswordInput
+            label={t("auth.confirmPassword", {
+              defaultValue: "Confirm password",
+            })}
+            textContentType="newPassword"
+            value={confirmPassword}
+            onChangeText={setConfirmPassword}
+            error={passwordError}
+            iconColor="rgba(255,255,255,0.5)"
+          />
 
-            {/* Terms link */}
-            <View className="items-center">
-              <Text
-                style={{ color: "rgba(255,255,255,0.35)", fontSize: 11 }}
-              >
-                {t("auth.termsNotice")}
-              </Text>
-            </View>
-
-            {/* Join button */}
-            <Button
-              disabled={!canSubmit}
-              onPress={() => completeMutation.mutate()}
-              size="large"
+          {/* Error banner */}
+          {completeMutation.isError ? (
+            <MotiView
+              from={{ opacity: 0, translateY: -8 }}
+              animate={{ opacity: 1, translateY: 0 }}
+              transition={{ type: "timing", duration: 250 }}
+              style={{
+                backgroundColor: "rgba(239,68,68,0.12)",
+                borderWidth: 1,
+                borderColor: "rgba(239,68,68,0.4)",
+                borderRadius: 12,
+                paddingHorizontal: 14,
+                paddingVertical: 10,
+              }}
             >
-              {completeMutation.isPending ? (
-                <ActivityIndicator color="#fff" size="small" />
-              ) : (
-                <Text className="text-white font-semibold text-base">
-                  {t("auth.joinButton", { defaultValue: "Join Baza" })}
-                </Text>
-              )}
-            </Button>
+              <Text
+                style={{ color: "#ef4444", fontSize: 13, fontWeight: "500" }}
+              >
+                {t("auth.inviteError", {
+                  defaultValue:
+                    "Could not complete registration. The invite may have expired.",
+                })}
+              </Text>
+            </MotiView>
+          ) : null}
+
+          {/* Terms link */}
+          <View className="items-center">
+            <Text
+              style={{ color: "rgba(255,255,255,0.35)", fontSize: 11 }}
+            >
+              {t("auth.termsNotice")}
+            </Text>
           </View>
+
+          {/* Join button */}
+          <Button
+            disabled={!canSubmit}
+            onPress={() => completeMutation.mutate()}
+            size="large"
+          >
+            {completeMutation.isPending ? (
+              <ActivityIndicator color="#fff" size="small" />
+            ) : (
+              <Text className="text-white font-body-semibold text-base">
+                {t("auth.joinButton", { defaultValue: "Join Baza" })}
+              </Text>
+            )}
+          </Button>
         </MotiView>
 
         {/* ── Spacer ── */}

@@ -73,7 +73,7 @@ export function OnboardingChecklist({
     return (
       <GlassCard>
         <View className="flex-col items-center gap-3">
-          <Text className="text-2xl font-bold text-accent">
+          <Text className="text-2xl font-body-bold text-accent">
             {t("client.onboarding.allSet")}
           </Text>
           <Button variant="ghost" size="small" onPress={handleDismiss}>
@@ -90,7 +90,7 @@ export function OnboardingChecklist({
   return (
     <GlassCard>
       <View className="flex-col gap-3">
-        <Text className="text-2xl font-bold text-foreground">
+        <Text className="text-2xl font-body-bold text-foreground">
           {t("client.onboarding.getStarted")}
         </Text>
         {/* Progress bar */}

@@ -14,7 +14,7 @@ import { HeroCard } from "@/components/ui/hero-card";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState, ErrorState } from "@/components/ui/states";
 import { ScreenContainer } from "@/components/ui/screen-container";
-import { ScreenTitle, SectionLabel } from "@/components/ui/typography";
+import { SectionLabel } from "@/components/ui/typography";
 import { getDateLocale } from "@/lib/i18n";
 import { clientsQueries } from "@/lib/queries/clients-queries-factory";
 import { sessionsQueries } from "@/lib/queries/sessions-queries-factory";
@@ -84,7 +84,7 @@ function ClientRow({ client }: { client: Client }) {
             style={{ width: 40, height: 40, backgroundColor: "rgba(46,91,66,0.22)" }}
           >
             <Text
-              className="font-bold"
+              className="font-body-bold"
               style={{ color: "#4caf80", fontSize: 15 }}
             >
               {initials}
@@ -93,7 +93,7 @@ function ClientRow({ client }: { client: Client }) {
 
           {/* Name + email */}
           <View className="flex-1 flex-col gap-0.5">
-            <Text className="font-semibold text-foreground text-sm">
+            <Text className="font-body-semibold text-foreground text-sm">
               {client.user.fullName}
             </Text>
             <Text className="text-xs text-muted">{client.user.email}</Text>
@@ -150,28 +150,20 @@ export default function TrainerClients() {
   const grouped = groupSessionsByDate(scheduledSessions, dateLocale);
 
   return (
-    <ScrollView
-      showsVerticalScrollIndicator={false}
-      keyboardShouldPersistTaps="handled"
-      refreshControl={
-        <RefreshControl
-          refreshing={refreshing}
-          onRefresh={handleRefresh}
-          tintColor="#2e5b42"
-          colors={["#2e5b42"]}
-        />
-      }
-    >
-      <ScreenContainer>
-        {/* ── Title ── */}
-        <MotiView
-          from={{ opacity: 0, translateY: -8 }}
-          animate={{ opacity: 1, translateY: 0 }}
-          transition={{ type: "timing", duration: 400, delay: 0 }}
-        >
-          <ScreenTitle>{t("trainer.clients.title")}</ScreenTitle>
-        </MotiView>
-
+    <ScreenContainer title={t("tabs.clients")}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            tintColor="#2e5b42"
+            colors={["#2e5b42"]}
+          />
+        }
+        contentContainerStyle={{ gap: 24 }}
+      >
         {/* ── Hero card — today stats ── */}
         <MotiView
           from={{ opacity: 0, translateY: 8 }}
@@ -182,7 +174,7 @@ export default function TrainerClients() {
             <View className="flex-col gap-1">
               <SectionLabel>{t("trainer.clients.todayLabel", { defaultValue: "Today" })}</SectionLabel>
               <Text
-                className="text-foreground font-bold"
+                className="text-foreground font-body-bold"
                 style={{ fontSize: 22, letterSpacing: -0.4, marginTop: 4 }}
               >
                 {t("trainer.clients.todayStats", {
@@ -225,7 +217,7 @@ export default function TrainerClients() {
                       <GlassCard size="md">
                         <View className="flex-row justify-between items-center">
                           <View className="flex-col gap-0.5 flex-1">
-                            <Text className="font-semibold text-base text-foreground">
+                            <Text className="font-body-semibold text-base text-foreground">
                               {(session as { classType?: { name?: string } }).classType?.name ??
                                 t("trainer.clients.sessionName")}
                             </Text>
@@ -266,7 +258,7 @@ export default function TrainerClients() {
             </View>
           </MotiView>
         )}
-      </ScreenContainer>
-    </ScrollView>
+      </ScrollView>
+    </ScreenContainer>
   );
 }

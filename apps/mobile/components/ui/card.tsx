@@ -41,7 +41,7 @@ export function StatCard({
       <GlassCard>
         <View className="flex-col gap-2">
           <BentoStatChip label={label} icon={icon} accentColor={accentColor} />
-          <Text className="text-4xl font-extrabold text-foreground tracking-tight">
+          <Text className="text-4xl font-extrabold tracking-tight text-foreground">
             {String(value)}
           </Text>
         </View>
@@ -53,7 +53,7 @@ export function StatCard({
 export function CalendarPrimitive({ month }: { month: string }) {
   return (
     <GlassCard size="md">
-      <Text className="font-bold text-base text-foreground">
+      <Text className="font-body-bold text-base text-foreground">
         {month}
       </Text>
     </GlassCard>

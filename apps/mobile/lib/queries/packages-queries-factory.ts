@@ -16,6 +16,14 @@ const packageTypesResponseSchema = z.object({
   packageTypes: z.array(packageTypeSchema),
 });
 
+const embeddedPackageTypeSchema = z.object({
+  id: z.string().optional(),
+  name: z.string(),
+  sessionCount: z.number(),
+  validityDays: z.number(),
+  lateCancelHours: z.number().optional(),
+});
+
 const clientPackageSchema = z.object({
   id: z.string(),
   clientProfileId: z.string(),
@@ -23,7 +31,7 @@ const clientPackageSchema = z.object({
   startsAt: z.string(),
   expiresAt: z.string(),
   sessionsRemaining: z.number(),
-  packageType: packageTypeSchema.optional(),
+  packageType: embeddedPackageTypeSchema.optional(),
 });
 
 const clientPackagesResponseSchema = z.object({

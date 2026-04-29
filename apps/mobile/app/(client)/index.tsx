@@ -140,33 +140,34 @@ export default function ClientHome() {
 
   if (isLoading) {
     return (
-      <ScrollView showsVerticalScrollIndicator={false}>
-        <ScreenContainer>
+      <ScreenContainer title={t("tabs.overview")}>
+        <ScrollView showsVerticalScrollIndicator={false}>
           <SkeletonCard />
           <SkeletonList count={3} />
-        </ScreenContainer>
-      </ScrollView>
+        </ScrollView>
+      </ScreenContainer>
     );
   }
 
   return (
-    <ScrollView
-      showsVerticalScrollIndicator={false}
-      refreshControl={
-        <RefreshControl
-          refreshing={refreshing}
-          onRefresh={handleRefresh}
-          tintColor="#2e5b42"
-          colors={["#2e5b42"]}
-        />
-      }
-    >
-      <ScreenContainer>
+    <ScreenContainer title={t("tabs.overview")}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            tintColor="#2e5b42"
+            colors={["#2e5b42"]}
+          />
+        }
+        contentContainerStyle={{ gap: 24 }}
+      >
         <Stagger delay={0}>
           <View className="flex-row justify-between items-center">
             <View className="flex-col">
               <Text
-                className="text-foreground font-bold"
+                className="text-foreground font-body-bold"
                 style={{ fontSize: 30, letterSpacing: -0.5 }}
               >
                 {t("client.home.greeting", { name: userName })}
@@ -216,7 +217,7 @@ export default function ClientHome() {
               <View className="gap-2">
                 <SectionLabel>{t("client.home.nextClass")}</SectionLabel>
                 <Text
-                  className="text-foreground font-bold"
+                  className="text-foreground font-body-bold"
                   style={{ fontSize: 28, letterSpacing: -0.5 }}
                 >
                   {nextSession.classTypeName}
@@ -227,7 +228,7 @@ export default function ClientHome() {
                 </Text>
                 <View className="flex-row items-center gap-2 pt-1">
                   <View className="bg-accent-soft px-3 py-1 rounded-full">
-                    <Text className="text-accent font-semibold text-xs">
+                    <Text className="text-accent font-body-semibold text-xs">
                       {t("client.home.in", {
                         time: dayjs(nextSession.startsAt).fromNow(true),
                       })}
@@ -266,7 +267,7 @@ export default function ClientHome() {
                 />
                 <View className="flex-1 flex-col gap-1">
                   <Text
-                    className="font-semibold text-foreground"
+                    className="font-body-semibold text-foreground"
                     style={{ fontSize: 17 }}
                   >
                     {activePackage.packageType?.name ??
@@ -308,7 +309,7 @@ export default function ClientHome() {
                 <GlassCard key={note.id} size="sm">
                   <View className="flex-col gap-1">
                     <Text
-                      className="text-[15px] font-medium text-foreground"
+                      className="text-[15px] font-body-medium text-foreground"
                       numberOfLines={2}
                     >
                       {note.note}
@@ -334,7 +335,7 @@ export default function ClientHome() {
             </View>
           </Stagger>
         ) : null}
-      </ScreenContainer>
-    </ScrollView>
+      </ScrollView>
+    </ScreenContainer>
   );
 }

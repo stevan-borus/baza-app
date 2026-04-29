@@ -1,106 +1,195 @@
+/**
+ * WeekStrip — fixed-width 7-column day picker.
+ *
+ * - Always renders 7 columns spanning the available width (no horizontal
+ *   scroll, fits any phone size).
+ * - First column honors the active dayjs locale's first day of week
+ *   (`sr` → Monday, `en` → Sunday).
+ * - Selecting a day calls `onSelectDate` only — it never modifies the
+ *   visible week. The week is owned by the parent via `weekStart` and
+ *   `onPrevWeek` / `onNextWeek` arrows. Arrows page week-by-week, never
+ *   month-by-month.
+ *
+ * The `selectedDate` / `onSelectDate` / `activityByDate` props are kept
+ * stable for backwards compatibility with existing callers. When
+ * `weekStart` is omitted, the week shown is derived from `selectedDate`
+ * (legacy behavior, used by the home overview where there is no nav).
+ */
 import React from "react";
-import { ScrollView, View, Text, Pressable } from "react-native";
-import { ACCENT, GLASS_BORDER } from "./tokens";
+import { Pressable, Text, View } from "react-native";
+import dayjs from "dayjs";
+import FontAwesome from "@expo/vector-icons/FontAwesome";
+import { useThemeTokens } from "./tokens";
 
-type ActivityStatus = "booked" | "available";
+type ActivityValue = boolean | number | string;
 
 type WeekStripProps = {
-  selectedDate: string; // ISO date string YYYY-MM-DD
+  /** Selected day, formatted as YYYY-MM-DD. */
+  selectedDate: string;
   onSelectDate: (date: string) => void;
-  activityByDate?: Record<string, ActivityStatus>;
+  /**
+   * First day of the displayed week. When provided, the strip renders this
+   * exact week regardless of where `selectedDate` falls. When omitted, the
+   * week containing `selectedDate` is shown (legacy mode, no arrows).
+   */
+  weekStart?: dayjs.Dayjs;
+  onPrevWeek?: () => void;
+  onNextWeek?: () => void;
+  /** Optional dot indicator below each date when truthy. */
+  activity?: Record<string, ActivityValue>;
+  /** Legacy alias for `activity`. */
+  activityByDate?: Record<string, ActivityValue>;
 };
 
-function getDayLabel(dateStr: string): { dayName: string; dayNum: string } {
-  const date = new Date(dateStr + "T00:00:00");
-  const dayName = date.toLocaleDateString("en", { weekday: "short" }).slice(0, 3);
-  const dayNum = String(date.getDate());
-  return { dayName, dayNum };
+/**
+ * Returns the start-of-week dayjs for the given date, using the active
+ * dayjs locale to decide the first weekday (Mon for sr, Sun for en).
+ *
+ * The `weekday` plugin maps weekday(0) to the locale's first day.
+ */
+export function startOfLocaleWeek(d: dayjs.Dayjs): dayjs.Dayjs {
+  // dayjs `weekday(0)` returns the locale's first weekday for the same
+  // calendar week as `d`. Strip time-of-day to keep arithmetic stable
+  // across DST transitions.
+  return d.weekday(0).startOf("day");
 }
 
-function getWeekDates(selectedDate: string): string[] {
-  const date = new Date(selectedDate + "T00:00:00");
-  const day = date.getDay();
-  const monday = new Date(date);
-  monday.setDate(date.getDate() - ((day + 6) % 7));
+export function WeekStrip({
+  selectedDate,
+  onSelectDate,
+  weekStart,
+  onPrevWeek,
+  onNextWeek,
+  activity,
+  activityByDate,
+}: WeekStripProps) {
+  const tokens = useThemeTokens();
+  const activityMap = activity ?? activityByDate ?? {};
 
-  const dates: string[] = [];
-  for (let i = 0; i < 7; i++) {
-    const d = new Date(monday);
-    d.setDate(monday.getDate() + i);
-    dates.push(d.toISOString().split("T")[0]);
-  }
-  return dates;
-}
+  // Resolve the displayed week. When `weekStart` is supplied, use it
+  // verbatim — selecting a day must NOT shift the week boundary.
+  const weekAnchor = weekStart
+    ? weekStart.startOf("day")
+    : startOfLocaleWeek(dayjs(selectedDate));
 
-function isToday(dateStr: string): boolean {
-  return dateStr === new Date().toISOString().split("T")[0];
-}
+  const days: dayjs.Dayjs[] = [];
+  for (let i = 0; i < 7; i++) days.push(weekAnchor.add(i, "day"));
 
-export function WeekStrip({ selectedDate, onSelectDate, activityByDate = {} }: WeekStripProps) {
-  const weekDates = getWeekDates(selectedDate);
+  const todayKey = dayjs().format("YYYY-MM-DD");
+  const showArrows = !!(onPrevWeek || onNextWeek);
 
   return (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-      <View className="flex-row gap-2 py-1 px-1">
-        {weekDates.map((dateStr) => {
-          const isSelected = dateStr === selectedDate;
-          const today = isToday(dateStr);
-          const { dayName, dayNum } = getDayLabel(dateStr);
-          const activity = activityByDate[dateStr];
+    <View className="flex-col gap-2">
+      {showArrows ? (
+        <View className="flex-row justify-between items-center">
+          <Pressable
+            onPress={onPrevWeek}
+            disabled={!onPrevWeek}
+            hitSlop={12}
+            className="active:opacity-60"
+            accessibilityRole="button"
+            accessibilityLabel="Previous week"
+          >
+            <FontAwesome
+              name="chevron-left"
+              size={14}
+              color={tokens.muted}
+            />
+          </Pressable>
+          <Text
+            className="font-body-semibold text-foreground"
+            style={{ fontSize: 14, letterSpacing: -0.2 }}
+          >
+            {weekAnchor.format("MMM D")} – {weekAnchor.add(6, "day").format("MMM D")}
+          </Text>
+          <Pressable
+            onPress={onNextWeek}
+            disabled={!onNextWeek}
+            hitSlop={12}
+            className="active:opacity-60"
+            accessibilityRole="button"
+            accessibilityLabel="Next week"
+          >
+            <FontAwesome
+              name="chevron-right"
+              size={14}
+              color={tokens.muted}
+            />
+          </Pressable>
+        </View>
+      ) : null}
+
+      <View className="flex-row" style={{ gap: 4 }}>
+        {days.map((d) => {
+          const dateKey = d.format("YYYY-MM-DD");
+          const isSelected = dateKey === selectedDate;
+          const isToday = dateKey === todayKey;
+          const hasActivity = !!activityMap[dateKey];
+          const dayLabel = d.format("dd"); // localized 2-letter weekday
 
           return (
             <Pressable
-              key={dateStr}
-              onPress={() => onSelectDate(dateStr)}
-              className="active:opacity-70"
-              style={{
-                alignItems: "center",
-                gap: 6,
-                paddingVertical: 10,
-                paddingHorizontal: 12,
-                borderRadius: 16,
-                backgroundColor: isSelected ? ACCENT : "transparent",
-                borderWidth: !isSelected && today ? 1 : 0,
-                borderColor: GLASS_BORDER,
-                minWidth: 48,
-              }}
+              key={dateKey}
+              onPress={() => onSelectDate(dateKey)}
+              className="flex-1 active:opacity-70"
+              style={{ alignItems: "center" }}
+              accessibilityRole="button"
+              accessibilityState={{ selected: isSelected }}
+              accessibilityLabel={d.format("dddd, D MMMM")}
             >
               <Text
+                className="text-muted"
                 style={{
                   fontSize: 11,
                   fontWeight: "500",
-                  color: isSelected ? "#ffffff" : "rgba(255,255,255,0.5)",
+                  marginBottom: 4,
+                  textTransform: "uppercase",
+                  letterSpacing: 0.4,
                 }}
               >
-                {dayName}
+                {dayLabel}
               </Text>
-              <Text
+              <View
                 style={{
-                  fontSize: 16,
-                  fontWeight: "700",
-                  color: isSelected ? "#ffffff" : "rgba(255,255,255,0.9)",
+                  width: 36,
+                  height: 36,
+                  borderRadius: 18,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  backgroundColor: isSelected
+                    ? tokens.accent
+                    : "transparent",
+                  borderWidth: !isSelected && isToday ? 1 : 0,
+                  borderColor: tokens.accent,
                 }}
               >
-                {dayNum}
-              </Text>
-              {activity ? (
-                <View
+                <Text
+                  className={isSelected ? "text-white" : "text-foreground"}
                   style={{
-                    width: 6,
-                    height: 6,
-                    borderRadius: 3,
-                    backgroundColor: activity === "booked" ? ACCENT : "transparent",
-                    borderWidth: activity === "available" ? 1 : 0,
-                    borderColor: ACCENT,
+                    fontSize: 15,
+                    fontWeight: "700",
                   }}
-                />
-              ) : (
-                <View style={{ width: 6, height: 6 }} />
-              )}
+                >
+                  {d.format("D")}
+                </Text>
+              </View>
+              <View
+                style={{
+                  width: 4,
+                  height: 4,
+                  borderRadius: 2,
+                  marginTop: 4,
+                  backgroundColor: hasActivity
+                    ? isSelected
+                      ? "#ffffff"
+                      : tokens.accent
+                    : "transparent",
+                }}
+              />
             </Pressable>
           );
         })}
       </View>
-    </ScrollView>
+    </View>
   );
 }

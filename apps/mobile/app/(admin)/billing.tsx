@@ -10,20 +10,16 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { ActivityIndicator, ScrollView, Text, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-native";
 import dayjs from "dayjs";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { MotiView } from "@/components/ui/styled";
 import { LegendList } from "@legendapp/list";
 import { getDateLocale } from "@/lib/i18n";
-import { ActionButton } from "@/components/ui/action-button";
 import { AppSheet } from "@/components/ui/sheet";
 import { Badge, Card } from "@/components/ui/card";
-import { GlassCard } from "@/components/ui/glass-card";
 import { HeroCard } from "@/components/ui/hero-card";
 import { NumberRollup } from "@/components/ui/number-rollup";
-import { SegmentedControl } from "@/components/ui/segmented-control";
 import { SectionLabel } from "@/components/ui/typography";
 import { Button } from "@/components/ui/button";
 import { EmptyState, ErrorState } from "@/components/ui/states";
@@ -34,14 +30,15 @@ import {
   type BillingRecord,
 } from "@/lib/queries/billing-queries-factory";
 import { clientsQueries } from "@/lib/queries/clients-queries-factory";
-import { TAB_BAR_HEIGHT, HEADER_HEIGHT } from "@/components/ui/constants";
+import { ScreenContainerRaw, useTabBarBottomPadding } from "@/components/ui/screen-container";
+import { HeaderIconButton } from "@/components/ui/app-header";
 
 type FilterTab = "all" | "confirmed" | "canceled" | "pending";
 
 export default function AdminBilling() {
   const { t } = useTranslation();
-  const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
+  const bottomPad = useTabBarBottomPadding();
   const [showCreate, setShowCreate] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState(() => dayjs());
   const [activeFilter, setActiveFilter] = useState<FilterTab>("all");
@@ -126,16 +123,26 @@ export default function AdminBilling() {
   const periodLabel = selectedMonth.format("MMMM YYYY");
 
   return (
-    <ScrollView
-      showsVerticalScrollIndicator={false}
-      keyboardShouldPersistTaps="handled"
-      contentContainerStyle={{
-        paddingTop: insets.top + HEADER_HEIGHT + 12,
-        paddingHorizontal: 24,
-        paddingBottom: TAB_BAR_HEIGHT + 16,
-        gap: 16,
-      }}
+    <ScreenContainerRaw
+      title={t("tabs.billing")}
+      rightSlot={
+        <HeaderIconButton
+          icon="plus"
+          onPress={() => setShowCreate(true)}
+          accessibilityLabel={t("admin.manage.sheetNewPayment")}
+        />
+      }
     >
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        contentContainerStyle={{
+          paddingTop: 16,
+          paddingHorizontal: 24,
+          paddingBottom: bottomPad,
+          gap: 16,
+        }}
+      >
       {/* Period selector */}
       <MotiView
         from={{ opacity: 0, translateY: -8 }}
@@ -150,7 +157,7 @@ export default function AdminBilling() {
             onPress={() => navigateBillingMonth(-1)}
           />
           <Text
-            className="text-foreground font-bold"
+            className="text-foreground font-body-bold"
             style={{ fontSize: 18, letterSpacing: -0.3 }}
           >
             {periodLabel}
@@ -188,46 +195,69 @@ export default function AdminBilling() {
               style={{ fontSize: 44, letterSpacing: -1 }}
             />
             <View className="flex-row gap-4">
-              <Text className="text-muted text-sm">
-                {summaryStats.count} {t("admin.manage.transactionCount").toLowerCase()}
-              </Text>
-              <Text className="text-muted text-sm">·</Text>
-              <Text className="text-muted text-sm">
-                {t("admin.manage.avgPerClient")}{" "}
-                {new Intl.NumberFormat("de-DE", {
-                  style: "currency",
-                  currency: "RSD",
-                  maximumFractionDigits: 0,
-                }).format(summaryStats.avg)}
-                /client
-              </Text>
+              <View className="flex-1 gap-1">
+                <Text className="text-muted text-xs uppercase tracking-wide">
+                  {t("admin.manage.transactionCount")}
+                </Text>
+                <Text className="text-foreground text-base font-body-medium">
+                  {summaryStats.count}
+                </Text>
+              </View>
+              <View className="flex-1 gap-1">
+                <Text className="text-muted text-xs uppercase tracking-wide">
+                  {t("admin.manage.avgPerClient")}
+                </Text>
+                <Text className="text-foreground text-base font-body-medium">
+                  {new Intl.NumberFormat("de-DE", {
+                    style: "currency",
+                    currency: "RSD",
+                    maximumFractionDigits: 0,
+                  }).format(summaryStats.avg)}
+                </Text>
+              </View>
             </View>
           </View>
         </HeroCard>
       </MotiView>
 
-      {/* Segmented filter + section label */}
+      {/* Scrollable filter chips + section label */}
       <MotiView
         from={{ opacity: 0, translateY: 8 }}
         animate={{ opacity: 1, translateY: 0 }}
         transition={{ type: "timing", duration: 350, delay: 160 }}
       >
         <View className="gap-3">
-          <SegmentedControl
-            options={filterTabs}
-            value={activeFilter}
-            onChange={setActiveFilter}
-          />
-          <SectionLabel>{t("admin.manage.transactions") ?? "Transactions"}</SectionLabel>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ gap: 8 }}
+          >
+            {filterTabs.map((tab) => {
+              const active = activeFilter === tab.value;
+              return (
+                <Pressable
+                  key={tab.value}
+                  onPress={() => setActiveFilter(tab.value)}
+                  className={`px-3 py-1.5 rounded-full border ${
+                    active
+                      ? "bg-accent border-accent"
+                      : "bg-glass border-glass-border"
+                  }`}
+                >
+                  <Text
+                    className={`text-xs font-body-semibold ${active ? "text-white" : "text-muted"}`}
+                  >
+                    {tab.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+          <SectionLabel>{t("admin.manage.transactionCount")}</SectionLabel>
         </View>
       </MotiView>
 
-      {/* FAB + errors/empty */}
-      <ActionButton
-        icon="plus"
-        label={t("admin.manage.sheetNewPayment")}
-        onPress={() => setShowCreate(true)}
-      />
+      {/* Errors / empty */}
       {billingQuery.isError ? (
         <ErrorState message={t("admin.manage.billingError")} />
       ) : null}
@@ -305,7 +335,7 @@ export default function AdminBilling() {
         <ScrollView>
           <View className="flex-col gap-4">
             <Text
-              className="text-foreground font-bold"
+              className="text-foreground font-body-bold"
               style={{ fontSize: 20, letterSpacing: -0.3 }}
             >
               {t("admin.manage.sheetNewPayment")}
@@ -391,6 +421,7 @@ export default function AdminBilling() {
           </View>
         </ScrollView>
       </AppSheet>
-    </ScrollView>
+      </ScrollView>
+    </ScreenContainerRaw>
   );
 }

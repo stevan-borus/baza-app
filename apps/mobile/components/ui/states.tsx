@@ -9,6 +9,7 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 import { Button } from "./button";
+import { useThemeTokens } from "./tokens";
 
 export function ListRow({
   title,
@@ -19,9 +20,9 @@ export function ListRow({
 }) {
   return (
     <View className="py-3.5">
-      <Text className="text-foreground font-medium text-lg">{title}</Text>
+      <Text className="font-body-medium text-lg text-foreground">{title}</Text>
       {subtitle ? (
-        <Text className="text-muted text-base mt-1">{subtitle}</Text>
+        <Text className="text-base mt-1 text-muted">{subtitle}</Text>
       ) : null}
     </View>
   );
@@ -40,19 +41,20 @@ export function EmptyState({
   ctaLabel?: string;
   onCtaPress?: () => void;
 }) {
+  const tokens = useThemeTokens();
   return (
     <AnimatedView
       entering={FadeInDown.duration(400).springify()}
       className="p-6 rounded-2xl items-center gap-3"
     >
-      <View className="w-14 h-14 rounded-full bg-glass items-center justify-center">
-        <FontAwesome name="inbox" size={24} color="rgba(255,255,255,0.3)" />
+      <View className="w-14 h-14 rounded-full items-center justify-center bg-glass">
+        <FontAwesome name="inbox" size={24} color={tokens.faint} />
       </View>
-      <Text className="text-foreground font-semibold text-xl text-center">
+      <Text className="font-body-semibold text-xl text-center text-foreground">
         {title}
       </Text>
       {description ? (
-        <Text className="text-muted text-base text-center">{description}</Text>
+        <Text className="text-base text-center text-muted">{description}</Text>
       ) : null}
       {ctaLabel && onCtaPress ? (
         <View className="mt-2">
@@ -66,6 +68,7 @@ export function EmptyState({
 }
 
 export function ErrorState({ message }: { message: string }) {
+  const tokens = useThemeTokens();
   const shakeX = useSharedValue(0);
 
   useEffect(() => {
@@ -85,10 +88,10 @@ export function ErrorState({ message }: { message: string }) {
   return (
     <AnimatedView
       style={animatedStyle}
-      className="p-4 rounded-2xl bg-danger-soft items-center gap-2 flex-row"
+      className="p-4 rounded-2xl items-center gap-2 flex-row bg-danger-soft"
     >
-      <FontAwesome name="exclamation-circle" size={20} color="#ef4444" />
-      <Text className="text-danger font-medium text-base text-center flex-1">
+      <FontAwesome name="exclamation-circle" size={20} color={tokens.danger} />
+      <Text className="font-body-medium text-base text-center flex-1 text-danger">
         {message}
       </Text>
     </AnimatedView>
@@ -100,15 +103,16 @@ export function NetworkError({
 }: {
   onRetry?: () => void;
 }) {
+  const tokens = useThemeTokens();
   return (
     <View className="flex-1 items-center justify-center p-6 gap-4">
-      <View className="w-18 h-18 rounded-full bg-glass items-center justify-center">
-        <FontAwesome name="wifi" size={32} color="rgba(255,255,255,0.3)" />
+      <View className="w-18 h-18 rounded-full items-center justify-center bg-glass">
+        <FontAwesome name="wifi" size={32} color={tokens.faint} />
       </View>
-      <Text className="text-foreground font-semibold text-xl text-center">
+      <Text className="font-body-semibold text-xl text-center text-foreground">
         No Connection
       </Text>
-      <Text className="text-muted text-base text-center">
+      <Text className="text-base text-center text-muted">
         Check your internet connection and try again.
       </Text>
       {onRetry ? (

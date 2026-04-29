@@ -1,4 +1,4 @@
-import { queryOptions, mutationOptions } from "@tanstack/react-query";
+import { queryOptions, mutationOptions, keepPreviousData } from "@tanstack/react-query";
 import { availabilityResponseSchema } from "@baza/types";
 import { z } from "zod";
 import { apiFetch } from "@/lib/api";
@@ -38,6 +38,7 @@ export const sessionsQueries = {
         return availabilityResponseSchema.parse(await response.json());
       },
       staleTime: 30_000,
+      placeholderData: keepPreviousData,
     }),
 
   list: () =>

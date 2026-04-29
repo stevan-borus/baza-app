@@ -1,7 +1,7 @@
 import React from "react";
 import { TouchableOpacity, View, Text } from "react-native";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
-import { DANGER } from "./tokens";
+import { useThemeTokens } from "./tokens";
 
 /** Compact action row -- icon + label, used for secondary actions. */
 export function ActionButton({
@@ -17,6 +17,7 @@ export function ActionButton({
   variant?: "default" | "danger";
   disabled?: boolean;
 }) {
+  const tokens = useThemeTokens();
   const startsWithPlus = label.trim().startsWith("+");
   const displayLabel = startsWithPlus ? label.trim().replace(/^\+\s*/, "") : label;
   const showIcon = icon && !(icon === "plus" && startsWithPlus);
@@ -38,12 +39,12 @@ export function ActionButton({
           <FontAwesome
             name={icon}
             size={14}
-            color={variant === "danger" ? DANGER : undefined}
+            color={variant === "danger" ? tokens.danger : tokens.foreground}
           />
         ) : null}
         <Text
           className={[
-            "text-sm font-medium",
+            "text-sm font-body-medium",
             variant === "danger" ? "text-danger" : "text-foreground",
           ].join(" ")}
         >

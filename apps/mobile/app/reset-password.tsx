@@ -162,195 +162,190 @@ export default function ResetPasswordScreen() {
           </View>
         </MotiView>
 
-        {/* ── Glass panel ── */}
+        {/* ── Form ── */}
         <MotiView
           from={{ opacity: 0, translateY: 24 }}
           animate={{ opacity: 1, translateY: 0 }}
           transition={{ type: "timing", duration: 500, delay: 250 }}
+          className="gap-4"
         >
-          <View className="bg-glass border border-glass-border rounded-3xl p-6 gap-4">
-            {/* Step dots inside the panel */}
-            <StepDots current={step} />
+          <StepDots current={step} />
 
-            {/* ── Step crossfade wrapper ── */}
-            <MotiView
-              key={step}
-              from={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ type: "timing", duration: 400 }}
-            >
-              {/* ── Step 1: Request reset link ── */}
-              {step === "request" ? (
-                <View className="gap-4">
-                  <View className="gap-1 items-center">
-                    <Text
-                      className="text-white font-bold text-center"
-                      style={{ fontSize: 22, letterSpacing: -0.4 }}
-                    >
-                      {t("auth.resetPasswordTitle")}
-                    </Text>
-                    <Text
-                      className="text-center"
-                      style={{ color: "rgba(255,255,255,0.5)", fontSize: 14 }}
-                    >
-                      {t("auth.resetPasswordIntro")}
-                    </Text>
-                  </View>
-
-                  <Input
-                    icon="envelope"
-                    label={t("auth.email")}
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                    keyboardType="email-address"
-                    textContentType="emailAddress"
-                    autoComplete="email"
-                    value={email}
-                    onChangeText={setEmail}
-                  />
-
-                  {requestMutation.isError ? (
-                    <ErrorBanner message={t("auth.sendLinkError")} />
-                  ) : null}
-
-                  <Button
-                    disabled={requestMutation.isPending || !email}
-                    onPress={() => requestMutation.mutate()}
-                    size="large"
-                  >
-                    {requestMutation.isPending ? (
-                      <ActivityIndicator color="#fff" size="small" />
-                    ) : (
-                      <Text className="text-white font-semibold text-base">
-                        {t("auth.sendLink")}
-                      </Text>
-                    )}
-                  </Button>
-
-                  <View className="items-center gap-3 mt-1">
-                    <LinkText
-                      color="rgba(255,255,255,0.6)"
-                      onPress={() => setStep("reset")}
-                    >
-                      {t("auth.haveToken")}
-                    </LinkText>
-                    <LinkText
-                      color="rgba(255,255,255,0.45)"
-                      onPress={() => router.back()}
-                    >
-                      {t("auth.backToSignIn")}
-                    </LinkText>
-                  </View>
-                </View>
-              ) : null}
-
-              {/* ── Step 2: Enter token + new password ── */}
-              {step === "reset" ? (
-                <View className="gap-4">
-                  <View className="gap-1 items-center">
-                    <Text
-                      className="text-white font-bold text-center"
-                      style={{ fontSize: 22, letterSpacing: -0.4 }}
-                    >
-                      {t("auth.checkEmail", { defaultValue: "Check your email" })}
-                    </Text>
-                    {email ? (
-                      <Text
-                        className="text-center"
-                        style={{ color: ACCENT_LIGHT, fontSize: 13 }}
-                      >
-                        {email}
-                      </Text>
-                    ) : null}
-                    <Text
-                      className="text-center"
-                      style={{ color: "rgba(255,255,255,0.5)", fontSize: 14 }}
-                    >
-                      {t("auth.resetTokenIntro")}
-                    </Text>
-                  </View>
-
-                  <Input
-                    label={t("auth.tokenPlaceholder")}
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                    value={token}
-                    onChangeText={setToken}
-                  />
-
-                  <PasswordInput
-                    label={t("auth.newPassword")}
-                    textContentType="newPassword"
-                    value={password}
-                    onChangeText={setPassword}
-                    iconColor="rgba(255,255,255,0.5)"
-                  />
-
-                  {resetMutation.isError ? (
-                    <ErrorBanner message={t("auth.resetError")} />
-                  ) : null}
-
-                  <Button
-                    disabled={resetMutation.isPending || !token || !password}
-                    onPress={() => resetMutation.mutate()}
-                    size="large"
-                  >
-                    {resetMutation.isPending ? (
-                      <ActivityIndicator color="#fff" size="small" />
-                    ) : (
-                      <Text className="text-white font-semibold text-base">
-                        {t("auth.resetSubmit")}
-                      </Text>
-                    )}
-                  </Button>
-
-                  <View className="items-center gap-3 mt-1">
-                    <LinkText
-                      color="rgba(255,255,255,0.6)"
-                      onPress={() => setStep("request")}
-                    >
-                      {t("auth.backToRequest")}
-                    </LinkText>
-                    <LinkText
-                      color="rgba(255,255,255,0.45)"
-                      onPress={() => router.back()}
-                    >
-                      {t("auth.backToSignIn")}
-                    </LinkText>
-                  </View>
-                </View>
-              ) : null}
-
-              {/* ── Success state ── */}
-              {step === "success" ? (
-                <View className="gap-4 items-center py-4">
+          {/* ── Step crossfade wrapper ── */}
+          <MotiView
+            key={step}
+            from={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ type: "timing", duration: 400 }}
+          >
+            {/* ── Step 1: Request reset link ── */}
+            {step === "request" ? (
+              <View className="gap-4">
+                <View className="gap-1 items-center mb-2">
                   <Text
-                    className="text-white font-bold text-center"
+                    className="text-white font-body-bold text-center"
                     style={{ fontSize: 22, letterSpacing: -0.4 }}
                   >
-                    {t("auth.passwordUpdated", {
-                      defaultValue: "Password updated",
-                    })}
+                    {t("auth.resetPasswordTitle")}
                   </Text>
                   <Text
                     className="text-center"
                     style={{ color: "rgba(255,255,255,0.5)", fontSize: 14 }}
                   >
-                    {t("auth.passwordUpdatedDesc", {
-                      defaultValue:
-                        "You can now sign in with your new password.",
-                    })}
+                    {t("auth.resetPasswordIntro")}
+                  </Text>
+                </View>
+
+                <Input
+                  icon="envelope"
+                  label={t("auth.email")}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  keyboardType="email-address"
+                  textContentType="emailAddress"
+                  autoComplete="email"
+                  value={email}
+                  onChangeText={setEmail}
+                />
+
+                {requestMutation.isError ? (
+                  <ErrorBanner message={t("auth.sendLinkError")} />
+                ) : null}
+
+                <Button
+                  disabled={requestMutation.isPending || !email}
+                  onPress={() => requestMutation.mutate()}
+                  size="large"
+                >
+                  {requestMutation.isPending ? (
+                    <ActivityIndicator color="#fff" size="small" />
+                  ) : (
+                    <Text className="text-white font-body-semibold text-base">
+                      {t("auth.sendLink")}
+                    </Text>
+                  )}
+                </Button>
+
+                <View className="flex-row items-center justify-center gap-3 mt-2">
+                  <LinkText
+                    color="rgba(255,255,255,0.6)"
+                    onPress={() => setStep("reset")}
+                  >
+                    {t("auth.haveToken")}
+                  </LinkText>
+                  <Text style={{ color: "rgba(255,255,255,0.25)", fontSize: 12 }}>
+                    ·
                   </Text>
                   <LinkText
-                    color={ACCENT_LIGHT}
-                    onPress={() => router.replace("/sign-in")}
+                    color="rgba(255,255,255,0.6)"
+                    onPress={() => router.back()}
                   >
                     {t("auth.backToSignIn")}
                   </LinkText>
                 </View>
-              ) : null}
-            </MotiView>
-          </View>
+              </View>
+            ) : null}
+
+            {/* ── Step 2: Enter token + new password ── */}
+            {step === "reset" ? (
+              <View className="gap-4">
+                <View className="gap-1 items-center mb-2">
+                  <Text
+                    className="text-white font-body-bold text-center"
+                    style={{ fontSize: 22, letterSpacing: -0.4 }}
+                  >
+                    {t("auth.checkEmail", { defaultValue: "Check your email" })}
+                  </Text>
+                  {email ? (
+                    <Text
+                      className="text-center"
+                      style={{ color: ACCENT_LIGHT, fontSize: 13 }}
+                    >
+                      {email}
+                    </Text>
+                  ) : null}
+                  <Text
+                    className="text-center"
+                    style={{ color: "rgba(255,255,255,0.5)", fontSize: 14 }}
+                  >
+                    {t("auth.resetTokenIntro")}
+                  </Text>
+                </View>
+
+                <Input
+                  label={t("auth.tokenPlaceholder")}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  value={token}
+                  onChangeText={setToken}
+                />
+
+                <PasswordInput
+                  label={t("auth.newPassword")}
+                  textContentType="newPassword"
+                  value={password}
+                  onChangeText={setPassword}
+                  iconColor="rgba(255,255,255,0.5)"
+                />
+
+                {resetMutation.isError ? (
+                  <ErrorBanner message={t("auth.resetError")} />
+                ) : null}
+
+                <Button
+                  disabled={resetMutation.isPending || !token || !password}
+                  onPress={() => resetMutation.mutate()}
+                  size="large"
+                >
+                  {resetMutation.isPending ? (
+                    <ActivityIndicator color="#fff" size="small" />
+                  ) : (
+                    <Text className="text-white font-body-semibold text-base">
+                      {t("auth.resetSubmit")}
+                    </Text>
+                  )}
+                </Button>
+
+                <View className="items-center mt-2">
+                  <LinkText
+                    color="rgba(255,255,255,0.6)"
+                    onPress={() => setStep("request")}
+                  >
+                    {t("auth.backToRequest")}
+                  </LinkText>
+                </View>
+              </View>
+            ) : null}
+
+            {/* ── Success state ── */}
+            {step === "success" ? (
+              <View className="gap-4 items-center py-4">
+                <Text
+                  className="text-white font-body-bold text-center"
+                  style={{ fontSize: 22, letterSpacing: -0.4 }}
+                >
+                  {t("auth.passwordUpdated", {
+                    defaultValue: "Password updated",
+                  })}
+                </Text>
+                <Text
+                  className="text-center"
+                  style={{ color: "rgba(255,255,255,0.5)", fontSize: 14 }}
+                >
+                  {t("auth.passwordUpdatedDesc", {
+                    defaultValue:
+                      "You can now sign in with your new password.",
+                  })}
+                </Text>
+                <LinkText
+                  color={ACCENT_LIGHT}
+                  onPress={() => router.replace("/sign-in")}
+                >
+                  {t("auth.backToSignIn")}
+                </LinkText>
+              </View>
+            ) : null}
+          </MotiView>
         </MotiView>
 
         {/* ── Spacer ── */}

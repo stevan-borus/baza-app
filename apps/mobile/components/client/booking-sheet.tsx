@@ -76,12 +76,12 @@ export function BookingSheet({
                         classTypeColor[session.classTypeName] ?? "#2e5b42",
                     }}
                   />
-                  <Text className="text-xs font-semibold text-muted uppercase tracking-wider">
+                  <Text className="text-xs font-body-semibold text-muted uppercase tracking-wider">
                     {session.classTypeName}
                   </Text>
                 </View>
                 <Text
-                  className="text-foreground font-bold"
+                  className="text-foreground font-body-bold"
                   style={{ fontSize: 28, letterSpacing: -0.5 }}
                 >
                   {dayjs(session.startsAt).format("HH:mm")} –{" "}
@@ -202,7 +202,7 @@ export function BookingSheet({
             ) : step === "confirmBook" ? (
               <View className="flex-col gap-3">
                 <Text
-                  className="text-foreground font-semibold text-[15px]"
+                  className="text-foreground font-body-semibold text-[15px]"
                   style={{ textAlign: "center" }}
                 >
                   {t("client.dayView.confirmBook")}
@@ -230,7 +230,7 @@ export function BookingSheet({
             ) : (
               <View className="flex-col gap-3">
                 <Text
-                  className="text-foreground font-semibold text-[15px]"
+                  className="text-foreground font-body-semibold text-[15px]"
                   style={{ textAlign: "center" }}
                 >
                   {t("client.dayView.cancelWarning")}

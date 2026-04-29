@@ -10,8 +10,7 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { Pressable, ScrollView, Text, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { ScrollView, Text, View } from "react-native";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { MotiView } from "@/components/ui/styled";
 import { Button } from "@/components/ui/button";
@@ -20,14 +19,15 @@ import { GlassCard } from "@/components/ui/glass-card";
 import { Input } from "@/components/ui/input";
 import { AppSheet } from "@/components/ui/sheet";
 import { SectionLabel } from "@/components/ui/typography";
-import { HEADER_HEIGHT, TAB_BAR_HEIGHT } from "@/components/ui/constants";
 import { ACCENT_LIGHT } from "@/components/ui/tokens";
 import { roomsQueries } from "@/lib/queries/rooms-queries-factory";
+import { ScreenContainerRaw, useTabBarBottomPadding } from "@/components/ui/screen-container";
+import { HeaderIconButton } from "@/components/ui/app-header";
 
 export default function AdminSettingsRooms() {
   const { t } = useTranslation();
-  const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
+  const bottomPad = useTabBarBottomPadding();
   const [showCreate, setShowCreate] = useState(false);
   const [form, setForm] = useState({ name: "", capacity: "" });
 
@@ -45,17 +45,28 @@ export default function AdminSettingsRooms() {
   const rooms = roomsQuery.data?.rooms ?? [];
 
   return (
-    <ScrollView
-      showsVerticalScrollIndicator={false}
-      keyboardShouldPersistTaps="handled"
-      contentContainerStyle={{
-        paddingTop: insets.top + HEADER_HEIGHT + 28,
-        paddingHorizontal: 20,
-        paddingBottom: TAB_BAR_HEIGHT + 16,
-        gap: 12,
-      }}
+    <ScreenContainerRaw
+      title={t("admin.manage.rooms")}
+      headerVariant="detail"
+      rightSlot={
+        <HeaderIconButton
+          icon="plus"
+          onPress={() => setShowCreate(true)}
+          accessibilityLabel={t("admin.manage.sheetNewRoom")}
+        />
+      }
     >
-      {/* Section label + add button */}
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        contentContainerStyle={{
+          paddingTop: 16,
+          paddingHorizontal: 20,
+          paddingBottom: bottomPad,
+          gap: 12,
+        }}
+      >
+      {/* Section label */}
       <MotiView
         from={{ opacity: 0, translateY: -8 }}
         animate={{ opacity: 1, translateY: 0 }}
@@ -65,21 +76,6 @@ export default function AdminSettingsRooms() {
           <SectionLabel>
             {t("admin.manage.rooms")} · {rooms.length}
           </SectionLabel>
-          <Pressable
-            onPress={() => setShowCreate(true)}
-            hitSlop={8}
-            style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
-          >
-            <View
-              className="flex-row items-center gap-1.5 px-3 py-1.5 rounded-full"
-              style={{ backgroundColor: ACCENT_LIGHT + "33" }}
-            >
-              <FontAwesome name="plus" size={10} color={ACCENT_LIGHT} />
-              <Text style={{ fontSize: 12, fontWeight: "600", color: ACCENT_LIGHT }}>
-                {t("admin.manage.sheetNewRoom")}
-              </Text>
-            </View>
-          </Pressable>
         </View>
       </MotiView>
 
@@ -108,7 +104,7 @@ export default function AdminSettingsRooms() {
 
               {/* Name */}
               <Text
-                className="text-foreground font-medium flex-1"
+                className="text-foreground font-body-medium flex-1"
                 style={{ fontSize: 16 }}
                 numberOfLines={1}
               >
@@ -147,7 +143,7 @@ export default function AdminSettingsRooms() {
       <AppSheet open={showCreate} onOpenChange={setShowCreate}>
         <View className="flex-col gap-4">
           <Text
-            className="text-foreground font-bold"
+            className="text-foreground font-body-bold"
             style={{ fontSize: 20, letterSpacing: -0.3 }}
           >
             {t("admin.manage.sheetNewRoom")}
@@ -179,6 +175,7 @@ export default function AdminSettingsRooms() {
           ) : null}
         </View>
       </AppSheet>
-    </ScrollView>
+      </ScrollView>
+    </ScreenContainerRaw>
   );
 }

@@ -117,18 +117,19 @@ export default function ClientProfile() {
   }
 
   return (
-    <ScrollView
-      showsVerticalScrollIndicator={false}
-      refreshControl={
-        <RefreshControl
-          refreshing={refreshing}
-          onRefresh={handleRefresh}
-          tintColor="#2e5b42"
-          colors={["#2e5b42"]}
-        />
-      }
-    >
-      <ScreenContainer>
+    <ScreenContainer title={t("tabs.profile")}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            tintColor="#2e5b42"
+            colors={["#2e5b42"]}
+          />
+        }
+        contentContainerStyle={{ gap: 24 }}
+      >
 
         {/* ── Hero ─────────────────────────────────────────────────────── */}
         <MotiView
@@ -149,7 +150,7 @@ export default function ClientProfile() {
               }}
             >
               <Text
-                className="text-accent font-bold"
+                className="text-accent font-body-bold"
                 style={{ fontSize: 28, letterSpacing: 1 }}
               >
                 {initials}
@@ -157,7 +158,7 @@ export default function ClientProfile() {
             </View>
             {/* Name + email */}
             <View className="items-center gap-1">
-              <Text className="text-foreground font-bold" style={{ fontSize: 24, letterSpacing: -0.5 }}>
+              <Text className="text-foreground font-body-bold" style={{ fontSize: 24, letterSpacing: -0.5 }}>
                 {userEmail.split("@")[0]}
               </Text>
               <Text className="text-[13px] text-muted">
@@ -226,7 +227,7 @@ export default function ClientProfile() {
                     {/* Details */}
                     <View className="flex-1 gap-1">
                       <View className="flex-row items-center justify-between">
-                        <Text className="font-semibold text-foreground" style={{ fontSize: 15 }}>
+                        <Text className="font-body-semibold text-foreground" style={{ fontSize: 15 }}>
                           {pkg.packageType?.name ?? t("client.package.packageName")}
                         </Text>
                         <Badge status={getPackageStatus(pkg)}>
@@ -293,7 +294,7 @@ export default function ClientProfile() {
               <View className="flex-col gap-4">
                 {/* Language */}
                 <View className="flex-col gap-2">
-                  <Text className="text-[13px] text-muted uppercase tracking-wider font-semibold">
+                  <Text className="text-[13px] text-muted uppercase tracking-wider font-body-semibold">
                     {t("client.profileTab.language")}
                   </Text>
                   <LanguageSwitcher />
@@ -336,7 +337,7 @@ export default function ClientProfile() {
           </View>
         </MotiView>
 
-      </ScreenContainer>
-    </ScrollView>
+      </ScrollView>
+    </ScreenContainer>
   );
 }

@@ -7,6 +7,7 @@ import Animated, {
   withTiming,
   Easing,
 } from "react-native-reanimated";
+import { useThemeTokens } from "./tokens";
 
 function usePulse() {
   const opacity = useSharedValue(0.3);
@@ -34,13 +35,14 @@ export function Skeleton({
   rounded?: number;
 }) {
   const pulseStyle = usePulse();
+  const tokens = useThemeTokens();
 
   return (
     <Animated.View
       style={[
         // eslint-disable-next-line react-native/no-inline-styles
         {
-          backgroundColor: "rgba(255,255,255,0.06)",
+          backgroundColor: tokens.glassStrong,
           width: width as any,
           height,
           borderRadius: rounded,
@@ -74,17 +76,18 @@ export function SkeletonText({
 
 export function SkeletonCard() {
   const pulseStyle = usePulse();
+  const tokens = useThemeTokens();
 
   return (
     <Animated.View
       style={[
         {
-          backgroundColor: "rgba(255,255,255,0.03)",
+          backgroundColor: tokens.glass,
           borderRadius: 22,
           padding: 16,
           gap: 12,
           borderWidth: 1,
-          borderColor: "rgba(255,255,255,0.05)",
+          borderColor: tokens.glassBorder,
         },
         pulseStyle,
       ]}
@@ -102,17 +105,18 @@ export function SkeletonCard() {
 
 export function SkeletonStatCard() {
   const pulseStyle = usePulse();
+  const tokens = useThemeTokens();
 
   return (
     <Animated.View
       style={[
         {
-          backgroundColor: "rgba(255,255,255,0.03)",
+          backgroundColor: tokens.glass,
           borderRadius: 22,
           padding: 20,
           gap: 8,
           borderWidth: 1,
-          borderColor: "rgba(255,255,255,0.05)",
+          borderColor: tokens.glassBorder,
         },
         pulseStyle,
       ]}

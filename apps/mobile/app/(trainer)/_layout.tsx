@@ -21,7 +21,7 @@ export default function TrainerLayout() {
 
   return (
     <Tabs
-      screenOptions={getAppTabScreenOptions(isDark)}
+      screenOptions={{ ...getAppTabScreenOptions(isDark), headerShown: false }}
       tabBar={(props) => <FloatingTabBar {...props} isDark={isDark} />}
     >
       <Tabs.Screen

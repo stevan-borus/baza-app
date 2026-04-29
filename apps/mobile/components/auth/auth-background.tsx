@@ -1,11 +1,13 @@
 import React from "react";
 import { View, KeyboardAvoidingView, Platform, ScrollView } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
+import { StatusBar } from "expo-status-bar";
 import { SafeAreaView } from "@/components/ui/styled";
 
 export function AuthBackground({ children }: { children: React.ReactNode }) {
   return (
     <View className="flex-1 bg-background">
+      <StatusBar style="light" />
       <LinearGradient
         colors={["#0A0F14", "#0F1F1A", "#0A0F14"]}
         locations={[0, 0.5, 1]}
@@ -19,8 +21,13 @@ export function AuthBackground({ children }: { children: React.ReactNode }) {
           className="flex-1"
         >
           <ScrollView
-            contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 24 }}
+            contentContainerStyle={{
+              flexGrow: 1,
+              paddingHorizontal: 24,
+              paddingBottom: 24,
+            }}
             keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
           >
             {children}
           </ScrollView>

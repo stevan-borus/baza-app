@@ -6,9 +6,7 @@ import { useState, useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { MotiView } from "@/components/ui/styled";
-import FontAwesome from "@expo/vector-icons/FontAwesome";
 import dayjs from "dayjs";
 import { AppSheet } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
@@ -17,8 +15,8 @@ import { EmptyState, ErrorState } from "@/components/ui/states";
 import { Input } from "@/components/ui/input";
 import { GlassCard } from "@/components/ui/glass-card";
 import { SectionLabel } from "@/components/ui/typography";
-import { TAB_BAR_HEIGHT, HEADER_HEIGHT } from "@/components/ui/constants";
-import { ACCENT } from "@/components/ui/tokens";
+import { ScreenContainerRaw, useTabBarBottomPadding } from "@/components/ui/screen-container";
+import { HeaderIconButton } from "@/components/ui/app-header";
 import { packagesQueries } from "@/lib/queries/packages-queries-factory";
 
 // ─── FilterChip ───────────────────────────────────────────────────────────────
@@ -40,7 +38,7 @@ function FilterChip({
       }`}
     >
       <Text
-        className={`text-xs font-semibold ${active ? "text-white" : "text-muted"}`}
+        className={`text-xs font-body-semibold ${active ? "text-white" : "text-muted"}`}
       >
         {label}
       </Text>
@@ -64,7 +62,7 @@ function SessionCountIcon({ count }: { count: number }) {
         borderColor: "rgba(46,91,66,0.45)",
       }}
     >
-      <Text className="text-accent font-bold" style={{ fontSize: 14 }}>
+      <Text className="text-accent font-body-bold" style={{ fontSize: 14 }}>
         {count}
       </Text>
     </View>
@@ -91,7 +89,7 @@ function AssignmentAvatar({ name }: { name: string }) {
         backgroundColor: "rgba(46,91,66,0.35)",
       }}
     >
-      <Text className="text-accent font-bold" style={{ fontSize: 13 }}>
+      <Text className="text-accent font-body-bold" style={{ fontSize: 13 }}>
         {initials}
       </Text>
     </View>
@@ -106,8 +104,8 @@ type AssignmentFilter = "all" | "expiring" | "expired";
 
 export default function AdminPackages() {
   const { t } = useTranslation();
-  const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
+  const bottomPad = useTabBarBottomPadding();
   const [showCreate, setShowCreate] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [assignmentFilter, setAssignmentFilter] = useState<AssignmentFilter>("all");
@@ -166,50 +164,32 @@ export default function AdminPackages() {
   ];
 
   return (
-    <ScrollView
-      showsVerticalScrollIndicator={false}
-      keyboardShouldPersistTaps="handled"
-      refreshControl={
-        <RefreshControl
-          refreshing={refreshing}
-          onRefresh={handleRefresh}
-          tintColor="#2e5b42"
-          colors={["#2e5b42"]}
+    <ScreenContainerRaw
+      title={t("tabs.packages")}
+      rightSlot={
+        <HeaderIconButton
+          icon="plus"
+          onPress={() => setShowCreate(true)}
+          accessibilityLabel={t("admin.manage.sheetNewPackage")}
         />
       }
     >
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            tintColor="#2e5b42"
+            colors={["#2e5b42"]}
+          />
+        }
+      >
       <View
         className="px-5 flex-col gap-4"
-        style={{ paddingTop: insets.top + HEADER_HEIGHT + 12, paddingBottom: TAB_BAR_HEIGHT + 16 }}
+        style={{ paddingTop: 16, paddingBottom: bottomPad }}
       >
-
-        {/* ── Header row ────────────────────────────────────────────────────── */}
-        <MotiView
-          from={{ opacity: 0, translateY: -8 }}
-          animate={{ opacity: 1, translateY: 0 }}
-          transition={{ type: "timing", duration: 300, delay: 0 }}
-          style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}
-        >
-          <Text
-            className="text-foreground font-bold"
-            style={{ fontSize: 26, letterSpacing: -0.5 }}
-          >
-            {t("admin.manage.tabPackages")}
-          </Text>
-          <Pressable
-            onPress={() => setShowCreate(true)}
-            style={{
-              width: 36,
-              height: 36,
-              borderRadius: 18,
-              backgroundColor: ACCENT,
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            <FontAwesome name="plus" size={14} color="#fff" />
-          </Pressable>
-        </MotiView>
 
         {/* ── Package types section ─────────────────────────────────────────── */}
         <MotiView
@@ -234,7 +214,7 @@ export default function AdminPackages() {
                 <SessionCountIcon count={pt.sessionCount} />
                 <View className="flex-1 flex-col gap-0.5">
                   <Text
-                    className="text-foreground font-bold"
+                    className="text-foreground font-body-bold"
                     style={{ fontSize: 15 }}
                     numberOfLines={1}
                   >
@@ -310,7 +290,7 @@ export default function AdminPackages() {
                   <AssignmentAvatar name={packageName} />
                   <View className="flex-1 flex-col gap-0.5">
                     <Text
-                      className="text-foreground font-semibold"
+                      className="text-foreground font-body-semibold"
                       style={{ fontSize: 15 }}
                       numberOfLines={1}
                     >
@@ -350,7 +330,7 @@ export default function AdminPackages() {
         <AppSheet open={showCreate} onOpenChange={setShowCreate}>
           <View className="flex-col gap-4">
             <Text
-              className="text-foreground font-bold"
+              className="text-foreground font-body-bold"
               style={{ fontSize: 20, letterSpacing: -0.3 }}
             >
               {t("admin.manage.sheetNewPackage")}
@@ -404,6 +384,7 @@ export default function AdminPackages() {
           </View>
         </AppSheet>
       </View>
-    </ScrollView>
+      </ScrollView>
+    </ScreenContainerRaw>
   );
 }

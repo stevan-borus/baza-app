@@ -1,7 +1,7 @@
 import React from "react";
 import { View, Text } from "react-native";
 import Svg, { Circle } from "react-native-svg";
-import { ACCENT } from "./tokens";
+import { ACCENT, useThemeTokens } from "./tokens";
 
 type ProgressRingProps = {
   progress: number; // 0-1
@@ -18,10 +18,12 @@ export function ProgressRing({
   size = 100,
   strokeWidth = 8,
   color = ACCENT,
-  trackColor = "rgba(255,255,255,0.08)",
+  trackColor,
   label,
   sublabel,
 }: ProgressRingProps) {
+  const tokens = useThemeTokens();
+  const resolvedTrackColor = trackColor ?? tokens.glassStrong;
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
   const clampedProgress = Math.max(0, Math.min(1, progress));
@@ -41,7 +43,7 @@ export function ProgressRing({
           cx={size / 2}
           cy={size / 2}
           r={radius}
-          stroke={trackColor}
+          stroke={resolvedTrackColor}
           strokeWidth={strokeWidth}
           fill="none"
         />
@@ -60,11 +62,11 @@ export function ProgressRing({
         />
       </Svg>
       <View className="absolute flex-col items-center" style={{ gap: 4 }}>
-        <Text className="text-lg font-bold text-white" numberOfLines={1}>
+        <Text className="text-lg font-body-bold text-foreground" numberOfLines={1}>
           {label ?? `${percentage}%`}
         </Text>
         {sublabel ? (
-          <Text className="text-xs text-white" style={{ opacity: 0.5 }} numberOfLines={1}>
+          <Text className="text-xs text-muted" numberOfLines={1}>
             {sublabel}
           </Text>
         ) : null}

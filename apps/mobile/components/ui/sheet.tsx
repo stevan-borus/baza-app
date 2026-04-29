@@ -1,39 +1,57 @@
-import React, { useCallback, useEffect, useMemo, useRef } from "react";
-import { Platform, View } from "react-native";
-import BottomSheet, {
+import React, { createContext, useCallback, useEffect, useMemo, useRef } from "react";
+import { Dimensions } from "react-native";
+import {
   BottomSheetBackdrop,
+  BottomSheetModal,
   type BottomSheetBackdropProps,
 } from "@gorhom/bottom-sheet";
-import { BlurView } from "expo-blur";
 import { BottomSheetView } from "./styled";
+import { useThemeTokens } from "./tokens";
+
+/**
+ * Set to `true` for descendants of an `AppSheet`. Components like `<Input>`
+ * read this to pick `BottomSheetTextInput` over the plain RN `TextInput`,
+ * which is required for keyboard-aware behavior inside gorhom sheets and
+ * crashes when used outside one.
+ */
+export const InsideBottomSheetContext = createContext<boolean>(false);
 
 type AppSheetProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   children: React.ReactNode;
-  snapPoints?: (string | number)[];
 };
 
-export function AppSheet({
-  open,
-  onOpenChange,
-  children,
-  snapPoints = ["60%", "90%"],
-}: AppSheetProps) {
-  const ref = useRef<BottomSheet>(null);
-  const points = useMemo(() => snapPoints, [snapPoints]);
+/**
+ * Shared bottom-sheet wrapper.
+ *
+ * Built on `BottomSheetModal`. No FullWindowOverlay — its trade-offs (broken
+ * keyboard toolbar position, gesture isolation, context isolation, native
+ * date-picker conflicts) cost more than the bottom-bleed gap it solved.
+ * The visible bottom area is now handled via the navigator's
+ * `sceneContainerStyle` painting `bg-background` to the bottom edge.
+ *
+ * - Auto-sizes to its content (`enableDynamicSizing`).
+ * - Caps at 90% of the window height; long content scrolls within an inner
+ *   ScrollView the caller renders.
+ *
+ * Requires `<BottomSheetModalProvider>` mounted at the app root (see _layout).
+ */
+export function AppSheet({ open, onOpenChange, children }: AppSheetProps) {
+  const ref = useRef<BottomSheetModal>(null);
+  const tokens = useThemeTokens();
+
+  const maxHeight = useMemo(
+    () => Dimensions.get("window").height * 0.9,
+    [],
+  );
 
   useEffect(() => {
-    if (open) ref.current?.expand();
-    else ref.current?.close();
+    if (open) ref.current?.present();
+    else ref.current?.dismiss();
   }, [open]);
 
-  const handleChange = useCallback(
-    (index: number) => {
-      if (index === -1) onOpenChange(false);
-    },
-    [onOpenChange],
-  );
+  const handleDismiss = useCallback(() => onOpenChange(false), [onOpenChange]);
 
   const renderBackdrop = useCallback(
     (props: BottomSheetBackdropProps) => (
@@ -42,34 +60,31 @@ export function AppSheet({
         appearsOnIndex={0}
         disappearsOnIndex={-1}
         opacity={0.5}
+        pressBehavior="close"
       />
     ),
     [],
   );
 
   return (
-    <BottomSheet
+    <BottomSheetModal
       ref={ref}
-      index={-1}
-      snapPoints={points}
+      enableDynamicSizing
+      maxDynamicContentSize={maxHeight}
       enablePanDownToClose
-      onChange={handleChange}
+      keyboardBehavior="interactive"
+      keyboardBlurBehavior="restore"
+      android_keyboardInputMode="adjustResize"
+      onDismiss={handleDismiss}
       backdropComponent={renderBackdrop}
-      backgroundStyle={{
-        backgroundColor: Platform.OS === "ios" ? "transparent" : "#0A0F14",
-      }}
-      handleIndicatorStyle={{ backgroundColor: "rgba(255,255,255,0.35)" }}
+      backgroundStyle={{ backgroundColor: tokens.surface }}
+      handleIndicatorStyle={{ backgroundColor: tokens.muted }}
     >
-      {Platform.OS === "ios" ? (
-        <BlurView
-          intensity={60}
-          tint="dark"
-          style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}
-        />
-      ) : null}
       <BottomSheetView className="px-6 pt-2 pb-10">
-        <View>{children}</View>
+        <InsideBottomSheetContext.Provider value={true}>
+          {children}
+        </InsideBottomSheetContext.Provider>
       </BottomSheetView>
-    </BottomSheet>
+    </BottomSheetModal>
   );
 }

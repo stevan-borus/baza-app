@@ -16,8 +16,9 @@ import { GlassCard } from "@/components/ui/glass-card";
 import { ACCENT } from "@/components/ui/tokens";
 import { EmptyState, ErrorState } from "@/components/ui/states";
 import { SkeletonList } from "@/components/ui/skeleton";
-import { ScreenContainerRaw } from "@/components/ui/screen-container";
-import { ScreenTitle, SectionLabel } from "@/components/ui/typography";
+import { ScreenContainerRaw, useTabBarBottomPadding } from "@/components/ui/screen-container";
+import { HeaderIconButton } from "@/components/ui/app-header";
+import { SectionLabel } from "@/components/ui/typography";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { notificationsQueries, type Notification } from "@/lib/queries/notifications-queries-factory";
 import dayjs from "dayjs";
@@ -120,6 +121,7 @@ type Segment = "all" | "unread";
 export default function ClientNotifications() {
   const queryClient = useQueryClient();
   const { t } = useTranslation();
+  const bottomPad = useTabBarBottomPadding();
   const [showPrefs, setShowPrefs] = useState(false);
   const [segment, setSegment] = useState<Segment>("all");
 
@@ -174,21 +176,16 @@ export default function ClientNotifications() {
   }, [groups]);
 
   return (
-    <ScreenContainerRaw>
-      {/* Header — stagger 0ms */}
-      <MotiView
-        from={{ opacity: 0, translateY: -8 }}
-        animate={{ opacity: 1, translateY: 0 }}
-        transition={{ type: "timing", duration: 350, delay: 0 }}
-      >
-        <View className="px-6 pb-2 flex-row justify-between items-center">
-          <ScreenTitle>{t("client.notifications.inbox")}</ScreenTitle>
-          <Pressable onPress={() => setShowPrefs(true)} hitSlop={12}>
-            <FontAwesome name="cog" size={22} color="#a1a1aa" />
-          </Pressable>
-        </View>
-      </MotiView>
-
+    <ScreenContainerRaw
+      title={t("client.notifications.inbox")}
+      rightSlot={
+        <HeaderIconButton
+          icon="cog"
+          onPress={() => setShowPrefs(true)}
+          accessibilityLabel={t("client.notifications.settingsTitle")}
+        />
+      }
+    >
       {/* Segmented control — stagger 80ms */}
       <MotiView
         from={{ opacity: 0, translateY: -8 }}
@@ -230,6 +227,7 @@ export default function ClientNotifications() {
           keyExtractor={(item) =>
             item.kind === "header" ? `header-${item.groupKey}` : item.notification.id
           }
+          contentContainerStyle={{ paddingBottom: bottomPad }}
           renderItem={({ item }: { item: ListItem }) => {
             if (item.kind === "header") {
               return (
@@ -312,7 +310,7 @@ export default function ClientNotifications() {
       <AppSheet open={showPrefs} onOpenChange={setShowPrefs}>
         <View className="flex-col gap-5">
           <Text
-            className="text-foreground font-bold"
+            className="text-foreground font-body-bold"
             style={{ fontSize: 24, letterSpacing: -0.3 }}
           >
             {t("client.notifications.settingsTitle")}

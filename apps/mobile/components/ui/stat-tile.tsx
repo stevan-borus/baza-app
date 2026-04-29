@@ -12,24 +12,26 @@ type StatTileProps = {
 export function StatTile({ label, value, delta, icon }: StatTileProps) {
   return (
     <GlassCard size="sm">
-      <View className="gap-2">
-        <View className="flex-row items-center justify-between">
-          <Text className="text-xs font-semibold text-muted uppercase tracking-wider">
+      <View className="gap-2" style={{ minHeight: 92 }}>
+        <View className="flex-row items-start justify-between" style={{ minHeight: 32 }}>
+          <Text
+            className="text-xs font-body-semibold uppercase tracking-wider text-muted flex-1"
+            numberOfLines={2}
+            style={{ lineHeight: 14 }}
+          >
             {label}
           </Text>
           {icon}
         </View>
         <Text
-          className="text-[28px] font-bold text-foreground"
+          className="text-[28px] font-body-bold text-foreground"
           style={{ letterSpacing: -0.5 }}
         >
           {value}
         </Text>
         {delta ? (
           <Text
-            className={`text-xs font-semibold ${
-              delta.positive ? "text-success" : "text-danger"
-            }`}
+            className={`text-xs font-body-semibold ${delta.positive ? "text-success" : "text-danger"}`}
           >
             {delta.positive ? "▲" : "▼"} {delta.value}
           </Text>

@@ -1,7 +1,8 @@
 import React from "react";
 import { View, Platform, type ViewProps } from "react-native";
 import { BlurView } from "expo-blur";
-import { GLASS_BG, GLASS_BORDER, GLASS_BG_ANDROID } from "./tokens";
+import { useThemeTokens } from "./tokens";
+import { useThemePreference } from "@/lib/theme-preference";
 
 type AccentBorder = "left" | "top";
 type CardSize = "sm" | "md" | "lg";
@@ -36,6 +37,8 @@ export function GlassCard({
   size = "lg",
   ...props
 }: GlassCardProps) {
+  const tokens = useThemeTokens();
+  const { resolvedTheme } = useThemePreference();
   const isIOS = Platform.OS === "ios";
   const isWeb = Platform.OS === "web";
   const isAndroid = Platform.OS === "android";
@@ -44,9 +47,9 @@ export function GlassCard({
   const borderRadius = sizeBorderRadius[size];
 
   const platformBg = isAndroid
-    ? GLASS_BG_ANDROID
+    ? tokens.glassAndroid
     : isWeb
-      ? GLASS_BG
+      ? tokens.glass
       : "transparent";
 
   const webExtra = isWeb ? { backdropFilter: "blur(12px)" } : {};
@@ -64,7 +67,7 @@ export function GlassCard({
         {
           borderRadius,
           borderWidth: 1,
-          borderColor: GLASS_BORDER,
+          borderColor: tokens.glassBorder,
           overflow: "hidden",
           padding,
           position: "relative",
@@ -79,7 +82,7 @@ export function GlassCard({
       {isIOS && (
         <BlurView
           intensity={40}
-          tint="dark"
+          tint={resolvedTheme === "dark" ? "dark" : "light"}
           style={{
             position: "absolute",
             top: 0,

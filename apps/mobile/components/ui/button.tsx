@@ -26,10 +26,10 @@ const variantCls: Record<Variant, string> = {
 };
 
 const variantTextCls: Record<Variant, string> = {
-  primary: "text-white font-semibold",
-  secondary: "text-white font-semibold",
-  danger: "text-danger font-semibold",
-  ghost: "text-foreground font-semibold",
+  primary: "text-white font-body-semibold",
+  secondary: "text-foreground font-body-semibold",
+  danger: "text-danger font-body-semibold",
+  ghost: "text-foreground font-body-semibold",
 };
 
 export function Button({

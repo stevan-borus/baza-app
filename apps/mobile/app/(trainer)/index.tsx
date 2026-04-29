@@ -18,23 +18,26 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import dayjs from "dayjs";
 import { useTranslation } from "react-i18next";
 import { RefreshControl, ScrollView, Text, View } from "react-native";
-import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { MotiView } from "@/components/ui/styled";
 import { AppSheet } from "@/components/ui/sheet";
-import { Badge, Card, StatCard } from "@/components/ui/card";
+import { Badge, Card } from "@/components/ui/card";
 import { ListRow } from "@/components/ui/states";
-import { WeekStrip } from "@/components/ui/week-strip";
+import { WeekStrip, startOfLocaleWeek } from "@/components/ui/week-strip";
+import { MonthView } from "@/components/ui/month-view";
+import { SegmentedControl } from "@/components/ui/segmented-control";
 import { HeroCard } from "@/components/ui/hero-card";
 import {
   TimeAxisDayView,
   type SessionBlock,
 } from "@/components/ui/time-axis-day-view";
 import { EmptyState, ErrorState } from "@/components/ui/states";
-import { ScreenContainerRaw } from "@/components/ui/screen-container";
+import { ScreenContainerRaw, useTabBarBottomPadding } from "@/components/ui/screen-container";
 import { SectionLabel } from "@/components/ui/typography";
 import { authQueries } from "@/lib/queries/auth-queries-factory";
 import { sessionsQueries } from "@/lib/queries/sessions-queries-factory";
-import { notificationsQueries, type Notification } from "@/lib/queries/notifications-queries-factory";
+import { notificationsQueries } from "@/lib/queries/notifications-queries-factory";
+
+type ScheduleTab = "day" | "month";
 
 function monthKeyFromDate(d: dayjs.Dayjs) {
   return d.format("YYYY-MM");
@@ -43,8 +46,12 @@ function monthKeyFromDate(d: dayjs.Dayjs) {
 export default function TrainerSchedule() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
+  const bottomPad = useTabBarBottomPadding();
   const [selectedDate, setSelectedDate] = useState(dayjs().format("YYYY-MM-DD"));
   const [month, setMonth] = useState(() => monthKeyFromDate(dayjs()));
+  const [weekStart, setWeekStart] = useState(() => startOfLocaleWeek(dayjs()));
+  const [monthDate, setMonthDate] = useState(() => dayjs().startOf("month"));
+  const [scheduleTab, setScheduleTab] = useState<ScheduleTab>("day");
   const [selectedSession, setSelectedSession] = useState<{
     sessionId: string;
     classTypeName: string;
@@ -101,15 +108,45 @@ export default function TrainerSchedule() {
   }));
 
   function handleDateSelect(date: string) {
+    // Selecting a day must NOT shift the visible week — `weekStart` is
+    // owned by the parent and only changes via the arrow buttons.
     setSelectedDate(date);
     const newMonth = monthKeyFromDate(dayjs(date));
     if (newMonth !== month) setMonth(newMonth);
   }
 
-  function navigateMonth(direction: -1 | 1) {
-    const newDate = displayDate.add(direction, "month").startOf("month");
-    setSelectedDate(newDate.format("YYYY-MM-DD"));
-    setMonth(monthKeyFromDate(newDate));
+  function handlePrevWeek() {
+    const newStart = weekStart.subtract(1, "week");
+    setWeekStart(newStart);
+    const newMonth = newStart.format("YYYY-MM");
+    if (newMonth !== month) setMonth(newMonth);
+  }
+
+  function handleNextWeek() {
+    const newStart = weekStart.add(1, "week");
+    setWeekStart(newStart);
+    const newMonth = newStart.format("YYYY-MM");
+    if (newMonth !== month) setMonth(newMonth);
+  }
+
+  function handlePrevMonth() {
+    const newMonthDate = monthDate.subtract(1, "month");
+    setMonthDate(newMonthDate);
+    setMonth(newMonthDate.format("YYYY-MM"));
+  }
+
+  function handleNextMonth() {
+    const newMonthDate = monthDate.add(1, "month");
+    setMonthDate(newMonthDate);
+    setMonth(newMonthDate.format("YYYY-MM"));
+  }
+
+  function handleMonthCellSelect(date: string) {
+    setSelectedDate(date);
+    setWeekStart(startOfLocaleWeek(dayjs(date)));
+    const newMonth = monthKeyFromDate(dayjs(date));
+    if (newMonth !== month) setMonth(newMonth);
+    setScheduleTab("day");
   }
 
   async function handleRefresh() {
@@ -142,7 +179,7 @@ export default function TrainerSchedule() {
   const greetingName = trainerName.split("@")[0] ?? trainerName;
 
   return (
-    <ScreenContainerRaw>
+    <ScreenContainerRaw title={t("tabs.schedule")}>
       {/* ── Greeting row ── */}
       <MotiView
         from={{ opacity: 0, translateY: -8 }}
@@ -152,7 +189,7 @@ export default function TrainerSchedule() {
         <View className="flex-row items-center justify-between px-6 pt-2 pb-1">
           <View className="flex-col gap-0.5">
             <Text
-              className="text-foreground font-bold"
+              className="text-foreground font-body-bold"
               style={{ fontSize: 22, letterSpacing: -0.4 }}
             >
               {t("trainer.schedule.greeting", { name: greetingName, defaultValue: `Hello, ${greetingName}` })}
@@ -178,7 +215,7 @@ export default function TrainerSchedule() {
                 {/* Sessions today */}
                 <View className="flex-col items-center gap-1 flex-1">
                   <Text
-                    className="text-foreground font-bold"
+                    className="text-foreground font-body-bold"
                     style={{ fontSize: 28, letterSpacing: -0.5 }}
                   >
                     {daySessions.length}
@@ -192,7 +229,7 @@ export default function TrainerSchedule() {
                 {/* Clients today */}
                 <View className="flex-col items-center gap-1 flex-1">
                   <Text
-                    className="text-foreground font-bold"
+                    className="text-foreground font-body-bold"
                     style={{ fontSize: 28, letterSpacing: -0.5 }}
                   >
                     {clientsToday}
@@ -206,7 +243,7 @@ export default function TrainerSchedule() {
                 {/* Hours tracked */}
                 <View className="flex-col items-center gap-1 flex-1">
                   <Text
-                    className="text-foreground font-bold"
+                    className="text-foreground font-body-bold"
                     style={{ fontSize: 28, letterSpacing: -0.5 }}
                   >
                     {hoursDisplay}
@@ -221,38 +258,20 @@ export default function TrainerSchedule() {
         </View>
       </MotiView>
 
-      {/* ── Month nav + WeekStrip ── */}
+      {/* ── View toggle ── */}
       <MotiView
         from={{ opacity: 0, translateY: 8 }}
         animate={{ opacity: 1, translateY: 0 }}
         transition={{ type: "timing", duration: 400, delay: 160 }}
       >
-        <View className="flex-row px-6 py-2 justify-between items-center">
-          <FontAwesome
-            name="chevron-left"
-            size={16}
-            color="#a1a1aa"
-            onPress={() => navigateMonth(-1)}
-          />
-          <Text
-            className="text-foreground font-bold"
-            style={{ fontSize: 18, letterSpacing: -0.3 }}
-          >
-            {displayDate.format("MMMM YYYY")}
-          </Text>
-          <FontAwesome
-            name="chevron-right"
-            size={16}
-            color="#a1a1aa"
-            onPress={() => navigateMonth(1)}
-          />
-        </View>
-
         <View className="px-6 pb-3">
-          <WeekStrip
-            selectedDate={selectedDate}
-            onSelectDate={handleDateSelect}
-            activityByDate={activityByDate}
+          <SegmentedControl<ScheduleTab>
+            options={[
+              { value: "day", label: "Day" },
+              { value: "month", label: "Month" },
+            ]}
+            value={scheduleTab}
+            onChange={setScheduleTab}
           />
         </View>
       </MotiView>
@@ -264,47 +283,82 @@ export default function TrainerSchedule() {
         </View>
       ) : null}
 
-      {/* ── Day label + session count ── */}
-      <MotiView
-        from={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ type: "timing", duration: 400, delay: 240 }}
-      >
-        <View className="px-6 pb-2 flex-row items-baseline justify-between">
-          <SectionLabel>{displayDate.format("dddd, D MMMM")}</SectionLabel>
-          {daySessions.length > 0 ? (
-            <Text className="text-xs text-muted">
-              {daySessions.length} {t("trainer.schedule.sessionsLabel", { defaultValue: "sessions" })}
-            </Text>
-          ) : null}
-        </View>
-      </MotiView>
+      {scheduleTab === "day" ? (
+        <>
+          <MotiView
+            from={{ opacity: 0, translateY: 8 }}
+            animate={{ opacity: 1, translateY: 0 }}
+            transition={{ type: "timing", duration: 400, delay: 200 }}
+          >
+            <View className="px-6 pb-3">
+              <WeekStrip
+                weekStart={weekStart}
+                selectedDate={selectedDate}
+                onSelectDate={handleDateSelect}
+                onPrevWeek={handlePrevWeek}
+                onNextWeek={handleNextWeek}
+                activity={activityByDate}
+              />
+            </View>
+          </MotiView>
 
-      {/* ── TimeAxisDayView or empty state ── */}
-      {daySessions.length === 0 ? (
+          {/* ── Day label + session count ── */}
+          <MotiView
+            from={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ type: "timing", duration: 400, delay: 240 }}
+          >
+            <View className="px-6 pb-2 flex-row items-baseline justify-between">
+              <SectionLabel>{displayDate.format("dddd, D MMMM")}</SectionLabel>
+              {daySessions.length > 0 ? (
+                <Text className="text-xs text-muted">
+                  {daySessions.length} {t("trainer.schedule.sessionsLabel", { defaultValue: "sessions" })}
+                </Text>
+              ) : null}
+            </View>
+          </MotiView>
+
+          {/* ── TimeAxisDayView or empty state ── */}
+          {daySessions.length === 0 ? (
+            <ScrollView
+              style={{ flex: 1 }}
+              contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 16, paddingBottom: bottomPad }}
+              refreshControl={
+                <RefreshControl
+                  refreshing={refreshing}
+                  onRefresh={handleRefresh}
+                  tintColor="#2e5b42"
+                  colors={["#2e5b42"]}
+                />
+              }
+            >
+              <EmptyState title={t("client.dayView.noSessions")} />
+            </ScrollView>
+          ) : (
+            <View style={{ flex: 1 }}>
+              <TimeAxisDayView
+                date={selectedDate}
+                sessions={timeAxisSessions}
+                onSessionPress={handleSessionPress}
+                showNowLine={isToday}
+              />
+            </View>
+          )}
+        </>
+      ) : (
         <ScrollView
           style={{ flex: 1 }}
-          contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 24 }}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={handleRefresh}
-              tintColor="#2e5b42"
-              colors={["#2e5b42"]}
-            />
-          }
+          contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 16, paddingBottom: bottomPad }}
         >
-          <EmptyState title={t("client.dayView.noSessions")} />
-        </ScrollView>
-      ) : (
-        <View style={{ flex: 1 }}>
-          <TimeAxisDayView
-            date={selectedDate}
-            sessions={timeAxisSessions}
-            onSessionPress={handleSessionPress}
-            showNowLine={isToday}
+          <MonthView
+            month={monthDate}
+            selectedDate={selectedDate}
+            onSelectDate={handleMonthCellSelect}
+            onPrevMonth={handlePrevMonth}
+            onNextMonth={handleNextMonth}
+            activity={activityByDate}
           />
-        </View>
+        </ScrollView>
       )}
 
       {/* ── Session detail sheet (kept verbatim) ── */}
@@ -312,7 +366,7 @@ export default function TrainerSchedule() {
         {selectedSession ? (
           <View className="flex-col gap-4">
             <Text
-              className="text-foreground font-bold"
+              className="text-foreground font-body-bold"
               style={{ fontSize: 24, letterSpacing: -0.3 }}
             >
               {selectedSession.classTypeName}

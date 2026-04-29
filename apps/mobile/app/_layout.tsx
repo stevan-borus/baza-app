@@ -5,14 +5,15 @@ import {
   DefaultTheme,
   ThemeProvider,
 } from "@react-navigation/native";
-import { LinearGradient } from "expo-linear-gradient";
 import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
-import { ActivityIndicator, StyleSheet, View } from "react-native";
+import { ActivityIndicator, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import { KeyboardProvider, KeyboardToolbar } from "react-native-keyboard-controller";
+import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import "react-native-reanimated";
 
 import "@/lib/i18n";
@@ -22,6 +23,7 @@ import { Providers } from "@/lib/providers";
 import { useSessionAuth } from "@/lib/session-auth";
 import { useColorScheme } from "@/components/useColorScheme";
 import { ThemePreferenceProvider } from "@/lib/theme-preference";
+import { ProfileSheetProvider } from "@/components/ui/profile-sheet";
 
 export { ErrorBoundary } from "expo-router";
 
@@ -57,6 +59,17 @@ export default function RootLayout() {
   const [loaded, error] = useFonts({
     SpaceMono: require("../assets/fonts/SpaceMono-Regular.ttf"),
     ...FontAwesome.font,
+    // Display: Fraunces — refined wedge serif (variable). Used for screen
+    // titles, big numbers, brand chrome.
+    "Fraunces-Regular": require("@expo-google-fonts/fraunces/400Regular/Fraunces_400Regular.ttf"),
+    "Fraunces-SemiBold": require("@expo-google-fonts/fraunces/600SemiBold/Fraunces_600SemiBold.ttf"),
+    "Fraunces-Bold": require("@expo-google-fonts/fraunces/700Bold/Fraunces_700Bold.ttf"),
+    // Body: Albert Sans — humanist sans with quiet warmth, pairs nicely
+    // with Fraunces.
+    "AlbertSans-Regular": require("@expo-google-fonts/albert-sans/400Regular/AlbertSans_400Regular.ttf"),
+    "AlbertSans-Medium": require("@expo-google-fonts/albert-sans/500Medium/AlbertSans_500Medium.ttf"),
+    "AlbertSans-SemiBold": require("@expo-google-fonts/albert-sans/600SemiBold/AlbertSans_600SemiBold.ttf"),
+    "AlbertSans-Bold": require("@expo-google-fonts/albert-sans/700Bold/AlbertSans_700Bold.ttf"),
   });
 
   useEffect(() => {
@@ -74,13 +87,23 @@ export default function RootLayout() {
   if (!loaded) return null;
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <SafeAreaProvider>
-        <ThemePreferenceProvider>
-          <RootLayoutNav />
-        </ThemePreferenceProvider>
-      </SafeAreaProvider>
-    </GestureHandlerRootView>
+    <Providers colorScheme="dark">
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <KeyboardProvider>
+          <SafeAreaProvider>
+            {/* ThemePreferenceProvider must wrap BottomSheetModalProvider so
+                the sheet's iOS FullWindowOverlay container (rendered by the
+                modal provider) can read live theme via useThemePreference(). */}
+            <ThemePreferenceProvider>
+              <BottomSheetModalProvider>
+                <RootLayoutNav />
+              </BottomSheetModalProvider>
+            </ThemePreferenceProvider>
+          </SafeAreaProvider>
+          <KeyboardToolbar />
+        </KeyboardProvider>
+      </GestureHandlerRootView>
+    </Providers>
   );
 }
 
@@ -89,23 +112,11 @@ function RootLayoutNav() {
   const isDark = colorScheme === "dark";
   return (
     <ThemeProvider value={isDark ? CustomDarkTheme : CustomLightTheme}>
-      <Providers colorScheme={isDark ? "dark" : "light"}>
-        <View className="flex-1">
-          <LinearGradient
-            pointerEvents="none"
-            style={StyleSheet.absoluteFill}
-            colors={
-              isDark
-                ? ["rgba(46,91,66,0.06)", "rgba(46,91,66,0.10)", "rgba(46,91,66,0.03)"]
-                : ["rgba(255,248,240,0.3)", "rgba(46,91,66,0.03)", "rgba(255,248,240,0.2)"]
-            }
-            locations={[0, 0.5, 1]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-          />
+      <ProfileSheetProvider>
+        <View className="flex-1 bg-background">
           <AppNavigator isDark={isDark} />
         </View>
-      </Providers>
+      </ProfileSheetProvider>
     </ThemeProvider>
   );
 }

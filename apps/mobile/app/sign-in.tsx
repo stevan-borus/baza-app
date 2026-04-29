@@ -86,7 +86,7 @@ export default function SignInScreen() {
           className="items-center gap-2 mt-8 mb-6"
         >
           <Text
-            className="text-white font-bold text-center"
+            className="text-white font-body-bold text-center"
             style={{ fontSize: 36, letterSpacing: -0.8 }}
           >
             {t("auth.welcomeBack", { defaultValue: "Welcome back" })}
@@ -101,82 +101,81 @@ export default function SignInScreen() {
           </Text>
         </MotiView>
 
-        {/* ── Glass panel ── */}
+        {/* ── Form ── */}
         <MotiView
           from={{ opacity: 0, translateY: 24 }}
           animate={{ opacity: 1, translateY: 0 }}
           transition={{ type: "timing", duration: 500, delay: 300 }}
+          className="gap-4"
         >
-          <View className="bg-glass border border-glass-border rounded-3xl p-6 gap-4">
-            {/* Email */}
-            <Input
-              icon="envelope"
-              label={t("auth.email")}
-              autoCapitalize="none"
-              autoCorrect={false}
-              keyboardType="email-address"
-              textContentType="emailAddress"
-              autoComplete="email"
-              value={email}
-              onChangeText={setEmail}
-            />
+          {/* Email */}
+          <Input
+            icon="envelope"
+            label={t("auth.email")}
+            autoCapitalize="none"
+            autoCorrect={false}
+            keyboardType="email-address"
+            textContentType="emailAddress"
+            autoComplete="email"
+            value={email}
+            onChangeText={setEmail}
+          />
 
-            {/* Password */}
-            <PasswordInput
-              label={t("auth.password")}
-              value={password}
-              onChangeText={setPassword}
-              iconColor="rgba(255,255,255,0.5)"
-            />
+          {/* Password */}
+          <PasswordInput
+            label={t("auth.password")}
+            value={password}
+            onChangeText={setPassword}
+            iconColor="rgba(255,255,255,0.5)"
+          />
 
-            {/* Forgot password — right-aligned */}
-            <View className="items-end">
-              <Link href="/reset-password" asChild>
-                <LinkText color="rgba(255,255,255,0.6)" fontSize={12}>
-                  {t("auth.forgotPassword")}
-                </LinkText>
-              </Link>
-            </View>
-
-            {/* Error state — slide in from top */}
-            {signInMutation.isError ? (
-              <MotiView
-                from={{ opacity: 0, translateY: -8 }}
-                animate={{ opacity: 1, translateY: 0 }}
-                transition={{ type: "timing", duration: 250 }}
-                style={{
-                  backgroundColor: "rgba(239,68,68,0.12)",
-                  borderWidth: 1,
-                  borderColor: "rgba(239,68,68,0.4)",
-                  borderRadius: 12,
-                  paddingHorizontal: 14,
-                  paddingVertical: 10,
-                }}
-              >
-                <Text
-                  style={{ color: "#ef4444", fontSize: 13, fontWeight: "500" }}
-                >
-                  {t("auth.signInError")}
-                </Text>
-              </MotiView>
-            ) : null}
-
-            {/* Sign in button */}
-            <Button
-              disabled={!canSubmit}
-              onPress={() => signInMutation.mutate()}
-              size="large"
-              className="mt-2"
-            >
-              {signInMutation.isPending ? (
-                <ActivityIndicator color="#fff" size="small" />
-              ) : (
-                <Text className="text-white font-semibold text-base">
-                  {t("auth.submit")}
-                </Text>
-              )}
-            </Button>
+          {/* Forgot password — right-aligned */}
+          <View className="items-end">
+            <Link href="/reset-password" asChild>
+              <LinkText color="rgba(255,255,255,0.6)" fontSize={12}>
+                {t("auth.forgotPassword")}
+              </LinkText>
+            </Link>
           </View>
+
+          {/* Error state — slide in from top */}
+          {signInMutation.isError ? (
+            <MotiView
+              from={{ opacity: 0, translateY: -8 }}
+              animate={{ opacity: 1, translateY: 0 }}
+              transition={{ type: "timing", duration: 250 }}
+              style={{
+                backgroundColor: "rgba(239,68,68,0.12)",
+                borderWidth: 1,
+                borderColor: "rgba(239,68,68,0.4)",
+                borderRadius: 12,
+                paddingHorizontal: 14,
+                paddingVertical: 10,
+              }}
+            >
+              <Text
+                style={{ color: "#ef4444", fontSize: 13, fontWeight: "500" }}
+              >
+                {t("auth.signInError")}
+              </Text>
+            </MotiView>
+          ) : null}
+
+          {/* Sign in button */}
+          <Button
+            disabled={!canSubmit}
+            onPress={() => signInMutation.mutate()}
+            size="large"
+            className="mt-2"
+          >
+            {signInMutation.isPending ? (
+              <ActivityIndicator color="#fff" size="small" />
+            ) : (
+              <Text className="text-white font-body-semibold text-base">
+                {t("auth.submit")}
+              </Text>
+            )}
+          </Button>
         </MotiView>
 
         {/* ── Spacer ── */}

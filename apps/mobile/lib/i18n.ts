@@ -3,6 +3,8 @@ import { initReactI18next } from "react-i18next";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
+import localeData from "dayjs/plugin/localeData";
+import weekday from "dayjs/plugin/weekday";
 import "dayjs/locale/sr";
 import "dayjs/locale/en";
 
@@ -10,6 +12,8 @@ import sr from "@/locales/sr.json";
 import en from "@/locales/en.json";
 
 dayjs.extend(relativeTime);
+dayjs.extend(localeData);
+dayjs.extend(weekday);
 
 const STORAGE_KEY = "app.preferredLocale";
 

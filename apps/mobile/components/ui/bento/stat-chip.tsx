@@ -26,7 +26,7 @@ export function BentoStatChip({ label, icon, accentColor }: StatChipProps) {
           <FontAwesome name={icon} size={18} color="#ffffff" />
         </View>
       ) : null}
-      <Text className="text-xs text-muted font-medium flex-1">
+      <Text className="text-xs text-muted font-body-medium flex-1">
         {label}
       </Text>
     </View>

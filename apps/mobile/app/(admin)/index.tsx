@@ -1,26 +1,26 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { Pressable, ScrollView, Text, View } from "react-native";
 import { useRouter } from "expo-router";
-import dayjs from "dayjs";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
+import dayjs from "dayjs";
 import { MotiView } from "@/components/ui/styled";
 import { AppSheet } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { GlassCard } from "@/components/ui/glass-card";
 import { HeroCard } from "@/components/ui/hero-card";
 import { StatTile } from "@/components/ui/stat-tile";
 import { NumberRollup } from "@/components/ui/number-rollup";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { SessionCard } from "@/components/ui/session-card";
-import { WeekStrip } from "@/components/ui/week-strip";
+import { WeekStrip, startOfLocaleWeek } from "@/components/ui/week-strip";
+import { MonthView } from "@/components/ui/month-view";
 import { EmptyState, ErrorState, ListRow } from "@/components/ui/states";
 import { Input } from "@/components/ui/input";
 import { DateTimePicker } from "@/components/ui/date-time-picker";
-import { SectionLabel, ScreenTitle } from "@/components/ui/typography";
-import { ScreenContainerRaw } from "@/components/ui/screen-container";
+import { SectionLabel } from "@/components/ui/typography";
+import { ScreenContainerRaw, useTabBarBottomPadding } from "@/components/ui/screen-container";
 import {
   SkeletonCard,
   SkeletonList,
@@ -38,7 +38,7 @@ import { reportsQueries } from "@/lib/queries/reports-queries-factory";
  * - WHOOP ios Apr 2024/ — 2×2 stat grouping
  */
 
-type ScheduleTab = "day" | "week" | "month";
+type ScheduleTab = "day" | "month";
 
 function monthKeyFromDate(d: dayjs.Dayjs) {
   return d.format("YYYY-MM");
@@ -46,10 +46,13 @@ function monthKeyFromDate(d: dayjs.Dayjs) {
 
 export default function AdminSchedule() {
   const { t } = useTranslation();
-  const queryClient = useQueryClient();
   const router = useRouter();
+  const queryClient = useQueryClient();
+  const bottomPad = useTabBarBottomPadding(24);
   const [selectedDate, setSelectedDate] = useState(dayjs().format("YYYY-MM-DD"));
   const [month, setMonth] = useState(() => monthKeyFromDate(dayjs()));
+  const [weekStart, setWeekStart] = useState(() => startOfLocaleWeek(dayjs()));
+  const [monthDate, setMonthDate] = useState(() => dayjs().startOf("month"));
   const [scheduleTab, setScheduleTab] = useState<ScheduleTab>("day");
   const [showCreate, setShowCreate] = useState(false);
   const [showEdit, setShowEdit] = useState<{
@@ -166,15 +169,47 @@ export default function AdminSchedule() {
   }
 
   function handleDateSelect(date: string) {
+    // Pick a day. NEVER mutate `weekStart` or `month` here — picking a day
+    // inside the visible week must not page the calendar.
     setSelectedDate(date);
     const newMonth = monthKeyFromDate(dayjs(date));
     if (newMonth !== month) setMonth(newMonth);
   }
 
-  function navigateMonth(direction: -1 | 1) {
-    const newDate = displayDate.add(direction, "month").startOf("month");
-    setSelectedDate(newDate.format("YYYY-MM-DD"));
-    setMonth(monthKeyFromDate(newDate));
+  function handlePrevWeek() {
+    const newStart = weekStart.subtract(1, "week");
+    setWeekStart(newStart);
+    const newMonth = newStart.format("YYYY-MM");
+    if (newMonth !== month) setMonth(newMonth);
+  }
+
+  function handleNextWeek() {
+    const newStart = weekStart.add(1, "week");
+    setWeekStart(newStart);
+    const newMonth = newStart.format("YYYY-MM");
+    if (newMonth !== month) setMonth(newMonth);
+  }
+
+  function handlePrevMonth() {
+    const newMonthDate = monthDate.subtract(1, "month");
+    setMonthDate(newMonthDate);
+    setMonth(newMonthDate.format("YYYY-MM"));
+  }
+
+  function handleNextMonth() {
+    const newMonthDate = monthDate.add(1, "month");
+    setMonthDate(newMonthDate);
+    setMonth(newMonthDate.format("YYYY-MM"));
+  }
+
+  function handleMonthCellSelect(date: string) {
+    // Tapping a day in MonthView selects the date and switches to Day view,
+    // realigning the week strip so the chosen day is in the visible week.
+    setSelectedDate(date);
+    setWeekStart(startOfLocaleWeek(dayjs(date)));
+    const newMonth = monthKeyFromDate(dayjs(date));
+    if (newMonth !== month) setMonth(newMonth);
+    setScheduleTab("day");
   }
 
   function handleEventPress(session: typeof sessions[0]) {
@@ -206,14 +241,14 @@ export default function AdminSchedule() {
       : 0;
 
   const isDashboardLoading =
-    summaryQuery.isPending || availabilityQuery.isPending;
+    summaryQuery.isLoading || availabilityQuery.isLoading;
 
   if (isDashboardLoading) {
     return (
-      <ScreenContainerRaw>
+      <ScreenContainerRaw title={t("tabs.dashboard")}>
         <ScrollView
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 32 }}
+          contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 16, paddingBottom: bottomPad }}
         >
           <View className="pt-4 flex-col gap-4">
             <SkeletonCard />
@@ -233,38 +268,26 @@ export default function AdminSchedule() {
   }
 
   return (
-    <ScreenContainerRaw>
+    <ScreenContainerRaw title={t("tabs.dashboard")}>
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 32 }}
+        contentContainerStyle={{ paddingTop: 16, paddingBottom: bottomPad }}
       >
-        {/* ── Header row ─────────────────────────────────────────────── */}
         <MotiView
           from={{ opacity: 0, translateY: -8 }}
           animate={{ opacity: 1, translateY: 0 }}
           transition={{ type: "timing", duration: 350 }}
         >
-          <View className="flex-row items-center justify-between px-6 pb-4">
-            <ScreenTitle>Dashboard</ScreenTitle>
-            <TouchableOpacity
-              onPress={() => router.push("/(admin)/settings")}
-              activeOpacity={0.6}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            >
-              <FontAwesome name="cog" size={22} color="#a1a1aa" />
-            </TouchableOpacity>
-          </View>
-
           {/* ── Revenue hero card ───────────────────────────────────── */}
           <View className="px-6 pb-4">
             <HeroCard tone="default">
-              <SectionLabel className="mb-2">Revenue this month</SectionLabel>
+              <SectionLabel className="mb-2">{t("admin.dashboard.revenueThisMonth")}</SectionLabel>
               <NumberRollup
                 value={revenueValue}
                 formatter={(n) =>
                   `RSD ${Math.round(n).toLocaleString("sr-RS")}`
                 }
-                className="text-foreground font-bold"
+                className="text-foreground font-body-bold"
                 style={{ fontSize: 44, letterSpacing: -1 }}
               />
             </HeroCard>
@@ -282,13 +305,13 @@ export default function AdminSchedule() {
             <View className="flex-row gap-3">
               <View className="flex-1">
                 <StatTile
-                  label="Sessions today"
+                  label={t("admin.dashboard.sessionsToday")}
                   value={daySessions.length}
                 />
               </View>
               <View className="flex-1">
                 <StatTile
-                  label="Active clients"
+                  label={t("admin.dashboard.activeClients")}
                   value={summary?.activeClients ?? "—"}
                 />
               </View>
@@ -297,7 +320,7 @@ export default function AdminSchedule() {
             <View className="flex-row gap-3">
               <View className="flex-1">
                 <StatTile
-                  label="New clients (mo)"
+                  label={t("admin.dashboard.newClientsMonth")}
                   value={
                     summary
                       ? summary.totalClients - summary.inactiveClients
@@ -307,7 +330,7 @@ export default function AdminSchedule() {
               </View>
               <View className="flex-1">
                 <StatTile
-                  label="Attendance rate"
+                  label={t("admin.dashboard.attendanceRate")}
                   value={summary ? `${attendanceRate}%` : "—"}
                 />
               </View>
@@ -315,19 +338,49 @@ export default function AdminSchedule() {
           </View>
         </MotiView>
 
+        {/* ── Studio quick-actions: 2 compact pills above the schedule ─ */}
+        <MotiView
+          from={{ opacity: 0, translateY: -4 }}
+          animate={{ opacity: 1, translateY: 0 }}
+          transition={{ type: "timing", duration: 350, delay: 220 }}
+          className="px-6 pb-4"
+        >
+          <View className="flex-row gap-2">
+            <Pressable
+              onPress={() => router.push("/(admin)/class-types")}
+              className="flex-1 flex-row items-center gap-2 bg-glass border border-glass-border rounded-2xl px-3.5 py-3 active:opacity-70"
+            >
+              <FontAwesome name="list" size={13} color="#a1a1aa" />
+              <Text className="text-foreground text-sm font-body-medium flex-1" numberOfLines={1}>
+                {t("admin.manage.classTypes")}
+              </Text>
+              <FontAwesome name="chevron-right" size={10} color="#a1a1aa" />
+            </Pressable>
+            <Pressable
+              onPress={() => router.push("/(admin)/rooms")}
+              className="flex-1 flex-row items-center gap-2 bg-glass border border-glass-border rounded-2xl px-3.5 py-3 active:opacity-70"
+            >
+              <FontAwesome name="building-o" size={13} color="#a1a1aa" />
+              <Text className="text-foreground text-sm font-body-medium flex-1" numberOfLines={1}>
+                {t("admin.manage.rooms")}
+              </Text>
+              <FontAwesome name="chevron-right" size={10} color="#a1a1aa" />
+            </Pressable>
+          </View>
+        </MotiView>
+
         {/* ── Schedule section ───────────────────────────────────────── */}
         <MotiView
           from={{ opacity: 0, translateY: -8 }}
           animate={{ opacity: 1, translateY: 0 }}
-          transition={{ type: "timing", duration: 350, delay: 240 }}
+          transition={{ type: "timing", duration: 350, delay: 280 }}
         >
           {/* Segmented control */}
           <View className="px-6 pb-4">
             <SegmentedControl<ScheduleTab>
               options={[
-                { value: "day", label: "Day" },
-                { value: "week", label: "Week" },
-                { value: "month", label: "Month" },
+                { value: "day", label: t("admin.schedule.viewDay") },
+                { value: "month", label: t("admin.schedule.viewMonth") },
               ]}
               value={scheduleTab}
               onChange={setScheduleTab}
@@ -336,45 +389,26 @@ export default function AdminSchedule() {
 
           {/* Section header row */}
           <View className="flex-row items-center justify-between px-6 pb-3">
-            <SectionLabel>Today's schedule</SectionLabel>
+            <SectionLabel>{t("admin.dashboard.todaySchedule")}</SectionLabel>
             <Text
-              className="text-xs font-semibold text-muted"
+              className="text-xs font-body-semibold text-muted"
               style={{ letterSpacing: 0.3 }}
             >
-              {daySessions.length} classes
+              {t("admin.dashboard.classCount", { count: daySessions.length })}
             </Text>
           </View>
 
           {scheduleTab === "day" ? (
             <>
-              {/* Month/year header with arrows */}
-              <View className="flex-row px-6 pb-3 justify-between items-center">
-                <FontAwesome
-                  name="chevron-left"
-                  size={16}
-                  color="#a1a1aa"
-                  onPress={() => navigateMonth(-1)}
-                />
-                <Text
-                  className="text-foreground font-bold"
-                  style={{ fontSize: 18, letterSpacing: -0.3 }}
-                >
-                  {displayDate.format("MMMM YYYY")}
-                </Text>
-                <FontAwesome
-                  name="chevron-right"
-                  size={16}
-                  color="#a1a1aa"
-                  onPress={() => navigateMonth(1)}
-                />
-              </View>
-
-              {/* WeekStrip */}
+              {/* WeekStrip with prev/next week arrows */}
               <View className="px-6 pb-3">
                 <WeekStrip
+                  weekStart={weekStart}
                   selectedDate={selectedDate}
                   onSelectDate={handleDateSelect}
-                  activityByDate={activityByDate}
+                  onPrevWeek={handlePrevWeek}
+                  onNextWeek={handleNextWeek}
+                  activity={activityByDate}
                 />
               </View>
 
@@ -417,17 +451,18 @@ export default function AdminSchedule() {
             </>
           ) : (
             <View className="px-6">
-              <GlassCard>
-                <Text
-                  className="text-muted text-sm text-center"
-                  style={{ paddingVertical: 24 }}
-                >
-                  {scheduleTab === "week" ? "Week view" : "Month view"} — coming soon
-                </Text>
-              </GlassCard>
+              <MonthView
+                month={monthDate}
+                selectedDate={selectedDate}
+                onSelectDate={handleMonthCellSelect}
+                onPrevMonth={handlePrevMonth}
+                onNextMonth={handleNextMonth}
+                activity={activityByDate}
+              />
             </View>
           )}
         </MotiView>
+
       </ScrollView>
 
       {/* Create Session Sheet */}
@@ -435,7 +470,7 @@ export default function AdminSchedule() {
         <ScrollView keyboardShouldPersistTaps="handled">
           <View className="flex-col gap-5 pb-5">
             <Text
-              className="text-foreground font-bold"
+              className="text-foreground font-body-bold"
               style={{ fontSize: 20, letterSpacing: -0.3 }}
             >
               {isRecurring
@@ -611,7 +646,7 @@ export default function AdminSchedule() {
         <ScrollView keyboardShouldPersistTaps="handled">
           <View className="flex-col gap-5 pb-5">
             <Text
-              className="text-foreground font-bold"
+              className="text-foreground font-body-bold"
               style={{ fontSize: 20, letterSpacing: -0.3 }}
             >
               {showEdit

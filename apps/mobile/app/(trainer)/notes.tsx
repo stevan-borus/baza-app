@@ -15,8 +15,9 @@ import { Button } from "@/components/ui/button";
 import { GlassCard } from "@/components/ui/glass-card";
 import { EmptyState, ErrorState } from "@/components/ui/states";
 import { Input } from "@/components/ui/input";
-import { ScreenContainerRaw } from "@/components/ui/screen-container";
-import { ScreenTitle, SectionLabel } from "@/components/ui/typography";
+import { ScreenContainerRaw, useTabBarBottomPadding } from "@/components/ui/screen-container";
+import { HeaderIconButton } from "@/components/ui/app-header";
+import { SectionLabel } from "@/components/ui/typography";
 import { getDateLocale } from "@/lib/i18n";
 import { trainerNotesQueries, type TrainerNote } from "@/lib/queries/trainer-notes-queries-factory";
 import { sessionsQueries } from "@/lib/queries/sessions-queries-factory";
@@ -150,6 +151,7 @@ function NoteRow({ item, dateLocale }: { item: TrainerNote; dateLocale: string }
 export default function TrainerNotes() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
+  const bottomPad = useTabBarBottomPadding();
   const [showCreate, setShowCreate] = useState(false);
   const [form, setForm] = useState({ sessionId: "", clientProfileId: "", note: "" });
   const [refreshing, setRefreshing] = useState(false);
@@ -225,22 +227,22 @@ export default function TrainerNotes() {
   ];
 
   return (
-    <ScreenContainerRaw>
-      {/* ── Header row ── */}
-      <MotiView
-        from={{ opacity: 0, translateY: -8 }}
-        animate={{ opacity: 1, translateY: 0 }}
-        transition={{ type: "timing", duration: 400, delay: 0 }}
-        style={{ paddingHorizontal: 20, paddingBottom: 4, paddingTop: 4 }}
-      >
-        <ScreenTitle>{t("trainer.notes.title")}</ScreenTitle>
-      </MotiView>
-
+    <ScreenContainerRaw
+      title={t("tabs.notes")}
+      rightSlot={
+        <HeaderIconButton
+          icon="plus"
+          onPress={() => setShowCreate(true)}
+          accessibilityLabel={t("trainer.notes.newNote")}
+        />
+      }
+    >
       {/* ── Filter chips ── */}
       <MotiView
         from={{ opacity: 0, translateY: 6 }}
         animate={{ opacity: 1, translateY: 0 }}
         transition={{ type: "timing", duration: 380, delay: 80 }}
+        style={{ paddingTop: 8 }}
       >
         <ScrollView
           horizontal
@@ -285,7 +287,7 @@ export default function TrainerNotes() {
               colors={["#2e5b42"]}
             />
           }
-          contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 8, paddingBottom: 100 }}
+          contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: bottomPad }}
           renderItem={({ item }: { item: ListItem }) =>
             item.kind === "header" ? (
               <View
@@ -327,42 +329,11 @@ export default function TrainerNotes() {
         />
       </MotiView>
 
-      {/* ── FAB ── */}
-      <View
-        style={{
-          position: "absolute",
-          bottom: 24,
-          right: 20,
-          zIndex: 10,
-        }}
-      >
-        <Pressable
-          onPress={() => setShowCreate(true)}
-          accessibilityRole="button"
-          accessibilityLabel={t("trainer.notes.newNote")}
-          style={({ pressed }) => ({
-            width: 56,
-            height: 56,
-            borderRadius: 28,
-            backgroundColor: pressed ? "#3a9e6e" : "#4caf80",
-            alignItems: "center",
-            justifyContent: "center",
-            shadowColor: "#4caf80",
-            shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.4,
-            shadowRadius: 12,
-            elevation: 8,
-          })}
-        >
-          <Text style={{ color: "#fff", fontSize: 28, lineHeight: 32, fontWeight: "300" }}>+</Text>
-        </Pressable>
-      </View>
-
       {/* ── Compose sheet (preserved) ── */}
       <AppSheet open={showCreate} onOpenChange={setShowCreate}>
         <View className="flex-col gap-5">
           <Text
-            className="text-foreground font-bold"
+            className="text-foreground font-body-bold"
             style={{ fontSize: 24, letterSpacing: -0.3 }}
           >
             {t("trainer.notes.sheetTitle")}

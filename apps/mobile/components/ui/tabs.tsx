@@ -1,8 +1,19 @@
+/**
+ * Re-exports the unified SegmentedControl plus the AppTabs component for
+ * scrollable, larger tab strips. Callers in older code paths import
+ * `SegmentedControl` from this file with the modern `segments`/`onValueChange`
+ * API; that path still works since the unified control supports both APIs.
+ */
 import React from "react";
-import { View, Text, Pressable, ScrollView } from "react-native";
-import { BentoSegmentedTabs } from "./bento/segmented-tabs";
-import { GLASS_BG, GLASS_BORDER } from "./tokens";
+import { Pressable, Text, View } from "react-native";
 
+export { SegmentedControl } from "./segmented-control";
+
+/**
+ * Larger pill-tabs row (used at the top of list screens to switch between
+ * datasets, e.g. Clients/Invites). Visually distinct from SegmentedControl —
+ * a softer glass background with a brighter active pill, no accent fill.
+ */
 export function AppTabs({
   tabs,
   value,
@@ -13,35 +24,19 @@ export function AppTabs({
   onValueChange: (value: string) => void;
 }) {
   return (
-    <View
-      style={{
-        backgroundColor: GLASS_BG,
-        borderWidth: 1,
-        borderColor: GLASS_BORDER,
-        borderRadius: 14,
-        padding: 4,
-        flexDirection: "row",
-      }}
-    >
+    <View className="flex-row rounded-[14px] p-1 border bg-glass border-glass-border">
       {tabs.map((tab) => {
         const isActive = value === tab.value;
         return (
           <Pressable
             key={tab.value}
             onPress={() => onValueChange(tab.value)}
-            style={{
-              flex: 1,
-              backgroundColor: isActive ? "rgba(255,255,255,0.1)" : "transparent",
-              borderRadius: 12,
-              paddingVertical: 8,
-              paddingHorizontal: 12,
-              alignItems: "center",
-            }}
+            className={`flex-1 rounded-xl py-2 px-3 items-center ${isActive ? "bg-glass-strong" : ""}`}
           >
             <Text
               className={[
                 "text-xs",
-                isActive ? "font-semibold text-foreground" : "font-normal text-muted",
+                isActive ? "font-body-semibold text-foreground" : "font-normal text-muted",
               ].join(" ")}
             >
               {tab.label}
@@ -50,27 +45,5 @@ export function AppTabs({
         );
       })}
     </View>
-  );
-}
-
-/** Bento-inspired segmented tabs for switching between compact views. */
-export function SegmentedControl<T extends string>({
-  segments,
-  value,
-  onValueChange,
-  fullWidth = true,
-}: {
-  segments: Array<{ value: T; label: string }>;
-  value: T;
-  onValueChange: (value: T) => void;
-  fullWidth?: boolean;
-}) {
-  return (
-    <BentoSegmentedTabs
-      segments={segments}
-      value={value}
-      onValueChange={onValueChange}
-      fullWidth={fullWidth}
-    />
   );
 }
