@@ -24,6 +24,7 @@ import { SectionLabel } from "@/components/ui/typography";
 import { Button } from "@/components/ui/button";
 import { EmptyState, ErrorState } from "@/components/ui/states";
 import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import { packagesQueries } from "@/lib/queries/packages-queries-factory";
 import {
   billingQueries,
@@ -339,59 +340,53 @@ export default function AdminBilling() {
             >
               {t("admin.manage.sheetNewPayment")}
             </Text>
-            <SectionLabel>{t("admin.manage.client")}</SectionLabel>
-            {(clientsQuery.data?.clients ?? []).map((c) => (
-              <Button
-                key={c.user.id}
-                size="small"
-                variant={
-                  form.clientUserId === c.user.id ? "primary" : "secondary"
-                }
-                onPress={() =>
-                  setForm((s) => ({ ...s, clientUserId: c.user.id }))
-                }
-              >
-                {c.user.fullName}
-              </Button>
-            ))}
+            <Select
+              placeholder={t("admin.manage.client")}
+              value={form.clientUserId}
+              onChange={(v) => setForm((s) => ({ ...s, clientUserId: v }))}
+              emptyText={t("admin.manage.emptyClients")}
+              options={(clientsQuery.data?.clients ?? []).map((c) => ({
+                value: c.user.id,
+                label: c.user.fullName,
+                hint: c.user.email,
+              }))}
+            />
             <Input
               placeholder={t("admin.manage.placeholderAmount")}
               keyboardType="numeric"
               value={form.amount}
               onChangeText={(v) => setForm((s) => ({ ...s, amount: v }))}
             />
-            <SectionLabel>{t("admin.manage.paymentMethod")}</SectionLabel>
-            <View className="flex-row flex-wrap gap-3">
-              {methods.map((m) => (
-                <Button
-                  key={m}
-                  size="small"
-                  variant={form.method === m ? "primary" : "secondary"}
-                  onPress={() => setForm((s) => ({ ...s, method: m }))}
-                >
-                  {t(methodLabelKeys[m])}
-                </Button>
-              ))}
-            </View>
-            <SectionLabel>{t("admin.manage.packageOptional")}</SectionLabel>
-            {(packageTypesQuery.data?.packageTypes ?? []).map((pt) => (
-              <Button
-                key={pt.id}
-                size="small"
-                variant={
-                  form.packageTypeId === pt.id ? "primary" : "secondary"
-                }
-                onPress={() =>
-                  setForm((s) => ({
-                    ...s,
-                    packageTypeId:
-                      form.packageTypeId === pt.id ? "" : pt.id,
-                  }))
-                }
-              >
-                {pt.name}
-              </Button>
-            ))}
+            <Select
+              placeholder={t("admin.manage.paymentMethod")}
+              value={form.method}
+              onChange={(v) => setForm((s) => ({ ...s, method: v }))}
+              options={methods.map((m) => ({
+                value: m,
+                label: t(methodLabelKeys[m]),
+              }))}
+            />
+            <Select
+              placeholder={t("admin.manage.packageOptional")}
+              value={form.packageTypeId}
+              onChange={(v) =>
+                setForm((s) => ({
+                  ...s,
+                  packageTypeId: form.packageTypeId === v ? "" : v,
+                }))
+              }
+              emptyText={t("admin.manage.packagesEmpty")}
+              options={(packageTypesQuery.data?.packageTypes ?? []).map(
+                (pt) => ({
+                  value: pt.id,
+                  label: pt.name,
+                  hint: t("admin.manage.sessionsDays", {
+                    count: pt.sessionCount,
+                    days: pt.validityDays,
+                  }),
+                }),
+              )}
+            />
             <Input
               placeholder={t("admin.manage.placeholderNotes")}
               value={form.notes}

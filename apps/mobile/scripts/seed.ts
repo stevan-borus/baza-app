@@ -26,6 +26,14 @@ async function main() {
       create: { userId: user.id, providerId: "credential", accountId: user.email, password: hash },
     });
 
+    if (u.role === UserRole.CLIENT) {
+      await prisma.clientProfile.upsert({
+        where: { userId: user.id },
+        update: {},
+        create: { userId: user.id },
+      });
+    }
+
     console.log(`Seeded ${u.role}: ${u.email}`);
   }
 }

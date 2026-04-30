@@ -107,9 +107,16 @@ export default function AdminPackages() {
   const queryClient = useQueryClient();
   const bottomPad = useTabBarBottomPadding();
   const [showCreate, setShowCreate] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [assignmentFilter, setAssignmentFilter] = useState<AssignmentFilter>("all");
   const [form, setForm] = useState({
+    name: "",
+    sessionCount: "",
+    validityDays: "",
+    lateCancelHours: "12",
+  });
+  const [editForm, setEditForm] = useState({
     name: "",
     sessionCount: "",
     validityDays: "",
@@ -156,6 +163,38 @@ export default function AdminPackages() {
       });
     },
   });
+
+  const updateTypeMutation = useMutation({
+    ...packagesQueries.updateType(),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["packages", "types"] });
+      setEditingId(null);
+    },
+  });
+
+  const deleteTypeMutation = useMutation({
+    ...packagesQueries.deleteType(),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["packages", "types"] });
+      setEditingId(null);
+    },
+  });
+
+  function openEdit(pt: {
+    id: string;
+    name: string;
+    sessionCount: number;
+    validityDays: number;
+    lateCancelHours: number;
+  }) {
+    setEditForm({
+      name: pt.name,
+      sessionCount: String(pt.sessionCount),
+      validityDays: String(pt.validityDays),
+      lateCancelHours: String(pt.lateCancelHours),
+    });
+    setEditingId(pt.id);
+  }
 
   const FILTERS: { key: AssignmentFilter; labelKey: string }[] = [
     { key: "all", labelKey: "admin.manage.filterAll" },
@@ -209,32 +248,38 @@ export default function AdminPackages() {
           ) : null}
 
           {(typesQuery.data?.packageTypes ?? []).map((pt) => (
-            <GlassCard key={pt.id} size="md">
-              <View className="flex-row items-center gap-3">
-                <SessionCountIcon count={pt.sessionCount} />
-                <View className="flex-1 flex-col gap-0.5">
-                  <Text
-                    className="text-foreground font-body-bold"
-                    style={{ fontSize: 15 }}
-                    numberOfLines={1}
-                  >
-                    {pt.name}
-                  </Text>
-                  <Text className="text-muted" style={{ fontSize: 13 }}>
-                    {t("admin.manage.sessionsDays", {
-                      count: pt.sessionCount,
-                      days: pt.validityDays,
-                    })}
-                  </Text>
-                  <Text className="text-muted" style={{ fontSize: 12 }}>
-                    {t("admin.manage.lateCancel", { hours: pt.lateCancelHours })}
-                  </Text>
+            <Pressable
+              key={pt.id}
+              onPress={() => openEdit(pt)}
+              className="active:opacity-80"
+            >
+              <GlassCard size="md">
+                <View className="flex-row items-center gap-3">
+                  <SessionCountIcon count={pt.sessionCount} />
+                  <View className="flex-1 flex-col gap-0.5">
+                    <Text
+                      className="text-foreground font-body-bold"
+                      style={{ fontSize: 15 }}
+                      numberOfLines={1}
+                    >
+                      {pt.name}
+                    </Text>
+                    <Text className="text-muted" style={{ fontSize: 13 }}>
+                      {t("admin.manage.sessionsDays", {
+                        count: pt.sessionCount,
+                        days: pt.validityDays,
+                      })}
+                    </Text>
+                    <Text className="text-muted" style={{ fontSize: 12 }}>
+                      {t("admin.manage.lateCancel", { hours: pt.lateCancelHours })}
+                    </Text>
+                  </View>
+                  <Badge status="neutral">
+                    {`${pt.sessionCount}`}
+                  </Badge>
                 </View>
-                <Badge status="neutral">
-                  {`${pt.sessionCount}`}
-                </Badge>
-              </View>
-            </GlassCard>
+              </GlassCard>
+            </Pressable>
           ))}
         </MotiView>
 
@@ -276,7 +321,7 @@ export default function AdminPackages() {
           ) : null}
 
           {filteredAssignments.length === 0 && !clientPackagesQuery.isLoading ? (
-            <EmptyState title={t("admin.manage.packagesEmpty")} />
+            <EmptyState title={t("admin.manage.assignmentsEmpty")} />
           ) : null}
 
           {filteredAssignments.map((pkg) => {
@@ -380,6 +425,92 @@ export default function AdminPackages() {
             </Button>
             {createMutation.isError ? (
               <ErrorState message={t("admin.manage.createPackageError")} />
+            ) : null}
+          </View>
+        </AppSheet>
+
+        {/* ═══════════════════════════════════════════════════════════════════
+            EDIT PACKAGE TYPE SHEET
+        ═══════════════════════════════════════════════════════════════════ */}
+        <AppSheet open={!!editingId} onOpenChange={(v) => !v && setEditingId(null)}>
+          <View className="flex-col gap-4">
+            <Text
+              className="text-foreground font-body-bold"
+              style={{ fontSize: 20, letterSpacing: -0.3 }}
+            >
+              {t("admin.manage.sheetEditPackage")}
+            </Text>
+            <Input
+              placeholder={t("admin.manage.placeholderName")}
+              value={editForm.name}
+              onChangeText={(v) => setEditForm((s) => ({ ...s, name: v }))}
+            />
+            <Input
+              placeholder={t("admin.manage.placeholderSessionCount")}
+              keyboardType="numeric"
+              value={editForm.sessionCount}
+              onChangeText={(v) =>
+                setEditForm((s) => ({ ...s, sessionCount: v }))
+              }
+            />
+            <Input
+              placeholder={t("admin.manage.placeholderValidityDays")}
+              keyboardType="numeric"
+              value={editForm.validityDays}
+              onChangeText={(v) =>
+                setEditForm((s) => ({ ...s, validityDays: v }))
+              }
+            />
+            <Input
+              placeholder={t("admin.manage.placeholderLateCancel")}
+              keyboardType="numeric"
+              value={editForm.lateCancelHours}
+              onChangeText={(v) =>
+                setEditForm((s) => ({ ...s, lateCancelHours: v }))
+              }
+            />
+            <Button
+              disabled={
+                updateTypeMutation.isPending ||
+                !editForm.name ||
+                !editForm.sessionCount ||
+                !editForm.validityDays
+              }
+              onPress={() => {
+                if (!editingId) return;
+                updateTypeMutation.mutate({
+                  id: editingId,
+                  name: editForm.name,
+                  sessionCount: parseInt(editForm.sessionCount, 10),
+                  validityDays: parseInt(editForm.validityDays, 10),
+                  lateCancelHours: parseInt(editForm.lateCancelHours, 10) || 12,
+                });
+              }}
+            >
+              {t("admin.schedule.saveChanges")}
+            </Button>
+            <Button
+              variant="danger"
+              disabled={deleteTypeMutation.isPending || !editingId}
+              onPress={() => {
+                if (!editingId) return;
+                deleteTypeMutation.mutate(editingId);
+              }}
+            >
+              {t("admin.manage.deletePackage")}
+            </Button>
+            {updateTypeMutation.isError ? (
+              <ErrorState
+                message={
+                  (updateTypeMutation.error as Error)?.message ??
+                  t("admin.manage.createPackageError")
+                }
+              />
+            ) : null}
+            {deleteTypeMutation.isError ? (
+              <ErrorState
+                message={(deleteTypeMutation.error as Error)?.message ?? ""}
+              />
             ) : null}
           </View>
         </AppSheet>

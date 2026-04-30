@@ -331,6 +331,14 @@ export const packageTypeInputSchema = PackageTypeInputSchema.pick({
 });
 export type PackageTypeInput = z.infer<typeof packageTypeInputSchema>;
 
+export const updatePackageTypeInputSchema = z.object({
+  name: z.string().min(2).max(100).optional(),
+  sessionCount: z.number().int().positive().optional(),
+  validityDays: z.number().int().positive().optional(),
+  lateCancelHours: z.number().int().nonnegative().optional(),
+});
+export type UpdatePackageTypeInput = z.infer<typeof updatePackageTypeInputSchema>;
+
 export const createClientPackageInputSchema = ClientPackageInputSchema.pick({
   clientProfileId: true,
   packageTypeId: true,
