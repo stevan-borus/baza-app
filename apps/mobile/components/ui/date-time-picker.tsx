@@ -86,32 +86,20 @@ export function DateTimePicker({
       >
         <View
           style={{
-            backgroundColor:
-              colorScheme === "dark" ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)",
-            borderColor:
-              colorScheme === "dark" ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)",
-            borderWidth: 2,
-            borderRadius: 16,
-            height: 52,
-            paddingHorizontal: 16,
-            flexDirection: "row",
-            alignItems: "center",
-            justifyContent: "space-between",
+            height: 48,
+            paddingHorizontal: 14,
             opacity: disabled ? 0.5 : 1,
           }}
+          className="border rounded-2xl flex-row items-center justify-between bg-glass border-glass-border"
         >
           <Text
-            style={{ opacity: displayValue ? 1 : 0.6 }}
-            className={[
-              "text-sm flex-1",
-              displayValue ? "text-foreground" : "text-muted",
-            ].join(" ")}
+            className={`text-sm flex-1 ${displayValue ? "text-foreground" : "text-muted"}`}
           >
             {displayValue || placeholder}
           </Text>
           <FontAwesome
             name="calendar"
-            size={16}
+            size={15}
             color={MUTED_COLOR}
           />
         </View>

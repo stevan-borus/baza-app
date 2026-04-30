@@ -3,9 +3,9 @@ import { Dimensions } from "react-native";
 import {
   BottomSheetBackdrop,
   BottomSheetModal,
+  BottomSheetScrollView,
   type BottomSheetBackdropProps,
 } from "@gorhom/bottom-sheet";
-import { BottomSheetView } from "./styled";
 import { useThemeTokens } from "./tokens";
 
 /**
@@ -80,11 +80,19 @@ export function AppSheet({ open, onOpenChange, children }: AppSheetProps) {
       backgroundStyle={{ backgroundColor: tokens.surface }}
       handleIndicatorStyle={{ backgroundColor: tokens.muted }}
     >
-      <BottomSheetView className="px-6 pt-2 pb-10">
+      <BottomSheetScrollView
+        contentContainerStyle={{
+          paddingHorizontal: 24,
+          paddingTop: 8,
+          paddingBottom: 40,
+        }}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
         <InsideBottomSheetContext.Provider value={true}>
           {children}
         </InsideBottomSheetContext.Provider>
-      </BottomSheetView>
+      </BottomSheetScrollView>
     </BottomSheetModal>
   );
 }

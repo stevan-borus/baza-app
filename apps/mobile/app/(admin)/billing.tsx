@@ -332,8 +332,7 @@ export default function AdminBilling() {
 
       {/* Create payment sheet — preserved wholesale */}
       <AppSheet open={showCreate} onOpenChange={setShowCreate}>
-        <ScrollView>
-          <View className="flex-col gap-4">
+        <View className="flex-col gap-4">
             <Text
               className="text-foreground font-body-bold"
               style={{ fontSize: 20, letterSpacing: -0.3 }}
@@ -418,8 +417,7 @@ export default function AdminBilling() {
             {createMutation.isError ? (
               <ErrorState message={t("admin.manage.createPaymentError")} />
             ) : null}
-          </View>
-        </ScrollView>
+        </View>
       </AppSheet>
       </ScrollView>
     </ScreenContainerRaw>

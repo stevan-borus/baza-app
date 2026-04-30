@@ -80,6 +80,8 @@ model User {
   pushTokens   PushToken[]
   notifications NotificationLog[]
   trainerNotesAuthored TrainerNote[] @relation("TrainerNoteAuthor")
+  trainerSessions       Session[]            @relation("SessionTrainer")
+  trainerSchedules      RecurringSchedule[]  @relation("ScheduleTrainer")
 }
 
 model ClientProfile {
@@ -200,25 +202,46 @@ model StudioRoom {
 }
 
 model Session {
-  id            String        @id @default(uuid())
-  classTypeId   String
-  roomId        String?
-  trainerUserId String?
-  startsAt      DateTime
-  endsAt        DateTime
-  capacity      Int
-  status        SessionStatus @default(SCHEDULED)
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-  classType     ClassType     @relation(fields: [classTypeId], references: [id], onDelete: Restrict)
-  room          StudioRoom?   @relation(fields: [roomId], references: [id], onDelete: SetNull)
-  bookings      Booking[]
-  waitlist      WaitlistEntry[]
-  consumptions  SessionConsumption[]
-  trainerNotes  TrainerNote[]
+  id                   String              @id @default(uuid())
+  classTypeId          String
+  roomId               String?
+  trainerUserId        String
+  recurringScheduleId  String?
+  startsAt             DateTime
+  endsAt               DateTime
+  capacity             Int
+  isActive             Boolean             @default(true)
+  status               SessionStatus       @default(SCHEDULED)
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+  classType            ClassType           @relation(fields: [classTypeId], references: [id], onDelete: Restrict)
+  room                 StudioRoom?         @relation(fields: [roomId], references: [id], onDelete: SetNull)
+  trainer              User                @relation("SessionTrainer", fields: [trainerUserId], references: [id], onDelete: Restrict)
+  recurringSchedule    RecurringSchedule?  @relation(fields: [recurringScheduleId], references: [id], onDelete: SetNull)
+  bookings             Booking[]
+  waitlist             WaitlistEntry[]
+  consumptions         SessionConsumption[]
+  trainerNotes         TrainerNote[]
 
   @@index([startsAt])
   @@index([trainerUserId, startsAt])
+  @@index([recurringScheduleId])
+}
+
+model RecurringSchedule {
+  id            String    @id @default(uuid())
+  classTypeId   String
+  roomId        String?
+  trainerUserId String
+  weekdays      Int[]
+  timeOfDayMins Int
+  durationMins  Int
+  capacity      Int
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  trainer       User      @relation("ScheduleTrainer", fields: [trainerUserId], references: [id], onDelete: Restrict)
+  sessions      Session[]
 }
 
 model Booking {

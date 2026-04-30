@@ -1,8 +1,33 @@
 import { queryOptions, mutationOptions, keepPreviousData } from "@tanstack/react-query";
-import { availabilityResponseSchema } from "@baza/types";
 import { z } from "zod";
 import { apiFetch } from "@/lib/api";
 import { sharedEnv } from "@/lib/env.shared";
+
+// Local availability schema — duplicates @baza/types but uses z.coerce.date()
+// so the wire format (ISO strings) parses into Date objects for `dayjs(...)`
+// consumers. Kept local to avoid Metro's flaky cross-package HMR.
+const availabilityResponseSchema = z.object({
+  success: z.boolean(),
+  month: z.string(),
+  sessions: z.array(
+    z.object({
+      id: z.string(),
+      startsAt: z.coerce.date(),
+      endsAt: z.coerce.date(),
+      capacity: z.number(),
+      classTypeName: z.string(),
+      roomId: z.nullable(z.string()).optional(),
+      roomName: z.nullable(z.string()),
+      trainerUserId: z.nullable(z.string()).optional(),
+      trainerName: z.nullable(z.string()).optional(),
+      bookedCount: z.number(),
+      waitlistCount: z.number(),
+      availableSlots: z.number(),
+      recurringScheduleId: z.nullable(z.string()).optional(),
+      isActive: z.boolean().optional(),
+    }),
+  ),
+});
 
 const sessionSchema = z.object({
   id: z.string(),
@@ -60,10 +85,11 @@ export const sessionsQueries = {
       mutationFn: async (payload: {
         classTypeId: string;
         roomId?: string;
-        trainerUserId?: string;
+        trainerUserId: string;
         startsAt: string;
         endsAt: string;
         capacity: number;
+        isActive?: boolean;
       }) => {
         const response = await apiFetch(`${sharedEnv.EXPO_PUBLIC_API_URL}/api/sessions`, {
           method: "POST",
@@ -88,7 +114,8 @@ export const sessionsQueries = {
         endsAt?: string;
         capacity?: number;
         roomId?: string | null;
-        trainerUserId?: string | null;
+        trainerUserId?: string;
+        isActive?: boolean;
         status?: "SCHEDULED" | "CANCELED" | "COMPLETED";
       }) => {
         const response = await apiFetch(`${sharedEnv.EXPO_PUBLIC_API_URL}/api/sessions/${id}`, {
@@ -108,12 +135,13 @@ export const sessionsQueries = {
       mutationFn: async (payload: {
         classTypeId: string;
         roomId?: string;
-        trainerUserId?: string;
+        trainerUserId: string;
         startsAt: string;
         durationMins: number;
         capacity: number;
-        repeatCount: number;
-        repeatEveryDays?: number;
+        weekCount: number;
+        weekdays: number[];
+        isActive?: boolean;
       }) => {
         const response = await apiFetch(
           `${sharedEnv.EXPO_PUBLIC_API_URL}/api/sessions/recurring`,
@@ -126,6 +154,88 @@ export const sessionsQueries = {
         );
         if (!response.ok)
           throw new Error(`Unable to create recurring sessions (${response.status})`);
+        return response.json();
+      },
+    }),
+
+  recurringSchedule: (id: string | null) =>
+    queryOptions({
+      queryKey: ["sessions", "recurring-schedule", id] as const,
+      enabled: !!id,
+      queryFn: async () => {
+        const response = await apiFetch(
+          `${sharedEnv.EXPO_PUBLIC_API_URL}/api/sessions/recurring/${id}`,
+          { credentials: "include" },
+        );
+        if (!response.ok)
+          throw new Error(`Unable to load schedule (${response.status})`);
+        return z
+          .object({
+            success: z.boolean(),
+            schedule: z.object({
+              id: z.string(),
+              classTypeId: z.string(),
+              roomId: z.nullable(z.string()),
+              trainerUserId: z.string(),
+              weekdays: z.array(z.number()),
+              timeOfDayMins: z.number(),
+              durationMins: z.number(),
+              capacity: z.number(),
+              isActive: z.boolean(),
+            }),
+            futureBookingsCount: z.number(),
+          })
+          .parse(await response.json());
+      },
+      staleTime: 30_000,
+    }),
+
+  updateRecurring: () =>
+    mutationOptions({
+      mutationKey: ["sessions", "update-recurring"] as const,
+      mutationFn: async ({
+        id,
+        ...payload
+      }: {
+        id: string;
+        roomId?: string | null;
+        trainerUserId?: string;
+        weekdays?: number[];
+        timeOfDayMins?: number;
+        durationMins?: number;
+        capacity?: number;
+        isActive?: boolean;
+        weekCount?: number;
+      }) => {
+        const response = await apiFetch(
+          `${sharedEnv.EXPO_PUBLIC_API_URL}/api/sessions/recurring/${id}`,
+          {
+            method: "PATCH",
+            credentials: "include",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify(payload),
+          },
+        );
+        if (!response.ok) {
+          const text = await response.text();
+          throw new Error(text || `Unable to update series (${response.status})`);
+        }
+        return response.json();
+      },
+    }),
+
+  deleteRecurring: () =>
+    mutationOptions({
+      mutationKey: ["sessions", "delete-recurring"] as const,
+      mutationFn: async (id: string) => {
+        const response = await apiFetch(
+          `${sharedEnv.EXPO_PUBLIC_API_URL}/api/sessions/recurring/${id}`,
+          { method: "DELETE", credentials: "include" },
+        );
+        if (!response.ok) {
+          const text = await response.text();
+          throw new Error(text || `Unable to delete series (${response.status})`);
+        }
         return response.json();
       },
     }),

@@ -13,9 +13,13 @@
 import { withUniwind } from "uniwind";
 import { SafeAreaView as RNSafeAreaView } from "react-native-safe-area-context";
 import { MotiView as RawMotiView, MotiText as RawMotiText } from "moti";
-import { BottomSheetView as RawBottomSheetView } from "@gorhom/bottom-sheet";
+import {
+  BottomSheetView as RawBottomSheetView,
+  BottomSheetScrollView as RawBottomSheetScrollView,
+} from "@gorhom/bottom-sheet";
 
 export const SafeAreaView = withUniwind(RNSafeAreaView);
 export const MotiView = withUniwind(RawMotiView);
 export const MotiText = withUniwind(RawMotiText);
 export const BottomSheetView = withUniwind(RawBottomSheetView);
+export const BottomSheetScrollView = withUniwind(RawBottomSheetScrollView);

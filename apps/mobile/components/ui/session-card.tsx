@@ -14,6 +14,8 @@ type SessionCardProps = {
   capacity: number;
   classType?: string;
   status: SessionStatus;
+  hidden?: boolean;
+  hiddenLabel?: string;
   onPress?: () => void;
 };
 
@@ -39,6 +41,8 @@ export function SessionCard({
   capacity,
   classType,
   status,
+  hidden,
+  hiddenLabel,
   onPress,
 }: SessionCardProps) {
   const config = statusConfig[status];
@@ -53,24 +57,30 @@ export function SessionCard({
 
   return (
     <Pressable onPress={onPress} className="active:opacity-80">
-      <GlassCard accentBorder={accentBorder} accentBorderColor={accentBorderColor}>
-        <View className="flex-row items-center gap-3">
-          <Text className="text-base font-body-bold min-w-[54px] text-foreground">
-            {time}
-          </Text>
-          <View className="flex-1 gap-0.5">
-            <Text className="text-sm font-body-semibold text-foreground">
-              {className}
+      <View style={{ opacity: hidden ? 0.5 : 1 }}>
+        <GlassCard accentBorder={accentBorder} accentBorderColor={accentBorderColor}>
+          <View className="flex-row items-center gap-3">
+            <Text className="text-base font-body-bold min-w-[54px] text-foreground">
+              {time}
             </Text>
-            {trainerName || room ? (
-              <Text className="text-xs text-muted">
-                {[trainerName, room].filter(Boolean).join(" · ")}
+            <View className="flex-1 gap-0.5">
+              <Text className="text-sm font-body-semibold text-foreground">
+                {className}
               </Text>
+              {trainerName || room ? (
+                <Text className="text-xs text-muted">
+                  {[trainerName, room].filter(Boolean).join(" · ")}
+                </Text>
+              ) : null}
+            </View>
+            {hidden && hiddenLabel ? (
+              <Badge status="warning">{hiddenLabel}</Badge>
+            ) : badgeLabel ? (
+              <Badge status={config.status}>{badgeLabel}</Badge>
             ) : null}
           </View>
-          {badgeLabel ? <Badge status={config.status}>{badgeLabel}</Badge> : null}
-        </View>
-      </GlassCard>
+        </GlassCard>
+      </View>
     </Pressable>
   );
 }

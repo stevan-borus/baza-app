@@ -25,9 +25,9 @@ type InputProps = TextInputProps & {
   rightSlot?: React.ReactNode;
 };
 
-const FIELD_HEIGHT = 56;
-const SIDE_PADDING = 16;
-const ADORNMENT_WIDTH = 36;
+const FIELD_HEIGHT = 48;
+const SIDE_PADDING = 14;
+const ADORNMENT_WIDTH = 32;
 
 export function Input({
   label,
@@ -79,14 +79,14 @@ export function Input({
             <MotiView
               className="absolute left-0"
               animate={{
-                translateY: active ? -10 : 0,
+                translateY: active ? -9 : 0,
                 scale: active ? 0.78 : 1,
               }}
               transition={{ type: "timing", duration: 150 }}
               style={{ transformOrigin: "left center" }}
               pointerEvents="none"
             >
-              <Text className="text-base text-muted">{label}</Text>
+              <Text className="text-sm text-muted">{label}</Text>
             </MotiView>
           ) : null}
 
@@ -101,11 +101,11 @@ export function Input({
               onBlur?.(e);
             }}
             placeholderTextColor={tokens.faint}
-            className={`text-base text-foreground ${className ?? ""}`}
+            className={`text-sm text-foreground ${className ?? ""}`}
             style={{
-              paddingTop: hasLabel ? 14 : 0,
+              paddingTop: hasLabel ? 12 : 0,
               paddingBottom: hasLabel ? 2 : 0,
-              lineHeight: 20,
+              lineHeight: 18,
             }}
             {...rest}
           />

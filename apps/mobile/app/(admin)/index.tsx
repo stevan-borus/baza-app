@@ -1,7 +1,7 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { Pressable, ScrollView, Switch, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import dayjs from "dayjs";
@@ -18,6 +18,7 @@ import { WeekStrip, startOfLocaleWeek } from "@/components/ui/week-strip";
 import { MonthView } from "@/components/ui/month-view";
 import { EmptyState, ErrorState, ListRow } from "@/components/ui/states";
 import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import { DateTimePicker } from "@/components/ui/date-time-picker";
 import { SectionLabel } from "@/components/ui/typography";
 import { ScreenContainerRaw, useTabBarBottomPadding } from "@/components/ui/screen-container";
@@ -26,10 +27,12 @@ import {
   SkeletonList,
   SkeletonStatCard,
 } from "@/components/ui/skeleton";
+import { ACCENT } from "@/components/ui/tokens";
 import { sessionsQueries } from "@/lib/queries/sessions-queries-factory";
 import { trainingsQueries } from "@/lib/queries/trainings-queries-factory";
 import { roomsQueries } from "@/lib/queries/rooms-queries-factory";
 import { reportsQueries } from "@/lib/queries/reports-queries-factory";
+import { usersQueries } from "@/lib/queries/users-queries-factory";
 
 /**
  * Design references (from docs/inspiration/):
@@ -65,8 +68,12 @@ export default function AdminSchedule() {
     waitlistCount: number;
     startsAt: Date;
     endsAt: Date;
+    recurringScheduleId: string | null;
+    isActive: boolean;
   } | null>(null);
+  const [editScope, setEditScope] = useState<"session" | "series">("session");
   const [isRecurring, setIsRecurring] = useState(false);
+  const [createIsActive, setCreateIsActive] = useState(true);
 
   const displayDate = dayjs(selectedDate);
 
@@ -75,6 +82,7 @@ export default function AdminSchedule() {
   );
   const classTypesQuery = useQuery(trainingsQueries.classTypes());
   const roomsQuery = useQuery(roomsQueries.list());
+  const trainersQuery = useQuery(usersQueries.trainers());
   const summaryQuery = useQuery(reportsQueries.summary());
   const summary = summaryQuery.data?.summary;
 
@@ -86,18 +94,18 @@ export default function AdminSchedule() {
     endsAt: Date | null;
     capacity: string;
     durationMins: string;
-    repeatCount: string;
-    repeatEveryDays: string;
+    weekCount: string;
+    weekdays: number[];
   }>({
     classTypeId: "",
     roomId: "",
     trainerUserId: "",
     startsAt: null,
     endsAt: null,
-    capacity: "8",
-    durationMins: "60",
-    repeatCount: "4",
-    repeatEveryDays: "7",
+    capacity: "",
+    durationMins: "",
+    weekCount: "",
+    weekdays: [],
   });
   const [editForm, setEditForm] = useState<{
     startsAt: Date | null;
@@ -106,6 +114,7 @@ export default function AdminSchedule() {
     roomId: string;
     trainerUserId: string;
     status: string;
+    isActive: boolean;
   }>({
     startsAt: null,
     endsAt: null,
@@ -113,6 +122,7 @@ export default function AdminSchedule() {
     roomId: "",
     trainerUserId: "",
     status: "SCHEDULED",
+    isActive: true,
   });
 
   const createMutation = useMutation({
@@ -138,6 +148,62 @@ export default function AdminSchedule() {
       setShowEdit(null);
     },
   });
+  const updateSeriesMutation = useMutation({
+    ...sessionsQueries.updateRecurring(),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["sessions"] });
+      setShowEdit(null);
+    },
+  });
+  const deleteSeriesMutation = useMutation({
+    ...sessionsQueries.deleteRecurring(),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["sessions"] });
+      setShowEdit(null);
+    },
+  });
+
+  const scheduleQuery = useQuery(
+    sessionsQueries.recurringSchedule(showEdit?.recurringScheduleId ?? null),
+  );
+  const [seriesForm, setSeriesForm] = useState<{
+    weekdays: number[];
+    timeOfDayMins: string;
+    durationMins: string;
+    capacity: string;
+    roomId: string;
+    trainerUserId: string;
+    weekCount: string;
+    isActive: boolean;
+  }>({
+    weekdays: [],
+    timeOfDayMins: "",
+    durationMins: "",
+    capacity: "",
+    roomId: "",
+    trainerUserId: "",
+    weekCount: "",
+    isActive: true,
+  });
+
+  const scheduleData = scheduleQuery.data?.schedule;
+  const futureBookingsCount = scheduleQuery.data?.futureBookingsCount ?? 0;
+  const lastLoadedScheduleIdRef = React.useRef<string | null>(null);
+  React.useEffect(() => {
+    if (!scheduleData) return;
+    if (lastLoadedScheduleIdRef.current === scheduleData.id) return;
+    lastLoadedScheduleIdRef.current = scheduleData.id;
+    setSeriesForm({
+      weekdays: [...scheduleData.weekdays].sort((a, b) => a - b),
+      timeOfDayMins: String(scheduleData.timeOfDayMins),
+      durationMins: String(scheduleData.durationMins),
+      capacity: String(scheduleData.capacity),
+      roomId: scheduleData.roomId ?? "",
+      trainerUserId: scheduleData.trainerUserId ?? "",
+      weekCount: "",
+      isActive: scheduleData.isActive,
+    });
+  }, [scheduleData]);
 
   function resetCreateForm() {
     setNewSession({
@@ -146,12 +212,13 @@ export default function AdminSchedule() {
       trainerUserId: "",
       startsAt: null,
       endsAt: null,
-      capacity: "8",
-      durationMins: "60",
-      repeatCount: "4",
-      repeatEveryDays: "7",
+      capacity: "",
+      durationMins: "",
+      weekCount: "",
+      weekdays: [],
     });
     setIsRecurring(false);
+    setCreateIsActive(true);
   }
 
   const sessions = availabilityQuery.data?.sessions ?? [];
@@ -213,13 +280,15 @@ export default function AdminSchedule() {
   }
 
   function handleEventPress(session: typeof sessions[0]) {
+    const sessionIsActive = session.isActive ?? true;
     setEditForm({
       startsAt: new Date(session.startsAt),
       endsAt: new Date(session.endsAt),
       capacity: String(session.capacity),
-      roomId: "",
-      trainerUserId: "",
+      roomId: session.roomId ?? "",
+      trainerUserId: session.trainerUserId ?? "",
       status: "SCHEDULED",
+      isActive: sessionIsActive,
     });
     setShowEdit({
       sessionId: session.id,
@@ -231,7 +300,10 @@ export default function AdminSchedule() {
       waitlistCount: session.waitlistCount,
       startsAt: session.startsAt,
       endsAt: session.endsAt,
+      recurringScheduleId: session.recurringScheduleId ?? null,
+      isActive: sessionIsActive,
     });
+    setEditScope("session");
   }
 
   const revenueValue = summary?.revenue ?? 0;
@@ -438,10 +510,13 @@ export default function AdminSchedule() {
                         key={session.id}
                         time={`${dayjs(session.startsAt).format("HH:mm")} - ${dayjs(session.endsAt).format("HH:mm")}`}
                         className={session.classTypeName}
+                        trainerName={session.trainerName ?? undefined}
                         room={session.roomName ?? undefined}
                         bookedCount={session.bookedCount}
                         capacity={session.capacity}
                         status={session.availableSlots > 0 ? "available" : "full"}
+                        hidden={session.isActive === false}
+                        hiddenLabel={t("admin.schedule.hiddenBadge")}
                         onPress={() => handleEventPress(session)}
                       />
                     ))
@@ -467,8 +542,7 @@ export default function AdminSchedule() {
 
       {/* Create Session Sheet */}
       <AppSheet open={showCreate} onOpenChange={setShowCreate}>
-        <ScrollView keyboardShouldPersistTaps="handled">
-          <View className="flex-col gap-5 pb-5">
+        <View className="flex-col gap-5 pb-5">
             <Text
               className="text-foreground font-body-bold"
               style={{ fontSize: 20, letterSpacing: -0.3 }}
@@ -496,48 +570,55 @@ export default function AdminSchedule() {
               </Button>
             </View>
 
-            <SectionLabel>{t("admin.schedule.classType")}</SectionLabel>
-            {classTypesQuery.data?.classTypes.map((ct) => (
-              <Button
-                key={ct.id}
-                size="small"
-                variant={
-                  newSession.classTypeId === ct.id ? "primary" : "secondary"
-                }
-                onPress={() =>
-                  setNewSession((s) => ({ ...s, classTypeId: ct.id }))
-                }
-              >
-                {ct.name} ({ct.durationMins} min)
-              </Button>
-            ))}
+            <Select
+              placeholder={t("admin.schedule.classType")}
+              value={newSession.classTypeId}
+              onChange={(v) =>
+                setNewSession((s) => ({ ...s, classTypeId: v }))
+              }
+              emptyText={t("admin.schedule.emptyClassTypes")}
+              options={(classTypesQuery.data?.classTypes ?? []).map((ct) => ({
+                value: ct.id,
+                label: ct.name,
+                hint: `${ct.durationMins} min`,
+              }))}
+            />
 
-            <SectionLabel>{t("admin.schedule.room")}</SectionLabel>
-            {roomsQuery.data?.rooms.map((room) => (
-              <Button
-                key={room.id}
-                size="small"
-                variant={
-                  newSession.roomId === room.id ? "primary" : "secondary"
-                }
-                onPress={() =>
-                  setNewSession((s) => ({ ...s, roomId: room.id }))
-                }
-              >
-                {t("admin.schedule.roomCap", {
+            <Select
+              placeholder={t("admin.schedule.room")}
+              value={newSession.roomId}
+              onChange={(v) => {
+                const room = roomsQuery.data?.rooms.find((r) => r.id === v);
+                setNewSession((s) => ({
+                  ...s,
+                  roomId: v,
+                  capacity: room ? String(room.capacity) : s.capacity,
+                }));
+              }}
+              emptyText={t("admin.schedule.emptyRooms")}
+              options={(roomsQuery.data?.rooms ?? []).map((room) => ({
+                value: room.id,
+                label: room.name,
+                hint: t("admin.schedule.roomCap", {
                   name: room.name,
                   capacity: room.capacity,
-                })}
-              </Button>
-            ))}
+                }),
+              }))}
+            />
 
-            <Input
-              placeholder={t("admin.schedule.placeholderTrainer")}
+            <Select
+              placeholder={t("admin.schedule.trainer")}
               value={newSession.trainerUserId}
-              onChangeText={(v) =>
+              onChange={(v) =>
                 setNewSession((s) => ({ ...s, trainerUserId: v }))
               }
+              emptyText={t("admin.schedule.emptyTrainers")}
+              options={(trainersQuery.data?.users ?? []).map((u) => ({
+                value: u.id,
+                label: u.fullName,
+              }))}
             />
+
             <DateTimePicker
               placeholder={t("admin.schedule.placeholderStart")}
               value={newSession.startsAt}
@@ -559,21 +640,49 @@ export default function AdminSchedule() {
                   }
                 />
                 <Input
-                  placeholder={t("admin.schedule.placeholderRepeatCount")}
+                  placeholder={t("admin.schedule.placeholderWeekCount")}
                   keyboardType="numeric"
-                  value={newSession.repeatCount}
+                  value={newSession.weekCount}
                   onChangeText={(v) =>
-                    setNewSession((s) => ({ ...s, repeatCount: v }))
+                    setNewSession((s) => ({ ...s, weekCount: v }))
                   }
                 />
-                <Input
-                  placeholder={t("admin.schedule.placeholderRepeatDays")}
-                  keyboardType="numeric"
-                  value={newSession.repeatEveryDays}
-                  onChangeText={(v) =>
-                    setNewSession((s) => ({ ...s, repeatEveryDays: v }))
-                  }
-                />
+                <View className="gap-2">
+                  <SectionLabel>
+                    {t("admin.schedule.weekdaysLabel")}
+                  </SectionLabel>
+                  <View className="flex-row gap-2">
+                    {[1, 2, 3, 4, 5, 6, 0].map((dow) => {
+                      const selected = newSession.weekdays.includes(dow);
+                      return (
+                        <Pressable
+                          key={dow}
+                          onPress={() =>
+                            setNewSession((s) => ({
+                              ...s,
+                              weekdays: selected
+                                ? s.weekdays.filter((d) => d !== dow)
+                                : [...s.weekdays, dow],
+                            }))
+                          }
+                          className={`flex-1 h-12 rounded-2xl border items-center justify-center ${
+                            selected
+                              ? "border-accent bg-accent"
+                              : "border-glass-border bg-glass"
+                          }`}
+                        >
+                          <Text
+                            className={`text-sm font-body-semibold ${
+                              selected ? "text-white" : "text-foreground"
+                            }`}
+                          >
+                            {t(`admin.schedule.weekday${dow}Short` as never)}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                </View>
               </>
             ) : (
               <DateTimePicker
@@ -596,38 +705,67 @@ export default function AdminSchedule() {
               }
             />
 
+            <View className="flex-row items-center justify-between px-1 py-1">
+              <Text className="text-sm text-muted">
+                {t("admin.schedule.visibleToClients")}
+              </Text>
+              <Switch
+                value={createIsActive}
+                onValueChange={setCreateIsActive}
+                trackColor={{ false: "#404040", true: ACCENT }}
+                style={{ transform: [{ scale: 0.85 }] }}
+              />
+            </View>
             <Button
               disabled={
                 (isRecurring
                   ? createRecurringMutation.isPending
                   : createMutation.isPending) ||
                 !newSession.classTypeId ||
+                !newSession.trainerUserId ||
                 !newSession.startsAt ||
-                (!isRecurring && !newSession.endsAt)
+                !newSession.capacity ||
+                (isRecurring
+                  ? !newSession.durationMins ||
+                    !newSession.weekCount ||
+                    newSession.weekdays.length === 0
+                  : !newSession.endsAt)
               }
               onPress={() => {
                 if (!newSession.startsAt) return;
+                if (!newSession.trainerUserId) return;
+                const capacity = parseInt(newSession.capacity, 10);
+                if (!Number.isFinite(capacity) || capacity <= 0) return;
                 if (isRecurring) {
+                  const durationMins = parseInt(newSession.durationMins, 10);
+                  const weekCount = parseInt(newSession.weekCount, 10);
+                  if (
+                    !Number.isFinite(durationMins) ||
+                    !Number.isFinite(weekCount) ||
+                    newSession.weekdays.length === 0
+                  )
+                    return;
                   createRecurringMutation.mutate({
                     classTypeId: newSession.classTypeId,
                     roomId: newSession.roomId || undefined,
-                    trainerUserId: newSession.trainerUserId || undefined,
+                    trainerUserId: newSession.trainerUserId,
                     startsAt: newSession.startsAt.toISOString(),
-                    durationMins: parseInt(newSession.durationMins, 10) || 60,
-                    capacity: parseInt(newSession.capacity, 10) || 8,
-                    repeatCount: parseInt(newSession.repeatCount, 10) || 4,
-                    repeatEveryDays:
-                      parseInt(newSession.repeatEveryDays, 10) || 7,
+                    durationMins,
+                    capacity,
+                    weekCount,
+                    weekdays: newSession.weekdays,
+                    isActive: createIsActive,
                   });
                 } else {
                   if (!newSession.endsAt) return;
                   createMutation.mutate({
                     classTypeId: newSession.classTypeId,
                     roomId: newSession.roomId || undefined,
-                    trainerUserId: newSession.trainerUserId || undefined,
+                    trainerUserId: newSession.trainerUserId,
                     startsAt: newSession.startsAt.toISOString(),
                     endsAt: newSession.endsAt.toISOString(),
-                    capacity: parseInt(newSession.capacity, 10) || 8,
+                    capacity,
+                    isActive: createIsActive,
                   });
                 }
               }}
@@ -637,113 +775,405 @@ export default function AdminSchedule() {
             {createMutation.isError || createRecurringMutation.isError ? (
               <ErrorState message={t("admin.schedule.createError")} />
             ) : null}
-          </View>
-        </ScrollView>
+        </View>
       </AppSheet>
 
       {/* Edit Session Sheet */}
       <AppSheet open={!!showEdit} onOpenChange={() => setShowEdit(null)}>
-        <ScrollView keyboardShouldPersistTaps="handled">
-          <View className="flex-col gap-5 pb-5">
-            <Text
-              className="text-foreground font-body-bold"
-              style={{ fontSize: 20, letterSpacing: -0.3 }}
-            >
-              {showEdit
-                ? t("admin.schedule.editTitle", {
-                    name: showEdit.classTypeName,
-                  })
-                : ""}
-            </Text>
-            {showEdit ? (
-              <Card>
-                <ListRow
-                  title={t("admin.schedule.bookedCount", {
-                    booked: showEdit.bookedCount,
-                    capacity: showEdit.capacity,
-                  })}
-                  subtitle={`${t("client.calendar.room")}: ${showEdit.roomName ?? "—"} · ${t("admin.schedule.waitlistShort", { count: showEdit.waitlistCount })}`}
-                />
-              </Card>
-            ) : null}
+        <View className="flex-col gap-5 pb-5">
+          <Text
+            className="text-foreground font-body-bold"
+            style={{ fontSize: 20, letterSpacing: -0.3 }}
+          >
+            {showEdit
+              ? t("admin.schedule.editTitle", {
+                  name: showEdit.classTypeName,
+                })
+              : ""}
+          </Text>
+          {showEdit ? (
+            <Card>
+              <ListRow
+                title={t("admin.schedule.bookedCount", {
+                  booked: showEdit.bookedCount,
+                  capacity: showEdit.capacity,
+                })}
+                subtitle={`${t("client.calendar.room")}: ${showEdit.roomName ?? "—"} · ${t("admin.schedule.waitlistShort", { count: showEdit.waitlistCount })}`}
+              />
+            </Card>
+          ) : null}
 
-            <DateTimePicker
-              placeholder={t("admin.schedule.placeholderStart")}
-              value={editForm.startsAt}
-              onChange={(date) =>
-                setEditForm((s) => ({ ...s, startsAt: date }))
-              }
-              mode="datetime"
-            />
-            <DateTimePicker
-              placeholder={t("admin.schedule.placeholderEnd")}
-              value={editForm.endsAt}
-              onChange={(date) => setEditForm((s) => ({ ...s, endsAt: date }))}
-              mode="datetime"
-              minimumDate={editForm.startsAt ?? undefined}
-            />
-            <Input
-              placeholder={t("admin.schedule.placeholderCapacity")}
-              keyboardType="numeric"
-              value={editForm.capacity}
-              onChangeText={(v) => setEditForm((s) => ({ ...s, capacity: v }))}
-            />
-            <Input
-              placeholder={t("admin.schedule.placeholderTrainer")}
-              value={editForm.trainerUserId}
-              onChangeText={(v) =>
-                setEditForm((s) => ({ ...s, trainerUserId: v }))
-              }
-            />
-
-            <SectionLabel>{t("admin.schedule.room")}</SectionLabel>
-            {roomsQuery.data?.rooms.map((room) => (
+          {showEdit?.recurringScheduleId ? (
+            <View className="flex-row gap-2">
               <Button
-                key={room.id}
+                className="flex-1"
                 size="small"
-                variant={editForm.roomId === room.id ? "primary" : "secondary"}
-                onPress={() => setEditForm((s) => ({ ...s, roomId: room.id }))}
+                variant={editScope === "session" ? "primary" : "secondary"}
+                onPress={() => setEditScope("session")}
               >
-                {room.name}
+                {t("admin.schedule.editScopeSession")}
               </Button>
-            ))}
+              <Button
+                className="flex-1"
+                size="small"
+                variant={editScope === "series" ? "primary" : "secondary"}
+                onPress={() => setEditScope("series")}
+              >
+                {t("admin.schedule.editScopeSeries")}
+              </Button>
+            </View>
+          ) : null}
 
-            <Button
-              disabled={updateMutation.isPending}
-              onPress={() =>
-                showEdit &&
-                updateMutation.mutate({
-                  id: showEdit.sessionId,
-                  startsAt: editForm.startsAt?.toISOString(),
-                  endsAt: editForm.endsAt?.toISOString(),
-                  capacity: editForm.capacity
-                    ? parseInt(editForm.capacity, 10)
-                    : undefined,
-                  roomId: editForm.roomId || undefined,
-                  trainerUserId: editForm.trainerUserId || undefined,
-                })
-              }
-            >
-              {t("admin.schedule.saveChanges")}
-            </Button>
-            <Button
-              variant="danger"
-              disabled={updateMutation.isPending}
-              onPress={() =>
-                showEdit &&
-                updateMutation.mutate({
-                  id: showEdit.sessionId,
-                  status: "CANCELED",
-                })
-              }
-            >
-              {t("admin.schedule.cancelSession")}
-            </Button>
-            {updateMutation.isError ? (
-              <ErrorState message={t("admin.schedule.updateError")} />
-            ) : null}
-          </View>
-        </ScrollView>
+          {editScope === "session" || !showEdit?.recurringScheduleId ? (
+            <>
+              <DateTimePicker
+                placeholder={t("admin.schedule.placeholderStart")}
+                value={editForm.startsAt}
+                onChange={(date) =>
+                  setEditForm((s) => ({ ...s, startsAt: date }))
+                }
+                mode="datetime"
+              />
+              <DateTimePicker
+                placeholder={t("admin.schedule.placeholderEnd")}
+                value={editForm.endsAt}
+                onChange={(date) =>
+                  setEditForm((s) => ({ ...s, endsAt: date }))
+                }
+                mode="datetime"
+                minimumDate={editForm.startsAt ?? undefined}
+              />
+              <Input
+                placeholder={t("admin.schedule.placeholderCapacity")}
+                keyboardType="numeric"
+                value={editForm.capacity}
+                onChangeText={(v) =>
+                  setEditForm((s) => ({ ...s, capacity: v }))
+                }
+              />
+              <Select
+                placeholder={t("admin.schedule.trainer")}
+                value={editForm.trainerUserId}
+                onChange={(v) =>
+                  setEditForm((s) => ({ ...s, trainerUserId: v }))
+                }
+                emptyText={t("admin.schedule.emptyTrainers")}
+                options={(trainersQuery.data?.users ?? []).map((u) => ({
+                  value: u.id,
+                  label: u.fullName,
+                }))}
+              />
+              <Select
+                placeholder={t("admin.schedule.room")}
+                value={editForm.roomId}
+                onChange={(v) => setEditForm((s) => ({ ...s, roomId: v }))}
+                emptyText={t("admin.schedule.emptyRooms")}
+                options={(roomsQuery.data?.rooms ?? []).map((room) => ({
+                  value: room.id,
+                  label: room.name,
+                  hint: t("admin.schedule.roomCap", {
+                    name: room.name,
+                    capacity: room.capacity,
+                  }),
+                }))}
+              />
+
+              {(() => {
+                const cannotHide =
+                  editForm.isActive &&
+                  !showEdit?.recurringScheduleId &&
+                  (showEdit?.bookedCount ?? 0) > 0;
+                return (
+                  <View className="gap-1">
+                    <View className="flex-row items-center justify-between px-1 py-1">
+                      <Text className="text-sm text-muted">
+                        {t("admin.schedule.visibleToClients")}
+                      </Text>
+                      <Switch
+                        value={editForm.isActive}
+                        onValueChange={(v) =>
+                          setEditForm((s) => ({ ...s, isActive: v }))
+                        }
+                        disabled={cannotHide}
+                        trackColor={{ false: "#404040", true: ACCENT }}
+                        style={{ transform: [{ scale: 0.85 }] }}
+                      />
+                    </View>
+                    {cannotHide ? (
+                      <Text className="text-xs text-muted px-1">
+                        {t("admin.schedule.hideBlockedSession")}
+                      </Text>
+                    ) : null}
+                  </View>
+                );
+              })()}
+
+              <Button
+                disabled={
+                  updateMutation.isPending ||
+                  !editForm.trainerUserId
+                }
+                onPress={() => {
+                  if (!showEdit) return;
+                  if (!editForm.trainerUserId) return;
+                  updateMutation.mutate({
+                    id: showEdit.sessionId,
+                    startsAt: editForm.startsAt?.toISOString(),
+                    endsAt: editForm.endsAt?.toISOString(),
+                    capacity: editForm.capacity
+                      ? parseInt(editForm.capacity, 10)
+                      : undefined,
+                    roomId: editForm.roomId || undefined,
+                    trainerUserId: editForm.trainerUserId,
+                    isActive: editForm.isActive,
+                  });
+                }}
+              >
+                {t("admin.schedule.saveChanges")}
+              </Button>
+              <Button
+                variant="danger"
+                disabled={updateMutation.isPending}
+                onPress={() =>
+                  showEdit &&
+                  updateMutation.mutate({
+                    id: showEdit.sessionId,
+                    status: "CANCELED",
+                  })
+                }
+              >
+                {t("admin.schedule.cancelSession")}
+              </Button>
+              {updateMutation.isError ? (
+                <ErrorState
+                  message={
+                    (updateMutation.error as Error)?.message ??
+                    t("admin.schedule.updateError")
+                  }
+                />
+              ) : null}
+            </>
+          ) : (
+            <>
+              <View className="gap-2">
+                <SectionLabel>
+                  {t("admin.schedule.weekdaysLabel")}
+                </SectionLabel>
+                <View className="flex-row gap-2">
+                  {[1, 2, 3, 4, 5, 6, 0].map((dow) => {
+                    const selected = seriesForm.weekdays.includes(dow);
+                    return (
+                      <Pressable
+                        key={dow}
+                        onPress={() =>
+                          setSeriesForm((s) => ({
+                            ...s,
+                            weekdays: selected
+                              ? s.weekdays.filter((d) => d !== dow)
+                              : [...s.weekdays, dow],
+                          }))
+                        }
+                        className={`flex-1 h-12 rounded-2xl border items-center justify-center ${
+                          selected
+                            ? "border-accent bg-accent"
+                            : "border-glass-border bg-glass"
+                        }`}
+                      >
+                        <Text
+                          className={`text-base font-body-semibold ${
+                            selected ? "text-white" : "text-foreground"
+                          }`}
+                        >
+                          {t(`admin.schedule.weekday${dow}Short` as never)}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              </View>
+              <Input
+                placeholder={t("admin.schedule.placeholderTimeOfDay")}
+                keyboardType="numeric"
+                value={
+                  seriesForm.timeOfDayMins === ""
+                    ? ""
+                    : (() => {
+                        const m = parseInt(seriesForm.timeOfDayMins, 10);
+                        if (!Number.isFinite(m)) return seriesForm.timeOfDayMins;
+                        const hh = String(Math.floor(m / 60)).padStart(2, "0");
+                        const mm = String(m % 60).padStart(2, "0");
+                        return `${hh}:${mm}`;
+                      })()
+                }
+                onChangeText={(v) => {
+                  const trimmed = v.trim();
+                  if (trimmed === "") {
+                    setSeriesForm((s) => ({ ...s, timeOfDayMins: "" }));
+                    return;
+                  }
+                  const match = trimmed.match(/^(\d{1,2}):?(\d{0,2})$/);
+                  if (!match) return;
+                  const hh = parseInt(match[1] ?? "0", 10);
+                  const mm = parseInt(match[2] || "0", 10);
+                  if (hh > 23 || mm > 59) return;
+                  setSeriesForm((s) => ({
+                    ...s,
+                    timeOfDayMins: String(hh * 60 + mm),
+                  }));
+                }}
+              />
+              <Input
+                placeholder={t("admin.schedule.placeholderDuration")}
+                keyboardType="numeric"
+                value={seriesForm.durationMins}
+                onChangeText={(v) =>
+                  setSeriesForm((s) => ({ ...s, durationMins: v }))
+                }
+              />
+              <Input
+                placeholder={t("admin.schedule.placeholderCapacity")}
+                keyboardType="numeric"
+                value={seriesForm.capacity}
+                onChangeText={(v) =>
+                  setSeriesForm((s) => ({ ...s, capacity: v }))
+                }
+              />
+              <Select
+                placeholder={t("admin.schedule.trainer")}
+                value={seriesForm.trainerUserId}
+                onChange={(v) =>
+                  setSeriesForm((s) => ({ ...s, trainerUserId: v }))
+                }
+                emptyText={t("admin.schedule.emptyTrainers")}
+                options={(trainersQuery.data?.users ?? []).map((u) => ({
+                  value: u.id,
+                  label: u.fullName,
+                }))}
+              />
+              <Select
+                placeholder={t("admin.schedule.room")}
+                value={seriesForm.roomId}
+                onChange={(v) =>
+                  setSeriesForm((s) => ({ ...s, roomId: v }))
+                }
+                emptyText={t("admin.schedule.emptyRooms")}
+                options={(roomsQuery.data?.rooms ?? []).map((room) => ({
+                  value: room.id,
+                  label: room.name,
+                  hint: t("admin.schedule.roomCap", {
+                    name: room.name,
+                    capacity: room.capacity,
+                  }),
+                }))}
+              />
+              <Input
+                placeholder={t("admin.schedule.placeholderWeekCountOptional")}
+                keyboardType="numeric"
+                value={seriesForm.weekCount}
+                onChangeText={(v) =>
+                  setSeriesForm((s) => ({ ...s, weekCount: v }))
+                }
+              />
+
+              {(() => {
+                const cannotHide =
+                  seriesForm.isActive && futureBookingsCount > 0;
+                return (
+                  <View className="gap-1">
+                    <View className="flex-row items-center justify-between px-1 py-1">
+                      <Text className="text-sm text-muted">
+                        {t("admin.schedule.visibleToClients")}
+                      </Text>
+                      <Switch
+                        value={seriesForm.isActive}
+                        onValueChange={(v) =>
+                          setSeriesForm((s) => ({ ...s, isActive: v }))
+                        }
+                        disabled={cannotHide}
+                        trackColor={{ false: "#404040", true: ACCENT }}
+                        style={{ transform: [{ scale: 0.85 }] }}
+                      />
+                    </View>
+                    {cannotHide ? (
+                      <Text className="text-xs text-muted px-1">
+                        {t("admin.schedule.hideBlockedSeries", {
+                          count: futureBookingsCount,
+                        })}
+                      </Text>
+                    ) : null}
+                  </View>
+                );
+              })()}
+
+              <Button
+                disabled={
+                  updateSeriesMutation.isPending ||
+                  !showEdit?.recurringScheduleId ||
+                  seriesForm.weekdays.length === 0 ||
+                  !seriesForm.trainerUserId
+                }
+                onPress={() => {
+                  if (!showEdit?.recurringScheduleId) return;
+                  if (!seriesForm.trainerUserId) return;
+                  const timeOfDayMins = seriesForm.timeOfDayMins
+                    ? parseInt(seriesForm.timeOfDayMins, 10)
+                    : undefined;
+                  const durationMins = seriesForm.durationMins
+                    ? parseInt(seriesForm.durationMins, 10)
+                    : undefined;
+                  const capacity = seriesForm.capacity
+                    ? parseInt(seriesForm.capacity, 10)
+                    : undefined;
+                  const weekCount = seriesForm.weekCount
+                    ? parseInt(seriesForm.weekCount, 10)
+                    : undefined;
+                  updateSeriesMutation.mutate({
+                    id: showEdit.recurringScheduleId,
+                    weekdays: seriesForm.weekdays,
+                    timeOfDayMins,
+                    durationMins,
+                    capacity,
+                    roomId: seriesForm.roomId || null,
+                    trainerUserId: seriesForm.trainerUserId,
+                    isActive: seriesForm.isActive,
+                    weekCount,
+                  });
+                }}
+              >
+                {t("admin.schedule.saveSeriesChanges")}
+              </Button>
+              <Button
+                variant="danger"
+                disabled={
+                  deleteSeriesMutation.isPending ||
+                  !showEdit?.recurringScheduleId
+                }
+                onPress={() => {
+                  if (!showEdit?.recurringScheduleId) return;
+                  deleteSeriesMutation.mutate(showEdit.recurringScheduleId);
+                }}
+              >
+                {t("admin.schedule.deleteSeries")}
+              </Button>
+              {updateSeriesMutation.isError ? (
+                <ErrorState
+                  message={
+                    (updateSeriesMutation.error as Error)?.message ??
+                    t("admin.schedule.updateError")
+                  }
+                />
+              ) : null}
+              {deleteSeriesMutation.isError ? (
+                <ErrorState
+                  message={
+                    (deleteSeriesMutation.error as Error)?.message ??
+                    t("admin.schedule.updateError")
+                  }
+                />
+              ) : null}
+            </>
+          )}
+        </View>
       </AppSheet>
     </ScreenContainerRaw>
   );

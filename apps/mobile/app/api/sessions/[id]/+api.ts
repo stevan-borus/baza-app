@@ -34,6 +34,8 @@ export async function PATCH(request: Request, context: RouteContext) {
       endsAt: true,
       status: true,
       trainerUserId: true,
+      isActive: true,
+      recurringScheduleId: true,
       bookings: {
         where: { canceledAt: null },
         select: {
@@ -45,6 +47,23 @@ export async function PATCH(request: Request, context: RouteContext) {
     },
   });
   if (!existing) return fail("Session not found", 404);
+
+  // Hide-OFF guard: refuse to deactivate a future session that has live bookings.
+  // Cancellation must go through the explicit `status: CANCELED` flow which
+  // notifies clients. Only applies to one-time sessions (recurring use the
+  // series-level toggle).
+  if (
+    parsed.data.isActive === false &&
+    existing.isActive &&
+    !existing.recurringScheduleId &&
+    existing.startsAt.getTime() >= Date.now() &&
+    existing.bookings.length > 0
+  ) {
+    return fail(
+      "Cannot hide — session has active bookings. Cancel them first.",
+      409,
+    );
+  }
 
   // Trainers cannot reassign the session to another trainer.
   if (
@@ -73,6 +92,7 @@ export async function PATCH(request: Request, context: RouteContext) {
       capacity: parsed.data.capacity,
       roomId: parsed.data.roomId,
       status: parsed.data.status,
+      isActive: parsed.data.isActive,
       // Trainers always stay assigned; admins may change trainer.
       trainerUserId:
         guard.user.role === UserRole.TRAINER
@@ -86,6 +106,7 @@ export async function PATCH(request: Request, context: RouteContext) {
       capacity: true,
       status: true,
       trainerUserId: true,
+      isActive: true,
     },
   });
 

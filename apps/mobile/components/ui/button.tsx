@@ -14,7 +14,7 @@ type ButtonProps = Omit<PressableProps, "children"> & {
 
 const sizeCls: Record<Size, string> = {
   small: "h-9 rounded-xl px-3",
-  default: "h-[50px] rounded-2xl px-4",
+  default: "h-12 rounded-2xl px-4",
   large: "h-14 rounded-[18px] px-5",
 };
 
@@ -26,10 +26,10 @@ const variantCls: Record<Variant, string> = {
 };
 
 const variantTextCls: Record<Variant, string> = {
-  primary: "text-white font-body-semibold",
-  secondary: "text-foreground font-body-semibold",
-  danger: "text-danger font-body-semibold",
-  ghost: "text-foreground font-body-semibold",
+  primary: "text-white font-body-semibold text-sm",
+  secondary: "text-foreground font-body-semibold text-sm",
+  danger: "text-danger font-body-semibold text-sm",
+  ghost: "text-foreground font-body-semibold text-sm",
 };
 
 export function Button({

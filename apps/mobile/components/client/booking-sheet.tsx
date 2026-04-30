@@ -128,6 +128,17 @@ export function BookingSheet({
                 }
               />
               <MetricRow
+                label={t("client.calendar.trainer")}
+                value={session.trainerName ?? "—"}
+                icon={
+                  <FontAwesome
+                    name="user"
+                    size={14}
+                    color="rgba(255,255,255,0.5)"
+                  />
+                }
+              />
+              <MetricRow
                 label={t("client.dayView.duration", { minutes: durationMin })
                   .replace(String(durationMin), "")
                   .trim()}

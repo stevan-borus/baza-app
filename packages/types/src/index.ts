@@ -102,15 +102,20 @@ export type SignInResponse = z.infer<typeof signInResponseSchema>;
 
 export const availabilitySessionSchema = SessionResultSchema.pick({
   id: true,
-  startsAt: true,
-  endsAt: true,
   capacity: true,
 }).extend({
+  startsAt: z.coerce.date(),
+  endsAt: z.coerce.date(),
   classTypeName: z.string(),
+  roomId: z.nullable(z.string()).optional(),
   roomName: z.nullable(z.string()),
+  trainerUserId: z.nullable(z.string()).optional(),
+  trainerName: z.nullable(z.string()).optional(),
   bookedCount: z.number(),
   waitlistCount: z.number(),
   availableSlots: z.number(),
+  recurringScheduleId: z.nullable(z.string()).optional(),
+  isActive: z.boolean().optional(),
 });
 export type AvailabilitySession = z.infer<typeof availabilitySessionSchema>;
 
@@ -240,10 +245,11 @@ export type TrainerNotesQuery = z.infer<typeof trainerNotesQuerySchema>;
 export const createSessionInputSchema = z.object({
   classTypeId: z.uuid(),
   roomId: z.uuid().optional(),
-  trainerUserId: z.uuid().optional(),
+  trainerUserId: z.uuid(),
   startsAt: z.string().min(10),
   endsAt: z.string().min(10),
   capacity: z.number().int().positive(),
+  isActive: z.boolean().default(true),
 });
 export type CreateSessionInput = z.infer<typeof createSessionInputSchema>;
 
@@ -252,7 +258,8 @@ export const updateSessionInputSchema = z.object({
   endsAt: z.string().min(10).optional(),
   capacity: z.number().int().positive().optional(),
   roomId: z.uuid().nullable().optional(),
-  trainerUserId: z.uuid().nullable().optional(),
+  trainerUserId: z.uuid().optional(),
+  isActive: z.boolean().optional(),
   status: z.enum(["SCHEDULED", "CANCELED", "COMPLETED"]).optional(),
 });
 export type UpdateSessionInput = z.infer<typeof updateSessionInputSchema>;
@@ -260,15 +267,32 @@ export type UpdateSessionInput = z.infer<typeof updateSessionInputSchema>;
 export const createRecurringSessionsInputSchema = z.object({
   classTypeId: z.uuid(),
   roomId: z.uuid().optional(),
-  trainerUserId: z.uuid().optional(),
+  trainerUserId: z.uuid(),
   startsAt: z.string().min(10),
   durationMins: z.number().int().positive(),
   capacity: z.number().int().positive(),
-  repeatCount: z.number().int().min(1).max(52),
-  repeatEveryDays: z.number().int().min(1).max(30).default(7),
+  weekCount: z.number().int().min(1).max(52),
+  weekdays: z.array(z.number().int().min(0).max(6)).min(1).max(7),
+  isActive: z.boolean().default(true),
 });
 export type CreateRecurringSessionsInput = z.infer<
   typeof createRecurringSessionsInputSchema
+>;
+
+export const updateRecurringSeriesInputSchema = z.object({
+  roomId: z.uuid().nullable().optional(),
+  trainerUserId: z.uuid().optional(),
+  weekdays: z.array(z.number().int().min(0).max(6)).min(1).max(7).optional(),
+  /** Minutes from start-of-day, 0..1439 */
+  timeOfDayMins: z.number().int().min(0).max(1439).optional(),
+  durationMins: z.number().int().positive().optional(),
+  capacity: z.number().int().positive().optional(),
+  isActive: z.boolean().optional(),
+  /** Replace the future-occurrence horizon with this many weeks from today. */
+  weekCount: z.number().int().min(1).max(52).optional(),
+});
+export type UpdateRecurringSeriesInput = z.infer<
+  typeof updateRecurringSeriesInputSchema
 >;
 
 export const createPromotionCampaignInputSchema = z.object({

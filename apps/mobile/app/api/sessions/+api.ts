@@ -9,12 +9,19 @@ export async function GET(request: Request) {
   const guard = await requireRole(request, [UserRole.ADMIN, UserRole.TRAINER]);
   if (!guard.ok) return guard.response;
 
-  // Trainers see only their assigned sessions; admins see all. Cap at 200.
+  // Trainers see only their assigned + active sessions; admins see all. Cap at 200.
   const sessions = await prisma.session.findMany({
     where:
       guard.user.role === UserRole.TRAINER
         ? {
             trainerUserId: guard.user.id,
+            OR: [
+              { recurringScheduleId: null, isActive: true },
+              {
+                recurringScheduleId: { not: null },
+                recurringSchedule: { isActive: true },
+              },
+            ],
           }
         : undefined,
     orderBy: { startsAt: "asc" },
@@ -83,6 +90,7 @@ export async function POST(request: Request) {
       startsAt,
       endsAt,
       capacity: parsed.data.capacity,
+      isActive: parsed.data.isActive,
     },
     select: {
       id: true,
@@ -90,6 +98,7 @@ export async function POST(request: Request) {
       endsAt: true,
       capacity: true,
       status: true,
+      isActive: true,
     },
   });
 
