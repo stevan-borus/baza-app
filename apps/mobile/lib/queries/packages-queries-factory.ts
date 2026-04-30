@@ -60,9 +60,13 @@ export const packagesQueries = {
     queryOptions({
       queryKey: ["packages", "client-packages", clientProfileId ?? "me"] as const,
       queryFn: async () => {
-        const url = new URL(`${sharedEnv.EXPO_PUBLIC_API_URL}/api/packages/client-packages`);
-        if (clientProfileId) url.searchParams.set("clientProfileId", clientProfileId);
-        const response = await apiFetch(url.toString(), { credentials: "include" });
+        const qs = clientProfileId
+          ? `?clientProfileId=${encodeURIComponent(clientProfileId)}`
+          : "";
+        const response = await apiFetch(
+          `${sharedEnv.EXPO_PUBLIC_API_URL}/api/packages/client-packages${qs}`,
+          { credentials: "include" },
+        );
         if (!response.ok) throw new Error(`Unable to load packages (${response.status})`);
         return clientPackagesResponseSchema.parse(await response.json());
       },
