@@ -581,27 +581,23 @@ export default function AdminSchedule() {
                   ...s,
                   classTypeId: v,
                   durationMins: ct ? String(ct.durationMins) : s.durationMins,
+                  capacity: ct ? String(ct.maxClients) : s.capacity,
                 }));
               }}
               emptyText={t("admin.schedule.emptyClassTypes")}
               options={(classTypesQuery.data?.classTypes ?? []).map((ct) => ({
                 value: ct.id,
                 label: ct.name,
-                hint: `${ct.durationMins} min`,
+                hint: `${ct.durationMins} min · ${ct.maxClients} ${t("admin.schedule.maxClientsHint")}`,
               }))}
             />
 
             <Select
               placeholder={t("admin.schedule.room")}
               value={newSession.roomId}
-              onChange={(v) => {
-                const room = roomsQuery.data?.rooms.find((r) => r.id === v);
-                setNewSession((s) => ({
-                  ...s,
-                  roomId: v,
-                  capacity: room ? String(room.capacity) : s.capacity,
-                }));
-              }}
+              onChange={(v) =>
+                setNewSession((s) => ({ ...s, roomId: v }))
+              }
               emptyText={t("admin.schedule.emptyRooms")}
               options={(roomsQuery.data?.rooms ?? []).map((room) => ({
                 value: room.id,

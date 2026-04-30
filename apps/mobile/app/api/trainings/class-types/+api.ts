@@ -8,8 +8,8 @@ import { tryCatch } from "@/lib/server/try-catch";
 export async function GET(request: Request) {
   const guard = await requireRole(request, [UserRole.ADMIN, UserRole.TRAINER]);
   if (!guard.ok) return guard.response;
-  const types = await prisma.classType.findMany({ orderBy: { name: "asc" } });
-  return ok({ success: true, types });
+  const classTypes = await prisma.classType.findMany({ orderBy: { name: "asc" } });
+  return ok({ success: true, classTypes });
 }
 
 export async function POST(request: Request) {
@@ -20,8 +20,8 @@ export async function POST(request: Request) {
   const parsed = classTypeInputSchema.safeParse(body);
   if (!parsed.success) return fail("Invalid payload", 400, parsed.error);
 
-  const type = await prisma.classType.create({
+  const classType = await prisma.classType.create({
     data: parsed.data,
   });
-  return ok({ success: true, type }, 201);
+  return ok({ success: true, classType }, 201);
 }
