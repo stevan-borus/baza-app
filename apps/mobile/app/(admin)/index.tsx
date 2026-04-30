@@ -573,9 +573,16 @@ export default function AdminSchedule() {
             <Select
               placeholder={t("admin.schedule.classType")}
               value={newSession.classTypeId}
-              onChange={(v) =>
-                setNewSession((s) => ({ ...s, classTypeId: v }))
-              }
+              onChange={(v) => {
+                const ct = classTypesQuery.data?.classTypes.find(
+                  (c) => c.id === v,
+                );
+                setNewSession((s) => ({
+                  ...s,
+                  classTypeId: v,
+                  durationMins: ct ? String(ct.durationMins) : s.durationMins,
+                }));
+              }}
               emptyText={t("admin.schedule.emptyClassTypes")}
               options={(classTypesQuery.data?.classTypes ?? []).map((ct) => ({
                 value: ct.id,
@@ -629,16 +636,17 @@ export default function AdminSchedule() {
               minimumDate={new Date()}
             />
 
+            <Input
+              placeholder={t("admin.schedule.placeholderDuration")}
+              keyboardType="numeric"
+              value={newSession.durationMins}
+              onChangeText={(v) =>
+                setNewSession((s) => ({ ...s, durationMins: v }))
+              }
+            />
+
             {isRecurring ? (
               <>
-                <Input
-                  placeholder={t("admin.schedule.placeholderDuration")}
-                  keyboardType="numeric"
-                  value={newSession.durationMins}
-                  onChangeText={(v) =>
-                    setNewSession((s) => ({ ...s, durationMins: v }))
-                  }
-                />
                 <Input
                   placeholder={t("admin.schedule.placeholderWeekCount")}
                   keyboardType="numeric"
@@ -684,17 +692,7 @@ export default function AdminSchedule() {
                   </View>
                 </View>
               </>
-            ) : (
-              <DateTimePicker
-                placeholder={t("admin.schedule.placeholderEnd")}
-                value={newSession.endsAt}
-                onChange={(date) =>
-                  setNewSession((s) => ({ ...s, endsAt: date }))
-                }
-                mode="datetime"
-                minimumDate={newSession.startsAt ?? new Date()}
-              />
-            )}
+            ) : null}
 
             <Input
               placeholder={t("admin.schedule.placeholderCapacity")}
@@ -725,22 +723,21 @@ export default function AdminSchedule() {
                 !newSession.trainerUserId ||
                 !newSession.startsAt ||
                 !newSession.capacity ||
+                !newSession.durationMins ||
                 (isRecurring
-                  ? !newSession.durationMins ||
-                    !newSession.weekCount ||
-                    newSession.weekdays.length === 0
-                  : !newSession.endsAt)
+                  ? !newSession.weekCount || newSession.weekdays.length === 0
+                  : false)
               }
               onPress={() => {
                 if (!newSession.startsAt) return;
                 if (!newSession.trainerUserId) return;
                 const capacity = parseInt(newSession.capacity, 10);
                 if (!Number.isFinite(capacity) || capacity <= 0) return;
+                const durationMins = parseInt(newSession.durationMins, 10);
+                if (!Number.isFinite(durationMins) || durationMins <= 0) return;
                 if (isRecurring) {
-                  const durationMins = parseInt(newSession.durationMins, 10);
                   const weekCount = parseInt(newSession.weekCount, 10);
                   if (
-                    !Number.isFinite(durationMins) ||
                     !Number.isFinite(weekCount) ||
                     newSession.weekdays.length === 0
                   )
@@ -757,13 +754,15 @@ export default function AdminSchedule() {
                     isActive: createIsActive,
                   });
                 } else {
-                  if (!newSession.endsAt) return;
+                  const endsAt = new Date(
+                    newSession.startsAt.getTime() + durationMins * 60 * 1000,
+                  );
                   createMutation.mutate({
                     classTypeId: newSession.classTypeId,
                     roomId: newSession.roomId || undefined,
                     trainerUserId: newSession.trainerUserId,
                     startsAt: newSession.startsAt.toISOString(),
-                    endsAt: newSession.endsAt.toISOString(),
+                    endsAt: endsAt.toISOString(),
                     capacity,
                     isActive: createIsActive,
                   });

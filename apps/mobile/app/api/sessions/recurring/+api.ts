@@ -40,7 +40,7 @@ export async function POST(request: Request) {
   const createData: {
     classTypeId: string;
     roomId: string | undefined;
-    trainerUserId: string | undefined;
+    trainerUserId: string;
     startsAt: Date;
     endsAt: Date;
     capacity: number;
