@@ -71,13 +71,13 @@
     "package": {
       "myPackage": "Moj paket",
       "active": "Aktivan",
-      "sessionsRemaining": "Preostalo sesija",
+      "sessionsRemaining": "Preostalo termina",
       "validUntil": "Važi do",
       "error": "Nije moguće učitati paket.",
       "noActive": "Nema aktivnog paketa.",
       "allPackages": "Svi paketi",
       "packageName": "Paket",
-      "sessionsUntil": "Sesije: {{count}} | Do: {{date}}"
+      "sessionsUntil": "Termini: {{count}} | Do: {{date}}"
     },
     "history": {
       "title": "Istorija treninga",
@@ -89,7 +89,7 @@
       "greeting": "Zdravo, {{name}}",
       "nextClass": "Sledeći trening",
       "noUpcoming": "Nema predstojećih treninga",
-      "sessionsLeft": "{{used}}/{{total}} sesija iskorišćeno",
+      "sessionsLeft": "{{used}}/{{total}} termina iskorišćeno",
       "recentNotes": "Poslednje beleške",
       "in": "za {{time}}"
     },
@@ -103,7 +103,7 @@
     },
     "profileTab": {
       "myPackages": "Moji paketi",
-      "sessions": "{{remaining}}/{{total}} sesija",
+      "sessions": "{{remaining}}/{{total}} termina",
       "expires": "Ističe {{date}}",
       "trainingHistory": "Istorija treninga",
       "preferences": "Podešavanja",
@@ -112,13 +112,13 @@
       "account": "Nalog",
       "paused": "Pauziran",
       "expired": "Istekao",
-      "totalNotes": "Ukupno sesija",
+      "totalNotes": "Ukupno termina",
       "thisMonth": "Ovaj mesec",
       "activePkgs": "Aktivni paketi"
     },
     "dayView": {
-      "noSessions": "Nema sesija ovog dana",
-      "sessionDetail": "Detalji sesije",
+      "noSessions": "Nema termina ovog dana",
+      "sessionDetail": "Detalji termina",
       "duration": "{{minutes}} min",
       "trainer": "Trener",
       "participants": "{{count}}/{{capacity}} zakazano",
@@ -159,10 +159,9 @@
       "settingsTitle": "Podešavanja obaveštenja",
       "pushEnabled": "Push obaveštenja",
       "inAppEnabled": "In-app obaveštenja",
-      "marketing": "Marketing poruke",
       "loadingPrefs": "Učitavam podešavanja...",
       "typeBooking": "Rezervacija",
-      "typeSession": "Sesija",
+      "typeSession": "Termin",
       "typeNote": "Beleška",
       "typeGeneral": "Opšte",
       "segmentAll": "Sve",
@@ -205,11 +204,11 @@
       "errorReports": "Nije moguće učitati izveštaje.",
       "activeClients": "Aktivni klijenti",
       "todaySessions": "Danas",
-      "totalSessions": "Ukupno sesija",
+      "totalSessions": "Ukupno termina",
       "revenue": "Prihod (RSD)",
       "loading": "Učitavam podatke...",
       "revenueThisMonth": "Prihod ovog meseca",
-      "sessionsToday": "Sesija danas",
+      "sessionsToday": "Termina danas",
       "newClientsMonth": "Novi klijenti ovog meseca",
       "attendanceRate": "Stopa dolazaka",
       "todaySchedule": "Današnji raspored",
@@ -257,7 +256,7 @@
       "invitesError": "Nije moguće učitati pozivnice.",
       "sheetAssign": "Dodeli paket",
       "packageType": "Tip paketa",
-      "sessionsCount": "{{name}} ({{count}} sesija)",
+      "sessionsCount": "{{name}} ({{count}} termina)",
       "placeholderStart": "Početak",
       "assign": "Dodeli",
       "assignError": "Dodela paketa nije uspela.",
@@ -280,10 +279,10 @@
       "viewDay": "Dan",
       "viewWeek": "Nedelja",
       "viewMonth": "Mesec",
-      "newSession": "+ Nova sesija",
+      "newSession": "+ Novi termin",
       "error": "Nije moguće učitati raspored.",
-      "sheetRecurring": "Ponavljajuće sesije",
-      "sheetNew": "Nova sesija",
+      "sheetRecurring": "Ponavljajući termini",
+      "sheetNew": "Novi termin",
       "once": "Jednokratna",
       "recurring": "Ponavljajuća",
       "classType": "Tip treninga",
@@ -312,18 +311,18 @@
       "weekday6Short": "S",
       "placeholderCapacity": "Max klijenata",
       "maxClientsHint": "klijenata",
-      "createError": "Kreiranje sesije nije uspelo.",
+      "createError": "Kreiranje termina nije uspelo.",
       "editTitle": "Uredi: {{name}}",
       "bookedCount": "{{booked}}/{{capacity}} zakazano",
       "waitlistShort": "Č. lista: {{count}}",
       "saveChanges": "Sačuvaj izmene",
       "saveSeriesChanges": "Sačuvaj izmene serije",
       "deleteSeries": "Obriši seriju",
-      "editScopeSession": "Ova sesija",
+      "editScopeSession": "Ovaj termin",
       "editScopeSeries": "Cela serija",
       "placeholderTimeOfDay": "Vreme (HH:MM)",
       "placeholderWeekCountOptional": "Broj nedelja (opciono)",
-      "cancelSession": "Otkaži sesiju",
+      "cancelSession": "Otkaži termin",
       "updateError": "Ažuriranje nije uspelo."
     },
     "manage": {
@@ -337,13 +336,13 @@
       "packagesEmpty": "Nema definisanih tipova paketa.",
       "assignmentsEmpty": "Nema dodeljenih paketa.",
       "emptyClients": "Nema klijenata. Dodajte klijenta sa stranice klijenata.",
-      "sessionsDays": "{{count}} sesija | {{days}} dana",
+      "sessionsDays": "{{count}} termina | {{days}} dana",
       "lateCancel": "Kasno otkazivanje: {{hours}}h unapred",
       "sheetNewPackage": "Novi tip paketa",
       "sheetEditPackage": "Uredi tip paketa",
       "deletePackage": "Obriši tip paketa",
       "placeholderName": "Naziv",
-      "placeholderSessionCount": "Broj sesija",
+      "placeholderSessionCount": "Broj termina",
       "placeholderValidityDays": "Važi dana",
       "placeholderLateCancel": "Kasno otkazivanje (sati)",
       "create": "Kreiraj",
@@ -367,7 +366,7 @@
       "placeholderNotes": "Beleške (opciono)",
       "createPaymentError": "Kreiranje uplate nije uspelo.",
       "reportsError": "Nije moguće učitati izveštaj.",
-      "totalSessions": "Ukupno sesija",
+      "totalSessions": "Ukupno termina",
       "totalClients": "Ukupno klijenata",
       "active": "Aktivni",
       "revenue": "Prihod (RSD)",
@@ -395,7 +394,7 @@
       "filterAll": "Sve",
       "filterExpiring": "Uskoro ističe",
       "filterExpired": "Istekao",
-      "sessionsRemaining": "{{count}} sesija preostalo",
+      "sessionsRemaining": "{{count}} termina preostalo",
       "expiresOn": "Ističe {{date}}",
       "periodWeek": "Nedelja",
       "periodMonth": "Mesec",
@@ -412,17 +411,17 @@
       "viewWeek": "Nedelja",
       "viewMonth": "Mesec",
       "sessionsThisMonth": "Termini ovog meseca",
-      "sessionChanges": "Izmene sesija",
+      "sessionChanges": "Izmene termina",
       "error": "Nije moguće učitati raspored.",
       "room": "Sala",
       "available": "Slobodno",
       "booked": "zakazano",
       "greeting": "Zdravo, {{name}}",
       "todayStats": "Danas",
-      "sessions": "Sesije",
+      "sessions": "Termini",
       "clients": "Klijenti",
       "hours": "Sati",
-      "sessionsLabel": "sesija"
+      "sessionsLabel": "termina"
     },
     "notes": {
       "title": "Beleške",
@@ -430,25 +429,29 @@
       "error": "Nije moguće učitati beleške.",
       "empty": "Nema beleški za prikaz.",
       "sheetTitle": "Nova beleška",
-      "session": "Sesija",
+      "session": "Termin",
       "client": "Klijent",
       "placeholder": "Beleška...",
+      "emptySessions": "Nema dostupnih termina",
+      "emptyClients": "Nema dostupnih klijenata",
       "saveError": "Čuvanje beleške nije uspelo.",
       "filterAll": "Sve",
       "filterThisWeek": "Ova nedelja",
       "filterByClient": "Po klijentu",
+      "pickClientTitle": "Filtriraj po klijentu",
       "unknownClient": "Nepoznat klijent"
     },
     "clients": {
       "title": "Moji klijenti",
       "todayLabel": "Danas",
-      "todayStats": "{{sessions}} sesija danas · {{clients}} klijenata danas",
+      "todayStats": "{{sessions}} termina danas · {{clients}} klijenata danas",
       "error": "Nije moguće učitati klijente.",
-      "sessionsError": "Nije moguće učitati sesije.",
-      "noSessions": "Nema zakazanih sesija.",
+      "sessionsError": "Nije moguće učitati termine.",
+      "noSessions": "Nema zakazanih termina.",
       "seats": "{{count}} mesta",
-      "sessionName": "Sesija",
-      "noClients": "Nema prijavljenih klijenata"
+      "sessionName": "Termin",
+      "noClients": "Nema prijavljenih klijenata",
+      "statTotal": "Ukupno"
     }
   },
   "notifications": {
@@ -457,20 +460,20 @@
       "body": "Vaša rezervacija termina je potvrđena."
     },
     "sessionUpdated": {
-      "title": "Sesija izmenjena",
-      "body": "Sesija koju ste zakazali je izmenjena. Pregledajte detalje."
+      "title": "Termin izmenjen",
+      "body": "Termin koji ste zakazali je izmenjen. Pregledajte detalje."
     },
     "trainerNote": {
       "title": "Nova beleška trenera",
-      "body": "Trener je dodao belešku na vašu sesiju."
+      "body": "Trener je dodao belešku na vaš termin."
     },
     "spotFromWaitlist": {
       "title": "Mesto sa liste čekanja",
       "body": "Premešteni ste sa liste čekanja na potvrđenu rezervaciju."
     },
     "sessionReminder": {
-      "title": "Podsetnik za sesiju",
-      "body": "Podsetnik: imate sesiju sutra."
+      "title": "Podsetnik za termin",
+      "body": "Podsetnik: imate termin sutra."
     },
     "packageExpiring": {
       "title": "Paket uskoro ističe",

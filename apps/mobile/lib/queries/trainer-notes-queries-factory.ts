@@ -38,11 +38,13 @@ async function fetchNotesPage(
   params?: { sessionId?: string; clientProfileId?: string },
   cursor?: string | null,
 ): Promise<TrainerNotesResponse> {
-  const url = new URL(`${sharedEnv.EXPO_PUBLIC_API_URL}/api/trainer-notes`);
-  if (params?.sessionId) url.searchParams.set("sessionId", params.sessionId);
-  if (params?.clientProfileId) url.searchParams.set("clientProfileId", params.clientProfileId);
-  if (cursor) url.searchParams.set("cursor", cursor);
-  const response = await apiFetch(url.toString(), { credentials: "include" });
+  const qs = new URLSearchParams();
+  if (params?.sessionId) qs.set("sessionId", params.sessionId);
+  if (params?.clientProfileId) qs.set("clientProfileId", params.clientProfileId);
+  if (cursor) qs.set("cursor", cursor);
+  const query = qs.toString();
+  const url = `${sharedEnv.EXPO_PUBLIC_API_URL}/api/trainer-notes${query ? `?${query}` : ""}`;
+  const response = await apiFetch(url, { credentials: "include" });
   if (!response.ok) throw new Error(`Unable to load notes (${response.status})`);
   return trainerNotesResponseSchema.parse(await response.json());
 }

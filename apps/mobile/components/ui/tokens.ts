@@ -95,9 +95,11 @@ const lightTokens: ThemeTokens = {
 };
 
 const darkTokens: ThemeTokens = {
-  background: "#0A0F14",
-  surface: "hsla(210, 15%, 11%, 1)",
-  surface2: "hsla(210, 12%, 15%, 1)",
+  // Neutral near-black — slightly off pure #000 so glass surfaces still read
+  // as raised. Was #0A0F14 / hsl(210°…) which carried a cool blue cast.
+  background: "#0E0E10",
+  surface: "hsl(0, 0%, 11%)",
+  surface2: "hsl(0, 0%, 15%)",
 
   foreground: "rgba(255, 255, 255, 0.92)",
   muted: "rgba(255, 255, 255, 0.55)",
@@ -106,7 +108,7 @@ const darkTokens: ThemeTokens = {
   glass: "rgba(255, 255, 255, 0.05)",
   glassStrong: "rgba(255, 255, 255, 0.08)",
   glassBorder: "rgba(255, 255, 255, 0.10)",
-  glassAndroid: "rgba(20, 25, 30, 0.95)",
+  glassAndroid: "rgba(26, 26, 28, 0.95)",
 
   accent: "#2e5b42",
   accentSoft: "rgba(46, 91, 66, 0.18)",

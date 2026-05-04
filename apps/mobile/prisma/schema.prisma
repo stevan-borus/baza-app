@@ -321,7 +321,6 @@ model NotificationPreference {
   userId           String   @unique
   pushEnabled      Boolean  @default(true)
   inAppEnabled     Boolean  @default(true)
-  marketingOptIn   Boolean  @default(false)
   preferredLocale  AppLocale?  // null => default "sr" for notifications
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt

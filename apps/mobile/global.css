@@ -61,9 +61,10 @@
     }
 
     @variant dark {
-      --color-background: #0A0F14;
-      --color-surface: hsla(210, 15%, 11%, 1);
-      --color-surface-2: hsla(210, 12%, 15%, 1);
+      /* Neutral near-black palette — no blue cast. */
+      --color-background: #0E0E10;
+      --color-surface: hsl(0, 0%, 11%);
+      --color-surface-2: hsl(0, 0%, 15%);
 
       --color-foreground: rgba(255, 255, 255, 0.92);
       --color-muted: rgba(255, 255, 255, 0.55);
@@ -72,7 +73,7 @@
       --color-glass: rgba(255, 255, 255, 0.05);
       --color-glass-strong: rgba(255, 255, 255, 0.08);
       --color-glass-border: rgba(255, 255, 255, 0.10);
-      --color-glass-android: rgba(20, 25, 30, 0.95);
+      --color-glass-android: rgba(26, 26, 28, 0.95);
 
       --color-accent-soft: rgba(46, 91, 66, 0.18);
       --color-accent-light: #5aa07e;

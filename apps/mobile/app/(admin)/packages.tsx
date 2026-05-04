@@ -103,7 +103,8 @@ type AssignmentFilter = "all" | "expiring" | "expired";
 // ─── Main screen ──────────────────────────────────────────────────────────────
 
 export default function AdminPackages() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const lang = i18n.language === "en" ? "en" : "sr";
   const queryClient = useQueryClient();
   const bottomPad = useTabBarBottomPadding();
   const [showCreate, setShowCreate] = useState(false);
@@ -348,7 +349,7 @@ export default function AdminPackages() {
                     </Text>
                     <Text className="text-muted" style={{ fontSize: 12 }}>
                       {t("admin.manage.expiresOn", {
-                        date: dayjs(pkg.expiresAt).format("MMM D, YYYY"),
+                        date: dayjs(pkg.expiresAt).locale(lang).format("MMM D, YYYY"),
                       })}
                     </Text>
                   </View>

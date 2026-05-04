@@ -37,7 +37,8 @@ import { HeaderIconButton } from "@/components/ui/app-header";
 type FilterTab = "all" | "confirmed" | "canceled" | "pending";
 
 export default function AdminBilling() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const lang = i18n.language === "en" ? "en" : "sr";
   const queryClient = useQueryClient();
   const bottomPad = useTabBarBottomPadding();
   const [showCreate, setShowCreate] = useState(false);
@@ -121,7 +122,7 @@ export default function AdminBilling() {
   const methods = ["CASH", "CARD", "COMPANY", "QR", "MANUAL_ONLINE"] as const;
   const dateLocale = getDateLocale();
 
-  const periodLabel = selectedMonth.format("MMMM YYYY");
+  const periodLabel = selectedMonth.locale(lang).format("MMMM YYYY");
 
   return (
     <ScreenContainerRaw

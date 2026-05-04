@@ -13,13 +13,11 @@ import { useRouter } from "expo-router";
 import { RefreshControl, ScrollView, Text, View } from "react-native";
 import { MotiView } from "@/components/ui/styled";
 import { useTranslation } from "react-i18next";
-import FontAwesome from "@expo/vector-icons/FontAwesome";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import { GlassCard } from "@/components/ui/glass-card";
 import { HeroCard } from "@/components/ui/hero-card";
 import { ProgressRing } from "@/components/ui/progress-ring";
-import { WeekStrip } from "@/components/ui/week-strip";
 import { EmptyState } from "@/components/ui/states";
 import { ScreenContainer } from "@/components/ui/screen-container";
 import { SectionLabel } from "@/components/ui/typography";
@@ -36,7 +34,6 @@ import {
   type TrainerNote,
 } from "@/lib/queries/trainer-notes-queries-factory";
 import { sessionsQueries } from "@/lib/queries/sessions-queries-factory";
-import { notificationsQueries } from "@/lib/queries/notifications-queries-factory";
 import { useQueryClient } from "@tanstack/react-query";
 
 dayjs.extend(relativeTime);
@@ -65,14 +62,12 @@ function Stagger({
 }
 
 export default function ClientHome() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const lang = i18n.language === "en" ? "en" : "sr";
   const router = useRouter();
   const queryClient = useQueryClient();
   const dateLocale = getDateLocale();
   const [refreshing, setRefreshing] = useState(false);
-  const [selectedDate, setSelectedDate] = useState(
-    dayjs().format("YYYY-MM-DD"),
-  );
 
   const meQuery = useQuery(authQueries.me());
   const packagesQuery = useQuery(packagesQueries.clientPackages());
@@ -81,7 +76,6 @@ export default function ClientHome() {
   const availabilityQuery = useQuery(
     sessionsQueries.availabilityByMonth(month),
   );
-  const notificationsQuery = useQuery(notificationsQueries.list());
 
   const packages = packagesQuery.data?.packages ?? [];
   const activePackage = packages.find(
@@ -90,8 +84,6 @@ export default function ClientHome() {
   );
   const notes = notesQuery.data?.notes ?? [];
   const sessions = availabilityQuery.data?.sessions ?? [];
-  const notifications = notificationsQuery.data?.notifications ?? [];
-  const unreadCount = notifications.filter((n) => !n.readAt).length;
 
   const userName = meQuery.data?.user.email?.split("@")[0] ?? "";
   const userId = meQuery.data?.user.id ?? "";
@@ -104,15 +96,6 @@ export default function ClientHome() {
         new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime(),
     );
   const nextSession = upcomingSessions[0] ?? null;
-
-  const activityByDate: Record<string, "booked" | "available"> = {};
-  for (const s of sessions) {
-    const dateKey = dayjs(s.startsAt).format("YYYY-MM-DD");
-    if (s.availableSlots > 0) {
-      activityByDate[dateKey] =
-        activityByDate[dateKey] === "booked" ? "booked" : "available";
-    }
-  }
 
   async function handleRefresh() {
     setRefreshing(true);
@@ -164,50 +147,16 @@ export default function ClientHome() {
         contentContainerStyle={{ gap: 24 }}
       >
         <Stagger delay={0}>
-          <View className="flex-row justify-between items-center">
-            <View className="flex-col">
-              <Text
-                className="text-foreground font-body-bold"
-                style={{ fontSize: 30, letterSpacing: -0.5 }}
-              >
-                {t("client.home.greeting", { name: userName })}
-              </Text>
-              <Text className="text-[13px] text-muted">
-                {dayjs().format("dddd, D MMMM")}
-              </Text>
-            </View>
-            <View style={{ position: "relative" }}>
-              <FontAwesome
-                name="bell-o"
-                size={22}
-                color="#a1a1aa"
-                onPress={() => router.push("/(client)/notifications")}
-              />
-              {unreadCount > 0 ? (
-                <View
-                  className="bg-accent items-center justify-center"
-                  style={{
-                    position: "absolute",
-                    top: -4,
-                    right: -6,
-                    borderRadius: 8,
-                    minWidth: 16,
-                    height: 16,
-                    paddingHorizontal: 4,
-                  }}
-                >
-                  <Text
-                    style={{
-                      fontSize: 10,
-                      fontWeight: "700",
-                      color: "#ffffff",
-                    }}
-                  >
-                    {unreadCount > 9 ? "9+" : unreadCount}
-                  </Text>
-                </View>
-              ) : null}
-            </View>
+          <View className="flex-col">
+            <Text
+              className="text-foreground font-body-bold"
+              style={{ fontSize: 30, letterSpacing: -0.5 }}
+            >
+              {t("client.home.greeting", { name: userName })}
+            </Text>
+            <Text className="text-[13px] text-muted">
+              {dayjs().locale(lang).format("dddd, D MMMM")}
+            </Text>
           </View>
         </Stagger>
 
@@ -223,14 +172,14 @@ export default function ClientHome() {
                   {nextSession.classTypeName}
                 </Text>
                 <Text className="text-muted text-sm">
-                  {dayjs(nextSession.startsAt).format("dddd · HH:mm")}
+                  {dayjs(nextSession.startsAt).locale(lang).format("dddd · HH:mm")}
                   {nextSession.roomName ? ` · ${nextSession.roomName}` : ""}
                 </Text>
                 <View className="flex-row items-center gap-2 pt-1">
                   <View className="bg-accent-soft px-3 py-1 rounded-full">
                     <Text className="text-accent font-body-semibold text-xs">
                       {t("client.home.in", {
-                        time: dayjs(nextSession.startsAt).fromNow(true),
+                        time: dayjs(nextSession.startsAt).locale(lang).fromNow(true),
                       })}
                     </Text>
                   </View>
@@ -244,14 +193,6 @@ export default function ClientHome() {
               />
             </GlassCard>
           )}
-        </Stagger>
-
-        <Stagger delay={160}>
-          <WeekStrip
-            selectedDate={selectedDate}
-            onSelectDate={setSelectedDate}
-            activityByDate={activityByDate}
-          />
         </Stagger>
 
         {activePackage ? (

@@ -44,7 +44,8 @@ export function BookingSheet({
   onCancel,
   pending,
 }: Props) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const lang = i18n.language === "en" ? "en" : "sr";
   const [step, setStep] = useState<BookingStep>("idle");
 
   React.useEffect(() => {
@@ -88,7 +89,7 @@ export function BookingSheet({
                   {dayjs(session.endsAt).format("HH:mm")}
                 </Text>
                 <Text className="text-muted text-sm">
-                  {dayjs(session.startsAt).format("dddd, D MMMM")}
+                  {dayjs(session.startsAt).locale(lang).format("dddd, D MMMM")}
                 </Text>
                 <View className="flex-row gap-2 pt-1">
                   <Badge status={isFull ? "danger" : "success"}>

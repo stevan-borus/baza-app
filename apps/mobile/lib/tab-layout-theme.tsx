@@ -28,7 +28,14 @@ type FloatingTabBarProps = Parameters<
 >[0];
 
 /** Routes hidden from the tab bar regardless of layout config. */
-const HIDDEN_TAB_ROUTES = new Set(["settings", "class-types", "rooms"]);
+const HIDDEN_TAB_ROUTES = new Set([
+  "settings",
+  "class-types",
+  "rooms",
+  // `profile` is reachable via the header avatar's ProfileSheet on every
+  // screen — no dedicated tab needed.
+  "profile",
+]);
 
 /**
  * Flat full-width bottom tab bar.
@@ -79,6 +86,24 @@ export function FloatingTabBar(
             size: 22,
           });
 
+          // tabBarBadge accepts string | number — when present we draw a small
+          // accent dot/pill at the top-right of the icon. Numbers > 9 collapse
+          // to "9+". Booleans true → unlabeled dot.
+          const rawBadge = (options as { tabBarBadge?: number | string | boolean })
+            .tabBarBadge;
+          const badge =
+            rawBadge === true
+              ? ""
+              : typeof rawBadge === "number"
+                ? rawBadge > 9
+                  ? "9+"
+                  : rawBadge > 0
+                    ? String(rawBadge)
+                    : null
+                : typeof rawBadge === "string" && rawBadge.length > 0
+                  ? rawBadge
+                  : null;
+
           return (
             <Pressable
               key={route.key}
@@ -102,7 +127,37 @@ export function FloatingTabBar(
                 gap: 2,
               }}
             >
-              {icon}
+              <View style={{ position: "relative" }}>
+                {icon}
+                {badge !== null ? (
+                  <View
+                    style={{
+                      position: "absolute",
+                      top: -4,
+                      right: -8,
+                      minWidth: badge === "" ? 8 : 16,
+                      height: badge === "" ? 8 : 16,
+                      borderRadius: badge === "" ? 4 : 8,
+                      paddingHorizontal: badge === "" ? 0 : 4,
+                      backgroundColor: ACCENT,
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    {badge !== "" ? (
+                      <Text
+                        style={{
+                          color: "#ffffff",
+                          fontSize: 10,
+                          fontWeight: "700",
+                        }}
+                      >
+                        {badge}
+                      </Text>
+                    ) : null}
+                  </View>
+                ) : null}
+              </View>
               <Text
                 numberOfLines={1}
                 style={{
@@ -138,7 +193,7 @@ export function getAppTabScreenOptions(isDark: boolean) {
     // shorter than the viewport still show the correct background to the
     // bottom (and behind any open bottom sheet that doesn't fully overlay).
     sceneContainerStyle: {
-      backgroundColor: isDark ? "#0A0F14" : "#ffffff",
+      backgroundColor: isDark ? "#0E0E10" : "#ffffff",
     },
   };
 }

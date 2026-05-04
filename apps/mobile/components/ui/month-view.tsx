@@ -14,6 +14,7 @@ import React from "react";
 import { Pressable, Text, View } from "react-native";
 import dayjs from "dayjs";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
+import { useTranslation } from "react-i18next";
 import { useThemeTokens } from "./tokens";
 import { startOfLocaleWeek } from "./week-strip";
 
@@ -37,11 +38,19 @@ export function MonthView({
   activity = {},
 }: Props) {
   const tokens = useThemeTokens();
+  // Subscribe to language changes so the localized month/weekday labels
+  // recompute when the user switches locales.
+  const { i18n } = useTranslation();
+  const lang = i18n.language === "en" ? "en" : "sr";
+  // dayjs instances carry their own locale; re-apply the active language so
+  // a `month` created in Serbian keeps formatting in Serbian even after the
+  // user switches to English (and vice versa).
+  const localizedMonth = month.locale(lang);
   const todayKey = dayjs().format("YYYY-MM-DD");
-  const currentMonthIndex = month.month();
+  const currentMonthIndex = localizedMonth.month();
 
   // Grid origin: start-of-week for the 1st of `month`.
-  const gridStart = startOfLocaleWeek(month.startOf("month"));
+  const gridStart = startOfLocaleWeek(localizedMonth.startOf("month"));
 
   // Weekday header labels (using the same locale-aware origin).
   const weekdayLabels: string[] = [];
@@ -70,7 +79,7 @@ export function MonthView({
           className="font-body-bold text-foreground"
           style={{ fontSize: 18, letterSpacing: -0.3 }}
         >
-          {month.format("MMMM YYYY")}
+          {localizedMonth.format("MMMM YYYY")}
         </Text>
         <Pressable
           onPress={onNextMonth}

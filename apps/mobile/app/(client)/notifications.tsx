@@ -19,7 +19,6 @@ import { SkeletonList } from "@/components/ui/skeleton";
 import { ScreenContainerRaw, useTabBarBottomPadding } from "@/components/ui/screen-container";
 import { HeaderIconButton } from "@/components/ui/app-header";
 import { SectionLabel } from "@/components/ui/typography";
-import { SegmentedControl } from "@/components/ui/segmented-control";
 import { notificationsQueries, type Notification } from "@/lib/queries/notifications-queries-factory";
 import dayjs from "dayjs";
 
@@ -98,14 +97,15 @@ function groupByDay(notifications: Notification[]): GroupedNotifications[] {
 
 /**
  * Relative time label: localized via dayjs (e.g. "2h ago" / "pre 2 sata").
- * Uses dayjs.fromNow() which respects the locale set in lib/i18n.ts.
- * Falls back to "MMM D" / "D. MMM" for older-than-a-week dates.
+ * `lang` is forced onto the dayjs instance so the label updates immediately
+ * when the user switches locales — without it, fresh dayjs() calls can read
+ * a stale global locale on the first re-render.
  */
-function formatRelativeTime(createdAt: string): string {
-  const d = dayjs(createdAt);
+function formatRelativeTime(createdAt: string, lang: "sr" | "en"): string {
+  const d = dayjs(createdAt).locale(lang);
   const diffDays = dayjs().diff(d, "day");
   if (diffDays < 7) return d.fromNow();
-  return d.format("MMM D");
+  return d.format(lang === "en" ? "MMM D" : "D. MMM");
 }
 
 function iconForType(type: string): string {
@@ -116,14 +116,12 @@ function iconForType(type: string): string {
 // Component
 // ---------------------------------------------------------------------------
 
-type Segment = "all" | "unread";
-
 export default function ClientNotifications() {
   const queryClient = useQueryClient();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const lang = i18n.language === "en" ? "en" : "sr";
   const bottomPad = useTabBarBottomPadding();
   const [showPrefs, setShowPrefs] = useState(false);
-  const [segment, setSegment] = useState<Segment>("all");
 
   const notificationsQuery = useInfiniteQuery(notificationsQueries.listInfinite());
   const prefsQuery = useQuery(notificationsQueries.preferences());
@@ -145,19 +143,9 @@ export default function ClientNotifications() {
     }
   }
 
-  const filtered = useMemo(
-    () => (segment === "unread" ? allNotifications.filter((n) => !n.readAt) : allNotifications),
-    [allNotifications, segment],
-  );
-
-  const groups = useMemo(() => groupByDay(filtered), [filtered]);
+  const groups = useMemo(() => groupByDay(allNotifications), [allNotifications]);
 
   const prefs = prefsQuery.data?.preferences;
-
-  const segmentOptions = [
-    { value: "all" as const, label: t("client.notifications.segmentAll") },
-    { value: "unread" as const, label: t("client.notifications.segmentUnread") },
-  ];
 
   // Build a flat list with section headers interleaved for LegendList
   type ListItem =
@@ -177,7 +165,7 @@ export default function ClientNotifications() {
 
   return (
     <ScreenContainerRaw
-      title={t("client.notifications.inbox")}
+      title={t("tabs.notifications")}
       rightSlot={
         <HeaderIconButton
           icon="cog"
@@ -186,38 +174,23 @@ export default function ClientNotifications() {
         />
       }
     >
-      {/* Segmented control — stagger 80ms */}
+      {/* List — stagger 100ms */}
       <MotiView
         from={{ opacity: 0, translateY: -8 }}
         animate={{ opacity: 1, translateY: 0 }}
-        transition={{ type: "timing", duration: 350, delay: 80 }}
-      >
-        <View className="px-6 pb-3">
-          <SegmentedControl
-            options={segmentOptions}
-            value={segment}
-            onChange={setSegment}
-          />
-        </View>
-      </MotiView>
-
-      {/* List — stagger 160ms */}
-      <MotiView
-        from={{ opacity: 0, translateY: -8 }}
-        animate={{ opacity: 1, translateY: 0 }}
-        transition={{ type: "timing", duration: 350, delay: 160 }}
+        transition={{ type: "timing", duration: 350, delay: 100 }}
         style={{ flex: 1 }}
       >
         {notificationsQuery.isLoading ? (
-          <View className="px-6">
+          <View className="px-6 pt-4">
             <SkeletonList count={3} />
           </View>
         ) : notificationsQuery.isError ? (
-          <View className="px-6">
+          <View className="px-6 pt-4">
             <ErrorState message={t("client.notifications.error")} />
           </View>
         ) : listData.length === 0 ? (
-          <View className="px-6">
+          <View className="px-6 pt-8">
             <EmptyState title={t("client.notifications.empty")} />
           </View>
         ) : null}
@@ -227,7 +200,7 @@ export default function ClientNotifications() {
           keyExtractor={(item) =>
             item.kind === "header" ? `header-${item.groupKey}` : item.notification.id
           }
-          contentContainerStyle={{ paddingBottom: bottomPad }}
+          contentContainerStyle={{ paddingTop: 12, paddingBottom: bottomPad }}
           renderItem={({ item }: { item: ListItem }) => {
             if (item.kind === "header") {
               return (
@@ -279,7 +252,7 @@ export default function ClientNotifications() {
                             {displayTitle}
                           </Text>
                           <Text className="text-[11px] text-muted">
-                            {formatRelativeTime(n.createdAt)}
+                            {formatRelativeTime(n.createdAt, lang)}
                           </Text>
                         </View>
                         <Text
@@ -317,54 +290,41 @@ export default function ClientNotifications() {
           </Text>
 
           {prefs ? (
-            <GlassCard>
-              <View className="flex-col">
-                {/* Push notifications row */}
-                <View className="flex-row justify-between items-center py-3 border-b border-glass-border">
-                  <View className="flex-row items-center gap-3">
+            <View className="flex-col">
+              {/* Push notifications row */}
+              <View className="flex-row justify-between items-center py-3 border-b border-glass-border">
+                <View className="flex-row items-center gap-3">
+                  <View style={{ width: 20, alignItems: "center" }}>
                     <FontAwesome name="bell" size={16} color={ACCENT} />
-                    <Text className="text-[15px] text-foreground">
-                      {t("client.notifications.pushEnabled")}
-                    </Text>
                   </View>
-                  <Switch
-                    value={prefs.pushEnabled}
-                    onValueChange={(v) => updatePrefsMutation.mutate({ pushEnabled: v })}
-                    trackColor={{ false: "#404040", true: ACCENT }}
-                  />
+                  <Text className="text-[15px] text-foreground">
+                    {t("client.notifications.pushEnabled")}
+                  </Text>
                 </View>
-
-                {/* In-app notifications row */}
-                <View className="flex-row justify-between items-center py-3 border-b border-glass-border">
-                  <View className="flex-row items-center gap-3">
-                    <FontAwesome name="mobile" size={16} color={ACCENT} />
-                    <Text className="text-[15px] text-foreground">
-                      {t("client.notifications.inAppEnabled")}
-                    </Text>
-                  </View>
-                  <Switch
-                    value={prefs.inAppEnabled}
-                    onValueChange={(v) => updatePrefsMutation.mutate({ inAppEnabled: v })}
-                    trackColor={{ false: "#404040", true: ACCENT }}
-                  />
-                </View>
-
-                {/* Marketing row — no bottom border on last item */}
-                <View className="flex-row justify-between items-center py-3">
-                  <View className="flex-row items-center gap-3">
-                    <FontAwesome name="gift" size={16} color={ACCENT} />
-                    <Text className="text-[15px] text-foreground">
-                      {t("client.notifications.marketing")}
-                    </Text>
-                  </View>
-                  <Switch
-                    value={prefs.marketingOptIn}
-                    onValueChange={(v) => updatePrefsMutation.mutate({ marketingOptIn: v })}
-                    trackColor={{ false: "#404040", true: ACCENT }}
-                  />
-                </View>
+                <Switch
+                  value={prefs.pushEnabled}
+                  onValueChange={(v) => updatePrefsMutation.mutate({ pushEnabled: v })}
+                  trackColor={{ false: "#404040", true: ACCENT }}
+                />
               </View>
-            </GlassCard>
+
+              {/* In-app notifications row — last visible row, no bottom border */}
+              <View className="flex-row justify-between items-center py-3">
+                <View className="flex-row items-center gap-3">
+                  <View style={{ width: 20, alignItems: "center" }}>
+                    <FontAwesome name="mobile" size={20} color={ACCENT} />
+                  </View>
+                  <Text className="text-[15px] text-foreground">
+                    {t("client.notifications.inAppEnabled")}
+                  </Text>
+                </View>
+                <Switch
+                  value={prefs.inAppEnabled}
+                  onValueChange={(v) => updatePrefsMutation.mutate({ inAppEnabled: v })}
+                  trackColor={{ false: "#404040", true: ACCENT }}
+                />
+              </View>
+            </View>
           ) : (
             <EmptyState title={t("client.notifications.loadingPrefs")} />
           )}

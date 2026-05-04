@@ -19,6 +19,7 @@ import React from "react";
 import { Pressable, Text, View } from "react-native";
 import dayjs from "dayjs";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
+import { useTranslation } from "react-i18next";
 import { useThemeTokens } from "./tokens";
 
 type ActivityValue = boolean | number | string;
@@ -64,13 +65,20 @@ export function WeekStrip({
   activityByDate,
 }: WeekStripProps) {
   const tokens = useThemeTokens();
+  const { i18n } = useTranslation();
   const activityMap = activity ?? activityByDate ?? {};
+  // Day-before-month for sr/most non-en locales, month-before-day for en.
+  const lang = i18n.language === "en" ? "en" : "sr";
+  const rangeFormat = lang === "en" ? "MMM D" : "D. MMM";
 
   // Resolve the displayed week. When `weekStart` is supplied, use it
-  // verbatim — selecting a day must NOT shift the week boundary.
-  const weekAnchor = weekStart
+  // verbatim — selecting a day must NOT shift the week boundary. Re-apply
+  // the active locale: dayjs instances carry their own locale, so a
+  // `weekStart` created when the app was Serbian would keep formatting in
+  // Serbian even after the user switches to English.
+  const weekAnchor = (weekStart
     ? weekStart.startOf("day")
-    : startOfLocaleWeek(dayjs(selectedDate));
+    : startOfLocaleWeek(dayjs(selectedDate))).locale(lang);
 
   const days: dayjs.Dayjs[] = [];
   for (let i = 0; i < 7; i++) days.push(weekAnchor.add(i, "day"));
@@ -100,7 +108,7 @@ export function WeekStrip({
             className="font-body-semibold text-foreground"
             style={{ fontSize: 14, letterSpacing: -0.2 }}
           >
-            {weekAnchor.format("MMM D")} – {weekAnchor.add(6, "day").format("MMM D")}
+            {weekAnchor.format(rangeFormat)} – {weekAnchor.add(6, "day").format(rangeFormat)}
           </Text>
           <Pressable
             onPress={onNextWeek}

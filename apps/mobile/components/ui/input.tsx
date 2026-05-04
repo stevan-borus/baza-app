@@ -55,15 +55,31 @@ export function Input({
     ? BottomSheetTextInput
     : TextInput) as unknown as typeof TextInput;
 
+  // Multiline inputs grow with content; non-multiline keep the standard
+  // 48px field height for layout consistency.
+  const isMultiline = !!rest.multiline;
+
   return (
     <View className="gap-1.5">
       <View
-        style={{
-          height: FIELD_HEIGHT,
-          paddingLeft: SIDE_PADDING,
-          paddingRight: SIDE_PADDING,
-        }}
-        className={`border rounded-2xl flex-row items-center bg-glass ${error ? "border-danger" : "border-glass-border"}`}
+        style={
+          isMultiline
+            ? {
+                minHeight: FIELD_HEIGHT * 2.25,
+                paddingLeft: SIDE_PADDING,
+                paddingRight: SIDE_PADDING,
+                paddingTop: 10,
+                paddingBottom: 10,
+              }
+            : {
+                height: FIELD_HEIGHT,
+                paddingLeft: SIDE_PADDING,
+                paddingRight: SIDE_PADDING,
+              }
+        }
+        className={`border rounded-2xl bg-glass ${
+          isMultiline ? "flex-row items-start" : "flex-row items-center"
+        } ${error ? "border-danger" : "border-glass-border"}`}
       >
         {iconName ? (
           <View
@@ -74,7 +90,9 @@ export function Input({
           </View>
         ) : null}
 
-        <View className="flex-1 h-full justify-center relative">
+        <View
+          className={`flex-1 relative ${isMultiline ? "" : "h-full justify-center"}`}
+        >
           {hasLabel ? (
             <MotiView
               className="absolute left-0"
@@ -102,11 +120,15 @@ export function Input({
             }}
             placeholderTextColor={tokens.faint}
             className={`text-sm text-foreground ${className ?? ""}`}
-            style={{
-              paddingTop: hasLabel ? 12 : 0,
-              paddingBottom: hasLabel ? 2 : 0,
-              lineHeight: 18,
-            }}
+            style={
+              isMultiline
+                ? { padding: 0, lineHeight: 20, textAlignVertical: "top" }
+                : {
+                    paddingTop: hasLabel ? 12 : 0,
+                    paddingBottom: hasLabel ? 2 : 0,
+                    lineHeight: 18,
+                  }
+            }
             {...rest}
           />
         </View>

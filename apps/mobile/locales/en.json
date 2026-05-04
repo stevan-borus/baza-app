@@ -158,7 +158,6 @@
       "settingsTitle": "Notification settings",
       "pushEnabled": "Push notifications",
       "inAppEnabled": "In-app notifications",
-      "marketing": "Marketing messages",
       "loadingPrefs": "Loading settings...",
       "typeBooking": "Booking",
       "typeSession": "Session",
@@ -431,10 +430,13 @@
       "session": "Session",
       "client": "Client",
       "placeholder": "Note...",
+      "emptySessions": "No sessions available",
+      "emptyClients": "No clients available",
       "saveError": "Saving note failed.",
       "filterAll": "All",
       "filterThisWeek": "This week",
       "filterByClient": "By client",
+      "pickClientTitle": "Filter by client",
       "unknownClient": "Unknown client"
     },
     "clients": {
@@ -446,7 +448,8 @@
       "noSessions": "No scheduled sessions.",
       "seats": "{{count}} seats",
       "sessionName": "Session",
-      "noClients": "No registered clients"
+      "noClients": "No registered clients",
+      "statTotal": "Total"
     }
   },
   "notifications": {

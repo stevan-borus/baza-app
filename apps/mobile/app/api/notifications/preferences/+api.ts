@@ -19,7 +19,6 @@ export async function GET(request: Request) {
     select: {
       pushEnabled: true,
       inAppEnabled: true,
-      marketingOptIn: true,
       preferredLocale: true,
       updatedAt: true,
     },
@@ -46,7 +45,6 @@ export async function PATCH(request: Request) {
       userId: guard.user.id,
       pushEnabled: parsed.data.pushEnabled ?? true,
       inAppEnabled: parsed.data.inAppEnabled ?? true,
-      marketingOptIn: parsed.data.marketingOptIn ?? false,
       preferredLocale: parsed.data.preferredLocale ?? null,
     },
     // Only update fields explicitly provided in the payload.
@@ -57,9 +55,6 @@ export async function PATCH(request: Request) {
       ...(typeof parsed.data.inAppEnabled === "boolean"
         ? { inAppEnabled: parsed.data.inAppEnabled }
         : {}),
-      ...(typeof parsed.data.marketingOptIn === "boolean"
-        ? { marketingOptIn: parsed.data.marketingOptIn }
-        : {}),
       ...(parsed.data.preferredLocale !== undefined
         ? { preferredLocale: parsed.data.preferredLocale }
         : {}),
@@ -67,7 +62,6 @@ export async function PATCH(request: Request) {
     select: {
       pushEnabled: true,
       inAppEnabled: true,
-      marketingOptIn: true,
       preferredLocale: true,
       updatedAt: true,
     },

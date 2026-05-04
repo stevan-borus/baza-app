@@ -8,6 +8,7 @@ import { useState, useMemo } from "react";
 import { useMutation, useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
+import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { MotiView } from "@/components/ui/styled";
 import { LegendList } from "@legendapp/list";
 import { AppSheet } from "@/components/ui/sheet";
@@ -15,9 +16,9 @@ import { Button } from "@/components/ui/button";
 import { GlassCard } from "@/components/ui/glass-card";
 import { EmptyState, ErrorState } from "@/components/ui/states";
 import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import { ScreenContainerRaw, useTabBarBottomPadding } from "@/components/ui/screen-container";
 import { HeaderIconButton } from "@/components/ui/app-header";
-import { SectionLabel } from "@/components/ui/typography";
 import { getDateLocale } from "@/lib/i18n";
 import { trainerNotesQueries, type TrainerNote } from "@/lib/queries/trainer-notes-queries-factory";
 import { sessionsQueries } from "@/lib/queries/sessions-queries-factory";
@@ -25,7 +26,12 @@ import { clientsQueries } from "@/lib/queries/clients-queries-factory";
 
 // ─── types ───────────────────────────────────────────────────────────────────
 
-type FilterValue = "all" | "thisWeek" | "byClient";
+/**
+ * Time filter — applies independently from the client filter.
+ * - "all": all notes
+ * - "thisWeek": only notes created since the most recent Monday 00:00
+ */
+type TimeFilter = "all" | "thisWeek";
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
@@ -39,21 +45,20 @@ function startOfWeek(): Date {
   return monday;
 }
 
-function applyFilter(notes: TrainerNote[], filter: FilterValue): TrainerNote[] {
-  if (filter === "thisWeek") {
+function applyFilters(
+  notes: TrainerNote[],
+  timeFilter: TimeFilter,
+  clientId: string | null,
+): TrainerNote[] {
+  let out = notes;
+  if (timeFilter === "thisWeek") {
     const weekStart = startOfWeek().getTime();
-    return notes.filter((n) => new Date(n.createdAt).getTime() >= weekStart);
+    out = out.filter((n) => new Date(n.createdAt).getTime() >= weekStart);
   }
-  if (filter === "byClient") {
-    // Stable sort by client full name, then by createdAt desc within each client.
-    return [...notes].sort((a, b) => {
-      const aName = a.clientProfile?.user.fullName ?? "";
-      const bName = b.clientProfile?.user.fullName ?? "";
-      if (aName !== bName) return aName.localeCompare(bName);
-      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-    });
+  if (clientId) {
+    out = out.filter((n) => n.clientProfileId === clientId);
   }
-  return notes;
+  return out;
 }
 
 // ─── FilterChip ──────────────────────────────────────────────────────────────
@@ -61,10 +66,12 @@ function applyFilter(notes: TrainerNote[], filter: FilterValue): TrainerNote[] {
 function FilterChip({
   label,
   active,
+  trailingIcon,
   onPress,
 }: {
   label: string;
   active: boolean;
+  trailingIcon?: "chevron-down" | "times";
   onPress: () => void;
 }) {
   return (
@@ -73,12 +80,17 @@ function FilterChip({
       accessibilityRole="button"
       accessibilityState={{ selected: active }}
       style={{
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 6,
         paddingHorizontal: 14,
         paddingVertical: 7,
         borderRadius: 999,
         borderWidth: 1,
         borderColor: active ? "#4caf80" : "rgba(255,255,255,0.12)",
-        backgroundColor: active ? "rgba(46,91,66,0.30)" : "rgba(255,255,255,0.05)",
+        backgroundColor: active
+          ? "rgba(46,91,66,0.30)"
+          : "rgba(255,255,255,0.05)",
       }}
     >
       <Text
@@ -88,9 +100,17 @@ function FilterChip({
           color: active ? "#4caf80" : "rgba(255,255,255,0.55)",
           letterSpacing: 0.1,
         }}
+        numberOfLines={1}
       >
         {label}
       </Text>
+      {trailingIcon ? (
+        <FontAwesome
+          name={trailingIcon}
+          size={trailingIcon === "times" ? 11 : 9}
+          color={active ? "#4caf80" : "rgba(255,255,255,0.45)"}
+        />
+      ) : null}
     </Pressable>
   );
 }
@@ -153,9 +173,11 @@ export default function TrainerNotes() {
   const queryClient = useQueryClient();
   const bottomPad = useTabBarBottomPadding();
   const [showCreate, setShowCreate] = useState(false);
+  const [showClientPicker, setShowClientPicker] = useState(false);
   const [form, setForm] = useState({ sessionId: "", clientProfileId: "", note: "" });
   const [refreshing, setRefreshing] = useState(false);
-  const [filter, setFilter] = useState<FilterValue>("all");
+  const [timeFilter, setTimeFilter] = useState<TimeFilter>("all");
+  const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const dateLocale = getDateLocale();
 
   const notesQuery = useInfiniteQuery(trainerNotesQueries.listInfinite());
@@ -172,43 +194,17 @@ export default function TrainerNotes() {
   });
 
   const allNotes = notesQuery.data?.pages.flatMap((p) => p.notes) ?? [];
-  const filteredNotes = useMemo(() => applyFilter(allNotes, filter), [allNotes, filter]);
+  const filteredNotes = useMemo(
+    () => applyFilters(allNotes, timeFilter, selectedClientId),
+    [allNotes, timeFilter, selectedClientId],
+  );
 
-  // For "By client" grouping we interleave sticky section headers with note rows.
-  type ListItem =
-    | { kind: "header"; clientName: string; id: string }
-    | { kind: "row"; note: TrainerNote; id: string };
+  type ListItem = { kind: "row"; note: TrainerNote; id: string };
 
-  const { listData, stickyIndices } = useMemo<{
-    listData: ListItem[];
-    stickyIndices: number[];
-  }>(() => {
-    if (filter !== "byClient") {
-      return {
-        listData: filteredNotes.map((n) => ({
-          kind: "row" as const,
-          note: n,
-          id: n.id,
-        })),
-        stickyIndices: [],
-      };
-    }
-
-    const items: ListItem[] = [];
-    const stickies: number[] = [];
-    let lastClient: string | null = null;
-    for (const note of filteredNotes) {
-      const name =
-        note.clientProfile?.user.fullName ?? t("trainer.notes.unknownClient");
-      if (name !== lastClient) {
-        stickies.push(items.length);
-        items.push({ kind: "header", clientName: name, id: `h:${name}` });
-        lastClient = name;
-      }
-      items.push({ kind: "row", note, id: note.id });
-    }
-    return { listData: items, stickyIndices: stickies };
-  }, [filteredNotes, filter, t]);
+  const listData = useMemo<ListItem[]>(
+    () => filteredNotes.map((n) => ({ kind: "row" as const, note: n, id: n.id })),
+    [filteredNotes],
+  );
 
   async function handleRefresh() {
     setRefreshing(true);
@@ -220,11 +216,12 @@ export default function TrainerNotes() {
     if (notesQuery.hasNextPage && !notesQuery.isFetchingNextPage) notesQuery.fetchNextPage();
   }
 
-  const chips: { value: FilterValue; label: string }[] = [
-    { value: "all", label: t("trainer.notes.filterAll") },
-    { value: "thisWeek", label: t("trainer.notes.filterThisWeek") },
-    { value: "byClient", label: t("trainer.notes.filterByClient") },
-  ];
+  const selectedClient = clientsQuery.data?.clients.find(
+    (c) => c.id === selectedClientId,
+  );
+  const clientChipLabel = selectedClient
+    ? selectedClient.user.fullName
+    : t("trainer.notes.filterByClient");
 
   return (
     <ScreenContainerRaw
@@ -250,14 +247,28 @@ export default function TrainerNotes() {
           contentContainerStyle={{ paddingHorizontal: 20, gap: 8, flexDirection: "row" }}
           style={{ flexGrow: 0 }}
         >
-          {chips.map((chip) => (
-            <FilterChip
-              key={chip.value}
-              label={chip.label}
-              active={filter === chip.value}
-              onPress={() => setFilter(chip.value)}
-            />
-          ))}
+          <FilterChip
+            label={t("trainer.notes.filterAll")}
+            active={timeFilter === "all"}
+            onPress={() => setTimeFilter("all")}
+          />
+          <FilterChip
+            label={t("trainer.notes.filterThisWeek")}
+            active={timeFilter === "thisWeek"}
+            onPress={() => setTimeFilter("thisWeek")}
+          />
+          <FilterChip
+            label={clientChipLabel}
+            active={!!selectedClient}
+            trailingIcon={selectedClient ? "times" : "chevron-down"}
+            onPress={() => {
+              if (selectedClient) {
+                setSelectedClientId(null);
+              } else {
+                setShowClientPicker(true);
+              }
+            }}
+          />
         </ScrollView>
       </MotiView>
 
@@ -278,7 +289,6 @@ export default function TrainerNotes() {
         <LegendList
           data={listData}
           keyExtractor={(item: ListItem) => item.id}
-          stickyIndices={stickyIndices}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
@@ -288,31 +298,9 @@ export default function TrainerNotes() {
             />
           }
           contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: bottomPad }}
-          renderItem={({ item }: { item: ListItem }) =>
-            item.kind === "header" ? (
-              <View
-                style={{
-                  backgroundColor: "rgba(10,15,20,0.92)",
-                  paddingVertical: 8,
-                  marginBottom: 4,
-                }}
-              >
-                <Text
-                  style={{
-                    fontSize: 11,
-                    fontWeight: "700",
-                    letterSpacing: 0.8,
-                    textTransform: "uppercase",
-                    color: "rgba(255,255,255,0.55)",
-                  }}
-                >
-                  {item.clientName}
-                </Text>
-              </View>
-            ) : (
-              <NoteRow item={item.note} dateLocale={dateLocale} />
-            )
-          }
+          renderItem={({ item }: { item: ListItem }) => (
+            <NoteRow item={item.note} dateLocale={dateLocale} />
+          )}
           onEndReached={handleEndReached}
           onEndReachedThreshold={0.5}
           ListEmptyComponent={
@@ -329,45 +317,75 @@ export default function TrainerNotes() {
         />
       </MotiView>
 
-      {/* ── Compose sheet (preserved) ── */}
-      <AppSheet open={showCreate} onOpenChange={setShowCreate}>
-        <View className="flex-col gap-5">
+      {/* ── Client picker sheet (for "By client" filter) ── */}
+      <AppSheet open={showClientPicker} onOpenChange={setShowClientPicker}>
+        <View className="flex-col gap-4 pb-5">
           <Text
             className="text-foreground font-body-bold"
-            style={{ fontSize: 24, letterSpacing: -0.3 }}
+            style={{ fontSize: 20, letterSpacing: -0.3 }}
+          >
+            {t("trainer.notes.pickClientTitle")}
+          </Text>
+          <Select
+            placeholder={t("trainer.notes.client")}
+            value={selectedClientId ?? ""}
+            onChange={(v) => {
+              setSelectedClientId(v || null);
+              setShowClientPicker(false);
+            }}
+            emptyText={t("trainer.notes.emptyClients")}
+            options={(clientsQuery.data?.clients ?? []).map((c) => ({
+              value: c.id,
+              label: c.user.fullName,
+            }))}
+          />
+        </View>
+      </AppSheet>
+
+      {/* ── Compose sheet ── */}
+      <AppSheet open={showCreate} onOpenChange={setShowCreate}>
+        <View className="flex-col gap-5 pb-5">
+          <Text
+            className="text-foreground font-body-bold"
+            style={{ fontSize: 20, letterSpacing: -0.3 }}
           >
             {t("trainer.notes.sheetTitle")}
           </Text>
 
-          <SectionLabel>{t("trainer.notes.session")}</SectionLabel>
-          {(sessionsQuery.data?.sessions ?? []).slice(0, 10).map((s) => (
-            <Button
-              key={s.id}
-              size="small"
-              variant={form.sessionId === s.id ? "primary" : "secondary"}
-              onPress={() => setForm((f) => ({ ...f, sessionId: s.id }))}
-            >
-              {s.classType?.name ?? t("trainer.clients.sessionName")} -{" "}
-              {new Date(s.startsAt).toLocaleDateString(dateLocale)}
-            </Button>
-          ))}
+          <Select
+            placeholder={t("trainer.notes.session")}
+            value={form.sessionId}
+            onChange={(v) => setForm((f) => ({ ...f, sessionId: v }))}
+            emptyText={t("trainer.notes.emptySessions")}
+            options={(sessionsQuery.data?.sessions ?? [])
+              .filter((s) => s.status === "SCHEDULED")
+              .map((s) => ({
+                value: s.id,
+                label: s.classType?.name ?? t("trainer.clients.sessionName"),
+                hint: new Date(s.startsAt).toLocaleDateString(dateLocale, {
+                  weekday: "short",
+                  month: "short",
+                  day: "numeric",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                }),
+              }))}
+          />
 
-          <SectionLabel>{t("trainer.notes.client")}</SectionLabel>
-          {(clientsQuery.data?.clients ?? []).map((c) => (
-            <Button
-              key={c.id}
-              size="small"
-              variant={form.clientProfileId === c.id ? "primary" : "secondary"}
-              onPress={() => setForm((f) => ({ ...f, clientProfileId: c.id }))}
-            >
-              {c.user.fullName}
-            </Button>
-          ))}
+          <Select
+            placeholder={t("trainer.notes.client")}
+            value={form.clientProfileId}
+            onChange={(v) => setForm((f) => ({ ...f, clientProfileId: v }))}
+            emptyText={t("trainer.notes.emptyClients")}
+            options={(clientsQuery.data?.clients ?? []).map((c) => ({
+              value: c.id,
+              label: c.user.fullName,
+            }))}
+          />
 
           <Input
             placeholder={t("trainer.notes.placeholder")}
             multiline
-            numberOfLines={3}
             value={form.note}
             onChangeText={(v) => setForm((f) => ({ ...f, note: v }))}
           />

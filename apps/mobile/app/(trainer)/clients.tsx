@@ -1,23 +1,33 @@
 /**
- * Trainer Clients screen — sessions grouped by date with client rows underneath.
- * Layout: HeroCard (today stats) → sticky-like date sections → session subheaders → GlassCard client rows.
- * Motion: MotiView stagger on header+hero (0/80ms) and a single list wrapper (160ms).
+ * Trainer Clients screen — searchable roster with compact stat strip.
+ *
+ * Layout: header → search input → "active · this month · expiring" stat strip
+ * → glass-card list, one row per client, tappable to expand notes.
+ * The empty hero card from the previous design is gone — it conveyed nothing
+ * useful. The stat strip now sits inline with the search and shows real
+ * counts derived from packageStatus.
  */
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
+import {
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  Text,
+  View,
+} from "react-native";
 import { MotiView } from "@/components/ui/styled";
 import { GlassCard } from "@/components/ui/glass-card";
-import { HeroCard } from "@/components/ui/hero-card";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState, ErrorState } from "@/components/ui/states";
-import { ScreenContainer } from "@/components/ui/screen-container";
-import { SectionLabel } from "@/components/ui/typography";
-import { getDateLocale } from "@/lib/i18n";
+import { Input } from "@/components/ui/input";
+import {
+  ScreenContainerRaw,
+  useTabBarBottomPadding,
+} from "@/components/ui/screen-container";
 import { clientsQueries } from "@/lib/queries/clients-queries-factory";
-import { sessionsQueries } from "@/lib/queries/sessions-queries-factory";
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -30,34 +40,27 @@ function getInitials(fullName: string): string {
     .join("");
 }
 
-function groupSessionsByDate(
-  sessions: Array<{ id: string; startsAt: string; [key: string]: unknown }>,
-  dateLocale: string,
-): Array<{ dateLabel: string; sessions: typeof sessions }> {
-  const map = new Map<string, typeof sessions>();
-  for (const s of sessions) {
-    const label = new Date(s.startsAt).toLocaleDateString(dateLocale, {
-      weekday: "long",
-      month: "long",
-      day: "numeric",
-    });
-    const group = map.get(label) ?? [];
-    group.push(s);
-    map.set(label, group);
-  }
-  return Array.from(map.entries()).map(([dateLabel, sessions]) => ({
-    dateLabel,
-    sessions,
-  }));
-}
+// ─── stat pill ──────────────────────────────────────────────────────────────
 
-function isToday(dateStr: string): boolean {
-  const d = new Date(dateStr);
-  const now = new Date();
+function StatPill({ value, label }: { value: number; label: string }) {
   return (
-    d.getFullYear() === now.getFullYear() &&
-    d.getMonth() === now.getMonth() &&
-    d.getDate() === now.getDate()
+    <View
+      className="flex-1 bg-glass border border-glass-border rounded-2xl px-3 py-2.5"
+    >
+      <Text
+        className="text-foreground font-body-bold"
+        style={{ fontSize: 18, letterSpacing: -0.4 }}
+      >
+        {value}
+      </Text>
+      <Text
+        className="text-muted text-[11px] mt-0.5"
+        style={{ letterSpacing: 0.3, textTransform: "uppercase" }}
+        numberOfLines={1}
+      >
+        {label}
+      </Text>
+    </View>
   );
 }
 
@@ -66,51 +69,77 @@ function isToday(dateStr: string): boolean {
 type Client = {
   id: string;
   notes?: string | null;
+  packageStatus: "active" | "expiring" | "expired" | "paused" | "none";
   user: { fullName: string; email: string };
+};
+
+const STATUS_BADGE: Record<
+  Client["packageStatus"],
+  { tone: "success" | "warning" | "neutral"; key: string }
+> = {
+  active: { tone: "success", key: "admin.clients.filterActive" },
+  expiring: { tone: "warning", key: "admin.clients.filterExpiring" },
+  expired: { tone: "warning", key: "admin.clients.filterExpired" },
+  paused: { tone: "neutral", key: "admin.clients.filterPaused" },
+  none: { tone: "neutral", key: "admin.clients.filterAll" },
 };
 
 function ClientRow({ client }: { client: Client }) {
   const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
   const initials = getInitials(client.user.fullName);
+  const badge = STATUS_BADGE[client.packageStatus];
 
   return (
-    <Pressable onPress={() => setExpanded((v) => !v)} accessibilityRole="button">
+    <Pressable
+      onPress={() => setExpanded((v) => !v)}
+      accessibilityRole="button"
+      className="active:opacity-80"
+    >
       <GlassCard size="sm">
         <View className="flex-row items-center gap-3">
-          {/* Avatar circle */}
           <View
             className="rounded-full items-center justify-center"
-            style={{ width: 40, height: 40, backgroundColor: "rgba(46,91,66,0.22)" }}
+            style={{
+              width: 40,
+              height: 40,
+              backgroundColor: "rgba(46,91,66,0.22)",
+            }}
           >
             <Text
               className="font-body-bold"
-              style={{ color: "#4caf80", fontSize: 15 }}
+              style={{ color: "#4caf80", fontSize: 14 }}
             >
               {initials}
             </Text>
           </View>
 
-          {/* Name + email */}
           <View className="flex-1 flex-col gap-0.5">
-            <Text className="font-body-semibold text-foreground text-sm">
+            <Text
+              className="font-body-semibold text-foreground text-sm"
+              numberOfLines={1}
+            >
               {client.user.fullName}
             </Text>
-            <Text className="text-xs text-muted">{client.user.email}</Text>
+            <Text className="text-xs text-muted" numberOfLines={1}>
+              {client.user.email}
+            </Text>
           </View>
 
-          {/* Chevron — only shown when notes exist */}
-          {client.notes ? (
-            <Text className="text-muted text-xs">{expanded ? "▲" : "▼"}</Text>
+          {client.packageStatus !== "none" ? (
+            <Badge status={badge.tone}>{t(badge.key)}</Badge>
           ) : null}
         </View>
 
-        {/* Expanded notes */}
         {expanded && client.notes ? (
-          <View className="mt-2 pt-2" style={{ borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.06)" }}>
-            <Text className="text-xs text-muted">
-              {t("admin.clients.notes", { text: client.notes })}
-            </Text>
+          <View
+            className="mt-3 pt-3"
+            style={{
+              borderTopWidth: 1,
+              borderTopColor: "rgba(255,255,255,0.06)",
+            }}
+          >
+            <Text className="text-xs text-muted leading-5">{client.notes}</Text>
           </View>
         ) : null}
       </GlassCard>
@@ -123,34 +152,44 @@ function ClientRow({ client }: { client: Client }) {
 export default function TrainerClients() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
+  const bottomPad = useTabBarBottomPadding(24);
   const [refreshing, setRefreshing] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const clientsQuery = useQuery(clientsQueries.list());
-  const sessionsQuery = useQuery(sessionsQueries.list());
-  const dateLocale = getDateLocale();
 
   async function handleRefresh() {
     setRefreshing(true);
-    await Promise.all([
-      queryClient.invalidateQueries({ queryKey: ["clients"] }),
-      queryClient.invalidateQueries({ queryKey: ["sessions"] }),
-    ]);
+    await queryClient.invalidateQueries({ queryKey: ["clients"] });
     setRefreshing(false);
   }
 
   const clients = clientsQuery.data?.clients ?? [];
-  const scheduledSessions = (sessionsQuery.data?.sessions ?? []).filter(
-    (s) => s.status === "SCHEDULED",
-  );
 
-  // Today stats
-  const todaySessions = scheduledSessions.filter((s) => isToday(s.startsAt));
-  const todayClientCount = todaySessions.length > 0 ? clients.length : 0;
+  const stats = useMemo(() => {
+    let active = 0;
+    let expiring = 0;
+    let expired = 0;
+    for (const c of clients) {
+      if (c.packageStatus === "active") active++;
+      else if (c.packageStatus === "expiring") expiring++;
+      else if (c.packageStatus === "expired") expired++;
+    }
+    return { active, expiring, expired };
+  }, [clients]);
 
-  const grouped = groupSessionsByDate(scheduledSessions, dateLocale);
+  const filtered = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return clients;
+    return clients.filter(
+      (c) =>
+        c.user.fullName.toLowerCase().includes(q) ||
+        c.user.email.toLowerCase().includes(q),
+    );
+  }, [clients, searchQuery]);
 
   return (
-    <ScreenContainer title={t("tabs.clients")}>
+    <ScreenContainerRaw title={t("tabs.clients")}>
       <ScrollView
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
@@ -162,103 +201,75 @@ export default function TrainerClients() {
             colors={["#2e5b42"]}
           />
         }
-        contentContainerStyle={{ gap: 24 }}
+        contentContainerStyle={{
+          paddingHorizontal: 24,
+          paddingTop: 16,
+          paddingBottom: bottomPad,
+          gap: 16,
+        }}
       >
-        {/* ── Hero card — today stats ── */}
+        {/* Search */}
+        <MotiView
+          from={{ opacity: 0, translateY: -6 }}
+          animate={{ opacity: 1, translateY: 0 }}
+          transition={{ type: "timing", duration: 300, delay: 60 }}
+        >
+          <Input
+            placeholder={t("admin.clients.searchPlaceholder")}
+            leftIcon="search"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+        </MotiView>
+
+        {/* Stat strip — total / active / expiring */}
+        <MotiView
+          from={{ opacity: 0, translateY: -4 }}
+          animate={{ opacity: 1, translateY: 0 }}
+          transition={{ type: "timing", duration: 300, delay: 140 }}
+        >
+          <View className="flex-row gap-2">
+            <StatPill
+              value={clients.length}
+              label={t("trainer.clients.statTotal")}
+            />
+            <StatPill
+              value={stats.active}
+              label={t("admin.clients.filterActive")}
+            />
+            <StatPill
+              value={stats.expiring}
+              label={t("admin.clients.filterExpiring")}
+            />
+          </View>
+        </MotiView>
+
+        {/* Error / empty / list */}
         <MotiView
           from={{ opacity: 0, translateY: 8 }}
           animate={{ opacity: 1, translateY: 0 }}
-          transition={{ type: "timing", duration: 400, delay: 80 }}
+          transition={{ type: "timing", duration: 300, delay: 220 }}
+          style={{ gap: 10 }}
         >
-          <HeroCard tone="default">
-            <View className="flex-col gap-1">
-              <SectionLabel>{t("trainer.clients.todayLabel", { defaultValue: "Today" })}</SectionLabel>
-              <Text
-                className="text-foreground font-body-bold"
-                style={{ fontSize: 22, letterSpacing: -0.4, marginTop: 4 }}
-              >
-                {t("trainer.clients.todayStats", {
-                  sessions: todaySessions.length,
-                  clients: todayClientCount,
-                  defaultValue: `${todaySessions.length} sessions today · ${todayClientCount} clients today`,
-                })}
-              </Text>
-            </View>
-          </HeroCard>
+          {clientsQuery.isError ? (
+            <ErrorState message={t("trainer.clients.error")} />
+          ) : filtered.length === 0 ? (
+            <EmptyState
+              title={
+                searchQuery
+                  ? t("admin.clients.filterEmpty")
+                  : t("admin.clients.empty")
+              }
+            />
+          ) : (
+            filtered.map((client) => (
+              <ClientRow key={client.id} client={client} />
+            ))
+          )}
         </MotiView>
-
-        {/* ── Error states ── */}
-        {clientsQuery.isError ? (
-          <ErrorState message={t("trainer.clients.error")} />
-        ) : null}
-        {sessionsQuery.isError ? (
-          <ErrorState message={t("trainer.clients.sessionsError")} />
-        ) : null}
-
-        {/* ── Session groups ── */}
-        {scheduledSessions.length === 0 ? (
-          <EmptyState title={t("trainer.clients.noSessions")} />
-        ) : (
-          <MotiView
-            from={{ opacity: 0, translateY: 12 }}
-            animate={{ opacity: 1, translateY: 0 }}
-            transition={{ type: "timing", duration: 400, delay: 160 }}
-          >
-            <View className="flex-col gap-6 pb-8">
-              {grouped.map(({ dateLabel, sessions: dateSessions }) => (
-                <View key={dateLabel} className="flex-col gap-3">
-                  {/* Date header */}
-                  <SectionLabel>{dateLabel}</SectionLabel>
-
-                  {/* Sessions in this date group */}
-                  {dateSessions.map((session) => (
-                    <View key={session.id} className="flex-col gap-2">
-                      {/* Session subheader */}
-                      <GlassCard size="md">
-                        <View className="flex-row justify-between items-center">
-                          <View className="flex-col gap-0.5 flex-1">
-                            <Text className="font-body-semibold text-base text-foreground">
-                              {(session as { classType?: { name?: string } }).classType?.name ??
-                                t("trainer.clients.sessionName")}
-                            </Text>
-                            <Text className="text-xs text-muted">
-                              {new Date(session.startsAt).toLocaleTimeString(dateLocale, {
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              })}
-                              {(session as unknown as { endsAt?: string }).endsAt
-                                ? ` – ${new Date((session as unknown as { endsAt: string }).endsAt).toLocaleTimeString(dateLocale, { hour: "2-digit", minute: "2-digit" })}`
-                                : ""}
-                            </Text>
-                          </View>
-                          <Badge status="neutral">
-                            {t("trainer.clients.seats", {
-                              count: (session as { capacity?: number }).capacity ?? 0,
-                            })}
-                          </Badge>
-                        </View>
-                      </GlassCard>
-
-                      {/* Client rows */}
-                      {clients.length > 0 ? (
-                        <View className="flex-col ml-3 gap-1.5">
-                          {clients.map((client) => (
-                            <ClientRow key={client.id} client={client} />
-                          ))}
-                        </View>
-                      ) : (
-                        <Text className="text-muted ml-4 text-xs">
-                          {t("trainer.clients.noClients")}
-                        </Text>
-                      )}
-                    </View>
-                  ))}
-                </View>
-              ))}
-            </View>
-          </MotiView>
-        )}
       </ScrollView>
-    </ScreenContainer>
+    </ScreenContainerRaw>
   );
 }

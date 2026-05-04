@@ -45,13 +45,8 @@ export default function TrainerLayout() {
           tabBarIcon: ({ color }) => <TabIcon name="pencil" color={color} />,
         }}
       />
-      <Tabs.Screen
-        name="profile"
-        options={{
-          title: t("tabs.profile"),
-          tabBarIcon: ({ color }) => <TabIcon name="user" color={color} />,
-        }}
-      />
+      {/* `profile` route is hidden from the tab bar (see tab-layout-theme); it
+          is reachable via the header avatar's ProfileSheet. */}
     </Tabs>
   );
 }

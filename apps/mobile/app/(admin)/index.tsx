@@ -48,7 +48,8 @@ function monthKeyFromDate(d: dayjs.Dayjs) {
 }
 
 export default function AdminSchedule() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const lang = i18n.language === "en" ? "en" : "sr";
   const router = useRouter();
   const queryClient = useQueryClient();
   const bottomPad = useTabBarBottomPadding(24);
@@ -499,7 +500,7 @@ export default function AdminSchedule() {
               {/* Day sessions list */}
               <View className="px-6">
                 <SectionLabel className="pb-3">
-                  {displayDate.format("dddd, D MMMM")}
+                  {displayDate.locale(lang).format("dddd, D MMMM")}
                 </SectionLabel>
                 <View className="flex-col gap-3">
                   {daySessions.length === 0 ? (

@@ -209,7 +209,6 @@ export type RegisterPushTokenInput = z.infer<
 export const notificationPreferenceInputSchema = z.object({
   pushEnabled: z.boolean().optional(),
   inAppEnabled: z.boolean().optional(),
-  marketingOptIn: z.boolean().optional(),
   preferredLocale: AppLocaleSchema.optional().nullable(),
 });
 export type NotificationPreferenceInput = z.infer<

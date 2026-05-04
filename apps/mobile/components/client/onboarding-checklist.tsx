@@ -34,6 +34,14 @@ function CheckRow({ done, label }: { done: boolean; label: string }) {
   );
 }
 
+/**
+ * Onboarding checklist for brand-new clients only.
+ *
+ * Shows two steps: "profile complete" and "first class booked". Once the
+ * client has booked any session the checklist hides itself permanently —
+ * returning users don't need a stepper. Manual dismissal is also supported
+ * so a client who isn't ready to book can clear it from view.
+ */
 export function OnboardingChecklist({
   userId,
   userName,
@@ -42,7 +50,6 @@ export function OnboardingChecklist({
 }: OnboardingChecklistProps) {
   const { t } = useTranslation();
   const [dismissed, setDismissed] = useState<boolean | null>(null);
-  const [notificationsConfigured, setNotificationsConfigured] = useState(false);
   const storageKey = `${STORAGE_PREFIX}${userId}`;
 
   useEffect(() => {
@@ -50,7 +57,6 @@ export function OnboardingChecklist({
       if (val) {
         const data = JSON.parse(val);
         setDismissed(data.dismissed ?? false);
-        setNotificationsConfigured(data.notificationsConfigured ?? false);
       } else {
         setDismissed(false);
       }
@@ -59,41 +65,30 @@ export function OnboardingChecklist({
 
   const profileCompleted = !!userName;
   const firstClassBooked = bookingCount > 0;
-  const allDone = profileCompleted && firstClassBooked && notificationsConfigured;
 
   const handleDismiss = useCallback(async () => {
     setDismissed(true);
-    await AsyncStorage.setItem(storageKey, JSON.stringify({ dismissed: true, notificationsConfigured }));
-  }, [storageKey, notificationsConfigured]);
+    await AsyncStorage.setItem(storageKey, JSON.stringify({ dismissed: true }));
+  }, [storageKey]);
 
-  // Not yet loaded or already dismissed
+  // Not yet loaded, manually dismissed, or already an active client.
   if (dismissed === null || dismissed) return null;
-  // All steps complete and not yet dismissed — show congrats
-  if (allDone) {
-    return (
-      <GlassCard>
-        <View className="flex-col items-center gap-3">
-          <Text className="text-2xl font-body-bold text-accent">
-            {t("client.onboarding.allSet")}
+  if (firstClassBooked) return null;
+
+  const completed = [profileCompleted, firstClassBooked].filter(Boolean).length;
+  const progress = completed / 2;
+
+  return (
+    <GlassCard>
+      <View className="flex-col gap-3">
+        <View className="flex-row items-center justify-between">
+          <Text className="text-2xl font-body-bold text-foreground">
+            {t("client.onboarding.getStarted")}
           </Text>
           <Button variant="ghost" size="small" onPress={handleDismiss}>
             {t("client.onboarding.dismiss")}
           </Button>
         </View>
-      </GlassCard>
-    );
-  }
-
-  const completed = [profileCompleted, firstClassBooked, notificationsConfigured].filter(Boolean).length;
-  const progress = completed / 3;
-
-  return (
-    <GlassCard>
-      <View className="flex-col gap-3">
-        <Text className="text-2xl font-body-bold text-foreground">
-          {t("client.onboarding.getStarted")}
-        </Text>
-        {/* Progress bar */}
         <View className="h-1 bg-surface-2 rounded-[2px] overflow-hidden">
           <View
             className="h-1 bg-accent rounded-[2px]"
@@ -104,10 +99,6 @@ export function OnboardingChecklist({
         <CheckRow
           done={firstClassBooked}
           label={t("client.onboarding.firstClassBooked")}
-        />
-        <CheckRow
-          done={notificationsConfigured}
-          label={t("client.onboarding.notificationsOn")}
         />
       </View>
     </GlassCard>

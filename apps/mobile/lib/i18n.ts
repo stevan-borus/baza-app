@@ -54,8 +54,14 @@ export async function loadStoredLocale(): Promise<void> {
 
 /**
  * Persist chosen locale and optionally return it for API sync.
+ *
+ * Sets dayjs.locale eagerly *before* awaiting i18n.changeLanguage so any
+ * React re-render triggered by the language change reads the updated dayjs
+ * locale on first paint. The languageChanged listener still re-syncs as a
+ * safety net (e.g. on app start via loadStoredLocale).
  */
 export async function setLocale(locale: Locale): Promise<void> {
+  syncDayjsLocale(locale);
   await i18n.changeLanguage(locale);
   try {
     await AsyncStorage.setItem(STORAGE_KEY, locale);

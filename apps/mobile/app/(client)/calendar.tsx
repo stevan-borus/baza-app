@@ -7,7 +7,7 @@
  */
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Text, View } from "react-native";
+import { ScrollView, Text, View } from "react-native";
 import { MotiView } from "@/components/ui/styled";
 import dayjs from "dayjs";
 import * as Haptics from "expo-haptics";
@@ -19,7 +19,10 @@ import {
   type SessionBlock,
 } from "@/components/ui/time-axis-day-view";
 import { EmptyState, ErrorState } from "@/components/ui/states";
-import { ScreenContainerRaw } from "@/components/ui/screen-container";
+import {
+  ScreenContainerRaw,
+  useTabBarBottomPadding,
+} from "@/components/ui/screen-container";
 import { SectionLabel } from "@/components/ui/typography";
 import { SkeletonList } from "@/components/ui/skeleton";
 import { BookingSheet } from "@/components/client/booking-sheet";
@@ -32,7 +35,9 @@ function monthKeyFromDate(d: dayjs.Dayjs) {
 }
 
 export default function ClientCalendar() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const lang = i18n.language === "en" ? "en" : "sr";
+  const bottomPad = useTabBarBottomPadding(24);
   const queryClient = useQueryClient();
   const [selectedDate, setSelectedDate] = useState(
     dayjs().format("YYYY-MM-DD"),
@@ -170,7 +175,7 @@ export default function ClientCalendar() {
       ) : null}
 
       <View className="px-6 pb-2 flex-row items-baseline justify-between">
-        <SectionLabel>{displayDate.format("dddd, D MMMM")}</SectionLabel>
+        <SectionLabel>{displayDate.locale(lang).format("dddd, D MMMM")}</SectionLabel>
         <Text className="text-xs text-muted">
           {daySessions.length === 0
             ? ""
@@ -179,20 +184,36 @@ export default function ClientCalendar() {
       </View>
 
       {availabilityQuery.isLoading ? (
-        <View className="px-6 pt-2">
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={{
+            paddingHorizontal: 24,
+            paddingTop: 8,
+            paddingBottom: bottomPad,
+          }}
+        >
           <SkeletonList count={3} />
-        </View>
+        </ScrollView>
       ) : daySessions.length === 0 ? (
-        <View className="px-6 pt-2">
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={{
+            paddingHorizontal: 24,
+            paddingTop: 8,
+            paddingBottom: bottomPad,
+          }}
+        >
           <EmptyState title={t("client.dayView.noSessions")} />
-        </View>
+        </ScrollView>
       ) : (
-        <TimeAxisDayView
-          date={selectedDate}
-          sessions={timeAxisSessions}
-          onSessionPress={handleSessionPress}
-          showNowLine
-        />
+        <View style={{ flex: 1 }}>
+          <TimeAxisDayView
+            date={selectedDate}
+            sessions={timeAxisSessions}
+            onSessionPress={handleSessionPress}
+            showNowLine
+          />
+        </View>
       )}
 
       <BookingSheet
