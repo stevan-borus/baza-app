@@ -32,9 +32,8 @@ const HIDDEN_TAB_ROUTES = new Set([
   "settings",
   "class-types",
   "rooms",
-  // `profile` is reachable via the header avatar's ProfileSheet on every
-  // screen — no dedicated tab needed.
-  "profile",
+  // `history` is a stack child of the profile tab, not a standalone tab.
+  "history",
 ]);
 
 /**

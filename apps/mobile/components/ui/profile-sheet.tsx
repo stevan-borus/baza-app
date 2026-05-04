@@ -10,7 +10,6 @@ import { authQueries } from "@/lib/queries/auth-queries-factory";
 import { type Locale } from "@/lib/i18n";
 import { notificationsQueries } from "@/lib/queries/notifications-queries-factory";
 import { signOutWithPushCleanup } from "@/lib/sign-out";
-import { useSessionAuth } from "@/lib/session-auth";
 import { AppSheet } from "./sheet";
 import { useThemeTokens } from "./tokens";
 
@@ -67,16 +66,6 @@ function ProfileSheetContent({ open, onOpenChange }: Props) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const tokens = useThemeTokens();
-  const { role } = useSessionAuth();
-
-  // Map role to the dedicated profile page (admin currently has none, so
-  // the "View profile" row is hidden for admins).
-  const profileRoute =
-    role === "TRAINER"
-      ? "/(trainer)/profile"
-      : role === "CLIENT"
-        ? "/(client)/profile"
-        : null;
 
   const meQuery = useQuery(authQueries.me());
   const email = meQuery.data?.user.email ?? "";
@@ -129,25 +118,6 @@ function ProfileSheetContent({ open, onOpenChange }: Props) {
             </Text>
           </View>
         </View>
-
-        {profileRoute ? (
-          <Pressable
-            onPress={() => {
-              onOpenChange(false);
-              router.push(profileRoute);
-            }}
-            android_ripple={null}
-            className="flex-row items-center justify-between py-3 px-3 rounded-lg border border-glass-border active:opacity-70"
-          >
-            <View className="flex-row items-center gap-3">
-              <FontAwesome name="user" size={15} color={tokens.foreground} />
-              <Text className="text-foreground font-body-medium" style={{ fontSize: 15 }}>
-                {t("client.profileTab.viewProfile", { defaultValue: "View profile" })}
-              </Text>
-            </View>
-            <FontAwesome name="chevron-right" size={11} color={tokens.faint} />
-          </Pressable>
-        ) : null}
 
         <View className="gap-2">
           <Text className="text-muted text-xs uppercase" style={{ letterSpacing: 0.5 }}>

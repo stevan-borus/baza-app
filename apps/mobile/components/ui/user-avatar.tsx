@@ -1,49 +1,69 @@
-import React from "react";
-import { Pressable, Text, View } from "react-native";
+import React, { useEffect, useState } from "react";
+import { Image, Pressable, Text, View } from "react-native";
 import { useQuery } from "@tanstack/react-query";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { authQueries } from "@/lib/queries/auth-queries-factory";
 import { useProfileSheet } from "./profile-sheet";
 
-const AVATAR_SIZE = 32;
+const AVATAR_SIZE = 36;
+const AVATAR_STORAGE_KEY = "baza.avatar.localUri";
 
 /**
- * Circular initial badge for the AppHeader's left slot. Tapping it opens
- * the global ProfileSheet (mounted once at the screen root, opened via context).
+ * Circular avatar for the AppHeader's left slot. Tapping it opens the
+ * global ProfileSheet. Theme-aware: foreground/background tokens swap
+ * between light and dark. Renders the user's locally-uploaded image
+ * if present, otherwise the email initial.
  */
 export function UserAvatar() {
   const meQuery = useQuery(authQueries.me());
   const email = meQuery.data?.user.email ?? "";
   const initial = (email || "?").charAt(0).toUpperCase();
   const { open } = useProfileSheet();
+  const [avatarUri, setAvatarUri] = useState<string | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+    AsyncStorage.getItem(AVATAR_STORAGE_KEY)
+      .then((uri) => {
+        if (mounted && uri) setAvatarUri(uri);
+      })
+      .catch(() => {});
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   return (
     <Pressable
       onPress={open}
       hitSlop={12}
+      android_ripple={null}
+      className="active:opacity-80"
       accessibilityRole="button"
       accessibilityLabel="Open profile menu"
     >
-      <View
-        style={{
-          width: AVATAR_SIZE,
-          height: AVATAR_SIZE,
-          borderRadius: AVATAR_SIZE / 2,
-          backgroundColor: "rgba(255,255,255,0.15)",
-          borderWidth: 1,
-          borderColor: "rgba(255,255,255,0.20)",
-        }}
-        className="items-center justify-center"
-      >
-        <Text
+      {avatarUri ? (
+        <Image
+          source={{ uri: avatarUri }}
           style={{
-            color: "rgba(255,255,255,0.95)",
-            fontSize: 14,
-            fontWeight: "600",
+            width: AVATAR_SIZE,
+            height: AVATAR_SIZE,
+            borderRadius: AVATAR_SIZE / 2,
           }}
+        />
+      ) : (
+        <View
+          className="rounded-full bg-foreground items-center justify-center"
+          style={{ width: AVATAR_SIZE, height: AVATAR_SIZE }}
         >
-          {initial}
-        </Text>
-      </View>
+          <Text
+            className="font-body-semibold text-background"
+            style={{ fontSize: 13 }}
+          >
+            {initial}
+          </Text>
+        </View>
+      )}
     </Pressable>
   );
 }

@@ -54,8 +54,13 @@ export default function ClientLayout() {
           tabBarBadge: unreadCount > 0 ? unreadCount : undefined,
         }}
       />
-      {/* `profile` route is hidden from the tab bar (see tab-layout-theme); it
-          is reachable via the header avatar's ProfileSheet. */}
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: t("tabs.profile"),
+          tabBarIcon: ({ color }) => <TabIcon name="user" color={color} />,
+        }}
+      />
     </Tabs>
   );
 }

@@ -940,22 +940,11 @@ export default function HomeStudio() {
             onPress={profileSheet.open}
             hitSlop={8}
             android_ripple={null}
-            className="active:opacity-80"
-            style={{
-              width: 36,
-              height: 36,
-              borderRadius: 18,
-              backgroundColor: INK,
-              alignItems: "center",
-              justifyContent: "center",
-            }}
+            className="w-9 h-9 rounded-full bg-foreground items-center justify-center active:opacity-80"
           >
             <Text
-              style={{
-                fontFamily: "AlbertSans-SemiBold",
-                fontSize: 13,
-                color: "#FFFFFF",
-              }}
+              className="font-body-semibold text-background"
+              style={{ fontSize: 13 }}
             >
               {(userName || "B").charAt(0).toUpperCase()}
             </Text>

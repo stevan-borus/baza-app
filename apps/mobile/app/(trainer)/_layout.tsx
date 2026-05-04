@@ -45,8 +45,9 @@ export default function TrainerLayout() {
           tabBarIcon: ({ color }) => <TabIcon name="pencil" color={color} />,
         }}
       />
-      {/* `profile` route is hidden from the tab bar (see tab-layout-theme); it
-          is reachable via the header avatar's ProfileSheet. */}
+      {/* Profile is reachable via the header avatar's ProfileSheet only;
+          the page itself exists but is hidden from the tab bar. */}
+      <Tabs.Screen name="profile" options={{ href: null }} />
     </Tabs>
   );
 }

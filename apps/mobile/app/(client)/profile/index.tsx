@@ -1,44 +1,50 @@
 /**
- * Client profile screen — redesigned (P2-T16).
+ * Client Profile (tab) — summary view.
  *
- * Design references (from docs/inspiration/):
- * - ClassPass ios May 2022/ — credits/packages section layout
- * - WHOOP ios Apr 2024/ — profile stat grouping
+ * Layout:
+ *   AppHeader (Baza logo + back? no, this IS a tab root)
+ *   ScrollView (own height; not capped by ScreenContainer body padding)
+ *   ├─ Hero: avatar (tap to upload), name, email
+ *   ├─ Stat tiles: total sessions / this month / active packages
+ *   ├─ My Packages
+ *   └─ Training history (link row → push to history.tsx)
  *
- * Structure:
- *   ScreenContainer (scrollable)
- *   ├─ Hero: large avatar (80px initials), name (bold 24px), email (muted)
- *   ├─ StatTile row: Total sessions · Bookings this month · Active packages
- *   ├─ GlassCard "My Packages": ProgressRing per package + details + status badge
- *   ├─ GlassCard "Training history": trainer notes list (up to 20)
- *   ├─ GlassCard "Preferences": language switcher + notification settings row
- *   └─ Sign out button (full-width danger)
- *
- * Sections stagger in with MotiView at 0 / 80 / 160 / 240 / 320 / 400 ms.
+ * Settings (theme + language) and Sign out live in the ProfileSheet
+ * (header-avatar tap), not here.
  */
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
-import { RefreshControl, ScrollView, Text, View } from "react-native";
+import { useEffect, useState } from "react";
+import {
+  Image,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  Text,
+  View,
+} from "react-native";
 import { useTranslation } from "react-i18next";
-import { useState } from "react";
+import * as ImagePicker from "expo-image-picker";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import FontAwesome from "@expo/vector-icons/FontAwesome";
+import Feather from "@expo/vector-icons/Feather";
 import { MotiView } from "@/components/ui/styled";
-import { LanguageSwitcher } from "@/components/LanguageSwitcher";
-import { Button } from "@/components/ui/button";
 import { GlassCard } from "@/components/ui/glass-card";
 import { Badge } from "@/components/ui/badge";
 import { StatTile } from "@/components/ui/stat-tile";
 import { ProgressRing } from "@/components/ui/progress-ring";
 import { SectionLabel } from "@/components/ui/typography";
-import { EmptyState, ErrorState, ListRow } from "@/components/ui/states";
-import { ScreenContainer } from "@/components/ui/screen-container";
+import { EmptyState, ErrorState } from "@/components/ui/states";
+import { ScreenContainerRaw, useTabBarBottomPadding } from "@/components/ui/screen-container";
 import { useThemeTokens } from "@/components/ui/tokens";
 import { getDateLocale } from "@/lib/i18n";
 import { authQueries } from "@/lib/queries/auth-queries-factory";
 import { packagesQueries, type ClientPackage } from "@/lib/queries/packages-queries-factory";
-import { trainerNotesQueries, type TrainerNote } from "@/lib/queries/trainer-notes-queries-factory";
-import { signOutWithPushCleanup } from "@/lib/sign-out";
+import { trainerNotesQueries } from "@/lib/queries/trainer-notes-queries-factory";
 
 // ─── helpers ────────────────────────────────────────────────────────────────
+
+const AVATAR_STORAGE_KEY = "baza.avatar.localUri";
 
 function getInitials(email: string): string {
   const prefix = email.split("@")[0] ?? "";
@@ -75,28 +81,34 @@ export default function ClientProfile() {
   const queryClient = useQueryClient();
   const tokens = useThemeTokens();
   const dateLocale = getDateLocale();
+  const bottomPad = useTabBarBottomPadding(24);
   const [refreshing, setRefreshing] = useState(false);
+  const [avatarUri, setAvatarUri] = useState<string | null>(null);
+
+  // Load any locally-persisted avatar URI on mount. (Server upload + a
+  // canonical avatar field on the user record will come in a follow-up;
+  // for now the chosen image is stored in AsyncStorage.)
+  useEffect(() => {
+    let mounted = true;
+    AsyncStorage.getItem(AVATAR_STORAGE_KEY)
+      .then((uri) => {
+        if (mounted && uri) setAvatarUri(uri);
+      })
+      .catch(() => {});
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const meQuery = useQuery(authQueries.me());
   const packagesQuery = useQuery(packagesQueries.clientPackages());
   const notesQuery = useQuery(trainerNotesQueries.list());
-
-  const signOutMutation = useMutation({
-    mutationFn: async () => {
-      await signOutWithPushCleanup();
-    },
-    onSuccess: async () => {
-      queryClient.clear();
-      router.replace("/sign-in");
-    },
-  });
 
   const packages = packagesQuery.data?.packages ?? [];
   const notes = notesQuery.data?.notes ?? [];
   const userEmail = meQuery.data?.user.email ?? "";
   const initials = userEmail ? getInitials(userEmail) : "?";
 
-  // Derive stats from available data
   const totalNotes = notes.length;
   const now = new Date();
   const thisMonthBookings = notes.filter((n) => {
@@ -117,10 +129,32 @@ export default function ClientProfile() {
     setRefreshing(false);
   }
 
+  async function handlePickAvatar() {
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) return;
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.85,
+    });
+    if (result.canceled) return;
+    const uri = result.assets[0]?.uri;
+    if (!uri) return;
+    setAvatarUri(uri);
+    AsyncStorage.setItem(AVATAR_STORAGE_KEY, uri).catch(() => {});
+  }
+
   return (
-    <ScreenContainer title={t("tabs.profile")}>
+    <ScreenContainerRaw title={t("tabs.profile")}>
       <ScrollView
         style={{ flex: 1 }}
+        contentContainerStyle={{
+          paddingHorizontal: 24,
+          paddingTop: 16,
+          paddingBottom: bottomPad,
+          gap: 24,
+        }}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
@@ -130,9 +164,7 @@ export default function ClientProfile() {
             colors={[tokens.accent]}
           />
         }
-        contentContainerStyle={{ gap: 24, paddingBottom: 32 }}
       >
-
         {/* ── Hero ─────────────────────────────────────────────────────── */}
         <MotiView
           from={{ opacity: 0, translateY: 12 }}
@@ -140,25 +172,59 @@ export default function ClientProfile() {
           transition={{ type: "timing", duration: 350, delay: 0 }}
         >
           <View className="items-center gap-3 pb-2">
-            {/* Avatar circle */}
-            <View
-              className="w-20 h-20 rounded-full bg-accent-soft items-center justify-center"
+            <Pressable
+              onPress={handlePickAvatar}
+              hitSlop={8}
+              android_ripple={null}
+              className="active:opacity-80"
+              accessibilityRole="button"
+              accessibilityLabel={t("client.profileTab.changePhoto", {
+                defaultValue: "Change profile photo",
+              })}
             >
-              <Text
-                className="text-accent font-body-bold"
-                style={{ fontSize: 28, letterSpacing: 1 }}
-              >
-                {initials}
-              </Text>
-            </View>
-            {/* Name + email */}
+              {avatarUri ? (
+                <View className="relative">
+                  <Image
+                    source={{ uri: avatarUri }}
+                    style={{
+                      width: 96,
+                      height: 96,
+                      borderRadius: 48,
+                    }}
+                  />
+                  <View
+                    className="absolute right-0 bottom-0 w-7 h-7 rounded-full bg-foreground items-center justify-center"
+                    style={{ borderWidth: 2, borderColor: tokens.background }}
+                  >
+                    <Feather name="camera" size={13} color={tokens.background} />
+                  </View>
+                </View>
+              ) : (
+                <View className="w-24 h-24 rounded-full bg-accent-soft items-center justify-center relative">
+                  <Text
+                    className="text-accent font-body-bold"
+                    style={{ fontSize: 32, letterSpacing: 1 }}
+                  >
+                    {initials}
+                  </Text>
+                  <View
+                    className="absolute right-0 bottom-0 w-7 h-7 rounded-full bg-foreground items-center justify-center"
+                    style={{ borderWidth: 2, borderColor: tokens.background }}
+                  >
+                    <Feather name="camera" size={13} color={tokens.background} />
+                  </View>
+                </View>
+              )}
+            </Pressable>
+
             <View className="items-center gap-1">
-              <Text className="text-foreground font-body-bold" style={{ fontSize: 24, letterSpacing: -0.5 }}>
+              <Text
+                className="text-foreground font-body-bold"
+                style={{ fontSize: 24, letterSpacing: -0.5 }}
+              >
                 {userEmail.split("@")[0]}
               </Text>
-              <Text className="text-[13px] text-muted">
-                {userEmail}
-              </Text>
+              <Text className="text-[13px] text-muted">{userEmail}</Text>
             </View>
           </View>
         </MotiView>
@@ -211,7 +277,6 @@ export default function ClientProfile() {
               return (
                 <GlassCard key={pkg.id}>
                   <View className="flex-row items-center gap-4">
-                    {/* Progress ring */}
                     <ProgressRing
                       size={56}
                       strokeWidth={5}
@@ -219,10 +284,12 @@ export default function ClientProfile() {
                       label={String(pkg.sessionsRemaining)}
                       sublabel={total > 0 ? `/${total}` : undefined}
                     />
-                    {/* Details */}
                     <View className="flex-1 gap-1">
                       <View className="flex-row items-center justify-between">
-                        <Text className="font-body-semibold text-foreground" style={{ fontSize: 15 }}>
+                        <Text
+                          className="font-body-semibold text-foreground"
+                          style={{ fontSize: 15 }}
+                        >
                           {pkg.packageType?.name ?? t("client.package.packageName")}
                         </Text>
                         <Badge status={getPackageStatus(pkg)}>
@@ -248,7 +315,7 @@ export default function ClientProfile() {
           </View>
         </MotiView>
 
-        {/* ── Training history ─────────────────────────────────────────── */}
+        {/* ── Training history (link → stack child) ────────────────────── */}
         <MotiView
           from={{ opacity: 0, translateY: 12 }}
           animate={{ opacity: 1, translateY: 0 }}
@@ -256,68 +323,34 @@ export default function ClientProfile() {
         >
           <View className="flex-col gap-4">
             <SectionLabel>{t("client.profileTab.trainingHistory")}</SectionLabel>
-            {notesQuery.isError ? (
-              <ErrorState message={t("client.history.error")} />
-            ) : null}
-            {notes.length === 0 && !notesQuery.isLoading ? (
-              <EmptyState title={t("client.history.noNotes")} />
-            ) : (
+            <Pressable
+              onPress={() => router.push("/(client)/profile/history")}
+              android_ripple={null}
+              className="active:opacity-80"
+            >
               <GlassCard>
-                <View className="flex-col gap-3">
-                  {notes.slice(0, 20).map((note: TrainerNote) => (
-                    <ListRow
-                      key={note.id}
-                      title={note.note}
-                      subtitle={`${new Date(note.createdAt).toLocaleDateString(dateLocale)}${note.trainer ? ` · ${note.trainer.fullName}` : ""}`}
-                    />
-                  ))}
+                <View className="flex-row items-center justify-between">
+                  <View className="flex-row items-center gap-3">
+                    <FontAwesome name="sticky-note-o" size={16} color={tokens.muted} />
+                    <Text
+                      className="text-foreground font-body-medium"
+                      style={{ fontSize: 15 }}
+                    >
+                      {t("client.profileTab.trainingHistory")}
+                    </Text>
+                  </View>
+                  <View className="flex-row items-center gap-2">
+                    <Text className="text-muted text-[13px]">
+                      {notesQuery.isLoading ? "…" : String(totalNotes)}
+                    </Text>
+                    <FontAwesome name="chevron-right" size={11} color={tokens.faint} />
+                  </View>
                 </View>
               </GlassCard>
-            )}
+            </Pressable>
           </View>
         </MotiView>
-
-        {/* ── Preferences ──────────────────────────────────────────────── */}
-        <MotiView
-          from={{ opacity: 0, translateY: 12 }}
-          animate={{ opacity: 1, translateY: 0 }}
-          transition={{ type: "timing", duration: 350, delay: 320 }}
-        >
-          <View className="flex-col gap-4">
-            <SectionLabel>{t("client.profileTab.preferences")}</SectionLabel>
-            <GlassCard>
-              <View className="flex-col gap-4">
-                {/* Language */}
-                <View className="flex-col gap-2">
-                  <Text className="text-[13px] text-muted uppercase tracking-wider font-body-semibold">
-                    {t("client.profileTab.language")}
-                  </Text>
-                  <LanguageSwitcher />
-                </View>
-              </View>
-            </GlassCard>
-          </View>
-        </MotiView>
-
-        {/* ── Sign out ─────────────────────────────────────────────────── */}
-        <MotiView
-          from={{ opacity: 0, translateY: 12 }}
-          animate={{ opacity: 1, translateY: 0 }}
-          transition={{ type: "timing", duration: 350, delay: 400 }}
-        >
-          <View className="flex-col gap-4">
-            <SectionLabel>{t("client.profileTab.account")}</SectionLabel>
-            <Button
-              variant="danger"
-              onPress={() => signOutMutation.mutate()}
-              disabled={signOutMutation.isPending}
-            >
-              {t("client.signOut")}
-            </Button>
-          </View>
-        </MotiView>
-
       </ScrollView>
-    </ScreenContainer>
+    </ScreenContainerRaw>
   );
 }

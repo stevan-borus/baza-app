@@ -149,7 +149,8 @@
       "totalNotes": "Total sessions",
       "thisMonth": "This month",
       "activePkgs": "Active packs",
-      "viewProfile": "View profile"
+      "viewProfile": "View profile",
+      "changePhoto": "Change profile photo"
     },
     "dayView": {
       "noSessions": "No sessions on this day",
