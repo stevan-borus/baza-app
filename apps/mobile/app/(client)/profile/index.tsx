@@ -24,7 +24,6 @@ import {
   View,
 } from "react-native";
 import { useTranslation } from "react-i18next";
-import * as ImagePicker from "expo-image-picker";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import Feather from "@expo/vector-icons/Feather";
@@ -130,19 +129,33 @@ export default function ClientProfile() {
   }
 
   async function handlePickAvatar() {
-    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!perm.granted) return;
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ["images"],
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.85,
-    });
-    if (result.canceled) return;
-    const uri = result.assets[0]?.uri;
-    if (!uri) return;
-    setAvatarUri(uri);
-    AsyncStorage.setItem(AVATAR_STORAGE_KEY, uri).catch(() => {});
+    // Lazy-import so a missing native module (dev client built before
+    // expo-image-picker was added) doesn't crash the whole screen at
+    // import time. If the picker isn't available we just no-op the tap.
+    let ImagePicker: typeof import("expo-image-picker");
+    try {
+      ImagePicker = await import("expo-image-picker");
+    } catch {
+      return;
+    }
+    try {
+      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!perm.granted) return;
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.85,
+      });
+      if (result.canceled) return;
+      const uri = result.assets[0]?.uri;
+      if (!uri) return;
+      setAvatarUri(uri);
+      AsyncStorage.setItem(AVATAR_STORAGE_KEY, uri).catch(() => {});
+    } catch {
+      // Native module missing or runtime error — no-op so the rest of
+      // the screen stays functional.
+    }
   }
 
   return (
