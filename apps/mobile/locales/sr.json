@@ -150,7 +150,11 @@
       "thisMonth": "Ovaj mesec",
       "activePkgs": "Aktivni paketi",
       "viewProfile": "Otvori profil",
-      "changePhoto": "Promeni profilnu sliku"
+      "changePhoto": "Promeni profilnu sliku",
+      "memberSince": "Član od {{year}}.",
+      "notesCount_one": "{{count}} unos",
+      "notesCount_few": "{{count}} unosa",
+      "notesCount_other": "{{count}} unosa"
     },
     "dayView": {
       "noSessions": "Nema termina ovog dana",

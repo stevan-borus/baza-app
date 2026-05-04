@@ -150,7 +150,10 @@
       "thisMonth": "This month",
       "activePkgs": "Active packs",
       "viewProfile": "View profile",
-      "changePhoto": "Change profile photo"
+      "changePhoto": "Change profile photo",
+      "memberSince": "Member since {{year}}",
+      "notesCount_one": "{{count}} entry",
+      "notesCount_other": "{{count}} entries"
     },
     "dayView": {
       "noSessions": "No sessions on this day",
