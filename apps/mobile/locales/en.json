@@ -87,11 +87,45 @@
     "signOut": "Sign out",
     "home": {
       "greeting": "Hello, {{name}}",
+      "greetingMorning": "Good morning",
+      "greetingAfternoon": "Good afternoon",
+      "greetingEvening": "Good evening",
+      "helloName": "Hello, {{name}}",
       "nextClass": "Next class",
       "noUpcoming": "No upcoming classes",
+      "noUpcomingSession": "No upcoming session",
+      "readyForNext": "Ready for your next class?",
+      "browseSchedule": "Browse schedule",
       "sessionsLeft": "{{used}}/{{total}} sessions used",
       "recentNotes": "Recent notes",
-      "in": "in {{time}}"
+      "fromYourTrainer": "From your trainer",
+      "yourPackage": "Your package",
+      "manage": "Manage",
+      "thisWeek": "This week",
+      "seeAll": "See all",
+      "today": "Today",
+      "tomorrow": "Tomorrow",
+      "in": "in {{time}}",
+      "startsInMinutes": "Starts in {{minutes}}m",
+      "confirmed": "Confirmed",
+      "checkIn": "Check in",
+      "viewDetails": "View details",
+      "cancel": "Cancel",
+      "spotLeft": "{{count}} spot left",
+      "spotsLeft": "{{count}} spots left",
+      "minutesShort": "{{count}} min",
+      "of": "{{available}} of {{capacity}} spots left",
+      "waitlistAvailable": "Waitlist available",
+      "book": "Book",
+      "join": "Join",
+      "package": "Package",
+      "trainer": "Trainer",
+      "onAccount": "On account",
+      "sessionsRemaining": "Sessions left",
+      "expiresOn": "Expires {{date}}",
+      "expiresWithCountdown": "Expires {{date}} · {{days}} days left",
+      "noClassesOnDay": "No classes on {{day}}.",
+      "tryAnotherDay": "Try another day."
     },
     "onboarding": {
       "getStarted": "Get started",
@@ -194,7 +228,17 @@
   },
   "common": {
     "languageSr": "Srpski",
-    "languageEn": "English"
+    "languageEn": "English",
+    "a11yOpenProfile": "Open profile",
+    "a11yGoBack": "Go back"
+  },
+  "validation": {
+    "required": "Required",
+    "tooShort": "Must be at least {{min}} characters",
+    "tooLong": "Must be at most {{max}} characters",
+    "invalidEmail": "Enter a valid email",
+    "invalid": "Invalid value",
+    "passwordsMismatch": "Passwords don't match"
   },
   "admin": {
     "dashboard": {

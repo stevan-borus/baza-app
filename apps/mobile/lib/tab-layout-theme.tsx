@@ -193,7 +193,7 @@ export function getAppTabScreenOptions(isDark: boolean) {
     // shorter than the viewport still show the correct background to the
     // bottom (and behind any open bottom sheet that doesn't fully overlay).
     sceneContainerStyle: {
-      backgroundColor: isDark ? "#0E0E10" : "#ffffff",
+      backgroundColor: isDark ? "#0E0E10" : "#F4EFE3",
     },
   };
 }

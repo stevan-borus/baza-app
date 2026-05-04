@@ -1,64 +1,33 @@
 /**
- * accept-invite.tsx
- *
- * Celebratory invite-acceptance screen — the user is joining the studio,
- * this should feel special and welcoming, not generic.
- *
- * Layout: absolute back chevron → hero (heading + subtitle) → inviter row →
- *         glass panel (email read-only, name, password, confirm, terms, CTA).
- *
- * Motion: hero fades/scales 0.95→1 (250ms, delay 0), inviter row fade +
- *         translateY 8→0 (delay 150ms), panel fade + translateY 16→0 (delay 300ms).
- *
- * All business logic preserved: token param, useMutation for completeInvite,
- * password mismatch detection, email + name pre-fill from query params.
+ * accept-invite.tsx — Studio look, vertically centered.
  */
 
 import { useMutation } from "@tanstack/react-query";
-import FontAwesome from "@expo/vector-icons/FontAwesome";
+import Feather from "@expo/vector-icons/Feather";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ActivityIndicator, Pressable, Text, View } from "react-native";
+import { ActivityIndicator, Text, View } from "react-native";
+import { z } from "zod";
 import { MotiView } from "@/components/ui/styled";
 import { AuthBackground } from "@/components/auth/auth-background";
-import { Button } from "@/components/ui/button";
 import { Input, PasswordInput } from "@/components/ui/input";
 import { LinkText } from "@/components/ui/typography";
-import { ACCENT, ACCENT_LIGHT, DANGER } from "@/components/ui/tokens";
+import { StudioButton } from "@/components/ui/studio";
 import { sharedEnv } from "@/lib/env.shared";
+import { validateForm, type FormErrors } from "@/lib/zod-form";
 
-// ── Inviter avatar: accent-soft circle with single initial ──────────────────
 function InviterBadge({ name }: { name: string }) {
   const initial = name.charAt(0).toUpperCase();
   return (
-    <View
-      style={{
-        width: 32,
-        height: 32,
-        borderRadius: 16,
-        backgroundColor: `${ACCENT}55`,
-        borderWidth: 1,
-        borderColor: `${ACCENT_LIGHT}66`,
-        alignItems: "center",
-        justifyContent: "center",
-      }}
-    >
-      <Text
-        style={{
-          color: ACCENT_LIGHT,
-          fontSize: 13,
-          fontWeight: "600",
-          lineHeight: 16,
-        }}
-      >
+    <View className="w-8 h-8 rounded-full bg-accent-soft items-center justify-center">
+      <Text className="font-body-semibold text-accent text-[13px]">
         {initial}
       </Text>
     </View>
   );
 }
 
-// ── Screen ──────────────────────────────────────────────────────────────────
 export default function AcceptInviteScreen() {
   const { t } = useTranslation();
   const router = useRouter();
@@ -72,17 +41,44 @@ export default function AcceptInviteScreen() {
   const token = typeof params.token === "string" ? params.token : "";
   const prefillEmail = typeof params.email === "string" ? params.email : "";
   const prefillName = typeof params.name === "string" ? params.name : "";
-  const invitedBy = typeof params.invitedBy === "string" ? params.invitedBy : "";
+  const invitedBy =
+    typeof params.invitedBy === "string" ? params.invitedBy : "";
 
   const [name, setName] = useState(prefillName);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [errors, setErrors] = useState<FormErrors<{
+    name: string;
+    password: string;
+    confirmPassword: string;
+  }>>({});
 
-  const passwordsMatch = password.length > 0 && password === confirmPassword;
-  const passwordError =
-    confirmPassword.length > 0 && !passwordsMatch
-      ? t("auth.passwordsMismatch", { defaultValue: "Passwords don't match" })
-      : undefined;
+  // Local schema — extends the wire schema with name + matching confirm.
+  // Refines emit a "custom" issue we surface on `confirmPassword`.
+  const formSchema = z
+    .object({
+      name: z.string().min(2, t("validation.tooShort", { min: 2 })),
+      password: z.string().min(6, t("validation.tooShort", { min: 6 })),
+      confirmPassword: z.string().min(6, t("validation.tooShort", { min: 6 })),
+    })
+    .refine((d) => d.password === d.confirmPassword, {
+      message: t("validation.passwordsMismatch"),
+      path: ["confirmPassword"],
+    });
+
+  function handleSubmit() {
+    const result = validateForm(
+      formSchema,
+      { name, password, confirmPassword },
+      t,
+    );
+    if (!result.ok) {
+      setErrors(result.errors);
+      return;
+    }
+    setErrors({});
+    completeMutation.mutate();
+  }
 
   const completeMutation = useMutation({
     mutationFn: async () => {
@@ -101,153 +97,85 @@ export default function AcceptInviteScreen() {
     onSuccess: () => router.replace("/sign-in"),
   });
 
-  const canSubmit =
-    token.length > 0 && passwordsMatch && !completeMutation.isPending;
 
-  // ── Invalid token state ────────────────────────────────────────────────────
+  // Invalid token state
   if (!token) {
     return (
-      <AuthBackground>
-        <View className="flex-1 flex-col">
-          {/* Back arrow */}
-          <View style={{ paddingTop: 8, paddingBottom: 4 }}>
-            <Pressable onPress={() => router.back()} hitSlop={12}>
-              <FontAwesome
-                name="chevron-left"
-                size={18}
-                color="rgba(255,255,255,0.7)"
-              />
-            </Pressable>
+      <AuthBackground showBack>
+        <View className="flex-1 items-center justify-center gap-4">
+          <View className="w-16 h-16 rounded-full bg-danger-soft border border-danger items-center justify-center">
+            <Feather name="alert-triangle" size={24} color="#dc2626" />
           </View>
-
-          <View className="flex-1 items-center justify-center gap-6">
-            {/* Error badge */}
-            <View
-              style={{
-                width: 64,
-                height: 64,
-                borderRadius: 32,
-                backgroundColor: "rgba(239,68,68,0.12)",
-                borderWidth: 1,
-                borderColor: "rgba(239,68,68,0.35)",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <FontAwesome name="exclamation-triangle" size={24} color={DANGER} />
-            </View>
-
-            <Text
-              className="text-white font-body-semibold text-xl text-center"
-              style={{ letterSpacing: -0.3 }}
-            >
-              {t("auth.inviteInvalid", { defaultValue: "Invalid invite link" })}
-            </Text>
-            <Text
-              className="text-center"
-              style={{ color: "rgba(255,255,255,0.5)", fontSize: 14 }}
-            >
-              {t("auth.inviteInvalidDesc", {
-                defaultValue:
-                  "This invite link is invalid or has expired.",
-              })}
-            </Text>
-            <LinkText
-              color={ACCENT_LIGHT}
-              onPress={() => router.replace("/sign-in")}
-            >
-              {t("auth.backToSignIn")}
-            </LinkText>
-          </View>
+          <Text
+            className="font-body-semibold text-foreground text-center"
+            style={{ fontSize: 20, letterSpacing: -0.4 }}
+          >
+            {t("auth.inviteInvalid")}
+          </Text>
+          <Text className="font-sans text-muted text-sm text-center">
+            {t("auth.inviteInvalidDesc")}
+          </Text>
+          <LinkText
+            className="text-accent"
+            onPress={() => router.replace("/sign-in")}
+          >
+            {t("auth.backToSignIn")}
+          </LinkText>
         </View>
       </AuthBackground>
     );
   }
 
-  // ── Main invite screen ─────────────────────────────────────────────────────
+  // Main invite screen — back chevron is rendered in the header by AuthBackground
   return (
-    <AuthBackground>
-      <View className="flex-1 flex-col">
-        {/* ── Absolute top-left: back chevron ── */}
-        <View style={{ paddingTop: 8, paddingBottom: 4 }}>
-          <Pressable onPress={() => router.back()} hitSlop={12}>
-            <FontAwesome
-              name="chevron-left"
-              size={18}
-              color="rgba(255,255,255,0.7)"
-            />
-          </Pressable>
-        </View>
-
-        {/* ── Hero: celebratory heading + subtitle ── */}
+    <AuthBackground showBack>
+      <View className="flex-1 justify-center">
         <MotiView
-          from={{ opacity: 0, scale: 0.95 }}
+          from={{ opacity: 0, scale: 0.96 }}
           animate={{ opacity: 1, scale: 1 }}
-          transition={{ type: "timing", duration: 250, delay: 0 }}
-          style={{ alignItems: "center", marginTop: 32, marginBottom: 16 }}
+          transition={{ type: "timing", duration: 250 }}
+          className="items-center mb-4"
         >
           <Text
-            className="text-white font-body-bold text-center"
-            style={{ fontSize: 34, letterSpacing: -0.8, lineHeight: 40 }}
+            className="font-body-bold text-foreground text-center"
+            style={{ fontSize: 30, letterSpacing: -0.6, lineHeight: 36 }}
           >
-            {t("auth.welcomeInvite", { defaultValue: "Welcome to Baza" })}
+            {t("auth.welcomeInvite")}
           </Text>
-          <Text
-            className="text-center"
-            style={{
-              color: "rgba(255,255,255,0.5)",
-              fontSize: 15,
-              marginTop: 8,
-            }}
-          >
-            {t("auth.inviteSubtitle", {
-              defaultValue: "You've been invited",
-            })}
+          <Text className="font-sans text-sm text-muted text-center mt-2">
+            {t("auth.inviteSubtitle")}
           </Text>
         </MotiView>
 
-        {/* ── Inviter row (only if invitedBy available) ── */}
         {invitedBy ? (
           <MotiView
             from={{ opacity: 0, translateY: 8 }}
             animate={{ opacity: 1, translateY: 0 }}
             transition={{ type: "timing", duration: 300, delay: 150 }}
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 8,
-              marginBottom: 24,
-            }}
+            className="flex-row items-center justify-center gap-2 mb-6"
           >
             <InviterBadge name={invitedBy} />
-            <Text style={{ color: "rgba(255,255,255,0.55)", fontSize: 13 }}>
-              {t("auth.invitedBy", {
-                defaultValue: "Invited by {{name}}",
-                name: invitedBy,
-              })}
+            <Text className="font-sans text-muted text-[13px]">
+              {t("auth.invitedBy", { name: invitedBy })}
             </Text>
           </MotiView>
         ) : (
-          // Small spacer when no inviter row
-          <View style={{ marginBottom: 24 }} />
+          <View className="mb-6" />
         )}
 
-        {/* ── Form ── */}
         <MotiView
           from={{ opacity: 0, translateY: 16 }}
           animate={{ opacity: 1, translateY: 0 }}
-          transition={{ type: "timing", duration: 400, delay: 300 }}
-          className="gap-4"
+          transition={{ type: "timing", duration: 400, delay: 250 }}
+          className="gap-3.5"
         >
-          {/* Pre-filled email — read-only, dimmed */}
           {prefillEmail ? (
             <Input
               icon="envelope"
               label={t("auth.email")}
               value={prefillEmail}
               editable={false}
-              style={{ opacity: 0.5 }}
+              style={{ opacity: 0.55 }}
               autoCapitalize="none"
               autoCorrect={false}
               keyboardType="email-address"
@@ -255,103 +183,81 @@ export default function AcceptInviteScreen() {
             />
           ) : null}
 
-          {/* Name input */}
           <Input
             icon="user"
-            label={t("auth.yourName", { defaultValue: "Your name" })}
+            label={t("auth.yourName")}
             autoCapitalize="words"
             autoCorrect={false}
             textContentType="name"
             value={name}
-            onChangeText={setName}
+            onChangeText={(v) => {
+              setName(v);
+              if (errors.name) setErrors((e) => ({ ...e, name: undefined }));
+            }}
+            error={errors.name}
           />
 
-          {/* Create password */}
           <PasswordInput
-            label={t("auth.createPassword", {
-              defaultValue: "Create password",
-            })}
+            label={t("auth.createPassword")}
             textContentType="newPassword"
             value={password}
-            onChangeText={setPassword}
-            iconColor="rgba(255,255,255,0.5)"
+            onChangeText={(v) => {
+              setPassword(v);
+              if (errors.password)
+                setErrors((e) => ({ ...e, password: undefined }));
+            }}
+            error={errors.password}
           />
 
-          {/* Confirm password */}
           <PasswordInput
-            label={t("auth.confirmPassword", {
-              defaultValue: "Confirm password",
-            })}
+            label={t("auth.confirmPassword")}
             textContentType="newPassword"
             value={confirmPassword}
-            onChangeText={setConfirmPassword}
-            error={passwordError}
-            iconColor="rgba(255,255,255,0.5)"
+            onChangeText={(v) => {
+              setConfirmPassword(v);
+              if (errors.confirmPassword)
+                setErrors((e) => ({ ...e, confirmPassword: undefined }));
+            }}
+            error={errors.confirmPassword}
           />
 
-          {/* Error banner */}
           {completeMutation.isError ? (
             <MotiView
               from={{ opacity: 0, translateY: -8 }}
               animate={{ opacity: 1, translateY: 0 }}
               transition={{ type: "timing", duration: 250 }}
-              style={{
-                backgroundColor: "rgba(239,68,68,0.12)",
-                borderWidth: 1,
-                borderColor: "rgba(239,68,68,0.4)",
-                borderRadius: 12,
-                paddingHorizontal: 14,
-                paddingVertical: 10,
-              }}
+              className="bg-danger-soft border border-danger rounded-lg px-3.5 py-2.5"
             >
-              <Text
-                style={{ color: "#ef4444", fontSize: 13, fontWeight: "500" }}
-              >
-                {t("auth.inviteError", {
-                  defaultValue:
-                    "Could not complete registration. The invite may have expired.",
-                })}
+              <Text className="font-body-medium text-danger text-[13px]">
+                {t("auth.inviteError")}
               </Text>
             </MotiView>
           ) : null}
 
-          {/* Terms link */}
           <View className="items-center">
-            <Text
-              style={{ color: "rgba(255,255,255,0.35)", fontSize: 11 }}
-            >
+            <Text className="font-sans text-faint text-[11px] text-center">
               {t("auth.termsNotice")}
             </Text>
           </View>
 
-          {/* Join button */}
-          <Button
-            disabled={!canSubmit}
-            onPress={() => completeMutation.mutate()}
-            size="large"
-          >
-            {completeMutation.isPending ? (
-              <ActivityIndicator color="#fff" size="small" />
-            ) : (
-              <Text className="text-white font-body-semibold text-base">
-                {t("auth.joinButton", { defaultValue: "Join Baza" })}
-              </Text>
-            )}
-          </Button>
+          {completeMutation.isPending ? (
+            <View className="h-[50px] rounded bg-foreground items-center justify-center mt-1">
+              <ActivityIndicator color="#FFFFFF" size="small" />
+            </View>
+          ) : (
+            <View className="mt-1">
+              <StudioButton
+                label={t("auth.joinButton")}
+                onPress={handleSubmit}
+                block
+              />
+            </View>
+          )}
         </MotiView>
+      </View>
 
-        {/* ── Spacer ── */}
-        <View className="flex-1" />
-
-        {/* ── Bottom: legal ── */}
-        <View className="items-center gap-1 pb-4">
-          <Text
-            className="text-center"
-            style={{ color: "rgba(255,255,255,0.25)", fontSize: 11 }}
-          >
-            v1.0.0
-          </Text>
-        </View>
+      <View className="items-center pb-1">
+        <Text className="font-sans text-faint text-[11px]">v1.0.0</Text>
       </View>
     </AuthBackground>
   );

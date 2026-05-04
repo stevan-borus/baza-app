@@ -9,10 +9,23 @@ import {
 import { BottomSheetTextInput } from "@gorhom/bottom-sheet";
 import { MotiView } from "@/components/ui/styled";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
+import Feather from "@expo/vector-icons/Feather";
 import { useThemeTokens } from "./tokens";
 import { InsideBottomSheetContext } from "./sheet";
 
 type IconName = React.ComponentProps<typeof FontAwesome>["name"];
+
+// Map of common FontAwesome legacy names → Feather (thin, modern stroke
+// matched to the rest of the Studio chrome). Falls back to FontAwesome
+// for icons not in the map.
+type FeatherName = React.ComponentProps<typeof Feather>["name"];
+const FA_TO_FEATHER: Partial<Record<IconName, FeatherName>> = {
+  envelope: "mail",
+  lock: "lock",
+  user: "user",
+  search: "search",
+  phone: "phone",
+};
 
 type InputProps = TextInputProps & {
   label?: string;
@@ -47,6 +60,8 @@ export function Input({
   const active = focused || (typeof value === "string" && value.length > 0);
   const iconName = leftIcon ?? icon;
   const hasLabel = !!label;
+  // Theme-driven so the icon stays visible in both light (ink on bone)
+  // and dark (cream on warm dark) variants.
   const resolvedIconColor = iconColor ?? tokens.muted;
   // Use BottomSheetTextInput when inside a sheet (so the keyboard pushes
   // the sheet up); plain TextInput everywhere else.
@@ -77,7 +92,7 @@ export function Input({
                 paddingRight: SIDE_PADDING,
               }
         }
-        className={`border rounded-2xl bg-glass ${
+        className={`border rounded-lg bg-surface ${
           isMultiline ? "flex-row items-start" : "flex-row items-center"
         } ${error ? "border-danger" : "border-glass-border"}`}
       >
@@ -86,7 +101,19 @@ export function Input({
             style={{ width: ADORNMENT_WIDTH }}
             className="items-start justify-center"
           >
-            <FontAwesome name={iconName} size={16} color={resolvedIconColor} />
+            {FA_TO_FEATHER[iconName] ? (
+              <Feather
+                name={FA_TO_FEATHER[iconName]!}
+                size={18}
+                color={resolvedIconColor}
+              />
+            ) : (
+              <FontAwesome
+                name={iconName}
+                size={16}
+                color={resolvedIconColor}
+              />
+            )}
           </View>
         ) : null}
 
@@ -104,7 +131,7 @@ export function Input({
               style={{ transformOrigin: "left center" }}
               pointerEvents="none"
             >
-              <Text className="text-sm text-muted">{label}</Text>
+              <Text className="font-sans text-sm text-muted">{label}</Text>
             </MotiView>
           ) : null}
 
@@ -119,7 +146,7 @@ export function Input({
               onBlur?.(e);
             }}
             placeholderTextColor={tokens.faint}
-            className={`text-sm text-foreground ${className ?? ""}`}
+            className={`text-sm font-sans text-foreground ${className ?? ""}`}
             style={
               isMultiline
                 ? { padding: 0, lineHeight: 20, textAlignVertical: "top" }
@@ -143,7 +170,9 @@ export function Input({
         ) : null}
       </View>
       {error ? (
-        <Text className="text-xs font-body-medium pl-1 text-danger">{error}</Text>
+        <Text className="text-xs font-body-medium pl-1 text-danger">
+          {error}
+        </Text>
       ) : null}
     </View>
   );
@@ -160,10 +189,15 @@ export function PasswordInput(props: PasswordInputProps) {
       secureTextEntry={hidden}
       leftIcon={props.leftIcon ?? props.icon ?? "lock"}
       rightSlot={
-        <Pressable onPress={() => setHidden((h) => !h)} hitSlop={12}>
-          <FontAwesome
-            name={hidden ? "eye" : "eye-slash"}
-            size={16}
+        <Pressable
+          onPress={() => setHidden((h) => !h)}
+          hitSlop={12}
+          android_ripple={null}
+          className="active:opacity-60"
+        >
+          <Feather
+            name={hidden ? "eye" : "eye-off"}
+            size={18}
             color={tokens.muted}
           />
         </Pressable>

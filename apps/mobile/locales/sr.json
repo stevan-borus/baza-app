@@ -87,11 +87,45 @@
     "signOut": "Odjavi se",
     "home": {
       "greeting": "Zdravo, {{name}}",
+      "greetingMorning": "Dobro jutro",
+      "greetingAfternoon": "Dobar dan",
+      "greetingEvening": "Dobro veče",
+      "helloName": "Zdravo, {{name}}",
       "nextClass": "Sledeći trening",
       "noUpcoming": "Nema predstojećih treninga",
+      "noUpcomingSession": "Nema predstojećih treninga",
+      "readyForNext": "Spremna za sledeći trening?",
+      "browseSchedule": "Pogledaj raspored",
       "sessionsLeft": "{{used}}/{{total}} termina iskorišćeno",
       "recentNotes": "Poslednje beleške",
-      "in": "za {{time}}"
+      "fromYourTrainer": "Od trenera",
+      "yourPackage": "Tvoj paket",
+      "manage": "Upravljaj",
+      "thisWeek": "Ova nedelja",
+      "seeAll": "Pogledaj sve",
+      "today": "Danas",
+      "tomorrow": "Sutra",
+      "in": "za {{time}}",
+      "startsInMinutes": "Počinje za {{minutes}}m",
+      "confirmed": "Potvrđeno",
+      "checkIn": "Prijavi dolazak",
+      "viewDetails": "Detalji",
+      "cancel": "Otkaži",
+      "spotLeft": "Još {{count}} mesto",
+      "spotsLeft": "Još {{count}} mesta",
+      "minutesShort": "{{count}} min",
+      "of": "{{available}} od {{capacity}} mesta",
+      "waitlistAvailable": "Lista čekanja",
+      "book": "Rezerviši",
+      "join": "Pridruži se",
+      "package": "Paket",
+      "trainer": "Trener",
+      "onAccount": "Na nalogu",
+      "sessionsRemaining": "Preostalo termina",
+      "expiresOn": "Ističe {{date}}",
+      "expiresWithCountdown": "Ističe {{date}} · još {{days}} dana",
+      "noClassesOnDay": "Nema treninga {{day}}.",
+      "tryAnotherDay": "Probaj drugi dan."
     },
     "onboarding": {
       "getStarted": "Započnite",
@@ -195,7 +229,17 @@
   },
   "common": {
     "languageSr": "Srpski",
-    "languageEn": "English"
+    "languageEn": "English",
+    "a11yOpenProfile": "Otvori profil",
+    "a11yGoBack": "Nazad"
+  },
+  "validation": {
+    "required": "Obavezno",
+    "tooShort": "Mora imati najmanje {{min}} karaktera",
+    "tooLong": "Mora imati najviše {{max}} karaktera",
+    "invalidEmail": "Unesite ispravan email",
+    "invalid": "Neispravna vrednost",
+    "passwordsMismatch": "Lozinke se ne podudaraju"
   },
   "admin": {
     "dashboard": {

@@ -1,5 +1,5 @@
 import React, { PropsWithChildren } from "react";
-import { Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import Animated, { FadeInLeft } from "react-native-reanimated";
 
 /**
@@ -26,6 +26,7 @@ export function LinkText({
   style,
   color,
   fontSize,
+  onPress,
   ...props
 }: LinkTextProps & { color?: string; fontSize?: string | number }) {
   const resolvedFontSize: number | undefined =
@@ -36,7 +37,7 @@ export function LinkText({
         : typeof fontSize === "string"
           ? Number.parseFloat(fontSize) || undefined
           : undefined;
-  return (
+  const text = (
     <Text
       className={`font-body-medium py-2 text-accent ${className ?? ""}`}
       style={[
@@ -49,6 +50,24 @@ export function LinkText({
       {children}
     </Text>
   );
+
+  // When given an onPress, wrap in a Pressable that uses opacity feedback
+  // only — never a background highlight (which paints a rectangle around
+  // the text on press). For Text-only LinkText (no onPress), don't add the
+  // wrapper so it inlines naturally inside parent layouts.
+  if (onPress) {
+    return (
+      <Pressable
+        onPress={onPress}
+        hitSlop={6}
+        android_ripple={null}
+        className="active:opacity-60"
+      >
+        {text}
+      </Pressable>
+    );
+  }
+  return text;
 }
 
 type LabelProps = React.ComponentProps<typeof Text> & {

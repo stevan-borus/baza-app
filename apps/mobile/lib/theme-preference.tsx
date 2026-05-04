@@ -18,7 +18,7 @@ export const ThemePreferenceContext = createContext<ThemePreferenceContextValue 
 
 export function ThemePreferenceProvider({ children }: PropsWithChildren) {
   const systemColorScheme = useSystemColorScheme();
-  const [preference, setPreferenceState] = useState<ThemePreference>("dark");
+  const [preference, setPreferenceState] = useState<ThemePreference>("light");
 
   useEffect(() => {
     let mounted = true;
@@ -49,11 +49,13 @@ export function ThemePreferenceProvider({ children }: PropsWithChildren) {
     });
   }
 
+  // Studio palette is light-first; "system" still respects the system pref,
+  // but unset / first-launch resolves to light.
   const resolvedTheme: ResolvedTheme =
     preference === "system"
-      ? systemColorScheme === "light"
-        ? "light"
-        : "dark"
+      ? systemColorScheme === "dark"
+        ? "dark"
+        : "light"
       : preference;
 
   const value = useMemo<ThemePreferenceContextValue>(

@@ -1,26 +1,26 @@
 /**
- * sign-in.tsx
+ * sign-in.tsx — Studio look, vertically centered.
  *
- * Immersive welcome sign-in screen.
- * Layout: logo (top 30%) → welcome block → glass-panel form → bottom legal strip.
- * Motion: logo fades in, heading slides up, panel slides up with a slight delay.
- * All business logic (signInMutation, redirect, state) is preserved unchanged.
+ * Bone canvas + Baza logo at the top (rendered by AuthBackground).
+ * The whole hero+form block is vertically centered between the logo and
+ * the bottom legal strip. Utility classes drive theme-tokened colors;
+ * inline `style` only carries values that have no Tailwind utility
+ * (font sizes / letter-spacing / line-heights).
  */
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Image } from "expo-image";
 import { Link, useRouter, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ActivityIndicator, Text, View } from "react-native";
 import { MotiView } from "@/components/ui/styled";
 import { AuthBackground } from "@/components/auth/auth-background";
-import { Button } from "@/components/ui/button";
 import { Input, PasswordInput } from "@/components/ui/input";
 import { LinkText } from "@/components/ui/typography";
+import { StudioButton } from "@/components/ui/studio";
 import { authClient } from "@/lib/auth-client";
-
-const logoWhite = require("@/assets/images/logo-white.png");
+import { signInInputSchema } from "@baza/types";
+import { validateForm, type FormErrors } from "@/lib/zod-form";
 
 export default function SignInScreen() {
   const { t } = useTranslation();
@@ -31,13 +31,24 @@ export default function SignInScreen() {
     typeof params.redirect === "string" ? params.redirect.trim() : undefined;
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [errors, setErrors] = useState<FormErrors<{
+    email: string;
+    password: string;
+  }>>({});
+
+  function handleSubmit() {
+    const result = validateForm(signInInputSchema, { email, password }, t);
+    if (!result.ok) {
+      setErrors(result.errors);
+      return;
+    }
+    setErrors({});
+    signInMutation.mutate();
+  }
 
   const signInMutation = useMutation({
     mutationFn: async () => {
-      const response = await authClient.signIn.email({
-        email,
-        password,
-      });
+      const response = await authClient.signIn.email({ email, password });
       if (response.error) {
         throw new Error(response.error.message || "Sign-in failed");
       }
@@ -57,58 +68,34 @@ export default function SignInScreen() {
     },
   });
 
-  const canSubmit =
-    email.length > 0 && password.length > 0 && !signInMutation.isPending;
-
   return (
     <AuthBackground>
-      <View className="flex-1 flex-col">
-        {/* ── Top 30%: Logo ── */}
-        <View className="items-center justify-end" style={{ height: "30%" }}>
-          <MotiView
-            from={{ opacity: 0, translateY: -12 }}
-            animate={{ opacity: 1, translateY: 0 }}
-            transition={{ type: "timing", duration: 400, delay: 0 }}
-          >
-            <Image
-              source={logoWhite}
-              style={{ width: 180, height: 60 }}
-              contentFit="contain"
-            />
-          </MotiView>
-        </View>
-
-        {/* ── Welcome block ── */}
+      {/* Centered hero + form. flex-1 + justify-center pushes the block to
+          the vertical center between the logo (top) and legal strip (bottom). */}
+      <View className="flex-1 justify-center">
         <MotiView
-          from={{ opacity: 0, translateY: 16 }}
+          from={{ opacity: 0, translateY: 12 }}
           animate={{ opacity: 1, translateY: 0 }}
-          transition={{ type: "timing", duration: 400, delay: 150 }}
-          className="items-center gap-2 mt-8 mb-6"
+          transition={{ type: "timing", duration: 400, delay: 100 }}
+          className="items-center mb-8"
         >
           <Text
-            className="text-white font-body-bold text-center"
-            style={{ fontSize: 36, letterSpacing: -0.8 }}
+            className="font-body-bold text-foreground text-center"
+            style={{ fontSize: 30, letterSpacing: -0.6 }}
           >
-            {t("auth.welcomeBack", { defaultValue: "Welcome back" })}
+            {t("auth.welcomeBack")}
           </Text>
-          <Text
-            className="text-center"
-            style={{ color: "rgba(255,255,255,0.5)", fontSize: 15 }}
-          >
-            {t("auth.signInSubtitle", {
-              defaultValue: "Sign in to your account",
-            })}
+          <Text className="font-sans text-sm text-muted text-center mt-1.5">
+            {t("auth.signInSubtitle")}
           </Text>
         </MotiView>
 
-        {/* ── Form ── */}
         <MotiView
-          from={{ opacity: 0, translateY: 24 }}
+          from={{ opacity: 0, translateY: 16 }}
           animate={{ opacity: 1, translateY: 0 }}
-          transition={{ type: "timing", duration: 500, delay: 300 }}
-          className="gap-4"
+          transition={{ type: "timing", duration: 400, delay: 220 }}
+          className="gap-3.5"
         >
-          {/* Email */}
           <Input
             icon="envelope"
             label={t("auth.email")}
@@ -118,84 +105,69 @@ export default function SignInScreen() {
             textContentType="emailAddress"
             autoComplete="email"
             value={email}
-            onChangeText={setEmail}
+            onChangeText={(v) => {
+              setEmail(v);
+              if (errors.email) setErrors((e) => ({ ...e, email: undefined }));
+            }}
+            error={errors.email}
           />
 
-          {/* Password */}
           <PasswordInput
             label={t("auth.password")}
             value={password}
-            onChangeText={setPassword}
-            iconColor="rgba(255,255,255,0.5)"
+            onChangeText={(v) => {
+              setPassword(v);
+              if (errors.password)
+                setErrors((e) => ({ ...e, password: undefined }));
+            }}
+            error={errors.password}
           />
 
-          {/* Forgot password — right-aligned */}
           <View className="items-end">
             <Link href="/reset-password" asChild>
-              <LinkText color="rgba(255,255,255,0.6)" fontSize={12}>
+              <LinkText className="text-muted" fontSize={12}>
                 {t("auth.forgotPassword")}
               </LinkText>
             </Link>
           </View>
 
-          {/* Error state — slide in from top */}
           {signInMutation.isError ? (
             <MotiView
               from={{ opacity: 0, translateY: -8 }}
               animate={{ opacity: 1, translateY: 0 }}
               transition={{ type: "timing", duration: 250 }}
-              style={{
-                backgroundColor: "rgba(239,68,68,0.12)",
-                borderWidth: 1,
-                borderColor: "rgba(239,68,68,0.4)",
-                borderRadius: 12,
-                paddingHorizontal: 14,
-                paddingVertical: 10,
-              }}
+              className="bg-danger-soft border border-danger rounded-lg px-3.5 py-2.5"
             >
-              <Text
-                style={{ color: "#ef4444", fontSize: 13, fontWeight: "500" }}
-              >
+              <Text className="font-body-medium text-danger text-[13px]">
                 {t("auth.signInError")}
               </Text>
             </MotiView>
           ) : null}
 
-          {/* Sign in button */}
-          <Button
-            disabled={!canSubmit}
-            onPress={() => signInMutation.mutate()}
-            size="large"
-            className="mt-2"
-          >
-            {signInMutation.isPending ? (
-              <ActivityIndicator color="#fff" size="small" />
-            ) : (
-              <Text className="text-white font-body-semibold text-base">
-                {t("auth.submit")}
-              </Text>
-            )}
-          </Button>
+          {signInMutation.isPending ? (
+            <View className="h-[50px] rounded bg-foreground items-center justify-center mt-1.5">
+              <ActivityIndicator color="#FFFFFF" size="small" />
+            </View>
+          ) : (
+            <View className="mt-1.5">
+              <StudioButton
+                label={t("auth.submit")}
+                onPress={handleSubmit}
+                block
+              />
+            </View>
+          )}
         </MotiView>
+      </View>
 
-        {/* ── Spacer ── */}
-        <View className="flex-1" />
-
-        {/* ── Bottom: version + terms ── */}
-        <View className="items-center gap-1 pb-4">
-          <Text
-            className="text-center"
-            style={{ color: "rgba(255,255,255,0.25)", fontSize: 11 }}
-          >
-            v1.0.0
-          </Text>
-          <Text
-            className="text-center"
-            style={{ color: "rgba(255,255,255,0.3)", fontSize: 11 }}
-          >
-            {t("auth.termsNotice")}
-          </Text>
-        </View>
+      {/* Bottom strip — version + terms */}
+      <View className="items-center gap-1 pb-1">
+        <Text className="font-sans text-faint text-[11px] text-center">
+          v1.0.0
+        </Text>
+        <Text className="font-sans text-faint text-[11px] text-center">
+          {t("auth.termsNotice")}
+        </Text>
       </View>
     </AuthBackground>
   );

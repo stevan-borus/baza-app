@@ -63,26 +63,28 @@ export type ThemeTokens = {
 };
 
 const lightTokens: ThemeTokens = {
-  background: "#fafaf8",
+  // Studio palette — warm bone canvas, near-black ink, single accent.
+  background: "#F4EFE3",
   surface: "#ffffff",
-  surface2: "#f3f3ee",
+  surface2: "#EBE5D5",
 
-  foreground: "rgba(15, 20, 25, 0.92)",
-  muted: "rgba(15, 20, 25, 0.55)",
-  faint: "rgba(15, 20, 25, 0.35)",
+  foreground: "#0F0F0D",
+  muted: "rgba(15, 15, 13, 0.62)",
+  faint: "rgba(15, 15, 13, 0.38)",
 
-  glass: "rgba(15, 20, 25, 0.04)",
-  glassStrong: "rgba(15, 20, 25, 0.07)",
-  glassBorder: "rgba(15, 20, 25, 0.10)",
+  glass: "rgba(15, 15, 13, 0.04)",
+  glassStrong: "rgba(15, 15, 13, 0.07)",
+  glassBorder: "rgba(15, 15, 13, 0.10)",
   glassAndroid: "rgba(255, 255, 255, 0.95)",
 
   accent: "#2e5b42",
   accentSoft: "rgba(46, 91, 66, 0.12)",
   accentLight: "#4a8c6b",
 
-  header: "#1f4030",
-  headerForeground: "rgba(255, 255, 255, 0.95)",
-  headerMuted: "rgba(255, 255, 255, 0.6)",
+  // Header is the bone canvas — no green chrome.
+  header: "#F4EFE3",
+  headerForeground: "#0F0F0D",
+  headerMuted: "rgba(15, 15, 13, 0.55)",
 
   danger: "#dc2626",
   dangerSoft: "rgba(220, 38, 38, 0.10)",
@@ -91,41 +93,42 @@ const lightTokens: ThemeTokens = {
   success: "#16a34a",
   successSoft: "rgba(22, 163, 74, 0.10)",
 
-  divider: "rgba(15, 20, 25, 0.08)",
+  divider: "rgba(15, 15, 13, 0.10)",
 };
 
 const darkTokens: ThemeTokens = {
-  // Neutral near-black — slightly off pure #000 so glass surfaces still read
-  // as raised. Was #0A0F14 / hsl(210°…) which carried a cool blue cast.
-  background: "#0E0E10",
-  surface: "hsl(0, 0%, 11%)",
-  surface2: "hsl(0, 0%, 15%)",
+  // Warm spa dark — soft neutral with a faint warm undertone so cream
+  // text never glows on pure black. Mirrors the @layer theme dark variant
+  // in global.css.
+  background: "#1A1A1C",
+  surface: "#232325",
+  surface2: "#2C2C2E",
 
-  foreground: "rgba(255, 255, 255, 0.92)",
-  muted: "rgba(255, 255, 255, 0.55)",
-  faint: "rgba(255, 255, 255, 0.35)",
+  foreground: "#EDE8DC",
+  muted: "rgba(237, 232, 220, 0.62)",
+  faint: "rgba(237, 232, 220, 0.38)",
 
-  glass: "rgba(255, 255, 255, 0.05)",
-  glassStrong: "rgba(255, 255, 255, 0.08)",
-  glassBorder: "rgba(255, 255, 255, 0.10)",
-  glassAndroid: "rgba(26, 26, 28, 0.95)",
+  glass: "rgba(237, 232, 220, 0.05)",
+  glassStrong: "rgba(237, 232, 220, 0.08)",
+  glassBorder: "rgba(237, 232, 220, 0.12)",
+  glassAndroid: "rgba(35, 35, 37, 0.95)",
 
   accent: "#2e5b42",
-  accentSoft: "rgba(46, 91, 66, 0.18)",
-  accentLight: "#5aa07e",
+  accentSoft: "rgba(46, 91, 66, 0.22)",
+  accentLight: "#7AA88E",
 
-  header: "#14291e",
-  headerForeground: "rgba(255, 255, 255, 0.95)",
-  headerMuted: "rgba(255, 255, 255, 0.6)",
+  header: "#1A1A1C",
+  headerForeground: "#EDE8DC",
+  headerMuted: "rgba(237, 232, 220, 0.62)",
 
-  danger: "#ef4444",
-  dangerSoft: "rgba(239, 68, 68, 0.12)",
-  warning: "#f59e0b",
-  warningSoft: "rgba(245, 158, 11, 0.12)",
-  success: "#22c55e",
-  successSoft: "rgba(34, 197, 94, 0.12)",
+  danger: "#f87171",
+  dangerSoft: "rgba(248, 113, 113, 0.14)",
+  warning: "#fbbf24",
+  warningSoft: "rgba(251, 191, 36, 0.14)",
+  success: "#4ade80",
+  successSoft: "rgba(74, 222, 128, 0.14)",
 
-  divider: "rgba(255, 255, 255, 0.08)",
+  divider: "rgba(237, 232, 220, 0.10)",
 };
 
 export function useThemeTokens(): ThemeTokens {
