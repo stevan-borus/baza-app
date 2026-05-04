@@ -32,6 +32,7 @@ import { ProgressRing } from "@/components/ui/progress-ring";
 import { SectionLabel } from "@/components/ui/typography";
 import { EmptyState, ErrorState, ListRow } from "@/components/ui/states";
 import { ScreenContainer } from "@/components/ui/screen-container";
+import { useThemeTokens } from "@/components/ui/tokens";
 import { getDateLocale } from "@/lib/i18n";
 import { authQueries } from "@/lib/queries/auth-queries-factory";
 import { packagesQueries, type ClientPackage } from "@/lib/queries/packages-queries-factory";
@@ -73,6 +74,7 @@ export default function ClientProfile() {
   const { t } = useTranslation();
   const router = useRouter();
   const queryClient = useQueryClient();
+  const tokens = useThemeTokens();
   const dateLocale = getDateLocale();
   const [refreshing, setRefreshing] = useState(false);
 
@@ -124,8 +126,8 @@ export default function ClientProfile() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={handleRefresh}
-            tintColor="#2e5b42"
-            colors={["#2e5b42"]}
+            tintColor={tokens.accent}
+            colors={[tokens.accent]}
           />
         }
         contentContainerStyle={{ gap: 24 }}
@@ -140,14 +142,7 @@ export default function ClientProfile() {
           <View className="items-center gap-3 pb-2">
             {/* Avatar circle */}
             <View
-              style={{
-                width: 80,
-                height: 80,
-                borderRadius: 40,
-                backgroundColor: "rgba(46, 91, 66, 0.18)",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
+              className="w-20 h-20 rounded-full bg-accent-soft items-center justify-center"
             >
               <Text
                 className="text-accent font-body-bold"
@@ -307,12 +302,12 @@ export default function ClientProfile() {
                   accessibilityLabel={t("client.profileTab.notificationSettings")}
                 >
                   <View className="flex-row items-center gap-3">
-                    <FontAwesome name="bell-o" size={16} color="rgba(255,255,255,0.45)" />
+                    <FontAwesome name="bell-o" size={16} color={tokens.muted} />
                     <Text className="text-[15px] text-foreground">
                       {t("client.profileTab.notificationSettings")}
                     </Text>
                   </View>
-                  <FontAwesome name="chevron-right" size={12} color="rgba(255,255,255,0.3)" />
+                  <FontAwesome name="chevron-right" size={12} color={tokens.faint} />
                 </TouchableOpacity>
               </View>
             </GlassCard>

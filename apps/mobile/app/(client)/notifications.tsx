@@ -13,7 +13,7 @@ import { MotiView } from "@/components/ui/styled";
 import { LegendList } from "@legendapp/list";
 import { AppSheet } from "@/components/ui/sheet";
 import { GlassCard } from "@/components/ui/glass-card";
-import { ACCENT } from "@/components/ui/tokens";
+import { useThemeTokens } from "@/components/ui/tokens";
 import { EmptyState, ErrorState } from "@/components/ui/states";
 import { SkeletonList } from "@/components/ui/skeleton";
 import { ScreenContainerRaw, useTabBarBottomPadding } from "@/components/ui/screen-container";
@@ -47,8 +47,9 @@ const TYPE_LABEL_KEYS: Record<string, string> = {
   GENERAL: "client.notifications.typeGeneral",
 };
 
-const ICON_COLOR_UNREAD = "#34d399"; // accent green
-const ICON_COLOR_READ = "#6b7280";
+// Read/unread icon colors are theme-driven inside the component (resolved
+// from `useThemeTokens()`); module-level constants would not flip with the
+// active theme.
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -120,8 +121,11 @@ export default function ClientNotifications() {
   const queryClient = useQueryClient();
   const { t, i18n } = useTranslation();
   const lang = i18n.language === "en" ? "en" : "sr";
+  const tokens = useThemeTokens();
   const bottomPad = useTabBarBottomPadding();
   const [showPrefs, setShowPrefs] = useState(false);
+  const ICON_COLOR_UNREAD = tokens.accent;
+  const ICON_COLOR_READ = tokens.faint;
 
   const notificationsQuery = useInfiniteQuery(notificationsQueries.listInfinite());
   const prefsQuery = useQuery(notificationsQueries.preferences());
@@ -295,7 +299,7 @@ export default function ClientNotifications() {
               <View className="flex-row justify-between items-center py-3 border-b border-glass-border">
                 <View className="flex-row items-center gap-3">
                   <View style={{ width: 20, alignItems: "center" }}>
-                    <FontAwesome name="bell" size={16} color={ACCENT} />
+                    <FontAwesome name="bell" size={16} color={tokens.accent} />
                   </View>
                   <Text className="text-[15px] text-foreground">
                     {t("client.notifications.pushEnabled")}
@@ -304,7 +308,7 @@ export default function ClientNotifications() {
                 <Switch
                   value={prefs.pushEnabled}
                   onValueChange={(v) => updatePrefsMutation.mutate({ pushEnabled: v })}
-                  trackColor={{ false: "#404040", true: ACCENT }}
+                  trackColor={{ false: tokens.glassStrong, true: tokens.accent }}
                 />
               </View>
 
@@ -312,7 +316,7 @@ export default function ClientNotifications() {
               <View className="flex-row justify-between items-center py-3">
                 <View className="flex-row items-center gap-3">
                   <View style={{ width: 20, alignItems: "center" }}>
-                    <FontAwesome name="mobile" size={20} color={ACCENT} />
+                    <FontAwesome name="mobile" size={20} color={tokens.accent} />
                   </View>
                   <Text className="text-[15px] text-foreground">
                     {t("client.notifications.inAppEnabled")}
@@ -321,7 +325,7 @@ export default function ClientNotifications() {
                 <Switch
                   value={prefs.inAppEnabled}
                   onValueChange={(v) => updatePrefsMutation.mutate({ inAppEnabled: v })}
-                  trackColor={{ false: "#404040", true: ACCENT }}
+                  trackColor={{ false: tokens.glassStrong, true: tokens.accent }}
                 />
               </View>
             </View>
