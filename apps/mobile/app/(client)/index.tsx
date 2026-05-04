@@ -35,6 +35,7 @@ import {
   type TrainerNote,
 } from "@/lib/queries/trainer-notes-queries-factory";
 import { sessionsQueries } from "@/lib/queries/sessions-queries-factory";
+import { useProfileSheet } from "@/components/ui/profile-sheet";
 
 dayjs.extend(relativeTime);
 
@@ -847,6 +848,7 @@ export default function HomeStudio() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const insets = useSafeAreaInsets();
+  const profileSheet = useProfileSheet();
   const [refreshing, setRefreshing] = useState(false);
   const [selectedDay, setSelectedDay] = useState(dayjs().startOf("day"));
   // Just a small breathing buffer — the flat tab bar takes its own real
@@ -933,10 +935,12 @@ export default function HomeStudio() {
             justifyContent: "space-between",
           }}
         >
-          {/* Left avatar — opens profile */}
+          {/* Left avatar — opens the profile sheet (theme + language + sign out) */}
           <Pressable
-            onPress={() => router.push("/(client)/profile")}
+            onPress={profileSheet.open}
             hitSlop={8}
+            android_ripple={null}
+            className="active:opacity-80"
             style={{
               width: 36,
               height: 36,

@@ -148,7 +148,8 @@
       "expired": "Istekao",
       "totalNotes": "Ukupno termina",
       "thisMonth": "Ovaj mesec",
-      "activePkgs": "Aktivni paketi"
+      "activePkgs": "Aktivni paketi",
+      "viewProfile": "Otvori profil"
     },
     "dayView": {
       "noSessions": "Nema termina ovog dana",

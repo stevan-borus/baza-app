@@ -148,7 +148,8 @@
       "expired": "Expired",
       "totalNotes": "Total sessions",
       "thisMonth": "This month",
-      "activePkgs": "Active packs"
+      "activePkgs": "Active packs",
+      "viewProfile": "View profile"
     },
     "dayView": {
       "noSessions": "No sessions on this day",

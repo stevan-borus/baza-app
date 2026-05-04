@@ -18,11 +18,10 @@
  */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
-import { RefreshControl, ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { RefreshControl, ScrollView, Text, View } from "react-native";
 import { useTranslation } from "react-i18next";
 import { useState } from "react";
 import { MotiView } from "@/components/ui/styled";
-import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { Button } from "@/components/ui/button";
 import { GlassCard } from "@/components/ui/glass-card";
@@ -121,6 +120,7 @@ export default function ClientProfile() {
   return (
     <ScreenContainer title={t("tabs.profile")}>
       <ScrollView
+        style={{ flex: 1 }}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
@@ -130,7 +130,7 @@ export default function ClientProfile() {
             colors={[tokens.accent]}
           />
         }
-        contentContainerStyle={{ gap: 24 }}
+        contentContainerStyle={{ gap: 24, paddingBottom: 32 }}
       >
 
         {/* ── Hero ─────────────────────────────────────────────────────── */}
@@ -294,21 +294,6 @@ export default function ClientProfile() {
                   </Text>
                   <LanguageSwitcher />
                 </View>
-                {/* Notification settings row */}
-                <TouchableOpacity
-                  className="flex-row items-center justify-between py-2"
-                  activeOpacity={0.7}
-                  accessibilityRole="button"
-                  accessibilityLabel={t("client.profileTab.notificationSettings")}
-                >
-                  <View className="flex-row items-center gap-3">
-                    <FontAwesome name="bell-o" size={16} color={tokens.muted} />
-                    <Text className="text-[15px] text-foreground">
-                      {t("client.profileTab.notificationSettings")}
-                    </Text>
-                  </View>
-                  <FontAwesome name="chevron-right" size={12} color={tokens.faint} />
-                </TouchableOpacity>
               </View>
             </GlassCard>
           </View>
