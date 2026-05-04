@@ -14,7 +14,7 @@
  */
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   Image,
   Pressable,
@@ -24,7 +24,7 @@ import {
   View,
 } from "react-native";
 import { useTranslation } from "react-i18next";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useLocalAvatar } from "@/lib/use-local-avatar";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import Feather from "@expo/vector-icons/Feather";
 import { MotiView } from "@/components/ui/styled";
@@ -42,8 +42,6 @@ import { packagesQueries, type ClientPackage } from "@/lib/queries/packages-quer
 import { trainerNotesQueries } from "@/lib/queries/trainer-notes-queries-factory";
 
 // ─── helpers ────────────────────────────────────────────────────────────────
-
-const AVATAR_STORAGE_KEY = "baza.avatar.localUri";
 
 function getInitials(email: string): string {
   const prefix = email.split("@")[0] ?? "";
@@ -82,22 +80,7 @@ export default function ClientProfile() {
   const dateLocale = getDateLocale();
   const bottomPad = useTabBarBottomPadding(24);
   const [refreshing, setRefreshing] = useState(false);
-  const [avatarUri, setAvatarUri] = useState<string | null>(null);
-
-  // Load any locally-persisted avatar URI on mount. (Server upload + a
-  // canonical avatar field on the user record will come in a follow-up;
-  // for now the chosen image is stored in AsyncStorage.)
-  useEffect(() => {
-    let mounted = true;
-    AsyncStorage.getItem(AVATAR_STORAGE_KEY)
-      .then((uri) => {
-        if (mounted && uri) setAvatarUri(uri);
-      })
-      .catch(() => {});
-    return () => {
-      mounted = false;
-    };
-  }, []);
+  const { avatarUri, setAvatarUri } = useLocalAvatar();
 
   const meQuery = useQuery(authQueries.me());
   const packagesQuery = useQuery(packagesQueries.clientPackages());
@@ -151,7 +134,6 @@ export default function ClientProfile() {
       const uri = result.assets[0]?.uri;
       if (!uri) return;
       setAvatarUri(uri);
-      AsyncStorage.setItem(AVATAR_STORAGE_KEY, uri).catch(() => {});
     } catch {
       // Native module missing or runtime error — no-op so the rest of
       // the screen stays functional.

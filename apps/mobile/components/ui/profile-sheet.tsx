@@ -3,7 +3,8 @@ import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
-import { Pressable, Text, View } from "react-native";
+import { Image, Pressable, Text, View } from "react-native";
+import { useLocalAvatar } from "@/lib/use-local-avatar";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { ThemeSwitcher } from "@/components/ThemeSwitcher";
 import { authQueries } from "@/lib/queries/auth-queries-factory";
@@ -70,6 +71,7 @@ function ProfileSheetContent({ open, onOpenChange }: Props) {
   const meQuery = useQuery(authQueries.me());
   const email = meQuery.data?.user.email ?? "";
   const initial = (email || "?").charAt(0).toUpperCase();
+  const { avatarUri } = useLocalAvatar();
 
   const signOutMutation = useMutation({
     mutationFn: async () => {
@@ -94,21 +96,24 @@ function ProfileSheetContent({ open, onOpenChange }: Props) {
     <AppSheet open={open} onOpenChange={onOpenChange}>
       <View className="gap-6">
         <View className="flex-row items-center gap-3">
-          <View
-            style={{
-              width: 48,
-              height: 48,
-              borderRadius: 24,
-              backgroundColor: tokens.accentSoft,
-              borderWidth: 1,
-              borderColor: tokens.accentLight,
-            }}
-            className="items-center justify-center"
-          >
-            <Text style={{ color: tokens.accentLight, fontSize: 18, fontWeight: "600" }}>
-              {initial}
-            </Text>
-          </View>
+          {avatarUri ? (
+            <Image
+              source={{ uri: avatarUri }}
+              style={{ width: 48, height: 48, borderRadius: 24 }}
+            />
+          ) : (
+            <View
+              className="rounded-full bg-foreground items-center justify-center"
+              style={{ width: 48, height: 48 }}
+            >
+              <Text
+                className="font-body-semibold text-background"
+                style={{ fontSize: 18 }}
+              >
+                {initial}
+              </Text>
+            </View>
+          )}
           <View className="flex-1">
             <Text className="text-foreground font-body-semibold" style={{ fontSize: 16 }}>
               {email.split("@")[0] || t("client.profileTab.account")}

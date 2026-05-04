@@ -1,37 +1,24 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
 import { Image, Pressable, Text, View } from "react-native";
 import { useQuery } from "@tanstack/react-query";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { authQueries } from "@/lib/queries/auth-queries-factory";
+import { useLocalAvatar } from "@/lib/use-local-avatar";
 import { useProfileSheet } from "./profile-sheet";
 
 const AVATAR_SIZE = 36;
-const AVATAR_STORAGE_KEY = "baza.avatar.localUri";
 
 /**
  * Circular avatar for the AppHeader's left slot. Tapping it opens the
- * global ProfileSheet. Theme-aware: foreground/background tokens swap
- * between light and dark. Renders the user's locally-uploaded image
- * if present, otherwise the email initial.
+ * global ProfileSheet. Theme-aware and reads the locally-uploaded image
+ * from `useLocalAvatar()` (shared with the profile page + sheet so all
+ * three render the same image).
  */
 export function UserAvatar() {
   const meQuery = useQuery(authQueries.me());
   const email = meQuery.data?.user.email ?? "";
   const initial = (email || "?").charAt(0).toUpperCase();
   const { open } = useProfileSheet();
-  const [avatarUri, setAvatarUri] = useState<string | null>(null);
-
-  useEffect(() => {
-    let mounted = true;
-    AsyncStorage.getItem(AVATAR_STORAGE_KEY)
-      .then((uri) => {
-        if (mounted && uri) setAvatarUri(uri);
-      })
-      .catch(() => {});
-    return () => {
-      mounted = false;
-    };
-  }, []);
+  const { avatarUri } = useLocalAvatar();
 
   return (
     <Pressable

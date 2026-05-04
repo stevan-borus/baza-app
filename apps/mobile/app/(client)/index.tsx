@@ -35,7 +35,7 @@ import {
   type TrainerNote,
 } from "@/lib/queries/trainer-notes-queries-factory";
 import { sessionsQueries } from "@/lib/queries/sessions-queries-factory";
-import { useProfileSheet } from "@/components/ui/profile-sheet";
+import { UserAvatar } from "@/components/ui/user-avatar";
 
 dayjs.extend(relativeTime);
 
@@ -848,7 +848,6 @@ export default function HomeStudio() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const insets = useSafeAreaInsets();
-  const profileSheet = useProfileSheet();
   const [refreshing, setRefreshing] = useState(false);
   const [selectedDay, setSelectedDay] = useState(dayjs().startOf("day"));
   // Just a small breathing buffer — the flat tab bar takes its own real
@@ -935,20 +934,9 @@ export default function HomeStudio() {
             justifyContent: "space-between",
           }}
         >
-          {/* Left avatar — opens the profile sheet (theme + language + sign out) */}
-          <Pressable
-            onPress={profileSheet.open}
-            hitSlop={8}
-            android_ripple={null}
-            className="w-9 h-9 rounded-full bg-foreground items-center justify-center active:opacity-80"
-          >
-            <Text
-              className="font-body-semibold text-background"
-              style={{ fontSize: 13 }}
-            >
-              {(userName || "B").charAt(0).toUpperCase()}
-            </Text>
-          </Pressable>
+          {/* Left avatar — shared component reads the locally-picked image
+              (or initial fallback) and opens the ProfileSheet on tap. */}
+          <UserAvatar />
 
           {/* Baza logo lockup — the actual brand mark (BAZA + PILATES STUDIO),
               forest green on transparent. Sized to fit the header band. */}
