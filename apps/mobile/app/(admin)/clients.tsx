@@ -249,8 +249,16 @@ export default function AdminClients() {
         >
           <SegmentedControl
             segments={[
-              { value: "clients" as const, label: t("admin.clients.tabClients", { count: clients.length }) },
-              { value: "invites" as const, label: t("admin.clients.tabInvites", { count: invites.length }) },
+              {
+                value: "clients" as const,
+                label: t("admin.clients.tabClients", { count: clients.length }),
+                testID: "admin-clients-tab-clients",
+              },
+              {
+                value: "invites" as const,
+                label: t("admin.clients.tabInvites", { count: invites.length }),
+                testID: "admin-clients-tab-invites",
+              },
             ]}
             value={tab}
             onValueChange={setTab}
@@ -682,6 +690,7 @@ export default function AdminClients() {
               {t("admin.clients.sheetInvite")}
             </Text>
             <Input
+              testID="invite-create-email-input"
               placeholder={t("admin.clients.placeholderEmail")}
               autoCapitalize="none"
               keyboardType="email-address"
@@ -689,17 +698,20 @@ export default function AdminClients() {
               onChangeText={(v) => setInviteForm((s) => ({ ...s, email: v }))}
             />
             <Input
+              testID="invite-create-name-input"
               placeholder={t("admin.clients.placeholderFullName")}
               value={inviteForm.fullName}
               onChangeText={(v) => setInviteForm((s) => ({ ...s, fullName: v }))}
             />
             <Input
+              testID="invite-create-phone-input"
               placeholder={t("admin.clients.placeholderPhone")}
               keyboardType="phone-pad"
               value={inviteForm.phone}
               onChangeText={(v) => setInviteForm((s) => ({ ...s, phone: v }))}
             />
             <Button
+              testID="invite-create-submit-button"
               disabled={createInviteMutation.isPending || !inviteForm.email || !inviteForm.fullName}
               onPress={() =>
                 createInviteMutation.mutate({

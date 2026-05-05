@@ -19,9 +19,9 @@ const sizeCls: Record<Size, string> = {
 };
 
 const variantCls: Record<Variant, string> = {
-  primary: "bg-accent active:opacity-90 active:scale-[0.97]",
-  secondary: "bg-glass border border-glass-border active:opacity-90 active:scale-[0.97]",
-  danger: "bg-danger-soft active:opacity-90 active:scale-[0.97]",
+  primary: "bg-accent active:opacity-90",
+  secondary: "bg-glass border border-glass-border active:opacity-90",
+  danger: "bg-danger-soft active:opacity-90",
   ghost: "bg-transparent active:opacity-65",
 };
 
