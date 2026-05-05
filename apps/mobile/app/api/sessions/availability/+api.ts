@@ -2,6 +2,7 @@ import { monthlyAvailabilityQuerySchema } from "@baza/types";
 import { UserRole } from "@/generated/prisma";
 import { requireRole } from "@/lib/server/auth-guards";
 import { fail, ok } from "@/lib/server/http";
+import { findEligibleClientPackage } from "@/lib/server/package-eligibility";
 import { prisma } from "@/lib/server/prisma";
 
 function getMonthRange(month: string) {
@@ -24,7 +25,8 @@ export async function GET(request: Request) {
   // Visibility rules:
   //   - Admin: sees everything (including hidden), so they can manage drafts.
   //   - Trainer (strict): sees only assigned + active (one-time) / active series.
-  //   - Client: sees only active (one-time) and active series.
+  //   - Client: sees only active (one-time) and active series, AND only those
+  //     class types the client has an eligible pack for at session.startsAt.
   const isAdmin = guard.user.role === UserRole.ADMIN;
   const visibilityFilter = isAdmin
     ? {}
@@ -55,6 +57,7 @@ export async function GET(request: Request) {
       capacity: true,
       isActive: true,
       roomId: true,
+      classTypeId: true,
       trainerUserId: true,
       recurringScheduleId: true,
       classType: { select: { name: true } },
@@ -71,10 +74,55 @@ export async function GET(request: Request) {
     orderBy: { startsAt: "asc" },
   });
 
+  // Class-scoped filter for clients: hide sessions whose classType the client
+  // has no spendable pack for at session.startsAt. We evaluate per-session via
+  // findEligibleClientPackage so all eligibility rules (pause window, future
+  // startsAt, expiry extended by paused time, sessionsRemaining > 0) apply.
+  let visibleSessions = sessions;
+  if (guard.user.role === UserRole.CLIENT) {
+    const clientProfileId = guard.user.clientProfile?.id;
+    if (!clientProfileId) {
+      // No profile -> no bookings possible -> empty list, not 404 — clients on
+      // the calendar should see "no package" UX state.
+      visibleSessions = [];
+    } else {
+      const [clientPackages, packagePauses] = await Promise.all([
+        prisma.clientPackage.findMany({
+          where: { clientProfileId },
+          select: {
+            id: true,
+            classTypeId: true,
+            startsAt: true,
+            expiresAt: true,
+            sessionsRemaining: true,
+          },
+        }),
+        prisma.packagePause.findMany({
+          where: { clientProfileId },
+          select: {
+            startsAt: true,
+            endsAt: true,
+          },
+        }),
+      ]);
+
+      visibleSessions = sessions.filter((session: (typeof sessions)[number]) =>
+        Boolean(
+          findEligibleClientPackage(
+            clientPackages,
+            packagePauses,
+            session.startsAt,
+            session.classTypeId,
+          ),
+        ),
+      );
+    }
+  }
+
   return ok({
     success: true,
     month: parsed.data.month,
-    sessions: sessions.map((session: (typeof sessions)[number]) => {
+    sessions: visibleSessions.map((session: (typeof sessions)[number]) => {
       const seriesActive = session.recurringSchedule?.isActive ?? null;
       const visibleToClients = session.recurringScheduleId
         ? seriesActive === true
