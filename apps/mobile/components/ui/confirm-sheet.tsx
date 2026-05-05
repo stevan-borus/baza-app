@@ -20,8 +20,6 @@ type ConfirmSheetProps = {
   /** Optional testID forwarded to the confirm Button. */
   testID?: string;
   onConfirm: () => void;
-  /** TestID applied to the confirm button (lets E2E specs scope reliably). */
-  testID?: string;
 };
 
 /**
@@ -42,7 +40,6 @@ export function ConfirmSheet({
   errorMessage,
   testID,
   onConfirm,
-  testID,
 }: ConfirmSheetProps) {
   const { t } = useTranslation();
 
@@ -71,7 +68,6 @@ export function ConfirmSheet({
             variant={tone}
             disabled={loading}
             onPress={onConfirm}
-            testID={testID}
           >
             {confirmLabel}
           </Button>
