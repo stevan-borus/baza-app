@@ -527,6 +527,7 @@ export default function AdminSchedule() {
                     daySessions.map((session) => (
                       <SessionCard
                         key={session.id}
+                        testID={`session-card-${session.id}`}
                         time={`${dayjs(session.startsAt).format("HH:mm")} - ${dayjs(session.endsAt).format("HH:mm")}`}
                         className={session.classTypeName}
                         trainerName={session.trainerName ?? undefined}
@@ -680,6 +681,7 @@ export default function AdminSchedule() {
                       return (
                         <Pressable
                           key={dow}
+                          testID={`session-create-weekday-${dow}`}
                           onPress={() =>
                             setNewSession((s) => ({
                               ...s,
@@ -787,7 +789,10 @@ export default function AdminSchedule() {
               {t("admin.manage.create")}
             </Button>
             {createMutation.isError || createRecurringMutation.isError ? (
-              <ErrorState message={t("admin.schedule.createError")} />
+              <ErrorState
+                testID="session-create-error"
+                message={t("admin.schedule.createError")}
+              />
             ) : null}
         </View>
       </AppSheet>
@@ -973,6 +978,7 @@ export default function AdminSchedule() {
                     return (
                       <Pressable
                         key={dow}
+                        testID={`series-edit-weekday-${dow}`}
                         onPress={() =>
                           setSeriesForm((s) => ({
                             ...s,

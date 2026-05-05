@@ -203,7 +203,11 @@ export default function AdminReports() {
             );
             const fillRatio = item.revenue / maxRevenue;
             return (
-              <GlassCard key={item.period} size="md">
+              <GlassCard
+                key={item.period}
+                testID={`revenue-row-${item.period}`}
+                size="md"
+              >
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
                   {/* Rank number */}
                   <Text
@@ -281,7 +285,11 @@ export default function AdminReports() {
             <EmptyState title={t("admin.manage.utilizationEmpty")} />
           ) : null}
           {utilizationData.map((item) => (
-            <GlassCard key={item.period} size="md">
+            <GlassCard
+              key={item.period}
+              testID={`utilization-row-${item.period}`}
+              size="md"
+            >
               <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
                 <ProgressRing
                   progress={item.utilization}

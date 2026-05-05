@@ -229,6 +229,7 @@ export default function ClientNotifications() {
 
             return (
               <Pressable
+                testID={`notification-row-${n.id}-${isUnread ? "unread" : "read"}`}
                 onPress={() => {
                   if (isUnread) markReadMutation.mutate(n.id);
                 }}

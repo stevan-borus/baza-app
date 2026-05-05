@@ -17,6 +17,7 @@ type SessionCardProps = {
   hidden?: boolean;
   hiddenLabel?: string;
   onPress?: () => void;
+  testID?: string;
 };
 
 const classTypeAccentColor: Record<string, string> = {
@@ -44,6 +45,7 @@ export function SessionCard({
   hidden,
   hiddenLabel,
   onPress,
+  testID,
 }: SessionCardProps) {
   const config = statusConfig[status];
   const spotsLeft = capacity - bookedCount;
@@ -56,7 +58,7 @@ export function SessionCard({
       : "#2e5b42";
 
   return (
-    <Pressable onPress={onPress} className="active:opacity-80">
+    <Pressable testID={testID} onPress={onPress} className="active:opacity-80">
       <View style={{ opacity: hidden ? 0.5 : 1 }}>
         <GlassCard accentBorder={accentBorder} accentBorderColor={accentBorderColor}>
           <View className="flex-row items-center gap-3">

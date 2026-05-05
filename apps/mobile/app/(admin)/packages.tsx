@@ -229,6 +229,7 @@ export default function AdminPackages() {
                     />
                   ) : null}
                   <Pressable
+                    testID={`package-type-row-${pt.id}`}
                     onPress={() => openEdit(pt)}
                     android_ripple={null}
                     className="flex-row items-center gap-3 px-4 py-3 active:opacity-70"

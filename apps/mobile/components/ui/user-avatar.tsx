@@ -24,6 +24,7 @@ export function UserAvatar() {
 
   return (
     <Pressable
+      testID="open-profile-sheet"
       onPress={open}
       hitSlop={12}
       android_ripple={null}

@@ -258,6 +258,7 @@ export default function TrainerSchedule() {
                     daySessions.map((session) => (
                       <SessionCard
                         key={session.id}
+                        testID={`session-card-${session.id}`}
                         time={`${dayjs(session.startsAt).format("HH:mm")} - ${dayjs(session.endsAt).format("HH:mm")}`}
                         className={session.classTypeName}
                         trainerName={session.trainerName ?? undefined}

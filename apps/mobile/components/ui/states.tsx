@@ -67,7 +67,13 @@ export function EmptyState({
   );
 }
 
-export function ErrorState({ message }: { message: string }) {
+export function ErrorState({
+  message,
+  testID,
+}: {
+  message: string;
+  testID?: string;
+}) {
   const tokens = useThemeTokens();
   const shakeX = useSharedValue(0);
 
@@ -87,6 +93,7 @@ export function ErrorState({ message }: { message: string }) {
 
   return (
     <AnimatedView
+      testID={testID}
       style={animatedStyle}
       className="p-4 rounded-2xl items-center gap-2 flex-row bg-danger-soft"
     >

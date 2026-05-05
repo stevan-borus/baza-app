@@ -216,7 +216,10 @@ export default function ClientCalendar() {
 
           {bookingMutation.isError ? (
             <View className="px-6 pb-3">
-              <ErrorState message={t("client.calendar.bookingError")} />
+              <ErrorState
+                testID="booking-error"
+                message={t("client.calendar.bookingError")}
+              />
             </View>
           ) : null}
 
@@ -228,7 +231,10 @@ export default function ClientCalendar() {
             >
               <View className="px-6 pb-3">
                 <GlassCard size="sm">
-                  <Text className="font-body-semibold text-accent">
+                  <Text
+                    testID="booking-confirmation-banner"
+                    className="font-body-semibold text-accent"
+                  >
                     {bookingResultState === "BOOKED"
                       ? t("client.calendar.bookingBooked")
                       : bookingResultState === "WAITLISTED"
