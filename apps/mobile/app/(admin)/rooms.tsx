@@ -149,17 +149,20 @@ export default function AdminSettingsRooms() {
             {t("admin.manage.sheetNewRoom")}
           </Text>
           <Input
+            testID="room-name-input"
             placeholder={t("admin.manage.placeholderName")}
             value={form.name}
             onChangeText={(v) => setForm((s) => ({ ...s, name: v }))}
           />
           <Input
+            testID="room-capacity-input"
             placeholder={t("admin.manage.placeholderCapacity")}
             keyboardType="numeric"
             value={form.capacity}
             onChangeText={(v) => setForm((s) => ({ ...s, capacity: v }))}
           />
           <Button
+            testID="room-create-submit"
             disabled={createMutation.isPending || !form.name}
             onPress={() =>
               createMutation.mutate({

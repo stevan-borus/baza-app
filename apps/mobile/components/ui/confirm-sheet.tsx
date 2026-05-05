@@ -18,6 +18,8 @@ type ConfirmSheetProps = {
   /** Optional inline error rendered above the buttons. */
   errorMessage?: string | null;
   onConfirm: () => void;
+  /** TestID applied to the confirm button (lets E2E specs scope reliably). */
+  testID?: string;
 };
 
 /**
@@ -37,6 +39,7 @@ export function ConfirmSheet({
   loading = false,
   errorMessage,
   onConfirm,
+  testID,
 }: ConfirmSheetProps) {
   const { t } = useTranslation();
 
@@ -61,6 +64,7 @@ export function ConfirmSheet({
         ) : null}
         <View className="flex-col gap-2 mt-2">
           <Button
+            testID={testID}
             variant={tone}
             disabled={loading}
             onPress={onConfirm}

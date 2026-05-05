@@ -166,23 +166,27 @@ export default function AdminSettingsClassTypes() {
             {t("admin.manage.sheetNewClassType")}
           </Text>
           <Input
+            testID="class-type-name-input"
             placeholder={t("admin.manage.placeholderName")}
             value={form.name}
             onChangeText={(v) => setForm((s) => ({ ...s, name: v }))}
           />
           <Input
+            testID="class-type-max-clients-input"
             placeholder={t("admin.manage.placeholderMaxClients")}
             keyboardType="numeric"
             value={form.maxClients}
             onChangeText={(v) => setForm((s) => ({ ...s, maxClients: v }))}
           />
           <Input
+            testID="class-type-duration-input"
             placeholder={t("admin.manage.placeholderDurationMins")}
             keyboardType="numeric"
             value={form.durationMins}
             onChangeText={(v) => setForm((s) => ({ ...s, durationMins: v }))}
           />
           <Button
+            testID="class-type-create-submit"
             disabled={createMutation.isPending || !form.name}
             onPress={() =>
               createMutation.mutate({
