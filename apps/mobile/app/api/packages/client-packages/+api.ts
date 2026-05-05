@@ -40,16 +40,40 @@ export async function GET(request: Request) {
       }),
     ]);
 
-    const activePackage = findEligibleClientPackage(
-      packages.map((item: { id: string; startsAt: Date; expiresAt: Date; sessionsRemaining: number }) => ({
-        id: item.id,
-        startsAt: item.startsAt,
-        expiresAt: item.expiresAt,
-        sessionsRemaining: item.sessionsRemaining,
-      })),
-      pauses,
-      new Date(),
-    );
+    // Dashboard "active package" is class-agnostic on purpose: this drives the
+    // profile/home pill that says "You have an active package". The class filter
+    // is enforced at booking and availability time, not here. We pick the most
+    // recent pack that is otherwise valid (started, has sessions, not expired,
+    // not paused) by ignoring the class-type filter — `findEligibleClientPackage`
+    // is class-scoped, so we evaluate that per-classTypeId and report any hit.
+    const now = new Date();
+    const activePackage = (() => {
+      const distinctClassTypeIds = Array.from(
+        new Set(packages.map((p: { classTypeId: string }) => p.classTypeId)),
+      );
+      for (const classTypeId of distinctClassTypeIds) {
+        const hit = findEligibleClientPackage(
+          packages.map((item: {
+            id: string;
+            classTypeId: string;
+            startsAt: Date;
+            expiresAt: Date;
+            sessionsRemaining: number;
+          }) => ({
+            id: item.id,
+            classTypeId: item.classTypeId,
+            startsAt: item.startsAt,
+            expiresAt: item.expiresAt,
+            sessionsRemaining: item.sessionsRemaining,
+          })),
+          pauses,
+          now,
+          classTypeId,
+        );
+        if (hit) return hit;
+      }
+      return null;
+    })();
 
     return ok({
       success: true,
@@ -115,12 +139,17 @@ export async function POST(request: Request) {
   const startsAt = new Date(parsed.data.startsAt);
   if (Number.isNaN(startsAt.getTime())) return fail("Invalid startsAt date", 400);
 
+  // Snapshot classTypeId and lateCancelHours from the parent PackageType so
+  // future template edits don't retroactively change a sold pack's policy or
+  // scope. ClientPackage is the source of truth from creation onward.
   const packageType = await prisma.packageType.findUnique({
     where: { id: parsed.data.packageTypeId },
     select: {
       id: true,
       sessionCount: true,
       validityDays: true,
+      classTypeId: true,
+      lateCancelHours: true,
     },
   });
   if (!packageType) return fail("Package type not found", 404);
@@ -133,6 +162,8 @@ export async function POST(request: Request) {
     data: {
       clientProfileId: parsed.data.clientProfileId,
       packageTypeId: parsed.data.packageTypeId,
+      classTypeId: packageType.classTypeId,
+      lateCancelHours: packageType.lateCancelHours,
       startsAt,
       expiresAt,
       sessionsRemaining: packageType.sessionCount,
@@ -141,6 +172,8 @@ export async function POST(request: Request) {
       id: true,
       clientProfileId: true,
       packageTypeId: true,
+      classTypeId: true,
+      lateCancelHours: true,
       startsAt: true,
       expiresAt: true,
       sessionsRemaining: true,

@@ -17,6 +17,8 @@ export async function GET(request: Request) {
       sessionCount: true,
       validityDays: true,
       lateCancelHours: true,
+      classTypeId: true,
+      classType: { select: { id: true, name: true } },
       createdAt: true,
       updatedAt: true,
     },
@@ -35,12 +37,21 @@ export async function POST(request: Request) {
   const parsed = packageTypeInputSchema.safeParse(body);
   if (!parsed.success) return fail("Invalid payload", 400, parsed.error);
 
+  // classTypeId is required — confirm the referenced ClassType exists so we
+  // surface a 404 instead of a Prisma FK error.
+  const classType = await prisma.classType.findUnique({
+    where: { id: parsed.data.classTypeId },
+    select: { id: true },
+  });
+  if (!classType) return fail("Class type not found", 404);
+
   const packageType = await prisma.packageType.create({
     data: {
       name: parsed.data.name,
       sessionCount: parsed.data.sessionCount,
       validityDays: parsed.data.validityDays,
       lateCancelHours: parsed.data.lateCancelHours,
+      classTypeId: parsed.data.classTypeId,
     },
     select: {
       id: true,
@@ -48,6 +59,8 @@ export async function POST(request: Request) {
       sessionCount: true,
       validityDays: true,
       lateCancelHours: true,
+      classTypeId: true,
+      classType: { select: { id: true, name: true } },
       createdAt: true,
     },
   });

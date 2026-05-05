@@ -44,65 +44,105 @@ export async function POST(request: Request) {
   const parsed = billingRecordInputSchema.safeParse(body);
   if (!parsed.success) return fail("Invalid payload", 400, parsed.error);
 
-  const payment = await prisma.billingRecord.create({
-    data: {
-      clientUserId: parsed.data.clientUserId,
-      amount: parsed.data.amount,
-      method: parsed.data.method,
-      status: parsed.data.status,
-      notes: parsed.data.notes,
-    },
-  });
+  // Recording payment in the admin form means "money received" — default to
+  // CONFIRMED so the BillingRecord and ClientPackage stay in sync without
+  // requiring the caller to pass `status` explicitly.
+  const status = parsed.data.status ?? "CONFIRMED";
 
-  let clientPackage: null | {
+  const shouldActivatePackage =
+    status === "CONFIRMED" &&
+    !!parsed.data.packageTypeId &&
+    parsed.data.activatePackageOnConfirm;
+
+  // Pre-load the activation prerequisites OUTSIDE the transaction so we can
+  // 4xx cleanly without writing a half-state. The actual create+create runs
+  // atomically so a transient DB error during ClientPackage insert rolls back
+  // the BillingRecord too.
+  let clientProfileId: string | null = null;
+  let packageTypeRow: {
     id: string;
-    startsAt: Date;
-    expiresAt: Date;
-    sessionsRemaining: number;
-  } = null;
-  // Side effect: confirmed payment with packageTypeId can auto-create client package.
-  if (
-    parsed.data.status === "CONFIRMED" &&
-    parsed.data.packageTypeId &&
-    parsed.data.activatePackageOnConfirm
-  ) {
+    sessionCount: number;
+    validityDays: number;
+    classTypeId: string;
+    lateCancelHours: number;
+  } | null = null;
+  if (shouldActivatePackage) {
     const [clientProfile, packageType] = await Promise.all([
       prisma.clientProfile.findUnique({
         where: { userId: parsed.data.clientUserId },
         select: { id: true },
       }),
+      // Required for activation: classTypeId + lateCancelHours snapshot fields.
       prisma.packageType.findUnique({
-        where: { id: parsed.data.packageTypeId },
+        where: { id: parsed.data.packageTypeId! },
         select: {
           id: true,
           sessionCount: true,
           validityDays: true,
+          classTypeId: true,
+          lateCancelHours: true,
         },
       }),
     ]);
+    if (!clientProfile) return fail("Client profile not found", 404);
+    if (!packageType) return fail("Package type not found", 404);
+    clientProfileId = clientProfile.id;
+    packageTypeRow = packageType;
+  }
 
-    if (clientProfile && packageType) {
-      const startsAt = new Date();
-      const expiresAt = new Date(
-        startsAt.getTime() + packageType.validityDays * 24 * 60 * 60 * 1000,
-      );
-      clientPackage = await prisma.clientPackage.create({
+  const startsAt = new Date();
+  const expiresAt = packageTypeRow
+    ? new Date(
+        startsAt.getTime() + packageTypeRow.validityDays * 24 * 60 * 60 * 1000,
+      )
+    : null;
+
+  const result = await prisma.$transaction(async (tx) => {
+    const payment = await tx.billingRecord.create({
+      data: {
+        clientUserId: parsed.data.clientUserId,
+        amount: parsed.data.amount,
+        method: parsed.data.method,
+        status,
+        notes: parsed.data.notes,
+      },
+    });
+
+    let clientPackage: {
+      id: string;
+      classTypeId: string;
+      startsAt: Date;
+      expiresAt: Date;
+      sessionsRemaining: number;
+    } | null = null;
+    if (
+      shouldActivatePackage &&
+      clientProfileId &&
+      packageTypeRow &&
+      expiresAt
+    ) {
+      clientPackage = await tx.clientPackage.create({
         data: {
-          clientProfileId: clientProfile.id,
-          packageTypeId: packageType.id,
+          clientProfileId,
+          packageTypeId: packageTypeRow.id,
+          classTypeId: packageTypeRow.classTypeId,
+          lateCancelHours: packageTypeRow.lateCancelHours,
           startsAt,
           expiresAt,
-          sessionsRemaining: packageType.sessionCount,
+          sessionsRemaining: packageTypeRow.sessionCount,
         },
         select: {
           id: true,
+          classTypeId: true,
           startsAt: true,
           expiresAt: true,
           sessionsRemaining: true,
         },
       });
     }
-  }
 
-  return ok({ success: true, payment, clientPackage }, 201);
+    return { payment, clientPackage };
+  });
+
+  return ok({ success: true, ...result }, 201);
 }

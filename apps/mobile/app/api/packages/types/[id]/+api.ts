@@ -19,6 +19,14 @@ export async function PATCH(request: Request, { id }: RouteParams) {
   const existing = await prisma.packageType.findUnique({ where: { id } });
   if (!existing) return fail("Package type not found", 404);
 
+  if (parsed.data.classTypeId) {
+    const classType = await prisma.classType.findUnique({
+      where: { id: parsed.data.classTypeId },
+      select: { id: true },
+    });
+    if (!classType) return fail("Class type not found", 404);
+  }
+
   const packageType = await prisma.packageType.update({
     where: { id },
     data: parsed.data,
@@ -28,6 +36,8 @@ export async function PATCH(request: Request, { id }: RouteParams) {
       sessionCount: true,
       validityDays: true,
       lateCancelHours: true,
+      classTypeId: true,
+      classType: { select: { id: true, name: true } },
       updatedAt: true,
     },
   });
