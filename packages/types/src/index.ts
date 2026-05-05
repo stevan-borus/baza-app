@@ -383,6 +383,11 @@ export type UpdateStudioRoomInput = z.infer<typeof updateStudioRoomInputSchema>;
 export const updateClassTypeInputSchema = classTypeInputSchema.partial();
 export type UpdateClassTypeInput = z.infer<typeof updateClassTypeInputSchema>;
 
+export const updateTrainerNoteInputSchema = z.object({
+  note: z.string().min(1).max(500),
+});
+export type UpdateTrainerNoteInput = z.infer<typeof updateTrainerNoteInputSchema>;
+
 export const appThemeTokens = {
   background: "#fdf7f4",
   brand: "#2e5b42",
