@@ -45,27 +45,41 @@ export function isInPauseWindow(
 
 export type EligiblePackage = Pick<
   ClientPackage,
-  "id" | "startsAt" | "expiresAt" | "sessionsRemaining"
+  "id" | "classTypeId" | "startsAt" | "expiresAt" | "sessionsRemaining"
 > & {
   effectiveExpiresAt: Date;
 };
 
 /**
- * Picks the most recent valid package for a session timestamp.
+ * Picks the most recent valid package for a session at the given timestamp.
  *
- * Uses {@link getEffectiveExpiresAt} and {@link isInPauseWindow} to enforce
- * pause-aware validity and prevent booking/check-in during active pause time.
+ * Eligibility rules:
+ *  - `classTypeId` must equal `pkg.classTypeId` — packs are now scoped to a
+ *    single class type (Programme), so a Reformer pack cannot be spent on an
+ *    Energy session.
+ *  - Pack must have started (`startsAt <= at`).
+ *  - Pack must have remaining sessions.
+ *  - Effective expiry (extended by paused time) must be in the future at `at`.
+ *  - `at` must not fall inside an active pause window.
+ *
+ * When multiple packs satisfy the rules, the newest `startsAt` wins.
  */
 export function findEligibleClientPackage(
   packages: Pick<
     ClientPackage,
-    "id" | "startsAt" | "expiresAt" | "sessionsRemaining"
+    "id" | "classTypeId" | "startsAt" | "expiresAt" | "sessionsRemaining"
   >[],
   pauses: Pick<PackagePause, "startsAt" | "endsAt">[],
   at: Date,
+  classTypeId: string,
 ): EligiblePackage | null {
+  // Filter to the requested class type up front so the iteration order check
+  // (newest startsAt wins) only considers candidates the client could spend.
+  const sameClassPackages = packages.filter(
+    (pkg) => pkg.classTypeId === classTypeId,
+  );
   // Prefer newest package first when multiple packages are valid.
-  const sortedPackages = [...packages].sort(
+  const sortedPackages = [...sameClassPackages].sort(
     (a, b) => b.startsAt.getTime() - a.startsAt.getTime(),
   );
   for (const pkg of sortedPackages) {
