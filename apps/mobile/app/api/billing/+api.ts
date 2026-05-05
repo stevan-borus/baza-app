@@ -49,6 +49,12 @@ export async function POST(request: Request) {
   // requiring the caller to pass `status` explicitly.
   const status = parsed.data.status ?? "CONFIRMED";
 
+  // TODO(billing): `activatePackageOnConfirm: false` is currently dead — every
+  //   live caller (admin billing form) sends true when a packageTypeId is
+  //   selected. If we ever support "record payment, activate package later",
+  //   we'll need a follow-up endpoint that activates a package against an
+  //   existing BillingRecord. Until then the flag stays so the schema is
+  //   compatible with future additions.
   const shouldActivatePackage =
     status === "CONFIRMED" &&
     !!parsed.data.packageTypeId &&

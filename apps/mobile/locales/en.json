@@ -187,7 +187,11 @@
       "cancel": "Cancel",
       "slotsShort": "slots",
       "classCount_one": "{{count}} class",
-      "classCount_other": "{{count}} classes"
+      "classCount_other": "{{count}} classes",
+      "empty": {
+        "noPackage": "You don't have an active package. Contact the studio.",
+        "noPackageCta": "Contact us"
+      }
     },
     "notifications": {
       "title": "Notifications",
@@ -259,6 +263,11 @@
     "invalidEmail": "Enter a valid email",
     "invalid": "Invalid value",
     "passwordsMismatch": "Passwords don't match"
+  },
+  "bookings": {
+    "error": {
+      "noPackageForClass": "You don't have a package for this class type."
+    }
   },
   "admin": {
     "dashboard": {
@@ -337,7 +346,16 @@
       "filterExpiring": "Expiring",
       "filterPaused": "Paused",
       "filterExpired": "Expired",
-      "filterEmpty": "No clients match this filter."
+      "filterEmpty": "No clients match this filter.",
+      "assignPackage": {
+        "heading": {
+          "comp": "Free / comp package"
+        }
+      }
+    },
+    "packages": {
+      "classType": "Class type",
+      "classTypeRequired": "Class type is required"
     },
     "schedule": {
       "title": "Schedule",
