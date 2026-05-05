@@ -5,13 +5,12 @@ import { prisma } from "@/lib/server/prisma";
 
 const AUTHENTICATED_ROLES = [UserRole.ADMIN, UserRole.TRAINER, UserRole.CLIENT];
 
-type RouteContext = { params: Promise<{ id: string }> };
+type RouteParams = Record<string, string>;
 
-export async function PATCH(request: Request, context: RouteContext) {
+export async function PATCH(request: Request, { id }: RouteParams) {
   const guard = await requireRole(request, AUTHENTICATED_ROLES);
   if (!guard.ok) return guard.response;
 
-  const { id } = await context.params;
   const notification = await prisma.notificationLog.findUnique({
     where: { id },
     select: {

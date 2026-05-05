@@ -24,7 +24,13 @@ export async function GET(request: Request) {
         orderBy: { startsAt: "desc" },
         include: {
           packageType: {
-            select: { name: true, sessionCount: true, validityDays: true },
+            select: {
+              id: true,
+              name: true,
+              sessionCount: true,
+              validityDays: true,
+              lateCancelHours: true,
+            },
           },
         },
       }),
@@ -52,7 +58,23 @@ export async function GET(request: Request) {
     });
   }
 
-  if (!clientProfileId) return fail("clientProfileId query param is required", 400);
+  // Admins may list all client packages across the studio when no clientProfileId
+  // is supplied (used by /(admin)/packages.tsx assignment list).
+  if (!clientProfileId) {
+    if (guard.user.role !== UserRole.ADMIN) {
+      return fail("clientProfileId query param is required", 400);
+    }
+    const packages = await prisma.clientPackage.findMany({
+      orderBy: { startsAt: "desc" },
+      include: {
+        packageType: {
+          select: { name: true, sessionCount: true, validityDays: true },
+        },
+      },
+    });
+    return ok({ success: true, packages });
+  }
+
   // Trainers may only view packages for clients they are linked to.
   if (guard.user.role === UserRole.TRAINER) {
     const canAccessClient = await trainerLinkedToClientProfile(guard.user.id, clientProfileId);

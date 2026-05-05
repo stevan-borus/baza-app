@@ -33,7 +33,6 @@ const notificationsResponseSchema = z.object({
 const preferencesSchema = z.object({
   pushEnabled: z.boolean(),
   inAppEnabled: z.boolean(),
-  marketingOptIn: z.boolean(),
   preferredLocale: z.string().nullable().optional(),
 });
 
@@ -46,9 +45,9 @@ export type Notification = z.infer<typeof notificationSchema>;
 type NotificationsResponse = z.infer<typeof notificationsResponseSchema>;
 
 async function fetchNotificationsPage(cursor?: string | null): Promise<NotificationsResponse> {
-  const url = new URL(`${sharedEnv.EXPO_PUBLIC_API_URL}/api/notifications`);
-  if (cursor) url.searchParams.set("cursor", cursor);
-  const response = await apiFetch(url.toString(), { credentials: "include" });
+  const query = cursor ? `?cursor=${encodeURIComponent(cursor)}` : "";
+  const url = `${sharedEnv.EXPO_PUBLIC_API_URL}/api/notifications${query}`;
+  const response = await apiFetch(url, { credentials: "include" });
   if (!response.ok) throw new Error(`Unable to load notifications (${response.status})`);
   return notificationsResponseSchema.parse(await response.json());
 }
@@ -146,7 +145,6 @@ export const notificationsQueries = {
       mutationFn: async (payload: {
         pushEnabled?: boolean;
         inAppEnabled?: boolean;
-        marketingOptIn?: boolean;
         preferredLocale?: "sr" | "en" | null;
       }) => {
         const response = await apiFetch(

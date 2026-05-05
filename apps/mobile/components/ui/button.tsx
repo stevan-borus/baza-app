@@ -1,77 +1,70 @@
 import React from "react";
-import { Button as TButton, Text } from "tamagui";
+import { Pressable, Text, type PressableProps } from "react-native";
+import * as Haptics from "expo-haptics";
 
-type ButtonVariant = "primary" | "secondary" | "danger" | "ghost";
-type ButtonSize = "small" | "default" | "large";
+type Variant = "primary" | "secondary" | "danger" | "ghost";
+type Size = "small" | "default" | "large";
 
-type ButtonProps = Omit<
-  React.ComponentProps<typeof TButton>,
-  "size" | "variant"
-> & {
-  variant?: ButtonVariant;
-  size?: ButtonSize;
+type ButtonProps = Omit<PressableProps, "children"> & {
+  variant?: Variant;
+  size?: Size;
+  disabled?: boolean;
+  children?: React.ReactNode;
+};
+
+const sizeCls: Record<Size, string> = {
+  small: "h-9 rounded-xl px-3",
+  default: "h-12 rounded-2xl px-4",
+  large: "h-14 rounded-[18px] px-5",
+};
+
+const variantCls: Record<Variant, string> = {
+  primary: "bg-accent active:opacity-90 active:scale-[0.97]",
+  secondary: "bg-glass border border-glass-border active:opacity-90 active:scale-[0.97]",
+  danger: "bg-danger-soft active:opacity-90 active:scale-[0.97]",
+  ghost: "bg-transparent active:opacity-65",
+};
+
+const variantTextCls: Record<Variant, string> = {
+  primary: "text-white font-body-semibold text-sm",
+  secondary: "text-foreground font-body-semibold text-sm",
+  danger: "text-danger font-body-semibold text-sm",
+  ghost: "text-foreground font-body-semibold text-sm",
 };
 
 export function Button({
   variant = "primary",
   size = "default",
+  disabled,
   children,
+  onPress,
+  className,
   ...props
 }: ButtonProps) {
-  const heights: Record<ButtonSize, number> = {
-    small: 32,
-    default: 44,
-    large: 48,
-  };
-  const radii: Record<ButtonSize, number> = {
-    small: 9,
-    default: 11,
-    large: 12,
-  };
-  const variantStyles: Record<
-    ButtonVariant,
-    React.ComponentProps<typeof TButton>
-  > = {
-    primary: {
-      bg: "$accent1",
-      pressStyle: { opacity: 0.85, scale: 0.985 },
-    },
-    secondary: {
-      bg: "$backgroundHover",
-      borderColor: "$borderColor",
-      borderWidth: 1,
-      pressStyle: { opacity: 0.85, scale: 0.985 },
-    },
-    danger: {
-      bg: "$red3",
-      pressStyle: { opacity: 0.85, scale: 0.985 },
-    },
-    ghost: {
-      bg: "transparent",
-      pressStyle: { opacity: 0.65 },
-    },
-  };
-
-  const content =
-    typeof children === "string" || typeof children === "number" ? (
-      <Text color={variant === "primary" ? "$white" : "$color"}>
-        {children}
-      </Text>
-    ) : (
-      children
-    );
+  function handlePress(e: Parameters<NonNullable<PressableProps["onPress"]>>[0]) {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    onPress?.(e);
+  }
 
   return (
-    <TButton
-      height={heights[size]}
-      rounded={radii[size]}
-      borderWidth={0}
-      disabledStyle={{ opacity: 0.4 }}
-      {...variantStyles[variant]}
+    <Pressable
+      disabled={disabled}
+      onPress={handlePress}
+      className={[
+        "items-center justify-center flex-row",
+        sizeCls[size],
+        variantCls[variant],
+        disabled ? "opacity-40" : "",
+        className ?? "",
+      ].join(" ")}
       {...props}
     >
-      {content}
-    </TButton>
+      {typeof children === "string" || typeof children === "number" ? (
+        <Text className={variantTextCls[variant]}>{children}</Text>
+      ) : (
+        children
+      )}
+    </Pressable>
   );
 }
 
@@ -82,4 +75,3 @@ export function SecondaryButton(props: Omit<ButtonProps, "variant">) {
 export function DangerButton(props: Omit<ButtonProps, "variant">) {
   return <Button variant="danger" {...props} />;
 }
-

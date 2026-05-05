@@ -54,6 +54,16 @@ export async function GET(request: Request) {
           fullName: true,
         },
       },
+      clientProfile: {
+        select: {
+          user: {
+            select: {
+              id: true,
+              fullName: true,
+            },
+          },
+        },
+      },
       session: {
         select: {
           startsAt: true,

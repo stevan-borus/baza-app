@@ -1,21 +1,26 @@
+/**
+ * sign-in.tsx — Studio look, vertically centered.
+ *
+ * Bone canvas + Baza logo at the top (rendered by AuthBackground).
+ * The whole hero+form block is vertically centered between the logo and
+ * the bottom legal strip. Utility classes drive theme-tokened colors;
+ * inline `style` only carries values that have no Tailwind utility
+ * (font sizes / letter-spacing / line-heights).
+ */
+
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { LinearGradient } from "expo-linear-gradient";
 import { Link, useRouter, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StyleSheet,
-} from "react-native";
-import { Text, Theme, YStack } from "tamagui";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { ErrorState } from "@/components/ui/states";
+import { Text, View } from "react-native";
+import { MotiView } from "@/components/ui/styled";
+import { AuthBackground } from "@/components/auth/auth-background";
 import { Input, PasswordInput } from "@/components/ui/input";
-import { Label, LinkText } from "@/components/ui/typography";
+import { LinkText } from "@/components/ui/typography";
+import { StudioButton } from "@/components/ui/studio";
 import { authClient } from "@/lib/auth-client";
+import { signInInputSchema } from "@baza/types";
+import { validateForm, type FormErrors } from "@/lib/zod-form";
 
 export default function SignInScreen() {
   const { t } = useTranslation();
@@ -26,13 +31,24 @@ export default function SignInScreen() {
     typeof params.redirect === "string" ? params.redirect.trim() : undefined;
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [errors, setErrors] = useState<FormErrors<{
+    email: string;
+    password: string;
+  }>>({});
+
+  function handleSubmit() {
+    const result = validateForm(signInInputSchema, { email, password }, t);
+    if (!result.ok) {
+      setErrors(result.errors);
+      return;
+    }
+    setErrors({});
+    signInMutation.mutate();
+  }
 
   const signInMutation = useMutation({
     mutationFn: async () => {
-      const response = await authClient.signIn.email({
-        email,
-        password,
-      });
+      const response = await authClient.signIn.email({ email, password });
       if (response.error) {
         throw new Error(response.error.message || "Sign-in failed");
       }
@@ -52,100 +68,102 @@ export default function SignInScreen() {
     },
   });
 
-  const canSubmit =
-    email.length > 0 && password.length > 0 && !signInMutation.isPending;
-
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1 }}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-    >
-      <ScrollView
-        contentContainerStyle={{ flexGrow: 1 }}
-        keyboardShouldPersistTaps="handled"
-        style={{ flex: 1 }}
-      >
-        <Theme name="dark">
-          <YStack
-            flex={1}
-            bg="#070b12"
-            px="$5"
-            justify="center"
-            gap="$5"
-            position="relative"
+    <AuthBackground>
+      {/* Centered hero + form. flex-1 + justify-center pushes the block to
+          the vertical center between the logo (top) and legal strip (bottom). */}
+      <View className="flex-1 justify-center">
+        <MotiView
+          from={{ opacity: 0, translateY: 12 }}
+          animate={{ opacity: 1, translateY: 0 }}
+          transition={{ type: "timing", duration: 400, delay: 100 }}
+          className="items-center mb-8"
+        >
+          <Text
+            className="font-body-bold text-foreground text-center"
+            style={{ fontSize: 30, letterSpacing: -0.6 }}
           >
-            <LinearGradient
-              pointerEvents="none"
-              style={StyleSheet.absoluteFill}
-              colors={[
-                "rgba(255,255,255,0)",
-                "rgba(155,155,155,0.08)",
-                "rgba(255,255,255,0.1)",
-              ]}
-              locations={[0, 0.52, 1]}
-              start={{ x: 0.04, y: 0.06 }}
-              end={{ x: 0.96, y: 0.94 }}
-            />
-            <YStack gap="$3" items="center" mb="$1">
-              <Text
-                fontSize="$8"
-                fontWeight="800"
-                color="$color"
-                letterSpacing={-0.6}
-              >
-                {t("auth.signIn")}
+            {t("auth.welcomeBack")}
+          </Text>
+          <Text className="font-sans text-sm text-muted text-center mt-1.5">
+            {t("auth.signInSubtitle")}
+          </Text>
+        </MotiView>
+
+        <MotiView
+          from={{ opacity: 0, translateY: 16 }}
+          animate={{ opacity: 1, translateY: 0 }}
+          transition={{ type: "timing", duration: 400, delay: 220 }}
+          className="gap-3.5"
+        >
+          <Input
+            icon="envelope"
+            label={t("auth.email")}
+            autoCapitalize="none"
+            autoCorrect={false}
+            keyboardType="email-address"
+            textContentType="emailAddress"
+            autoComplete="email"
+            value={email}
+            onChangeText={(v) => {
+              setEmail(v);
+              if (errors.email) setErrors((e) => ({ ...e, email: undefined }));
+            }}
+            error={errors.email}
+          />
+
+          <PasswordInput
+            label={t("auth.password")}
+            value={password}
+            onChangeText={(v) => {
+              setPassword(v);
+              if (errors.password)
+                setErrors((e) => ({ ...e, password: undefined }));
+            }}
+            error={errors.password}
+          />
+
+          <View className="items-end">
+            <Link href="/reset-password" asChild>
+              <LinkText className="text-muted" fontSize={12}>
+                {t("auth.forgotPassword")}
+              </LinkText>
+            </Link>
+          </View>
+
+          {signInMutation.isError ? (
+            <MotiView
+              from={{ opacity: 0, translateY: -8 }}
+              animate={{ opacity: 1, translateY: 0 }}
+              transition={{ type: "timing", duration: 250 }}
+              className="bg-danger-soft border border-danger rounded-lg px-3.5 py-2.5"
+            >
+              <Text className="font-body-medium text-danger text-[13px]">
+                {t("auth.signInError")}
               </Text>
-            </YStack>
+            </MotiView>
+          ) : null}
 
-            <Card bg="$color2" borderColor="$color4">
-              <YStack gap="$4">
-                <YStack gap="$2">
-                  <Label>{t("auth.email")}</Label>
-                  <Input
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                    keyboardType="email-address"
-                    textContentType="emailAddress"
-                    autoComplete="email"
-                    value={email}
-                    onChangeText={setEmail}
-                  />
-                </YStack>
+          <View className="mt-1.5">
+            <StudioButton
+              label={t("auth.submit")}
+              onPress={handleSubmit}
+              loading={signInMutation.isPending}
+              block
+            />
+          </View>
+        </MotiView>
+      </View>
 
-                <YStack gap="$2">
-                  <Label>{t("auth.password")}</Label>
-                  <PasswordInput value={password} onChangeText={setPassword} />
-                </YStack>
-
-                <YStack items="flex-end">
-                  <Link href="/reset-password" asChild>
-                    <LinkText color="$accent10">
-                      {t("auth.forgotPassword")}
-                    </LinkText>
-                  </Link>
-                </YStack>
-
-                <YStack gap="$3">
-                  <Button
-                    disabled={!canSubmit}
-                    onPress={() => signInMutation.mutate()}
-                    size="large"
-                  >
-                    {signInMutation.isPending
-                      ? t("auth.signingIn")
-                      : t("auth.submit")}
-                  </Button>
-
-                  {signInMutation.isError ? (
-                    <ErrorState message={t("auth.signInError")} />
-                  ) : null}
-                </YStack>
-              </YStack>
-            </Card>
-          </YStack>
-        </Theme>
-      </ScrollView>
-    </KeyboardAvoidingView>
+      {/* Bottom strip — version + terms */}
+      <View className="items-center gap-1 pb-1">
+        <Text className="font-sans text-faint text-[11px] text-center">
+          v1.0.0
+        </Text>
+        <Text className="font-sans text-faint text-[11px] text-center">
+          {t("auth.termsNotice")}
+        </Text>
+      </View>
+    </AuthBackground>
   );
 }
-

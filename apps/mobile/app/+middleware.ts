@@ -10,10 +10,12 @@ export const unstable_settings = {
 startCronScheduler();
 
 const middleware: MiddlewareFunction = (request) => {
-  const pathname = new URL(request.url).pathname;
-  if (pathname.startsWith("/api/auth")) {
-    process.stderr.write(`[auth-middleware] ${request.method} ${pathname}\n`);
-  }
+  const url = new URL(request.url);
+  const pathname = url.pathname;
+  // Surface every API hit on stderr so devs see traffic in `pnpm dev`.
+  // `console.log` is unreliable inside Expo Router API routes; `process.stderr.write` is.
+  const search = url.search ? url.search : "";
+  process.stderr.write(`[api] ${request.method} ${pathname}${search}\n`);
 };
 
 export default middleware;

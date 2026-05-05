@@ -1,61 +1,98 @@
-import React, { PropsWithChildren, useEffect, useState } from "react";
-import { Sheet, Theme } from "tamagui";
-import { useColorScheme } from "@/components/useColorScheme";
+import React, { createContext, useCallback, useEffect, useMemo, useRef } from "react";
+import { Dimensions } from "react-native";
+import {
+  BottomSheetBackdrop,
+  BottomSheetModal,
+  BottomSheetScrollView,
+  type BottomSheetBackdropProps,
+} from "@gorhom/bottom-sheet";
+import { useThemeTokens } from "./tokens";
 
-export function AppSheet({
-  open,
-  onOpenChange,
-  children,
-}: PropsWithChildren<{
+/**
+ * Set to `true` for descendants of an `AppSheet`. Components like `<Input>`
+ * read this to pick `BottomSheetTextInput` over the plain RN `TextInput`,
+ * which is required for keyboard-aware behavior inside gorhom sheets and
+ * crashes when used outside one.
+ */
+export const InsideBottomSheetContext = createContext<boolean>(false);
+
+type AppSheetProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-}>) {
-  const isDark = useColorScheme() === "dark";
-  const [mounted, setMounted] = useState(false);
+  children: React.ReactNode;
+};
+
+/**
+ * Shared bottom-sheet wrapper.
+ *
+ * Built on `BottomSheetModal`. No FullWindowOverlay — its trade-offs (broken
+ * keyboard toolbar position, gesture isolation, context isolation, native
+ * date-picker conflicts) cost more than the bottom-bleed gap it solved.
+ * The visible bottom area is now handled via the navigator's
+ * `sceneContainerStyle` painting `bg-background` to the bottom edge.
+ *
+ * - Auto-sizes to its content (`enableDynamicSizing`).
+ * - Caps at 90% of the window height; long content scrolls within an inner
+ *   ScrollView the caller renders.
+ *
+ * Requires `<BottomSheetModalProvider>` mounted at the app root (see _layout).
+ */
+export function AppSheet({ open, onOpenChange, children }: AppSheetProps) {
+  const ref = useRef<BottomSheetModal>(null);
+  const tokens = useThemeTokens();
+
+  const maxHeight = useMemo(
+    () => Dimensions.get("window").height * 0.9,
+    [],
+  );
 
   useEffect(() => {
-    if (open) {
-      const id = requestAnimationFrame(() => setMounted(true));
-      return () => cancelAnimationFrame(id);
-    }
-    setMounted(false);
+    if (open) ref.current?.present();
+    else ref.current?.dismiss();
   }, [open]);
 
-  if (!open || !mounted) return null;
+  const handleDismiss = useCallback(() => onOpenChange(false), [onOpenChange]);
+
+  const renderBackdrop = useCallback(
+    (props: BottomSheetBackdropProps) => (
+      <BottomSheetBackdrop
+        {...props}
+        appearsOnIndex={0}
+        disappearsOnIndex={-1}
+        opacity={0.5}
+        pressBehavior="close"
+      />
+    ),
+    [],
+  );
 
   return (
-    <Sheet
-      modal
-      open={open}
-      onOpenChange={onOpenChange}
-      snapPointsMode="fit"
-      dismissOnSnapToBottom
-      moveOnKeyboardChange
+    <BottomSheetModal
+      ref={ref}
+      enableDynamicSizing
+      maxDynamicContentSize={maxHeight}
+      enablePanDownToClose
+      keyboardBehavior="interactive"
+      keyboardBlurBehavior="restore"
+      android_keyboardInputMode="adjustResize"
+      onDismiss={handleDismiss}
+      backdropComponent={renderBackdrop}
+      backgroundStyle={{ backgroundColor: tokens.surface }}
+      handleIndicatorStyle={{ backgroundColor: tokens.muted }}
     >
-      <Theme name={isDark ? "dark" : "light"}>
-        <Sheet.Overlay opacity={0.55} bg="rgba(0,0,0,0.55)" />
-        <Sheet.Handle
-          height={4}
-          rounded={999}
-          bg={isDark ? "rgba(255,255,255,0.28)" : "rgba(38,77,59,0.42)"}
-          opacity={1}
-        />
-        <Sheet.Frame
-          bg={isDark ? "rgba(12,12,14,0.98)" : "$background"}
-          borderTopLeftRadius={22}
-          borderTopRightRadius={22}
-          px="$4"
-          pt="$3"
-          pb="$8"
-          borderTopWidth={1}
-          borderColor={
-            isDark ? "rgba(255,255,255,0.12)" : "rgba(38,77,59,0.22)"
-          }
-        >
+      <BottomSheetScrollView
+        contentContainerStyle={{
+          paddingHorizontal: 24,
+          paddingTop: 8,
+          paddingBottom: 40,
+        }}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
+        <InsideBottomSheetContext.Provider value={true}>
           {children}
-        </Sheet.Frame>
-      </Theme>
-    </Sheet>
+        </InsideBottomSheetContext.Provider>
+      </BottomSheetScrollView>
+    </BottomSheetModal>
   );
 }
-

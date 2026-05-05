@@ -1,12 +1,14 @@
 import { useState } from "react";
-import { Pressable, Platform } from "react-native";
+import { Pressable, Platform, View, Text } from "react-native";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
 import { useTranslation } from "react-i18next";
-import { XStack, Text, useTheme } from "tamagui";
-import { useThemeName } from "@tamagui/core";
 import { useColorScheme } from "@/components/useColorScheme";
 import { getDateLocale } from "@/lib/i18n";
+import { ACCENT } from "./tokens";
+
+// Muted text color used for the calendar icon
+const MUTED_COLOR = "#737373";
 
 type DateTimePickerProps = {
   value: Date | null;
@@ -33,10 +35,7 @@ export function DateTimePicker({
 }: DateTimePickerProps) {
   const [isVisible, setIsVisible] = useState(false);
   const { i18n } = useTranslation();
-  const themeName = useThemeName();
-  const isDark = String(themeName).includes("dark");
   const colorScheme = useColorScheme();
-  const theme = useTheme();
 
   const locale = i18n.language === "en" ? "en" : "sr-Latn";
   const dateLocale = getDateLocale();
@@ -85,38 +84,25 @@ export function DateTimePicker({
         onPress={() => !disabled && setIsVisible(true)}
         disabled={disabled}
       >
-        <XStack
-          backgroundColor={isDark ? "$colorTransparent" : "$background"}
-          borderColor={isDark ? "$accent9" : "$borderColor"}
-          borderWidth={1}
-          borderRadius={11}
-          height={44}
-          paddingHorizontal="$4"
-          alignItems="center"
-          justifyContent="space-between"
-          opacity={disabled ? 0.5 : 1}
+        <View
+          style={{
+            height: 48,
+            paddingHorizontal: 14,
+            opacity: disabled ? 0.5 : 1,
+          }}
+          className="border rounded-2xl flex-row items-center justify-between bg-glass border-glass-border"
         >
           <Text
-            fontSize="$3"
-            color={
-              displayValue
-                ? isDark
-                  ? "$white"
-                  : "$color"
-                : isDark
-                  ? "$white"
-                  : "$color10"
-            }
-            opacity={displayValue ? 1 : 0.6}
+            className={`text-sm flex-1 ${displayValue ? "text-foreground" : "text-muted"}`}
           >
             {displayValue || placeholder}
           </Text>
           <FontAwesome
             name="calendar"
-            size={16}
-            color={theme.color10?.val ?? "#737373"}
+            size={15}
+            color={MUTED_COLOR}
           />
-        </XStack>
+        </View>
       </Pressable>
 
       <DateTimePickerModal
@@ -133,11 +119,10 @@ export function DateTimePicker({
         locale={locale}
         confirmTextIOS={i18n.language === "en" ? "Confirm" : "Potvrdi"}
         cancelTextIOS={i18n.language === "en" ? "Cancel" : "Otkaži"}
-        accentColor="#16a34a"
-        buttonTextColorIOS="#16a34a"
+        accentColor={ACCENT}
+        buttonTextColorIOS={ACCENT}
         pickerContainerStyleIOS={{ paddingHorizontal: 16 }}
       />
     </>
   );
 }
-

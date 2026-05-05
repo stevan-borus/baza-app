@@ -16,6 +16,14 @@ const packageTypesResponseSchema = z.object({
   packageTypes: z.array(packageTypeSchema),
 });
 
+const embeddedPackageTypeSchema = z.object({
+  id: z.string().optional(),
+  name: z.string(),
+  sessionCount: z.number(),
+  validityDays: z.number(),
+  lateCancelHours: z.number().optional(),
+});
+
 const clientPackageSchema = z.object({
   id: z.string(),
   clientProfileId: z.string(),
@@ -23,7 +31,7 @@ const clientPackageSchema = z.object({
   startsAt: z.string(),
   expiresAt: z.string(),
   sessionsRemaining: z.number(),
-  packageType: packageTypeSchema.optional(),
+  packageType: embeddedPackageTypeSchema.optional(),
 });
 
 const clientPackagesResponseSchema = z.object({
@@ -52,9 +60,13 @@ export const packagesQueries = {
     queryOptions({
       queryKey: ["packages", "client-packages", clientProfileId ?? "me"] as const,
       queryFn: async () => {
-        const url = new URL(`${sharedEnv.EXPO_PUBLIC_API_URL}/api/packages/client-packages`);
-        if (clientProfileId) url.searchParams.set("clientProfileId", clientProfileId);
-        const response = await apiFetch(url.toString(), { credentials: "include" });
+        const qs = clientProfileId
+          ? `?clientProfileId=${encodeURIComponent(clientProfileId)}`
+          : "";
+        const response = await apiFetch(
+          `${sharedEnv.EXPO_PUBLIC_API_URL}/api/packages/client-packages${qs}`,
+          { credentials: "include" },
+        );
         if (!response.ok) throw new Error(`Unable to load packages (${response.status})`);
         return clientPackagesResponseSchema.parse(await response.json());
       },
@@ -77,6 +89,52 @@ export const packagesQueries = {
           body: JSON.stringify(payload),
         });
         if (!response.ok) throw new Error(`Unable to create package type (${response.status})`);
+        return response.json();
+      },
+    }),
+
+  updateType: () =>
+    mutationOptions({
+      mutationKey: ["packages", "types", "update"] as const,
+      mutationFn: async ({
+        id,
+        ...payload
+      }: {
+        id: string;
+        name?: string;
+        sessionCount?: number;
+        validityDays?: number;
+        lateCancelHours?: number;
+      }) => {
+        const response = await apiFetch(
+          `${sharedEnv.EXPO_PUBLIC_API_URL}/api/packages/types/${id}`,
+          {
+            method: "PATCH",
+            credentials: "include",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify(payload),
+          },
+        );
+        if (!response.ok) {
+          const text = await response.text();
+          throw new Error(text || `Unable to update package type (${response.status})`);
+        }
+        return response.json();
+      },
+    }),
+
+  deleteType: () =>
+    mutationOptions({
+      mutationKey: ["packages", "types", "delete"] as const,
+      mutationFn: async (id: string) => {
+        const response = await apiFetch(
+          `${sharedEnv.EXPO_PUBLIC_API_URL}/api/packages/types/${id}`,
+          { method: "DELETE", credentials: "include" },
+        );
+        if (!response.ok) {
+          const text = await response.text();
+          throw new Error(text || `Unable to delete package type (${response.status})`);
+        }
         return response.json();
       },
     }),

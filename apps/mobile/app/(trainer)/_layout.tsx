@@ -21,7 +21,7 @@ export default function TrainerLayout() {
 
   return (
     <Tabs
-      screenOptions={getAppTabScreenOptions(isDark)}
+      screenOptions={{ ...getAppTabScreenOptions(isDark), headerShown: false }}
       tabBar={(props) => <FloatingTabBar {...props} isDark={isDark} />}
     >
       <Tabs.Screen
@@ -45,6 +45,8 @@ export default function TrainerLayout() {
           tabBarIcon: ({ color }) => <TabIcon name="pencil" color={color} />,
         }}
       />
+      {/* Profile data + theme/language switcher live entirely in the
+          ProfileSheet (header avatar tap). No dedicated tab/route. */}
     </Tabs>
   );
 }

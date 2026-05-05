@@ -1,7 +1,7 @@
 import { Redirect } from "expo-router";
-import { ActivityIndicator } from "react-native";
-import { YStack } from "tamagui";
+import { ActivityIndicator, View } from "react-native";
 import { useSessionAuth } from "@/lib/session-auth";
+import { ACCENT } from "@/components/ui/tokens";
 
 /**
  * Root index — redirects to the correct role-based route group
@@ -12,9 +12,9 @@ export default function RootIndex() {
 
   if (session.isPending) {
     return (
-      <YStack flex={1} bg="$background" items="center" justify="center">
-        <ActivityIndicator size="large" color="#2e5b42" />
-      </YStack>
+      <View className="flex-1 bg-background items-center justify-center">
+        <ActivityIndicator size="large" color={ACCENT} />
+      </View>
     );
   }
 
@@ -27,4 +27,3 @@ export default function RootIndex() {
   if (role === "TRAINER") return <Redirect href="/(trainer)" />;
   return <Redirect href="/(client)" />;
 }
-

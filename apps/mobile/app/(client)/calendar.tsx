@@ -1,264 +1,304 @@
+/**
+ * Client Calendar tab — Day / Month views over the booking schedule.
+ *
+ * - Day view: StudioWeekStrip + TimeAxisDayView; tap a session to book/cancel
+ *   via the booking sheet.
+ * - Month view: MonthView grid with accent dots on days that have any
+ *   bookable sessions; tap a date to switch to Day mode focused on it.
+ */
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Calendar, type ICalendarEventBase } from "react-native-big-calendar";
+import { ScrollView, Text, View } from "react-native";
+import { MotiView } from "@/components/ui/styled";
 import dayjs from "dayjs";
+import * as Haptics from "expo-haptics";
 import { useTranslation } from "react-i18next";
-import { Text, XStack, YStack, useTheme } from "tamagui";
-import { useColorScheme } from "@/components/useColorScheme";
-import { AppSheet } from "@/components/ui/sheet";
-import { Badge, Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { ErrorState, ListRow } from "@/components/ui/states";
-import { ScreenContainerRaw } from "@/components/ui/screen-container";
-import { SectionHeader } from "@/components/ui/typography";
-import { getDateLocale } from "@/lib/i18n";
+import { GlassCard } from "@/components/ui/glass-card";
+import { startOfLocaleWeek } from "@/components/ui/week-strip";
+import { StudioWeekStrip, CapsLabel } from "@/components/ui/studio";
+import { MonthView } from "@/components/ui/month-view";
+import { SegmentedControl } from "@/components/ui/segmented-control";
+import {
+  TimeAxisDayView,
+  type SessionBlock,
+} from "@/components/ui/time-axis-day-view";
+import { EmptyState, ErrorState } from "@/components/ui/states";
+import {
+  ScreenContainerRaw,
+  useTabBarBottomPadding,
+} from "@/components/ui/screen-container";
+import { SkeletonList } from "@/components/ui/skeleton";
+import { BookingSheet } from "@/components/client/booking-sheet";
 import { sessionsQueries } from "@/lib/queries/sessions-queries-factory";
 import { bookingsQueries } from "@/lib/queries/bookings-queries-factory";
+import type { AvailabilitySession } from "@baza/types";
 
-interface SessionEvent extends ICalendarEventBase {
-  sessionId: string;
-  classTypeName: string;
-  roomName: string | null;
-  availableSlots: number;
-  waitlistCount: number;
-  capacity: number;
-  bookedCount: number;
+type ViewTab = "day" | "month";
+
+function monthKeyFromDate(d: dayjs.Dayjs) {
+  return d.format("YYYY-MM");
 }
-
-function currentMonthKey() {
-  const now = new Date();
-  return `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}`;
-}
-
-const bookingStateColor = {
-  BOOKED: "$accent1",
-  BOOKED_ALREADY: "$accent8",
-  WAITLISTED: "$yellow10",
-  WAITLIST_PROMOTED: "$accent1",
-  CANCELED: "$color10",
-} as const;
-
-const BOOKING_STATE_KEYS: Record<string, string> = {
-  BOOKED: "client.calendar.bookingBooked",
-  BOOKED_ALREADY: "client.calendar.bookingBookedAlready",
-  WAITLISTED: "client.calendar.bookingWaitlisted",
-  WAITLIST_PROMOTED: "client.calendar.bookingWaitlistPromoted",
-  CANCELED: "client.calendar.bookingCanceled",
-};
 
 export default function ClientCalendar() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const lang = i18n.language === "en" ? "en" : "sr";
+  const bottomPad = useTabBarBottomPadding(24);
   const queryClient = useQueryClient();
-  const [month, setMonth] = useState(() => currentMonthKey());
-  const [calendarDate, setCalendarDate] = useState(new Date());
-  const [selectedEvent, setSelectedEvent] = useState<SessionEvent | null>(null);
-  const locale = getDateLocale().startsWith("en") ? "en" : "sr";
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === "dark";
-  const theme = useTheme();
+  const [selectedDate, setSelectedDate] = useState(
+    dayjs().format("YYYY-MM-DD"),
+  );
+  const [month, setMonth] = useState(() => monthKeyFromDate(dayjs()));
+  const [weekStart, setWeekStart] = useState(() => startOfLocaleWeek(dayjs()));
+  const [monthDate, setMonthDate] = useState(() => dayjs().startOf("month"));
+  const [viewTab, setViewTab] = useState<ViewTab>("day");
+  const [selectedSession, setSelectedSession] =
+    useState<AvailabilitySession | null>(null);
 
-  const availabilityQuery = useQuery(sessionsQueries.availabilityByMonth(month));
+  const displayDate = dayjs(selectedDate);
+
+  const availabilityQuery = useQuery(
+    sessionsQueries.availabilityByMonth(month),
+  );
 
   const bookingMutation = useMutation({
     ...bookingsQueries.mutateBooking(),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["sessions", "availability", month] });
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      await queryClient.invalidateQueries({
+        queryKey: ["sessions", "availability", month],
+      });
       await queryClient.invalidateQueries({ queryKey: ["packages"] });
+      setSelectedSession(null);
     },
   });
 
-  const events: SessionEvent[] = (availabilityQuery.data?.sessions ?? []).map((s) => ({
-    sessionId: s.id,
-    title: `${s.classTypeName} (${s.availableSlots} ${t("client.calendar.slotsShort")})`,
-    start: new Date(s.startsAt),
-    end: new Date(s.endsAt),
-    classTypeName: s.classTypeName,
-    roomName: s.roomName,
-    availableSlots: s.availableSlots,
-    waitlistCount: s.waitlistCount,
-    capacity: s.capacity,
-    bookedCount: s.bookedCount,
-  }));
+  const sessions = availabilityQuery.data?.sessions ?? [];
+  const daySessions = sessions.filter(
+    (s) => dayjs(s.startsAt).format("YYYY-MM-DD") === selectedDate,
+  );
 
-  function handleDateChange(date: Date) {
-    const key = `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}`;
-    if (key !== month) setMonth(key);
-    setCalendarDate(date);
+  // YYYY-MM-DD → number of sessions on that day. Drives the dot indicator
+  // under each day pill in StudioWeekStrip.
+  const sessionsByDay = sessions.reduce<Record<string, number>>((acc, s) => {
+    const k = dayjs(s.startsAt).format("YYYY-MM-DD");
+    acc[k] = (acc[k] ?? 0) + 1;
+    return acc;
+  }, {});
+
+  function handleDateSelect(d: dayjs.Dayjs) {
+    Haptics.selectionAsync();
+    // Picking a day must NOT shift the visible week. The week boundary is
+    // owned by `weekStart` and only changes via the arrow buttons below.
+    const date = d.format("YYYY-MM-DD");
+    setSelectedDate(date);
+    const newMonth = monthKeyFromDate(d);
+    if (newMonth !== month) setMonth(newMonth);
+  }
+
+  function handlePrevWeek() {
+    const newStart = weekStart.subtract(1, "week");
+    setWeekStart(newStart);
+    const newMonth = newStart.format("YYYY-MM");
+    if (newMonth !== month) setMonth(newMonth);
+  }
+
+  function handleNextWeek() {
+    const newStart = weekStart.add(1, "week");
+    setWeekStart(newStart);
+    const newMonth = newStart.format("YYYY-MM");
+    if (newMonth !== month) setMonth(newMonth);
+  }
+
+  function handlePrevMonth() {
+    const next = monthDate.subtract(1, "month");
+    setMonthDate(next);
+    setMonth(next.format("YYYY-MM"));
+  }
+
+  function handleNextMonth() {
+    const next = monthDate.add(1, "month");
+    setMonthDate(next);
+    setMonth(next.format("YYYY-MM"));
+  }
+
+  // Tap on a day cell in month view: switch back to day mode focused on
+  // that date and re-anchor the week strip so the date is in view.
+  function handleMonthCellSelect(date: string) {
+    Haptics.selectionAsync();
+    setSelectedDate(date);
+    setWeekStart(startOfLocaleWeek(dayjs(date)));
+    const newMonth = monthKeyFromDate(dayjs(date));
+    if (newMonth !== month) setMonth(newMonth);
+    setViewTab("day");
+  }
+
+  function handleSessionPress(s: SessionBlock) {
+    const full = sessions.find((x) => x.id === s.id);
+    if (full) setSelectedSession(full);
   }
 
   const bookingResultState = bookingMutation.data?.state as string | undefined;
 
+  const timeAxisSessions: SessionBlock[] = daySessions.map((s) => ({
+    id: s.id,
+    startsAt:
+      typeof s.startsAt === "string" ? s.startsAt : s.startsAt.toISOString(),
+    endsAt: typeof s.endsAt === "string" ? s.endsAt : s.endsAt.toISOString(),
+    classTypeName: s.classTypeName,
+    roomName: s.roomName,
+    bookedCount: s.bookedCount,
+    capacity: s.capacity,
+    status: s.availableSlots > 0 ? "available" : "full",
+  }));
+
   return (
-    <ScreenContainerRaw>
-      <YStack px="$5" gap="$3" pb="$2">
-        <SectionHeader
-          title={t("client.calendar.title")}
-          subtitle={t("client.calendar.description")}
+    <ScreenContainerRaw title={t("tabs.calendar")}>
+      {/* Day / Month view toggle */}
+      <View className="px-5 pt-3 pb-3">
+        <SegmentedControl<ViewTab>
+          options={[
+            { value: "day", label: t("admin.schedule.viewDay") },
+            { value: "month", label: t("admin.schedule.viewMonth") },
+          ]}
+          value={viewTab}
+          onChange={setViewTab}
         />
-      </YStack>
+      </View>
 
-      {availabilityQuery.isError ? (
-        <YStack px="$5" pt="$3">
-          <ErrorState message={t("client.calendar.errorSlots")} />
-        </YStack>
-      ) : null}
+      {viewTab === "day" ? (
+        <MotiView
+          from={{ opacity: 0, translateY: -8 }}
+          animate={{ opacity: 1, translateY: 0 }}
+          transition={{ type: "timing", duration: 350 }}
+        >
+          <View className="pb-3">
+            <StudioWeekStrip
+              weekStart={weekStart}
+              selected={dayjs(selectedDate)}
+              onSelect={handleDateSelect}
+              sessionsByDay={sessionsByDay}
+              onPrevWeek={handlePrevWeek}
+              onNextWeek={handleNextWeek}
+              rangeLabel={`${weekStart.locale(lang).format("D. MMM")} — ${weekStart
+                .add(6, "day")
+                .locale(lang)
+                .format("D. MMM")}`}
+            />
+          </View>
+        </MotiView>
+      ) : (
+        <MotiView
+          from={{ opacity: 0, translateY: -8 }}
+          animate={{ opacity: 1, translateY: 0 }}
+          transition={{ type: "timing", duration: 350 }}
+          style={{ flex: 1 }}
+        >
+          <View className="px-5 pb-4" style={{ flex: 1 }}>
+            <MonthView
+              month={monthDate}
+              selectedDate={selectedDate}
+              onSelectDate={handleMonthCellSelect}
+              onPrevMonth={handlePrevMonth}
+              onNextMonth={handleNextMonth}
+              activity={sessionsByDay}
+            />
+          </View>
+        </MotiView>
+      )}
 
-      {bookingMutation.isSuccess && bookingResultState ? (
-        <YStack px="$5" py="$3">
-          <YStack
-            bg={bookingResultState === "CANCELED" ? "$backgroundHover" : "$green3"}
-            rounded="$3"
-            p="$4"
-          >
-            <Text
-              fontWeight="600"
-              color={
-                bookingResultState &&
-                Object.prototype.hasOwnProperty.call(bookingStateColor, bookingResultState)
-                  ? bookingStateColor[bookingResultState as keyof typeof bookingStateColor]
-                  : "$color"
-              }
+      {viewTab === "day" ? (
+        <>
+          {availabilityQuery.isError ? (
+            <View className="px-6">
+              <ErrorState message={t("client.calendar.errorSlots")} />
+            </View>
+          ) : null}
+
+          {bookingMutation.isError ? (
+            <View className="px-6 pb-3">
+              <ErrorState message={t("client.calendar.bookingError")} />
+            </View>
+          ) : null}
+
+          {bookingMutation.isSuccess && bookingResultState ? (
+            <MotiView
+              from={{ opacity: 0, translateY: -6 }}
+              animate={{ opacity: 1, translateY: 0 }}
+              transition={{ type: "timing", duration: 250 }}
             >
-              {BOOKING_STATE_KEYS[bookingResultState] ? t(BOOKING_STATE_KEYS[bookingResultState]) : bookingResultState}
+              <View className="px-6 pb-3">
+                <GlassCard size="sm">
+                  <Text className="font-body-semibold text-accent">
+                    {bookingResultState === "BOOKED"
+                      ? t("client.calendar.bookingBooked")
+                      : bookingResultState === "WAITLISTED"
+                        ? t("client.calendar.bookingWaitlisted")
+                        : bookingResultState === "CANCELED"
+                          ? t("client.calendar.bookingCanceled")
+                          : bookingResultState}
+                  </Text>
+                </GlassCard>
+              </View>
+            </MotiView>
+          ) : null}
+
+          <View className="px-5 pb-2 flex-row items-baseline justify-between">
+            <CapsLabel size={12} tracking={2.4}>
+              {displayDate.locale(lang).format("dddd, D MMMM").toUpperCase()}
+            </CapsLabel>
+            <Text className="text-xs text-muted">
+              {daySessions.length === 0
+                ? ""
+                : t("client.calendar.classCount", { count: daySessions.length })}
             </Text>
-            {bookingResultState === "WAITLISTED" ? (
-              <Text fontSize="$2" color="$color10" mt="$1">
-                {t("client.calendar.waitlistNote")}
-              </Text>
-            ) : null}
-          </YStack>
-        </YStack>
-      ) : null}
-      {bookingMutation.isError ? (
-        <YStack px="$5">
-          <ErrorState message={t("client.calendar.bookingError")} />
-        </YStack>
+          </View>
+
+          {availabilityQuery.isLoading ? (
+            <ScrollView
+              style={{ flex: 1 }}
+              contentContainerStyle={{
+                paddingHorizontal: 24,
+                paddingTop: 8,
+                paddingBottom: bottomPad,
+              }}
+            >
+              <SkeletonList count={3} />
+            </ScrollView>
+          ) : daySessions.length === 0 ? (
+            <ScrollView
+              style={{ flex: 1 }}
+              contentContainerStyle={{
+                paddingHorizontal: 24,
+                paddingTop: 8,
+                paddingBottom: bottomPad,
+              }}
+            >
+              <EmptyState title={t("client.dayView.noSessions")} />
+            </ScrollView>
+          ) : (
+            <View style={{ flex: 1 }}>
+              <TimeAxisDayView
+                date={selectedDate}
+                sessions={timeAxisSessions}
+                onSessionPress={handleSessionPress}
+                showNowLine
+              />
+            </View>
+          )}
+        </>
       ) : null}
 
-      <YStack flex={1} minHeight={500} px="$5" pb="$3">
-        <Card>
-          <Calendar
-            events={events}
-            height={480}
-            mode="month"
-            theme={{
-              palette: {
-                primary: {
-                  main: "#2e5b42",
-                  contrastText: "#ffffff",
-                },
-                nowIndicator: "#2e5b42",
-                gray: {
-                  100: isDark ? "#111827" : "#f3f4f6",
-                  200: isDark ? "#1f2937" : "#e5e7eb",
-                  300: isDark ? "#374151" : "#d1d5db",
-                  500: isDark ? "#9ca3af" : "#6b7280",
-                  800: isDark ? "#e5e7eb" : "#111827",
-                },
-                moreLabel: isDark ? "#e5e7eb" : "#374151",
-              },
-              typography: {
-                sm: { fontWeight: "500", fontSize: 12 },
-                xl: { fontWeight: "600", fontSize: 13 },
-                moreLabel: { fontWeight: "600", fontSize: 11 },
-              },
-            }}
-            calendarContainerStyle={{
-              borderRadius: 12,
-              backgroundColor: isDark ? "#0f172a" : "#ffffff",
-            }}
-            bodyContainerStyle={{
-              backgroundColor: isDark ? "#0f172a" : "#ffffff",
-            }}
-            headerContainerStyle={{
-              borderBottomColor: isDark
-                ? "rgba(255,255,255,0.08)"
-                : "rgba(15,23,42,0.08)",
-              borderBottomWidth: 1,
-            }}
-            eventCellStyle={{
-              backgroundColor: "#2e5b42",
-              borderRadius: 10,
-              borderWidth: 0,
-              paddingHorizontal: 6,
-              paddingVertical: 4,
-            }}
-            eventCellTextColor="#ffffff"
-            calendarCellStyle={{
-              backgroundColor: isDark ? "#0f172a" : "#ffffff",
-              borderColor: isDark
-                ? "rgba(255,255,255,0.08)"
-                : "rgba(15,23,42,0.08)",
-              borderWidth: 1,
-            }}
-            calendarCellTextStyle={{
-              color: theme.color.val,
-            }}
-            date={calendarDate}
-            onPressEvent={(event) => setSelectedEvent(event as SessionEvent)}
-            onSwipeEnd={handleDateChange}
-            swipeEnabled
-            weekStartsOn={1}
-            locale={locale}
-          />
-        </Card>
-      </YStack>
-
-      <AppSheet open={!!selectedEvent} onOpenChange={() => setSelectedEvent(null)}>
-        {selectedEvent ? (
-          <YStack gap="$4">
-            <Text fontSize="$6" fontWeight="700" color="$color" letterSpacing={-0.3}>
-              {selectedEvent.classTypeName}
-            </Text>
-            <Card>
-              <YStack gap="$3">
-                <ListRow
-                  title={`${dayjs(selectedEvent.start).format("DD.MM.YYYY HH:mm")} - ${dayjs(selectedEvent.end).format("HH:mm")}`}
-                  subtitle={`${t("client.calendar.room")}: ${selectedEvent.roomName ?? "—"}`}
-                />
-                <XStack gap="$2">
-                  <Badge
-                    variant="soft"
-                    color={selectedEvent.availableSlots > 0 ? "$accent3" : "$red3"}
-                  >
-                    {selectedEvent.availableSlots > 0
-                      ? t("client.calendar.availableSlots", { count: selectedEvent.availableSlots })
-                      : t("client.calendar.full")}
-                  </Badge>
-                  {selectedEvent.waitlistCount > 0 ? (
-                    <Badge variant="soft" color="$yellow3">
-                      {t("client.calendar.waitlistShort", { count: selectedEvent.waitlistCount })}
-                    </Badge>
-                  ) : null}
-                </XStack>
-              </YStack>
-            </Card>
-            <XStack gap="$3">
-              <Button
-                flex={1}
-                disabled={bookingMutation.isPending}
-                onPress={() => {
-                  bookingMutation.mutate({ sessionId: selectedEvent.sessionId, action: "BOOK" });
-                  setSelectedEvent(null);
-                }}
-              >
-                {t("client.calendar.book")}
-              </Button>
-              <Button
-                flex={1}
-                variant="danger"
-                disabled={bookingMutation.isPending}
-                onPress={() => {
-                  bookingMutation.mutate({ sessionId: selectedEvent.sessionId, action: "CANCEL" });
-                  setSelectedEvent(null);
-                }}
-              >
-                {t("client.calendar.cancel")}
-              </Button>
-            </XStack>
-          </YStack>
-        ) : null}
-      </AppSheet>
+      <BookingSheet
+        session={selectedSession}
+        onClose={() => setSelectedSession(null)}
+        onBook={(id) =>
+          bookingMutation.mutate({ sessionId: id, action: "BOOK" })
+        }
+        onCancel={(id) =>
+          bookingMutation.mutate({ sessionId: id, action: "CANCEL" })
+        }
+        pending={bookingMutation.isPending}
+      />
     </ScreenContainerRaw>
   );
 }

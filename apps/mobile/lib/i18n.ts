@@ -1,9 +1,19 @@
 import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import dayjs from "dayjs";
+import relativeTime from "dayjs/plugin/relativeTime";
+import localeData from "dayjs/plugin/localeData";
+import weekday from "dayjs/plugin/weekday";
+import "dayjs/locale/sr";
+import "dayjs/locale/en";
 
 import sr from "@/locales/sr.json";
 import en from "@/locales/en.json";
+
+dayjs.extend(relativeTime);
+dayjs.extend(localeData);
+dayjs.extend(weekday);
 
 const STORAGE_KEY = "app.preferredLocale";
 
@@ -18,6 +28,13 @@ i18n.use(initReactI18next).init({
   interpolation: { escapeValue: false },
   compatibilityJSON: "v4",
 });
+
+// Keep dayjs locale in sync with i18n so .fromNow(), .format() etc. are localized.
+function syncDayjsLocale(lng: string) {
+  dayjs.locale(lng === "sr" ? "sr" : "en");
+}
+syncDayjsLocale(i18n.language);
+i18n.on("languageChanged", syncDayjsLocale);
 
 export default i18n;
 
@@ -37,8 +54,14 @@ export async function loadStoredLocale(): Promise<void> {
 
 /**
  * Persist chosen locale and optionally return it for API sync.
+ *
+ * Sets dayjs.locale eagerly *before* awaiting i18n.changeLanguage so any
+ * React re-render triggered by the language change reads the updated dayjs
+ * locale on first paint. The languageChanged listener still re-syncs as a
+ * safety net (e.g. on app start via loadStoredLocale).
  */
 export async function setLocale(locale: Locale): Promise<void> {
+  syncDayjsLocale(locale);
   await i18n.changeLanguage(locale);
   try {
     await AsyncStorage.setItem(STORAGE_KEY, locale);

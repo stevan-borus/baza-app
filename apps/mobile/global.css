@@ -1,0 +1,99 @@
+@import "tailwindcss";
+@import "uniwind";
+
+/* ──────────────────────────────────────────────────────────────────────────
+ * Design tokens — Uniwind canonical pattern.
+ * Tokens declared inside `@layer theme { :root { @variant light/dark { … } } }`
+ * are recognized by Uniwind's metro plugin and swap at runtime when
+ * `Uniwind.setTheme()` is called from theme-preference.tsx.
+ *
+ * Tailwind v4 generates utility classes (`bg-background`, `text-foreground`,
+ * `border-glass-border`, etc.) from these `--color-*` declarations.
+ * ────────────────────────────────────────────────────────────────────────── */
+@theme {
+  /* Brand-stable values used in both themes (no per-theme override below). */
+  --color-accent: #2e5b42;
+  /* Header is now the bone canvas itself (no green chrome). Logo + ink. */
+  --color-header: #F4EFE3;
+  --color-header-foreground: #0F0F0D;
+  --color-header-muted: rgba(15, 15, 13, 0.55);
+  /* Sage glow for accents on dark photo overlays. */
+  --color-accent-light-on-dark: #9ED6B5;
+  /* Body family — DM Sans, geometric modern sans. Default for the app.
+   * `font-sans` is the global default; weight variants get explicit utility
+   * names to avoid colliding with Tailwind's built-in `font-bold` (which is
+   * a font-weight, not a family). On RN we can't synthesize weights from a
+   * single face, so each weight maps to its own loaded font file. */
+  --font-sans: "AlbertSans-Regular", system-ui, sans-serif;
+  --font-body-medium: "AlbertSans-Medium", system-ui, sans-serif;
+  --font-body-semibold: "AlbertSans-SemiBold", system-ui, sans-serif;
+  --font-body-bold: "AlbertSans-Bold", system-ui, sans-serif;
+  /* Display family — Fraunces, refined variable serif. Use sparingly:
+     screen titles, big numbers, brand chrome. */
+  --font-display: "Fraunces-SemiBold", serif;
+  --font-display-bold: "Fraunces-Bold", serif;
+}
+
+@layer theme {
+  :root {
+    @variant light {
+      /* Studio palette — warm bone canvas, near-black ink, single accent.
+         `--color-surface` is a slightly warmer + lighter shade of the
+         canvas (not pure white) so cards read as quiet embedded chrome
+         instead of glaring tiles on bone. */
+      --color-background: #F4EFE3;
+      --color-surface: #FBF7EC;
+      --color-surface-2: #EBE5D5;
+
+      --color-foreground: #0F0F0D;
+      --color-muted: rgba(15, 15, 13, 0.62);
+      --color-faint: rgba(15, 15, 13, 0.38);
+
+      --color-glass: rgba(15, 15, 13, 0.04);
+      --color-glass-strong: rgba(15, 15, 13, 0.07);
+      --color-glass-border: rgba(15, 15, 13, 0.10);
+      --color-glass-android: rgba(255, 255, 255, 0.95);
+
+      --color-accent-soft: rgba(46, 91, 66, 0.12);
+      --color-accent-light: #4a8c6b;
+
+      --color-danger: #dc2626;
+      --color-danger-soft: rgba(220, 38, 38, 0.10);
+      --color-warning: #d97706;
+      --color-warning-soft: rgba(217, 119, 6, 0.10);
+      --color-success: #16a34a;
+      --color-success-soft: rgba(22, 163, 74, 0.10);
+
+      --color-divider: rgba(15, 15, 13, 0.10);
+    }
+
+    @variant dark {
+      /* Warm spa dark — not OLED-black. Soft neutral with a faint warm
+         undertone so cream text never glows on pure black. */
+      --color-background: #1A1A1C;
+      --color-surface: #232325;
+      --color-surface-2: #2C2C2E;
+
+      --color-foreground: #EDE8DC;
+      --color-muted: rgba(237, 232, 220, 0.62);
+      --color-faint: rgba(237, 232, 220, 0.38);
+
+      --color-glass: rgba(237, 232, 220, 0.05);
+      --color-glass-strong: rgba(237, 232, 220, 0.08);
+      --color-glass-border: rgba(237, 232, 220, 0.12);
+      --color-glass-android: rgba(35, 35, 37, 0.95);
+
+      --color-accent-soft: rgba(46, 91, 66, 0.22);
+      --color-accent-light: #7AA88E;
+
+      --color-danger: #f87171;
+      --color-danger-soft: rgba(248, 113, 113, 0.14);
+      --color-warning: #fbbf24;
+      --color-warning-soft: rgba(251, 191, 36, 0.14);
+      --color-success: #4ade80;
+      --color-success-soft: rgba(74, 222, 128, 0.14);
+
+      --color-divider: rgba(237, 232, 220, 0.10);
+    }
+  }
+}

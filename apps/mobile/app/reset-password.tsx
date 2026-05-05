@@ -1,32 +1,100 @@
+/**
+ * reset-password.tsx — Studio look, vertically centered.
+ */
+
 import { useMutation } from "@tanstack/react-query";
-import FontAwesome from "@expo/vector-icons/FontAwesome";
-import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StyleSheet,
-} from "react-native";
-import { Text, Theme, YStack } from "tamagui";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { ErrorState } from "@/components/ui/states";
+import { Text, View } from "react-native";
+import Feather from "@expo/vector-icons/Feather";
+import { MotiView } from "@/components/ui/styled";
+import { AuthBackground } from "@/components/auth/auth-background";
 import { Input, PasswordInput } from "@/components/ui/input";
-import { Label, LinkText } from "@/components/ui/typography";
+import { LinkText } from "@/components/ui/typography";
+import { StudioButton } from "@/components/ui/studio";
+import { useThemeTokens } from "@/components/ui/tokens";
 import { sharedEnv } from "@/lib/env.shared";
+import {
+  requestPasswordResetInputSchema,
+  resetPasswordInputSchema,
+} from "@baza/types";
+import { validateForm, type FormErrors } from "@/lib/zod-form";
 
-type Step = "request" | "reset";
+type Step = "request" | "reset" | "success";
+
+function StepDots({ current }: { current: Step }) {
+  const steps: Step[] = ["request", "reset", "success"];
+  return (
+    <View className="flex-row gap-2 justify-center mb-2">
+      {steps.map((s) => (
+        <View
+          key={s}
+          className={`w-1.5 h-1.5 rounded-full ${
+            s === current ? "bg-accent" : "bg-glass-border"
+          }`}
+        />
+      ))}
+    </View>
+  );
+}
+
+function ErrorBanner({ message }: { message: string }) {
+  return (
+    <MotiView
+      from={{ opacity: 0, translateY: -8 }}
+      animate={{ opacity: 1, translateY: 0 }}
+      transition={{ type: "timing", duration: 250 }}
+      className="bg-danger-soft border border-danger rounded-lg px-3.5 py-2.5"
+    >
+      <Text className="font-body-medium text-danger text-[13px]">{message}</Text>
+    </MotiView>
+  );
+}
 
 export default function ResetPasswordScreen() {
   const { t } = useTranslation();
   const router = useRouter();
+  const tokens = useThemeTokens();
   const [step, setStep] = useState<Step>("request");
   const [email, setEmail] = useState("");
   const [token, setToken] = useState("");
   const [password, setPassword] = useState("");
+  const [requestErrors, setRequestErrors] = useState<FormErrors<{
+    email: string;
+  }>>({});
+  const [resetErrors, setResetErrors] = useState<FormErrors<{
+    token: string;
+    password: string;
+  }>>({});
+
+  function handleRequestSubmit() {
+    const result = validateForm(
+      requestPasswordResetInputSchema,
+      { email },
+      t,
+    );
+    if (!result.ok) {
+      setRequestErrors(result.errors);
+      return;
+    }
+    setRequestErrors({});
+    requestMutation.mutate();
+  }
+
+  function handleResetSubmit() {
+    const result = validateForm(
+      resetPasswordInputSchema,
+      { token, password },
+      t,
+    );
+    if (!result.ok) {
+      setResetErrors(result.errors);
+      return;
+    }
+    setResetErrors({});
+    resetMutation.mutate();
+  }
 
   const requestMutation = useMutation({
     mutationFn: async () => {
@@ -59,164 +127,209 @@ export default function ResetPasswordScreen() {
       if (!response.ok) throw new Error(`Reset failed (${response.status})`);
       return response.json();
     },
-    onSuccess: () => router.replace("/sign-in"),
+    onSuccess: () => setStep("success"),
   });
 
+  const isSuccess = step === "success";
+
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1 }}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-    >
-      <ScrollView
-        contentContainerStyle={{ flexGrow: 1 }}
-        keyboardShouldPersistTaps="handled"
-        style={{ flex: 1 }}
-      >
-        <Theme name="dark">
-          <YStack
-            flex={1}
-            bg="#070b12"
-            px="$5"
-            justify="center"
-            gap="$5"
-            position="relative"
+    <AuthBackground showBack>
+
+      <View className="flex-1 justify-center">
+        <MotiView
+          from={{ opacity: 0, scale: 0.85 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ type: "timing", duration: 350, delay: 80 }}
+          className="items-center mb-5"
+        >
+          <View
+            className={`w-14 h-14 rounded-full items-center justify-center ${
+              isSuccess ? "bg-success-soft" : "bg-accent-soft"
+            }`}
           >
-            <LinearGradient
-              pointerEvents="none"
-              style={StyleSheet.absoluteFill}
-              colors={[
-                "rgba(255,255,255,0)",
-                "rgba(155,155,155,0.08)",
-                "rgba(255,255,255,0.1)",
-              ]}
-              locations={[0, 0.52, 1]}
-              start={{ x: 0.04, y: 0.06 }}
-              end={{ x: 0.96, y: 0.94 }}
+            <Feather
+              name={isSuccess ? "check" : "lock"}
+              size={22}
+              color={isSuccess ? "#16a34a" : tokens.accent}
             />
-            <YStack gap="$3" items="center" mb="$1">
-              <YStack
-                width={56}
-                height={56}
-                rounded={999}
-                bg="$color3"
-                items="center"
-                justify="center"
-              >
-                <FontAwesome name="lock" size={20} color="#94a3b8" />
-              </YStack>
-              <Text
-                fontSize="$8"
-                fontWeight="800"
-                color="$color"
-                letterSpacing={-0.5}
-              >
-                {t("auth.resetPasswordTitle")}
-              </Text>
-              <Text fontSize="$3" color="$color10" text="center">
-                {step === "request"
-                  ? t("auth.resetPasswordIntro")
-                  : t("auth.resetTokenIntro")}
-              </Text>
-            </YStack>
+          </View>
+        </MotiView>
 
-            <Card bg="$color2" borderColor="$color4">
-              {step === "request" ? (
-                <YStack gap="$4">
-                  <YStack gap="$2">
-                    <Label>{t("auth.email")}</Label>
-                    <Input
-                      autoCapitalize="none"
-                      keyboardType="email-address"
-                      textContentType="emailAddress"
-                      autoComplete="email"
-                      value={email}
-                      onChangeText={setEmail}
-                    />
-                  </YStack>
+        <MotiView
+          from={{ opacity: 0, translateY: 16 }}
+          animate={{ opacity: 1, translateY: 0 }}
+          transition={{ type: "timing", duration: 400, delay: 200 }}
+          className="gap-3.5"
+        >
+          <StepDots current={step} />
 
-                  <YStack gap="$3">
-                    <Button
-                      disabled={requestMutation.isPending || !email}
-                      onPress={() => requestMutation.mutate()}
-                      size="large"
-                    >
-                      {t("auth.sendLink")}
-                    </Button>
+          <MotiView
+            key={step}
+            from={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ type: "timing", duration: 300 }}
+          >
+            {/* Step 1: request */}
+            {step === "request" ? (
+              <View className="gap-3.5">
+                <View className="items-center gap-1 mb-1.5">
+                  <Text
+                    className="font-body-bold text-foreground text-center"
+                    style={{ fontSize: 22, letterSpacing: -0.4 }}
+                  >
+                    {t("auth.resetPasswordTitle")}
+                  </Text>
+                  <Text className="font-sans text-muted text-sm text-center">
+                    {t("auth.resetPasswordIntro")}
+                  </Text>
+                </View>
 
-                    {requestMutation.isError ? (
-                      <ErrorState message={t("auth.sendLinkError")} />
-                    ) : null}
+                <Input
+                  icon="envelope"
+                  label={t("auth.email")}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  keyboardType="email-address"
+                  textContentType="emailAddress"
+                  autoComplete="email"
+                  value={email}
+                  onChangeText={(v) => {
+                    setEmail(v);
+                    if (requestErrors.email)
+                      setRequestErrors((e) => ({ ...e, email: undefined }));
+                  }}
+                  error={requestErrors.email}
+                />
 
-                    {requestMutation.isSuccess ? (
-                      <YStack bg="$green3" rounded="$3" p="$4">
-                        <Text color="$green10" fontWeight="600" fontSize="$3">
-                          {t("auth.resetLinkSent", { email })}
-                        </Text>
-                      </YStack>
-                    ) : null}
-                  </YStack>
+                {requestMutation.isError ? (
+                  <ErrorBanner message={t("auth.sendLinkError")} />
+                ) : null}
 
-                  <YStack items="center" gap="$3">
-                    <LinkText color="$green10" onPress={() => setStep("reset")}>
-                      {t("auth.haveToken")}
-                    </LinkText>
-                    <LinkText color="$accent10" onPress={() => router.back()}>
-                      {t("auth.backToSignIn")}
-                    </LinkText>
-                  </YStack>
-                </YStack>
-              ) : (
-                <YStack gap="$4">
-                  <YStack gap="$2">
-                    <Label>{t("auth.tokenPlaceholder")}</Label>
-                    <Input
-                      autoCapitalize="none"
-                      value={token}
-                      onChangeText={setToken}
-                    />
-                  </YStack>
+                <StudioButton
+                  label={t("auth.sendLink")}
+                  onPress={handleRequestSubmit}
+                  loading={requestMutation.isPending}
+                  block
+                />
 
-                  <YStack gap="$2">
-                    <Label>{t("auth.newPassword")}</Label>
-                    <PasswordInput
-                      textContentType="newPassword"
-                      value={password}
-                      onChangeText={setPassword}
-                    />
-                  </YStack>
+                <View className="flex-row items-center justify-center gap-3 mt-1.5">
+                  <LinkText
+                    className="text-muted"
+                    onPress={() => setStep("reset")}
+                  >
+                    {t("auth.haveToken")}
+                  </LinkText>
+                  <Text className="text-faint text-xs">·</Text>
+                  <LinkText
+                    className="text-muted"
+                    onPress={() => router.back()}
+                  >
+                    {t("auth.backToSignIn")}
+                  </LinkText>
+                </View>
+              </View>
+            ) : null}
 
-                  <YStack gap="$3">
-                    <Button
-                      disabled={resetMutation.isPending || !token || !password}
-                      onPress={() => resetMutation.mutate()}
-                      size="large"
-                    >
-                      {t("auth.resetSubmit")}
-                    </Button>
+            {/* Step 2: reset */}
+            {step === "reset" ? (
+              <View className="gap-3.5">
+                <View className="items-center gap-1 mb-1.5">
+                  <Text
+                    className="font-body-bold text-foreground text-center"
+                    style={{ fontSize: 22, letterSpacing: -0.4 }}
+                  >
+                    {t("auth.checkEmail")}
+                  </Text>
+                  {email ? (
+                    <Text className="font-body-semibold text-accent text-[13px] text-center">
+                      {email}
+                    </Text>
+                  ) : null}
+                  <Text className="font-sans text-muted text-sm text-center">
+                    {t("auth.resetTokenIntro")}
+                  </Text>
+                </View>
 
-                    {resetMutation.isError ? (
-                      <ErrorState message={t("auth.resetError")} />
-                    ) : null}
-                  </YStack>
+                <Input
+                  label={t("auth.tokenPlaceholder")}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  value={token}
+                  onChangeText={(v) => {
+                    setToken(v);
+                    if (resetErrors.token)
+                      setResetErrors((e) => ({ ...e, token: undefined }));
+                  }}
+                  error={resetErrors.token}
+                />
 
-                  <YStack items="center" gap="$3">
-                    <LinkText
-                      color="$green10"
-                      onPress={() => setStep("request")}
-                    >
-                      {t("auth.backToRequest")}
-                    </LinkText>
-                    <LinkText color="$accent10" onPress={() => router.back()}>
-                      {t("auth.backToSignIn")}
-                    </LinkText>
-                  </YStack>
-                </YStack>
-              )}
-            </Card>
-          </YStack>
-        </Theme>
-      </ScrollView>
-    </KeyboardAvoidingView>
+                <PasswordInput
+                  label={t("auth.newPassword")}
+                  textContentType="newPassword"
+                  value={password}
+                  onChangeText={(v) => {
+                    setPassword(v);
+                    if (resetErrors.password)
+                      setResetErrors((e) => ({
+                        ...e,
+                        password: undefined,
+                      }));
+                  }}
+                  error={resetErrors.password}
+                />
+
+                {resetMutation.isError ? (
+                  <ErrorBanner message={t("auth.resetError")} />
+                ) : null}
+
+                <StudioButton
+                  label={t("auth.resetSubmit")}
+                  onPress={handleResetSubmit}
+                  loading={resetMutation.isPending}
+                  block
+                />
+
+                <View className="items-center mt-1.5">
+                  <LinkText
+                    className="text-muted"
+                    onPress={() => setStep("request")}
+                  >
+                    {t("auth.backToRequest")}
+                  </LinkText>
+                </View>
+              </View>
+            ) : null}
+
+            {/* Success */}
+            {step === "success" ? (
+              <View className="gap-3.5 items-center py-3">
+                <Text
+                  className="font-body-bold text-foreground text-center"
+                  style={{ fontSize: 22, letterSpacing: -0.4 }}
+                >
+                  {t("auth.passwordUpdated")}
+                </Text>
+                <Text className="font-sans text-muted text-sm text-center">
+                  {t("auth.passwordUpdatedDesc")}
+                </Text>
+                <LinkText
+                  className="text-accent"
+                  onPress={() => router.replace("/sign-in")}
+                >
+                  {t("auth.backToSignIn")}
+                </LinkText>
+              </View>
+            ) : null}
+          </MotiView>
+        </MotiView>
+      </View>
+
+      <View className="items-center gap-1 pb-1">
+        <Text className="font-sans text-faint text-[11px]">v1.0.0</Text>
+        <Text className="font-sans text-faint text-[11px] text-center">
+          {t("auth.termsNotice")}
+        </Text>
+      </View>
+    </AuthBackground>
   );
 }
-

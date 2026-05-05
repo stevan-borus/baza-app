@@ -9,20 +9,21 @@ import { tryCatch } from "@/lib/server/try-catch";
 export async function POST(request: Request) {
   const guard = await requireRole(request, [UserRole.ADMIN]);
   if (!guard.ok) return guard.response;
-  // Marketing campaigns only target users who opted in and have in-app enabled.
+  // Promotions go to every client with in-app notifications enabled — there
+  // is no marketing-specific opt-out. Users who turn in-app off get nothing.
 
   const bodyResult = await tryCatch(request.json());
   const body = bodyResult.error ? null : bodyResult.data;
   const parsed = createPromotionCampaignInputSchema.safeParse(body);
   if (!parsed.success) return fail("Invalid payload", 400, parsed.error);
 
-  const optedInUsers = await prisma.notificationPreference.findMany({
-    where: { marketingOptIn: true, inAppEnabled: true },
+  const recipients = await prisma.notificationPreference.findMany({
+    where: { inAppEnabled: true },
     select: { userId: true },
   });
 
   await Promise.all(
-    optedInUsers.map((entry: { userId: string }) =>
+    recipients.map((entry: { userId: string }) =>
       createAndDispatchUserNotification({
         userId: entry.userId,
         type: "GENERAL",
@@ -35,6 +36,6 @@ export async function POST(request: Request) {
 
   return ok({
     success: true,
-    recipients: optedInUsers.length,
+    recipients: recipients.length,
   });
 }

@@ -41,6 +41,7 @@ yarn-error.log*
 # IDE
 .cursor/
 .vscode/
+.claude/
 
 # Misc
 .DS_Store

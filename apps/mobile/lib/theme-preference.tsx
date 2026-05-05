@@ -1,6 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, { PropsWithChildren, createContext, useContext, useEffect, useMemo, useState } from "react";
 import { useColorScheme as useSystemColorScheme } from "react-native";
+import { Uniwind } from "uniwind";
 
 const THEME_PREFERENCE_KEY = "baza.theme-preference";
 
@@ -13,11 +14,11 @@ type ThemePreferenceContextValue = {
   setPreference: (preference: ThemePreference) => void;
 };
 
-const ThemePreferenceContext = createContext<ThemePreferenceContextValue | null>(null);
+export const ThemePreferenceContext = createContext<ThemePreferenceContextValue | null>(null);
 
 export function ThemePreferenceProvider({ children }: PropsWithChildren) {
   const systemColorScheme = useSystemColorScheme();
-  const [preference, setPreferenceState] = useState<ThemePreference>("system");
+  const [preference, setPreferenceState] = useState<ThemePreference>("light");
 
   useEffect(() => {
     let mounted = true;
@@ -36,6 +37,11 @@ export function ThemePreferenceProvider({ children }: PropsWithChildren) {
     };
   }, []);
 
+  // Sync Uniwind's theme registry with the user's preference.
+  useEffect(() => {
+    Uniwind.setTheme(preference);
+  }, [preference]);
+
   function setPreference(next: ThemePreference) {
     setPreferenceState(next);
     AsyncStorage.setItem(THEME_PREFERENCE_KEY, next).catch(() => {
@@ -43,6 +49,8 @@ export function ThemePreferenceProvider({ children }: PropsWithChildren) {
     });
   }
 
+  // Studio palette is light-first; "system" still respects the system pref,
+  // but unset / first-launch resolves to light.
   const resolvedTheme: ResolvedTheme =
     preference === "system"
       ? systemColorScheme === "dark"
@@ -66,11 +74,10 @@ export function useThemePreference() {
   const context = useContext(ThemePreferenceContext);
   if (!context) {
     return {
-      preference: "system" as ThemePreference,
-      resolvedTheme: (useSystemColorScheme() === "dark" ? "dark" : "light") as ResolvedTheme,
+      preference: "dark" as ThemePreference,
+      resolvedTheme: "dark" as ResolvedTheme,
       setPreference: () => {},
     };
   }
   return context;
 }
-

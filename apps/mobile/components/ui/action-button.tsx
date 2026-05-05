@@ -1,7 +1,7 @@
 import React from "react";
-import { TouchableOpacity } from "react-native";
+import { TouchableOpacity, View, Text } from "react-native";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
-import { Text, XStack } from "tamagui";
+import { useThemeTokens } from "./tokens";
 
 /** Compact action row -- icon + label, used for secondary actions. */
 export function ActionButton({
@@ -17,6 +17,7 @@ export function ActionButton({
   variant?: "default" | "danger";
   disabled?: boolean;
 }) {
+  const tokens = useThemeTokens();
   const startsWithPlus = label.trim().startsWith("+");
   const displayLabel = startsWithPlus ? label.trim().replace(/^\+\s*/, "") : label;
   const showIcon = icon && !(icon === "plus" && startsWithPlus);
@@ -28,30 +29,28 @@ export function ActionButton({
       activeOpacity={0.7}
       style={{ opacity: disabled ? 0.4 : 1 }}
     >
-      <XStack
-        bg={variant === "danger" ? "$red3" : "$backgroundHover"}
-        rounded={10}
-        px="$3"
-        py="$2.5"
-        items="center"
-        gap="$2"
+      <View
+        className={[
+          "flex-row items-center rounded-xl px-3.5 py-2.5 gap-2",
+          variant === "danger" ? "bg-danger-soft" : "bg-glass",
+        ].join(" ")}
       >
         {showIcon ? (
           <FontAwesome
             name={icon}
             size={14}
-            color={variant === "danger" ? "#ef4444" : undefined}
+            color={variant === "danger" ? tokens.danger : tokens.foreground}
           />
         ) : null}
         <Text
-          fontSize="$2"
-          fontWeight="500"
-          color={variant === "danger" ? "$red10" : "$color"}
+          className={[
+            "text-sm font-body-medium",
+            variant === "danger" ? "text-danger" : "text-foreground",
+          ].join(" ")}
         >
           {displayLabel}
         </Text>
-      </XStack>
+      </View>
     </TouchableOpacity>
   );
 }
-

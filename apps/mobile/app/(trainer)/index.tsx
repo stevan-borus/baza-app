@@ -1,233 +1,370 @@
+/**
+ * Trainer schedule (Pregled raspored) — Studio operations look.
+ *
+ * No photo hero — staff want signal, not atmosphere. Editorial stat
+ * strip up top (Sessions / Clients / Hours), then the schedule list,
+ * then optional month view. Same chrome (logo header + UserAvatar) as
+ * the rest of the app; the difference is density.
+ */
 import { useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Calendar, type ICalendarEventBase } from "react-native-big-calendar";
+import { useQuery } from "@tanstack/react-query";
 import dayjs from "dayjs";
-import { useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
-import { Text, YStack, useTheme } from "tamagui";
-import { LanguageSwitcher } from "@/components/LanguageSwitcher";
-import { useColorScheme } from "@/components/useColorScheme";
+import { ScrollView, Text, View } from "react-native";
+import { MotiView } from "@/components/ui/styled";
 import { AppSheet } from "@/components/ui/sheet";
-import { Badge, Card, StatCard } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { ListRow, ErrorState } from "@/components/ui/states";
-import { ScreenContainerRaw } from "@/components/ui/screen-container";
-import { SegmentedControl } from "@/components/ui/tabs";
-import { SectionHeader } from "@/components/ui/typography";
-import { getDateLocale } from "@/lib/i18n";
+import { Badge, Card } from "@/components/ui/card";
+import { ListRow, EmptyState, ErrorState } from "@/components/ui/states";
+import { startOfLocaleWeek } from "@/components/ui/week-strip";
+import { MonthView } from "@/components/ui/month-view";
+import { SegmentedControl } from "@/components/ui/segmented-control";
+import { SessionCard } from "@/components/ui/session-card";
+import {
+  ScreenContainerRaw,
+  useTabBarBottomPadding,
+} from "@/components/ui/screen-container";
+import { CapsLabel, StudioWeekStrip } from "@/components/ui/studio";
 import { authQueries } from "@/lib/queries/auth-queries-factory";
 import { sessionsQueries } from "@/lib/queries/sessions-queries-factory";
-import { notificationsQueries, type Notification } from "@/lib/queries/notifications-queries-factory";
-import { signOutWithPushCleanup } from "@/lib/sign-out";
 
-type ViewMode = "day" | "week" | "month";
+type ScheduleTab = "day" | "month";
 
-interface SessionEvent extends ICalendarEventBase {
-  sessionId: string;
-  classTypeName: string;
-  roomName: string | null;
-  bookedCount: number;
-  capacity: number;
-  availableSlots: number;
-}
-
-function currentMonthKey() {
-  const now = new Date();
-  return `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}`;
+function monthKeyFromDate(d: dayjs.Dayjs) {
+  return d.format("YYYY-MM");
 }
 
 export default function TrainerSchedule() {
-  const { t } = useTranslation();
-  const router = useRouter();
-  const queryClient = useQueryClient();
-  const [month, setMonth] = useState(() => currentMonthKey());
-  const [viewMode, setViewMode] = useState<ViewMode>("week");
-  const [calendarDate, setCalendarDate] = useState(new Date());
-  const [selectedEvent, setSelectedEvent] = useState<SessionEvent | null>(null);
-  const locale = getDateLocale().startsWith("en") ? "en" : "sr";
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === "dark";
-  const theme = useTheme();
+  const { t, i18n } = useTranslation();
+  const lang = i18n.language === "en" ? "en" : "sr";
+  const bottomPad = useTabBarBottomPadding(24);
+  const [selectedDate, setSelectedDate] = useState(dayjs().format("YYYY-MM-DD"));
+  const [month, setMonth] = useState(() => monthKeyFromDate(dayjs()));
+  const [weekStart, setWeekStart] = useState(() => startOfLocaleWeek(dayjs()));
+  const [monthDate, setMonthDate] = useState(() => dayjs().startOf("month"));
+  const [scheduleTab, setScheduleTab] = useState<ScheduleTab>("day");
+  const [selectedSession, setSelectedSession] = useState<{
+    sessionId: string;
+    classTypeName: string;
+    roomName: string | null;
+    bookedCount: number;
+    capacity: number;
+    availableSlots: number;
+    startsAt: Date;
+    endsAt: Date;
+  } | null>(null);
+
+  const displayDate = dayjs(selectedDate);
 
   const meQuery = useQuery(authQueries.me());
   const availabilityQuery = useQuery(sessionsQueries.availabilityByMonth(month));
-  const notifsQuery = useQuery(notificationsQueries.list());
-
-  const signOutMutation = useMutation({
-    mutationFn: async () => {
-      await signOutWithPushCleanup();
-    },
-    onSuccess: async () => {
-      queryClient.clear();
-      router.replace("/sign-in");
-    },
-  });
 
   const sessions = availabilityQuery.data?.sessions ?? [];
-  const sessionNotifs = (notifsQuery.data?.notifications ?? []).filter((n: Notification) => n.type === "SESSION_UPDATED");
 
-  const events: SessionEvent[] = sessions.map((s) => ({
-    sessionId: s.id,
-    title: `${s.classTypeName} (${s.bookedCount}/${s.capacity})`,
-    start: new Date(s.startsAt),
-    end: new Date(s.endsAt),
-    classTypeName: s.classTypeName,
-    roomName: s.roomName,
-    bookedCount: s.bookedCount,
-    capacity: s.capacity,
-    availableSlots: s.availableSlots,
-  }));
+  const daySessions = sessions.filter(
+    (s) => dayjs(s.startsAt).format("YYYY-MM-DD") === selectedDate,
+  );
 
-  function handleDateChange(date: Date) {
-    const key = `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}`;
-    if (key !== month) setMonth(key);
-    setCalendarDate(date);
+  // Hero stats — sessions, booked clients, hours.
+  const clientsToday = daySessions.reduce((sum, s) => sum + s.bookedCount, 0);
+  const minsToday = daySessions.reduce((sum, s) => {
+    return sum + dayjs(s.endsAt).diff(dayjs(s.startsAt), "minute");
+  }, 0);
+  const hoursToday = minsToday / 60;
+  const hoursDisplay = hoursToday > 0 ? hoursToday.toFixed(1) : "0";
+
+  // YYYY-MM-DD → number of sessions on that day (drives the dot indicator
+  // under each StudioWeekStrip pill).
+  const sessionsByDay = sessions.reduce<Record<string, number>>((acc, s) => {
+    const k = dayjs(s.startsAt).format("YYYY-MM-DD");
+    acc[k] = (acc[k] ?? 0) + 1;
+    return acc;
+  }, {});
+
+  // MonthView still expects the legacy "available"/"booked" map.
+  const activityByDate: Record<string, "available"> = {};
+  for (const s of sessions) {
+    const dateKey = dayjs(s.startsAt).format("YYYY-MM-DD");
+    activityByDate[dateKey] = "available";
   }
 
+  function handleDateSelect(d: dayjs.Dayjs) {
+    const date = d.format("YYYY-MM-DD");
+    setSelectedDate(date);
+    const newMonth = monthKeyFromDate(d);
+    if (newMonth !== month) setMonth(newMonth);
+  }
+
+  function handlePrevWeek() {
+    const newStart = weekStart.subtract(1, "week");
+    setWeekStart(newStart);
+    const newMonth = newStart.format("YYYY-MM");
+    if (newMonth !== month) setMonth(newMonth);
+  }
+
+  function handleNextWeek() {
+    const newStart = weekStart.add(1, "week");
+    setWeekStart(newStart);
+    const newMonth = newStart.format("YYYY-MM");
+    if (newMonth !== month) setMonth(newMonth);
+  }
+
+  function handlePrevMonth() {
+    const newMonthDate = monthDate.subtract(1, "month");
+    setMonthDate(newMonthDate);
+    setMonth(newMonthDate.format("YYYY-MM"));
+  }
+
+  function handleNextMonth() {
+    const newMonthDate = monthDate.add(1, "month");
+    setMonthDate(newMonthDate);
+    setMonth(newMonthDate.format("YYYY-MM"));
+  }
+
+  function handleMonthCellSelect(date: string) {
+    setSelectedDate(date);
+    setWeekStart(startOfLocaleWeek(dayjs(date)));
+    const newMonth = monthKeyFromDate(dayjs(date));
+    if (newMonth !== month) setMonth(newMonth);
+    setScheduleTab("day");
+  }
+
+  function handleEventPress(session: typeof sessions[0]) {
+    setSelectedSession({
+      sessionId: session.id,
+      classTypeName: session.classTypeName,
+      roomName: session.roomName,
+      bookedCount: session.bookedCount,
+      capacity: session.capacity,
+      availableSlots: session.availableSlots,
+      startsAt: session.startsAt instanceof Date
+        ? session.startsAt
+        : new Date(session.startsAt),
+      endsAt: session.endsAt instanceof Date
+        ? session.endsAt
+        : new Date(session.endsAt),
+    });
+  }
+
+  const trainerName = meQuery.data?.user?.email ?? "";
+  const greetingName = trainerName.split("@")[0] ?? trainerName;
+
   return (
-    <ScreenContainerRaw>
-      <YStack px="$5" gap="$3">
-        <SectionHeader
-          title={t("trainer.schedule.title")}
-          subtitle={meQuery.data ? meQuery.data.user.email : undefined}
-        />
+    <ScreenContainerRaw title={t("tabs.schedule")}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingTop: 16, paddingBottom: bottomPad }}
+      >
+        {/* ── Greeting ── */}
+        <MotiView
+          from={{ opacity: 0, translateY: -8 }}
+          animate={{ opacity: 1, translateY: 0 }}
+          transition={{ type: "timing", duration: 350 }}
+        >
+          <View className="px-5 pb-5">
+            <CapsLabel size={11} tracking={1.6} className="text-muted">
+              {dayjs().locale(lang).format("dddd, D MMMM").toUpperCase()}
+            </CapsLabel>
+            <Text
+              className="text-foreground font-body-bold mt-1.5"
+              style={{ fontSize: 26, letterSpacing: -0.5, textTransform: "capitalize" }}
+            >
+              {t("trainer.schedule.greeting", { name: greetingName })}
+            </Text>
+          </View>
+        </MotiView>
 
-        <Card>
-          <YStack gap="$3">
-            <SegmentedControl
-              segments={[
-                { value: "day" as const, label: t("trainer.schedule.viewDay") },
-                { value: "week" as const, label: t("trainer.schedule.viewWeek") },
-                { value: "month" as const, label: t("trainer.schedule.viewMonth") },
-              ]}
-              value={viewMode}
-              onValueChange={setViewMode}
+        {/* ── Today stats — editorial hairline strip ── */}
+        <MotiView
+          from={{ opacity: 0, translateY: -8 }}
+          animate={{ opacity: 1, translateY: 0 }}
+          transition={{ type: "timing", duration: 350, delay: 80 }}
+        >
+          <View className="mx-5 mb-6 flex-row">
+            <StatColumn
+              label={t("trainer.schedule.sessions")}
+              value={daySessions.length}
             />
+            <View className="bg-glass-border" style={{ width: 1, marginVertical: 10 }} />
+            <StatColumn
+              label={t("trainer.schedule.clients")}
+              value={clientsToday}
+            />
+            <View className="bg-glass-border" style={{ width: 1, marginVertical: 10 }} />
+            <StatColumn
+              label={t("trainer.schedule.hours")}
+              value={hoursDisplay}
+              accent
+            />
+          </View>
+        </MotiView>
 
-            <StatCard label={t("trainer.schedule.sessionsThisMonth")} value={sessions.length} />
-          </YStack>
-        </Card>
+        {/* ── Schedule section ── */}
+        <MotiView
+          from={{ opacity: 0, translateY: -8 }}
+          animate={{ opacity: 1, translateY: 0 }}
+          transition={{ type: "timing", duration: 350, delay: 160 }}
+        >
+          <View className="px-5 pb-4">
+            <SegmentedControl<ScheduleTab>
+              options={[
+                { value: "day", label: t("admin.schedule.viewDay") },
+                { value: "month", label: t("admin.schedule.viewMonth") },
+              ]}
+              value={scheduleTab}
+              onChange={setScheduleTab}
+            />
+          </View>
 
-        {sessionNotifs.length > 0 ? (
-          <Card>
-            <YStack gap="$2">
-              <Text fontWeight="600" fontSize="$3" color="$color">
-                {t("trainer.schedule.sessionChanges")}
-              </Text>
-              {sessionNotifs.slice(0, 5).map((n: Notification) => (
-                <Text key={n.id} fontSize="$2" color="$color10">
-                  {n.title}: {n.body}
-                </Text>
-              ))}
-            </YStack>
-          </Card>
-        ) : null}
-      </YStack>
+          {scheduleTab === "day" ? (
+            <>
+              <View className="pb-4">
+                <StudioWeekStrip
+                  weekStart={weekStart}
+                  selected={dayjs(selectedDate)}
+                  onSelect={handleDateSelect}
+                  sessionsByDay={sessionsByDay}
+                  onPrevWeek={handlePrevWeek}
+                  onNextWeek={handleNextWeek}
+                  rangeLabel={`${weekStart.locale(lang).format("D. MMM")} — ${weekStart
+                    .add(6, "day")
+                    .locale(lang)
+                    .format("D. MMM")}`}
+                />
+              </View>
 
-      {availabilityQuery.isError ? (
-        <YStack px="$5">
-          <ErrorState message={t("trainer.schedule.error")} />
-        </YStack>
-      ) : null}
+              {availabilityQuery.isError ? (
+                <View className="px-5">
+                  <ErrorState message={t("trainer.schedule.error")} />
+                </View>
+              ) : null}
 
-      <YStack flex={1} minHeight={500} px="$5">
-        <Card>
-          <Calendar
-            events={events}
-            height={480}
-            mode={viewMode === "day" ? "day" : viewMode === "week" ? "week" : "month"}
-            theme={{
-              palette: {
-                primary: {
-                  main: "#2e5b42",
-                  contrastText: "#ffffff",
-                },
-                nowIndicator: "#2e5b42",
-                gray: {
-                  100: isDark ? "#111827" : "#f3f4f6",
-                  200: isDark ? "#1f2937" : "#e5e7eb",
-                  300: isDark ? "#374151" : "#d1d5db",
-                  500: isDark ? "#9ca3af" : "#6b7280",
-                  800: isDark ? "#e5e7eb" : "#111827",
-                },
-                moreLabel: isDark ? "#e5e7eb" : "#374151",
-              },
-              typography: {
-                sm: { fontWeight: "500", fontSize: 12 },
-                xl: { fontWeight: "600", fontSize: 13 },
-                moreLabel: { fontWeight: "600", fontSize: 11 },
-              },
-            }}
-            calendarContainerStyle={{
-              borderRadius: 12,
-              backgroundColor: isDark ? "#0f172a" : "#ffffff",
-            }}
-            bodyContainerStyle={{
-              backgroundColor: isDark ? "#0f172a" : "#ffffff",
-            }}
-            headerContainerStyle={{
-              borderBottomColor: isDark
-                ? "rgba(255,255,255,0.08)"
-                : "rgba(15,23,42,0.08)",
-              borderBottomWidth: 1,
-            }}
-            eventCellStyle={{
-              backgroundColor: "#2e5b42",
-              borderRadius: 10,
-              borderWidth: 0,
-              paddingHorizontal: 6,
-              paddingVertical: 4,
-            }}
-            eventCellTextColor="#ffffff"
-            calendarCellStyle={{
-              backgroundColor: isDark ? "#0f172a" : "#ffffff",
-              borderColor: isDark
-                ? "rgba(255,255,255,0.08)"
-                : "rgba(15,23,42,0.08)",
-              borderWidth: 1,
-            }}
-            calendarCellTextStyle={{
-              color: theme.color.val,
-            }}
-            date={calendarDate}
-            onPressEvent={(event) => setSelectedEvent(event as SessionEvent)}
-            onSwipeEnd={handleDateChange}
-            swipeEnabled
-            weekStartsOn={1}
-            locale={locale}
-          />
-        </Card>
-      </YStack>
+              <View className="px-5">
+                <View className="flex-row items-baseline justify-between pb-3">
+                  <CapsLabel size={12} tracking={2.4}>
+                    {displayDate.locale(lang).format("dddd, D MMMM").toUpperCase()}
+                  </CapsLabel>
+                  {daySessions.length > 0 ? (
+                    <Text className="text-xs text-muted">
+                      {t("admin.dashboard.classCount", {
+                        count: daySessions.length,
+                      })}
+                    </Text>
+                  ) : null}
+                </View>
+                <View className="flex-col gap-3">
+                  {daySessions.length === 0 ? (
+                    <EmptyState title={t("client.dayView.noSessions")} />
+                  ) : (
+                    daySessions.map((session) => (
+                      <SessionCard
+                        key={session.id}
+                        time={`${dayjs(session.startsAt).format("HH:mm")} - ${dayjs(session.endsAt).format("HH:mm")}`}
+                        className={session.classTypeName}
+                        trainerName={session.trainerName ?? undefined}
+                        room={session.roomName ?? undefined}
+                        bookedCount={session.bookedCount}
+                        capacity={session.capacity}
+                        status={
+                          session.availableSlots > 0 ? "available" : "full"
+                        }
+                        onPress={() => handleEventPress(session)}
+                      />
+                    ))
+                  )}
+                </View>
+              </View>
+            </>
+          ) : (
+            <View className="px-5">
+              <MonthView
+                month={monthDate}
+                selectedDate={selectedDate}
+                onSelectDate={handleMonthCellSelect}
+                onPrevMonth={handlePrevMonth}
+                onNextMonth={handleNextMonth}
+                activity={activityByDate}
+              />
+            </View>
+          )}
+        </MotiView>
+      </ScrollView>
 
-      <YStack px="$5" pb="$4" gap="$3">
-        <Card>
-          <LanguageSwitcher />
-        </Card>
-        <Button variant="secondary" onPress={() => signOutMutation.mutate()}>
-          {t("client.signOut")}
-        </Button>
-      </YStack>
-
-      <AppSheet open={!!selectedEvent} onOpenChange={() => setSelectedEvent(null)}>
-        {selectedEvent ? (
-          <YStack gap="$4">
-            <Text fontSize="$6" fontWeight="700" color="$color" letterSpacing={-0.3}>
-              {selectedEvent.classTypeName}
+      {/* ── Session detail sheet (trainer is read-only) ── */}
+      <AppSheet
+        open={!!selectedSession}
+        onOpenChange={() => setSelectedSession(null)}
+      >
+        {selectedSession ? (
+          <View className="flex-col gap-4 pb-5">
+            <Text
+              className="text-foreground font-body-bold"
+              style={{ fontSize: 22, letterSpacing: -0.3 }}
+            >
+              {selectedSession.classTypeName}
             </Text>
             <Card>
-              <YStack gap="$3">
+              <View className="flex-col gap-3">
                 <ListRow
-                  title={`${dayjs(selectedEvent.start).format("DD.MM.YYYY HH:mm")} - ${dayjs(selectedEvent.end).format("HH:mm")}`}
-                  subtitle={`${t("trainer.schedule.room")}: ${selectedEvent.roomName ?? "—"} · ${t("trainer.schedule.available")}: ${selectedEvent.availableSlots}`}
+                  title={`${dayjs(selectedSession.startsAt).format("DD.MM.YYYY HH:mm")} – ${dayjs(selectedSession.endsAt).format("HH:mm")}`}
+                  subtitle={`${t("trainer.schedule.room")}: ${selectedSession.roomName ?? "—"} · ${t("trainer.schedule.available")}: ${selectedSession.availableSlots}`}
                 />
-                <Badge variant="soft">
-                  {selectedEvent.bookedCount}/{selectedEvent.capacity} {t("trainer.schedule.booked")}
+                <Badge status="neutral">
+                  {selectedSession.bookedCount}/{selectedSession.capacity}{" "}
+                  {t("trainer.schedule.booked")}
                 </Badge>
-              </YStack>
+              </View>
             </Card>
-          </YStack>
+          </View>
         ) : null}
       </AppSheet>
     </ScreenContainerRaw>
+  );
+}
+
+// ─── editorial stat column (matches client/profile pattern) ──────────────
+
+function StatColumn({
+  label,
+  value,
+  accent = false,
+}: {
+  label: string;
+  value: number | string;
+  accent?: boolean;
+}) {
+  // Empty data renders an em-dash so the strip stays elegant on quiet days.
+  const display =
+    typeof value === "number"
+      ? value === 0
+        ? "—"
+        : String(value)
+      : value === "0"
+        ? "—"
+        : value;
+  return (
+    <View className="flex-1 items-center py-4 px-2 gap-1.5">
+      <Text
+        className={accent ? "text-accent" : "text-muted"}
+        style={{
+          fontFamily: "AlbertSans-SemiBold",
+          fontSize: 9,
+          letterSpacing: 1.4,
+          textTransform: "uppercase",
+        }}
+      >
+        {label}
+      </Text>
+      <Text
+        className={accent ? "text-accent" : "text-foreground"}
+        style={{
+          fontFamily: "AlbertSans-Bold",
+          fontSize: 26,
+          letterSpacing: -0.6,
+          lineHeight: 30,
+        }}
+      >
+        {display}
+      </Text>
+    </View>
   );
 }
