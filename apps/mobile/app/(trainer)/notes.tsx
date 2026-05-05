@@ -12,6 +12,7 @@ import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { MotiView } from "@/components/ui/styled";
 import { LegendList } from "@legendapp/list";
 import { AppSheet } from "@/components/ui/sheet";
+import { ConfirmSheet } from "@/components/ui/confirm-sheet";
 import { Button } from "@/components/ui/button";
 import { GlassCard } from "@/components/ui/glass-card";
 import { EmptyState, ErrorState } from "@/components/ui/states";
@@ -50,6 +51,7 @@ function applyFilters(
   notes: TrainerNote[],
   timeFilter: TimeFilter,
   clientId: string | null,
+  sessionId: string | null,
 ): TrainerNote[] {
   let out = notes;
   if (timeFilter === "thisWeek") {
@@ -58,6 +60,9 @@ function applyFilters(
   }
   if (clientId) {
     out = out.filter((n) => n.clientProfileId === clientId);
+  }
+  if (sessionId) {
+    out = out.filter((n) => n.sessionId === sessionId);
   }
   return out;
 }
@@ -113,7 +118,15 @@ function FilterChip({
 
 // ─── NoteRow ─────────────────────────────────────────────────────────────────
 
-function NoteRow({ item, dateLocale }: { item: TrainerNote; dateLocale: string }) {
+function NoteRow({
+  item,
+  dateLocale,
+  onPress,
+}: {
+  item: TrainerNote;
+  dateLocale: string;
+  onPress?: () => void;
+}) {
   const dateStr = new Date(item.createdAt).toLocaleDateString(dateLocale, {
     weekday: "short",
     month: "short",
@@ -124,7 +137,13 @@ function NoteRow({ item, dateLocale }: { item: TrainerNote; dateLocale: string }
   const preview = item.note.length > 120 ? `${item.note.slice(0, 120)}…` : item.note;
 
   return (
-    <View style={{ marginBottom: 10 }}>
+    <Pressable
+      testID={`note-row-${item.id}`}
+      onPress={onPress}
+      android_ripple={null}
+      style={{ marginBottom: 10 }}
+      className="active:opacity-70"
+    >
       <GlassCard size="md" accentBorder="left">
         <View style={{ gap: 6 }}>
           {/* Meta row: client name · trainer · date */}
@@ -158,7 +177,7 @@ function NoteRow({ item, dateLocale }: { item: TrainerNote; dateLocale: string }
           </Text>
         </View>
       </GlassCard>
-    </View>
+    </Pressable>
   );
 }
 
@@ -170,10 +189,15 @@ export default function TrainerNotes() {
   const bottomPad = useTabBarBottomPadding();
   const [showCreate, setShowCreate] = useState(false);
   const [showClientPicker, setShowClientPicker] = useState(false);
+  const [showSessionPicker, setShowSessionPicker] = useState(false);
   const [form, setForm] = useState({ sessionId: "", clientProfileId: "", note: "" });
   const [refreshing, setRefreshing] = useState(false);
   const [timeFilter, setTimeFilter] = useState<TimeFilter>("all");
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
+  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editText, setEditText] = useState("");
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const dateLocale = getDateLocale();
 
   const notesQuery = useInfiniteQuery(trainerNotesQueries.listInfinite());
@@ -189,10 +213,32 @@ export default function TrainerNotes() {
     },
   });
 
+  const updateMutation = useMutation({
+    ...trainerNotesQueries.update(),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["trainer-notes"] });
+      setEditingId(null);
+    },
+  });
+
+  const deleteMutation = useMutation({
+    ...trainerNotesQueries.delete(),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["trainer-notes"] });
+      setConfirmDelete(false);
+      setEditingId(null);
+    },
+  });
+
+  function openEdit(note: TrainerNote) {
+    setEditText(note.note);
+    setEditingId(note.id);
+  }
+
   const allNotes = notesQuery.data?.pages.flatMap((p) => p.notes) ?? [];
   const filteredNotes = useMemo(
-    () => applyFilters(allNotes, timeFilter, selectedClientId),
-    [allNotes, timeFilter, selectedClientId],
+    () => applyFilters(allNotes, timeFilter, selectedClientId, selectedSessionId),
+    [allNotes, timeFilter, selectedClientId, selectedSessionId],
   );
 
   type ListItem = { kind: "row"; note: TrainerNote; id: string };
@@ -218,6 +264,15 @@ export default function TrainerNotes() {
   const clientChipLabel = selectedClient
     ? selectedClient.user.fullName
     : t("trainer.notes.filterByClient");
+
+  const selectedSession = sessionsQuery.data?.sessions.find(
+    (s) => s.id === selectedSessionId,
+  );
+  const sessionChipLabel = selectedSession
+    ? `${selectedSession.classType?.name ?? t("trainer.clients.sessionName")} · ${new Date(
+        selectedSession.startsAt,
+      ).toLocaleDateString(dateLocale, { month: "short", day: "numeric" })}`
+    : t("trainer.notes.filterBySession");
 
   return (
     <ScreenContainerRaw
@@ -261,10 +316,26 @@ export default function TrainerNotes() {
               if (selectedClient) {
                 setSelectedClientId(null);
               } else {
+                setSelectedSessionId(null);
                 setShowClientPicker(true);
               }
             }}
           />
+          <View testID="note-filter-by-session">
+            <FilterChip
+              label={sessionChipLabel}
+              active={!!selectedSession}
+              trailingIcon={selectedSession ? "times" : "chevron-down"}
+              onPress={() => {
+                if (selectedSession) {
+                  setSelectedSessionId(null);
+                } else {
+                  setSelectedClientId(null);
+                  setShowSessionPicker(true);
+                }
+              }}
+            />
+          </View>
         </ScrollView>
       </MotiView>
 
@@ -295,7 +366,11 @@ export default function TrainerNotes() {
           }
           contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: bottomPad }}
           renderItem={({ item }: { item: ListItem }) => (
-            <NoteRow item={item.note} dateLocale={dateLocale} />
+            <NoteRow
+              item={item.note}
+              dateLocale={dateLocale}
+              onPress={() => openEdit(item.note)}
+            />
           )}
           onEndReached={handleEndReached}
           onEndReachedThreshold={0.5}
@@ -401,6 +476,106 @@ export default function TrainerNotes() {
           ) : null}
         </View>
       </AppSheet>
+
+      {/* ── Session picker sheet (for "By session" filter) ── */}
+      <AppSheet open={showSessionPicker} onOpenChange={setShowSessionPicker}>
+        <View className="flex-col gap-4 pb-5">
+          <Text
+            className="text-foreground font-body-bold"
+            style={{ fontSize: 20, letterSpacing: -0.3 }}
+          >
+            {t("trainer.notes.pickSessionTitle")}
+          </Text>
+          <Select
+            testID="session-filter-picker"
+            optionTestIDPrefix="session-filter-option"
+            placeholder={t("trainer.notes.session")}
+            value={selectedSessionId ?? ""}
+            onChange={(v) => {
+              setSelectedSessionId(v || null);
+              setShowSessionPicker(false);
+            }}
+            emptyText={t("trainer.notes.emptySessions")}
+            options={(sessionsQuery.data?.sessions ?? []).map((s) => ({
+              value: s.id,
+              label: s.classType?.name ?? t("trainer.clients.sessionName"),
+              hint: new Date(s.startsAt).toLocaleDateString(dateLocale, {
+                weekday: "short",
+                month: "short",
+                day: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
+              }),
+            }))}
+          />
+        </View>
+      </AppSheet>
+
+      {/* ── Edit note sheet ── */}
+      <AppSheet
+        open={!!editingId}
+        onOpenChange={(v) => !v && setEditingId(null)}
+      >
+        <View className="flex-col gap-4 pb-5">
+          <Text
+            className="text-foreground font-body-bold"
+            style={{ fontSize: 20, letterSpacing: -0.3 }}
+          >
+            {t("trainer.notes.editSheetTitle")}
+          </Text>
+          <Input
+            testID="note-edit-text-input"
+            placeholder={t("trainer.notes.placeholder")}
+            multiline
+            value={editText}
+            onChangeText={setEditText}
+          />
+          <Button
+            testID="note-edit-save-button"
+            disabled={updateMutation.isPending || !editText.trim()}
+            onPress={() => {
+              if (!editingId) return;
+              updateMutation.mutate({ id: editingId, note: editText.trim() });
+            }}
+          >
+            {t("admin.schedule.saveChanges")}
+          </Button>
+          <Button
+            testID="note-edit-delete-button"
+            variant="danger"
+            disabled={deleteMutation.isPending || !editingId}
+            onPress={() => setConfirmDelete(true)}
+          >
+            {t("confirm.deleteNoteConfirm")}
+          </Button>
+          {updateMutation.isError ? (
+            <ErrorState
+              message={
+                (updateMutation.error as Error)?.message ??
+                t("trainer.notes.saveError")
+              }
+            />
+          ) : null}
+        </View>
+      </AppSheet>
+      <ConfirmSheet
+        open={confirmDelete}
+        onOpenChange={setConfirmDelete}
+        title={t("confirm.deleteNoteTitle")}
+        message={t("confirm.deleteNoteMessage")}
+        confirmLabel={t("confirm.deleteNoteConfirm")}
+        loading={deleteMutation.isPending}
+        testID="note-delete-confirm-button"
+        errorMessage={
+          deleteMutation.isError
+            ? (deleteMutation.error as Error)?.message ?? null
+            : null
+        }
+        onConfirm={() => {
+          if (!editingId) return;
+          deleteMutation.mutate(editingId);
+        }}
+      />
     </ScreenContainerRaw>
   );
 }

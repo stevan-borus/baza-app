@@ -84,4 +84,41 @@ export const trainerNotesQueries = {
         return response.json();
       },
     }),
+
+  update: () =>
+    mutationOptions({
+      mutationKey: ["trainer-notes", "update"] as const,
+      mutationFn: async ({ id, note }: { id: string; note: string }) => {
+        const response = await apiFetch(
+          `${sharedEnv.EXPO_PUBLIC_API_URL}/api/trainer-notes/${id}`,
+          {
+            method: "PATCH",
+            credentials: "include",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ note }),
+          },
+        );
+        if (!response.ok) {
+          const text = await response.text();
+          throw new Error(text || `Unable to update note (${response.status})`);
+        }
+        return response.json();
+      },
+    }),
+
+  delete: () =>
+    mutationOptions({
+      mutationKey: ["trainer-notes", "delete"] as const,
+      mutationFn: async (id: string) => {
+        const response = await apiFetch(
+          `${sharedEnv.EXPO_PUBLIC_API_URL}/api/trainer-notes/${id}`,
+          { method: "DELETE", credentials: "include" },
+        );
+        if (!response.ok) {
+          const text = await response.text();
+          throw new Error(text || `Unable to delete note (${response.status})`);
+        }
+        return response.json();
+      },
+    }),
 };
