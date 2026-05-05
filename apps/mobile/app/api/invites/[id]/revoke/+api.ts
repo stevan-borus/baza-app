@@ -3,12 +3,11 @@ import { requireRole } from "@/lib/server/auth-guards";
 import { fail, ok } from "@/lib/server/http";
 import { prisma } from "@/lib/server/prisma";
 
-type RouteContext = { params: Promise<{ id: string }> };
+type RouteParams = Record<string, string>;
 
-export async function POST(request: Request, context: RouteContext) {
+export async function POST(request: Request, { id }: RouteParams) {
   const guard = await requireRole(request, [UserRole.ADMIN]);
   if (!guard.ok) return guard.response;
-  const { id } = await context.params;
 
   const invite = await prisma.userInvite.findUnique({ where: { id } });
   if (!invite) return fail("Invite not found", 404);

@@ -6,12 +6,11 @@ import { prisma } from "@/lib/server/prisma";
 import { sendInviteEmail } from "@/lib/server/resend";
 import { addHours, generateRawToken, hashToken } from "@/lib/server/tokens";
 
-type RouteContext = { params: Promise<{ id: string }> };
+type RouteParams = Record<string, string>;
 
-export async function POST(request: Request, context: RouteContext) {
+export async function POST(request: Request, { id }: RouteParams) {
   const guard = await requireRole(request, [UserRole.ADMIN]);
   if (!guard.ok) return guard.response;
-  const { id } = await context.params;
 
   const invite = await prisma.userInvite.findUnique({
     where: { id },

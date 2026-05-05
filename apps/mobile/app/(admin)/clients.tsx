@@ -16,6 +16,7 @@ import {
 import { MotiView } from "@/components/ui/styled";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { AppSheet } from "@/components/ui/sheet";
+import { ConfirmSheet } from "@/components/ui/confirm-sheet";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState, ErrorState } from "@/components/ui/states";
@@ -77,6 +78,7 @@ export default function AdminClients() {
   // Delete confirmation — separate from the actions sheet so a stray tap
   // can't soft-delete a client.
   const [showDeleteFor, setShowDeleteFor] = useState<string | null>(null);
+  const [confirmRevokeId, setConfirmRevokeId] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
   // ── Form state ────────────────────────────────────────────────────────────
@@ -102,7 +104,10 @@ export default function AdminClients() {
   });
   const revokeMutation = useMutation({
     ...invitesQueries.revoke(),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["invites"] }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["invites"] });
+      setConfirmRevokeId(null);
+    },
   });
   const resendMutation = useMutation({
     ...invitesQueries.resend(),
@@ -400,7 +405,7 @@ export default function AdminClients() {
                           </Text>
                         </Pressable>
                         <Pressable
-                          onPress={() => revokeMutation.mutate(invite.id)}
+                          onPress={() => setConfirmRevokeId(invite.id)}
                           disabled={revokeMutation.isPending}
                           className="flex-1 flex-row items-center justify-center gap-1.5 py-2 rounded-lg"
                           style={{ backgroundColor: "rgba(255,0,0,0.08)" }}
@@ -793,6 +798,23 @@ export default function AdminClients() {
         </AppSheet>
       </View>
       </ScrollView>
+      <ConfirmSheet
+        open={!!confirmRevokeId}
+        onOpenChange={(o) => !o && setConfirmRevokeId(null)}
+        title={t("confirm.revokeInviteTitle")}
+        message={t("confirm.revokeInviteMessage")}
+        confirmLabel={t("confirm.revokeInviteConfirm")}
+        loading={revokeMutation.isPending}
+        errorMessage={
+          revokeMutation.isError
+            ? (revokeMutation.error as Error)?.message ?? null
+            : null
+        }
+        onConfirm={() => {
+          if (!confirmRevokeId) return;
+          revokeMutation.mutate(confirmRevokeId);
+        }}
+      />
     </ScreenContainerRaw>
   );
 }

@@ -237,7 +237,22 @@
     "languageSr": "Srpski",
     "languageEn": "English",
     "a11yOpenProfile": "Otvori profil",
-    "a11yGoBack": "Nazad"
+    "a11yGoBack": "Nazad",
+    "cancel": "Otkaži"
+  },
+  "confirm": {
+    "deletePackageTitle": "Obrisati tip paketa?",
+    "deletePackageMessage": "Tip paketa će biti uklonjen. Postojeći klijentski paketi neće biti dirnuti.",
+    "deletePackageConfirm": "Obriši tip paketa",
+    "deleteSeriesTitle": "Obrisati seriju?",
+    "deleteSeriesMessage": "Svi budući termini bez rezervacija u ovoj seriji biće uklonjeni.",
+    "deleteSeriesConfirm": "Obriši seriju",
+    "cancelSessionTitle": "Otkazati termin?",
+    "cancelSessionMessage": "Prijavljeni klijenti i dodeljeni trener biće obavešteni.",
+    "cancelSessionConfirm": "Otkaži termin",
+    "revokeInviteTitle": "Povući pozivnicu?",
+    "revokeInviteMessage": "Link za pozivnicu odmah prestaje da radi.",
+    "revokeInviteConfirm": "Povuci pozivnicu"
   },
   "validation": {
     "required": "Obavezno",

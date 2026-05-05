@@ -8,6 +8,7 @@ import Feather from "@expo/vector-icons/Feather";
 import dayjs from "dayjs";
 import { MotiView } from "@/components/ui/styled";
 import { AppSheet } from "@/components/ui/sheet";
+import { ConfirmSheet } from "@/components/ui/confirm-sheet";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { NumberRollup } from "@/components/ui/number-rollup";
@@ -76,6 +77,8 @@ export default function AdminSchedule() {
   } | null>(null);
   const [editScope, setEditScope] = useState<"session" | "series">("session");
   const [isRecurring, setIsRecurring] = useState(false);
+  const [confirmDeleteSeries, setConfirmDeleteSeries] = useState(false);
+  const [confirmCancelSession, setConfirmCancelSession] = useState(false);
   const [createIsActive, setCreateIsActive] = useState(true);
 
   const displayDate = dayjs(selectedDate);
@@ -148,6 +151,7 @@ export default function AdminSchedule() {
     ...sessionsQueries.update(),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["sessions"] });
+      setConfirmCancelSession(false);
       setShowEdit(null);
     },
   });
@@ -162,6 +166,7 @@ export default function AdminSchedule() {
     ...sessionsQueries.deleteRecurring(),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["sessions"] });
+      setConfirmDeleteSeries(false);
       setShowEdit(null);
     },
   });
@@ -943,13 +948,7 @@ export default function AdminSchedule() {
               <Button
                 variant="danger"
                 disabled={updateMutation.isPending}
-                onPress={() =>
-                  showEdit &&
-                  updateMutation.mutate({
-                    id: showEdit.sessionId,
-                    status: "CANCELED",
-                  })
-                }
+                onPress={() => setConfirmCancelSession(true)}
               >
                 {t("admin.schedule.cancelSession")}
               </Button>
@@ -1157,10 +1156,7 @@ export default function AdminSchedule() {
                   deleteSeriesMutation.isPending ||
                   !showEdit?.recurringScheduleId
                 }
-                onPress={() => {
-                  if (!showEdit?.recurringScheduleId) return;
-                  deleteSeriesMutation.mutate(showEdit.recurringScheduleId);
-                }}
+                onPress={() => setConfirmDeleteSeries(true)}
               >
                 {t("admin.schedule.deleteSeries")}
               </Button>
@@ -1172,18 +1168,49 @@ export default function AdminSchedule() {
                   }
                 />
               ) : null}
-              {deleteSeriesMutation.isError ? (
-                <ErrorState
-                  message={
-                    (deleteSeriesMutation.error as Error)?.message ??
-                    t("admin.schedule.updateError")
-                  }
-                />
-              ) : null}
             </>
           )}
         </View>
       </AppSheet>
+      <ConfirmSheet
+        open={confirmDeleteSeries}
+        onOpenChange={setConfirmDeleteSeries}
+        title={t("confirm.deleteSeriesTitle")}
+        message={t("confirm.deleteSeriesMessage")}
+        confirmLabel={t("confirm.deleteSeriesConfirm")}
+        loading={deleteSeriesMutation.isPending}
+        errorMessage={
+          deleteSeriesMutation.isError
+            ? (deleteSeriesMutation.error as Error)?.message ??
+              t("admin.schedule.updateError")
+            : null
+        }
+        onConfirm={() => {
+          if (!showEdit?.recurringScheduleId) return;
+          deleteSeriesMutation.mutate(showEdit.recurringScheduleId);
+        }}
+      />
+      <ConfirmSheet
+        open={confirmCancelSession}
+        onOpenChange={setConfirmCancelSession}
+        title={t("confirm.cancelSessionTitle")}
+        message={t("confirm.cancelSessionMessage")}
+        confirmLabel={t("confirm.cancelSessionConfirm")}
+        loading={updateMutation.isPending}
+        errorMessage={
+          updateMutation.isError && confirmCancelSession
+            ? (updateMutation.error as Error)?.message ??
+              t("admin.schedule.updateError")
+            : null
+        }
+        onConfirm={() => {
+          if (!showEdit) return;
+          updateMutation.mutate({
+            id: showEdit.sessionId,
+            status: "CANCELED",
+          });
+        }}
+      />
     </ScreenContainerRaw>
   );
 }

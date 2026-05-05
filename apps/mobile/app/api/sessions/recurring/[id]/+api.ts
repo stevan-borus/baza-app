@@ -5,12 +5,11 @@ import { fail, ok } from "@/lib/server/http";
 import { prisma } from "@/lib/server/prisma";
 import { tryCatch } from "@/lib/server/try-catch";
 
-type RouteContext = { params: Promise<{ id: string }> };
+type RouteParams = Record<string, string>;
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-export async function GET(_request: Request, context: RouteContext) {
-  const { id } = await context.params;
+export async function GET(_request: Request, { id }: RouteParams) {
   const schedule = await prisma.recurringSchedule.findUnique({
     where: { id },
   });
@@ -27,10 +26,9 @@ export async function GET(_request: Request, context: RouteContext) {
   return ok({ success: true, schedule, futureBookingsCount });
 }
 
-export async function PATCH(request: Request, context: RouteContext) {
+export async function PATCH(request: Request, { id }: RouteParams) {
   const guard = await requireRole(request, [UserRole.ADMIN]);
   if (!guard.ok) return guard.response;
-  const { id } = await context.params;
 
   const bodyResult = await tryCatch(request.json());
   const body = bodyResult.error ? null : bodyResult.data;
@@ -226,10 +224,9 @@ export async function PATCH(request: Request, context: RouteContext) {
   return ok({ success: true, schedule: result });
 }
 
-export async function DELETE(request: Request, context: RouteContext) {
+export async function DELETE(request: Request, { id }: RouteParams) {
   const guard = await requireRole(request, [UserRole.ADMIN]);
   if (!guard.ok) return guard.response;
-  const { id } = await context.params;
 
   const blocked = await prisma.session.findFirst({
     where: {

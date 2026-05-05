@@ -235,7 +235,22 @@
     "languageSr": "Srpski",
     "languageEn": "English",
     "a11yOpenProfile": "Open profile",
-    "a11yGoBack": "Go back"
+    "a11yGoBack": "Go back",
+    "cancel": "Cancel"
+  },
+  "confirm": {
+    "deletePackageTitle": "Delete package type?",
+    "deletePackageMessage": "This package type will be removed. Existing client packages won't be affected.",
+    "deletePackageConfirm": "Delete package type",
+    "deleteSeriesTitle": "Delete series?",
+    "deleteSeriesMessage": "All future un-booked sessions in this series will be removed.",
+    "deleteSeriesConfirm": "Delete series",
+    "cancelSessionTitle": "Cancel session?",
+    "cancelSessionMessage": "Booked clients and the assigned trainer will be notified.",
+    "cancelSessionConfirm": "Cancel session",
+    "revokeInviteTitle": "Revoke invite?",
+    "revokeInviteMessage": "The invite link will stop working immediately.",
+    "revokeInviteConfirm": "Revoke invite"
   },
   "validation": {
     "required": "Required",

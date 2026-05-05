@@ -5,12 +5,11 @@ import { fail, ok } from "@/lib/server/http";
 import { prisma } from "@/lib/server/prisma";
 import { tryCatch } from "@/lib/server/try-catch";
 
-type RouteContext = { params: Promise<{ id: string }> };
+type RouteParams = Record<string, string>;
 
-export async function PATCH(request: Request, context: RouteContext) {
+export async function PATCH(request: Request, { id }: RouteParams) {
   const guard = await requireRole(request, [UserRole.ADMIN]);
   if (!guard.ok) return guard.response;
-  const { id } = await context.params;
 
   const bodyResult = await tryCatch(request.json());
   const body = bodyResult.error ? null : bodyResult.data;
@@ -36,10 +35,9 @@ export async function PATCH(request: Request, context: RouteContext) {
   return ok({ success: true, packageType });
 }
 
-export async function DELETE(request: Request, context: RouteContext) {
+export async function DELETE(request: Request, { id }: RouteParams) {
   const guard = await requireRole(request, [UserRole.ADMIN]);
   if (!guard.ok) return guard.response;
-  const { id } = await context.params;
   // Refuse deletion if any client package references this type.
   const inUse = await prisma.clientPackage.findFirst({
     where: { packageTypeId: id },

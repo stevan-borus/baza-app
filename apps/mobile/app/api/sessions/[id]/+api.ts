@@ -8,12 +8,11 @@ import { prisma } from "@/lib/server/prisma";
 import { trainerOwnsSession } from "@/lib/server/trainer-scope";
 import { tryCatch } from "@/lib/server/try-catch";
 
-type RouteContext = { params: Promise<{ id: string }> };
+type RouteParams = Record<string, string>;
 
-export async function PATCH(request: Request, context: RouteContext) {
+export async function PATCH(request: Request, { id }: RouteParams) {
   const guard = await requireRole(request, [UserRole.ADMIN, UserRole.TRAINER]);
   if (!guard.ok) return guard.response;
-  const { id } = await context.params;
 
   // Trainers may only edit sessions they are assigned to.
   if (guard.user.role === UserRole.TRAINER) {

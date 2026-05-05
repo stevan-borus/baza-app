@@ -10,6 +10,7 @@ import { Pressable, RefreshControl, ScrollView, Text, View } from "react-native"
 import { MotiView } from "@/components/ui/styled";
 import dayjs from "dayjs";
 import { AppSheet } from "@/components/ui/sheet";
+import { ConfirmSheet } from "@/components/ui/confirm-sheet";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState, ErrorState } from "@/components/ui/states";
@@ -68,6 +69,7 @@ export default function AdminPackages() {
   const bottomPad = useTabBarBottomPadding();
   const [showCreate, setShowCreate] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [assignmentFilter, setAssignmentFilter] = useState<AssignmentFilter>("all");
   const [form, setForm] = useState({
@@ -136,6 +138,7 @@ export default function AdminPackages() {
     ...packagesQueries.deleteType(),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["packages", "types"] });
+      setConfirmDelete(false);
       setEditingId(null);
     },
   });
@@ -472,10 +475,7 @@ export default function AdminPackages() {
             <Button
               variant="danger"
               disabled={deleteTypeMutation.isPending || !editingId}
-              onPress={() => {
-                if (!editingId) return;
-                deleteTypeMutation.mutate(editingId);
-              }}
+              onPress={() => setConfirmDelete(true)}
             >
               {t("admin.manage.deletePackage")}
             </Button>
@@ -487,13 +487,25 @@ export default function AdminPackages() {
                 }
               />
             ) : null}
-            {deleteTypeMutation.isError ? (
-              <ErrorState
-                message={(deleteTypeMutation.error as Error)?.message ?? ""}
-              />
-            ) : null}
           </View>
         </AppSheet>
+        <ConfirmSheet
+          open={confirmDelete}
+          onOpenChange={setConfirmDelete}
+          title={t("confirm.deletePackageTitle")}
+          message={t("confirm.deletePackageMessage")}
+          confirmLabel={t("confirm.deletePackageConfirm")}
+          loading={deleteTypeMutation.isPending}
+          errorMessage={
+            deleteTypeMutation.isError
+              ? (deleteTypeMutation.error as Error)?.message ?? null
+              : null
+          }
+          onConfirm={() => {
+            if (!editingId) return;
+            deleteTypeMutation.mutate(editingId);
+          }}
+        />
       </View>
       </ScrollView>
     </ScreenContainerRaw>
