@@ -22,11 +22,8 @@ export async function GET(request: Request) {
 
   const { start, end } = getMonthRange(parsed.data.month);
 
-  // Visibility rules:
-  //   - Admin: sees everything (including hidden), so they can manage drafts.
-  //   - Trainer (strict): sees only assigned + active (one-time) / active series.
-  //   - Client: sees only active (one-time) and active series, AND only those
-  //     class types the client has an eligible pack for at session.startsAt.
+  // Admin sees hidden/draft sessions; trainer + client only see active.
+  // Clients are additionally filtered by package eligibility further down.
   const isAdmin = guard.user.role === UserRole.ADMIN;
   const visibilityFilter = isAdmin
     ? {}
@@ -74,16 +71,12 @@ export async function GET(request: Request) {
     orderBy: { startsAt: "asc" },
   });
 
-  // Class-scoped filter for clients: hide sessions whose classType the client
-  // has no spendable pack for at session.startsAt. We evaluate per-session via
-  // findEligibleClientPackage so all eligibility rules (pause window, future
-  // startsAt, expiry extended by paused time, sessionsRemaining > 0) apply.
   let visibleSessions = sessions;
   if (guard.user.role === UserRole.CLIENT) {
     const clientProfileId = guard.user.clientProfile?.id;
     if (!clientProfileId) {
-      // No profile -> no bookings possible -> empty list, not 404 — clients on
-      // the calendar should see "no package" UX state.
+      // No profile means no bookings possible; render an empty calendar
+      // rather than 404 so the "buy a package" UX state shows.
       visibleSessions = [];
     } else {
       const [clientPackages, packagePauses] = await Promise.all([

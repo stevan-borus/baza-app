@@ -395,9 +395,6 @@ export default function AdminBilling() {
                   clientUserId: form.clientUserId,
                   amount: parseInt(form.amount, 10),
                   method: form.method,
-                  // Recording payment in this form means money is in hand —
-                  // the resulting BillingRecord and (if a package is selected)
-                  // its ClientPackage are CONFIRMED in the same transaction.
                   status: "CONFIRMED",
                   notes: form.notes || undefined,
                   packageTypeId: form.packageTypeId || undefined,

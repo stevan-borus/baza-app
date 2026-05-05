@@ -1,10 +1,3 @@
-/**
- * Test DB helper. Each integration test calls `resetDb()` in `beforeEach` to
- * truncate the tables we mutate, then seeds the rows needed for that test.
- *
- * Auth is mocked at the module boundary with `vi.mock("@/lib/server/auth-guards", ...)`
- * — see `auth-mock.ts` for the helper. We do NOT exercise better-auth in tests.
- */
 import { prisma } from "@/lib/server/prisma";
 
 export async function resetDb() {

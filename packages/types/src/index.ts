@@ -311,9 +311,6 @@ export const billingRecordInputSchema = BillingRecordInputSchema.pick({
 }).extend({
   amount: z.number().int().positive(),
   notes: z.string().max(500).optional(),
-  // Recording payment in the admin form means "money received"; status defaults
-  // to CONFIRMED on the server when omitted. We keep it acceptable in the body
-  // for callers (tests, future flows) that need to record PENDING/CANCELED.
   status: z.enum(["PENDING", "CONFIRMED", "CANCELED"]).optional(),
   packageTypeId: z.uuid().optional(),
   activatePackageOnConfirm: z.boolean().default(true),
@@ -330,7 +327,6 @@ export const packageTypeInputSchema = PackageTypeInputSchema.pick({
   sessionCount: z.number().int().positive(),
   validityDays: z.number().int().positive(),
   lateCancelHours: z.number().int().nonnegative().default(12),
-  // Required: each PackageType is scoped to exactly one Programme (ClassType).
   classTypeId: z.uuid(),
 });
 export type PackageTypeInput = z.infer<typeof packageTypeInputSchema>;

@@ -44,26 +44,15 @@ export async function POST(request: Request) {
   const parsed = billingRecordInputSchema.safeParse(body);
   if (!parsed.success) return fail("Invalid payload", 400, parsed.error);
 
-  // Recording payment in the admin form means "money received" — default to
-  // CONFIRMED so the BillingRecord and ClientPackage stay in sync without
-  // requiring the caller to pass `status` explicitly.
   const status = parsed.data.status ?? "CONFIRMED";
 
-  // TODO(billing): `activatePackageOnConfirm: false` is currently dead — every
-  //   live caller (admin billing form) sends true when a packageTypeId is
-  //   selected. If we ever support "record payment, activate package later",
-  //   we'll need a follow-up endpoint that activates a package against an
-  //   existing BillingRecord. Until then the flag stays so the schema is
-  //   compatible with future additions.
+  // TODO(billing): `activatePackageOnConfirm: false` is dead today — keep the
+  // flag for a future "activate later" endpoint we haven't built yet.
   const shouldActivatePackage =
     status === "CONFIRMED" &&
     !!parsed.data.packageTypeId &&
     parsed.data.activatePackageOnConfirm;
 
-  // Pre-load the activation prerequisites OUTSIDE the transaction so we can
-  // 4xx cleanly without writing a half-state. The actual create+create runs
-  // atomically so a transient DB error during ClientPackage insert rolls back
-  // the BillingRecord too.
   let clientProfileId: string | null = null;
   let packageTypeRow: {
     id: string;
@@ -78,7 +67,6 @@ export async function POST(request: Request) {
         where: { userId: parsed.data.clientUserId },
         select: { id: true },
       }),
-      // Required for activation: classTypeId + lateCancelHours snapshot fields.
       prisma.packageType.findUnique({
         where: { id: parsed.data.packageTypeId! },
         select: {

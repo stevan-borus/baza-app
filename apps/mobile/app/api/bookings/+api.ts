@@ -36,8 +36,6 @@ export async function POST(request: Request) {
     return fail("Session not available", 404);
 
   if (action === "BOOK") {
-    // Booking requires an eligible package (active, within validity, not paused,
-    // matching the session's class type) at session time.
     const [clientPackages, packagePauses] = await Promise.all([
       prisma.clientPackage.findMany({
         where: { clientProfileId, classTypeId: session.classTypeId },
@@ -66,7 +64,6 @@ export async function POST(request: Request) {
     );
 
     if (!eligiblePackage) {
-      // 409: client has no pack scoped to this Programme that is currently spendable.
       return fail("no_package_for_class", 409);
     }
 
@@ -137,9 +134,6 @@ export async function POST(request: Request) {
       clientPackage: {
         select: {
           id: true,
-          // lateCancelHours is snapshotted on the ClientPackage at creation —
-          // booking history must respect the policy in force when the pack was
-          // sold, even if the parent PackageType template changes later.
           lateCancelHours: true,
         },
       },

@@ -1,10 +1,3 @@
-/**
- * Integration tests for POST /api/billing.
- *
- * Covers the new atomic flow: BillingRecord + ClientPackage are created in a
- * single transaction, ClientPackage snapshots classTypeId + lateCancelHours
- * from the parent PackageType, and the default status is CONFIRMED.
- */
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { setMockUser } from "./auth-mock";
 import { resetDb } from "./setup-db";
@@ -119,7 +112,6 @@ describe("POST /api/billing", () => {
         clientUserId: clientUser.id,
         amount: 11000,
         method: "CASH",
-        // status omitted on purpose
         packageTypeId: packageType.id,
         activatePackageOnConfirm: true,
       }),
@@ -140,8 +132,6 @@ describe("POST /api/billing", () => {
       clientProfile: null,
     });
 
-    // Reference a non-existent PackageType id — endpoint should 404 before
-    // writing anything, leaving zero BillingRecords behind.
     const res = await POST(
       buildJsonRequest({
         clientUserId: clientUser.id,

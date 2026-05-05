@@ -1,14 +1,5 @@
-/**
- * Loads test-only env defaults BEFORE any application module is imported. The
- * mobile app's `env.server.ts` is strict — it parses with Zod at import time —
- * so we must populate every required key here. Non-secret values only.
- *
- * We use `||=` (not `??=`) because Vite/Vitest may have populated empty strings
- * from a checked-out `.env` file; we want test-friendly defaults to win over
- * blank values.
- */
-// Vite/Vitest pre-populates BASE_URL with "/" — that's not a valid URL, so we
-// always overwrite it for the integration env. Other vars use blank-only fill.
+// Vitest pre-populates BASE_URL with "/", which fails Zod URL validation in
+// env.server.ts. Always overwrite. Other vars use blank-only fill below.
 process.env.BASE_URL = "http://localhost:3010";
 
 function setIfBlank(key: string, value: string) {

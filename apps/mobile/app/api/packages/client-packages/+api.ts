@@ -40,12 +40,9 @@ export async function GET(request: Request) {
       }),
     ]);
 
-    // Dashboard "active package" is class-agnostic on purpose: this drives the
-    // profile/home pill that says "You have an active package". The class filter
-    // is enforced at booking and availability time, not here. We pick the most
-    // recent pack that is otherwise valid (started, has sessions, not expired,
-    // not paused) by ignoring the class-type filter — `findEligibleClientPackage`
-    // is class-scoped, so we evaluate that per-classTypeId and report any hit.
+    // Dashboard "active package" is class-agnostic on purpose — drives the
+    // home/profile pill, not the bookable calendar. Class scope is enforced at
+    // booking + availability time. Here we just look for ANY eligible pack.
     const now = new Date();
     const activePackage = (() => {
       const distinctClassTypeIds = Array.from(
@@ -139,9 +136,6 @@ export async function POST(request: Request) {
   const startsAt = new Date(parsed.data.startsAt);
   if (Number.isNaN(startsAt.getTime())) return fail("Invalid startsAt date", 400);
 
-  // Snapshot classTypeId and lateCancelHours from the parent PackageType so
-  // future template edits don't retroactively change a sold pack's policy or
-  // scope. ClientPackage is the source of truth from creation onward.
   const packageType = await prisma.packageType.findUnique({
     where: { id: parsed.data.packageTypeId },
     select: {

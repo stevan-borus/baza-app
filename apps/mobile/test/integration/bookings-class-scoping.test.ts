@@ -1,6 +1,3 @@
-/**
- * Integration tests for POST /api/bookings — class-scoping enforcement at booking time.
- */
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { setMockUser } from "./auth-mock";
 import { resetDb } from "./setup-db";
@@ -19,7 +16,6 @@ vi.mock("@/lib/server/auth-guards", async () => {
   };
 });
 
-// Notifications fire-and-forget — no need to actually push during tests.
 vi.mock("@/lib/server/notifications", () => ({
   createSystemNotification: vi.fn(async () => undefined),
 }));
@@ -73,7 +69,6 @@ async function createPackage(opts: {
   startsAt?: Date;
   expiresAt?: Date;
 }) {
-  // Ensure a parent PackageType exists.
   const packageType = await prisma.packageType.create({
     data: {
       name: `pt-${Math.random()}`,
@@ -116,7 +111,6 @@ describe("POST /api/bookings class-scoping", () => {
 
   it("returns 409 with no_package_for_class when client has only an other-class pack", async () => {
     const { client, clientProfile, trainer, reformer, energy } = await seed();
-    // Client owns only an Energy pack — they're booking a Reformer session.
     await createPackage({
       clientProfileId: clientProfile.id,
       classTypeId: energy.id,

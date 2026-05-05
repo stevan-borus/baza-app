@@ -709,10 +709,6 @@ export default function AdminClients() {
           </View>
         </AppSheet>
 
-        {/* Assign Package Sheet — this is the comp / friends-and-family path
-            (no BillingRecord). The heading makes that explicit so admins
-            don't accidentally use it for paid packages. Use the billing form
-            for those: it creates the package atomically with the payment. */}
         <AppSheet open={!!showAssignPackage} onOpenChange={() => setShowAssignPackage(null)}>
           <View className="flex-col gap-4">
             <SheetHeader

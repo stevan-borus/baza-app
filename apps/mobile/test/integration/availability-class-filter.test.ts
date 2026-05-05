@@ -1,6 +1,3 @@
-/**
- * Integration tests for GET /api/sessions/availability — class-scoped filtering for clients.
- */
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { setMockUser } from "./auth-mock";
 import { resetDb } from "./setup-db";
@@ -173,7 +170,6 @@ describe("GET /api/sessions/availability class-scoped client filtering", () => {
     await makePackage({
       clientProfileId: clientProfile.id,
       classTypeId: reformer.id,
-      // Expired before the session date.
       startsAt: new Date("2026-04-01T00:00:00Z"),
       expiresAt: new Date("2026-05-30T00:00:00Z"),
     });
@@ -197,7 +193,6 @@ describe("GET /api/sessions/availability class-scoped client filtering", () => {
     await makePackage({
       clientProfileId: clientProfile.id,
       classTypeId: reformer.id,
-      // Pack starts AFTER the session.
       startsAt: new Date("2026-07-01T00:00:00Z"),
       expiresAt: new Date("2026-08-01T00:00:00Z"),
     });
@@ -222,7 +217,6 @@ describe("GET /api/sessions/availability class-scoped client filtering", () => {
       clientProfileId: clientProfile.id,
       classTypeId: reformer.id,
     });
-    // Pause covers the session date.
     await prisma.packagePause.create({
       data: {
         clientProfileId: clientProfile.id,

@@ -10,10 +10,6 @@ const users = [
 
 const PASSWORD = "Steva123!";
 
-/**
- * Class type catalogue mirrors the marketing site's programme list. Names are the
- * canonical labels we look up by when seeding package types.
- */
 const CLASS_TYPES = [
   { name: "Reformer pilates", maxClients: 6, durationMins: 60 },
   { name: "Energy pilates", maxClients: 12, durationMins: 60 },
@@ -21,14 +17,6 @@ const CLASS_TYPES = [
   { name: "Golden age pilates", maxClients: 10, durationMins: 60 },
 ] as const;
 
-/**
- * Package type catalogue per the baza-landing programme prices. Each PackageType is
- * scoped to exactly one ClassType (Programme). Prices are documentation-only — the
- * billing flow stores the admin-entered amount on `BillingRecord.amount`.
- *
- * Validity: marketing copy says "12 termina"/"8 termina" (sessions). Default to 30
- * days unless we adjust later — there is no marketing-stated validity.
- */
 const PACKAGE_TYPES = [
   {
     name: "Reformer 12",
@@ -101,9 +89,7 @@ async function seedUsers() {
 }
 
 async function seedClassTypesAndPackages() {
-  // Wipe existing PackageTypes/ClientPackages so we can re-create the marketing-aligned
-  // catalogue with the new required classTypeId column. Order matters: ClientPackage
-  // references PackageType.
+  // Order matters: ClientPackage references PackageType.
   await prisma.clientPackage.deleteMany({});
   await prisma.packageType.deleteMany({});
 
