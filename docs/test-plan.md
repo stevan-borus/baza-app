@@ -235,6 +235,12 @@ The test-suite naming + structure conventions are already established — see th
 Plan E2E line items that depend on these handlers:
 - E2E #13–#14 (Edit/Delete ClassType), #19–#20 (Edit/Delete StudioRoom), #23 (Delete single session), #25 (Edit single occurrence — already exists), #26 (Edit whole series), #27 (Delete single occurrence), #28 (Delete whole series), #29 (room double-booking → rejected), #30 (trainer double-booking → rejected), #43–#44 (Trainer edits/deletes a note).
 
+### Other implementation gaps blocking Phase A E2E
+These are not on the API-gaps subagent's brief but the E2E spec scaffolding depends on them. Add as part of Phase A E2E execution work (or as a small parallel branch).
+
+- **Auth form testIDs.** The Studio sign-in screen (`apps/mobile/app/sign-in.tsx`) does not set `auth-email-input`, `auth-password-input`, or `auth-submit-button` testIDs. The Phase B Maestro flows used these and the Playwright auth-smoke spec (`test/e2e/auth-smoke.spec.ts`) is scaffolded against them. Add `testID` props on `Input`/`PasswordInput`/`StudioButton` invocations in sign-in, reset-password, and complete-invite screens. Same for the `tab-clients`/`tab-index`/`tab-calendar`/`tab-notes` tab IDs the smoke test asserts after sign-in — confirm those still exist in the (admin)/(trainer)/(client) layout files.
+- **Browser binaries.** `pnpm exec playwright install --with-deps chromium` from `apps/mobile/` (or `pnpm test:e2e:install`). Not run in this branch — left as a one-shot post-merge.
+
 ## Out of scope for Phase A
 
 - Maestro native parity — Phase B follow-up.

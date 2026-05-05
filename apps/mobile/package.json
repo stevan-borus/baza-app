@@ -25,7 +25,9 @@
     "test:unit": "vitest run --project unit",
     "test:integration": "vitest run --project integration",
     "test:db:prepare": "DATABASE_URL=postgresql://postgres:postgres@localhost:5434/baza_app?schema=public prisma migrate reset --force",
-    "test:db:seed-e2e": "DATABASE_URL=postgresql://postgres:postgres@localhost:5434/baza_app?schema=public tsx scripts/test/seed-e2e.ts"
+    "test:db:seed-e2e": "DATABASE_URL=postgresql://postgres:postgres@localhost:5434/baza_app?schema=public tsx scripts/test/seed-e2e.ts",
+    "test:e2e": "playwright test",
+    "test:e2e:install": "playwright install --with-deps chromium"
   },
   "dependencies": {
     "@baza/i18n": "workspace:*",
@@ -94,6 +96,7 @@
     "schema": "prisma/schema.prisma"
   },
   "devDependencies": {
+    "@playwright/test": "^1.59.1",
     "@types/node": "^25",
     "@types/pg": "^8.16.0",
     "@types/react": "~19.2.0",
