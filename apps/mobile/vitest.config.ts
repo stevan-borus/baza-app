@@ -2,6 +2,9 @@ import path from "node:path";
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({
+  esbuild: {
+    jsx: "automatic",
+  },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "."),
@@ -15,7 +18,7 @@ export default defineConfig({
         extends: true,
         test: {
           name: "unit",
-          include: ["test/unit/**/*.test.ts"],
+          include: ["test/unit/**/*.test.{ts,tsx}"],
           environment: "node",
         },
       },
