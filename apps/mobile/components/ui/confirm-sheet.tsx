@@ -17,6 +17,8 @@ type ConfirmSheetProps = {
   loading?: boolean;
   /** Optional inline error rendered above the buttons. */
   errorMessage?: string | null;
+  /** Optional testID forwarded to the confirm Button. */
+  testID?: string;
   onConfirm: () => void;
 };
 
@@ -36,6 +38,7 @@ export function ConfirmSheet({
   tone = "danger",
   loading = false,
   errorMessage,
+  testID,
   onConfirm,
 }: ConfirmSheetProps) {
   const { t } = useTranslation();
@@ -64,6 +67,7 @@ export function ConfirmSheet({
             variant={tone}
             disabled={loading}
             onPress={onConfirm}
+            testID={testID}
           >
             {confirmLabel}
           </Button>

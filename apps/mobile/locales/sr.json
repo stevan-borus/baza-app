@@ -256,7 +256,16 @@
     "cancelSessionConfirm": "Otkaži termin",
     "revokeInviteTitle": "Povući pozivnicu?",
     "revokeInviteMessage": "Link za pozivnicu odmah prestaje da radi.",
-    "revokeInviteConfirm": "Povuci pozivnicu"
+    "revokeInviteConfirm": "Povuci pozivnicu",
+    "deleteClassTypeTitle": "Obriši tip treninga?",
+    "deleteClassTypeMessage": "Ova akcija je trajna i utiče na sve buduće termine.",
+    "deleteClassTypeConfirm": "Obriši",
+    "deleteRoomTitle": "Obriši salu?",
+    "deleteRoomMessage": "Sala će biti obrisana iz svih budućih termina.",
+    "deleteRoomConfirm": "Obriši",
+    "deleteNoteTitle": "Obriši belešku?",
+    "deleteNoteMessage": "Beleška će biti trajno uklonjena.",
+    "deleteNoteConfirm": "Obriši"
   },
   "validation": {
     "required": "Obavezno",
@@ -466,6 +475,8 @@
       "classTypes": "Tipovi treninga",
       "rooms": "Sale",
       "sheetNewClassType": "Novi tip treninga",
+      "sheetEditClassType": "Izmeni tip treninga",
+      "sheetEditRoom": "Izmeni salu",
       "classTypeSummary": "{{duration}} min · Maks {{max}}",
       "placeholderMaxClients": "Max klijenata",
       "placeholderDurationMins": "Trajanje (min)",
@@ -524,7 +535,10 @@
       "filterAll": "Sve",
       "filterThisWeek": "Ova nedelja",
       "filterByClient": "Po klijentu",
+      "filterBySession": "Po terminu",
       "pickClientTitle": "Filtriraj po klijentu",
+      "pickSessionTitle": "Filtriraj po terminu",
+      "editSheetTitle": "Izmeni belešku",
       "unknownClient": "Nepoznat klijent"
     },
     "clients": {
