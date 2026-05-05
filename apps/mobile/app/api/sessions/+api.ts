@@ -3,6 +3,7 @@ import { UserRole } from "@/generated/prisma";
 import { requireRole } from "@/lib/server/auth-guards";
 import { fail, ok } from "@/lib/server/http";
 import { prisma } from "@/lib/server/prisma";
+import { findScheduleConflict } from "@/lib/server/schedule-conflict";
 import { tryCatch } from "@/lib/server/try-catch";
 
 export async function GET(request: Request) {
@@ -79,14 +80,35 @@ export async function POST(request: Request) {
     return fail("Trainers can only create sessions assigned to themselves", 403);
   }
 
+  const trainerUserId =
+    guard.user.role === UserRole.TRAINER
+      ? guard.user.id
+      : parsed.data.trainerUserId;
+
+  // Schedule conflict: refuse if another live session overlaps on the same
+  // room (when set) OR the same trainer. CANCELED sessions don't block.
+  const conflict = await findScheduleConflict({
+    startsAt,
+    endsAt,
+    roomId: parsed.data.roomId,
+    trainerUserId,
+  });
+  if (conflict) {
+    return Response.json(
+      {
+        success: false,
+        message: "Schedule conflict",
+        conflict,
+      },
+      { status: 409 },
+    );
+  }
+
   const session = await prisma.session.create({
     data: {
       classTypeId: parsed.data.classTypeId,
       roomId: parsed.data.roomId,
-      trainerUserId:
-        guard.user.role === UserRole.TRAINER
-          ? guard.user.id
-          : parsed.data.trainerUserId,
+      trainerUserId,
       startsAt,
       endsAt,
       capacity: parsed.data.capacity,

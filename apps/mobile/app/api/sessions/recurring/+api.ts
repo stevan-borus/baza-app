@@ -3,6 +3,7 @@ import { UserRole } from "@/generated/prisma";
 import { requireRole } from "@/lib/server/auth-guards";
 import { fail, ok } from "@/lib/server/http";
 import { prisma } from "@/lib/server/prisma";
+import { findScheduleConflict } from "@/lib/server/schedule-conflict";
 import { tryCatch } from "@/lib/server/try-catch";
 
 export async function POST(request: Request) {
@@ -72,6 +73,27 @@ export async function POST(request: Request) {
   }
   if (createData.length === 0) {
     return fail("No sessions to create — selected weekdays produce no slots", 400);
+  }
+
+  // Schedule conflict: check the first generated slot against existing live
+  // sessions for the same room (when set) or trainer. Phase A is "good
+  // enough" — full per-occurrence conflict scan can come later.
+  const firstSlot = createData[0]!;
+  const conflict = await findScheduleConflict({
+    startsAt: firstSlot.startsAt,
+    endsAt: firstSlot.endsAt,
+    roomId: firstSlot.roomId,
+    trainerUserId: firstSlot.trainerUserId,
+  });
+  if (conflict) {
+    return Response.json(
+      {
+        success: false,
+        message: "Schedule conflict",
+        conflict,
+      },
+      { status: 409 },
+    );
   }
 
   const timeOfDayMins = anchor.getHours() * 60 + anchor.getMinutes();

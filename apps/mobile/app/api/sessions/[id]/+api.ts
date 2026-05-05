@@ -5,6 +5,7 @@ import { fail, ok } from "@/lib/server/http";
 import { createSystemNotification } from "@/lib/server/notifications";
 import { NOTIFICATION_MESSAGE_KEYS } from "@baza/i18n";
 import { prisma } from "@/lib/server/prisma";
+import { findScheduleConflict } from "@/lib/server/schedule-conflict";
 import { trainerOwnsSession } from "@/lib/server/trainer-scope";
 import { tryCatch } from "@/lib/server/try-catch";
 
@@ -33,6 +34,7 @@ export async function PATCH(request: Request, { id }: RouteParams) {
       endsAt: true,
       status: true,
       trainerUserId: true,
+      roomId: true,
       isActive: true,
       recurringScheduleId: true,
       bookings: {
@@ -81,6 +83,34 @@ export async function PATCH(request: Request, { id }: RouteParams) {
     endsAt <= startsAt
   ) {
     return fail("Invalid schedule range", 400);
+  }
+
+  // Schedule conflict: refuse if another live session overlaps on the same
+  // room (when set) OR the same trainer. Excludes the session being edited.
+  const nextRoomId =
+    parsed.data.roomId === undefined ? existing.roomId : parsed.data.roomId;
+  const nextTrainerUserId =
+    guard.user.role === UserRole.TRAINER
+      ? guard.user.id
+      : parsed.data.trainerUserId === undefined
+        ? existing.trainerUserId
+        : parsed.data.trainerUserId;
+  const conflict = await findScheduleConflict({
+    startsAt,
+    endsAt,
+    roomId: nextRoomId,
+    trainerUserId: nextTrainerUserId,
+    excludeSessionId: id,
+  });
+  if (conflict) {
+    return Response.json(
+      {
+        success: false,
+        message: "Schedule conflict",
+        conflict,
+      },
+      { status: 409 },
+    );
   }
 
   const session = await prisma.session.update({
