@@ -591,6 +591,8 @@ export default function AdminSchedule() {
             </View>
 
             <Select
+              testID="session-create-class-type-select"
+              optionTestIDPrefix="session-create-class-type-option"
               placeholder={t("admin.schedule.classType")}
               value={newSession.classTypeId}
               onChange={(v) => {
@@ -613,6 +615,8 @@ export default function AdminSchedule() {
             />
 
             <Select
+              testID="session-create-room-select"
+              optionTestIDPrefix="session-create-room-option"
               placeholder={t("admin.schedule.room")}
               value={newSession.roomId}
               onChange={(v) =>
@@ -630,6 +634,8 @@ export default function AdminSchedule() {
             />
 
             <Select
+              testID="session-create-trainer-select"
+              optionTestIDPrefix="session-create-trainer-option"
               placeholder={t("admin.schedule.trainer")}
               value={newSession.trainerUserId}
               onChange={(v) =>
@@ -733,6 +739,7 @@ export default function AdminSchedule() {
               />
             </View>
             <Button
+              testID="session-create-submit"
               disabled={
                 (isRecurring
                   ? createRecurringMutation.isPending
@@ -929,6 +936,7 @@ export default function AdminSchedule() {
               })()}
 
               <Button
+                testID="session-edit-save-button"
                 disabled={
                   updateMutation.isPending ||
                   !editForm.trainerUserId
@@ -952,6 +960,7 @@ export default function AdminSchedule() {
                 {t("admin.schedule.saveChanges")}
               </Button>
               <Button
+                testID="session-edit-cancel-button"
                 variant="danger"
                 disabled={updateMutation.isPending}
                 onPress={() => setConfirmCancelSession(true)}
@@ -1198,6 +1207,7 @@ export default function AdminSchedule() {
         }}
       />
       <ConfirmSheet
+        testID="session-cancel-confirm-button"
         open={confirmCancelSession}
         onOpenChange={setConfirmCancelSession}
         title={t("confirm.cancelSessionTitle")}

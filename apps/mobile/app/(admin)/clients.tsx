@@ -662,7 +662,7 @@ export default function AdminClients() {
                     testID="client-delete-confirm-button"
                     onPress={() => {
                       updateClientMutation.mutate({
-                        id: client.id,
+                        id: client.user.id,
                         isActive: false,
                       });
                       setShowDeleteFor(null);

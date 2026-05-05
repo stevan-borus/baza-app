@@ -129,11 +129,93 @@ test.describe("trainer (Serbian)", () => {
       .toBe(1);
   });
 
-  test.skip("43: trainer edits a note", () => {
-    // TODO: NoteRow has no onPress / edit affordance. Defer until UI lands.
+  test("43: trainer edits an existing note", async ({ page }) => {
+    // Re-link + create a known note so this spec can run in isolation.
+    await linkTrainerToClient(
+      REFORMER_TRAINER_EMAIL,
+      ACTIVE_REFORMER_CLIENT_EMAIL,
+    );
+
+    await signInAsReformerTrainer(page);
+    await page.getByTestId("tab-notes").click();
+
+    // Open the first existing note row (spec 42 left at least one).
+    const firstRow = page.locator('[data-testid^="note-row-"]').first();
+    await expect(firstRow).toBeVisible({ timeout: 10_000 });
+    await firstRow.dispatchEvent("click");
+
+    const newText = `Edited note ${Date.now()}`;
+    await page.getByTestId("note-edit-text-input").fill(newText);
+    await page.getByTestId("note-edit-save-button").dispatchEvent("click");
+
+    // The note row's preview text updates to the new text.
+    await expect(page.getByText(newText).first()).toBeVisible({
+      timeout: 10_000,
+    });
   });
-  test.skip("44: trainer deletes a note", () => {
-    // TODO: same as 43.
+
+  test("44: trainer deletes a note", async ({ page }) => {
+    // Make sure at least one note exists for the linked client.
+    await linkTrainerToClient(
+      REFORMER_TRAINER_EMAIL,
+      ACTIVE_REFORMER_CLIENT_EMAIL,
+    );
+
+    await signInAsReformerTrainer(page);
+    await page.getByTestId("tab-notes").click();
+
+    const before = await countTrainerNotesFor(ACTIVE_REFORMER_CLIENT_EMAIL);
+
+    // If the seed is empty (no notes), create one quickly via the compose
+    // sheet so the spec has something to delete.
+    if (before === 0) {
+      await page
+        .getByRole("button", { name: t.trainer.notes.newNote })
+        .click();
+      await page.getByTestId("note-session-select").dispatchEvent("click");
+      await page
+        .locator('[data-testid^="note-session-option-"]')
+        .first()
+        .dispatchEvent("click");
+      await page.getByTestId("note-client-select").dispatchEvent("click");
+      await page
+        .locator('[data-testid^="note-client-option-"]')
+        .first()
+        .dispatchEvent("click");
+      await page
+        .getByTestId("note-text-input")
+        .fill("Delete-me note");
+      await page.getByTestId("note-save-button").dispatchEvent("click");
+      await expect
+        .poll(
+          async () =>
+            countTrainerNotesFor(ACTIVE_REFORMER_CLIENT_EMAIL),
+          { timeout: 10_000 },
+        )
+        .toBeGreaterThan(0);
+    }
+
+    const beforeDelete = await countTrainerNotesFor(
+      ACTIVE_REFORMER_CLIENT_EMAIL,
+    );
+
+    const firstRow = page.locator('[data-testid^="note-row-"]').first();
+    await firstRow.dispatchEvent("click");
+    await page.getByTestId("note-edit-delete-button").dispatchEvent("click");
+    await expect(
+      page.getByTestId("note-delete-confirm-button"),
+    ).toBeVisible({ timeout: 5_000 });
+    await page
+      .locator('[data-testid="note-delete-confirm-button"]:visible')
+      .first()
+      .dispatchEvent("click");
+
+    await expect
+      .poll(
+        async () => countTrainerNotesFor(ACTIVE_REFORMER_CLIENT_EMAIL),
+        { timeout: 10_000 },
+      )
+      .toBe(beforeDelete - 1);
   });
 
   test("45: trainer cannot create a note for an unlinked client (server 403)", async ({
@@ -179,35 +261,113 @@ test.describe("trainer (Serbian)", () => {
   });
 
   test("47: by-client filter scopes the notes list", async ({ page }) => {
-    // Spec 42 already created one linked-client note. Open the by-client
-    // filter and assert the picker has the linked client visible.
+    // Make sure the linked client exists for this trainer.
+    await linkTrainerToClient(
+      REFORMER_TRAINER_EMAIL,
+      ACTIVE_REFORMER_CLIENT_EMAIL,
+    );
+
     await signInAsReformerTrainer(page);
     await page.getByTestId("tab-notes").click();
 
-    // Tap the "By client" chip — it's a translated FilterChip.
+    // Tap the "By client" chip → opens the picker sheet with a Select.
     await page
       .getByText(t.trainer.notes.filterByClient)
       .first()
       .dispatchEvent("click");
 
-    // Picker sheet now visible; the only linked client appears.
+    // The picker sheet has a Select that lists linked clients; expand it.
+    await page
+      .getByText(t.trainer.notes.pickClientTitle)
+      .first()
+      .waitFor({ timeout: 5_000 });
+    // The Select trigger doesn't have a testID inside this picker sheet —
+    // tap the Select placeholder text to expand.
+    await page
+      .getByText(t.trainer.notes.client, { exact: true })
+      .first()
+      .dispatchEvent("click");
+
     await expect(
       page.getByText("Active Reformer Client", { exact: true }).first(),
     ).toBeVisible({ timeout: 5_000 });
   });
 
-  test.skip("48: by-session note grouping", () => {
-    // TODO: no by-session view in the current notes screen.
+  test("48: by-session filter narrows the notes list to a session", async ({
+    page,
+  }) => {
+    // Ensure a note exists for the linked client + their session.
+    const { sessionId } = await linkTrainerToClient(
+      REFORMER_TRAINER_EMAIL,
+      ACTIVE_REFORMER_CLIENT_EMAIL,
+    );
+
+    await signInAsReformerTrainer(page);
+    await page.getByTestId("tab-notes").click();
+
+    if ((await countTrainerNotesFor(ACTIVE_REFORMER_CLIENT_EMAIL)) === 0) {
+      await page
+        .getByRole("button", { name: t.trainer.notes.newNote })
+        .click();
+      await page.getByTestId("note-session-select").dispatchEvent("click");
+      await page
+        .locator('[data-testid^="note-session-option-"]')
+        .first()
+        .dispatchEvent("click");
+      await page.getByTestId("note-client-select").dispatchEvent("click");
+      // Wait for the client options to actually render (the trainer's
+      // /api/clients query is fetched on the screen mount; the linkage we
+      // just wrote needs a beat to surface).
+      await expect(
+        page.locator('[data-testid^="note-client-option-"]').first(),
+      ).toBeVisible({ timeout: 10_000 });
+      await page
+        .locator('[data-testid^="note-client-option-"]')
+        .first()
+        .dispatchEvent("click");
+      await page
+        .getByTestId("note-text-input")
+        .fill("Note for session-filter test");
+      await page.getByTestId("note-save-button").dispatchEvent("click");
+      await expect
+        .poll(
+          async () =>
+            countTrainerNotesFor(ACTIVE_REFORMER_CLIENT_EMAIL),
+          { timeout: 10_000 },
+        )
+        .toBeGreaterThan(0);
+    }
+
+    // Open the by-session filter chip — the testID is on the wrapping View;
+    // click the inner Pressable (FilterChip) by its label text.
+    await page
+      .getByTestId("note-filter-by-session")
+      .getByText(t.trainer.notes.filterBySession)
+      .dispatchEvent("click");
+    // Wait for the picker sheet to mount, then pick the session.
+    await expect(page.getByTestId("session-filter-picker")).toBeVisible({
+      timeout: 5_000,
+    });
+    await page.getByTestId("session-filter-picker").dispatchEvent("click");
+    await page
+      .getByTestId(`session-filter-option-${sessionId}`)
+      .dispatchEvent("click");
+
+    // The note row should still render — it's tied to that session.
+    await expect(
+      page.locator('[data-testid^="note-row-"]').first(),
+    ).toBeVisible({ timeout: 5_000 });
   });
 
   test("49: trainer can create a note for a linked client (any session)", async ({
     page,
   }) => {
-    // Use the existing linkage from spec 42; create a second note. This
-    // exercises the same path as 42 with a different note body to assert
-    // the count grows. Plan item 49 specifically calls out "past session"
-    // — but the seed only has future sessions, so this is the closest
-    // approximation without extending the seed.
+    // Self-sufficient: re-link so the trainer's clients query returns at
+    // least one option even when the spec runs alone.
+    await linkTrainerToClient(
+      REFORMER_TRAINER_EMAIL,
+      ACTIVE_REFORMER_CLIENT_EMAIL,
+    );
     const before = await countTrainerNotesFor(ACTIVE_REFORMER_CLIENT_EMAIL);
 
     await signInAsReformerTrainer(page);

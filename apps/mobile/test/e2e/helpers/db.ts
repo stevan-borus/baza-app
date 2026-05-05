@@ -268,6 +268,41 @@ export async function createPastSessionWithBooking(input: CreatePastSessionInput
   };
 }
 
+export async function getUserActive(userEmail: string) {
+  const user = await db().user.findUnique({
+    where: { email: userEmail.toLowerCase() },
+    select: { isActive: true },
+  });
+  return user?.isActive ?? null;
+}
+
+export async function countSessionsByStatus(status: "SCHEDULED" | "CANCELED" | "COMPLETED") {
+  return db().session.count({ where: { status } });
+}
+
+export async function countSessions() {
+  return db().session.count();
+}
+
+export async function findSessionByStartsAt(startsAt: Date) {
+  return db().session.findFirst({
+    where: {
+      startsAt: {
+        gte: new Date(startsAt.getTime() - 60_000),
+        lte: new Date(startsAt.getTime() + 60_000),
+      },
+    },
+    select: {
+      id: true,
+      startsAt: true,
+      capacity: true,
+      classTypeId: true,
+      trainerUserId: true,
+      roomId: true,
+    },
+  });
+}
+
 export async function getSessionsRemaining(clientPackageId: string) {
   const pkg = await db().clientPackage.findUnique({
     where: { id: clientPackageId },
