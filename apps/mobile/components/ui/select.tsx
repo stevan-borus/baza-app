@@ -21,6 +21,8 @@ type SelectProps<V extends string> = {
   emptyText?: string;
   error?: string;
   disabled?: boolean;
+  testID?: string;
+  optionTestIDPrefix?: string;
 };
 
 const FIELD_HEIGHT = 48;
@@ -36,6 +38,8 @@ export function Select<V extends string>({
   emptyText,
   error,
   disabled,
+  testID,
+  optionTestIDPrefix,
 }: SelectProps<V>) {
   const tokens = useThemeTokens();
   const [open, setOpen] = useState(false);
@@ -45,6 +49,7 @@ export function Select<V extends string>({
   return (
     <View className="gap-1.5">
       <Pressable
+        testID={testID}
         onPress={() => !disabled && setOpen((o) => !o)}
         disabled={disabled}
       >
@@ -115,6 +120,11 @@ export function Select<V extends string>({
               return (
                 <Pressable
                   key={opt.value}
+                  testID={
+                    optionTestIDPrefix
+                      ? `${optionTestIDPrefix}-${opt.value}`
+                      : undefined
+                  }
                   onPress={() => {
                     onChange(opt.value);
                     setOpen(false);

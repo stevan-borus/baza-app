@@ -349,6 +349,8 @@ export default function TrainerNotes() {
           </Text>
 
           <Select
+            testID="note-session-select"
+            optionTestIDPrefix="note-session-option"
             placeholder={t("trainer.notes.session")}
             value={form.sessionId}
             onChange={(v) => setForm((f) => ({ ...f, sessionId: v }))}
@@ -369,6 +371,8 @@ export default function TrainerNotes() {
           />
 
           <Select
+            testID="note-client-select"
+            optionTestIDPrefix="note-client-option"
             placeholder={t("trainer.notes.client")}
             value={form.clientProfileId}
             onChange={(v) => setForm((f) => ({ ...f, clientProfileId: v }))}
@@ -380,12 +384,14 @@ export default function TrainerNotes() {
           />
 
           <Input
+            testID="note-text-input"
             placeholder={t("trainer.notes.placeholder")}
             multiline
             value={form.note}
             onChangeText={(v) => setForm((f) => ({ ...f, note: v }))}
           />
           <Button
+            testID="note-save-button"
             disabled={
               createMutation.isPending ||
               !form.sessionId ||

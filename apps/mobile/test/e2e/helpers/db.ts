@@ -117,6 +117,55 @@ export async function createPasswordResetToken(input: CreateResetTokenInput) {
   return { id: row.id, rawToken };
 }
 
+/**
+ * Create a Booking directly so a trainer-client linkage exists for E2E.
+ * Returns the booking id and the chosen sessionId. Picks the soonest
+ * future session for the trainer; throws if none.
+ */
+export async function linkTrainerToClient(
+  trainerEmail: string,
+  clientEmail: string,
+) {
+  const [trainer, clientUser] = await Promise.all([
+    db().user.findUnique({
+      where: { email: trainerEmail.toLowerCase() },
+      select: { id: true },
+    }),
+    db().user.findUnique({
+      where: { email: clientEmail.toLowerCase() },
+      select: { clientProfile: { select: { id: true } } },
+    }),
+  ]);
+  if (!trainer || !clientUser?.clientProfile) {
+    throw new Error("Trainer or client not found");
+  }
+  const session = await db().session.findFirst({
+    where: {
+      trainerUserId: trainer.id,
+      startsAt: { gt: new Date() },
+      status: "SCHEDULED",
+    },
+    orderBy: { startsAt: "asc" },
+    select: { id: true },
+  });
+  if (!session) throw new Error("No future session for trainer");
+  const booking = await db().booking.upsert({
+    where: {
+      sessionId_clientProfileId: {
+        sessionId: session.id,
+        clientProfileId: clientUser.clientProfile.id,
+      },
+    },
+    create: {
+      sessionId: session.id,
+      clientProfileId: clientUser.clientProfile.id,
+    },
+    update: { canceledAt: null },
+    select: { id: true },
+  });
+  return { bookingId: booking.id, sessionId: session.id };
+}
+
 export async function countActiveBookingsFor(userEmail: string) {
   const user = await db().user.findUnique({
     where: { email: userEmail.toLowerCase() },
@@ -128,6 +177,17 @@ export async function countActiveBookingsFor(userEmail: string) {
       clientProfileId: user.clientProfile.id,
       canceledAt: null,
     },
+  });
+}
+
+export async function countTrainerNotesFor(clientEmail: string) {
+  const user = await db().user.findUnique({
+    where: { email: clientEmail.toLowerCase() },
+    select: { clientProfile: { select: { id: true } } },
+  });
+  if (!user?.clientProfile) return 0;
+  return db().trainerNote.count({
+    where: { clientProfileId: user.clientProfile.id },
   });
 }
 
