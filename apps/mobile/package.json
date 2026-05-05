@@ -23,7 +23,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:unit": "vitest run --project unit",
-    "test:integration": "vitest run --project integration"
+    "test:integration": "vitest run --project integration",
+    "test:db:prepare": "DATABASE_URL=postgresql://postgres:postgres@localhost:5434/baza_app?schema=public prisma migrate reset --force"
   },
   "dependencies": {
     "@baza/i18n": "workspace:*",
