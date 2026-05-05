@@ -10,7 +10,7 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { ScrollView, Text, View } from "react-native";
+import { Pressable, ScrollView, Text, View } from "react-native";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { MotiView } from "@/components/ui/styled";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,7 @@ import { ErrorState } from "@/components/ui/states";
 import { GlassCard } from "@/components/ui/glass-card";
 import { Input } from "@/components/ui/input";
 import { AppSheet } from "@/components/ui/sheet";
+import { ConfirmSheet } from "@/components/ui/confirm-sheet";
 import { SectionLabel } from "@/components/ui/typography";
 import { ACCENT_LIGHT } from "@/components/ui/tokens";
 import { roomsQueries } from "@/lib/queries/rooms-queries-factory";
@@ -29,7 +30,10 @@ export default function AdminSettingsRooms() {
   const queryClient = useQueryClient();
   const bottomPad = useTabBarBottomPadding();
   const [showCreate, setShowCreate] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const [form, setForm] = useState({ name: "", capacity: "" });
+  const [editForm, setEditForm] = useState({ name: "", capacity: "" });
 
   const roomsQuery = useQuery(roomsQueries.list());
 
@@ -41,6 +45,28 @@ export default function AdminSettingsRooms() {
       setForm({ name: "", capacity: "" });
     },
   });
+
+  const updateMutation = useMutation({
+    ...roomsQueries.update(),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["rooms"] });
+      setEditingId(null);
+    },
+  });
+
+  const deleteMutation = useMutation({
+    ...roomsQueries.delete(),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["rooms"] });
+      setConfirmDelete(false);
+      setEditingId(null);
+    },
+  });
+
+  function openEdit(room: { id: string; name: string; capacity: number }) {
+    setEditForm({ name: room.name, capacity: String(room.capacity) });
+    setEditingId(room.id);
+  }
 
   const rooms = roomsQuery.data?.rooms ?? [];
 
@@ -87,40 +113,47 @@ export default function AdminSettingsRooms() {
           animate={{ opacity: 1, translateY: 0 }}
           transition={{ type: "timing", duration: 380, delay: idx * 60 }}
         >
-          <GlassCard style={{ padding: 0, borderRadius: 16, overflow: "hidden" }}>
-            <View className="flex-row items-center px-4 py-3.5 gap-3.5">
-              {/* Door / location icon */}
-              <View
-                className="items-center justify-center"
-                style={{
-                  width: 32,
-                  height: 32,
-                  borderRadius: 10,
-                  backgroundColor: "rgba(74,140,107,0.15)",
-                }}
-              >
-                <FontAwesome name="map-marker" size={15} color={ACCENT_LIGHT} />
-              </View>
+          <Pressable
+            testID={`room-row-${room.id}`}
+            onPress={() => openEdit(room)}
+            android_ripple={null}
+            className="active:opacity-70"
+          >
+            <GlassCard style={{ padding: 0, borderRadius: 16, overflow: "hidden" }}>
+              <View className="flex-row items-center px-4 py-3.5 gap-3.5">
+                {/* Door / location icon */}
+                <View
+                  className="items-center justify-center"
+                  style={{
+                    width: 32,
+                    height: 32,
+                    borderRadius: 10,
+                    backgroundColor: "rgba(74,140,107,0.15)",
+                  }}
+                >
+                  <FontAwesome name="map-marker" size={15} color={ACCENT_LIGHT} />
+                </View>
 
-              {/* Name */}
-              <Text
-                className="text-foreground font-body-medium flex-1"
-                style={{ fontSize: 16 }}
-                numberOfLines={1}
-              >
-                {room.name}
-              </Text>
-
-              {/* Capacity badge */}
-              <View className="flex-row items-center gap-1.5">
-                <FontAwesome name="users" size={11} color="#a1a1aa" />
-                <Text className="text-muted" style={{ fontSize: 13 }}>
-                  {room.capacity}
+                {/* Name */}
+                <Text
+                  className="text-foreground font-body-medium flex-1"
+                  style={{ fontSize: 16 }}
+                  numberOfLines={1}
+                >
+                  {room.name}
                 </Text>
-                <FontAwesome name="chevron-right" size={11} color="#52525b" />
+
+                {/* Capacity badge */}
+                <View className="flex-row items-center gap-1.5">
+                  <FontAwesome name="users" size={11} color="#a1a1aa" />
+                  <Text className="text-muted" style={{ fontSize: 13 }}>
+                    {room.capacity}
+                  </Text>
+                  <FontAwesome name="chevron-right" size={11} color="#52525b" />
+                </View>
               </View>
-            </View>
-          </GlassCard>
+            </GlassCard>
+          </Pressable>
         </MotiView>
       ))}
 
@@ -178,6 +211,79 @@ export default function AdminSettingsRooms() {
           ) : null}
         </View>
       </AppSheet>
+
+      {/* Edit sheet */}
+      <AppSheet open={!!editingId} onOpenChange={(v) => !v && setEditingId(null)}>
+        <View className="flex-col gap-4">
+          <Text
+            className="text-foreground font-body-bold"
+            style={{ fontSize: 20, letterSpacing: -0.3 }}
+          >
+            {t("admin.manage.sheetEditRoom")}
+          </Text>
+          <Input
+            testID="room-edit-name-input"
+            placeholder={t("admin.manage.placeholderName")}
+            value={editForm.name}
+            onChangeText={(v) => setEditForm((s) => ({ ...s, name: v }))}
+          />
+          <Input
+            testID="room-edit-capacity-input"
+            placeholder={t("admin.manage.placeholderCapacity")}
+            keyboardType="numeric"
+            value={editForm.capacity}
+            onChangeText={(v) => setEditForm((s) => ({ ...s, capacity: v }))}
+          />
+          <Button
+            testID="room-edit-save-button"
+            disabled={updateMutation.isPending || !editForm.name}
+            onPress={() => {
+              if (!editingId) return;
+              updateMutation.mutate({
+                id: editingId,
+                name: editForm.name,
+                capacity: parseInt(editForm.capacity, 10) || 10,
+              });
+            }}
+          >
+            {t("admin.schedule.saveChanges")}
+          </Button>
+          <Button
+            testID="room-edit-delete-button"
+            variant="danger"
+            disabled={deleteMutation.isPending || !editingId}
+            onPress={() => setConfirmDelete(true)}
+          >
+            {t("confirm.deleteRoomConfirm")}
+          </Button>
+          {updateMutation.isError ? (
+            <ErrorState
+              message={
+                (updateMutation.error as Error)?.message ??
+                t("admin.manage.createError")
+              }
+            />
+          ) : null}
+        </View>
+      </AppSheet>
+      <ConfirmSheet
+        open={confirmDelete}
+        onOpenChange={setConfirmDelete}
+        title={t("confirm.deleteRoomTitle")}
+        message={t("confirm.deleteRoomMessage")}
+        confirmLabel={t("confirm.deleteRoomConfirm")}
+        loading={deleteMutation.isPending}
+        testID="room-delete-confirm-button"
+        errorMessage={
+          deleteMutation.isError
+            ? (deleteMutation.error as Error)?.message ?? null
+            : null
+        }
+        onConfirm={() => {
+          if (!editingId) return;
+          deleteMutation.mutate(editingId);
+        }}
+      />
       </ScrollView>
     </ScreenContainerRaw>
   );

@@ -17,6 +17,8 @@ type ConfirmSheetProps = {
   loading?: boolean;
   /** Optional inline error rendered above the buttons. */
   errorMessage?: string | null;
+  /** Optional testID forwarded to the confirm Button. */
+  testID?: string;
   onConfirm: () => void;
   /** TestID applied to the confirm button (lets E2E specs scope reliably). */
   testID?: string;
@@ -38,6 +40,7 @@ export function ConfirmSheet({
   tone = "danger",
   loading = false,
   errorMessage,
+  testID,
   onConfirm,
   testID,
 }: ConfirmSheetProps) {
@@ -68,6 +71,7 @@ export function ConfirmSheet({
             variant={tone}
             disabled={loading}
             onPress={onConfirm}
+            testID={testID}
           >
             {confirmLabel}
           </Button>

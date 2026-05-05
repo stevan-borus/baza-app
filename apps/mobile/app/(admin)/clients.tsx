@@ -761,6 +761,7 @@ export default function AdminClients() {
               onChangeText={(v) => setAssignForm((s) => ({ ...s, startsAt: v }))}
             />
             <Button
+              testID="assign-package-submit"
               disabled={assignPackageMutation.isPending || !assignForm.packageTypeId || !assignForm.startsAt}
               onPress={() =>
                 showAssignPackage &&
@@ -789,11 +790,13 @@ export default function AdminClients() {
               }}
             />
             <Input
+              testID="pause-start-input"
               placeholder={t("admin.clients.pauseStart")}
               value={pauseForm.startsAt}
               onChangeText={(v) => setPauseForm((s) => ({ ...s, startsAt: v }))}
             />
             <Input
+              testID="pause-end-input"
               placeholder={t("admin.clients.pauseEnd")}
               value={pauseForm.endsAt}
               onChangeText={(v) => setPauseForm((s) => ({ ...s, endsAt: v }))}
@@ -804,6 +807,7 @@ export default function AdminClients() {
               onChangeText={(v) => setPauseForm((s) => ({ ...s, reason: v }))}
             />
             <Button
+              testID="pause-submit-button"
               disabled={pauseMutation.isPending || !pauseForm.startsAt || !pauseForm.endsAt}
               onPress={() =>
                 showPause &&

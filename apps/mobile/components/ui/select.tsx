@@ -52,6 +52,7 @@ export function Select<V extends string>({
         testID={testID}
         onPress={() => !disabled && setOpen((o) => !o)}
         disabled={disabled}
+        testID={testID}
       >
         <View
           style={{
@@ -129,6 +130,11 @@ export function Select<V extends string>({
                     onChange(opt.value);
                     setOpen(false);
                   }}
+                  testID={
+                    optionTestIDPrefix
+                      ? `${optionTestIDPrefix}-${opt.value}`
+                      : undefined
+                  }
                 >
                   <View
                     className={`flex-row items-center px-3.5 py-2.5 ${

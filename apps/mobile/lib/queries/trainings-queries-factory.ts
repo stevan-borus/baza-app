@@ -49,4 +49,49 @@ export const trainingsQueries = {
         return response.json();
       },
     }),
+
+  updateClassType: () =>
+    mutationOptions({
+      mutationKey: ["trainings", "class-types", "update"] as const,
+      mutationFn: async ({
+        id,
+        ...payload
+      }: {
+        id: string;
+        name?: string;
+        maxClients?: number;
+        durationMins?: number;
+      }) => {
+        const response = await apiFetch(
+          `${sharedEnv.EXPO_PUBLIC_API_URL}/api/trainings/class-types/${id}`,
+          {
+            method: "PATCH",
+            credentials: "include",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify(payload),
+          },
+        );
+        if (!response.ok) {
+          const text = await response.text();
+          throw new Error(text || `Unable to update class type (${response.status})`);
+        }
+        return response.json();
+      },
+    }),
+
+  deleteClassType: () =>
+    mutationOptions({
+      mutationKey: ["trainings", "class-types", "delete"] as const,
+      mutationFn: async (id: string) => {
+        const response = await apiFetch(
+          `${sharedEnv.EXPO_PUBLIC_API_URL}/api/trainings/class-types/${id}`,
+          { method: "DELETE", credentials: "include" },
+        );
+        if (!response.ok) {
+          const text = await response.text();
+          throw new Error(text || `Unable to delete class type (${response.status})`);
+        }
+        return response.json();
+      },
+    }),
 };

@@ -10,7 +10,7 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { ScrollView, Text, View } from "react-native";
+import { Pressable, ScrollView, Text, View } from "react-native";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { MotiView } from "@/components/ui/styled";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,7 @@ import { ErrorState } from "@/components/ui/states";
 import { GlassCard } from "@/components/ui/glass-card";
 import { Input } from "@/components/ui/input";
 import { AppSheet } from "@/components/ui/sheet";
+import { ConfirmSheet } from "@/components/ui/confirm-sheet";
 import { SectionLabel } from "@/components/ui/typography";
 import { trainingsQueries } from "@/lib/queries/trainings-queries-factory";
 import { ScreenContainerRaw, useTabBarBottomPadding } from "@/components/ui/screen-container";
@@ -38,7 +39,14 @@ export default function AdminSettingsClassTypes() {
   const queryClient = useQueryClient();
   const bottomPad = useTabBarBottomPadding();
   const [showCreate, setShowCreate] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const [form, setForm] = useState({
+    name: "",
+    maxClients: "",
+    durationMins: "",
+  });
+  const [editForm, setEditForm] = useState({
     name: "",
     maxClients: "",
     durationMins: "",
@@ -54,6 +62,32 @@ export default function AdminSettingsClassTypes() {
       setForm({ name: "", maxClients: "", durationMins: "" });
     },
   });
+
+  const updateMutation = useMutation({
+    ...trainingsQueries.updateClassType(),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["trainings"] });
+      setEditingId(null);
+    },
+  });
+
+  const deleteMutation = useMutation({
+    ...trainingsQueries.deleteClassType(),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["trainings"] });
+      setConfirmDelete(false);
+      setEditingId(null);
+    },
+  });
+
+  function openEdit(ct: { id: string; name: string; maxClients: number; durationMins: number }) {
+    setEditForm({
+      name: ct.name,
+      maxClients: String(ct.maxClients),
+      durationMins: String(ct.durationMins),
+    });
+    setEditingId(ct.id);
+  }
 
   const classTypes = classTypesQuery.data?.classTypes ?? [];
 
@@ -100,44 +134,51 @@ export default function AdminSettingsClassTypes() {
           animate={{ opacity: 1, translateY: 0 }}
           transition={{ type: "timing", duration: 380, delay: idx * 60 }}
         >
-          <GlassCard style={{ padding: 0, borderRadius: 16, overflow: "hidden" }}>
-            <View className="flex-row items-center px-4 py-3.5 gap-3.5">
-              {/* Colored dot indicator */}
-              <View
-                style={{
-                  width: 10,
-                  height: 10,
-                  borderRadius: 5,
-                  backgroundColor: DOT_COLORS[idx % DOT_COLORS.length],
-                }}
-              />
+          <Pressable
+            testID={`class-type-row-${ct.id}`}
+            onPress={() => openEdit(ct)}
+            android_ripple={null}
+            className="active:opacity-70"
+          >
+            <GlassCard style={{ padding: 0, borderRadius: 16, overflow: "hidden" }}>
+              <View className="flex-row items-center px-4 py-3.5 gap-3.5">
+                {/* Colored dot indicator */}
+                <View
+                  style={{
+                    width: 10,
+                    height: 10,
+                    borderRadius: 5,
+                    backgroundColor: DOT_COLORS[idx % DOT_COLORS.length],
+                  }}
+                />
 
-              {/* Name */}
-              <Text
-                className="text-foreground font-body-medium flex-1"
-                style={{ fontSize: 16 }}
-                numberOfLines={1}
-              >
-                {ct.name}
-              </Text>
+                {/* Name */}
+                <Text
+                  className="text-foreground font-body-medium flex-1"
+                  style={{ fontSize: 16 }}
+                  numberOfLines={1}
+                >
+                  {ct.name}
+                </Text>
 
-              {/* Meta: duration · capacity */}
-              <View className="flex-row items-center gap-3">
-                <View className="flex-row items-center gap-1">
-                  <FontAwesome name="clock-o" size={11} color="#a1a1aa" />
-                  <Text className="text-muted" style={{ fontSize: 12 }}>
-                    {ct.durationMins}min
-                  </Text>
-                </View>
-                <View className="flex-row items-center gap-1">
-                  <FontAwesome name="users" size={11} color="#a1a1aa" />
-                  <Text className="text-muted" style={{ fontSize: 12 }}>
-                    {ct.maxClients}
-                  </Text>
+                {/* Meta: duration · capacity */}
+                <View className="flex-row items-center gap-3">
+                  <View className="flex-row items-center gap-1">
+                    <FontAwesome name="clock-o" size={11} color="#a1a1aa" />
+                    <Text className="text-muted" style={{ fontSize: 12 }}>
+                      {ct.durationMins}min
+                    </Text>
+                  </View>
+                  <View className="flex-row items-center gap-1">
+                    <FontAwesome name="users" size={11} color="#a1a1aa" />
+                    <Text className="text-muted" style={{ fontSize: 12 }}>
+                      {ct.maxClients}
+                    </Text>
+                  </View>
                 </View>
               </View>
-            </View>
-          </GlassCard>
+            </GlassCard>
+          </Pressable>
         </MotiView>
       ))}
 
@@ -203,6 +244,87 @@ export default function AdminSettingsClassTypes() {
           ) : null}
         </View>
       </AppSheet>
+
+      {/* Edit sheet */}
+      <AppSheet open={!!editingId} onOpenChange={(v) => !v && setEditingId(null)}>
+        <View className="flex-col gap-4">
+          <Text
+            className="text-foreground font-body-bold"
+            style={{ fontSize: 20, letterSpacing: -0.3 }}
+          >
+            {t("admin.manage.sheetEditClassType")}
+          </Text>
+          <Input
+            testID="class-type-edit-name-input"
+            placeholder={t("admin.manage.placeholderName")}
+            value={editForm.name}
+            onChangeText={(v) => setEditForm((s) => ({ ...s, name: v }))}
+          />
+          <Input
+            testID="class-type-edit-max-clients-input"
+            placeholder={t("admin.manage.placeholderMaxClients")}
+            keyboardType="numeric"
+            value={editForm.maxClients}
+            onChangeText={(v) => setEditForm((s) => ({ ...s, maxClients: v }))}
+          />
+          <Input
+            testID="class-type-edit-duration-input"
+            placeholder={t("admin.manage.placeholderDurationMins")}
+            keyboardType="numeric"
+            value={editForm.durationMins}
+            onChangeText={(v) => setEditForm((s) => ({ ...s, durationMins: v }))}
+          />
+          <Button
+            testID="class-type-edit-save-button"
+            disabled={updateMutation.isPending || !editForm.name}
+            onPress={() => {
+              if (!editingId) return;
+              updateMutation.mutate({
+                id: editingId,
+                name: editForm.name,
+                maxClients: parseInt(editForm.maxClients, 10) || 8,
+                durationMins: parseInt(editForm.durationMins, 10) || 60,
+              });
+            }}
+          >
+            {t("admin.schedule.saveChanges")}
+          </Button>
+          <Button
+            testID="class-type-edit-delete-button"
+            variant="danger"
+            disabled={deleteMutation.isPending || !editingId}
+            onPress={() => setConfirmDelete(true)}
+          >
+            {t("confirm.deleteClassTypeConfirm")}
+          </Button>
+          {updateMutation.isError ? (
+            <ErrorState
+              message={
+                (updateMutation.error as Error)?.message ??
+                t("admin.manage.createError")
+              }
+            />
+          ) : null}
+        </View>
+      </AppSheet>
+      <ConfirmSheet
+        open={confirmDelete}
+        onOpenChange={setConfirmDelete}
+        title={t("confirm.deleteClassTypeTitle")}
+        message={t("confirm.deleteClassTypeMessage")}
+        confirmLabel={t("confirm.deleteClassTypeConfirm")}
+        loading={deleteMutation.isPending}
+        testID="class-type-delete-confirm-button"
+        errorMessage={
+          deleteMutation.isError
+            ? (deleteMutation.error as Error)?.message ?? null
+            : null
+        }
+        onConfirm={() => {
+          if (!editingId) return;
+          deleteMutation.mutate(editingId);
+        }}
+      />
       </ScrollView>
     </ScreenContainerRaw>
   );

@@ -335,6 +335,8 @@ export default function AdminBilling() {
               {t("admin.manage.sheetNewPayment")}
             </Text>
             <Select
+              testID="billing-client-select"
+              optionTestIDPrefix="billing-client-option"
               placeholder={t("admin.manage.client")}
               value={form.clientUserId}
               onChange={(v) => setForm((s) => ({ ...s, clientUserId: v }))}
@@ -346,12 +348,15 @@ export default function AdminBilling() {
               }))}
             />
             <Input
+              testID="billing-amount-input"
               placeholder={t("admin.manage.placeholderAmount")}
               keyboardType="numeric"
               value={form.amount}
               onChangeText={(v) => setForm((s) => ({ ...s, amount: v }))}
             />
             <Select
+              testID="billing-method-select"
+              optionTestIDPrefix="billing-method-option"
               placeholder={t("admin.manage.paymentMethod")}
               value={form.method}
               onChange={(v) => setForm((s) => ({ ...s, method: v }))}
@@ -361,6 +366,8 @@ export default function AdminBilling() {
               }))}
             />
             <Select
+              testID="billing-package-select"
+              optionTestIDPrefix="billing-package-option"
               placeholder={t("admin.manage.packageOptional")}
               value={form.packageTypeId}
               onChange={(v) =>
@@ -387,6 +394,7 @@ export default function AdminBilling() {
               onChangeText={(v) => setForm((s) => ({ ...s, notes: v }))}
             />
             <Button
+              testID="billing-create-submit"
               disabled={
                 createMutation.isPending || !form.clientUserId || !form.amount
               }
