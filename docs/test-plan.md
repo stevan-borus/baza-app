@@ -210,6 +210,31 @@ i18n: tests import locale JSON and reference keys via the actual translated stri
 - i18n key parity — 1 test.
 - Opportunistic helpers in reports/aggregations if any exist as pure functions.
 
+## Deferred tests — pending the API-gaps branch merge
+
+Several Phase A integration tests cannot be written today because the routes they would test do not exist on disk. A separate branch (spawned in `.claude/worktrees/`) is filling these gaps. **When that branch merges back to `dev`, write the following tests against the new endpoints**, then delete this section.
+
+The test-suite naming + structure conventions are already established — see the existing files in `apps/mobile/test/integration/` for the patterns to copy.
+
+### Endpoints the gaps branch is adding
+- `PATCH` and `DELETE` on `/api/rooms/[id]` (admin-only; DELETE → 409 when sessions reference the room).
+- `PATCH` and `DELETE` on `/api/trainings/class-types/[id]` (admin-only; DELETE → 409 when PackageType or Session references the class type).
+- `PATCH` and `DELETE` on `/api/trainer-notes/[id]` (trainers can only modify their own notes; admins can modify any).
+- `DELETE` on `/api/sessions/[id]` (admin-only; 409 when active bookings exist).
+- `PATCH` and `DELETE` on `/api/sessions/recurring/[id]` (PATCH updates RecurringSchedule; DELETE cascades to child sessions only when no active bookings).
+- Room/trainer **double-booking conflict enforcement** in POST/PATCH `/api/sessions` and POST `/api/sessions/recurring` (returns 409 with `conflict: { kind, sessionId }`).
+
+### Tests to write after merge
+- `rooms-edit-delete.test.ts` — 4 tests: PATCH happy path, PATCH 404, DELETE no-deps OK, DELETE-with-deps 409.
+- `class-types-edit-delete.test.ts` — 4 tests: same shape; 409 for both PackageType and Session dependents.
+- `trainer-notes-edit-delete.test.ts` — 5 tests: PATCH own note OK; PATCH others' note 403; DELETE own OK; DELETE others' 403; admin can edit/delete any.
+- `sessions-delete.test.ts` — 3 tests: admin DELETE no-bookings OK; DELETE with active bookings 409; trainer DELETE 403 (admin-only).
+- `sessions-recurring-edit-delete.test.ts` — 5 tests: PATCH RecurringSchedule (capacity/isActive); cascade isActive flip to children; DELETE series no-bookings OK; DELETE blocked by any child booking; PATCH 404.
+- `sessions-conflicts.test.ts` — 6 tests: room conflict on POST single, trainer conflict on POST single, no conflict when times don't overlap, PATCH self does not self-conflict, recurring POST refuses if any slot conflicts, conflict body shape (`kind`, `sessionId`).
+
+Plan E2E line items that depend on these handlers:
+- E2E #13–#14 (Edit/Delete ClassType), #19–#20 (Edit/Delete StudioRoom), #23 (Delete single session), #25 (Edit single occurrence — already exists), #26 (Edit whole series), #27 (Delete single occurrence), #28 (Delete whole series), #29 (room double-booking → rejected), #30 (trainer double-booking → rejected), #43–#44 (Trainer edits/deletes a note).
+
 ## Out of scope for Phase A
 
 - Maestro native parity — Phase B follow-up.
