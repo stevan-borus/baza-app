@@ -377,6 +377,9 @@ export const studioRoomInputSchema = StudioRoomInputSchema.pick({
 });
 export type StudioRoomInput = z.infer<typeof studioRoomInputSchema>;
 
+export const updateStudioRoomInputSchema = studioRoomInputSchema.partial();
+export type UpdateStudioRoomInput = z.infer<typeof updateStudioRoomInputSchema>;
+
 export const appThemeTokens = {
   background: "#fdf7f4",
   brand: "#2e5b42",
