@@ -5,6 +5,7 @@ import { fail, ok } from "@/lib/server/http";
 import { createSystemNotification } from "@/lib/server/notifications";
 import { NOTIFICATION_MESSAGE_KEYS } from "@baza/i18n";
 import { prisma } from "@/lib/server/prisma";
+import { findScheduleConflict } from "@/lib/server/schedule-conflict";
 import { trainerOwnsSession } from "@/lib/server/trainer-scope";
 import { tryCatch } from "@/lib/server/try-catch";
 
@@ -33,6 +34,7 @@ export async function PATCH(request: Request, { id }: RouteParams) {
       endsAt: true,
       status: true,
       trainerUserId: true,
+      roomId: true,
       isActive: true,
       recurringScheduleId: true,
       bookings: {
@@ -81,6 +83,34 @@ export async function PATCH(request: Request, { id }: RouteParams) {
     endsAt <= startsAt
   ) {
     return fail("Invalid schedule range", 400);
+  }
+
+  // Schedule conflict: refuse if another live session overlaps on the same
+  // room (when set) OR the same trainer. Excludes the session being edited.
+  const nextRoomId =
+    parsed.data.roomId === undefined ? existing.roomId : parsed.data.roomId;
+  const nextTrainerUserId =
+    guard.user.role === UserRole.TRAINER
+      ? guard.user.id
+      : parsed.data.trainerUserId === undefined
+        ? existing.trainerUserId
+        : parsed.data.trainerUserId;
+  const conflict = await findScheduleConflict({
+    startsAt,
+    endsAt,
+    roomId: nextRoomId,
+    trainerUserId: nextTrainerUserId,
+    excludeSessionId: id,
+  });
+  if (conflict) {
+    return Response.json(
+      {
+        success: false,
+        error: "Schedule conflict",
+        conflict,
+      },
+      { status: 409 },
+    );
   }
 
   const session = await prisma.session.update({
@@ -132,4 +162,34 @@ export async function PATCH(request: Request, { id }: RouteParams) {
   }
 
   return ok({ success: true, session });
+}
+
+export async function DELETE(request: Request, { id }: RouteParams) {
+  const guard = await requireRole(request, [UserRole.ADMIN]);
+  if (!guard.ok) return guard.response;
+  // Admin-only true delete. Trainers must use PATCH with status=CANCELED so
+  // booked clients are notified through the standard channel.
+
+  const existing = await prisma.session.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      _count: {
+        select: {
+          bookings: { where: { canceledAt: null } },
+        },
+      },
+    },
+  });
+  if (!existing) return fail("Session not found", 404);
+
+  if (existing._count.bookings > 0) {
+    return fail(
+      "Session has active bookings — cancel them before deleting",
+      409,
+    );
+  }
+
+  await prisma.session.delete({ where: { id } });
+  return ok({ success: true });
 }
