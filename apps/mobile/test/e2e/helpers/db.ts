@@ -280,6 +280,166 @@ export async function countSessionsByStatus(status: "SCHEDULED" | "CANCELED" | "
   return db().session.count({ where: { status } });
 }
 
+/**
+ * Schedule a future session for a given trainer + class type, starting in
+ * `hoursFromNow` hours. Useful when the rich seed's earliest session is
+ * outside the late-cancel cutoff.
+ */
+export async function createFutureSession(input: {
+  trainerEmail: string;
+  classTypeName: string;
+  hoursFromNow: number;
+  capacity?: number;
+}) {
+  const trainer = await db().user.findUnique({
+    where: { email: input.trainerEmail.toLowerCase() },
+    select: { id: true },
+  });
+  const classType = await db().classType.findFirst({
+    where: { name: input.classTypeName },
+    select: { id: true },
+  });
+  const room = await db().studioRoom.findFirst({ select: { id: true } });
+  if (!trainer || !classType || !room) {
+    throw new Error("Trainer / classType / room not found");
+  }
+  const startsAt = new Date(Date.now() + input.hoursFromNow * 60 * 60 * 1000);
+  const endsAt = new Date(startsAt.getTime() + 60 * 60 * 1000);
+  const session = await db().session.create({
+    data: {
+      classTypeId: classType.id,
+      trainerUserId: trainer.id,
+      roomId: room.id,
+      startsAt,
+      endsAt,
+      capacity: input.capacity ?? 6,
+      status: "SCHEDULED",
+    },
+    select: { id: true, startsAt: true, capacity: true, classTypeId: true },
+  });
+  return session;
+}
+
+/**
+ * Pre-fill a session with bookings from any clients except `excludeEmail`,
+ * up to its `capacity`. Each filler booking is tied to a synthetic
+ * ClientProfile (so the seeded matrix isn't perturbed).
+ */
+export async function fillSessionToCapacity(
+  sessionId: string,
+  excludeEmail: string,
+) {
+  const session = await db().session.findUnique({
+    where: { id: sessionId },
+    select: { capacity: true, classTypeId: true },
+  });
+  if (!session) throw new Error("Session not found");
+  const exclude = await db().user.findUnique({
+    where: { email: excludeEmail.toLowerCase() },
+    select: { clientProfile: { select: { id: true } } },
+  });
+  const excludeId = exclude?.clientProfile?.id ?? null;
+
+  const existing = await db().booking.count({
+    where: { sessionId, canceledAt: null },
+  });
+  const toFill = session.capacity - existing;
+  if (toFill <= 0) return { added: 0 };
+
+  // Create synthetic clients to occupy the seats.
+  const fillers: { id: string }[] = [];
+  for (let i = 0; i < toFill; i++) {
+    const email = `filler.${sessionId.slice(0, 8)}.${i}@e2e.test`;
+    const user = await db().user.upsert({
+      where: { email },
+      update: {},
+      create: {
+        email,
+        fullName: `Filler ${i}`,
+        role: "CLIENT",
+        isActive: true,
+        passwordHash: "$2b$10$placeholder",
+        clientProfile: { create: {} },
+      },
+      select: { clientProfile: { select: { id: true } } },
+    });
+    if (user.clientProfile && user.clientProfile.id !== excludeId) {
+      fillers.push({ id: user.clientProfile.id });
+    }
+  }
+
+  for (const f of fillers) {
+    await db().booking.create({
+      data: {
+        sessionId,
+        clientProfileId: f.id,
+      },
+    });
+  }
+  return { added: fillers.length };
+}
+
+/**
+ * Add a client to the waitlist for a session at a given position.
+ */
+export async function addToWaitlist(
+  sessionId: string,
+  clientEmail: string,
+  position: number,
+) {
+  const user = await db().user.findUnique({
+    where: { email: clientEmail.toLowerCase() },
+    select: { clientProfile: { select: { id: true } } },
+  });
+  if (!user?.clientProfile) throw new Error("Client not found");
+  return db().waitlistEntry.create({
+    data: {
+      sessionId,
+      clientProfileId: user.clientProfile.id,
+      position,
+    },
+  });
+}
+
+export async function findClientBookingFor(
+  clientEmail: string,
+  sessionId: string,
+) {
+  const user = await db().user.findUnique({
+    where: { email: clientEmail.toLowerCase() },
+    select: { clientProfile: { select: { id: true } } },
+  });
+  if (!user?.clientProfile) return null;
+  return db().booking.findFirst({
+    where: {
+      sessionId,
+      clientProfileId: user.clientProfile.id,
+      canceledAt: null,
+    },
+    select: { id: true, clientPackageId: true },
+  });
+}
+
+export async function findSessionConsumption(
+  clientEmail: string,
+  sessionId: string,
+) {
+  const user = await db().user.findUnique({
+    where: { email: clientEmail.toLowerCase() },
+    select: { clientProfile: { select: { id: true } } },
+  });
+  if (!user?.clientProfile) return null;
+  return db().sessionConsumption.findUnique({
+    where: {
+      clientProfileId_sessionId: {
+        clientProfileId: user.clientProfile.id,
+        sessionId,
+      },
+    },
+    select: { id: true },
+  });
+}
+
 export async function countSessions() {
   return db().session.count();
 }
