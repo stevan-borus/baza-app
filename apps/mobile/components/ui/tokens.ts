@@ -64,8 +64,10 @@ export type ThemeTokens = {
 
 const lightTokens: ThemeTokens = {
   // Studio palette — warm bone canvas, near-black ink, single accent.
+  // `surface` is a slightly warmer + lighter shade of the canvas (not
+  // pure white) so cards read as quiet embedded chrome on bone.
   background: "#F4EFE3",
-  surface: "#ffffff",
+  surface: "#FBF7EC",
   surface2: "#EBE5D5",
 
   foreground: "#0F0F0D",

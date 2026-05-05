@@ -13,12 +13,12 @@ import { MotiView } from "@/components/ui/styled";
 import { CartesianChart, Bar } from "victory-native";
 import { GlassCard } from "@/components/ui/glass-card";
 import { HeroCard } from "@/components/ui/hero-card";
-import { StatTile } from "@/components/ui/stat-tile";
 import { ProgressRing } from "@/components/ui/progress-ring";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { EmptyState, ErrorState } from "@/components/ui/states";
 import { SectionLabel } from "@/components/ui/typography";
-import { ACCENT } from "@/components/ui/tokens";
+import { useThemeTokens } from "@/components/ui/tokens";
+import { StatStrip } from "@/components/ui/studio";
 import { reportsQueries } from "@/lib/queries/reports-queries-factory";
 import { ScreenContainerRaw, useTabBarBottomPadding } from "@/components/ui/screen-container";
 
@@ -29,6 +29,7 @@ const STAGGER = [0, 80, 160, 240, 320];
 export default function AdminReports() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
+  const tokens = useThemeTokens();
   const bottomPad = useTabBarBottomPadding();
   const [refreshing, setRefreshing] = useState(false);
   const [period, setPeriod] = useState<Period>("month");
@@ -73,8 +74,8 @@ export default function AdminReports() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={handleRefresh}
-            tintColor="#2e5b42"
-            colors={["#2e5b42"]}
+            tintColor={tokens.accent}
+            colors={[tokens.accent]}
           />
         }
         contentContainerStyle={{
@@ -105,43 +106,36 @@ export default function AdminReports() {
         <ErrorState message={t("admin.manage.reportsError")} />
       ) : null}
 
-      {/* 2×2 StatTile grid */}
+      {/* Editorial stat strip — 4 hairline-separated columns */}
       {summary ? (
         <MotiView
           from={{ opacity: 0, translateY: 12 }}
           animate={{ opacity: 1, translateY: 0 }}
           transition={{ type: "timing", duration: 380, delay: STAGGER[1] }}
         >
-          <View style={{ gap: 12 }}>
-            <View style={{ flexDirection: "row", gap: 12 }}>
-              <View style={{ flex: 1 }}>
-                <StatTile
-                  label={t("admin.manage.totalSessions")}
-                  value={summary.totalSessions}
-                />
-              </View>
-              <View style={{ flex: 1 }}>
-                <StatTile
-                  label={t("admin.dashboard.activeClients")}
-                  value={summary.activeClients}
-                />
-              </View>
-            </View>
-            <View style={{ flexDirection: "row", gap: 12 }}>
-              <View style={{ flex: 1 }}>
-                <StatTile
-                  label={t("admin.manage.totalClients")}
-                  value={summary.totalClients}
-                />
-              </View>
-              <View style={{ flex: 1 }}>
-                <StatTile
-                  label={t("admin.dashboard.revenue")}
-                  value={summary.revenue}
-                />
-              </View>
-            </View>
-          </View>
+          <StatStrip
+            className=""
+            columns={2}
+            items={[
+              {
+                label: t("admin.manage.totalSessions"),
+                value: summary.totalSessions,
+              },
+              {
+                label: t("admin.dashboard.activeClients"),
+                value: summary.activeClients,
+              },
+              {
+                label: t("admin.manage.totalClients"),
+                value: summary.totalClients,
+              },
+              {
+                label: t("admin.dashboard.revenue"),
+                value: summary.revenue,
+                accent: true,
+              },
+            ]}
+          />
         </MotiView>
       ) : null}
 
@@ -173,7 +167,7 @@ export default function AdminReports() {
                     <Bar
                       points={points.y}
                       chartBounds={chartBounds}
-                      color={ACCENT}
+                      color={tokens.accent}
                       roundedCorners={{ topLeft: 4, topRight: 4 }}
                     />
                   )}
@@ -257,7 +251,7 @@ export default function AdminReports() {
                         style={{
                           height: 4,
                           borderRadius: 2,
-                          backgroundColor: ACCENT,
+                          backgroundColor: tokens.accent,
                           width: `${Math.round(fillRatio * 100)}%`,
                         }}
                       />
@@ -327,7 +321,7 @@ export default function AdminReports() {
                       style={{
                         height: 4,
                         borderRadius: 2,
-                        backgroundColor: ACCENT,
+                        backgroundColor: tokens.accent,
                         width: `${Math.round(
                           (item.utilization / maxUtilization) * 100,
                         )}%`,

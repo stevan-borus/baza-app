@@ -4,17 +4,16 @@ import { useTranslation } from "react-i18next";
 import { Pressable, ScrollView, Switch, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
+import Feather from "@expo/vector-icons/Feather";
 import dayjs from "dayjs";
 import { MotiView } from "@/components/ui/styled";
 import { AppSheet } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { HeroCard } from "@/components/ui/hero-card";
-import { StatTile } from "@/components/ui/stat-tile";
 import { NumberRollup } from "@/components/ui/number-rollup";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { SessionCard } from "@/components/ui/session-card";
-import { WeekStrip, startOfLocaleWeek } from "@/components/ui/week-strip";
+import { startOfLocaleWeek } from "@/components/ui/week-strip";
 import { MonthView } from "@/components/ui/month-view";
 import { EmptyState, ErrorState, ListRow } from "@/components/ui/states";
 import { Input } from "@/components/ui/input";
@@ -27,7 +26,9 @@ import {
   SkeletonList,
   SkeletonStatCard,
 } from "@/components/ui/skeleton";
-import { ACCENT } from "@/components/ui/tokens";
+import { useThemeTokens } from "@/components/ui/tokens";
+import { CapsLabel, StudioWeekStrip, StatStrip } from "@/components/ui/studio";
+import { HeaderIconButton } from "@/components/ui/app-header";
 import { sessionsQueries } from "@/lib/queries/sessions-queries-factory";
 import { trainingsQueries } from "@/lib/queries/trainings-queries-factory";
 import { roomsQueries } from "@/lib/queries/rooms-queries-factory";
@@ -52,6 +53,7 @@ export default function AdminSchedule() {
   const lang = i18n.language === "en" ? "en" : "sr";
   const router = useRouter();
   const queryClient = useQueryClient();
+  const tokens = useThemeTokens();
   const bottomPad = useTabBarBottomPadding(24);
   const [selectedDate, setSelectedDate] = useState(dayjs().format("YYYY-MM-DD"));
   const [month, setMonth] = useState(() => monthKeyFromDate(dayjs()));
@@ -229,14 +231,16 @@ export default function AdminSchedule() {
     (s) => dayjs(s.startsAt).format("YYYY-MM-DD") === selectedDate,
   );
 
-  // Build activity map for WeekStrip
-  const activityByDate: Record<string, "booked" | "available"> = {};
-  for (const s of sessions) {
-    const dateKey = dayjs(s.startsAt).format("YYYY-MM-DD");
-    activityByDate[dateKey] = "available";
-  }
+  // YYYY-MM-DD → number of sessions on that day. Drives the dot indicator
+  // under each day pill in StudioWeekStrip and MonthView.
+  const sessionsByDay = sessions.reduce<Record<string, number>>((acc, s) => {
+    const k = dayjs(s.startsAt).format("YYYY-MM-DD");
+    acc[k] = (acc[k] ?? 0) + 1;
+    return acc;
+  }, {});
 
-  function handleDateSelect(date: string) {
+  function handleDateSelect(d: dayjs.Dayjs) {
+    const date = d.format("YYYY-MM-DD");
     // Pick a day. NEVER mutate `weekStart` or `month` here — picking a day
     // inside the visible week must not page the calendar.
     setSelectedDate(date);
@@ -341,103 +345,116 @@ export default function AdminSchedule() {
   }
 
   return (
-    <ScreenContainerRaw title={t("tabs.dashboard")}>
+    <ScreenContainerRaw
+      title={t("tabs.dashboard")}
+      rightSlot={
+        <HeaderIconButton
+          icon="plus"
+          onPress={() => setShowCreate(true)}
+          accessibilityLabel={t("admin.schedule.newSession")}
+        />
+      }
+    >
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingTop: 16, paddingBottom: bottomPad }}
       >
+        {/* ── Revenue hero — caps overline + giant numeral on bone ── */}
         <MotiView
           from={{ opacity: 0, translateY: -8 }}
           animate={{ opacity: 1, translateY: 0 }}
           transition={{ type: "timing", duration: 350 }}
         >
-          {/* ── Revenue hero card ───────────────────────────────────── */}
-          <View className="px-6 pb-4">
-            <HeroCard tone="default">
-              <SectionLabel className="mb-2">{t("admin.dashboard.revenueThisMonth")}</SectionLabel>
+          <View className="px-5 pb-6">
+            <CapsLabel size={11} tracking={1.6} className="text-muted">
+              {t("admin.dashboard.revenueThisMonth")}
+            </CapsLabel>
+            <View className="flex-row items-baseline mt-1.5">
               <NumberRollup
                 value={revenueValue}
                 formatter={(n) =>
-                  `RSD ${Math.round(n).toLocaleString("sr-RS")}`
+                  `${Math.round(n).toLocaleString("sr-RS")}`
                 }
                 className="text-foreground font-body-bold"
-                style={{ fontSize: 44, letterSpacing: -1 }}
+                style={{ fontSize: 40, letterSpacing: -1, lineHeight: 44 }}
               />
-            </HeroCard>
+              <Text
+                className="text-muted ml-2"
+                style={{ fontFamily: "AlbertSans-Medium", fontSize: 14 }}
+              >
+                RSD
+              </Text>
+            </View>
           </View>
         </MotiView>
 
-        {/* ── 2×2 Stat grid ──────────────────────────────────────────── */}
+        {/* ── Editorial stat strip — 4 hairline-separated columns ── */}
         <MotiView
           from={{ opacity: 0, translateY: -8 }}
           animate={{ opacity: 1, translateY: 0 }}
           transition={{ type: "timing", duration: 350, delay: 120 }}
+          className="mb-6"
         >
-          <View className="px-6 pb-4 gap-3">
-            {/* Row 1 */}
-            <View className="flex-row gap-3">
-              <View className="flex-1">
-                <StatTile
-                  label={t("admin.dashboard.sessionsToday")}
-                  value={daySessions.length}
-                />
-              </View>
-              <View className="flex-1">
-                <StatTile
-                  label={t("admin.dashboard.activeClients")}
-                  value={summary?.activeClients ?? "—"}
-                />
-              </View>
-            </View>
-            {/* Row 2 */}
-            <View className="flex-row gap-3">
-              <View className="flex-1">
-                <StatTile
-                  label={t("admin.dashboard.newClientsMonth")}
-                  value={
-                    summary
-                      ? summary.totalClients - summary.inactiveClients
-                      : "—"
-                  }
-                />
-              </View>
-              <View className="flex-1">
-                <StatTile
-                  label={t("admin.dashboard.attendanceRate")}
-                  value={summary ? `${attendanceRate}%` : "—"}
-                />
-              </View>
-            </View>
-          </View>
+          <StatStrip
+            columns={2}
+            items={[
+              {
+                label: t("admin.dashboard.sessionsToday"),
+                value: daySessions.length,
+              },
+              {
+                label: t("admin.dashboard.activeClients"),
+                value: summary?.activeClients,
+              },
+              {
+                label: t("admin.dashboard.newClientsMonth"),
+                value: summary
+                  ? summary.totalClients - summary.inactiveClients
+                  : undefined,
+              },
+              {
+                label: t("admin.dashboard.attendanceRate"),
+                value: summary ? `${attendanceRate}%` : undefined,
+                accent: true,
+              },
+            ]}
+          />
         </MotiView>
 
-        {/* ── Studio quick-actions: 2 compact pills above the schedule ─ */}
+        {/* ── Studio quick-actions: hairline list rows ── */}
         <MotiView
           from={{ opacity: 0, translateY: -4 }}
           animate={{ opacity: 1, translateY: 0 }}
           transition={{ type: "timing", duration: 350, delay: 220 }}
-          className="px-6 pb-4"
+          className="mb-6"
         >
-          <View className="flex-row gap-2">
+          <View className="mx-5 border-t border-b border-glass-border">
             <Pressable
               onPress={() => router.push("/(admin)/class-types")}
-              className="flex-1 flex-row items-center gap-2 bg-glass border border-glass-border rounded-2xl px-3.5 py-3 active:opacity-70"
+              android_ripple={null}
+              className="flex-row items-center justify-between py-4 active:opacity-60"
             >
-              <FontAwesome name="list" size={13} color="#a1a1aa" />
-              <Text className="text-foreground text-sm font-body-medium flex-1" numberOfLines={1}>
-                {t("admin.manage.classTypes")}
-              </Text>
-              <FontAwesome name="chevron-right" size={10} color="#a1a1aa" />
+              <View className="flex-row items-center gap-3 flex-1">
+                <Feather name="list" size={16} color={tokens.muted} />
+                <Text className="text-foreground font-body-medium" style={{ fontSize: 15 }}>
+                  {t("admin.manage.classTypes")}
+                </Text>
+              </View>
+              <Feather name="chevron-right" size={16} color={tokens.faint} />
             </Pressable>
+            <View className="bg-glass-border" style={{ height: 1 }} />
             <Pressable
               onPress={() => router.push("/(admin)/rooms")}
-              className="flex-1 flex-row items-center gap-2 bg-glass border border-glass-border rounded-2xl px-3.5 py-3 active:opacity-70"
+              android_ripple={null}
+              className="flex-row items-center justify-between py-4 active:opacity-60"
             >
-              <FontAwesome name="building-o" size={13} color="#a1a1aa" />
-              <Text className="text-foreground text-sm font-body-medium flex-1" numberOfLines={1}>
-                {t("admin.manage.rooms")}
-              </Text>
-              <FontAwesome name="chevron-right" size={10} color="#a1a1aa" />
+              <View className="flex-row items-center gap-3 flex-1">
+                <Feather name="home" size={16} color={tokens.muted} />
+                <Text className="text-foreground font-body-medium" style={{ fontSize: 15 }}>
+                  {t("admin.manage.rooms")}
+                </Text>
+              </View>
+              <Feather name="chevron-right" size={16} color={tokens.faint} />
             </Pressable>
           </View>
         </MotiView>
@@ -460,48 +477,44 @@ export default function AdminSchedule() {
             />
           </View>
 
-          {/* Section header row */}
-          <View className="flex-row items-center justify-between px-6 pb-3">
-            <SectionLabel>{t("admin.dashboard.todaySchedule")}</SectionLabel>
-            <Text
-              className="text-xs font-body-semibold text-muted"
-              style={{ letterSpacing: 0.3 }}
-            >
-              {t("admin.dashboard.classCount", { count: daySessions.length })}
-            </Text>
-          </View>
-
           {scheduleTab === "day" ? (
             <>
-              {/* WeekStrip with prev/next week arrows */}
-              <View className="px-6 pb-3">
-                <WeekStrip
+              <View className="pb-4">
+                <StudioWeekStrip
                   weekStart={weekStart}
-                  selectedDate={selectedDate}
-                  onSelectDate={handleDateSelect}
+                  selected={dayjs(selectedDate)}
+                  onSelect={handleDateSelect}
+                  sessionsByDay={sessionsByDay}
                   onPrevWeek={handlePrevWeek}
                   onNextWeek={handleNextWeek}
-                  activity={activityByDate}
+                  rangeLabel={`${weekStart.locale(lang).format("D. MMM")} — ${weekStart
+                    .add(6, "day")
+                    .locale(lang)
+                    .format("D. MMM")}`}
                 />
               </View>
 
-              <View className="px-6 pb-3">
-                <Button size="small" onPress={() => setShowCreate(true)}>
-                  {t("admin.schedule.newSession")}
-                </Button>
-              </View>
-
               {availabilityQuery.isError ? (
-                <View className="px-6">
+                <View className="px-5">
                   <ErrorState message={t("admin.schedule.error")} />
                 </View>
               ) : null}
 
               {/* Day sessions list */}
-              <View className="px-6">
-                <SectionLabel className="pb-3">
-                  {displayDate.locale(lang).format("dddd, D MMMM")}
-                </SectionLabel>
+              <View className="px-5">
+                <View className="flex-row items-baseline justify-between pb-3">
+                  <CapsLabel size={12} tracking={2.4}>
+                    {displayDate.locale(lang).format("dddd, D MMMM").toUpperCase()}
+                  </CapsLabel>
+                  {daySessions.length > 0 ? (
+                    <Text className="text-xs text-muted">
+                      {t("admin.dashboard.classCount", {
+                        count: daySessions.length,
+                      })}
+                    </Text>
+                  ) : null}
+                </View>
+
                 <View className="flex-col gap-3">
                   {daySessions.length === 0 ? (
                     <EmptyState title={t("client.dayView.noSessions")} />
@@ -526,14 +539,14 @@ export default function AdminSchedule() {
               </View>
             </>
           ) : (
-            <View className="px-6">
+            <View className="px-5">
               <MonthView
                 month={monthDate}
                 selectedDate={selectedDate}
                 onSelectDate={handleMonthCellSelect}
                 onPrevMonth={handlePrevMonth}
                 onNextMonth={handleNextMonth}
-                activity={activityByDate}
+                activity={sessionsByDay}
               />
             </View>
           )}
@@ -707,7 +720,7 @@ export default function AdminSchedule() {
               <Switch
                 value={createIsActive}
                 onValueChange={setCreateIsActive}
-                trackColor={{ false: "#404040", true: ACCENT }}
+                trackColor={{ false: tokens.glassStrong, true: tokens.accent }}
                 style={{ transform: [{ scale: 0.85 }] }}
               />
             </View>
@@ -891,7 +904,7 @@ export default function AdminSchedule() {
                           setEditForm((s) => ({ ...s, isActive: v }))
                         }
                         disabled={cannotHide}
-                        trackColor={{ false: "#404040", true: ACCENT }}
+                        trackColor={{ false: tokens.glassStrong, true: tokens.accent }}
                         style={{ transform: [{ scale: 0.85 }] }}
                       />
                     </View>
@@ -1086,7 +1099,7 @@ export default function AdminSchedule() {
                           setSeriesForm((s) => ({ ...s, isActive: v }))
                         }
                         disabled={cannotHide}
-                        trackColor={{ false: "#404040", true: ACCENT }}
+                        trackColor={{ false: tokens.glassStrong, true: tokens.accent }}
                         style={{ transform: [{ scale: 0.85 }] }}
                       />
                     </View>
@@ -1174,3 +1187,4 @@ export default function AdminSchedule() {
     </ScreenContainerRaw>
   );
 }
+

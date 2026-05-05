@@ -2,7 +2,7 @@
 // segmented Clients/Invites tabs. All five AppSheets (create, edit, invite, assign-package,
 // pause) are preserved verbatim with their form state and mutations unchanged.
 
-import { useState } from "react";
+import React, { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import {
@@ -23,39 +23,13 @@ import { Input } from "@/components/ui/input";
 import { SectionLabel } from "@/components/ui/typography";
 import { GlassCard } from "@/components/ui/glass-card";
 import { SegmentedControl } from "@/components/ui/tabs";
-import { ACCENT } from "@/components/ui/tokens";
+import { useThemeTokens } from "@/components/ui/tokens";
 import { ScreenContainerRaw, useTabBarBottomPadding } from "@/components/ui/screen-container";
 import { HeaderIconButton } from "@/components/ui/app-header";
+import { FilterChip } from "@/components/ui/studio";
 import { clientsQueries } from "@/lib/queries/clients-queries-factory";
 import { invitesQueries, type Invite } from "@/lib/queries/invites-queries-factory";
 import { packagesQueries } from "@/lib/queries/packages-queries-factory";
-
-// ─── FilterChip ──────────────────────────────────────────────────────────────
-
-function FilterChip({
-  active,
-  label,
-  onPress,
-}: {
-  active: boolean;
-  label: string;
-  onPress: () => void;
-}) {
-  return (
-    <Pressable
-      onPress={onPress}
-      className={`px-3 py-1.5 rounded-full border ${
-        active ? "bg-accent border-accent" : "bg-glass border-glass-border"
-      }`}
-    >
-      <Text
-        className={`text-xs font-body-semibold ${active ? "text-white" : "text-muted"}`}
-      >
-        {label}
-      </Text>
-    </Pressable>
-  );
-}
 
 // ─── InitialsAvatar ───────────────────────────────────────────────────────────
 
@@ -67,15 +41,7 @@ function InitialsAvatar({ name }: { name: string }) {
     .toUpperCase()
     .slice(0, 2);
   return (
-    <View
-      className="items-center justify-center"
-      style={{
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        backgroundColor: "rgba(46,91,66,0.35)",
-      }}
-    >
+    <View className="items-center justify-center w-10 h-10 rounded-full bg-accent-soft">
       <Text className="text-accent font-body-bold" style={{ fontSize: 14 }}>
         {initials}
       </Text>
@@ -91,6 +57,7 @@ type FilterType = "all" | "active" | "expiring" | "paused" | "expired";
 
 export default function AdminClients() {
   const queryClient = useQueryClient();
+  const tokens = useThemeTokens();
   const { t } = useTranslation();
   const bottomPad = useTabBarBottomPadding();
 
@@ -105,6 +72,11 @@ export default function AdminClients() {
   const [showEditClient, setShowEditClient] = useState<string | null>(null);
   const [showAssignPackage, setShowAssignPackage] = useState<string | null>(null);
   const [showPause, setShowPause] = useState<string | null>(null);
+  // Actions sheet — opened by tapping a client row in the list.
+  const [showActionsFor, setShowActionsFor] = useState<string | null>(null);
+  // Delete confirmation — separate from the actions sheet so a stray tap
+  // can't soft-delete a client.
+  const [showDeleteFor, setShowDeleteFor] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
   // ── Form state ────────────────────────────────────────────────────────────
@@ -239,8 +211,8 @@ export default function AdminClients() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={handleRefresh}
-            tintColor="#2e5b42"
-            colors={["#2e5b42"]}
+            tintColor={tokens.accent}
+            colors={[tokens.accent]}
           />
         }
       >
@@ -320,24 +292,42 @@ export default function AdminClients() {
                 <EmptyState title={t("admin.clients.empty")} />
               ) : null}
 
-              {filteredClients.map((client) => (
-                <GlassCard key={client.id}>
-                  <View className="flex-row gap-3 items-center">
-                    <InitialsAvatar name={client.user.fullName} />
-                    <View className="flex-1 flex-col gap-0.5">
-                      <Text
-                        className="text-foreground font-body-semibold"
-                        style={{ fontSize: 15 }}
-                        numberOfLines={1}
-                      >
-                        {client.user.fullName}
-                      </Text>
-                      <Text className="text-muted" style={{ fontSize: 13 }} numberOfLines={1}>
-                        {client.user.email}
-                        {client.user.phone ? ` · ${client.user.phone}` : ""}
-                      </Text>
-                    </View>
-                    <View className="flex-row items-center gap-2">
+              {/* Compact rows. Tap a row → opens the actions sheet (Uredi /
+                  Dodeli paket / Pauziraj / Obriši). Status badge sits to
+                  the right of the email so density stays low even with
+                  hundreds of clients on screen. */}
+              <View className="bg-surface rounded-lg overflow-hidden">
+                {filteredClients.map((client, idx) => (
+                  <React.Fragment key={client.id}>
+                    {idx > 0 ? (
+                      <View
+                        className="bg-glass-border"
+                        style={{ height: 1, marginLeft: 64 }}
+                      />
+                    ) : null}
+                    <Pressable
+                      onPress={() => setShowActionsFor(client.id)}
+                      android_ripple={null}
+                      className="flex-row items-center gap-3 px-4 py-3 active:opacity-70"
+                    >
+                      <InitialsAvatar name={client.user.fullName} />
+                      <View className="flex-1 gap-0.5">
+                        <Text
+                          className="text-foreground font-body-semibold"
+                          style={{ fontSize: 15 }}
+                          numberOfLines={1}
+                        >
+                          {client.user.fullName}
+                        </Text>
+                        <Text
+                          className="text-muted"
+                          style={{ fontSize: 12 }}
+                          numberOfLines={1}
+                        >
+                          {client.user.email}
+                          {client.user.phone ? ` · ${client.user.phone}` : ""}
+                        </Text>
+                      </View>
                       {client.packageStatus === "active" ? (
                         <Badge status="success">
                           {t("admin.clients.filterActive")}
@@ -355,66 +345,15 @@ export default function AdminClients() {
                           {t("admin.clients.filterExpired")}
                         </Badge>
                       ) : null}
-                      <Pressable
-                        onPress={() => {
-                          setEditForm({
-                            fullName: client.user.fullName,
-                            phone: client.user.phone ?? "",
-                            notes: client.notes ?? "",
-                            isActive: true,
-                          });
-                          setShowEditClient(client.id);
-                        }}
-                        hitSlop={8}
-                      >
-                        <FontAwesome name="chevron-right" size={12} color="#a1a1aa" />
-                      </Pressable>
-                    </View>
-                  </View>
-
-                  {/* Action row */}
-                  <View className="flex-row gap-2 mt-3 pt-3" style={{ borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.06)" }}>
-                    <Pressable
-                      onPress={() => {
-                        setEditForm({
-                          fullName: client.user.fullName,
-                          phone: client.user.phone ?? "",
-                          notes: client.notes ?? "",
-                          isActive: true,
-                        });
-                        setShowEditClient(client.id);
-                      }}
-                      className="flex-1 flex-row items-center justify-center gap-1.5 py-2 rounded-lg"
-                      style={{ backgroundColor: "rgba(255,255,255,0.06)" }}
-                    >
-                      <FontAwesome name="pencil" size={12} color="#a1a1aa" />
-                      <Text className="text-muted" style={{ fontSize: 12, fontWeight: "600" }}>
-                        {t("admin.clients.edit")}
-                      </Text>
+                      <FontAwesome
+                        name="chevron-right"
+                        size={11}
+                        color={tokens.faint}
+                      />
                     </Pressable>
-                    <Pressable
-                      onPress={() => setShowAssignPackage(client.id)}
-                      className="flex-1 flex-row items-center justify-center gap-1.5 py-2 rounded-lg"
-                      style={{ backgroundColor: "rgba(255,255,255,0.06)" }}
-                    >
-                      <FontAwesome name="gift" size={12} color="#a1a1aa" />
-                      <Text className="text-muted" style={{ fontSize: 12, fontWeight: "600" }}>
-                        {t("admin.clients.assignPackage")}
-                      </Text>
-                    </Pressable>
-                    <Pressable
-                      onPress={() => setShowPause(client.id)}
-                      className="flex-1 flex-row items-center justify-center gap-1.5 py-2 rounded-lg"
-                      style={{ backgroundColor: "rgba(255,255,255,0.06)" }}
-                    >
-                      <FontAwesome name="pause" size={12} color="#a1a1aa" />
-                      <Text className="text-muted" style={{ fontSize: 12, fontWeight: "600" }}>
-                        {t("admin.clients.pause")}
-                      </Text>
-                    </Pressable>
-                  </View>
-                </GlassCard>
-              ))}
+                  </React.Fragment>
+                ))}
+              </View>
             </>
           ) : (
             <>
@@ -527,9 +466,14 @@ export default function AdminClients() {
         {/* Edit Client Sheet */}
         <AppSheet open={!!showEditClient} onOpenChange={() => setShowEditClient(null)}>
           <View className="flex-col gap-4">
-            <Text className="text-foreground font-body-bold" style={{ fontSize: 20, letterSpacing: -0.3 }}>
-              {t("admin.clients.sheetEdit")}
-            </Text>
+            <SheetHeader
+              title={t("admin.clients.sheetEdit")}
+              onBack={() => {
+                const id = showEditClient;
+                setShowEditClient(null);
+                if (id) setShowActionsFor(id);
+              }}
+            />
             <SectionLabel>{t("admin.clients.placeholderFullName")}</SectionLabel>
             <Input
               placeholder={t("admin.clients.placeholderFullName")}
@@ -557,7 +501,7 @@ export default function AdminClients() {
               <Switch
                 value={editForm.isActive}
                 onValueChange={(v) => setEditForm((s) => ({ ...s, isActive: v }))}
-                trackColor={{ false: "#404040", true: ACCENT }}
+                trackColor={{ false: tokens.glassStrong, true: tokens.accent }}
               />
             </View>
             <Button
@@ -577,6 +521,147 @@ export default function AdminClients() {
             </Button>
             {updateClientMutation.isError ? <ErrorState message={t("admin.clients.updateError")} /> : null}
           </View>
+        </AppSheet>
+
+        {/* Actions sheet — opens when a client row is tapped. Avoids
+            stacking 3+ inline action buttons under every row. */}
+        <AppSheet
+          open={!!showActionsFor}
+          onOpenChange={(o) => !o && setShowActionsFor(null)}
+        >
+          {(() => {
+            const client = clients.find((c) => c.id === showActionsFor);
+            if (!client) return null;
+            return (
+              <View className="flex-col gap-2">
+                <View className="flex-row items-center gap-3 pb-3">
+                  <InitialsAvatar name={client.user.fullName} />
+                  <View className="flex-1 gap-0.5">
+                    <Text
+                      className="text-foreground font-body-semibold"
+                      style={{ fontSize: 16 }}
+                      numberOfLines={1}
+                    >
+                      {client.user.fullName}
+                    </Text>
+                    <Text
+                      className="text-muted"
+                      style={{ fontSize: 12 }}
+                      numberOfLines={1}
+                    >
+                      {client.user.email}
+                    </Text>
+                  </View>
+                </View>
+                <View className="bg-glass-border" style={{ height: 1 }} />
+                <ActionRow
+                  icon="edit-2"
+                  label={t("admin.clients.edit")}
+                  onPress={() => {
+                    setEditForm({
+                      fullName: client.user.fullName,
+                      phone: client.user.phone ?? "",
+                      notes: client.notes ?? "",
+                      isActive: true,
+                    });
+                    setShowActionsFor(null);
+                    setShowEditClient(client.id);
+                  }}
+                />
+                <ActionRow
+                  icon="gift"
+                  label={t("admin.clients.assignPackage")}
+                  onPress={() => {
+                    setShowActionsFor(null);
+                    setShowAssignPackage(client.id);
+                  }}
+                />
+                <ActionRow
+                  icon="pause"
+                  label={t("admin.clients.pause")}
+                  onPress={() => {
+                    setShowActionsFor(null);
+                    setShowPause(client.id);
+                  }}
+                />
+                <ActionRow
+                  icon="trash-2"
+                  label={t("admin.clients.delete")}
+                  destructive
+                  onPress={() => {
+                    setShowActionsFor(null);
+                    setShowDeleteFor(client.id);
+                  }}
+                />
+              </View>
+            );
+          })()}
+        </AppSheet>
+
+        {/* Delete confirmation sheet — separate from the actions sheet
+            so an accidental tap on "Obriši" doesn't immediately wipe a
+            client. The mutation only runs from the destructive button. */}
+        <AppSheet
+          open={!!showDeleteFor}
+          onOpenChange={(o) => !o && setShowDeleteFor(null)}
+        >
+          {(() => {
+            const client = clients.find((c) => c.id === showDeleteFor);
+            if (!client) return null;
+            return (
+              <View className="flex-col gap-5">
+                <View className="items-center gap-3 pt-1">
+                  <View className="w-12 h-12 rounded-full bg-danger-soft items-center justify-center">
+                    <Feather name="alert-triangle" size={20} color="#dc2626" />
+                  </View>
+                  <Text
+                    className="text-foreground font-body-bold text-center"
+                    style={{ fontSize: 18, letterSpacing: -0.3 }}
+                  >
+                    {client.user.fullName}
+                  </Text>
+                  <Text
+                    className="text-muted text-center"
+                    style={{ fontSize: 14, lineHeight: 20 }}
+                  >
+                    {t("admin.clients.deleteConfirm")}
+                  </Text>
+                </View>
+                <View className="flex-row gap-3">
+                  <Pressable
+                    onPress={() => setShowDeleteFor(null)}
+                    android_ripple={null}
+                    className="flex-1 items-center justify-center py-3.5 rounded border border-glass-border active:opacity-70"
+                  >
+                    <Text
+                      className="font-body-semibold uppercase text-foreground"
+                      style={{ fontSize: 12, letterSpacing: 1.4 }}
+                    >
+                      {t("admin.clients.cancel", { defaultValue: "Otkaži" })}
+                    </Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={() => {
+                      updateClientMutation.mutate({
+                        id: client.id,
+                        isActive: false,
+                      });
+                      setShowDeleteFor(null);
+                    }}
+                    android_ripple={null}
+                    className="flex-1 items-center justify-center py-3.5 rounded bg-danger active:opacity-90"
+                  >
+                    <Text
+                      className="font-body-semibold uppercase text-white"
+                      style={{ fontSize: 12, letterSpacing: 1.4 }}
+                    >
+                      {t("admin.clients.delete")}
+                    </Text>
+                  </Pressable>
+                </View>
+              </View>
+            );
+          })()}
         </AppSheet>
 
         {/* Invite Sheet */}
@@ -622,9 +707,14 @@ export default function AdminClients() {
         {/* Assign Package Sheet */}
         <AppSheet open={!!showAssignPackage} onOpenChange={() => setShowAssignPackage(null)}>
           <View className="flex-col gap-4">
-            <Text className="text-foreground font-body-bold" style={{ fontSize: 20, letterSpacing: -0.3 }}>
-              {t("admin.clients.sheetAssign")}
-            </Text>
+            <SheetHeader
+              title={t("admin.clients.sheetAssign")}
+              onBack={() => {
+                const id = showAssignPackage;
+                setShowAssignPackage(null);
+                if (id) setShowActionsFor(id);
+              }}
+            />
             <SectionLabel>{t("admin.clients.packageType")}</SectionLabel>
             {(packageTypesQuery.data?.packageTypes ?? []).map((pt) => (
               <Button
@@ -661,9 +751,14 @@ export default function AdminClients() {
         {/* Pause Package Sheet */}
         <AppSheet open={!!showPause} onOpenChange={() => setShowPause(null)}>
           <View className="flex-col gap-4">
-            <Text className="text-foreground font-body-bold" style={{ fontSize: 20, letterSpacing: -0.3 }}>
-              {t("admin.clients.sheetPause")}
-            </Text>
+            <SheetHeader
+              title={t("admin.clients.sheetPause")}
+              onBack={() => {
+                const id = showPause;
+                setShowPause(null);
+                if (id) setShowActionsFor(id);
+              }}
+            />
             <Input
               placeholder={t("admin.clients.pauseStart")}
               value={pauseForm.startsAt}
@@ -699,5 +794,86 @@ export default function AdminClients() {
       </View>
       </ScrollView>
     </ScreenContainerRaw>
+  );
+}
+
+// ─── ActionRow ───────────────────────────────────────────────────────────────
+// Used inside the client-actions sheet. Feather icon + label + chevron, full
+// width, hairline-divided. Destructive variant tints icon + label red.
+
+import Feather from "@expo/vector-icons/Feather";
+
+/**
+ * SheetHeader — back chevron on the left of the sheet title. The chevron
+ * goes "back" to the actions sheet (the previous step in the user's flow);
+ * the standard sheet swipe-down still dismisses entirely.
+ */
+function SheetHeader({
+  title,
+  onBack,
+}: {
+  title: string;
+  onBack: () => void;
+}) {
+  const t = useThemeTokens();
+  return (
+    <View className="flex-row items-center gap-2 -ml-1">
+      <Pressable
+        onPress={onBack}
+        hitSlop={12}
+        android_ripple={null}
+        className="active:opacity-60 w-8 h-8 items-center justify-center"
+        accessibilityRole="button"
+        accessibilityLabel="Back"
+      >
+        <Feather name="chevron-left" size={22} color={t.foreground} />
+      </Pressable>
+      <Text
+        className="text-foreground font-body-bold flex-1"
+        style={{ fontSize: 20, letterSpacing: -0.3 }}
+      >
+        {title}
+      </Text>
+    </View>
+  );
+}
+
+function ActionRow({
+  icon,
+  label,
+  onPress,
+  destructive = false,
+}: {
+  icon: React.ComponentProps<typeof Feather>["name"];
+  label: string;
+  onPress: () => void;
+  destructive?: boolean;
+}) {
+  const t = useThemeTokens();
+  return (
+    <Pressable
+      onPress={onPress}
+      android_ripple={null}
+      className="flex-row items-center gap-3 py-3.5 active:opacity-70"
+    >
+      <Feather
+        name={icon}
+        size={18}
+        color={destructive ? "#dc2626" : t.foreground}
+      />
+      <Text
+        className={
+          destructive
+            ? "text-danger font-body-medium flex-1"
+            : "text-foreground font-body-medium flex-1"
+        }
+        style={{ fontSize: 15 }}
+      >
+        {label}
+      </Text>
+      {!destructive ? (
+        <Feather name="chevron-right" size={16} color={t.faint} />
+      ) : null}
+    </Pressable>
   );
 }

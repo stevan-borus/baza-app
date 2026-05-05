@@ -37,9 +37,12 @@
 @layer theme {
   :root {
     @variant light {
-      /* Studio palette — warm bone canvas, near-black ink, single accent. */
+      /* Studio palette — warm bone canvas, near-black ink, single accent.
+         `--color-surface` is a slightly warmer + lighter shade of the
+         canvas (not pure white) so cards read as quiet embedded chrome
+         instead of glaring tiles on bone. */
       --color-background: #F4EFE3;
-      --color-surface: #ffffff;
+      --color-surface: #FBF7EC;
       --color-surface-2: #EBE5D5;
 
       --color-foreground: #0F0F0D;

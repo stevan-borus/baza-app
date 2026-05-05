@@ -18,9 +18,11 @@ import { LegendList } from "@legendapp/list";
 import { getDateLocale } from "@/lib/i18n";
 import { AppSheet } from "@/components/ui/sheet";
 import { Badge, Card } from "@/components/ui/card";
-import { HeroCard } from "@/components/ui/hero-card";
 import { NumberRollup } from "@/components/ui/number-rollup";
 import { SectionLabel } from "@/components/ui/typography";
+import { CapsLabel, FilterChip, StatStrip } from "@/components/ui/studio";
+import { useThemeTokens } from "@/components/ui/tokens";
+import Feather from "@expo/vector-icons/Feather";
 import { Button } from "@/components/ui/button";
 import { EmptyState, ErrorState } from "@/components/ui/states";
 import { Input } from "@/components/ui/input";
@@ -40,6 +42,7 @@ export default function AdminBilling() {
   const { t, i18n } = useTranslation();
   const lang = i18n.language === "en" ? "en" : "sr";
   const queryClient = useQueryClient();
+  const tokens = useThemeTokens();
   const bottomPad = useTabBarBottomPadding();
   const [showCreate, setShowCreate] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState(() => dayjs());
@@ -145,118 +148,108 @@ export default function AdminBilling() {
           gap: 16,
         }}
       >
-      {/* Period selector */}
+      {/* Period selector — caps label between Feather chevrons */}
       <MotiView
         from={{ opacity: 0, translateY: -8 }}
         animate={{ opacity: 1, translateY: 0 }}
         transition={{ type: "timing", duration: 350, delay: 0 }}
       >
         <View className="flex-row justify-between items-center">
-          <FontAwesome
-            name="chevron-left"
-            size={16}
-            color="#a1a1aa"
+          <Pressable
             onPress={() => navigateBillingMonth(-1)}
-          />
-          <Text
-            className="text-foreground font-body-bold"
-            style={{ fontSize: 18, letterSpacing: -0.3 }}
+            hitSlop={12}
+            android_ripple={null}
+            className="active:opacity-60 w-9 h-9 items-center justify-center"
           >
+            <Feather name="chevron-left" size={20} color={tokens.foreground} />
+          </Pressable>
+          <CapsLabel size={11} tracking={1.6}>
             {periodLabel}
-          </Text>
-          <FontAwesome
-            name="chevron-right"
-            size={16}
-            color="#a1a1aa"
+          </CapsLabel>
+          <Pressable
             onPress={() => navigateBillingMonth(1)}
-          />
+            hitSlop={12}
+            android_ripple={null}
+            className="active:opacity-60 w-9 h-9 items-center justify-center"
+          >
+            <Feather name="chevron-right" size={20} color={tokens.foreground} />
+          </Pressable>
         </View>
       </MotiView>
 
-      {/* Hero revenue card */}
+      {/* Total revenue — editorial overline + giant numeral */}
       <MotiView
         from={{ opacity: 0, translateY: 12 }}
         animate={{ opacity: 1, translateY: 0 }}
         transition={{ type: "timing", duration: 350, delay: 80 }}
       >
-        <HeroCard tone="default">
-          <View className="gap-3">
-            <SectionLabel>
-              {t("admin.manage.totalRevenue")} · {periodLabel}
-            </SectionLabel>
+        <View className="gap-1.5">
+          <CapsLabel size={11} tracking={1.6} className="text-muted">
+            {t("admin.manage.totalRevenue")}
+          </CapsLabel>
+          <View className="flex-row items-baseline">
             <NumberRollup
               value={summaryStats.totalRevenue}
               formatter={(n) =>
-                new Intl.NumberFormat("de-DE", {
-                  style: "currency",
-                  currency: "RSD",
-                  maximumFractionDigits: 0,
-                }).format(Math.round(n))
+                `${Math.round(n).toLocaleString("sr-RS")}`
               }
-              className="text-foreground font-extrabold"
-              style={{ fontSize: 44, letterSpacing: -1 }}
+              className="text-foreground font-body-bold"
+              style={{ fontSize: 40, letterSpacing: -1, lineHeight: 44 }}
             />
-            <View className="flex-row gap-4">
-              <View className="flex-1 gap-1">
-                <Text className="text-muted text-xs uppercase tracking-wide">
-                  {t("admin.manage.transactionCount")}
-                </Text>
-                <Text className="text-foreground text-base font-body-medium">
-                  {summaryStats.count}
-                </Text>
-              </View>
-              <View className="flex-1 gap-1">
-                <Text className="text-muted text-xs uppercase tracking-wide">
-                  {t("admin.manage.avgPerClient")}
-                </Text>
-                <Text className="text-foreground text-base font-body-medium">
-                  {new Intl.NumberFormat("de-DE", {
-                    style: "currency",
-                    currency: "RSD",
-                    maximumFractionDigits: 0,
-                  }).format(summaryStats.avg)}
-                </Text>
-              </View>
-            </View>
+            <Text
+              className="text-muted ml-2"
+              style={{ fontFamily: "AlbertSans-Medium", fontSize: 14 }}
+            >
+              RSD
+            </Text>
           </View>
-        </HeroCard>
+        </View>
       </MotiView>
 
-      {/* Scrollable filter chips + section label */}
+      {/* Stat strip — count + average */}
       <MotiView
         from={{ opacity: 0, translateY: 8 }}
         animate={{ opacity: 1, translateY: 0 }}
-        transition={{ type: "timing", duration: 350, delay: 160 }}
+        transition={{ type: "timing", duration: 350, delay: 140 }}
       >
-        <View className="gap-3">
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ gap: 8 }}
-          >
-            {filterTabs.map((tab) => {
-              const active = activeFilter === tab.value;
-              return (
-                <Pressable
-                  key={tab.value}
-                  onPress={() => setActiveFilter(tab.value)}
-                  className={`px-3 py-1.5 rounded-full border ${
-                    active
-                      ? "bg-accent border-accent"
-                      : "bg-glass border-glass-border"
-                  }`}
-                >
-                  <Text
-                    className={`text-xs font-body-semibold ${active ? "text-white" : "text-muted"}`}
-                  >
-                    {tab.label}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </ScrollView>
-          <SectionLabel>{t("admin.manage.transactionCount")}</SectionLabel>
-        </View>
+        <StatStrip
+          className=""
+          items={[
+            {
+              label: t("admin.manage.transactionCount"),
+              value: summaryStats.count,
+            },
+            {
+              label: t("admin.manage.avgPerClient"),
+              value: summaryStats.avg
+                ? `${Math.round(summaryStats.avg).toLocaleString("sr-RS")}`
+                : undefined,
+              accent: true,
+            },
+          ]}
+        />
+      </MotiView>
+
+      {/* Filter chips */}
+      <MotiView
+        from={{ opacity: 0, translateY: 8 }}
+        animate={{ opacity: 1, translateY: 0 }}
+        transition={{ type: "timing", duration: 350, delay: 200 }}
+      >
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ gap: 8 }}
+        >
+          {filterTabs.map((tab) => (
+            <FilterChip
+              key={tab.value}
+              label={tab.label}
+              active={activeFilter === tab.value}
+              onPress={() => setActiveFilter(tab.value)}
+            />
+          ))}
+        </ScrollView>
       </MotiView>
 
       {/* Errors / empty */}
