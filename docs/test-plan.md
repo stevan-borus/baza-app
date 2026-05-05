@@ -210,13 +210,41 @@ i18n: tests import locale JSON and reference keys via the actual translated stri
 - i18n key parity — 1 test.
 - Opportunistic helpers in reports/aggregations if any exist as pure functions.
 
-## Phase 2 blockers — must fix before E2E can run
+## Phase 2 status (E2E layer)
 
-Phase A delivers a complete unit + integration suite (204 tests). The Playwright auth-smoke spec is scaffolded against existing testIDs.
+44 specs passing, 28 skipped, 0 failing.
 
-- ~~**tslib interop error in Expo Router web export.**~~ **Resolved** in Phase 2 (commit on `tests` branch). Root cause: tslib's `package.json` `exports` map routes the `node` import condition (which Expo CLI sets when bundling for SSR) to `./modules/index.js`, whose `import tslib from '../tslib.js'` + destructure pattern fails under Metro's CJS interop because the CJS `tslib.js` does not set `module.exports.default`. The first consumer to hit this on `/sign-in` is `framer-motion@6.5.1` (pulled in by `moti`). Fix: a `resolver.resolveRequest` shim in `apps/mobile/metro.config.js` that redirects every `'tslib'` request to `tslib/tslib.es6.mjs`, which exposes named exports + a default object and works for both namespace and default imports. Auth-smoke spec now passes 4/4 against the live Expo web server.
+### Resolved
 
-- **Remaining E2E spec build-out (~64 tests).** Per the "E2E (Playwright web)" section above. Auth-smoke is the working pattern reference.
+- **tslib interop error in Expo Router web export.** Root cause: tslib's `package.json` `exports` map routes the `node` import condition (which Expo CLI sets when bundling for SSR) to `./modules/index.js`, whose `import tslib from '../tslib.js'` + destructure pattern fails under Metro's CJS interop because the CJS `tslib.js` does not set `module.exports.default`. First consumer to hit this on `/sign-in` was `framer-motion@6.5.1` (pulled in by `moti`). Fix: a `resolver.resolveRequest` shim in `apps/mobile/metro.config.js` redirecting every `'tslib'` request to `tslib/tslib.es6.mjs`.
+- **`apiFetch` 401-ing on web.** It forced `credentials: "omit"` and pulled the cookie via `authClient.getCookie()` (expo-secure-store, no-op on web). Now uses `credentials: "include"` on web so the browser cookie jar carries the session.
+- **`@gorhom/bottom-sheet`'s `BottomSheetTextInput` crashed on web** (`State.currentlyFocusedInput is not a function`). The `Input` wrapper now falls back to plain `TextInput` on `Platform.OS === "web"`.
+- **`Button`'s `active:scale-[0.97]` made Playwright stability checks time out** (107 retries before failing). Dropped the scale animation; opacity-only feedback matches `StudioButton`.
+- **Sessions list endpoint schema mismatch.** `/api/sessions` (GET) wasn't returning `classTypeId`/`roomId`/`classType`/`room`, so `sessionsListResponseSchema.parse()` threw and the trainer notes Session select was empty. Filled in the missing fields.
+
+### Specs by group (file: passing / skipped)
+
+- `auth-smoke.spec.ts`: 4/0 — admin/trainer/client sign-in + wrong password.
+- `auth-extended.spec.ts`: 7/0 — sign-out, invite create+redeem (happy + expired + used), password reset request + expired.
+- `client.spec.ts`: 9/3 — home, calendar, booking, cancel-before-cutoff, notifications, language, sign-out, no-package filter. Skipped: 57 (late-cancel forfeit), 58 (full waitlist), 59 (waitlist promotion) — need seed extensions.
+- `trainer.spec.ts`: 7/5 — schedule, clients, notes (create / by-client / second note / search) + 403 for unlinked client. Skipped: 43/44 (no edit/delete UI), 46 (no per-client profile route), 48 (no by-session grouping), 51 (no post-cron attendance markers).
+- `admin.spec.ts`: 8/20 — catalog (ClassType/PackageType/Room create + Package edit/delete), invites, client list, billing nav. Skipped: ClassType/Room edit-delete UI not built (13/14/19/20), all scheduling specs because the DateTimePicker has no usable web fallback (21-30), pause/deactivate/billing-create flows pending testID wiring on placeholder-driven Inputs (33-38).
+- `cron-reports-en.spec.ts`: 9/0 — reports section render, cron consumption + skip + 401, 4 EN-smoke.
+
+### Deferred to later phase
+
+- Scheduling create/edit/delete via UI: needs a web-friendly DateTimePicker (the current `react-native-modal-datetime-picker` doesn't render on web). API-level integration tests cover the underlying behavior.
+- Class-type / room edit-delete UI: read-only screens today; defer until product adds the affordances.
+- Trainer note edit-delete UI: same reason.
+- Late-cancel forfeit (spec 57), waitlist (58/59), post-cron attendance markers (51): need seed extensions or new UI variants.
+
+### How to run
+
+```sh
+cd apps/mobile
+pnpm test:e2e            # full suite (~3 minutes, 44 passing)
+pnpm test:e2e -g "53:"   # one spec by name match
+```
 
 ### Phase A E2E artifacts that ARE in tree (will activate when runtime is fixed)
 - `apps/mobile/playwright.config.ts` — webServer + Chromium project + per-spec retain-on-failure traces.
