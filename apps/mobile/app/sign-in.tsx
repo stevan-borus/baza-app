@@ -12,7 +12,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useRouter, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ActivityIndicator, Text, View } from "react-native";
+import { Text, View } from "react-native";
 import { MotiView } from "@/components/ui/styled";
 import { AuthBackground } from "@/components/auth/auth-background";
 import { Input, PasswordInput } from "@/components/ui/input";
@@ -144,19 +144,14 @@ export default function SignInScreen() {
             </MotiView>
           ) : null}
 
-          {signInMutation.isPending ? (
-            <View className="h-[50px] rounded bg-foreground items-center justify-center mt-1.5">
-              <ActivityIndicator color="#FFFFFF" size="small" />
-            </View>
-          ) : (
-            <View className="mt-1.5">
-              <StudioButton
-                label={t("auth.submit")}
-                onPress={handleSubmit}
-                block
-              />
-            </View>
-          )}
+          <View className="mt-1.5">
+            <StudioButton
+              label={t("auth.submit")}
+              onPress={handleSubmit}
+              loading={signInMutation.isPending}
+              block
+            />
+          </View>
         </MotiView>
       </View>
 

@@ -6,7 +6,7 @@ import { useMutation } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ActivityIndicator, Text, View } from "react-native";
+import { Text, View } from "react-native";
 import Feather from "@expo/vector-icons/Feather";
 import { MotiView } from "@/components/ui/styled";
 import { AuthBackground } from "@/components/auth/auth-background";
@@ -205,17 +205,12 @@ export default function ResetPasswordScreen() {
                   <ErrorBanner message={t("auth.sendLinkError")} />
                 ) : null}
 
-                {requestMutation.isPending ? (
-                  <View className="h-[50px] rounded bg-foreground items-center justify-center">
-                    <ActivityIndicator color="#FFFFFF" size="small" />
-                  </View>
-                ) : (
-                  <StudioButton
-                    label={t("auth.sendLink")}
-                    onPress={handleRequestSubmit}
-                    block
-                  />
-                )}
+                <StudioButton
+                  label={t("auth.sendLink")}
+                  onPress={handleRequestSubmit}
+                  loading={requestMutation.isPending}
+                  block
+                />
 
                 <View className="flex-row items-center justify-center gap-3 mt-1.5">
                   <LinkText
@@ -287,17 +282,12 @@ export default function ResetPasswordScreen() {
                   <ErrorBanner message={t("auth.resetError")} />
                 ) : null}
 
-                {resetMutation.isPending ? (
-                  <View className="h-[50px] rounded bg-foreground items-center justify-center">
-                    <ActivityIndicator color="#FFFFFF" size="small" />
-                  </View>
-                ) : (
-                  <StudioButton
-                    label={t("auth.resetSubmit")}
-                    onPress={handleResetSubmit}
-                    block
-                  />
-                )}
+                <StudioButton
+                  label={t("auth.resetSubmit")}
+                  onPress={handleResetSubmit}
+                  loading={resetMutation.isPending}
+                  block
+                />
 
                 <View className="items-center mt-1.5">
                   <LinkText

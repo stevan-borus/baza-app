@@ -1,21 +1,20 @@
 /**
  * MonthView — 7×6 calendar grid for a single month.
  *
- * Leading and trailing days from neighbouring months are rendered greyed
- * out so the grid is always a complete 6-row block. Each cell shows the
- * day number with an accent dot when `activity[date]` is truthy.
+ * Studio look: matches StudioWeekStrip's pill language (square 4pt corners,
+ * caps DOW, ink-fill on selected, green border on today, accent dot under
+ * days with activity). Out-of-month cells fade to faint.
  *
- * The header row carries the localized month/year string and arrow
- * buttons for prev/next month navigation. Tapping a cell calls
- * `onSelectDate` only — switching back to a Day or Week view is the
- * parent's job.
+ * The header carries the localized "Maj 2026" label centered between
+ * Feather prev/next chevrons.
  */
 import React from "react";
 import { Pressable, Text, View } from "react-native";
 import dayjs from "dayjs";
-import FontAwesome from "@expo/vector-icons/FontAwesome";
+import Feather from "@expo/vector-icons/Feather";
 import { useTranslation } from "react-i18next";
 import { useThemeTokens } from "./tokens";
+import { CapsLabel } from "./studio";
 import { startOfLocaleWeek } from "./week-strip";
 
 type ActivityValue = boolean | number | string;
@@ -38,71 +37,62 @@ export function MonthView({
   activity = {},
 }: Props) {
   const tokens = useThemeTokens();
-  // Subscribe to language changes so the localized month/weekday labels
-  // recompute when the user switches locales.
   const { i18n } = useTranslation();
   const lang = i18n.language === "en" ? "en" : "sr";
-  // dayjs instances carry their own locale; re-apply the active language so
-  // a `month` created in Serbian keeps formatting in Serbian even after the
-  // user switches to English (and vice versa).
   const localizedMonth = month.locale(lang);
   const todayKey = dayjs().format("YYYY-MM-DD");
   const currentMonthIndex = localizedMonth.month();
 
-  // Grid origin: start-of-week for the 1st of `month`.
   const gridStart = startOfLocaleWeek(localizedMonth.startOf("month"));
 
-  // Weekday header labels (using the same locale-aware origin).
   const weekdayLabels: string[] = [];
   for (let i = 0; i < 7; i++) {
     weekdayLabels.push(gridStart.add(i, "day").format("dd"));
   }
 
-  // 6 rows × 7 cols = 42 cells.
   const cells: dayjs.Dayjs[] = [];
   for (let i = 0; i < 42; i++) cells.push(gridStart.add(i, "day"));
 
   return (
     <View className="flex-col gap-3">
-      {/* Header */}
+      {/* Header — chevrons + centered caps month label */}
       <View className="flex-row justify-between items-center">
         <Pressable
           onPress={onPrevMonth}
           hitSlop={12}
-          className="active:opacity-60"
+          android_ripple={null}
+          className="active:opacity-60 w-9 h-9 items-center justify-center"
           accessibilityRole="button"
           accessibilityLabel="Previous month"
         >
-          <FontAwesome name="chevron-left" size={16} color={tokens.muted} />
+          <Feather name="chevron-left" size={20} color={tokens.foreground} />
         </Pressable>
-        <Text
-          className="font-body-bold text-foreground"
-          style={{ fontSize: 18, letterSpacing: -0.3 }}
-        >
+        <CapsLabel size={11} tracking={1.6}>
           {localizedMonth.format("MMMM YYYY")}
-        </Text>
+        </CapsLabel>
         <Pressable
           onPress={onNextMonth}
           hitSlop={12}
-          className="active:opacity-60"
+          android_ripple={null}
+          className="active:opacity-60 w-9 h-9 items-center justify-center"
           accessibilityRole="button"
           accessibilityLabel="Next month"
         >
-          <FontAwesome name="chevron-right" size={16} color={tokens.muted} />
+          <Feather name="chevron-right" size={20} color={tokens.foreground} />
         </Pressable>
       </View>
 
-      {/* Weekday header */}
-      <View className="flex-row">
+      {/* Weekday header — caps tracked, faint ink */}
+      <View className="flex-row" style={{ gap: 4 }}>
         {weekdayLabels.map((label, idx) => (
-          <View key={idx} className="flex-1" style={{ alignItems: "center" }}>
+          <View key={idx} className="flex-1 items-center">
             <Text
-              className="text-muted"
+              className="text-faint"
               style={{
+                fontFamily: "AlbertSans-SemiBold",
                 fontSize: 10,
-                fontWeight: "600",
+                letterSpacing: 1.2,
                 textTransform: "uppercase",
-                letterSpacing: 0.4,
               }}
             >
               {label}
@@ -111,7 +101,7 @@ export function MonthView({
         ))}
       </View>
 
-      {/* Grid (6 rows of 7) */}
+      {/* Grid */}
       <View className="flex-col" style={{ gap: 4 }}>
         {Array.from({ length: 6 }).map((_, row) => (
           <View key={row} className="flex-row" style={{ gap: 4 }}>
@@ -122,37 +112,37 @@ export function MonthView({
               const inMonth = d.month() === currentMonthIndex;
               const hasActivity = !!activity[dateKey];
 
+              const containerCls = isSelected
+                ? "bg-foreground"
+                : isToday
+                  ? "border border-accent active:opacity-70"
+                  : "border border-glass-border active:opacity-70";
+
+              const numeralCls = isSelected
+                ? "text-background"
+                : isToday
+                  ? "text-accent"
+                  : inMonth
+                    ? "text-foreground"
+                    : "text-faint";
+
               return (
                 <Pressable
                   key={dateKey}
                   onPress={() => onSelectDate(dateKey)}
-                  className="flex-1 active:opacity-70"
+                  android_ripple={null}
+                  className={`flex-1 items-center justify-center rounded ${containerCls}`}
                   accessibilityRole="button"
                   accessibilityState={{ selected: isSelected }}
                   accessibilityLabel={d.format("dddd, D MMMM YYYY")}
-                  style={{
-                    aspectRatio: 1,
-                    alignItems: "center",
-                    justifyContent: "center",
-                    borderRadius: 12,
-                    backgroundColor: isSelected
-                      ? tokens.accent
-                      : "transparent",
-                    borderWidth: !isSelected && isToday ? 1 : 0,
-                    borderColor: tokens.accent,
-                  }}
+                  style={{ aspectRatio: 1 }}
                 >
                   <Text
-                    className={
-                      isSelected
-                        ? "text-white"
-                        : inMonth
-                          ? "text-foreground"
-                          : "text-faint"
-                    }
+                    className={numeralCls}
                     style={{
-                      fontSize: 14,
-                      fontWeight: isToday || isSelected ? "700" : "500",
+                      fontFamily: "AlbertSans-SemiBold",
+                      fontSize: 15,
+                      letterSpacing: -0.2,
                     }}
                   >
                     {d.format("D")}
@@ -162,10 +152,10 @@ export function MonthView({
                       width: 4,
                       height: 4,
                       borderRadius: 2,
-                      marginTop: 2,
+                      marginTop: 4,
                       backgroundColor: hasActivity
                         ? isSelected
-                          ? "#ffffff"
+                          ? tokens.background
                           : tokens.accent
                         : "transparent",
                     }}

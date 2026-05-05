@@ -92,7 +92,7 @@ export function Input({
                 paddingRight: SIDE_PADDING,
               }
         }
-        className={`border rounded-lg bg-surface ${
+        className={`border rounded-lg bg-glass ${
           isMultiline ? "flex-row items-start" : "flex-row items-center"
         } ${error ? "border-danger" : "border-glass-border"}`}
       >

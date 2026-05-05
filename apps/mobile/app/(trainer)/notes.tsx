@@ -19,6 +19,7 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { ScreenContainerRaw, useTabBarBottomPadding } from "@/components/ui/screen-container";
 import { HeaderIconButton } from "@/components/ui/app-header";
+import { useThemeTokens } from "@/components/ui/tokens";
 import { getDateLocale } from "@/lib/i18n";
 import { trainerNotesQueries, type TrainerNote } from "@/lib/queries/trainer-notes-queries-factory";
 import { sessionsQueries } from "@/lib/queries/sessions-queries-factory";
@@ -74,32 +75,27 @@ function FilterChip({
   trailingIcon?: "chevron-down" | "times";
   onPress: () => void;
 }) {
+  // Theme-aware: ink-fill when selected (always legible), faint-bordered
+  // ghost when idle. Replaces the old white-on-white chips.
+  const tokens = useThemeTokens();
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
       accessibilityState={{ selected: active }}
-      style={{
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 6,
-        paddingHorizontal: 14,
-        paddingVertical: 7,
-        borderRadius: 999,
-        borderWidth: 1,
-        borderColor: active ? "#4caf80" : "rgba(255,255,255,0.12)",
-        backgroundColor: active
-          ? "rgba(46,91,66,0.30)"
-          : "rgba(255,255,255,0.05)",
-      }}
+      android_ripple={null}
+      className={`flex-row items-center px-3.5 py-2 rounded-full border active:opacity-80 ${
+        active
+          ? "bg-foreground border-foreground"
+          : "border-glass-border"
+      }`}
+      style={{ gap: 6 }}
     >
       <Text
-        style={{
-          fontSize: 13,
-          fontWeight: active ? "600" : "400",
-          color: active ? "#4caf80" : "rgba(255,255,255,0.55)",
-          letterSpacing: 0.1,
-        }}
+        className={
+          active ? "text-background font-body-semibold" : "text-muted font-body-medium"
+        }
+        style={{ fontSize: 13, letterSpacing: 0.1 }}
         numberOfLines={1}
       >
         {label}
@@ -108,7 +104,7 @@ function FilterChip({
         <FontAwesome
           name={trailingIcon}
           size={trailingIcon === "times" ? 11 : 9}
-          color={active ? "#4caf80" : "rgba(255,255,255,0.45)"}
+          color={active ? tokens.background : tokens.faint}
         />
       ) : null}
     </Pressable>

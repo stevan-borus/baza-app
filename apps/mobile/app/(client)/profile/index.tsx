@@ -1,15 +1,18 @@
 /**
- * Client Profile (tab) — Studio look, magazine-cover hero.
+ * Client Profile (tab) — editorial restraint.
+ *
+ * Profile is a "this is yours" settings surface, not a discovery surface.
+ * Where the home tab leans on photography, the profile leans on tight
+ * typography + hairlines. The avatar IS the only image that belongs.
  *
  * Layout:
  *   AppHeader (Baza logo + UserAvatar)
  *   ScrollView
- *   ├─ Cover: full-bleed studio photo with overlaid avatar + name + "MEMBER SINCE"
- *   ├─ Editorial stat strip: Fraunces numerals, hairline-separated columns,
- *   │   em-dash for empty values
- *   ├─ MOJI PAKETI section: white surface card per package with ink hairline,
- *   │   Fraunces sessions-remaining numeral, sage progress bar
- *   └─ ISTORIJA TRENINGA: schedule-row-style link → push to history.tsx
+ *   ├─ Hero: large centered avatar (camera badge), name, email,
+ *   │   "MEMBER SINCE" caps tag
+ *   ├─ Editorial stat strip: hairline-separated columns
+ *   ├─ MOJI PAKETI: surface cards stacked
+ *   └─ ISTORIJA TRENINGA: hairline list row (no card chrome)
  *
  * Settings + Sign out live in the ProfileSheet (header avatar tap).
  */
@@ -18,7 +21,6 @@ import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
   Image,
-  ImageBackground,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -27,7 +29,6 @@ import {
 } from "react-native";
 import { useTranslation } from "react-i18next";
 import * as ImagePicker from "expo-image-picker";
-import { LinearGradient } from "expo-linear-gradient";
 import { useLocalAvatar } from "@/lib/use-local-avatar";
 import Feather from "@expo/vector-icons/Feather";
 import { MotiView } from "@/components/ui/styled";
@@ -38,8 +39,6 @@ import { getDateLocale } from "@/lib/i18n";
 import { authQueries } from "@/lib/queries/auth-queries-factory";
 import { packagesQueries, type ClientPackage } from "@/lib/queries/packages-queries-factory";
 import { trainerNotesQueries } from "@/lib/queries/trainer-notes-queries-factory";
-
-const COVER_PHOTO = require("@/assets/studio/triple.webp");
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -145,152 +144,78 @@ export default function ClientProfile() {
           />
         }
       >
-        {/* ── Cover ────────────────────────────────────────────────────── */}
+        {/* ── Hero ─ centered editorial; avatar IS the only image ─── */}
         <MotiView
-          from={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ type: "timing", duration: 450, delay: 0 }}
+          from={{ opacity: 0, translateY: 6 }}
+          animate={{ opacity: 1, translateY: 0 }}
+          transition={{ type: "timing", duration: 400, delay: 0 }}
         >
-          <View
-            className="mx-4 mt-3 rounded-lg overflow-hidden"
-            style={{ height: 320 }}
-          >
-            <ImageBackground
-              source={COVER_PHOTO}
-              style={{ width: "100%", height: "100%" }}
-              resizeMode="cover"
+          <View className="items-center pt-6 pb-2 gap-4">
+            <Pressable
+              onPress={handlePickAvatar}
+              hitSlop={8}
+              android_ripple={null}
+              className="active:opacity-80"
+              accessibilityRole="button"
+              accessibilityLabel={t("client.profileTab.changePhoto")}
             >
-              {/* Top fade — anchors the "MEMBER SINCE" tag */}
-              <LinearGradient
-                colors={["rgba(15,15,13,0.55)", "rgba(15,15,13,0)"]}
-                style={{
-                  position: "absolute",
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  height: 110,
-                }}
-              />
-              {/* Bottom fade — anchors avatar + name */}
-              <LinearGradient
-                colors={[
-                  "rgba(15,15,13,0)",
-                  "rgba(15,15,13,0.55)",
-                  "rgba(15,15,13,0.92)",
-                ]}
-                style={{
-                  position: "absolute",
-                  bottom: 0,
-                  left: 0,
-                  right: 0,
-                  height: 240,
-                }}
-              />
-
-              {/* Top: brass tag */}
-              <View className="px-5 pt-5 flex-row items-center gap-2">
-                <View
-                  className="rounded-full bg-accent"
-                  style={{ width: 6, height: 6 }}
-                />
-                <Text
-                  style={{
-                    fontFamily: "AlbertSans-SemiBold",
-                    fontSize: 11,
-                    color: "#FFFFFF",
-                    letterSpacing: 1.6,
-                    textTransform: "uppercase",
-                  }}
-                >
-                  {t("client.profileTab.memberSince", {
-                    year: memberSinceYear,
-                  })}
-                </Text>
-              </View>
-
-              {/* Bottom: avatar + name + email */}
-              <View
-                className="absolute left-0 right-0 bottom-0 p-5 flex-row items-end gap-4"
-              >
-                <Pressable
-                  onPress={handlePickAvatar}
-                  hitSlop={8}
-                  android_ripple={null}
-                  className="active:opacity-80"
-                  accessibilityRole="button"
-                  accessibilityLabel={t("client.profileTab.changePhoto")}
-                >
-                  {avatarUri ? (
-                    <View className="relative">
-                      <Image
-                        source={{ uri: avatarUri }}
-                        style={{
-                          width: 76,
-                          height: 76,
-                          borderRadius: 38,
-                          borderWidth: 2,
-                          borderColor: "#FFFFFF",
-                        }}
-                      />
-                      <View
-                        className="absolute right-0 bottom-0 w-7 h-7 rounded-full bg-accent items-center justify-center"
-                        style={{ borderWidth: 2, borderColor: "#FFFFFF" }}
-                      >
-                        <Feather name="camera" size={13} color="#FFFFFF" />
-                      </View>
-                    </View>
-                  ) : (
-                    <View
-                      className="relative w-[76px] h-[76px] rounded-full bg-accent items-center justify-center"
-                      style={{ borderWidth: 2, borderColor: "#FFFFFF" }}
-                    >
-                      <Text
-                        style={{
-                          fontFamily: "AlbertSans-Bold",
-                          fontSize: 28,
-                          color: "#FFFFFF",
-                          letterSpacing: 1,
-                        }}
-                      >
-                        {initials}
-                      </Text>
-                      <View
-                        className="absolute right-0 bottom-0 w-7 h-7 rounded-full bg-foreground items-center justify-center"
-                        style={{ borderWidth: 2, borderColor: "#FFFFFF" }}
-                      >
-                        <Feather name="camera" size={13} color="#FFFFFF" />
-                      </View>
-                    </View>
-                  )}
-                </Pressable>
-
-                <View className="flex-1 pb-1">
-                  <Text
+              {avatarUri ? (
+                <View className="relative">
+                  <Image
+                    source={{ uri: avatarUri }}
                     style={{
-                      fontFamily: "AlbertSans-Bold",
-                      fontSize: 26,
-                      color: "#FFFFFF",
-                      letterSpacing: -0.6,
-                      textTransform: "capitalize",
+                      width: 120,
+                      height: 120,
+                      borderRadius: 60,
                     }}
-                    numberOfLines={1}
+                  />
+                  <View
+                    className="absolute right-1 bottom-1 w-8 h-8 rounded-full bg-foreground items-center justify-center"
+                    style={{ borderWidth: 2, borderColor: tokens.background }}
                   >
-                    {userName}
-                  </Text>
-                  <Text
-                    style={{
-                      fontFamily: "AlbertSans-Regular",
-                      fontSize: 12,
-                      color: "rgba(255,255,255,0.7)",
-                      marginTop: 2,
-                    }}
-                    numberOfLines={1}
-                  >
-                    {userEmail}
-                  </Text>
+                    <Feather name="camera" size={14} color={tokens.background} />
+                  </View>
                 </View>
+              ) : (
+                <View
+                  className="relative w-[120px] h-[120px] rounded-full bg-accent-soft items-center justify-center"
+                >
+                  <Text
+                    className="font-body-bold text-accent"
+                    style={{ fontSize: 36, letterSpacing: 1 }}
+                  >
+                    {initials}
+                  </Text>
+                  <View
+                    className="absolute right-1 bottom-1 w-8 h-8 rounded-full bg-foreground items-center justify-center"
+                    style={{ borderWidth: 2, borderColor: tokens.background }}
+                  >
+                    <Feather name="camera" size={14} color={tokens.background} />
+                  </View>
+                </View>
+              )}
+            </Pressable>
+
+            <View className="items-center gap-1">
+              <Text
+                className="font-body-bold text-foreground text-center"
+                style={{ fontSize: 26, letterSpacing: -0.5, textTransform: "capitalize" }}
+                numberOfLines={1}
+              >
+                {userName}
+              </Text>
+              <Text
+                className="text-muted text-[12px] text-center"
+                numberOfLines={1}
+              >
+                {userEmail}
+              </Text>
+              <View className="mt-2">
+                <CapsLabel size={10} tracking={1.6} className="text-faint">
+                  {t("client.profileTab.memberSince", { year: memberSinceYear })}
+                </CapsLabel>
               </View>
-            </ImageBackground>
+            </View>
           </View>
         </MotiView>
 
@@ -343,17 +268,16 @@ export default function ClientProfile() {
             </View>
           ) : null}
           {packages.length === 0 && !packagesQuery.isLoading ? (
-            <View className="mx-4 px-4 py-5 border-t border-b border-glass-border">
-              <Text
-                style={{
-                  fontFamily: "AlbertSans-Regular",
-                  fontSize: 13,
-                  color: tokens.muted,
-                  fontStyle: "italic",
-                }}
-              >
-                {t("client.package.noActive")}
-              </Text>
+            <View className="mx-4 border-t border-glass-border">
+              <View className="flex-row items-center justify-between py-4">
+                <Text
+                  className="font-body-medium text-foreground"
+                  style={{ fontSize: 15, letterSpacing: -0.1 }}
+                >
+                  {t("client.package.noActive")}
+                </Text>
+                <Text className="text-faint text-[13px]">—</Text>
+              </View>
             </View>
           ) : null}
           <View className="gap-3 px-4">
@@ -419,50 +343,40 @@ export default function ClientProfile() {
           </View>
         </MotiView>
 
-        {/* ── ISTORIJA TRENINGA — schedule-row style ─────────────────── */}
+        {/* ── ISTORIJA TRENINGA — hairline list row, no card chrome ── */}
         <MotiView
           from={{ opacity: 0, translateY: 8 }}
           animate={{ opacity: 1, translateY: 0 }}
           transition={{ type: "timing", duration: 400, delay: 280 }}
         >
           <SectionRow title={t("client.profileTab.trainingHistory")} />
-          <Pressable
-            onPress={() => router.push("/(client)/profile/history")}
-            android_ripple={null}
-            className="mx-4 bg-surface rounded-lg flex-row items-center px-4 py-3 gap-3 active:opacity-80"
-          >
-            <View
-              className="rounded-md bg-accent-soft items-center justify-center"
-              style={{ width: 56, height: 56 }}
+          <View className="mx-4 border-t border-glass-border">
+            <Pressable
+              onPress={() => router.push("/(client)/profile/history")}
+              android_ripple={null}
+              className="flex-row items-center justify-between py-4 active:opacity-60"
             >
-              <Feather name="bookmark" size={20} color={tokens.accent} />
-            </View>
-            <View className="flex-1 gap-1">
-              <Text
-                style={{
-                  fontFamily: "AlbertSans-SemiBold",
-                  fontSize: 11,
-                  color: tokens.muted,
-                  letterSpacing: 1.2,
-                  textTransform: "uppercase",
-                }}
-              >
-                {t("client.profileTab.trainingHistory")}
-              </Text>
-              <Text
-                className="font-body-semibold text-foreground"
-                style={{ fontSize: 16, letterSpacing: -0.2 }}
-              >
-                {totalNotes === 0
-                  ? t("client.history.noNotes")
-                  : t("client.profileTab.notesCount", {
-                      count: totalNotes,
-                      defaultValue: `${totalNotes} entries`,
-                    })}
-              </Text>
-            </View>
-            <Feather name="chevron-right" size={20} color={tokens.faint} />
-          </Pressable>
+              <View className="flex-1 pr-3">
+                <Text
+                  className="font-body-medium text-foreground"
+                  style={{ fontSize: 15, letterSpacing: -0.1 }}
+                >
+                  {totalNotes === 0
+                    ? t("client.history.noNotes")
+                    : t("client.profileTab.notesCount", {
+                        count: totalNotes,
+                        defaultValue: `${totalNotes} entries`,
+                      })}
+                </Text>
+              </View>
+              <View className="flex-row items-center gap-2">
+                <Text className="text-faint text-[13px]">
+                  {totalNotes > 0 ? totalNotes : "—"}
+                </Text>
+                <Feather name="chevron-right" size={16} color={tokens.faint} />
+              </View>
+            </Pressable>
+          </View>
         </MotiView>
       </ScrollView>
     </ScreenContainerRaw>

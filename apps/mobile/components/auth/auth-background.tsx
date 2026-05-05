@@ -21,7 +21,10 @@ import { useRouter } from "expo-router";
 import { useThemeTokens } from "@/components/ui/tokens";
 import { useThemePreference } from "@/lib/theme-preference";
 
-const LOGO_BAZA = require("@/assets/studio/baza-logo.webp");
+// Swap by theme so the wordmark always reads — green PNG on bone, white
+// PNG on warm dark.
+const LOGO_BAZA_INK = require("@/assets/studio/baza-logo.webp");
+const LOGO_BAZA_CREAM = require("@/assets/studio/baza-logo-white.webp");
 
 export function AuthBackground({
   children,
@@ -75,7 +78,9 @@ export function AuthBackground({
                 </Pressable>
               ) : null}
               <Image
-                source={LOGO_BAZA}
+                source={
+                  resolvedTheme === "dark" ? LOGO_BAZA_CREAM : LOGO_BAZA_INK
+                }
                 style={{ width: 130, height: 38 }}
                 resizeMode="contain"
               />

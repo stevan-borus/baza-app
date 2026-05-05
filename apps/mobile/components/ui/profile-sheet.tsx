@@ -1,9 +1,11 @@
 import React, { createContext, useCallback, useContext, useMemo, useState } from "react";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
+import Feather from "@expo/vector-icons/Feather";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { Image, Pressable, Text, View } from "react-native";
+import * as ImagePicker from "expo-image-picker";
 import { useLocalAvatar } from "@/lib/use-local-avatar";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { ThemeSwitcher } from "@/components/ThemeSwitcher";
@@ -71,7 +73,22 @@ function ProfileSheetContent({ open, onOpenChange }: Props) {
   const meQuery = useQuery(authQueries.me());
   const email = meQuery.data?.user.email ?? "";
   const initial = (email || "?").charAt(0).toUpperCase();
-  const { avatarUri } = useLocalAvatar();
+  const { avatarUri, setAvatarUri } = useLocalAvatar();
+
+  async function handlePickAvatar() {
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) return;
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.85,
+    });
+    if (result.canceled) return;
+    const uri = result.assets[0]?.uri;
+    if (!uri) return;
+    setAvatarUri(uri);
+  }
 
   const signOutMutation = useMutation({
     mutationFn: async () => {
@@ -96,24 +113,41 @@ function ProfileSheetContent({ open, onOpenChange }: Props) {
     <AppSheet open={open} onOpenChange={onOpenChange}>
       <View className="gap-6">
         <View className="flex-row items-center gap-3">
-          {avatarUri ? (
-            <Image
-              source={{ uri: avatarUri }}
-              style={{ width: 48, height: 48, borderRadius: 24 }}
-            />
-          ) : (
-            <View
-              className="rounded-full bg-foreground items-center justify-center"
-              style={{ width: 48, height: 48 }}
-            >
-              <Text
-                className="font-body-semibold text-background"
-                style={{ fontSize: 18 }}
+          <Pressable
+            onPress={handlePickAvatar}
+            hitSlop={6}
+            android_ripple={null}
+            className="active:opacity-80"
+            accessibilityRole="button"
+            accessibilityLabel={t("client.profileTab.changePhoto")}
+          >
+            <View className="relative">
+              {avatarUri ? (
+                <Image
+                  source={{ uri: avatarUri }}
+                  style={{ width: 56, height: 56, borderRadius: 28 }}
+                />
+              ) : (
+                <View
+                  className="rounded-full bg-foreground items-center justify-center"
+                  style={{ width: 56, height: 56 }}
+                >
+                  <Text
+                    className="font-body-semibold text-background"
+                    style={{ fontSize: 20 }}
+                  >
+                    {initial}
+                  </Text>
+                </View>
+              )}
+              <View
+                className="absolute -right-0.5 -bottom-0.5 w-6 h-6 rounded-full bg-foreground items-center justify-center"
+                style={{ borderWidth: 2, borderColor: tokens.background }}
               >
-                {initial}
-              </Text>
+                <Feather name="camera" size={11} color={tokens.background} />
+              </View>
             </View>
-          )}
+          </Pressable>
           <View className="flex-1">
             <Text className="text-foreground font-body-semibold" style={{ fontSize: 16 }}>
               {email.split("@")[0] || t("client.profileTab.account")}

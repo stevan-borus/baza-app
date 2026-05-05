@@ -20,8 +20,6 @@ import {
   View,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { StatusBar } from "expo-status-bar";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
@@ -36,6 +34,9 @@ import {
 } from "@/lib/queries/trainer-notes-queries-factory";
 import { sessionsQueries } from "@/lib/queries/sessions-queries-factory";
 import { UserAvatar } from "@/components/ui/user-avatar";
+import { AppHeader } from "@/components/ui/app-header";
+import { StudioWeekStrip } from "@/components/ui/studio";
+import { useThemeTokens } from "@/components/ui/tokens";
 
 dayjs.extend(relativeTime);
 
@@ -45,20 +46,13 @@ const PHOTO_RINGS = require("@/assets/studio/rings.webp");
 const PHOTO_PLANK = require("@/assets/studio/plank.webp");
 const PHOTO_TRIPLE = require("@/assets/studio/triple.webp");
 const PHOTO_REFORMER = require("@/assets/studio/reformer-1.webp");
-const LOGO_BAZA = require("@/assets/studio/baza-logo.webp"); // forest green on transparent
 
 const SCHEDULE_PHOTOS = [PHOTO_RINGS, PHOTO_PLANK, PHOTO_REFORMER, PHOTO_TRIPLE];
 
-// Palette — bone canvas, near-black ink, forest green as SIGNATURE not CTA.
-const BG = "#F4EFE3";
-const SURFACE = "#FFFFFF";
-const SURFACE_2 = "#EBE5D5";
-const INK = "#0F0F0D";
-const INK_SOFT = "rgba(15,15,13,0.62)";
-const INK_FAINT = "rgba(15,15,13,0.38)";
-const HAIRLINE = "rgba(15,15,13,0.10)";
-const ACCENT = "#2e5b42";
-const ACCENT_LIGHT = "#9ED6B5"; // sage glow on dark photo overlays
+// Theme-stable values that go OVER photographs — these are intentionally
+// hard-coded because they sit on top of an image and must read regardless
+// of theme.
+const ACCENT_LIGHT = "#9ED6B5"; // sage glow used on dark photo overlays
 
 function currentMonthKey() {
   const now = new Date();
@@ -78,7 +72,7 @@ function photoForSessionId(id: string) {
 function CapsLabel({
   children,
   size = 11,
-  color = INK,
+  color,
   tracking = 2,
 }: {
   children: React.ReactNode;
@@ -86,12 +80,14 @@ function CapsLabel({
   color?: string;
   tracking?: number;
 }) {
+  const tokens = useThemeTokens();
+  const resolved = color ?? tokens.foreground;
   return (
     <Text
       style={{
         fontFamily: "AlbertSans-SemiBold",
         fontSize: size,
-        color,
+        color: resolved,
         letterSpacing: tracking,
         textTransform: "uppercase",
       }}
@@ -108,6 +104,7 @@ function SectionRow({
   title: string;
   action?: { label: string; onPress: () => void };
 }) {
+  const tokens = useThemeTokens();
   return (
     <View
       style={{
@@ -127,7 +124,7 @@ function SectionRow({
             style={{
               fontFamily: "AlbertSans-Medium",
               fontSize: 12,
-              color: INK_SOFT,
+              color: tokens.muted,
               textDecorationLine: "underline",
             }}
           >
@@ -139,11 +136,15 @@ function SectionRow({
   );
 }
 
+/**
+ * Local pill — dims opacity on press instead of swapping background color
+ * so a white pill stays white-ish (not muddy grey-brown) when held.
+ */
 function BlackPill({
   label,
   onPress,
-  fill = INK,
-  textColor = "#FFFFFF",
+  fill,
+  textColor,
   block = false,
 }: {
   label: string;
@@ -152,11 +153,16 @@ function BlackPill({
   textColor?: string;
   block?: boolean;
 }) {
+  const tokens = useThemeTokens();
+  const resolvedFill = fill ?? tokens.foreground;
+  const resolvedText = textColor ?? tokens.background;
   return (
     <Pressable
       onPress={onPress}
+      android_ripple={null}
       style={({ pressed }) => ({
-        backgroundColor: pressed ? "#2A2A26" : fill,
+        backgroundColor: resolvedFill,
+        opacity: pressed ? 0.85 : 1,
         paddingHorizontal: 22,
         paddingVertical: 14,
         borderRadius: 4,
@@ -168,7 +174,7 @@ function BlackPill({
         style={{
           fontFamily: "AlbertSans-SemiBold",
           fontSize: 12,
-          color: textColor,
+          color: resolvedText,
           letterSpacing: 1.4,
           textTransform: "uppercase",
         }}
@@ -176,88 +182,6 @@ function BlackPill({
         {label}
       </Text>
     </Pressable>
-  );
-}
-
-// ────────────────────────────────────────────────────────────────────────
-// Week strip — minimal, ink-on-bone with a single ink-filled today
-
-function WeekStrip({
-  selected,
-  onSelect,
-  sessionsByDay,
-}: {
-  selected: dayjs.Dayjs;
-  onSelect: (d: dayjs.Dayjs) => void;
-  sessionsByDay: Record<string, number>;
-}) {
-  const start = dayjs().startOf("day");
-  const days = Array.from({ length: 7 }, (_, i) => start.add(i, "day"));
-  return (
-    <View
-      style={{
-        flexDirection: "row",
-        paddingHorizontal: 20,
-        gap: 6,
-      }}
-    >
-      {days.map((d) => {
-        const isSelected = d.isSame(selected, "day");
-        const count = sessionsByDay[d.format("YYYY-MM-DD")] ?? 0;
-        return (
-          <Pressable
-            key={d.toString()}
-            onPress={() => onSelect(d)}
-            style={{
-              flex: 1,
-              paddingVertical: 12,
-              alignItems: "center",
-              backgroundColor: isSelected ? INK : "transparent",
-              borderWidth: isSelected ? 0 : 1,
-              borderColor: HAIRLINE,
-              borderRadius: 4,
-            }}
-          >
-            <Text
-              style={{
-                fontFamily: "AlbertSans-SemiBold",
-                fontSize: 10,
-                color: isSelected ? "rgba(255,255,255,0.6)" : INK_FAINT,
-                letterSpacing: 1.2,
-                textTransform: "uppercase",
-              }}
-            >
-              {d.format("ddd")}
-            </Text>
-            <Text
-              style={{
-                fontFamily: "AlbertSans-SemiBold",
-                fontSize: 18,
-                marginTop: 4,
-                color: isSelected ? "#FFFFFF" : INK,
-                letterSpacing: -0.3,
-              }}
-            >
-              {d.format("D")}
-            </Text>
-            <View
-              style={{
-                marginTop: 6,
-                width: 4,
-                height: 4,
-                borderRadius: 2,
-                backgroundColor:
-                  count > 0
-                    ? isSelected
-                      ? "#FFFFFF"
-                      : ACCENT
-                    : "transparent",
-              }}
-            />
-          </Pressable>
-        );
-      })}
-    </View>
   );
 }
 
@@ -365,7 +289,7 @@ function NextClassHero({
                   width: 6,
                   height: 6,
                   borderRadius: 3,
-                  backgroundColor: ACCENT,
+                  backgroundColor: "#2e5b42",
                 }}
               />
               <Text
@@ -397,7 +321,7 @@ function NextClassHero({
                 style={{
                   fontFamily: "AlbertSans-SemiBold",
                   fontSize: 10,
-                  color: isWithinHour ? INK : "#FFFFFF",
+                  color: isWithinHour ? "#0F0F0D" : "#FFFFFF",
                   letterSpacing: 1.2,
                   textTransform: "uppercase",
                 }}
@@ -459,7 +383,7 @@ function NextClassHero({
                 style={{
                   fontFamily: "AlbertSans-Regular",
                   fontSize: 12,
-                  color: ACCENT === "#2e5b42" ? "#9ED6B5" : "rgba(255,255,255,0.7)",
+                  color: ACCENT_LIGHT,
                   letterSpacing: 0.4,
                 }}
               >
@@ -477,7 +401,7 @@ function NextClassHero({
                 }
                 onPress={onPress}
                 fill="#FFFFFF"
-                textColor={INK}
+                textColor="#0F0F0D"
               />
               <Pressable
                 onPress={onCancel}
@@ -531,6 +455,7 @@ function ScheduleRow({
   onPress: () => void;
 }) {
   const { t } = useTranslation();
+  const tokens = useThemeTokens();
   const start = dayjs(session.startsAt);
   const end = dayjs(session.endsAt);
   const full = session.availableSlots === 0;
@@ -554,7 +479,7 @@ function ScheduleRow({
             width: 64,
             height: 64,
             borderRadius: 4,
-            backgroundColor: SURFACE_2,
+            backgroundColor: tokens.surface2,
           }}
           resizeMode="cover"
         />
@@ -565,7 +490,7 @@ function ScheduleRow({
             style={{
               fontFamily: "AlbertSans-SemiBold",
               fontSize: 11,
-              color: INK_SOFT,
+              color: tokens.muted,
               letterSpacing: 1.2,
               textTransform: "uppercase",
             }}
@@ -578,7 +503,7 @@ function ScheduleRow({
             style={{
               fontFamily: "AlbertSans-SemiBold",
               fontSize: 16,
-              color: INK,
+              color: tokens.foreground,
               letterSpacing: -0.2,
             }}
             numberOfLines={1}
@@ -589,7 +514,7 @@ function ScheduleRow({
             style={{
               fontFamily: "AlbertSans-Regular",
               fontSize: 12,
-              color: full ? INK_FAINT : ACCENT,
+              color: full ? tokens.faint : tokens.accent,
               letterSpacing: 0.2,
             }}
           >
@@ -607,7 +532,7 @@ function ScheduleRow({
           style={{
             fontFamily: "AlbertSans-SemiBold",
             fontSize: 11,
-            color: INK,
+            color: tokens.foreground,
             letterSpacing: 1.4,
             textTransform: "uppercase",
           }}
@@ -645,7 +570,7 @@ function PackageCard({
       <Pressable
         onPress={onPress}
         style={({ pressed }) => ({
-          backgroundColor: ACCENT,
+          backgroundColor: "#2e5b42",
           borderRadius: 8,
           padding: 22,
           opacity: pressed ? 0.96 : 1,
@@ -767,6 +692,7 @@ function NoteRow({
   isLast: boolean;
 }) {
   const { t } = useTranslation();
+  const tokens = useThemeTokens();
   const initial = (note.trainer?.fullName ?? "T").charAt(0).toUpperCase();
   return (
     <View>
@@ -783,7 +709,7 @@ function NoteRow({
             width: 36,
             height: 36,
             borderRadius: 18,
-            backgroundColor: INK,
+            backgroundColor: tokens.foreground,
             alignItems: "center",
             justifyContent: "center",
           }}
@@ -792,7 +718,7 @@ function NoteRow({
             style={{
               fontFamily: "AlbertSans-SemiBold",
               fontSize: 13,
-              color: "#FFFFFF",
+              color: tokens.background,
             }}
           >
             {initial}
@@ -803,7 +729,7 @@ function NoteRow({
             style={{
               fontFamily: "AlbertSans-SemiBold",
               fontSize: 11,
-              color: INK_FAINT,
+              color: tokens.faint,
               letterSpacing: 1.2,
               textTransform: "uppercase",
               marginBottom: 4,
@@ -816,7 +742,7 @@ function NoteRow({
             style={{
               fontFamily: "AlbertSans-Regular",
               fontSize: 14,
-              color: INK,
+              color: tokens.foreground,
               lineHeight: 20,
             }}
             numberOfLines={3}
@@ -829,7 +755,7 @@ function NoteRow({
         <View
           style={{
             height: 1,
-            backgroundColor: HAIRLINE,
+            backgroundColor: tokens.glassBorder,
             marginLeft: 68,
             marginRight: 20,
           }}
@@ -847,7 +773,7 @@ export default function HomeStudio() {
   const lang = i18n.language === "en" ? "en" : "sr";
   const router = useRouter();
   const queryClient = useQueryClient();
-  const insets = useSafeAreaInsets();
+  const tokens = useThemeTokens();
   const [refreshing, setRefreshing] = useState(false);
   const [selectedDay, setSelectedDay] = useState(dayjs().startOf("day"));
   // Just a small breathing buffer — the flat tab bar takes its own real
@@ -914,58 +840,27 @@ export default function HomeStudio() {
   })();
 
   return (
-    <View style={{ flex: 1, backgroundColor: BG }}>
-      <StatusBar style="dark" />
-
-      {/* Wordmark header — SKIMS-tight letterspacing, sits on bone */}
-      <View
-        style={{
-          paddingTop: insets.top,
-          backgroundColor: BG,
-        }}
-      >
-        <View
-          style={{
-            paddingHorizontal: 20,
-            paddingTop: 14,
-            paddingBottom: 14,
-            flexDirection: "row",
-            alignItems: "center",
-            justifyContent: "space-between",
-          }}
-        >
-          {/* Left avatar — shared component reads the locally-picked image
-              (or initial fallback) and opens the ProfileSheet on tap. */}
-          <UserAvatar />
-
-          {/* Baza logo lockup — the actual brand mark (BAZA + PILATES STUDIO),
-              forest green on transparent. Sized to fit the header band. */}
-          <Image
-            source={LOGO_BAZA}
-            style={{ width: 110, height: 32 }}
-            resizeMode="contain"
-          />
-
-          {/* Visual balance for the avatar */}
-          <View style={{ width: 36 }} />
-        </View>
-      </View>
+    <View style={{ flex: 1, backgroundColor: tokens.background }}>
+      {/* Shared AppHeader — same logo + UserAvatar + StatusBar handling
+          as every other tab. Single source of truth so headers don't
+          drift between screens. */}
+      <AppHeader leftSlot={<UserAvatar />} />
 
       <ScrollView
-        style={{ flex: 1, backgroundColor: BG }}
+        style={{ flex: 1, backgroundColor: tokens.background }}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{
           paddingTop: 8,
           paddingBottom: bottomPad,
           gap: 24,
-          backgroundColor: BG,
+          backgroundColor: tokens.background,
         }}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
             onRefresh={handleRefresh}
-            tintColor={INK}
-            colors={[INK]}
+            tintColor={tokens.foreground}
+            colors={[tokens.foreground]}
           />
         }
       >
@@ -1035,7 +930,7 @@ export default function HomeStudio() {
                       width: 6,
                       height: 6,
                       borderRadius: 3,
-                      backgroundColor: ACCENT,
+                      backgroundColor: "#2e5b42",
                     }}
                   />
                   <Text
@@ -1089,7 +984,7 @@ export default function HomeStudio() {
                       label={t("client.home.browseSchedule")}
                       onPress={() => router.push("/(client)/calendar")}
                       fill="#FFFFFF"
-                      textColor={INK}
+                      textColor="#0F0F0D"
                     />
                   </View>
                 </View>
@@ -1107,7 +1002,7 @@ export default function HomeStudio() {
               onPress: () => router.push("/(client)/calendar"),
             }}
           />
-          <WeekStrip
+          <StudioWeekStrip
             selected={selectedDay}
             onSelect={setSelectedDay}
             sessionsByDay={sessionsByDay}
@@ -1120,7 +1015,7 @@ export default function HomeStudio() {
                   paddingVertical: 22,
                   paddingHorizontal: 18,
                   borderRadius: 4,
-                  backgroundColor: SURFACE_2,
+                  backgroundColor: tokens.surface2,
                   alignItems: "flex-start",
                   gap: 12,
                 }}
@@ -1129,7 +1024,7 @@ export default function HomeStudio() {
                   style={{
                     fontFamily: "AlbertSans-Regular",
                     fontSize: 13,
-                    color: INK_SOFT,
+                    color: tokens.muted,
                     lineHeight: 18,
                   }}
                 >
@@ -1145,7 +1040,7 @@ export default function HomeStudio() {
             <View
               style={{
                 marginHorizontal: 16,
-                backgroundColor: SURFACE,
+                backgroundColor: tokens.surface,
                 borderRadius: 8,
                 overflow: "hidden",
               }}
@@ -1162,7 +1057,7 @@ export default function HomeStudio() {
                     <View
                       style={{
                         height: 1,
-                        backgroundColor: HAIRLINE,
+                        backgroundColor: tokens.glassBorder,
                         marginLeft: 20 + 64 + 14,
                         marginRight: 20,
                       }}
@@ -1199,7 +1094,7 @@ export default function HomeStudio() {
             <View
               style={{
                 marginHorizontal: 16,
-                backgroundColor: SURFACE,
+                backgroundColor: tokens.surface,
                 borderRadius: 8,
                 overflow: "hidden",
               }}

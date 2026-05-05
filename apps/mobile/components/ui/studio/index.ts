@@ -7,3 +7,4 @@ export {
 } from "./buttons";
 export { SectionRow } from "./section";
 export { StudioScreen } from "./screen";
+export { StudioWeekStrip, type StudioWeekStripProps } from "./week-strip";

@@ -4,7 +4,8 @@
  * inline `style` only for the runtime-pressed state and any non-token fill.
  */
 import React from "react";
-import { Pressable, Text } from "react-native";
+import { ActivityIndicator, Pressable, Text, View } from "react-native";
+import { useThemeTokens } from "@/components/ui/tokens";
 import { STUDIO } from "./palette";
 
 type CommonProps = {
@@ -12,6 +13,8 @@ type CommonProps = {
   onPress: () => void;
   block?: boolean;
   disabled?: boolean;
+  /** Shows a spinner on the left of the label and blocks press while true. */
+  loading?: boolean;
   icon?: React.ReactNode;
 };
 
@@ -29,11 +32,14 @@ export function StudioButton({
   onPress,
   block = false,
   disabled = false,
+  loading = false,
   fill,
   textColor,
   icon,
 }: CommonProps & { fill?: string; textColor?: string }) {
   const hasCustomFill = !!fill;
+  const inert = disabled || loading;
+  const tokens = useThemeTokens();
 
   // Pressable className is composed conditionally so we can swap the whole
   // visual when disabled. Disabled = thin border, no fill — so it doesn't
@@ -54,16 +60,41 @@ export function StudioButton({
     disabled ? "text-faint" : textColor ? "" : "text-background",
   ].join(" ");
 
+  // Spinner color tracks the text color so it always reads against the fill.
+  const spinnerColor = disabled
+    ? tokens.faint
+    : textColor ?? (hasCustomFill ? STUDIO.ink : tokens.background);
+
   return (
     <Pressable
-      onPress={disabled ? undefined : onPress}
-      disabled={disabled}
+      onPress={inert ? undefined : onPress}
+      disabled={inert}
       className={pressableCls}
       style={
         !disabled && hasCustomFill ? { backgroundColor: fill } : undefined
       }
     >
-      {icon}
+      {/* Adornment slot — fixed 14pt box so the spinner never grows the
+          button. Sits to the left of the label when loading or when an
+          icon was passed. The slot collapses (no width) otherwise. */}
+      {loading ? (
+        <View
+          style={{
+            width: 14,
+            height: 14,
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <ActivityIndicator
+            size="small"
+            color={spinnerColor}
+            style={{ transform: [{ scale: 0.7 }] }}
+          />
+        </View>
+      ) : (
+        icon
+      )}
       <Text
         className={textCls}
         style={{

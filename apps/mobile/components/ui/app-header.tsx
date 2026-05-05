@@ -3,7 +3,6 @@ import {
   View,
   Image,
   Pressable,
-  StyleSheet,
   type ViewProps,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -14,8 +13,12 @@ import { useRouter } from "expo-router";
 import { useThemeTokens } from "./tokens";
 import { useThemePreference } from "@/lib/theme-preference";
 
-const HEADER_BAR_HEIGHT = 52;
-const LOGO_BAZA = require("@/assets/studio/baza-logo.webp");
+// No fixed bar height — pad consistently top/bottom so the chrome matches
+// the home tab's bespoke header (paddingTop/Bottom: 14 around 32pt logo).
+// Swap logo by theme so the wordmark stays legible: forest-green PNG on
+// bone, white PNG on warm dark.
+const LOGO_BAZA_INK = require("@/assets/studio/baza-logo.webp");
+const LOGO_BAZA_CREAM = require("@/assets/studio/baza-logo-white.webp");
 
 export type AppHeaderProps = {
   /** Centered title — kept for API compatibility but the logo lockup
@@ -48,11 +51,13 @@ export function AppHeader({
       {/* Top safe area painted bone */}
       <View style={{ height: insets.top }} />
 
-      {/* Header bar */}
+      {/* Header bar — matches the home tab: 14pt top/bottom padding around
+          the 32pt logo, no fixed bar height. */}
       <View
         style={{
-          height: HEADER_BAR_HEIGHT,
           paddingHorizontal: 20,
+          paddingTop: 14,
+          paddingBottom: 14,
           flexDirection: "row",
           alignItems: "center",
           justifyContent: "space-between",
@@ -65,9 +70,9 @@ export function AppHeader({
           {leftSlot}
         </View>
 
-        {/* Logo lockup */}
+        {/* Logo lockup — swap by theme so the wordmark always reads */}
         <Image
-          source={LOGO_BAZA}
+          source={resolvedTheme === "dark" ? LOGO_BAZA_CREAM : LOGO_BAZA_INK}
           style={{ width: 110, height: 32 }}
           resizeMode="contain"
         />
@@ -79,12 +84,6 @@ export function AppHeader({
           {rightSlot}
         </View>
       </View>
-
-      {/* Hairline bottom border — theme-aware divider */}
-      <View
-        className="bg-divider"
-        style={{ height: StyleSheet.hairlineWidth }}
-      />
     </View>
   );
 }

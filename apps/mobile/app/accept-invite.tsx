@@ -7,7 +7,7 @@ import Feather from "@expo/vector-icons/Feather";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ActivityIndicator, Text, View } from "react-native";
+import { Text, View } from "react-native";
 import { z } from "zod";
 import { MotiView } from "@/components/ui/styled";
 import { AuthBackground } from "@/components/auth/auth-background";
@@ -240,19 +240,14 @@ export default function AcceptInviteScreen() {
             </Text>
           </View>
 
-          {completeMutation.isPending ? (
-            <View className="h-[50px] rounded bg-foreground items-center justify-center mt-1">
-              <ActivityIndicator color="#FFFFFF" size="small" />
-            </View>
-          ) : (
-            <View className="mt-1">
-              <StudioButton
-                label={t("auth.joinButton")}
-                onPress={handleSubmit}
-                block
-              />
-            </View>
-          )}
+          <View className="mt-1">
+            <StudioButton
+              label={t("auth.joinButton")}
+              onPress={handleSubmit}
+              loading={completeMutation.isPending}
+              block
+            />
+          </View>
         </MotiView>
       </View>
 

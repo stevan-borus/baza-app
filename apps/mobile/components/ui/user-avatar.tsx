@@ -3,15 +3,16 @@ import { Image, Pressable, Text, View } from "react-native";
 import { useQuery } from "@tanstack/react-query";
 import { authQueries } from "@/lib/queries/auth-queries-factory";
 import { useLocalAvatar } from "@/lib/use-local-avatar";
+import { useThemeTokens } from "./tokens";
 import { useProfileSheet } from "./profile-sheet";
 
 const AVATAR_SIZE = 36;
 
 /**
  * Circular avatar for the AppHeader's left slot. Tapping it opens the
- * global ProfileSheet. Theme-aware and reads the locally-uploaded image
- * from `useLocalAvatar()` (shared with the profile page + sheet so all
- * three render the same image).
+ * global ProfileSheet. Theme-aware: reads `useLocalAvatar()` and adds a
+ * subtle glass-border ring when an image is set (otherwise photographic
+ * avatars float without a defined edge against the surrounding canvas).
  */
 export function UserAvatar() {
   const meQuery = useQuery(authQueries.me());
@@ -19,6 +20,7 @@ export function UserAvatar() {
   const initial = (email || "?").charAt(0).toUpperCase();
   const { open } = useProfileSheet();
   const { avatarUri } = useLocalAvatar();
+  const tokens = useThemeTokens();
 
   return (
     <Pressable
@@ -36,6 +38,8 @@ export function UserAvatar() {
             width: AVATAR_SIZE,
             height: AVATAR_SIZE,
             borderRadius: AVATAR_SIZE / 2,
+            borderWidth: 1,
+            borderColor: tokens.glassBorder,
           }}
         />
       ) : (

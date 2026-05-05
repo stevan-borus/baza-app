@@ -1,8 +1,10 @@
 /**
- * Trainer schedule screen — mirrors the admin schedule layout (P3 polish):
- * single vertical ScrollView with greeting + hero stats + view toggle +
- * WeekStrip/MonthView + session list. Tapping a session opens a read-only
- * detail sheet (trainers cannot edit sessions).
+ * Trainer schedule (Pregled raspored) — Studio operations look.
+ *
+ * No photo hero — staff want signal, not atmosphere. Editorial stat
+ * strip up top (Sessions / Clients / Hours), then the schedule list,
+ * then optional month view. Same chrome (logo header + UserAvatar) as
+ * the rest of the app; the difference is density.
  */
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -13,16 +15,15 @@ import { MotiView } from "@/components/ui/styled";
 import { AppSheet } from "@/components/ui/sheet";
 import { Badge, Card } from "@/components/ui/card";
 import { ListRow, EmptyState, ErrorState } from "@/components/ui/states";
-import { WeekStrip, startOfLocaleWeek } from "@/components/ui/week-strip";
+import { startOfLocaleWeek } from "@/components/ui/week-strip";
 import { MonthView } from "@/components/ui/month-view";
 import { SegmentedControl } from "@/components/ui/segmented-control";
-import { HeroCard } from "@/components/ui/hero-card";
 import { SessionCard } from "@/components/ui/session-card";
 import {
   ScreenContainerRaw,
   useTabBarBottomPadding,
 } from "@/components/ui/screen-container";
-import { SectionLabel } from "@/components/ui/typography";
+import { CapsLabel, StudioWeekStrip } from "@/components/ui/studio";
 import { authQueries } from "@/lib/queries/auth-queries-factory";
 import { sessionsQueries } from "@/lib/queries/sessions-queries-factory";
 
@@ -71,15 +72,25 @@ export default function TrainerSchedule() {
   const hoursToday = minsToday / 60;
   const hoursDisplay = hoursToday > 0 ? hoursToday.toFixed(1) : "0";
 
-  const activityByDate: Record<string, "booked" | "available"> = {};
+  // YYYY-MM-DD → number of sessions on that day (drives the dot indicator
+  // under each StudioWeekStrip pill).
+  const sessionsByDay = sessions.reduce<Record<string, number>>((acc, s) => {
+    const k = dayjs(s.startsAt).format("YYYY-MM-DD");
+    acc[k] = (acc[k] ?? 0) + 1;
+    return acc;
+  }, {});
+
+  // MonthView still expects the legacy "available"/"booked" map.
+  const activityByDate: Record<string, "available"> = {};
   for (const s of sessions) {
     const dateKey = dayjs(s.startsAt).format("YYYY-MM-DD");
     activityByDate[dateKey] = "available";
   }
 
-  function handleDateSelect(date: string) {
+  function handleDateSelect(d: dayjs.Dayjs) {
+    const date = d.format("YYYY-MM-DD");
     setSelectedDate(date);
-    const newMonth = monthKeyFromDate(dayjs(date));
+    const newMonth = monthKeyFromDate(d);
     if (newMonth !== month) setMonth(newMonth);
   }
 
@@ -149,68 +160,41 @@ export default function TrainerSchedule() {
           animate={{ opacity: 1, translateY: 0 }}
           transition={{ type: "timing", duration: 350 }}
         >
-          <View className="px-6 pb-4">
+          <View className="px-5 pb-5">
+            <CapsLabel size={11} tracking={1.6} className="text-muted">
+              {dayjs().locale(lang).format("dddd, D MMMM").toUpperCase()}
+            </CapsLabel>
             <Text
-              className="text-foreground font-body-bold"
-              style={{ fontSize: 22, letterSpacing: -0.4 }}
+              className="text-foreground font-body-bold mt-1.5"
+              style={{ fontSize: 26, letterSpacing: -0.5, textTransform: "capitalize" }}
             >
               {t("trainer.schedule.greeting", { name: greetingName })}
-            </Text>
-            <Text className="text-muted text-sm mt-0.5">
-              {dayjs().locale(lang).format("dddd, D MMMM YYYY")}
             </Text>
           </View>
         </MotiView>
 
-        {/* ── Today stats hero ── */}
+        {/* ── Today stats — editorial hairline strip ── */}
         <MotiView
           from={{ opacity: 0, translateY: -8 }}
           animate={{ opacity: 1, translateY: 0 }}
           transition={{ type: "timing", duration: 350, delay: 80 }}
         >
-          <View className="px-6 pb-4">
-            <HeroCard tone="default">
-              <View className="flex-col gap-3">
-                <SectionLabel>{t("trainer.schedule.todayStats")}</SectionLabel>
-                <View className="flex-row justify-between">
-                  <View className="flex-col items-center gap-1 flex-1">
-                    <Text
-                      className="text-foreground font-body-bold"
-                      style={{ fontSize: 28, letterSpacing: -0.5 }}
-                    >
-                      {daySessions.length}
-                    </Text>
-                    <Text className="text-muted text-xs text-center">
-                      {t("trainer.schedule.sessions")}
-                    </Text>
-                  </View>
-                  <View className="w-px bg-glass-border self-stretch mx-1" />
-                  <View className="flex-col items-center gap-1 flex-1">
-                    <Text
-                      className="text-foreground font-body-bold"
-                      style={{ fontSize: 28, letterSpacing: -0.5 }}
-                    >
-                      {clientsToday}
-                    </Text>
-                    <Text className="text-muted text-xs text-center">
-                      {t("trainer.schedule.clients")}
-                    </Text>
-                  </View>
-                  <View className="w-px bg-glass-border self-stretch mx-1" />
-                  <View className="flex-col items-center gap-1 flex-1">
-                    <Text
-                      className="text-foreground font-body-bold"
-                      style={{ fontSize: 28, letterSpacing: -0.5 }}
-                    >
-                      {hoursDisplay}
-                    </Text>
-                    <Text className="text-muted text-xs text-center">
-                      {t("trainer.schedule.hours")}
-                    </Text>
-                  </View>
-                </View>
-              </View>
-            </HeroCard>
+          <View className="mx-5 mb-6 flex-row">
+            <StatColumn
+              label={t("trainer.schedule.sessions")}
+              value={daySessions.length}
+            />
+            <View className="bg-glass-border" style={{ width: 1, marginVertical: 10 }} />
+            <StatColumn
+              label={t("trainer.schedule.clients")}
+              value={clientsToday}
+            />
+            <View className="bg-glass-border" style={{ width: 1, marginVertical: 10 }} />
+            <StatColumn
+              label={t("trainer.schedule.hours")}
+              value={hoursDisplay}
+              accent
+            />
           </View>
         </MotiView>
 
@@ -220,7 +204,7 @@ export default function TrainerSchedule() {
           animate={{ opacity: 1, translateY: 0 }}
           transition={{ type: "timing", duration: 350, delay: 160 }}
         >
-          <View className="px-6 pb-4">
+          <View className="px-5 pb-4">
             <SegmentedControl<ScheduleTab>
               options={[
                 { value: "day", label: t("admin.schedule.viewDay") },
@@ -233,28 +217,32 @@ export default function TrainerSchedule() {
 
           {scheduleTab === "day" ? (
             <>
-              <View className="px-6 pb-3">
-                <WeekStrip
+              <View className="pb-4">
+                <StudioWeekStrip
                   weekStart={weekStart}
-                  selectedDate={selectedDate}
-                  onSelectDate={handleDateSelect}
+                  selected={dayjs(selectedDate)}
+                  onSelect={handleDateSelect}
+                  sessionsByDay={sessionsByDay}
                   onPrevWeek={handlePrevWeek}
                   onNextWeek={handleNextWeek}
-                  activity={activityByDate}
+                  rangeLabel={`${weekStart.locale(lang).format("D. MMM")} — ${weekStart
+                    .add(6, "day")
+                    .locale(lang)
+                    .format("D. MMM")}`}
                 />
               </View>
 
               {availabilityQuery.isError ? (
-                <View className="px-6">
+                <View className="px-5">
                   <ErrorState message={t("trainer.schedule.error")} />
                 </View>
               ) : null}
 
-              <View className="px-6">
+              <View className="px-5">
                 <View className="flex-row items-baseline justify-between pb-3">
-                  <SectionLabel>
-                    {displayDate.locale(lang).format("dddd, D MMMM")}
-                  </SectionLabel>
+                  <CapsLabel size={12} tracking={2.4}>
+                    {displayDate.locale(lang).format("dddd, D MMMM").toUpperCase()}
+                  </CapsLabel>
                   {daySessions.length > 0 ? (
                     <Text className="text-xs text-muted">
                       {t("admin.dashboard.classCount", {
@@ -287,7 +275,7 @@ export default function TrainerSchedule() {
               </View>
             </>
           ) : (
-            <View className="px-6">
+            <View className="px-5">
               <MonthView
                 month={monthDate}
                 selectedDate={selectedDate}
@@ -330,5 +318,53 @@ export default function TrainerSchedule() {
         ) : null}
       </AppSheet>
     </ScreenContainerRaw>
+  );
+}
+
+// ─── editorial stat column (matches client/profile pattern) ──────────────
+
+function StatColumn({
+  label,
+  value,
+  accent = false,
+}: {
+  label: string;
+  value: number | string;
+  accent?: boolean;
+}) {
+  // Empty data renders an em-dash so the strip stays elegant on quiet days.
+  const display =
+    typeof value === "number"
+      ? value === 0
+        ? "—"
+        : String(value)
+      : value === "0"
+        ? "—"
+        : value;
+  return (
+    <View className="flex-1 items-center py-4 px-2 gap-1.5">
+      <Text
+        className={accent ? "text-accent" : "text-muted"}
+        style={{
+          fontFamily: "AlbertSans-SemiBold",
+          fontSize: 9,
+          letterSpacing: 1.4,
+          textTransform: "uppercase",
+        }}
+      >
+        {label}
+      </Text>
+      <Text
+        className={accent ? "text-accent" : "text-foreground"}
+        style={{
+          fontFamily: "AlbertSans-Bold",
+          fontSize: 26,
+          letterSpacing: -0.6,
+          lineHeight: 30,
+        }}
+      >
+        {display}
+      </Text>
+    </View>
   );
 }
