@@ -240,7 +240,12 @@
     "languageEn": "English",
     "a11yOpenProfile": "Open profile",
     "a11yGoBack": "Go back",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "time": "Time",
+    "pickDate": "Pick a date",
+    "pickTime": "Pick a time",
+    "pickDateTime": "Pick date and time"
   },
   "confirm": {
     "deletePackageTitle": "Delete package type?",

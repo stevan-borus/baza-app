@@ -242,7 +242,12 @@
     "languageEn": "English",
     "a11yOpenProfile": "Otvori profil",
     "a11yGoBack": "Nazad",
-    "cancel": "Otkaži"
+    "cancel": "Otkaži",
+    "confirm": "Potvrdi",
+    "time": "Vreme",
+    "pickDate": "Izaberi datum",
+    "pickTime": "Izaberi vreme",
+    "pickDateTime": "Izaberi datum i vreme"
   },
   "confirm": {
     "deletePackageTitle": "Obrisati tip paketa?",

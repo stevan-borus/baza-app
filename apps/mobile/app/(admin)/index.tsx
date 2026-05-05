@@ -643,6 +643,7 @@ export default function AdminSchedule() {
             />
 
             <DateTimePicker
+              testID="session-create-startsAt"
               placeholder={t("admin.schedule.placeholderStart")}
               value={newSession.startsAt}
               onChange={(date) =>
