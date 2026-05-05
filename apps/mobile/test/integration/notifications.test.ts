@@ -19,24 +19,29 @@ vi.mock("@/lib/server/auth-guards", async () => {
 // Stub out push dispatch so the route just records to the DB.
 vi.mock("@/lib/server/notifications", async () => {
   const { prisma } = await import("@/lib/server/prisma");
+  const { Prisma } = await import("@/generated/prisma");
+  type StubNotificationInput = {
+    userId: string;
+    type: string;
+    title: string;
+    body: string;
+    payload?: Record<string, unknown>;
+  };
   return {
     getPreferredLocale: async () => "en",
     createSystemNotification: vi.fn(async () => undefined),
     createAndDispatchUserNotification: vi.fn(
-      async (input: {
-        userId: string;
-        type: "BOOKING_CONFIRMED" | "BOOKING_REMINDER" | "PACKAGE_EXPIRING" | "GENERAL" | "PROMOTION";
-        title: string;
-        body: string;
-        payload?: Record<string, unknown>;
-      }) =>
+      async (input: StubNotificationInput) =>
         prisma.notificationLog.create({
           data: {
             userId: input.userId,
-            type: input.type,
+            type: input.type as never,
             title: input.title,
             body: input.body,
-            payload: input.payload ?? {},
+            payload:
+              input.payload === undefined
+                ? Prisma.JsonNull
+                : (JSON.parse(JSON.stringify(input.payload)) as Prisma.InputJsonValue),
           },
         }),
     ),

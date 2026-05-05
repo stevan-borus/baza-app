@@ -210,11 +210,28 @@ i18n: tests import locale JSON and reference keys via the actual translated stri
 - i18n key parity — 1 test.
 - Opportunistic helpers in reports/aggregations if any exist as pure functions.
 
-## Other implementation gaps blocking Phase A E2E
-These are not on the API-gaps subagent's brief but the E2E spec scaffolding depends on them. Add as part of Phase A E2E execution work (or as a small parallel branch).
+## Phase 2 blockers — must fix before E2E can run
 
-- **Auth form testIDs.** The Studio sign-in screen (`apps/mobile/app/sign-in.tsx`) does not set `auth-email-input`, `auth-password-input`, or `auth-submit-button` testIDs. The Phase B Maestro flows used these and the Playwright auth-smoke spec (`test/e2e/auth-smoke.spec.ts`) is scaffolded against them. Add `testID` props on `Input`/`PasswordInput`/`StudioButton` invocations in sign-in, reset-password, and complete-invite screens. Same for the `tab-clients`/`tab-index`/`tab-calendar`/`tab-notes` tab IDs the smoke test asserts after sign-in — confirm those still exist in the (admin)/(trainer)/(client) layout files.
-- **Browser binaries.** `pnpm exec playwright install --with-deps chromium` from `apps/mobile/` (or `pnpm test:e2e:install`). Not run in this branch — left as a one-shot post-merge.
+Phase A delivers a complete unit + integration suite (204 tests). The Playwright auth-smoke spec is scaffolded against existing testIDs but the runtime is broken:
+
+- **tslib interop error in Expo Router web export.** Running `playwright test` boots `expo start --web --port 8010` (per `playwright.config.ts`'s webServer). The first request to `/sign-in` returns a Server Error: `Cannot destructure property '__extends' of 'tslib.default' as it is undefined`. The page never hydrates, so the testIDs are never queryable. This blocks **every** Playwright spec, not just auth-smoke.
+
+  Likely causes (need investigation):
+  1. `@react-email/components` (or another transitive dep) ships ESM that imports `tslib` as a default export when Metro/Webpack expects a namespace import. Pinning `tslib` or adding a Metro `resolver.unstable_enablePackageExports = false` toggle has fixed similar reports.
+  2. A monorepo hoisting interaction (multiple `tslib` versions across `packages/types`, `apps/mobile`, etc.).
+  3. The Studio fonts or theming code path on `sign-in.tsx` is using a TS helper that the web bundler can't resolve.
+
+  Reproduce: `cd apps/mobile && CI=1 EXPO_PUBLIC_API_URL=http://127.0.0.1:8010 BASE_URL=http://127.0.0.1:8010 expo start --web --port 8010`, then visit `/sign-in`.
+
+- **Remaining E2E spec build-out (~64 tests).** Per the "E2E (Playwright web)" section above. Don't start writing more specs until the runtime is fixed — they'd all fail for the same reason and produce no signal.
+
+### Phase A E2E artifacts that ARE in tree (will activate when runtime is fixed)
+- `apps/mobile/playwright.config.ts` — webServer + Chromium project + per-spec retain-on-failure traces.
+- `apps/mobile/test/e2e/auth-smoke.spec.ts` — 4 tests (admin/trainer/client sign-in + wrong password).
+- `apps/mobile/test/e2e/helpers/db.ts` — per-spec-file rich-seed reset.
+- `apps/mobile/test/e2e/helpers/locales.ts` — t/en exports for translation-key selectors.
+- `apps/mobile/scripts/test/seed-e2e.ts` — Q12 user matrix.
+- `auth-email-input` / `auth-password-input` / `auth-submit-button` / `tab-${name}` testIDs wired throughout the auth screens and FloatingTabBar.
 
 ## Out of scope for Phase A
 

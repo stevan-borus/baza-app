@@ -7,16 +7,14 @@ const SEED_PASSWORD = "Password123!";
 /**
  * Auth smoke (Serbian).
  *
- * NOTE: This spec depends on testIDs being present on the auth form's email
- * input, password input, and submit button. The Maestro flows already used
- * `auth-email-input`, `auth-password-input`, `auth-submit-button`. The web
- * build of the Studio sign-in screen does NOT currently set those testIDs
- * (it uses <Input label=... /> with the label rendered as separate <Text>).
+ * The auth-form testIDs (auth-email-input, auth-password-input,
+ * auth-submit-button) and tab testIDs (tab-clients, tab-index) are wired in
+ * sign-in.tsx + lib/tab-layout-theme.tsx. This spec was written against them.
  *
- * This selector strategy will resolve once the auth form testIDs are added —
- * tracked in docs/test-plan.md "Deferred tests" section. Until then:
- *   - The spec is scaffolded so the runner discovers + runs once enabled.
- *   - The testID-based locators below match the Phase B Maestro convention.
+ * Phase A status: scaffolded but not running. Expo Router's web export
+ * throws a tslib interop error on first request — see docs/test-plan.md
+ * "Phase 2 blockers" for the diagnosis. The spec stays in tree so Phase 2
+ * can re-enable it after the runtime is fixed.
  */
 test.describe("auth smoke (Serbian)", () => {
   test.beforeAll(async () => {

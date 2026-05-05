@@ -16,6 +16,7 @@ type CommonProps = {
   /** Shows a spinner on the left of the label and blocks press while true. */
   loading?: boolean;
   icon?: React.ReactNode;
+  testID?: string;
 };
 
 /**
@@ -36,6 +37,7 @@ export function StudioButton({
   fill,
   textColor,
   icon,
+  testID,
 }: CommonProps & { fill?: string; textColor?: string }) {
   const hasCustomFill = !!fill;
   const inert = disabled || loading;
@@ -69,6 +71,7 @@ export function StudioButton({
     <Pressable
       onPress={inert ? undefined : onPress}
       disabled={inert}
+      testID={testID}
       className={pressableCls}
       style={
         !disabled && hasCustomFill ? { backgroundColor: fill } : undefined
