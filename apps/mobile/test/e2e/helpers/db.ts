@@ -166,6 +166,116 @@ export async function linkTrainerToClient(
   return { bookingId: booking.id, sessionId: session.id };
 }
 
+type CreatePastSessionInput = {
+  trainerEmail: string;
+  classTypeName: string;
+  clientEmail: string;
+  /** Session's startsAt; endsAt is +60min. Must be in the past. */
+  startsAt: Date;
+  /** Cancel the booking before/after the late-cancel cutoff, or not at all. */
+  cancel?: "none" | "before-cutoff" | "after-cutoff";
+};
+
+/**
+ * Backdate a session-with-booking so the consumption cron has something
+ * to chew on. Returns the row IDs and the client's clientPackage.id so
+ * the spec can read sessionsRemaining before/after the cron run.
+ */
+export async function createPastSessionWithBooking(input: CreatePastSessionInput) {
+  const [trainer, classType, clientUser] = await Promise.all([
+    db().user.findUnique({
+      where: { email: input.trainerEmail.toLowerCase() },
+      select: { id: true },
+    }),
+    db().classType.findFirst({
+      where: { name: input.classTypeName },
+      select: { id: true },
+    }),
+    db().user.findUnique({
+      where: { email: input.clientEmail.toLowerCase() },
+      select: {
+        clientProfile: {
+          select: {
+            id: true,
+            packages: {
+              where: { classTypeId: undefined },
+              select: { id: true, classTypeId: true },
+            },
+          },
+        },
+      },
+    }),
+  ]);
+  if (!trainer || !classType || !clientUser?.clientProfile) {
+    throw new Error("Trainer/classType/client not found");
+  }
+  const room = await db().studioRoom.findFirst({ select: { id: true } });
+  if (!room) throw new Error("No StudioRoom");
+
+  const endsAt = new Date(input.startsAt.getTime() + 60 * 60 * 1000);
+  const session = await db().session.create({
+    data: {
+      classTypeId: classType.id,
+      trainerUserId: trainer.id,
+      roomId: room.id,
+      startsAt: input.startsAt,
+      endsAt,
+      capacity: 6,
+      status: "SCHEDULED",
+    },
+    select: { id: true },
+  });
+
+  // Pick the client's package matching this classType.
+  const pkg = await db().clientPackage.findFirst({
+    where: {
+      clientProfileId: clientUser.clientProfile.id,
+      classTypeId: classType.id,
+    },
+    select: { id: true, sessionsRemaining: true, lateCancelHours: true },
+  });
+  if (!pkg) {
+    throw new Error("Client has no package for this class type");
+  }
+
+  const cancel = input.cancel ?? "none";
+  // Late-cancel boundary: if cancellation < lateCancelHours before startsAt,
+  // it's "after-cutoff". `before-cutoff` means cancellation more than
+  // lateCancelHours before startsAt.
+  const cutoffMs = pkg.lateCancelHours * 60 * 60 * 1000;
+  const canceledAt =
+    cancel === "before-cutoff"
+      ? new Date(input.startsAt.getTime() - cutoffMs - 60 * 60 * 1000)
+      : cancel === "after-cutoff"
+        ? new Date(input.startsAt.getTime() - 60 * 60 * 1000)
+        : null;
+
+  const booking = await db().booking.create({
+    data: {
+      sessionId: session.id,
+      clientProfileId: clientUser.clientProfile.id,
+      clientPackageId: pkg.id,
+      canceledAt,
+    },
+    select: { id: true },
+  });
+
+  return {
+    sessionId: session.id,
+    bookingId: booking.id,
+    clientPackageId: pkg.id,
+    sessionsRemainingBefore: pkg.sessionsRemaining,
+  };
+}
+
+export async function getSessionsRemaining(clientPackageId: string) {
+  const pkg = await db().clientPackage.findUnique({
+    where: { id: clientPackageId },
+    select: { sessionsRemaining: true },
+  });
+  return pkg?.sessionsRemaining ?? null;
+}
+
 export async function countActiveBookingsFor(userEmail: string) {
   const user = await db().user.findUnique({
     where: { email: userEmail.toLowerCase() },
