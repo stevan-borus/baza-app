@@ -254,7 +254,16 @@
     "cancelSessionConfirm": "Cancel session",
     "revokeInviteTitle": "Revoke invite?",
     "revokeInviteMessage": "The invite link will stop working immediately.",
-    "revokeInviteConfirm": "Revoke invite"
+    "revokeInviteConfirm": "Revoke invite",
+    "deleteClassTypeTitle": "Delete class type?",
+    "deleteClassTypeMessage": "This action is permanent and affects all future sessions.",
+    "deleteClassTypeConfirm": "Delete",
+    "deleteRoomTitle": "Delete room?",
+    "deleteRoomMessage": "The room will be removed from all future sessions.",
+    "deleteRoomConfirm": "Delete",
+    "deleteNoteTitle": "Delete note?",
+    "deleteNoteMessage": "The note will be permanently removed.",
+    "deleteNoteConfirm": "Delete"
   },
   "validation": {
     "required": "Required",
@@ -463,6 +472,8 @@
       "classTypes": "Class types",
       "rooms": "Rooms",
       "sheetNewClassType": "New class type",
+      "sheetEditClassType": "Edit class type",
+      "sheetEditRoom": "Edit room",
       "classTypeSummary": "{{duration}} min · Max {{max}}",
       "placeholderMaxClients": "Max clients",
       "placeholderDurationMins": "Duration (min)",
@@ -521,7 +532,10 @@
       "filterAll": "All",
       "filterThisWeek": "This week",
       "filterByClient": "By client",
+      "filterBySession": "By session",
       "pickClientTitle": "Filter by client",
+      "pickSessionTitle": "Filter by session",
+      "editSheetTitle": "Edit note",
       "unknownClient": "Unknown client"
     },
     "clients": {
