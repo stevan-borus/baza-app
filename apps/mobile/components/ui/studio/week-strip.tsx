@@ -111,6 +111,7 @@ export function StudioWeekStrip({
           return (
             <Pressable
               key={d.toString()}
+              testID={`week-strip-day-${d.format("YYYY-MM-DD")}`}
               onPress={() => onSelect(d)}
               android_ripple={null}
               className={`flex-1 py-3 items-center rounded ${containerCls}`}

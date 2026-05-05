@@ -117,6 +117,20 @@ export async function createPasswordResetToken(input: CreateResetTokenInput) {
   return { id: row.id, rawToken };
 }
 
+export async function countActiveBookingsFor(userEmail: string) {
+  const user = await db().user.findUnique({
+    where: { email: userEmail.toLowerCase() },
+    select: { clientProfile: { select: { id: true } } },
+  });
+  if (!user?.clientProfile) return 0;
+  return db().booking.count({
+    where: {
+      clientProfileId: user.clientProfile.id,
+      canceledAt: null,
+    },
+  });
+}
+
 export async function findLatestResetTokenFor(userEmail: string) {
   const user = await db().user.findUnique({
     where: { email: userEmail.toLowerCase() },
