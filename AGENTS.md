@@ -95,3 +95,11 @@ No test framework is currently configured. When adding tests, prefer Vitest for 
 - Database: Neon Postgres
 
 See `docs/deployment-runbook.md` for production procedures.
+
+## Studio Visual System
+
+Bone canvas, ink text, forest-green as brand signature only, black as primary CTA. Components and tokens live in `apps/mobile/components/ui/studio/`.
+
+- **Use Uniwind `className` for colors, layout, type.** Reach for inline `style` only for off-scale sizes, letter-spacing, line-height, computed values, or native props that need a JS color (Feather `color`, `placeholderTextColor`). If utilities seem broken after a token change, bounce Metro with `--clear`.
+- **Every visible string must be i18n'd in both `locales/en.json` and `locales/sr.json`.** Serbian is default. Includes accessibility labels (`common.a11y*` namespace).
+- **No `useEffect` for one-shot setup** like setting a status bar style. Use the declarative form; if a parent overrides it, fix the parent.
