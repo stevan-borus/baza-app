@@ -17,11 +17,13 @@ import { EmptyState, ErrorState } from "@/components/ui/states";
 import { Input } from "@/components/ui/input";
 import { GlassCard } from "@/components/ui/glass-card";
 import { SectionLabel } from "@/components/ui/typography";
+import { Select } from "@/components/ui/select";
 import { ScreenContainerRaw, useTabBarBottomPadding } from "@/components/ui/screen-container";
 import { HeaderIconButton } from "@/components/ui/app-header";
 import { useThemeTokens } from "@/components/ui/tokens";
 import { FilterChip } from "@/components/ui/studio";
 import { packagesQueries } from "@/lib/queries/packages-queries-factory";
+import { trainingsQueries } from "@/lib/queries/trainings-queries-factory";
 
 // ─── SessionCountIcon ─────────────────────────────────────────────────────────
 // Circular badge used on package-type rows to display session count.
@@ -77,12 +79,14 @@ export default function AdminPackages() {
     sessionCount: "",
     validityDays: "",
     lateCancelHours: "12",
+    classTypeId: "",
   });
   const [editForm, setEditForm] = useState({
     name: "",
     sessionCount: "",
     validityDays: "",
     lateCancelHours: "12",
+    classTypeId: "",
   });
 
   async function handleRefresh() {
@@ -95,6 +99,7 @@ export default function AdminPackages() {
   }
 
   const typesQuery = useQuery(packagesQueries.types());
+  const classTypesQuery = useQuery(trainingsQueries.classTypes());
   const clientPackagesQuery = useQuery(packagesQueries.clientPackages());
   const allAssignments = clientPackagesQuery.data?.packages ?? [];
 
@@ -122,6 +127,7 @@ export default function AdminPackages() {
         sessionCount: "",
         validityDays: "",
         lateCancelHours: "12",
+        classTypeId: "",
       });
     },
   });
@@ -149,12 +155,14 @@ export default function AdminPackages() {
     sessionCount: number;
     validityDays: number;
     lateCancelHours: number;
+    classTypeId: string;
   }) {
     setEditForm({
       name: pt.name,
       sessionCount: String(pt.sessionCount),
       validityDays: String(pt.validityDays),
       lateCancelHours: String(pt.lateCancelHours),
+      classTypeId: pt.classTypeId,
     });
     setEditingId(pt.id);
   }
@@ -239,6 +247,8 @@ export default function AdminPackages() {
                         style={{ fontSize: 12 }}
                         numberOfLines={1}
                       >
+                        {pt.classType?.name ?? "—"}
+                        {" · "}
                         {t("admin.manage.sessionsDays", {
                           count: pt.sessionCount,
                           days: pt.validityDays,
@@ -368,6 +378,16 @@ export default function AdminPackages() {
               value={form.name}
               onChangeText={(v) => setForm((s) => ({ ...s, name: v }))}
             />
+            <Select
+              placeholder={t("admin.packages.classType")}
+              value={form.classTypeId}
+              onChange={(v) => setForm((s) => ({ ...s, classTypeId: v }))}
+              emptyText={t("admin.schedule.emptyClassTypes")}
+              options={(classTypesQuery.data?.classTypes ?? []).map((ct) => ({
+                value: ct.id,
+                label: ct.name,
+              }))}
+            />
             <Input
               placeholder={t("admin.manage.placeholderSessionCount")}
               keyboardType="numeric"
@@ -393,7 +413,8 @@ export default function AdminPackages() {
                 createMutation.isPending ||
                 !form.name ||
                 !form.sessionCount ||
-                !form.validityDays
+                !form.validityDays ||
+                !form.classTypeId
               }
               onPress={() =>
                 createMutation.mutate({
@@ -401,6 +422,7 @@ export default function AdminPackages() {
                   sessionCount: parseInt(form.sessionCount, 10),
                   validityDays: parseInt(form.validityDays, 10),
                   lateCancelHours: parseInt(form.lateCancelHours, 10) || 12,
+                  classTypeId: form.classTypeId,
                 })
               }
             >
@@ -427,6 +449,18 @@ export default function AdminPackages() {
               placeholder={t("admin.manage.placeholderName")}
               value={editForm.name}
               onChangeText={(v) => setEditForm((s) => ({ ...s, name: v }))}
+            />
+            <Select
+              placeholder={t("admin.packages.classType")}
+              value={editForm.classTypeId}
+              onChange={(v) =>
+                setEditForm((s) => ({ ...s, classTypeId: v }))
+              }
+              emptyText={t("admin.schedule.emptyClassTypes")}
+              options={(classTypesQuery.data?.classTypes ?? []).map((ct) => ({
+                value: ct.id,
+                label: ct.name,
+              }))}
             />
             <Input
               placeholder={t("admin.manage.placeholderSessionCount")}
@@ -457,7 +491,8 @@ export default function AdminPackages() {
                 updateTypeMutation.isPending ||
                 !editForm.name ||
                 !editForm.sessionCount ||
-                !editForm.validityDays
+                !editForm.validityDays ||
+                !editForm.classTypeId
               }
               onPress={() => {
                 if (!editingId) return;
@@ -467,6 +502,7 @@ export default function AdminPackages() {
                   sessionCount: parseInt(editForm.sessionCount, 10),
                   validityDays: parseInt(editForm.validityDays, 10),
                   lateCancelHours: parseInt(editForm.lateCancelHours, 10) || 12,
+                  classTypeId: editForm.classTypeId,
                 });
               }}
             >

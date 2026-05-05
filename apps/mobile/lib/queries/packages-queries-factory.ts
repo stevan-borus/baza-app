@@ -3,12 +3,19 @@ import { z } from "zod";
 import { apiFetch } from "@/lib/api";
 import { sharedEnv } from "@/lib/env.shared";
 
+const embeddedClassTypeSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+});
+
 const packageTypeSchema = z.object({
   id: z.string(),
   name: z.string(),
   sessionCount: z.number(),
   validityDays: z.number(),
   lateCancelHours: z.number(),
+  classTypeId: z.string(),
+  classType: embeddedClassTypeSchema.optional(),
 });
 
 const packageTypesResponseSchema = z.object({
@@ -28,6 +35,7 @@ const clientPackageSchema = z.object({
   id: z.string(),
   clientProfileId: z.string(),
   packageTypeId: z.string(),
+  classTypeId: z.string().optional(),
   startsAt: z.string(),
   expiresAt: z.string(),
   sessionsRemaining: z.number(),
@@ -81,6 +89,7 @@ export const packagesQueries = {
         sessionCount: number;
         validityDays: number;
         lateCancelHours?: number;
+        classTypeId: string;
       }) => {
         const response = await apiFetch(`${sharedEnv.EXPO_PUBLIC_API_URL}/api/packages/types`, {
           method: "POST",
@@ -105,6 +114,7 @@ export const packagesQueries = {
         sessionCount?: number;
         validityDays?: number;
         lateCancelHours?: number;
+        classTypeId?: string;
       }) => {
         const response = await apiFetch(
           `${sharedEnv.EXPO_PUBLIC_API_URL}/api/packages/types/${id}`,

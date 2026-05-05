@@ -50,6 +50,7 @@ export async function POST(request: Request) {
       session: {
         select: {
           startsAt: true,
+          classTypeId: true,
         },
       },
     },
@@ -85,9 +86,13 @@ export async function POST(request: Request) {
         if (!targetPackageId) {
           const [clientPackages, packagePauses] = await Promise.all([
             tx.clientPackage.findMany({
-              where: { clientProfileId: booking.clientProfileId },
+              where: {
+                clientProfileId: booking.clientProfileId,
+                classTypeId: booking.session.classTypeId,
+              },
               select: {
                 id: true,
+                classTypeId: true,
                 startsAt: true,
                 expiresAt: true,
                 sessionsRemaining: true,
@@ -106,6 +111,7 @@ export async function POST(request: Request) {
             clientPackages,
             packagePauses,
             booking.session.startsAt,
+            booking.session.classTypeId,
           );
           targetPackageId = eligiblePackage?.id ?? null;
         }

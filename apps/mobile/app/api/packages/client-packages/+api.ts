@@ -40,16 +40,37 @@ export async function GET(request: Request) {
       }),
     ]);
 
-    const activePackage = findEligibleClientPackage(
-      packages.map((item: { id: string; startsAt: Date; expiresAt: Date; sessionsRemaining: number }) => ({
-        id: item.id,
-        startsAt: item.startsAt,
-        expiresAt: item.expiresAt,
-        sessionsRemaining: item.sessionsRemaining,
-      })),
-      pauses,
-      new Date(),
-    );
+    // Dashboard "active package" is class-agnostic on purpose — drives the
+    // home/profile pill, not the bookable calendar. Class scope is enforced at
+    // booking + availability time. Here we just look for ANY eligible pack.
+    const now = new Date();
+    const activePackage = (() => {
+      const distinctClassTypeIds = Array.from(
+        new Set(packages.map((p: { classTypeId: string }) => p.classTypeId)),
+      );
+      for (const classTypeId of distinctClassTypeIds) {
+        const hit = findEligibleClientPackage(
+          packages.map((item: {
+            id: string;
+            classTypeId: string;
+            startsAt: Date;
+            expiresAt: Date;
+            sessionsRemaining: number;
+          }) => ({
+            id: item.id,
+            classTypeId: item.classTypeId,
+            startsAt: item.startsAt,
+            expiresAt: item.expiresAt,
+            sessionsRemaining: item.sessionsRemaining,
+          })),
+          pauses,
+          now,
+          classTypeId,
+        );
+        if (hit) return hit;
+      }
+      return null;
+    })();
 
     return ok({
       success: true,
@@ -121,6 +142,8 @@ export async function POST(request: Request) {
       id: true,
       sessionCount: true,
       validityDays: true,
+      classTypeId: true,
+      lateCancelHours: true,
     },
   });
   if (!packageType) return fail("Package type not found", 404);
@@ -133,6 +156,8 @@ export async function POST(request: Request) {
     data: {
       clientProfileId: parsed.data.clientProfileId,
       packageTypeId: parsed.data.packageTypeId,
+      classTypeId: packageType.classTypeId,
+      lateCancelHours: packageType.lateCancelHours,
       startsAt,
       expiresAt,
       sessionsRemaining: packageType.sessionCount,
@@ -141,6 +166,8 @@ export async function POST(request: Request) {
       id: true,
       clientProfileId: true,
       packageTypeId: true,
+      classTypeId: true,
+      lateCancelHours: true,
       startsAt: true,
       expiresAt: true,
       sessionsRemaining: true,

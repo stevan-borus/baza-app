@@ -709,7 +709,6 @@ export default function AdminClients() {
           </View>
         </AppSheet>
 
-        {/* Assign Package Sheet */}
         <AppSheet open={!!showAssignPackage} onOpenChange={() => setShowAssignPackage(null)}>
           <View className="flex-col gap-4">
             <SheetHeader
@@ -720,6 +719,12 @@ export default function AdminClients() {
                 if (id) setShowActionsFor(id);
               }}
             />
+            <Text
+              className="text-muted"
+              style={{ fontSize: 13 }}
+            >
+              {t("admin.clients.assignPackage.heading.comp")}
+            </Text>
             <SectionLabel>{t("admin.clients.packageType")}</SectionLabel>
             {(packageTypesQuery.data?.packageTypes ?? []).map((pt) => (
               <Button

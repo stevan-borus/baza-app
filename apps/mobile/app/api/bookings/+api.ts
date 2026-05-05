@@ -29,18 +29,19 @@ export async function POST(request: Request) {
       startsAt: true,
       capacity: true,
       status: true,
+      classTypeId: true,
     },
   });
   if (!session || session.status !== "SCHEDULED")
     return fail("Session not available", 404);
 
   if (action === "BOOK") {
-    // Booking requires an eligible package (active, within validity, not paused) at session time.
     const [clientPackages, packagePauses] = await Promise.all([
       prisma.clientPackage.findMany({
-        where: { clientProfileId },
+        where: { clientProfileId, classTypeId: session.classTypeId },
         select: {
           id: true,
+          classTypeId: true,
           startsAt: true,
           expiresAt: true,
           sessionsRemaining: true,
@@ -59,10 +60,11 @@ export async function POST(request: Request) {
       clientPackages,
       packagePauses,
       session.startsAt,
+      session.classTypeId,
     );
 
     if (!eligiblePackage) {
-      return fail("No active package available for this booking", 409);
+      return fail("no_package_for_class", 409);
     }
 
     const hasBooking = await prisma.booking.findUnique({
@@ -132,11 +134,7 @@ export async function POST(request: Request) {
       clientPackage: {
         select: {
           id: true,
-          packageType: {
-            select: {
-              lateCancelHours: true,
-            },
-          },
+          lateCancelHours: true,
         },
       },
     },
@@ -150,7 +148,7 @@ export async function POST(request: Request) {
   if (activeBooking && !activeBooking.canceledAt) {
     // Late cancellations (within policy window) consume one package session as penalty.
     const lateCancelHours =
-      activeBooking.clientPackage?.packageType.lateCancelHours ?? 0;
+      activeBooking.clientPackage?.lateCancelHours ?? 0;
     if (
       shouldApplyLateCancelPenalty(
         session.startsAt,
@@ -209,9 +207,13 @@ export async function POST(request: Request) {
     });
     const [clientPackages, packagePauses] = await Promise.all([
       tx.clientPackage.findMany({
-        where: { clientProfileId: nextWaitlist.clientProfileId },
+        where: {
+          clientProfileId: nextWaitlist.clientProfileId,
+          classTypeId: session.classTypeId,
+        },
         select: {
           id: true,
+          classTypeId: true,
           startsAt: true,
           expiresAt: true,
           sessionsRemaining: true,
@@ -229,6 +231,7 @@ export async function POST(request: Request) {
       clientPackages,
       packagePauses,
       session.startsAt,
+      session.classTypeId,
     );
     if (!eligiblePackage) return null;
 

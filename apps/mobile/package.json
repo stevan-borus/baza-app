@@ -19,7 +19,11 @@
     "cron:run": "tsx scripts/run-cron.ts",
     "cron:reminders": "tsx scripts/run-cron.ts reminders --mode immediate --window-minutes 1440",
     "cron:expiry": "tsx scripts/run-cron.ts package-expiry --mode immediate --window-days 30",
-    "cron:sessions": "tsx scripts/run-cron.ts session-consumption --mode immediate --lookback-hours 720"
+    "cron:sessions": "tsx scripts/run-cron.ts session-consumption --mode immediate --lookback-hours 720",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:unit": "vitest run --project unit",
+    "test:integration": "vitest run --project integration"
   },
   "dependencies": {
     "@baza/i18n": "workspace:*",
@@ -92,10 +96,12 @@
     "@types/pg": "^8.16.0",
     "@types/react": "~19.2.0",
     "@types/react-dom": "^19.2.0",
+    "@vitest/expect": "^4.1.5",
     "babel-plugin-react-compiler": "^1.0.0",
     "prisma": "^7.4.0",
     "prisma-zod-generator": "^2.1.4",
     "react-test-renderer": "19.1.0",
-    "tsx": "^4.21.0"
+    "tsx": "^4.21.0",
+    "vitest": "^4.1.5"
   }
 }

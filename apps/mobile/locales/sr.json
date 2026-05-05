@@ -189,7 +189,11 @@
       "slotsShort": "sl.",
       "classCount_one": "{{count}} termin",
       "classCount_few": "{{count}} termina",
-      "classCount_other": "{{count}} termina"
+      "classCount_other": "{{count}} termina",
+      "empty": {
+        "noPackage": "Nemate aktivan paket. Kontaktirajte studio.",
+        "noPackageCta": "Kontaktiraj nas"
+      }
     },
     "notifications": {
       "title": "Obaveštenja",
@@ -261,6 +265,11 @@
     "invalidEmail": "Unesite ispravan email",
     "invalid": "Neispravna vrednost",
     "passwordsMismatch": "Lozinke se ne podudaraju"
+  },
+  "bookings": {
+    "error": {
+      "noPackageForClass": "Nemate paket za ovaj tip treninga."
+    }
   },
   "admin": {
     "dashboard": {
@@ -340,7 +349,16 @@
       "filterExpiring": "Ističu",
       "filterPaused": "Pauzirani",
       "filterExpired": "Istekli",
-      "filterEmpty": "Nema klijenata koji odgovaraju filteru."
+      "filterEmpty": "Nema klijenata koji odgovaraju filteru.",
+      "assignPackage": {
+        "heading": {
+          "comp": "Besplatan paket / komp paket"
+        }
+      }
+    },
+    "packages": {
+      "classType": "Tip treninga",
+      "classTypeRequired": "Tip treninga je obavezan"
     },
     "schedule": {
       "title": "Raspored",

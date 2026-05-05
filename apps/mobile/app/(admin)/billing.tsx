@@ -395,6 +395,7 @@ export default function AdminBilling() {
                   clientUserId: form.clientUserId,
                   amount: parseInt(form.amount, 10),
                   method: form.method,
+                  status: "CONFIRMED",
                   notes: form.notes || undefined,
                   packageTypeId: form.packageTypeId || undefined,
                   activatePackageOnConfirm: !!form.packageTypeId,

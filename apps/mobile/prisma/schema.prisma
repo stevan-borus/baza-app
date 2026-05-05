@@ -189,7 +189,9 @@ model ClassType {
   durationMins Int
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
-  sessions     Session[]
+  sessions       Session[]
+  packageTypes   PackageType[]
+  clientPackages ClientPackage[]
 }
 
 model StudioRoom {
@@ -276,15 +278,21 @@ model PackageType {
   sessionCount        Int
   validityDays        Int
   lateCancelHours     Int      @default(12)
+  classTypeId         String
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
+  classType           ClassType @relation(fields: [classTypeId], references: [id], onDelete: Restrict)
   clientPackages      ClientPackage[]
+
+  @@index([classTypeId])
 }
 
 model ClientPackage {
   id                String              @id @default(uuid())
   clientProfileId   String
   packageTypeId     String
+  classTypeId       String
+  lateCancelHours   Int
   startsAt          DateTime
   expiresAt         DateTime
   sessionsRemaining Int
@@ -292,7 +300,11 @@ model ClientPackage {
   updatedAt         DateTime            @updatedAt
   clientProfile     ClientProfile       @relation(fields: [clientProfileId], references: [id], onDelete: Cascade)
   packageType       PackageType         @relation(fields: [packageTypeId], references: [id], onDelete: Restrict)
+  classType         ClassType           @relation(fields: [classTypeId], references: [id], onDelete: Restrict)
   bookings          Booking[]
+
+  @@index([classTypeId])
+  @@index([clientProfileId, classTypeId])
 }
 
 model PackagePause {
