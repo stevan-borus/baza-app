@@ -212,18 +212,11 @@ i18n: tests import locale JSON and reference keys via the actual translated stri
 
 ## Phase 2 blockers — must fix before E2E can run
 
-Phase A delivers a complete unit + integration suite (204 tests). The Playwright auth-smoke spec is scaffolded against existing testIDs but the runtime is broken:
+Phase A delivers a complete unit + integration suite (204 tests). The Playwright auth-smoke spec is scaffolded against existing testIDs.
 
-- **tslib interop error in Expo Router web export.** Running `playwright test` boots `expo start --web --port 8010` (per `playwright.config.ts`'s webServer). The first request to `/sign-in` returns a Server Error: `Cannot destructure property '__extends' of 'tslib.default' as it is undefined`. The page never hydrates, so the testIDs are never queryable. This blocks **every** Playwright spec, not just auth-smoke.
+- ~~**tslib interop error in Expo Router web export.**~~ **Resolved** in Phase 2 (commit on `tests` branch). Root cause: tslib's `package.json` `exports` map routes the `node` import condition (which Expo CLI sets when bundling for SSR) to `./modules/index.js`, whose `import tslib from '../tslib.js'` + destructure pattern fails under Metro's CJS interop because the CJS `tslib.js` does not set `module.exports.default`. The first consumer to hit this on `/sign-in` is `framer-motion@6.5.1` (pulled in by `moti`). Fix: a `resolver.resolveRequest` shim in `apps/mobile/metro.config.js` that redirects every `'tslib'` request to `tslib/tslib.es6.mjs`, which exposes named exports + a default object and works for both namespace and default imports. Auth-smoke spec now passes 4/4 against the live Expo web server.
 
-  Likely causes (need investigation):
-  1. `@react-email/components` (or another transitive dep) ships ESM that imports `tslib` as a default export when Metro/Webpack expects a namespace import. Pinning `tslib` or adding a Metro `resolver.unstable_enablePackageExports = false` toggle has fixed similar reports.
-  2. A monorepo hoisting interaction (multiple `tslib` versions across `packages/types`, `apps/mobile`, etc.).
-  3. The Studio fonts or theming code path on `sign-in.tsx` is using a TS helper that the web bundler can't resolve.
-
-  Reproduce: `cd apps/mobile && CI=1 EXPO_PUBLIC_API_URL=http://127.0.0.1:8010 BASE_URL=http://127.0.0.1:8010 expo start --web --port 8010`, then visit `/sign-in`.
-
-- **Remaining E2E spec build-out (~64 tests).** Per the "E2E (Playwright web)" section above. Don't start writing more specs until the runtime is fixed — they'd all fail for the same reason and produce no signal.
+- **Remaining E2E spec build-out (~64 tests).** Per the "E2E (Playwright web)" section above. Auth-smoke is the working pattern reference.
 
 ### Phase A E2E artifacts that ARE in tree (will activate when runtime is fixed)
 - `apps/mobile/playwright.config.ts` — webServer + Chromium project + per-spec retain-on-failure traces.
