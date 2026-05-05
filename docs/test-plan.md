@@ -228,11 +228,12 @@ Local runtimes (estimate):
 
 ## Execution notes for the next session
 
-1. Confirm `package-class-scoping` is merged to `dev`.
-2. From `tests` branch: `git merge origin/dev` to bring everything in.
-3. Update test seed (`apps/mobile/scripts/test/seed-e2e.ts` — needs to be created; see worktree judgment call about no e2e seed existing yet) with the rich seed shape above.
-4. Build out test layers in order: unit → integration → E2E. Each layer's failures inform the next.
-5. Use `superpowers:test-driven-development` for each test before implementation/test scaffolding.
+1. Confirm `package-class-scoping` is merged to `dev` and `tests` is at `dev` HEAD or later.
+2. **Schema setup uses migrations only.** `pnpm exec prisma migrate deploy` (test DB) or `prisma migrate dev --name <x>` (when authoring schema changes). **Never** `prisma db push` — see `~/.claude/projects/.../memory/feedback_prisma_migrations.md`. The current test infra scripts in `package.json` (`test:db:prepare`) used `db push --force-reset` — **rewrite them to use `prisma migrate reset` or `prisma migrate deploy`** as part of Phase A.
+3. Create `apps/mobile/scripts/test/seed-e2e.ts` (it doesn't exist yet — the production seed at `scripts/seed.ts` is the closest reference). Implement the **rich seed** shape from this plan (Q12 matrix).
+4. Wire per-spec-file DB reset (Q2(b)) — each Playwright spec resets via `prisma migrate reset --skip-seed` then runs the rich seed. Vitest integration tests follow the same pattern (already partially in place — `setup-db.ts` truncates tables; rewrite to use `migrate reset` for stronger isolation).
+5. Build out test layers in order: unit → integration → E2E. Each layer's failures inform the next.
+6. Use `superpowers:test-driven-development` for each test before implementation/test scaffolding.
 
 ---
 
