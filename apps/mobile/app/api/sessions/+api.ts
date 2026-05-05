@@ -97,7 +97,7 @@ export async function POST(request: Request) {
     return Response.json(
       {
         success: false,
-        message: "Schedule conflict",
+        error: "Schedule conflict",
         conflict,
       },
       { status: 409 },

@@ -106,7 +106,7 @@ export async function PATCH(request: Request, { id }: RouteParams) {
     return Response.json(
       {
         success: false,
-        message: "Schedule conflict",
+        error: "Schedule conflict",
         conflict,
       },
       { status: 409 },
