@@ -133,3 +133,33 @@ export async function PATCH(request: Request, { id }: RouteParams) {
 
   return ok({ success: true, session });
 }
+
+export async function DELETE(request: Request, { id }: RouteParams) {
+  const guard = await requireRole(request, [UserRole.ADMIN]);
+  if (!guard.ok) return guard.response;
+  // Admin-only true delete. Trainers must use PATCH with status=CANCELED so
+  // booked clients are notified through the standard channel.
+
+  const existing = await prisma.session.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      _count: {
+        select: {
+          bookings: { where: { canceledAt: null } },
+        },
+      },
+    },
+  });
+  if (!existing) return fail("Session not found", 404);
+
+  if (existing._count.bookings > 0) {
+    return fail(
+      "Session has active bookings — cancel them before deleting",
+      409,
+    );
+  }
+
+  await prisma.session.delete({ where: { id } });
+  return ok({ success: true });
+}
