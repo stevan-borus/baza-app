@@ -520,7 +520,13 @@
       "sessions": "Sessions",
       "clients": "Clients",
       "hours": "Hours",
-      "sessionsLabel": "sessions"
+      "sessionsLabel": "sessions",
+      "attendance": {
+        "consumed_one": "{{count}} consumed",
+        "consumed_other": "{{count}} consumed",
+        "canceled_one": "{{count}} canceled",
+        "canceled_other": "{{count}} canceled"
+      }
     },
     "notes": {
       "title": "Notes",
