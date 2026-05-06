@@ -276,6 +276,15 @@ export async function getUserActive(userEmail: string) {
   return user?.isActive ?? null;
 }
 
+export async function getUserIdByEmail(userEmail: string) {
+  const user = await db().user.findUnique({
+    where: { email: userEmail.toLowerCase() },
+    select: { id: true },
+  });
+  if (!user) throw new Error(`No user with email ${userEmail}`);
+  return user.id;
+}
+
 export async function countSessionsByStatus(status: "SCHEDULED" | "CANCELED" | "COMPLETED") {
   return db().session.count({ where: { status } });
 }

@@ -2,6 +2,7 @@ import { test, expect, type Page } from "@playwright/test";
 import {
   countTrainerNotesFor,
   disconnect,
+  getUserIdByEmail,
   linkTrainerToClient,
   resetAndSeed,
 } from "./helpers/db";
@@ -30,10 +31,8 @@ function nextReformerDate(): string {
 /**
  * Trainer (Serbian). Test-plan items 40-51.
  *
- * Items 43, 44, 48, 51 are blocked because the screens don't have the
- * UI to support them yet (note edit/delete, by-session grouping,
- * post-cron attendance state on the schedule). They're skipped here
- * with explicit TODOs and tracked in docs/test-plan.md.
+ * Item 51 is still skipped — post-cron attendance state needs new API
+ * surface on the trainer schedule. Tracked in docs/test-plan.md.
  */
 test.describe("trainer (Serbian)", () => {
   test.beforeAll(async () => {
@@ -255,9 +254,24 @@ test.describe("trainer (Serbian)", () => {
     expect([400, 403, 404]).toContain(response.status());
   });
 
-  test.skip("46: trainer cannot view non-linked client's profile", () => {
-    // TODO: there's no per-client profile route in the trainer scope yet.
-    // Kept as a server-side concern; integration tests cover the API.
+  test("46: trainer cannot view non-linked client's profile", async ({
+    page,
+  }) => {
+    // Reformer trainer is NOT linked to client.empty (no booking exists).
+    // Visiting that client's profile route directly must surface the
+    // forbidden error card and must NOT leak the client's identity.
+    const unlinkedUserId = await getUserIdByEmail("client.empty@e2e.test");
+
+    await signInAsReformerTrainer(page);
+    await page.goto(`/(trainer)/clients/${unlinkedUserId}`);
+
+    await expect(
+      page.getByTestId("trainer-client-profile-error"),
+    ).toBeVisible({ timeout: 10_000 });
+
+    // The unlinked client's identity must not appear on the page.
+    expect(await page.getByText("Empty Pack Client").count()).toBe(0);
+    expect(await page.getByText("client.empty@e2e.test").count()).toBe(0);
   });
 
   test("47: by-client filter scopes the notes list", async ({ page }) => {

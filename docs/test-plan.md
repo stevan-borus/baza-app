@@ -213,7 +213,7 @@ i18n: tests import locale JSON and reference keys via the actual translated stri
 
 ## Phase 2 status (E2E layer)
 
-**71 specs passing, 2 skipped, 0 failing.** Full E2E suite runs in ~5 minutes locally.
+**72 specs passing, 1 skipped, 0 failing.** Full E2E suite runs in ~5 minutes locally.
 
 ### Resolved infrastructure issues
 
@@ -235,18 +235,17 @@ Each of these blocked at least one test class on the `tests` branch and was fixe
 | `auth-smoke.spec.ts` | 4 | 0 | Admin/trainer/client sign-in + wrong password. |
 | `auth-extended.spec.ts` | 7 | 0 | Sign-out, invite create + redeem (happy / expired / used), password reset request + expired. |
 | `client.spec.ts` | 12 | 0 | Home, calendar, book + cancel before/after cutoff, full session → waitlist button, notifications, language switch, sign-out, no-package filter. |
-| `trainer.spec.ts` | 10 | 2 | Schedule scoping, clients-list scoping, note create / edit / delete, by-client + by-session filters, search, 403 for unlinked client. Skipped: 46 (no per-client profile route — server-side only), 51 (no post-cron attendance markers — needs new API surface). |
+| `trainer.spec.ts` | 11 | 1 | Schedule scoping, clients-list scoping, note create / edit / delete, by-client + by-session filters, search, 403 for unlinked client, non-linked client profile blocked. Skipped: 51 (no post-cron attendance markers — needs new API surface). |
 | `admin.spec.ts` | 28 | 0 | Catalog CRUD (ClassType / PackageType / Room create + edit + delete), single-session create / edit / cancel, recurring series create / edit single occurrence / edit whole series / cancel single / delete whole, room + trainer double-book conflicts, invite, client list status badges, pause, deactivate, all four billing flows. |
 | `cron-reports-en.spec.ts` | 9 | 0 | Reports sections render, cron consumption (consume / skip pre-cutoff / 401 without token), 4 EN-smoke. |
 | `datetime-picker-smoke.spec.ts` | 1 | 0 | Verifies the new web DateTimePicker mounts the calendar + time input and round-trips a date. |
-| **Total** | **71** | **2** | |
+| **Total** | **72** | **1** | |
 
 ### Skipped specs and why
 
-Both skips are blocked by missing API/UI surface, not by the test layer.
+The remaining skip is blocked by missing API surface, not by the test layer.
 
-- **Spec 46 — trainer cannot view non-linked client's profile.** There is no `/clients/:id` route in the trainer scope today, so there's nothing to navigate to. Server-level enforcement is covered by the integration tests under `test/integration/clients.test.ts`.
-- **Spec 51 — trainer schedule shows post-cron attendance markers.** No endpoint surfaces per-booking `SessionConsumption` or cancellation state on past sessions. Adding this would require a new API surface (e.g., extending `/api/sessions` to include per-session attendance counts, or a dedicated `/api/trainer/attendance` endpoint). Subagent confirmed during the unblock pass — this stays out of scope for the test rewrite.
+- **Spec 51 — trainer schedule shows post-cron attendance markers.** No endpoint surfaces per-booking `SessionConsumption` or cancellation state on past sessions. Adding this would require a new API surface (e.g., extending `/api/sessions` to include per-session attendance counts, or a dedicated `/api/trainer/attendance` endpoint).
 
 ### How to run
 
