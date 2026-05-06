@@ -202,6 +202,8 @@ export const packagePauseInputSchema = PackagePauseInputSchema.pick({
   endsAt: true,
   reason: true,
 }).extend({
+  startsAt: z.coerce.date(),
+  endsAt: z.coerce.date(),
   reason: z.string().max(300).optional(),
 });
 export type PackagePauseInput = z.infer<typeof packagePauseInputSchema>;

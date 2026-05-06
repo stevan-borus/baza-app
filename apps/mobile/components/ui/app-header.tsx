@@ -137,10 +137,12 @@ export function HeaderIconButton({
   icon,
   onPress,
   accessibilityLabel,
+  testID,
 }: {
   icon: FontAwesomeName;
   onPress: () => void;
   accessibilityLabel: string;
+  testID?: string;
 }) {
   const featherName = FA_TO_FEATHER[icon];
   const tokens = useThemeTokens();
@@ -152,6 +154,7 @@ export function HeaderIconButton({
       className="active:opacity-60"
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
+      testID={testID}
     >
       {featherName ? (
         <Feather name={featherName} size={22} color={tokens.foreground} />

@@ -93,7 +93,7 @@ function ClientRow({ client }: { client: Client }) {
 
   return (
     <Pressable
-      onPress={() => router.push(`/clients/${client.user.id}`)}
+      onPress={() => router.push(`/(trainer)/clients/${client.user.id}`)}
       accessibilityRole="button"
       accessibilityLabel={client.user.fullName}
       className="active:opacity-80"

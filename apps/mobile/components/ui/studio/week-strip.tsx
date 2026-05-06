@@ -56,6 +56,7 @@ export function StudioWeekStrip({
               className="active:opacity-60 w-9 h-9 items-center justify-center"
               accessibilityRole="button"
               accessibilityLabel="Previous week"
+              testID="week-strip-prev"
             >
               <Feather name="chevron-left" size={20} color={tokens.foreground} />
             </Pressable>
@@ -77,6 +78,7 @@ export function StudioWeekStrip({
               className="active:opacity-60 w-9 h-9 items-center justify-center"
               accessibilityRole="button"
               accessibilityLabel="Next week"
+              testID="week-strip-next"
             >
               <Feather name="chevron-right" size={20} color={tokens.foreground} />
             </Pressable>
@@ -111,6 +113,7 @@ export function StudioWeekStrip({
           return (
             <Pressable
               key={d.toString()}
+              testID={`week-strip-day-${d.format("YYYY-MM-DD")}`}
               onPress={() => onSelect(d)}
               android_ripple={null}
               className={`flex-1 py-3 items-center rounded ${containerCls}`}

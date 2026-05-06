@@ -184,6 +184,7 @@ export default function AcceptInviteScreen() {
           ) : null}
 
           <Input
+            testID="invite-name-input"
             icon="user"
             label={t("auth.yourName")}
             autoCapitalize="words"
@@ -198,6 +199,7 @@ export default function AcceptInviteScreen() {
           />
 
           <PasswordInput
+            testID="invite-password-input"
             label={t("auth.createPassword")}
             textContentType="newPassword"
             value={password}
@@ -210,6 +212,7 @@ export default function AcceptInviteScreen() {
           />
 
           <PasswordInput
+            testID="invite-confirm-password-input"
             label={t("auth.confirmPassword")}
             textContentType="newPassword"
             value={confirmPassword}
@@ -242,6 +245,7 @@ export default function AcceptInviteScreen() {
 
           <View className="mt-1">
             <StudioButton
+              testID="invite-submit-button"
               label={t("auth.joinButton")}
               onPress={handleSubmit}
               loading={completeMutation.isPending}

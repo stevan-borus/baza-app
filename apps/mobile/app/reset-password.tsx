@@ -185,6 +185,7 @@ export default function ResetPasswordScreen() {
                 </View>
 
                 <Input
+                  testID="reset-email-input"
                   icon="envelope"
                   label={t("auth.email")}
                   autoCapitalize="none"
@@ -206,6 +207,7 @@ export default function ResetPasswordScreen() {
                 ) : null}
 
                 <StudioButton
+                  testID="reset-send-link-button"
                   label={t("auth.sendLink")}
                   onPress={handleRequestSubmit}
                   loading={requestMutation.isPending}
@@ -251,6 +253,7 @@ export default function ResetPasswordScreen() {
                 </View>
 
                 <Input
+                  testID="reset-token-input"
                   label={t("auth.tokenPlaceholder")}
                   autoCapitalize="none"
                   autoCorrect={false}
@@ -264,6 +267,7 @@ export default function ResetPasswordScreen() {
                 />
 
                 <PasswordInput
+                  testID="reset-new-password-input"
                   label={t("auth.newPassword")}
                   textContentType="newPassword"
                   value={password}
@@ -283,6 +287,7 @@ export default function ResetPasswordScreen() {
                 ) : null}
 
                 <StudioButton
+                  testID="reset-submit-button"
                   label={t("auth.resetSubmit")}
                   onPress={handleResetSubmit}
                   loading={resetMutation.isPending}

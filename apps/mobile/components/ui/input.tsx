@@ -1,5 +1,6 @@
 import React, { useContext, useState } from "react";
 import {
+  Platform,
   TextInput,
   View,
   Text,
@@ -65,8 +66,15 @@ export function Input({
   const resolvedIconColor = iconColor ?? tokens.muted;
   // Use BottomSheetTextInput when inside a sheet (so the keyboard pushes
   // the sheet up); plain TextInput everywhere else.
+  //
+  // On web, gorhom's BottomSheetTextInput crashes with
+  // `RNTextInput.default.State.currentlyFocusedInput is not a function` —
+  // react-native-web doesn't expose the same TextInputState shape that
+  // gorhom expects. There is no soft keyboard on web anyway, so falling
+  // back to plain TextInput on web is both safe and correct.
   const insideSheet = useContext(InsideBottomSheetContext);
-  const TextInputComponent = (insideSheet
+  const useBottomSheetTextInput = insideSheet && Platform.OS !== "web";
+  const TextInputComponent = (useBottomSheetTextInput
     ? BottomSheetTextInput
     : TextInput) as unknown as typeof TextInput;
 

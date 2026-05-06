@@ -120,6 +120,7 @@ export function BookingSheet({
               <MetricRow
                 label={t("client.calendar.room")}
                 value={session.roomName ?? "—"}
+                valueTestID="booking-detail-room"
                 icon={
                   <FontAwesome
                     name="map-marker"
@@ -131,6 +132,7 @@ export function BookingSheet({
               <MetricRow
                 label={t("client.calendar.trainer")}
                 value={session.trainerName ?? "—"}
+                valueTestID="booking-detail-trainer"
                 icon={
                   <FontAwesome
                     name="user"
@@ -144,6 +146,7 @@ export function BookingSheet({
                   .replace(String(durationMin), "")
                   .trim()}
                 value={`${durationMin} min`}
+                valueTestID="booking-detail-duration"
                 icon={
                   <FontAwesome
                     name="clock-o"
@@ -160,6 +163,7 @@ export function BookingSheet({
                   .split(" ")[0]
                   .replace(":", "")}
                 value={`${session.bookedCount} / ${session.capacity}`}
+                valueTestID="booking-detail-capacity"
                 icon={
                   <FontAwesome
                     name="users"
@@ -180,6 +184,7 @@ export function BookingSheet({
               <View className="flex-row gap-3">
                 {!isFull ? (
                   <Button
+                    testID="booking-book-button"
                     className="flex-1"
                     onPress={() => {
                       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -191,6 +196,7 @@ export function BookingSheet({
                   </Button>
                 ) : (
                   <Button
+                    testID="booking-waitlist-button"
                     className="flex-1"
                     variant="secondary"
                     onPress={() => onBook(session.id)}
@@ -200,6 +206,7 @@ export function BookingSheet({
                   </Button>
                 )}
                 <Button
+                  testID="booking-cancel-button"
                   className="flex-1"
                   variant="danger"
                   onPress={() => {
@@ -221,6 +228,7 @@ export function BookingSheet({
                 </Text>
                 <View className="flex-row gap-3">
                   <Button
+                    testID="booking-confirm-book-button"
                     className="flex-1"
                     onPress={() => {
                       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
@@ -231,6 +239,7 @@ export function BookingSheet({
                     {t("client.dayView.confirm")}
                   </Button>
                   <Button
+                    testID="booking-confirm-book-back-button"
                     className="flex-1"
                     variant="secondary"
                     onPress={() => setStep("idle")}
@@ -249,6 +258,7 @@ export function BookingSheet({
                 </Text>
                 <View className="flex-row gap-3">
                   <Button
+                    testID="booking-confirm-cancel-button"
                     className="flex-1"
                     variant="danger"
                     onPress={() => {
@@ -260,6 +270,7 @@ export function BookingSheet({
                     {t("client.dayView.confirm")}
                   </Button>
                   <Button
+                    testID="booking-confirm-cancel-back-button"
                     className="flex-1"
                     variant="secondary"
                     onPress={() => setStep("idle")}

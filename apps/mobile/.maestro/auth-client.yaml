@@ -1,0 +1,23 @@
+appId: ${APP_ID}
+name: "Client can sign in and see home screen"
+env:
+  EMAIL: "client.active.reformer@e2e.test"
+  PASSWORD: "Password123!"
+---
+- launchApp:
+    clearState: true
+    clearKeychain: true
+
+- waitForAnimationToEnd
+
+- runFlow:
+    when:
+      visible: ".*Retry.*"
+    file: helpers/dismiss-error.yaml
+
+- runFlow:
+    file: helpers/sign-in.yaml
+
+# Active-reformer client always has a package, so the "Tvoj paket"
+# (`client.home.yourPackage`) section title is reliably rendered.
+- assertVisible: "Tvoj paket"

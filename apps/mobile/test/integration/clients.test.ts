@@ -1,10 +1,3 @@
-/**
- * Integration tests for GET /api/clients/[id].
- *
- * Auth is mocked via `auth-mock` — each test calls `setMockUser()` to assert
- * a role + identity, then invokes the route handler directly. The Prisma
- * client hits the real test DB (env.setup.ts). We reset rows in beforeEach.
- */
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { setMockUser } from "./auth-mock";
 import { resetDb } from "./setup-db";
@@ -23,56 +16,384 @@ vi.mock("@/lib/server/auth-guards", async () => {
   };
 });
 
-import { GET } from "@/app/api/clients/[id]/+api";
+import { GET, POST } from "@/app/api/clients/+api";
+import { GET as GET_BY_ID, PATCH } from "@/app/api/clients/[id]/+api";
 import { prisma } from "@/lib/server/prisma";
 
-async function seed() {
-  const admin = await prisma.user.create({
-    data: { email: "admin@test.local", fullName: "Admin", role: "ADMIN" },
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+async function makeClient(opts: { email: string; fullName: string }) {
+  const user = await prisma.user.create({
+    data: {
+      email: opts.email,
+      fullName: opts.fullName,
+      role: "CLIENT",
+      isActive: true,
+    },
   });
-  const trainerLinked = await prisma.user.create({
-    data: { email: "trainer-linked@test.local", fullName: "Linked Trainer", role: "TRAINER" },
+  const profile = await prisma.clientProfile.create({
+    data: { userId: user.id },
   });
-  const trainerOther = await prisma.user.create({
-    data: { email: "trainer-other@test.local", fullName: "Other Trainer", role: "TRAINER" },
-  });
-  const clientUser = await prisma.user.create({
-    data: { email: "client@test.local", fullName: "The Client", role: "CLIENT" },
-  });
-  const clientProfile = await prisma.clientProfile.create({
-    data: { userId: clientUser.id, notes: "Has tight hamstrings" },
-  });
-  const classType = await prisma.classType.create({
+  return { user, profile };
+}
+
+async function makeReformerPackageType() {
+  const reformer = await prisma.classType.create({
     data: { name: "Reformer", maxClients: 6, durationMins: 60 },
   });
-
-  // Active booking links `trainerLinked` to the client.
-  const session = await prisma.session.create({
+  const packageType = await prisma.packageType.create({
     data: {
-      classTypeId: classType.id,
-      trainerUserId: trainerLinked.id,
-      startsAt: new Date(Date.now() - 24 * 60 * 60 * 1000),
-      endsAt: new Date(Date.now() - 23 * 60 * 60 * 1000),
-      capacity: 6,
-      isActive: true,
-      status: "SCHEDULED",
+      name: "Reformer 12-pack",
+      sessionCount: 12,
+      validityDays: 30,
+      lateCancelHours: 12,
+      classTypeId: reformer.id,
     },
   });
-  await prisma.booking.create({
-    data: {
-      sessionId: session.id,
-      clientProfileId: clientProfile.id,
-    },
+  return { reformer, packageType };
+}
+
+function asAdmin() {
+  setMockUser({
+    id: "admin-1",
+    role: "ADMIN",
+    email: "admin@test.local",
+    isActive: true,
+    clientProfile: null,
+  });
+}
+
+function asTrainer(id: string) {
+  setMockUser({
+    id,
+    role: "TRAINER",
+    email: "trainer@test.local",
+    isActive: true,
+    clientProfile: null,
+  });
+}
+
+describe("clients API", () => {
+  beforeEach(async () => {
+    await resetDb();
+  });
+  afterAll(async () => {
+    await resetDb();
+    await prisma.$disconnect();
   });
 
-  return { admin, trainerLinked, trainerOther, clientUser, clientProfile };
-}
+  it("GET as admin lists clients with computed packageStatus reflecting their packages", async () => {
+    const { reformer, packageType } = await makeReformerPackageType();
+    const active = await makeClient({
+      email: "active@test.local",
+      fullName: "Active Annie",
+    });
+    const expired = await makeClient({
+      email: "expired@test.local",
+      fullName: "Expired Eric",
+    });
+    const empty = await makeClient({
+      email: "empty@test.local",
+      fullName: "Empty Emma",
+    });
+    void empty;
 
-function buildRequest(id: string) {
-  return new Request(`http://test.local/api/clients/${id}`);
-}
+    await prisma.clientPackage.create({
+      data: {
+        clientProfileId: active.profile.id,
+        packageTypeId: packageType.id,
+        classTypeId: reformer.id,
+        lateCancelHours: 12,
+        startsAt: new Date(Date.now() - 5 * DAY_MS),
+        expiresAt: new Date(Date.now() + 25 * DAY_MS),
+        sessionsRemaining: 8,
+      },
+    });
+    await prisma.clientPackage.create({
+      data: {
+        clientProfileId: expired.profile.id,
+        packageTypeId: packageType.id,
+        classTypeId: reformer.id,
+        lateCancelHours: 12,
+        startsAt: new Date(Date.now() - 60 * DAY_MS),
+        expiresAt: new Date(Date.now() - 7 * DAY_MS),
+        sessionsRemaining: 4,
+      },
+    });
+
+    asAdmin();
+    const response = await GET(new Request("http://test.local/api/clients"));
+    const body = (await response.json()) as {
+      clients: { user: { email: string }; packageStatus: string }[];
+    };
+    const byEmail = Object.fromEntries(
+      body.clients.map((c) => [c.user.email, c.packageStatus]),
+    );
+    expect(byEmail["active@test.local"]).toBe("active");
+    expect(byEmail["expired@test.local"]).toBe("expired");
+    expect(byEmail["empty@test.local"]).toBe("none");
+  });
+
+  it("GET as trainer lists only clients linked via active booking", async () => {
+    const { reformer } = await makeReformerPackageType();
+    const trainer = await prisma.user.create({
+      data: { email: "tx@test.local", fullName: "TX", role: "TRAINER" },
+    });
+    const linked = await makeClient({
+      email: "linked@test.local",
+      fullName: "Linked",
+    });
+    const stranger = await makeClient({
+      email: "stranger@test.local",
+      fullName: "Stranger",
+    });
+    void stranger;
+    const session = await prisma.session.create({
+      data: {
+        classTypeId: reformer.id,
+        trainerUserId: trainer.id,
+        startsAt: new Date(Date.now() + DAY_MS),
+        endsAt: new Date(Date.now() + DAY_MS + 60 * 60 * 1000),
+        capacity: 6,
+        isActive: true,
+        status: "SCHEDULED",
+      },
+    });
+    await prisma.booking.create({
+      data: { sessionId: session.id, clientProfileId: linked.profile.id },
+    });
+
+    asTrainer(trainer.id);
+    const response = await GET(new Request("http://test.local/api/clients"));
+    const body = (await response.json()) as {
+      clients: { user: { email: string } }[];
+    };
+    expect(body.clients.map((c) => c.user.email)).toEqual(["linked@test.local"]);
+    expect(body.clients.map((c) => c.user.email)).not.toContain(
+      "stranger@test.local",
+    );
+  });
+
+  it("POST creates a client user + clientProfile (admin-only)", async () => {
+    asAdmin();
+    const response = await POST(
+      new Request("http://test.local/api/clients", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          email: "fresh@test.local",
+          fullName: "Fresh Client",
+        }),
+      }),
+    );
+    expect(response.status).toBe(201);
+    const persisted = await prisma.user.findUnique({
+      where: { email: "fresh@test.local" },
+      include: { clientProfile: true },
+    });
+    expect(persisted?.role).toBe("CLIENT");
+    expect(persisted?.clientProfile).not.toBeNull();
+  });
+
+  it("PATCH as admin can deactivate a client (isActive=false)", async () => {
+    const { user } = await makeClient({
+      email: "deact@test.local",
+      fullName: "Deact",
+    });
+    asAdmin();
+    const response = await PATCH(
+      new Request(`http://test.local/api/clients/${user.id}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ isActive: false }),
+      }),
+      { id: user.id },
+    );
+    expect(response.status).toBe(200);
+    const reloaded = await prisma.user.findUnique({ where: { id: user.id } });
+    expect(reloaded?.isActive).toBe(false);
+  });
+
+  it("PATCH as admin can reactivate a client (isActive=true)", async () => {
+    const { user } = await makeClient({
+      email: "react@test.local",
+      fullName: "Reactivate",
+    });
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { isActive: false },
+    });
+    asAdmin();
+    const response = await PATCH(
+      new Request(`http://test.local/api/clients/${user.id}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ isActive: true }),
+      }),
+      { id: user.id },
+    );
+    expect(response.status).toBe(200);
+    const reloaded = await prisma.user.findUnique({ where: { id: user.id } });
+    expect(reloaded?.isActive).toBe(true);
+  });
+
+  it("PATCH returns 404 for an unknown client id", async () => {
+    asAdmin();
+    const response = await PATCH(
+      new Request("http://test.local/api/clients/x", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ isActive: false }),
+      }),
+      { id: "00000000-0000-0000-0000-000000000000" },
+    );
+    expect(response.status).toBe(404);
+  });
+
+  it("PATCH as trainer trying to set isActive on a linked client is rejected (admin-only field)", async () => {
+    const { reformer } = await makeReformerPackageType();
+    const trainer = await prisma.user.create({
+      data: { email: "ty@test.local", fullName: "TY", role: "TRAINER" },
+    });
+    const linked = await makeClient({
+      email: "linked2@test.local",
+      fullName: "Linked2",
+    });
+    const session = await prisma.session.create({
+      data: {
+        classTypeId: reformer.id,
+        trainerUserId: trainer.id,
+        startsAt: new Date(Date.now() + DAY_MS),
+        endsAt: new Date(Date.now() + DAY_MS + 60 * 60 * 1000),
+        capacity: 6,
+        isActive: true,
+        status: "SCHEDULED",
+      },
+    });
+    await prisma.booking.create({
+      data: { sessionId: session.id, clientProfileId: linked.profile.id },
+    });
+
+    asTrainer(trainer.id);
+    const response = await PATCH(
+      new Request(`http://test.local/api/clients/${linked.user.id}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ isActive: false }),
+      }),
+      { id: linked.user.id },
+    );
+    expect(response.status).toBe(403);
+    const reloaded = await prisma.user.findUnique({
+      where: { id: linked.user.id },
+    });
+    expect(reloaded?.isActive).toBe(true);
+  });
+
+  it("PATCH as trainer for a non-linked client is forbidden", async () => {
+    const trainer = await prisma.user.create({
+      data: { email: "tz@test.local", fullName: "TZ", role: "TRAINER" },
+    });
+    const stranger = await makeClient({
+      email: "no-link@test.local",
+      fullName: "NoLink",
+    });
+
+    asTrainer(trainer.id);
+    const response = await PATCH(
+      new Request(`http://test.local/api/clients/${stranger.user.id}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ notes: "some note" }),
+      }),
+      { id: stranger.user.id },
+    );
+    expect(response.status).toBe(403);
+  });
+
+  it("PATCH as trainer can update notes on a linked client", async () => {
+    const { reformer } = await makeReformerPackageType();
+    const trainer = await prisma.user.create({
+      data: { email: "tw@test.local", fullName: "TW", role: "TRAINER" },
+    });
+    const linked = await makeClient({
+      email: "linked3@test.local",
+      fullName: "Linked3",
+    });
+    const session = await prisma.session.create({
+      data: {
+        classTypeId: reformer.id,
+        trainerUserId: trainer.id,
+        startsAt: new Date(Date.now() + DAY_MS),
+        endsAt: new Date(Date.now() + DAY_MS + 60 * 60 * 1000),
+        capacity: 6,
+        isActive: true,
+        status: "SCHEDULED",
+      },
+    });
+    await prisma.booking.create({
+      data: { sessionId: session.id, clientProfileId: linked.profile.id },
+    });
+
+    asTrainer(trainer.id);
+    const response = await PATCH(
+      new Request(`http://test.local/api/clients/${linked.user.id}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ notes: "Prefers afternoon classes" }),
+      }),
+      { id: linked.user.id },
+    );
+    expect(response.status).toBe(200);
+    const reloadedProfile = await prisma.clientProfile.findUnique({
+      where: { id: linked.profile.id },
+    });
+    expect(reloadedProfile?.notes).toBe("Prefers afternoon classes");
+  });
+});
 
 describe("GET /api/clients/[id]", () => {
+  async function seedForGet() {
+    const admin = await prisma.user.create({
+      data: { email: "admin-get@test.local", fullName: "Admin", role: "ADMIN" },
+    });
+    const trainerLinked = await prisma.user.create({
+      data: { email: "trainer-linked@test.local", fullName: "Linked Trainer", role: "TRAINER" },
+    });
+    const trainerOther = await prisma.user.create({
+      data: { email: "trainer-other@test.local", fullName: "Other Trainer", role: "TRAINER" },
+    });
+    const clientUser = await prisma.user.create({
+      data: { email: "client-get@test.local", fullName: "The Client", role: "CLIENT" },
+    });
+    const clientProfile = await prisma.clientProfile.create({
+      data: { userId: clientUser.id, notes: "Has tight hamstrings" },
+    });
+    const classType = await prisma.classType.create({
+      data: { name: "Reformer Get", maxClients: 6, durationMins: 60 },
+    });
+    const session = await prisma.session.create({
+      data: {
+        classTypeId: classType.id,
+        trainerUserId: trainerLinked.id,
+        startsAt: new Date(Date.now() - DAY_MS),
+        endsAt: new Date(Date.now() - DAY_MS + 60 * 60 * 1000),
+        capacity: 6,
+        isActive: true,
+        status: "SCHEDULED",
+      },
+    });
+    await prisma.booking.create({
+      data: { sessionId: session.id, clientProfileId: clientProfile.id },
+    });
+
+    return { admin, trainerLinked, trainerOther, clientUser, clientProfile };
+  }
+
+  function buildRequest(id: string) {
+    return new Request(`http://test.local/api/clients/${id}`);
+  }
+
   beforeEach(async () => {
     await resetDb();
   });
@@ -82,7 +403,7 @@ describe("GET /api/clients/[id]", () => {
   });
 
   it("returns 200 with client data when caller is admin", async () => {
-    const { admin, clientUser, clientProfile } = await seed();
+    const { admin, clientUser, clientProfile } = await seedForGet();
     setMockUser({
       id: admin.id,
       role: "ADMIN",
@@ -91,18 +412,18 @@ describe("GET /api/clients/[id]", () => {
       clientProfile: null,
     });
 
-    const res = await GET(buildRequest(clientUser.id), { id: clientUser.id });
+    const res = await GET_BY_ID(buildRequest(clientUser.id), { id: clientUser.id });
     expect(res.status).toBe(200);
     const json = await res.json();
     expect(json.success).toBe(true);
     expect(json.client.id).toBe(clientProfile.id);
     expect(json.client.user.id).toBe(clientUser.id);
-    expect(json.client.user.email).toBe("client@test.local");
+    expect(json.client.user.email).toBe("client-get@test.local");
     expect(json.client.notes).toBe("Has tight hamstrings");
   });
 
   it("returns 200 when trainer is linked to the client via active booking", async () => {
-    const { trainerLinked, clientUser } = await seed();
+    const { trainerLinked, clientUser } = await seedForGet();
     setMockUser({
       id: trainerLinked.id,
       role: "TRAINER",
@@ -111,14 +432,14 @@ describe("GET /api/clients/[id]", () => {
       clientProfile: null,
     });
 
-    const res = await GET(buildRequest(clientUser.id), { id: clientUser.id });
+    const res = await GET_BY_ID(buildRequest(clientUser.id), { id: clientUser.id });
     expect(res.status).toBe(200);
     const json = await res.json();
     expect(json.client.user.id).toBe(clientUser.id);
   });
 
   it("returns 403 when trainer is not linked to the client", async () => {
-    const { trainerOther, clientUser } = await seed();
+    const { trainerOther, clientUser } = await seedForGet();
     setMockUser({
       id: trainerOther.id,
       role: "TRAINER",
@@ -127,7 +448,7 @@ describe("GET /api/clients/[id]", () => {
       clientProfile: null,
     });
 
-    const res = await GET(buildRequest(clientUser.id), { id: clientUser.id });
+    const res = await GET_BY_ID(buildRequest(clientUser.id), { id: clientUser.id });
     expect(res.status).toBe(403);
     const json = await res.json();
     expect(json.success).toBe(false);
@@ -135,7 +456,7 @@ describe("GET /api/clients/[id]", () => {
   });
 
   it("returns 403 when caller is a client", async () => {
-    const { clientUser, clientProfile } = await seed();
+    const { clientUser, clientProfile } = await seedForGet();
     setMockUser({
       id: clientUser.id,
       role: "CLIENT",
@@ -144,12 +465,12 @@ describe("GET /api/clients/[id]", () => {
       clientProfile: { id: clientProfile.id },
     });
 
-    const res = await GET(buildRequest(clientUser.id), { id: clientUser.id });
+    const res = await GET_BY_ID(buildRequest(clientUser.id), { id: clientUser.id });
     expect(res.status).toBe(403);
   });
 
   it("returns 404 when target client does not exist", async () => {
-    const { admin } = await seed();
+    const { admin } = await seedForGet();
     setMockUser({
       id: admin.id,
       role: "ADMIN",
@@ -158,7 +479,7 @@ describe("GET /api/clients/[id]", () => {
       clientProfile: null,
     });
 
-    const res = await GET(
+    const res = await GET_BY_ID(
       buildRequest("00000000-0000-0000-0000-000000000000"),
       { id: "00000000-0000-0000-0000-000000000000" },
     );

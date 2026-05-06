@@ -1,0 +1,276 @@
+import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { setMockUser } from "./auth-mock";
+import { resetDb } from "./setup-db";
+
+vi.mock("@/lib/server/auth-guards", async () => {
+  const { fail } = await import("@/lib/server/http");
+  const mod = await import("./auth-mock");
+  return {
+    requireRole: async (_req: Request, allowed: string[]) => {
+      const user = mod.getMockUser();
+      if (!user) return { ok: false as const, response: fail("Unauthorized", 401) };
+      if (!allowed.includes(user.role)) return { ok: false as const, response: fail("Forbidden", 403) };
+      return { ok: true as const, user };
+    },
+    getRequestUser: async () => mod.getMockUser(),
+  };
+});
+
+vi.mock("@/lib/server/notifications", () => ({
+  createSystemNotification: vi.fn(async () => undefined),
+}));
+
+import { POST } from "@/app/api/sessions/+api";
+import { PATCH } from "@/app/api/sessions/[id]/+api";
+import { prisma } from "@/lib/server/prisma";
+
+const HOUR_MS = 60 * 60 * 1000;
+const DAY_MS = 24 * HOUR_MS;
+
+async function seed() {
+  const trainer = await prisma.user.create({
+    data: { email: "trainer@test.local", fullName: "Trainer", role: "TRAINER" },
+  });
+  const otherTrainer = await prisma.user.create({
+    data: { email: "other@test.local", fullName: "Other", role: "TRAINER" },
+  });
+  const reformer = await prisma.classType.create({
+    data: { name: "Reformer", maxClients: 6, durationMins: 60 },
+  });
+  return { trainer, otherTrainer, reformer };
+}
+
+function asAdmin() {
+  setMockUser({
+    id: "admin-1",
+    role: "ADMIN",
+    email: "admin@test.local",
+    isActive: true,
+    clientProfile: null,
+  });
+}
+
+function asTrainer(t: { id: string; email: string }) {
+  setMockUser({
+    id: t.id,
+    role: "TRAINER",
+    email: t.email,
+    isActive: true,
+    clientProfile: null,
+  });
+}
+
+function jsonRequest(url: string, method: string, body: unknown) {
+  return new Request(url, {
+    method,
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
+
+const futureStart = new Date(Date.now() + 2 * DAY_MS);
+const futureEnd = new Date(futureStart.getTime() + HOUR_MS);
+
+describe("sessions CRUD", () => {
+  beforeEach(async () => {
+    await resetDb();
+  });
+  afterAll(async () => {
+    await resetDb();
+    await prisma.$disconnect();
+  });
+
+  it("POST as admin creates a session assigned to a chosen trainer", async () => {
+    const { trainer, reformer } = await seed();
+    asAdmin();
+
+    const response = await POST(
+      jsonRequest("http://test.local/api/sessions", "POST", {
+        classTypeId: reformer.id,
+        trainerUserId: trainer.id,
+        startsAt: futureStart.toISOString(),
+        endsAt: futureEnd.toISOString(),
+        capacity: 6,
+      }),
+    );
+    expect(response.status).toBe(201);
+    const persisted = await prisma.session.findFirst({
+      where: { trainerUserId: trainer.id },
+    });
+    expect(persisted).not.toBeNull();
+  });
+
+  it("POST as trainer assigns the session to themselves regardless of payload trainerUserId", async () => {
+    const { trainer, reformer } = await seed();
+    asTrainer(trainer);
+
+    const response = await POST(
+      jsonRequest("http://test.local/api/sessions", "POST", {
+        classTypeId: reformer.id,
+        trainerUserId: trainer.id,
+        startsAt: futureStart.toISOString(),
+        endsAt: futureEnd.toISOString(),
+        capacity: 6,
+      }),
+    );
+    expect(response.status).toBe(201);
+    const persisted = await prisma.session.findFirst({
+      where: { trainerUserId: trainer.id },
+    });
+    expect(persisted).not.toBeNull();
+  });
+
+  it("POST as trainer trying to assign to a different trainer is rejected (403)", async () => {
+    const { trainer, otherTrainer, reformer } = await seed();
+    asTrainer(trainer);
+
+    const response = await POST(
+      jsonRequest("http://test.local/api/sessions", "POST", {
+        classTypeId: reformer.id,
+        trainerUserId: otherTrainer.id,
+        startsAt: futureStart.toISOString(),
+        endsAt: futureEnd.toISOString(),
+        capacity: 6,
+      }),
+    );
+    expect(response.status).toBe(403);
+    expect(await prisma.session.count()).toBe(0);
+  });
+
+  it("POST returns 400 when endsAt is not after startsAt", async () => {
+    const { trainer, reformer } = await seed();
+    asAdmin();
+
+    const response = await POST(
+      jsonRequest("http://test.local/api/sessions", "POST", {
+        classTypeId: reformer.id,
+        trainerUserId: trainer.id,
+        startsAt: futureStart.toISOString(),
+        endsAt: futureStart.toISOString(),
+        capacity: 6,
+      }),
+    );
+    expect(response.status).toBe(400);
+  });
+
+  it("PATCH as admin updates startsAt and endsAt on an existing session", async () => {
+    const { trainer, reformer } = await seed();
+    const session = await prisma.session.create({
+      data: {
+        classTypeId: reformer.id,
+        trainerUserId: trainer.id,
+        startsAt: futureStart,
+        endsAt: futureEnd,
+        capacity: 6,
+        status: "SCHEDULED",
+        isActive: true,
+      },
+    });
+    const newStart = new Date(futureStart.getTime() + 3 * HOUR_MS);
+    const newEnd = new Date(newStart.getTime() + HOUR_MS);
+    asAdmin();
+
+    const response = await PATCH(
+      jsonRequest(`http://test.local/api/sessions/${session.id}`, "PATCH", {
+        startsAt: newStart.toISOString(),
+        endsAt: newEnd.toISOString(),
+      }),
+      { id: session.id },
+    );
+    expect(response.status).toBe(200);
+    const reloaded = await prisma.session.findUnique({ where: { id: session.id } });
+    expect(reloaded?.startsAt.getTime()).toBe(newStart.getTime());
+  });
+
+  it("PATCH as trainer for a session they do not own is rejected (403)", async () => {
+    const { trainer, otherTrainer, reformer } = await seed();
+    const session = await prisma.session.create({
+      data: {
+        classTypeId: reformer.id,
+        trainerUserId: otherTrainer.id,
+        startsAt: futureStart,
+        endsAt: futureEnd,
+        capacity: 6,
+        status: "SCHEDULED",
+        isActive: true,
+      },
+    });
+    asTrainer(trainer);
+
+    const response = await PATCH(
+      jsonRequest(`http://test.local/api/sessions/${session.id}`, "PATCH", {
+        capacity: 12,
+      }),
+      { id: session.id },
+    );
+    expect(response.status).toBe(403);
+  });
+
+  it("PATCH as trainer attempting to reassign their session to another trainer is rejected (403)", async () => {
+    const { trainer, otherTrainer, reformer } = await seed();
+    const session = await prisma.session.create({
+      data: {
+        classTypeId: reformer.id,
+        trainerUserId: trainer.id,
+        startsAt: futureStart,
+        endsAt: futureEnd,
+        capacity: 6,
+        status: "SCHEDULED",
+        isActive: true,
+      },
+    });
+    asTrainer(trainer);
+
+    const response = await PATCH(
+      jsonRequest(`http://test.local/api/sessions/${session.id}`, "PATCH", {
+        trainerUserId: otherTrainer.id,
+      }),
+      { id: session.id },
+    );
+    expect(response.status).toBe(403);
+  });
+
+  it("PATCH refuses to hide (isActive=false) a future session that has active bookings (409)", async () => {
+    const { trainer, reformer } = await seed();
+    const client = await prisma.user.create({
+      data: { email: "c@test.local", fullName: "C", role: "CLIENT" },
+    });
+    const profile = await prisma.clientProfile.create({
+      data: { userId: client.id },
+    });
+    const session = await prisma.session.create({
+      data: {
+        classTypeId: reformer.id,
+        trainerUserId: trainer.id,
+        startsAt: futureStart,
+        endsAt: futureEnd,
+        capacity: 6,
+        status: "SCHEDULED",
+        isActive: true,
+      },
+    });
+    await prisma.booking.create({
+      data: { sessionId: session.id, clientProfileId: profile.id },
+    });
+    asAdmin();
+
+    const response = await PATCH(
+      jsonRequest(`http://test.local/api/sessions/${session.id}`, "PATCH", {
+        isActive: false,
+      }),
+      { id: session.id },
+    );
+    expect(response.status).toBe(409);
+    const reloaded = await prisma.session.findUnique({ where: { id: session.id } });
+    expect(reloaded?.isActive).toBe(true);
+  });
+
+  it("PATCH returns 404 for an unknown session id", async () => {
+    asAdmin();
+    const response = await PATCH(
+      jsonRequest("http://test.local/api/sessions/x", "PATCH", { capacity: 8 }),
+      { id: "00000000-0000-0000-0000-000000000000" },
+    );
+    expect(response.status).toBe(404);
+  });
+});

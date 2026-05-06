@@ -1,0 +1,42 @@
+appId: ${APP_ID}
+name: "Trainer can navigate to notes and reach the new-note trigger"
+env:
+  EMAIL: "trainer.reformer@e2e.test"
+  PASSWORD: "Password123!"
+---
+- launchApp:
+    clearState: true
+    clearKeychain: true
+
+- waitForAnimationToEnd
+
+- runFlow:
+    when:
+      visible: ".*Retry.*"
+    file: helpers/dismiss-error.yaml
+
+- runFlow:
+    file: helpers/sign-in.yaml
+
+- tapOn:
+    id: "tab-notes"
+
+- waitForAnimationToEnd
+
+# The note sheet (gorhom BottomSheetModal) is not reachable through
+# Maestro's iOS hierarchy reader. We verify navigation + the trigger
+# button; sheet-internal flow is covered by Phase A Playwright
+# (`trainer.spec.ts` specs 42-44).
+- extendedWaitUntil:
+    visible: "Beleške"
+    timeout: 15000
+
+- extendedWaitUntil:
+    visible:
+      id: "trainer-new-note-button"
+    timeout: 15000
+
+- tapOn:
+    id: "trainer-new-note-button"
+
+- waitForAnimationToEnd

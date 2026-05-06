@@ -12,7 +12,7 @@ import { MotiView } from "@/components/ui/styled";
  *
  * New callers should use `segments` + `onValueChange`.
  */
-type Segment<T extends string> = { value: T; label: string };
+type Segment<T extends string> = { value: T; label: string; testID?: string };
 
 type SegmentedControlProps<T extends string> = {
   value: T;
@@ -38,6 +38,7 @@ export function SegmentedControl<T extends string>(props: SegmentedControlProps<
         return (
           <Pressable
             key={seg.value}
+            testID={seg.testID}
             onPress={() => handleChange(seg.value)}
             className={`${fullWidth ? "flex-1" : ""} py-2 px-3 rounded-xl relative items-center`}
           >

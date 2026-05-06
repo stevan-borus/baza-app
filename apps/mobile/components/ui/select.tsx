@@ -49,9 +49,9 @@ export function Select<V extends string>({
   return (
     <View className="gap-1.5">
       <Pressable
+        testID={testID}
         onPress={() => !disabled && setOpen((o) => !o)}
         disabled={disabled}
-        testID={testID}
       >
         <View
           style={{
@@ -120,15 +120,15 @@ export function Select<V extends string>({
               return (
                 <Pressable
                   key={opt.value}
-                  onPress={() => {
-                    onChange(opt.value);
-                    setOpen(false);
-                  }}
                   testID={
                     optionTestIDPrefix
                       ? `${optionTestIDPrefix}-${opt.value}`
                       : undefined
                   }
+                  onPress={() => {
+                    onChange(opt.value);
+                    setOpen(false);
+                  }}
                 >
                   <View
                     className={`flex-row items-center px-3.5 py-2.5 ${

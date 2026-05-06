@@ -44,8 +44,14 @@ export async function GET(request: Request) {
     success: true,
     sessions: sessions.map((item: (typeof sessions)[number]) => ({
       id: item.id,
+      classTypeId: item.classTypeId,
       classTypeName: item.classType.name,
+      classType: { id: item.classTypeId, name: item.classType.name },
+      roomId: item.roomId,
       roomName: item.room?.name ?? null,
+      room: item.room
+        ? { id: item.roomId as string, name: item.room.name }
+        : null,
       startsAt: item.startsAt,
       endsAt: item.endsAt,
       status: item.status,

@@ -106,6 +106,7 @@ export function FloatingTabBar(
           return (
             <Pressable
               key={route.key}
+              testID={`tab-${route.name}`}
               accessibilityRole="button"
               accessibilityState={isFocused ? { selected: true } : {}}
               accessibilityLabel={label}

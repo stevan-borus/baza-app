@@ -357,6 +357,7 @@ export default function AdminSchedule() {
           icon="plus"
           onPress={() => setShowCreate(true)}
           accessibilityLabel={t("admin.schedule.newSession")}
+          testID="admin-new-session-button"
         />
       }
     >
@@ -435,6 +436,7 @@ export default function AdminSchedule() {
         >
           <View className="mx-5 border-t border-b border-glass-border">
             <Pressable
+              testID="admin-quick-class-types"
               onPress={() => router.push("/(admin)/class-types")}
               android_ripple={null}
               className="flex-row items-center justify-between py-4 active:opacity-60"
@@ -449,6 +451,7 @@ export default function AdminSchedule() {
             </Pressable>
             <View className="bg-glass-border" style={{ height: 1 }} />
             <Pressable
+              testID="admin-quick-rooms"
               onPress={() => router.push("/(admin)/rooms")}
               android_ripple={null}
               className="flex-row items-center justify-between py-4 active:opacity-60"
@@ -527,6 +530,7 @@ export default function AdminSchedule() {
                     daySessions.map((session) => (
                       <SessionCard
                         key={session.id}
+                        testID={`session-card-${session.id}`}
                         time={`${dayjs(session.startsAt).format("HH:mm")} - ${dayjs(session.endsAt).format("HH:mm")}`}
                         className={session.classTypeName}
                         trainerName={session.trainerName ?? undefined}
@@ -572,6 +576,7 @@ export default function AdminSchedule() {
             </Text>
             <View className="flex-row gap-2">
               <Button
+                testID="session-create-mode-once"
                 className="flex-1"
                 size="small"
                 variant={!isRecurring ? "primary" : "secondary"}
@@ -580,6 +585,7 @@ export default function AdminSchedule() {
                 {t("admin.schedule.once")}
               </Button>
               <Button
+                testID="session-create-mode-recurring"
                 className="flex-1"
                 size="small"
                 variant={isRecurring ? "primary" : "secondary"}
@@ -590,6 +596,8 @@ export default function AdminSchedule() {
             </View>
 
             <Select
+              testID="session-create-class-type-select"
+              optionTestIDPrefix="session-create-class-type-option"
               placeholder={t("admin.schedule.classType")}
               value={newSession.classTypeId}
               onChange={(v) => {
@@ -612,6 +620,8 @@ export default function AdminSchedule() {
             />
 
             <Select
+              testID="session-create-room-select"
+              optionTestIDPrefix="session-create-room-option"
               placeholder={t("admin.schedule.room")}
               value={newSession.roomId}
               onChange={(v) =>
@@ -629,6 +639,8 @@ export default function AdminSchedule() {
             />
 
             <Select
+              testID="session-create-trainer-select"
+              optionTestIDPrefix="session-create-trainer-option"
               placeholder={t("admin.schedule.trainer")}
               value={newSession.trainerUserId}
               onChange={(v) =>
@@ -642,6 +654,7 @@ export default function AdminSchedule() {
             />
 
             <DateTimePicker
+              testID="session-create-startsAt"
               placeholder={t("admin.schedule.placeholderStart")}
               value={newSession.startsAt}
               onChange={(date) =>
@@ -663,6 +676,7 @@ export default function AdminSchedule() {
             {isRecurring ? (
               <>
                 <Input
+                  testID="session-create-week-count-input"
                   placeholder={t("admin.schedule.placeholderWeekCount")}
                   keyboardType="numeric"
                   value={newSession.weekCount}
@@ -680,6 +694,7 @@ export default function AdminSchedule() {
                       return (
                         <Pressable
                           key={dow}
+                          testID={`session-create-weekday-${dow}`}
                           onPress={() =>
                             setNewSession((s) => ({
                               ...s,
@@ -730,6 +745,7 @@ export default function AdminSchedule() {
               />
             </View>
             <Button
+              testID="session-create-submit"
               disabled={
                 (isRecurring
                   ? createRecurringMutation.isPending
@@ -787,7 +803,10 @@ export default function AdminSchedule() {
               {t("admin.manage.create")}
             </Button>
             {createMutation.isError || createRecurringMutation.isError ? (
-              <ErrorState message={t("admin.schedule.createError")} />
+              <ErrorState
+                testID="session-create-error"
+                message={t("admin.schedule.createError")}
+              />
             ) : null}
         </View>
       </AppSheet>
@@ -820,6 +839,7 @@ export default function AdminSchedule() {
           {showEdit?.recurringScheduleId ? (
             <View className="flex-row gap-2">
               <Button
+                testID="session-edit-scope-session"
                 className="flex-1"
                 size="small"
                 variant={editScope === "session" ? "primary" : "secondary"}
@@ -828,6 +848,7 @@ export default function AdminSchedule() {
                 {t("admin.schedule.editScopeSession")}
               </Button>
               <Button
+                testID="session-edit-scope-series"
                 className="flex-1"
                 size="small"
                 variant={editScope === "series" ? "primary" : "secondary"}
@@ -923,6 +944,7 @@ export default function AdminSchedule() {
               })()}
 
               <Button
+                testID="session-edit-save-button"
                 disabled={
                   updateMutation.isPending ||
                   !editForm.trainerUserId
@@ -946,6 +968,7 @@ export default function AdminSchedule() {
                 {t("admin.schedule.saveChanges")}
               </Button>
               <Button
+                testID="session-edit-cancel-button"
                 variant="danger"
                 disabled={updateMutation.isPending}
                 onPress={() => setConfirmCancelSession(true)}
@@ -973,6 +996,7 @@ export default function AdminSchedule() {
                     return (
                       <Pressable
                         key={dow}
+                        testID={`series-edit-weekday-${dow}`}
                         onPress={() =>
                           setSeriesForm((s) => ({
                             ...s,
@@ -1114,6 +1138,7 @@ export default function AdminSchedule() {
               })()}
 
               <Button
+                testID="series-edit-save-button"
                 disabled={
                   updateSeriesMutation.isPending ||
                   !showEdit?.recurringScheduleId ||
@@ -1151,6 +1176,7 @@ export default function AdminSchedule() {
                 {t("admin.schedule.saveSeriesChanges")}
               </Button>
               <Button
+                testID="series-edit-delete-button"
                 variant="danger"
                 disabled={
                   deleteSeriesMutation.isPending ||
@@ -1173,6 +1199,7 @@ export default function AdminSchedule() {
         </View>
       </AppSheet>
       <ConfirmSheet
+        testID="series-delete-confirm-button"
         open={confirmDeleteSeries}
         onOpenChange={setConfirmDeleteSeries}
         title={t("confirm.deleteSeriesTitle")}
@@ -1191,6 +1218,7 @@ export default function AdminSchedule() {
         }}
       />
       <ConfirmSheet
+        testID="session-cancel-confirm-button"
         open={confirmCancelSession}
         onOpenChange={setConfirmCancelSession}
         title={t("confirm.cancelSessionTitle")}

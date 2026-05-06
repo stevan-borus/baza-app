@@ -1,105 +1,35 @@
-# AGENTS.md
+# Project Instructions
 
-Guidelines for AI agents working on this codebase.
+## Tooling
 
-## Project Overview
+- pnpm only — never npm/yarn.
+- Run scripts from `package.json`. Don't invoke `tsc`, `vitest`, `playwright`, `prisma` directly — go through the script (e.g. `pnpm --filter mobile test:e2e`, `pnpm --filter mobile check-types`).
+- Schema changes: `prisma migrate dev` / `migrate deploy` / `migrate reset`. **Never** `prisma db push`, even on test DBs.
 
-Baza Pilates is a full-stack studio management app built as an Expo monorepo. It serves three user roles: Admin, Trainer, and Client. The app runs on iOS, Android, and Web from a single codebase with server-side API routes.
+## i18n
 
-## Architecture
-
-### Monorepo Layout
-
-- `apps/mobile/` - Main Expo app with file-based routing and API routes
-- `packages/types/` - Shared Zod validation schemas
-- `packages/i18n/` - Shared internationalization utilities
-- `docs/` - Specifications and runbooks
-
-### Key Conventions
-
-- **Routing:** Expo Router 6 file-based routing. Role-specific screens live in `app/(admin)/`, `app/(trainer)/`, `app/(client)/`. API routes live in `app/api/`.
-- **Styling:** Tamagui component library. Theme colors: background `#fdf7f4`, brand `#2e5b42`, accent `#6e1644`. Font: Inter.
-- **State management:** TanStack React Query for server state. Query factories are in `lib/queries/`.
-- **Validation:** Zod schemas shared between client and server via `@baza/types`.
-- **Database:** Prisma ORM with PostgreSQL. Schema at `apps/mobile/prisma/schema.prisma`.
-- **Auth:** Better Auth with session-based cookies. Invite-only registration (no public sign-up).
-- **i18n:** Serbian (default) and English. Translation files in `apps/mobile/locales/`.
-- **Email:** React Email templates in `apps/mobile/emails/`, sent via Resend.
-
-### Server-Side Patterns
-
-- API route handlers are in `apps/mobile/app/api/`.
-- Auth guards use `requireAuth()` and `requireRole()` from `lib/server/auth-guards.ts`.
-- Prisma client is initialized in `lib/server/prisma.ts`.
-- Notifications go through `lib/server/notifications.ts` (push via Expo, persisted in-app).
-- Cron jobs are triggered via POST with `x-cron-token` header. Support `dryRun` and `mode` params.
-
-### Client-Side Patterns
-
-- Query factories in `lib/queries/` return `queryOptions()` objects for TanStack Query.
-- Mutations use `useMutation` with query invalidation on success.
-- Auth client is in `lib/auth-client.ts`.
-- UI components are in `components/ui/` (Button, Card, Input, Sheet, etc.).
-- Screen layouts use `ScreenContainer` wrapper.
-
-## Development
-
-### Running Locally
-
-```bash
-pnpm install
-docker compose up -d          # PostgreSQL on port 5434
-pnpm --filter mobile exec prisma migrate dev
-pnpm dev                      # Expo dev server on port 8010
-```
-
-### Package Manager
-
-Use `pnpm`. Do not use npm or yarn.
-
-### Linting and Formatting
-
-- Linter: Oxlint (`pnpm lint:all`)
-- Formatter: Oxfmt (`pnpm format:check`)
-- Type checking: `pnpm check-types`
-
-### Database Changes
-
-1. Edit `apps/mobile/prisma/schema.prisma`
-2. Run `pnpm --filter mobile exec prisma migrate dev --name <migration_name>`
-3. Run `pnpm --filter mobile exec prisma generate`
-4. Update Zod schemas in `packages/types/` if needed
-
-### Adding API Routes
-
-1. Create route file in `apps/mobile/app/api/`
-2. Export async handler functions (`GET`, `POST`, `PATCH`, `DELETE`)
-3. Add auth guards with `requireAuth()` / `requireRole()`
-4. Validate request bodies with Zod schemas from `@baza/types`
-5. Update `docs/api-contract.md`
-
-### Adding Translations
-
-1. Add keys to both `apps/mobile/locales/sr.json` and `apps/mobile/locales/en.json`
-2. Use `useTranslation()` hook in components
-3. Keep key structure consistent across languages
+Every visible string lives in BOTH `apps/mobile/locales/sr.json` AND `apps/mobile/locales/en.json`. Includes a11y labels. Serbian is default.
 
 ## Testing
 
-No test framework is currently configured. When adding tests, prefer Vitest for unit/integration and Maestro for E2E mobile testing.
+Testing Trophy — integration > unit. Real DB, real route handlers, real Playwright dev server.
 
-## Deployment
+| Layer | Tool | Path |
+|---|---|---|
+| E2E | Playwright (Chromium, web) | `apps/mobile/test/e2e/` |
+| Integration | Vitest + real Postgres | `apps/mobile/test/integration/` |
+| Unit | Vitest | `apps/mobile/test/unit/` |
 
-- Mobile: EAS Build + EAS Update
-- Server/Web: EAS Hosting
-- Database: Neon Postgres
+Anti-flake:
 
-See `docs/deployment-runbook.md` for production procedures.
+- Wait for state, not time. `expect.poll()` / `waitFor({ state: "visible" })` / `findBy*`. No `setTimeout` / `waitForTimeout` as a primary wait.
+- No racy date math. `d.getTime() === Date.now()` resolves differently across runs — use a deterministic iteration counter (see `test/e2e/helpers/dates.ts`).
+- WeekStrip-driven specs must navigate. Use `helpers/dates.ts:navigateWeekStripTo(page, dateKey)` — don't assume the target date is in the visible week.
+- Each test passes in isolation, or the file's `beforeAll` sets up its dependencies.
+- `testID` convention: `<context>-<element>` (e.g. `client-row-${id}`).
 
-## Studio Visual System
+Date fragility: the suite reads the wall clock (seed window + `gt: new Date()` filters + `new Date()` in spec code). It drifts by day-of-week, time-of-day, and cross-spec mutation. Anchor-time refactor not yet implemented — see CONTEXT.md → "Anchor time". Until it lands, sanity-check that any new date-touching spec stays green if run as-of next Saturday. `page.clock.install()` only freezes the browser, not the Node dev server.
 
-Bone canvas, ink text, forest-green as brand signature only, black as primary CTA. Components and tokens live in `apps/mobile/components/ui/studio/`.
+## Worktrees
 
-- **Use Uniwind `className` for colors, layout, type.** Reach for inline `style` only for off-scale sizes, letter-spacing, line-height, computed values, or native props that need a JS color (Feather `color`, `placeholderTextColor`). If utilities seem broken after a token change, bounce Metro with `--clear`.
-- **Every visible string must be i18n'd in both `locales/en.json` and `locales/sr.json`.** Serbian is default. Includes accessibility labels (`common.a11y*` namespace).
-- **No `useEffect` for one-shot setup** like setting a status bar style. Use the declarative form; if a parent overrides it, fix the parent.
+When working in a git worktree, ALL operations use the worktree path. Never `cd` into or reference the main checkout.

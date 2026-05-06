@@ -273,7 +273,7 @@ export default function AdminBilling() {
             keyExtractor={(item) => item.id}
             renderItem={({ item }: { item: BillingRecord }) => (
               <View className="px-1 py-1.5">
-                <Card>
+                <Card testID={`billing-row-${item.id}`}>
                   <View className="flex-col gap-2">
                     <View className="flex-row justify-between items-center">
                       <Text className="text-foreground font-extrabold" style={{ fontSize: 20 }}>

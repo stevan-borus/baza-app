@@ -39,3 +39,14 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# Playwright output
+/test-results
+/playwright-report
+/playwright/.cache
+
+# Maestro (E2E) — captured reset token from password-reset flow
+.maestro/.tmp/
+
+# E2E build artifacts
+.env.test.local

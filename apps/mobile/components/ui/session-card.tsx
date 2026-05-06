@@ -24,9 +24,7 @@ type SessionCardProps = {
   hidden?: boolean;
   hiddenLabel?: string;
   onPress?: () => void;
-  // Optional post-cron markers. When passed, render a small line under the
-  // bookedCount strip showing what happened. Only meaningful on past
-  // sessions; the trainer schedule wires this through.
+  testID?: string;
   sessionId?: string;
   attendance?: SessionAttendance | null;
 };
@@ -56,6 +54,7 @@ export function SessionCard({
   hidden,
   hiddenLabel,
   onPress,
+  testID,
   sessionId,
   attendance,
 }: SessionCardProps) {
@@ -71,7 +70,7 @@ export function SessionCard({
       : "#2e5b42";
 
   return (
-    <Pressable onPress={onPress} className="active:opacity-80">
+    <Pressable testID={testID} onPress={onPress} className="active:opacity-80">
       <View style={{ opacity: hidden ? 0.5 : 1 }}>
         <GlassCard accentBorder={accentBorder} accentBorderColor={accentBorderColor}>
           <View className="flex-col gap-2">

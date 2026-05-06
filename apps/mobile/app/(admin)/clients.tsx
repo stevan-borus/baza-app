@@ -200,6 +200,11 @@ export default function AdminClients() {
               ? setShowCreateClient(true)
               : setShowInviteForm(true)
           }
+          testID={
+            tab === "clients"
+              ? "admin-new-client-button"
+              : "admin-new-invite-button"
+          }
           accessibilityLabel={
             tab === "clients"
               ? t("admin.clients.sheetNewClient")
@@ -249,8 +254,16 @@ export default function AdminClients() {
         >
           <SegmentedControl
             segments={[
-              { value: "clients" as const, label: t("admin.clients.tabClients", { count: clients.length }) },
-              { value: "invites" as const, label: t("admin.clients.tabInvites", { count: invites.length }) },
+              {
+                value: "clients" as const,
+                label: t("admin.clients.tabClients", { count: clients.length }),
+                testID: "admin-clients-tab-clients",
+              },
+              {
+                value: "invites" as const,
+                label: t("admin.clients.tabInvites", { count: invites.length }),
+                testID: "admin-clients-tab-invites",
+              },
             ]}
             value={tab}
             onValueChange={setTab}
@@ -311,6 +324,7 @@ export default function AdminClients() {
                       />
                     ) : null}
                     <Pressable
+                      testID={`client-row-${client.id}`}
                       onPress={() => setShowActionsFor(client.id)}
                       android_ripple={null}
                       className="flex-row items-center gap-3 px-4 py-3 active:opacity-70"
@@ -366,7 +380,7 @@ export default function AdminClients() {
               {invites.length === 0 ? <EmptyState title={t("admin.clients.invitesEmpty")} /> : null}
 
               {invites.map((invite: Invite) => (
-                <GlassCard key={invite.id}>
+                <GlassCard key={invite.id} testID={`invite-row-${invite.id}`}>
                   <View className="flex-col gap-2.5">
                     <View className="flex-row justify-between items-center">
                       <View className="flex-1 flex-col">
@@ -560,6 +574,7 @@ export default function AdminClients() {
                 </View>
                 <View className="bg-glass-border" style={{ height: 1 }} />
                 <ActionRow
+                  testID="client-action-edit"
                   icon="edit-2"
                   label={t("admin.clients.edit")}
                   onPress={() => {
@@ -574,6 +589,7 @@ export default function AdminClients() {
                   }}
                 />
                 <ActionRow
+                  testID="client-action-assign-package"
                   icon="gift"
                   label={t("admin.clients.assignPackage")}
                   onPress={() => {
@@ -582,6 +598,7 @@ export default function AdminClients() {
                   }}
                 />
                 <ActionRow
+                  testID="client-action-pause"
                   icon="pause"
                   label={t("admin.clients.pause")}
                   onPress={() => {
@@ -590,6 +607,7 @@ export default function AdminClients() {
                   }}
                 />
                 <ActionRow
+                  testID="client-action-delete"
                   icon="trash-2"
                   label={t("admin.clients.delete")}
                   destructive
@@ -646,9 +664,10 @@ export default function AdminClients() {
                     </Text>
                   </Pressable>
                   <Pressable
+                    testID="client-delete-confirm-button"
                     onPress={() => {
                       updateClientMutation.mutate({
-                        id: client.id,
+                        id: client.user.id,
                         isActive: false,
                       });
                       setShowDeleteFor(null);
@@ -676,6 +695,7 @@ export default function AdminClients() {
               {t("admin.clients.sheetInvite")}
             </Text>
             <Input
+              testID="invite-create-email-input"
               placeholder={t("admin.clients.placeholderEmail")}
               autoCapitalize="none"
               keyboardType="email-address"
@@ -683,17 +703,20 @@ export default function AdminClients() {
               onChangeText={(v) => setInviteForm((s) => ({ ...s, email: v }))}
             />
             <Input
+              testID="invite-create-name-input"
               placeholder={t("admin.clients.placeholderFullName")}
               value={inviteForm.fullName}
               onChangeText={(v) => setInviteForm((s) => ({ ...s, fullName: v }))}
             />
             <Input
+              testID="invite-create-phone-input"
               placeholder={t("admin.clients.placeholderPhone")}
               keyboardType="phone-pad"
               value={inviteForm.phone}
               onChangeText={(v) => setInviteForm((s) => ({ ...s, phone: v }))}
             />
             <Button
+              testID="invite-create-submit-button"
               disabled={createInviteMutation.isPending || !inviteForm.email || !inviteForm.fullName}
               onPress={() =>
                 createInviteMutation.mutate({
@@ -729,6 +752,7 @@ export default function AdminClients() {
             {(packageTypesQuery.data?.packageTypes ?? []).map((pt) => (
               <Button
                 key={pt.id}
+                testID={`assign-package-option-${pt.id}`}
                 size="small"
                 variant={assignForm.packageTypeId === pt.id ? "primary" : "secondary"}
                 onPress={() => setAssignForm((s) => ({ ...s, packageTypeId: pt.id }))}
@@ -874,15 +898,18 @@ function ActionRow({
   label,
   onPress,
   destructive = false,
+  testID,
 }: {
   icon: React.ComponentProps<typeof Feather>["name"];
   label: string;
   onPress: () => void;
   destructive?: boolean;
+  testID?: string;
 }) {
   const t = useThemeTokens();
   return (
     <Pressable
+      testID={testID}
       onPress={onPress}
       android_ripple={null}
       className="flex-row items-center gap-3 py-3.5 active:opacity-70"

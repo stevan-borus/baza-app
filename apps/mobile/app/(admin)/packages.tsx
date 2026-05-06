@@ -181,6 +181,7 @@ export default function AdminPackages() {
           icon="plus"
           onPress={() => setShowCreate(true)}
           accessibilityLabel={t("admin.manage.sheetNewPackage")}
+          testID="admin-new-package-button"
         />
       }
     >
@@ -229,6 +230,7 @@ export default function AdminPackages() {
                     />
                   ) : null}
                   <Pressable
+                    testID={`package-type-row-${pt.id}`}
                     onPress={() => openEdit(pt)}
                     android_ripple={null}
                     className="flex-row items-center gap-3 px-4 py-3 active:opacity-70"
@@ -374,11 +376,14 @@ export default function AdminPackages() {
               {t("admin.manage.sheetNewPackage")}
             </Text>
             <Input
+              testID="package-name-input"
               placeholder={t("admin.manage.placeholderName")}
               value={form.name}
               onChangeText={(v) => setForm((s) => ({ ...s, name: v }))}
             />
             <Select
+              testID="package-class-type-select"
+              optionTestIDPrefix="package-class-type-option"
               placeholder={t("admin.packages.classType")}
               value={form.classTypeId}
               onChange={(v) => setForm((s) => ({ ...s, classTypeId: v }))}
@@ -389,18 +394,21 @@ export default function AdminPackages() {
               }))}
             />
             <Input
+              testID="package-session-count-input"
               placeholder={t("admin.manage.placeholderSessionCount")}
               keyboardType="numeric"
               value={form.sessionCount}
               onChangeText={(v) => setForm((s) => ({ ...s, sessionCount: v }))}
             />
             <Input
+              testID="package-validity-days-input"
               placeholder={t("admin.manage.placeholderValidityDays")}
               keyboardType="numeric"
               value={form.validityDays}
               onChangeText={(v) => setForm((s) => ({ ...s, validityDays: v }))}
             />
             <Input
+              testID="package-late-cancel-input"
               placeholder={t("admin.manage.placeholderLateCancel")}
               keyboardType="numeric"
               value={form.lateCancelHours}
@@ -409,6 +417,7 @@ export default function AdminPackages() {
               }
             />
             <Button
+              testID="package-create-submit"
               disabled={
                 createMutation.isPending ||
                 !form.name ||
@@ -446,11 +455,14 @@ export default function AdminPackages() {
               {t("admin.manage.sheetEditPackage")}
             </Text>
             <Input
+              testID="package-edit-name-input"
               placeholder={t("admin.manage.placeholderName")}
               value={editForm.name}
               onChangeText={(v) => setEditForm((s) => ({ ...s, name: v }))}
             />
             <Select
+              testID="package-edit-class-type-select"
+              optionTestIDPrefix="package-edit-class-type-option"
               placeholder={t("admin.packages.classType")}
               value={editForm.classTypeId}
               onChange={(v) =>
@@ -463,6 +475,7 @@ export default function AdminPackages() {
               }))}
             />
             <Input
+              testID="package-edit-session-count-input"
               placeholder={t("admin.manage.placeholderSessionCount")}
               keyboardType="numeric"
               value={editForm.sessionCount}
@@ -471,6 +484,7 @@ export default function AdminPackages() {
               }
             />
             <Input
+              testID="package-edit-validity-days-input"
               placeholder={t("admin.manage.placeholderValidityDays")}
               keyboardType="numeric"
               value={editForm.validityDays}
@@ -479,6 +493,7 @@ export default function AdminPackages() {
               }
             />
             <Input
+              testID="package-edit-late-cancel-input"
               placeholder={t("admin.manage.placeholderLateCancel")}
               keyboardType="numeric"
               value={editForm.lateCancelHours}
@@ -487,6 +502,7 @@ export default function AdminPackages() {
               }
             />
             <Button
+              testID="package-edit-save-button"
               disabled={
                 updateTypeMutation.isPending ||
                 !editForm.name ||
@@ -509,6 +525,7 @@ export default function AdminPackages() {
               {t("admin.schedule.saveChanges")}
             </Button>
             <Button
+              testID="package-edit-delete-button"
               variant="danger"
               disabled={deleteTypeMutation.isPending || !editingId}
               onPress={() => setConfirmDelete(true)}
@@ -526,6 +543,7 @@ export default function AdminPackages() {
           </View>
         </AppSheet>
         <ConfirmSheet
+          testID="package-delete-confirm-button"
           open={confirmDelete}
           onOpenChange={setConfirmDelete}
           title={t("confirm.deletePackageTitle")}

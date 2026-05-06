@@ -124,6 +124,7 @@ export function TimeAxisDayView({
             return (
               <Pressable
                 key={s.id}
+                testID={`session-block-${s.id}`}
                 onPress={() => onSessionPress(s)}
                 className="absolute left-0 right-0 active:opacity-80"
                 style={{ top, height }}

@@ -1,0 +1,119 @@
+/* Studio-look overrides for react-day-picker.
+ *
+ * The library exposes CSS variables (--rdp-*) for colors and a small set of
+ * class names for layout. We re-style the parts that matter (head, day cells,
+ * range/selection chrome) to match the bone canvas + accent green chrome the
+ * rest of the app uses. The component's `style` prop sets --rdp-accent-color
+ * at runtime so the active theme's accent flows through. */
+
+[data-testid="date-time-picker-calendar"] .rdp-root {
+  /* Inherit the accent color set on the parent div so `var(--rdp-accent-color)` resolves to our token. */
+  --rdp-accent-color: inherit;
+  --rdp-accent-background-color: inherit;
+  --rdp-today-color: inherit;
+  --rdp-day_button-width: 36px;
+  --rdp-day_button-height: 36px;
+  --rdp-day_button-border-radius: 10px;
+  --rdp-weekday-padding: 6px 0;
+  --rdp-day-width: 36px;
+  --rdp-day-height: 36px;
+  --rdp-day_button-border: 0;
+  --rdp-selected-border: 0;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  font-family: "AlbertSans-Regular", system-ui, sans-serif;
+  color: inherit;
+}
+
+[data-testid="date-time-picker-calendar"] {
+  /* Force the accent variables to read from this wrapper instead of
+   * react-day-picker's defaults inside .rdp-root. */
+  --rdp-today-color: var(--rdp-accent-color);
+}
+
+[data-testid="date-time-picker-calendar"] .rdp-month_caption {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 0 12px;
+  font-family: "AlbertSans-SemiBold", system-ui, sans-serif;
+  font-size: 14px;
+  letter-spacing: 1.6px;
+  text-transform: uppercase;
+  color: inherit;
+}
+
+[data-testid="date-time-picker-calendar"] .rdp-nav {
+  display: flex;
+  gap: 6px;
+}
+
+[data-testid="date-time-picker-calendar"] .rdp-button_previous,
+[data-testid="date-time-picker-calendar"] .rdp-button_next {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  background: transparent;
+  border: 1px solid var(--rdp-accent-color, currentColor);
+  color: inherit;
+  cursor: pointer;
+  opacity: 0.6;
+  transition: opacity 120ms ease, background-color 120ms ease;
+}
+
+[data-testid="date-time-picker-calendar"] .rdp-button_previous:hover,
+[data-testid="date-time-picker-calendar"] .rdp-button_next:hover {
+  opacity: 1;
+  background: var(--rdp-accent-background-color);
+}
+
+[data-testid="date-time-picker-calendar"] .rdp-weekdays {
+  font-family: "AlbertSans-SemiBold", system-ui, sans-serif;
+  font-size: 11px;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+  color: inherit;
+  opacity: 0.55;
+}
+
+[data-testid="date-time-picker-calendar"] .rdp-day {
+  font-family: "AlbertSans-Regular", system-ui, sans-serif;
+  font-size: 14px;
+  color: inherit;
+}
+
+[data-testid="date-time-picker-calendar"] .rdp-day_button {
+  border-radius: 10px;
+  font-size: 14px;
+  font-family: inherit;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  color: inherit;
+  transition: background-color 120ms ease, color 120ms ease;
+}
+
+[data-testid="date-time-picker-calendar"] .rdp-day_button:hover {
+  background: var(--rdp-accent-background-color);
+}
+
+[data-testid="date-time-picker-calendar"] .rdp-day.rdp-today .rdp-day_button {
+  font-family: "AlbertSans-SemiBold", system-ui, sans-serif;
+  color: var(--rdp-accent-color);
+}
+
+[data-testid="date-time-picker-calendar"] .rdp-day.rdp-selected .rdp-day_button {
+  background: var(--rdp-accent-color);
+  color: #ffffff;
+  font-family: "AlbertSans-SemiBold", system-ui, sans-serif;
+}
+
+[data-testid="date-time-picker-calendar"] .rdp-day.rdp-outside .rdp-day_button {
+  opacity: 0.35;
+}
+
+[data-testid="date-time-picker-calendar"] .rdp-day.rdp-disabled .rdp-day_button {
+  opacity: 0.25;
+  cursor: not-allowed;
+}

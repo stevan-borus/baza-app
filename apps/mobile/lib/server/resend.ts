@@ -3,6 +3,7 @@ import { render } from "@react-email/render";
 import { createElement } from "react";
 import { InviteEmail } from "@/emails/invite-email";
 import { ResetEmail } from "@/emails/reset-email";
+import { captureResetTokenForE2E } from "@/lib/server/e2e-reset-token-capture";
 import { env } from "@/lib/server/env";
 import { tryCatch } from "@/lib/server/try-catch";
 
@@ -52,6 +53,7 @@ export async function sendResetEmail(params: {
   to: string;
   resetToken: string;
 }) {
+  await captureResetTokenForE2E({ email: params.to, token: params.resetToken });
   const resetUrl = `${env.APP_WEB_URL}/auth/reset-password?token=${encodeURIComponent(params.resetToken)}`;
   const html = await render(createElement(ResetEmail, { resetUrl }));
   await sendEmail(params.to, "Baza Pilates - reset lozinke", html);

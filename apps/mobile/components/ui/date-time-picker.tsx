@@ -5,9 +5,9 @@ import DateTimePickerModal from "react-native-modal-datetime-picker";
 import { useTranslation } from "react-i18next";
 import { useColorScheme } from "@/components/useColorScheme";
 import { getDateLocale } from "@/lib/i18n";
-import { ACCENT } from "./tokens";
+import { useThemeTokens, ACCENT } from "./tokens";
+import { WebDateTimeSheet } from "./date-time-picker-web";
 
-// Muted text color used for the calendar icon
 const MUTED_COLOR = "#737373";
 
 type DateTimePickerProps = {
@@ -18,11 +18,16 @@ type DateTimePickerProps = {
   minimumDate?: Date;
   maximumDate?: Date;
   disabled?: boolean;
+  testID?: string;
 };
 
 /**
- * A styled date/time picker that uses the native modal picker.
- * Displays the selected value in a pressable input-like container.
+ * Date / time / datetime picker.
+ *
+ * Native: uses react-native-modal-datetime-picker (the original behavior).
+ * Web: opens an AppSheet containing react-day-picker styled to the Studio
+ * look, plus an HTML <input type="time"> for the time-of-day. Both share
+ * the same trigger Pressable.
  */
 export function DateTimePicker({
   value,
@@ -32,13 +37,16 @@ export function DateTimePicker({
   minimumDate,
   maximumDate,
   disabled = false,
+  testID,
 }: DateTimePickerProps) {
   const [isVisible, setIsVisible] = useState(false);
   const { i18n } = useTranslation();
   const colorScheme = useColorScheme();
+  const tokens = useThemeTokens();
 
   const locale = i18n.language === "en" ? "en" : "sr-Latn";
   const dateLocale = getDateLocale();
+  const isWeb = Platform.OS === "web";
 
   function handleConfirm(date: Date) {
     setIsVisible(false);
@@ -81,6 +89,8 @@ export function DateTimePicker({
   return (
     <>
       <Pressable
+        testID={testID}
+        accessibilityRole="button"
         onPress={() => !disabled && setIsVisible(true)}
         disabled={disabled}
       >
@@ -98,31 +108,46 @@ export function DateTimePicker({
             {displayValue || placeholder}
           </Text>
           <FontAwesome
-            name="calendar"
+            name={mode === "time" ? "clock-o" : "calendar"}
             size={15}
             color={MUTED_COLOR}
           />
         </View>
       </Pressable>
 
-      <DateTimePickerModal
-        isVisible={isVisible}
-        mode={mode}
-        date={value ?? new Date()}
-        onConfirm={handleConfirm}
-        onCancel={handleCancel}
-        minimumDate={minimumDate}
-        maximumDate={maximumDate}
-        isDarkModeEnabled={colorScheme === "dark"}
-        themeVariant={colorScheme === "dark" ? "dark" : "light"}
-        display={Platform.OS === "ios" ? "inline" : "default"}
-        locale={locale}
-        confirmTextIOS={i18n.language === "en" ? "Confirm" : "Potvrdi"}
-        cancelTextIOS={i18n.language === "en" ? "Cancel" : "Otkaži"}
-        accentColor={ACCENT}
-        buttonTextColorIOS={ACCENT}
-        pickerContainerStyleIOS={{ paddingHorizontal: 16 }}
-      />
+      {isWeb ? (
+        <WebDateTimeSheet
+          open={isVisible}
+          onOpenChange={(o) => !o && setIsVisible(false)}
+          value={value}
+          mode={mode}
+          minimumDate={minimumDate}
+          maximumDate={maximumDate}
+          onConfirm={handleConfirm}
+          locale={locale}
+          accent={tokens.accent}
+        />
+      ) : (
+        <DateTimePickerModal
+          isVisible={isVisible}
+          mode={mode}
+          date={value ?? new Date()}
+          onConfirm={handleConfirm}
+          onCancel={handleCancel}
+          minimumDate={minimumDate}
+          maximumDate={maximumDate}
+          isDarkModeEnabled={colorScheme === "dark"}
+          themeVariant={colorScheme === "dark" ? "dark" : "light"}
+          display={Platform.OS === "ios" ? "inline" : "default"}
+          locale={locale}
+          confirmTextIOS={i18n.language === "en" ? "Confirm" : "Potvrdi"}
+          cancelTextIOS={i18n.language === "en" ? "Cancel" : "Otkaži"}
+          accentColor={ACCENT}
+          buttonTextColorIOS={ACCENT}
+          pickerContainerStyleIOS={{ paddingHorizontal: 16 }}
+        />
+      )}
     </>
   );
 }
+

@@ -177,6 +177,7 @@ function ProfileSheetContent({ open, onOpenChange }: Props) {
         </View>
 
         <Pressable
+          testID="profile-sign-out-button"
           onPress={() => signOutMutation.mutate()}
           disabled={signOutMutation.isPending}
           className="flex-row items-center justify-center py-3 px-4 rounded-2xl"

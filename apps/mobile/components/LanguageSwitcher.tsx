@@ -24,8 +24,8 @@ export function LanguageSwitcher({
       value={current}
       onValueChange={(locale) => handleLocale(locale as Locale)}
       segments={[
-        { value: "sr", label: t("common.languageSr") },
-        { value: "en", label: t("common.languageEn") },
+        { value: "sr", label: t("common.languageSr"), testID: "language-sr" },
+        { value: "en", label: t("common.languageEn"), testID: "language-en" },
       ]}
     />
   );

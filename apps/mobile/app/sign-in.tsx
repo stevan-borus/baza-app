@@ -97,6 +97,7 @@ export default function SignInScreen() {
           className="gap-3.5"
         >
           <Input
+            testID="auth-email-input"
             icon="envelope"
             label={t("auth.email")}
             autoCapitalize="none"
@@ -113,6 +114,7 @@ export default function SignInScreen() {
           />
 
           <PasswordInput
+            testID="auth-password-input"
             label={t("auth.password")}
             value={password}
             onChangeText={(v) => {
@@ -146,6 +148,7 @@ export default function SignInScreen() {
 
           <View className="mt-1.5">
             <StudioButton
+              testID="auth-submit-button"
               label={t("auth.submit")}
               onPress={handleSubmit}
               loading={signInMutation.isPending}

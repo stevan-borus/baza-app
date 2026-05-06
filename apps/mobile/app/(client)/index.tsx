@@ -605,6 +605,7 @@ function PackageCard({
               style={{ flexDirection: "row", alignItems: "baseline", gap: 4 }}
             >
               <Text
+                testID="package-sessions-remaining"
                 style={{
                   fontFamily: "AlbertSans-Bold",
                   fontSize: 40,
