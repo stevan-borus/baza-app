@@ -8,6 +8,11 @@ import {
   getUserActive,
   resetAndSeed,
 } from "./helpers/db";
+import {
+  dateKeyFromDate,
+  navigateWeekStripTo,
+  nextReformerDayKey,
+} from "./helpers/dates";
 import { t } from "./helpers/locales";
 
 const SEED_PASSWORD = "Password123!";
@@ -345,22 +350,7 @@ test.describe("admin (Serbian)", () => {
 
     // Tap any session-card on today/this-week and open the edit sheet.
     // Pick the first Reformer day from the seed so a session exists to tap.
-    const reformerDays = new Set([1, 3, 5]);
-    const d = new Date();
-    while (
-      !reformerDays.has(d.getDay()) ||
-      (d.getTime() === Date.now() && d.getHours() >= 10)
-    ) {
-      d.setDate(d.getDate() + 1);
-    }
-    const target = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(
-      2,
-      "0",
-    )}-${String(d.getDate()).padStart(2, "0")}`;
-    await page
-      .locator(`[data-testid="week-strip-day-${target}"]:visible`)
-      .first()
-      .dispatchEvent("click");
+    await navigateWeekStripTo(page, nextReformerDayKey());
 
     const card = page.locator('[data-testid^="session-card-"]').first();
     await expect(card).toBeVisible({ timeout: 10_000 });
@@ -381,23 +371,7 @@ test.describe("admin (Serbian)", () => {
     const cancelledBefore = await countSessionsByStatus("CANCELED");
 
     await signInAsAdmin(page);
-
-    const reformerDays = new Set([1, 3, 5]);
-    const d = new Date();
-    while (
-      !reformerDays.has(d.getDay()) ||
-      (d.getTime() === Date.now() && d.getHours() >= 10)
-    ) {
-      d.setDate(d.getDate() + 1);
-    }
-    const target = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(
-      2,
-      "0",
-    )}-${String(d.getDate()).padStart(2, "0")}`;
-    await page
-      .locator(`[data-testid="week-strip-day-${target}"]:visible`)
-      .first()
-      .dispatchEvent("click");
+    await navigateWeekStripTo(page, nextReformerDayKey());
 
     const card = page.locator('[data-testid^="session-card-"]').first();
     await expect(card).toBeVisible({ timeout: 10_000 });
@@ -507,14 +481,11 @@ test.describe("admin (Serbian)", () => {
     if (!ref) throw new Error("Need a seeded recurring Reformer session");
 
     await signInAsAdmin(page);
-    // Navigate to that session's day on the schedule.
-    const targetDate = `${ref.startsAt.getFullYear()}-${String(
-      ref.startsAt.getMonth() + 1,
-    ).padStart(2, "0")}-${String(ref.startsAt.getDate()).padStart(2, "0")}`;
-    await page
-      .locator(`[data-testid="week-strip-day-${targetDate}"]:visible`)
-      .first()
-      .dispatchEvent("click");
+    // Navigate to that session's day — the WeekStrip only shows 7 days,
+    // and prior specs in this file may have canceled sessions in the
+    // current week, pushing `findFutureSeriesSession`'s result into a
+    // later week.
+    await navigateWeekStripTo(page, dateKeyFromDate(ref.startsAt));
 
     await page
       .getByTestId(`session-card-${ref.id}`)
@@ -541,13 +512,7 @@ test.describe("admin (Serbian)", () => {
     if (!ref) throw new Error("Need a seeded recurring Reformer session");
 
     await signInAsAdmin(page);
-    const targetDate = `${ref.startsAt.getFullYear()}-${String(
-      ref.startsAt.getMonth() + 1,
-    ).padStart(2, "0")}-${String(ref.startsAt.getDate()).padStart(2, "0")}`;
-    await page
-      .locator(`[data-testid="week-strip-day-${targetDate}"]:visible`)
-      .first()
-      .dispatchEvent("click");
+    await navigateWeekStripTo(page, dateKeyFromDate(ref.startsAt));
 
     await page
       .getByTestId(`session-card-${ref.id}`)
@@ -584,13 +549,7 @@ test.describe("admin (Serbian)", () => {
     const cancelledBefore = await countSessionsByStatus("CANCELED");
 
     await signInAsAdmin(page);
-    const targetDate = `${ref.startsAt.getFullYear()}-${String(
-      ref.startsAt.getMonth() + 1,
-    ).padStart(2, "0")}-${String(ref.startsAt.getDate()).padStart(2, "0")}`;
-    await page
-      .locator(`[data-testid="week-strip-day-${targetDate}"]:visible`)
-      .first()
-      .dispatchEvent("click");
+    await navigateWeekStripTo(page, dateKeyFromDate(ref.startsAt));
 
     await page
       .getByTestId(`session-card-${ref.id}`)
@@ -620,13 +579,7 @@ test.describe("admin (Serbian)", () => {
     const seriesBefore = await countRecurringSchedules();
 
     await signInAsAdmin(page);
-    const targetDate = `${ref.startsAt.getFullYear()}-${String(
-      ref.startsAt.getMonth() + 1,
-    ).padStart(2, "0")}-${String(ref.startsAt.getDate()).padStart(2, "0")}`;
-    await page
-      .locator(`[data-testid="week-strip-day-${targetDate}"]:visible`)
-      .first()
-      .dispatchEvent("click");
+    await navigateWeekStripTo(page, dateKeyFromDate(ref.startsAt));
 
     await page
       .getByTestId(`session-card-${ref.id}`)

@@ -56,6 +56,7 @@ export function StudioWeekStrip({
               className="active:opacity-60 w-9 h-9 items-center justify-center"
               accessibilityRole="button"
               accessibilityLabel="Previous week"
+              testID="week-strip-prev"
             >
               <Feather name="chevron-left" size={20} color={tokens.foreground} />
             </Pressable>
@@ -77,6 +78,7 @@ export function StudioWeekStrip({
               className="active:opacity-60 w-9 h-9 items-center justify-center"
               accessibilityRole="button"
               accessibilityLabel="Next week"
+              testID="week-strip-next"
             >
               <Feather name="chevron-right" size={20} color={tokens.foreground} />
             </Pressable>

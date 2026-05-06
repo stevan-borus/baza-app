@@ -5,6 +5,7 @@ import {
   getSessionsRemaining,
   resetAndSeed,
 } from "./helpers/db";
+import { navigateWeekStripTo, nextReformerDayKey } from "./helpers/dates";
 import { t, t_en } from "./helpers/locales";
 
 const SEED_PASSWORD = "Password123!";
@@ -179,22 +180,7 @@ test.describe("cron + reports + EN smoke (Serbian + English)", () => {
 
     await page.goto("/calendar");
     // Select the next Reformer day so today's weekday doesn't matter.
-    const reformerDays = new Set([1, 3, 5]);
-    const d = new Date();
-    while (
-      !reformerDays.has(d.getDay()) ||
-      (d.getTime() === Date.now() && d.getHours() >= 10)
-    ) {
-      d.setDate(d.getDate() + 1);
-    }
-    const target = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(
-      2,
-      "0",
-    )}-${String(d.getDate()).padStart(2, "0")}`;
-    await page
-      .locator(`[data-testid="week-strip-day-${target}"]:visible`)
-      .first()
-      .dispatchEvent("click");
+    await navigateWeekStripTo(page, nextReformerDayKey());
 
     await expect(page.getByText("Reformer pilates").first()).toBeVisible({
       timeout: 10_000,
@@ -227,22 +213,7 @@ test.describe("cron + reports + EN smoke (Serbian + English)", () => {
     await page.goto("/calendar");
 
     // Pick a Reformer day in the week strip.
-    const reformerDays = new Set([1, 3, 5]);
-    const d = new Date();
-    while (
-      !reformerDays.has(d.getDay()) ||
-      (d.getTime() === Date.now() && d.getHours() >= 10)
-    ) {
-      d.setDate(d.getDate() + 1);
-    }
-    const target = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(
-      2,
-      "0",
-    )}-${String(d.getDate()).padStart(2, "0")}`;
-    await page
-      .locator(`[data-testid="week-strip-day-${target}"]:visible`)
-      .first()
-      .dispatchEvent("click");
+    await navigateWeekStripTo(page, nextReformerDayKey());
 
     // Open booking sheet.
     const block = page.locator('[data-testid^="session-block-"]').first();

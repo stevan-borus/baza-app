@@ -258,8 +258,27 @@ The suite starts its own Expo web server on port 8010 (see `playwright.config.ts
 - `apps/mobile/test/e2e/*.spec.ts` — seven spec files covering the test plan.
 - `apps/mobile/test/e2e/helpers/db.ts` — Prisma-direct helpers for seeding state the rich seed doesn't cover (invites, reset tokens, trainer-client linkage, future sessions, fillers, waitlist, etc.).
 - `apps/mobile/test/e2e/helpers/locales.ts` — `t` / `t_en` re-exports of the locale JSON for translation-key selectors.
+- `apps/mobile/test/e2e/helpers/dates.ts` — deterministic `nextReformerDayKey()` and `navigateWeekStripTo(page, dateKey)` so specs that pick a session date from the DB don't get stuck on a WeekStrip that doesn't show that week. Replaces the racy `d.getTime() === Date.now()` loop that lived inline in admin/cron specs.
 - `apps/mobile/scripts/test/seed-e2e.ts` — rich seed (Q12 matrix).
 - testIDs wired across the auth, admin, trainer, and client screens to support the suite. Convention: `<context>-<element>` (e.g. `client-row-${id}`, `package-create-submit`). Components that needed it (`Button`, `Select`, `Input`, `ConfirmSheet`, `SessionCard`, `SegmentedControl`, `MetricRow`, `ErrorState`, `DateTimePicker`) accept and forward a `testID` prop.
+
+### Known fragility — anchor-time follow-up
+
+The whole suite depends on the **wall clock**: the seed creates 2 weeks of recurring sessions starting from "today's locale week", the API filters `gt: new Date()`, helpers like `findFutureSeriesSession` filter on real `now`, and many specs compute target dates from `new Date()`. This works today but drifts over time:
+
+- **Day-of-week sensitivity**: today is Wed → Reformer Mon/Wed/Fri 10:00 means several sessions exist in the "current visible week"; on Saturday the visible week has zero past+today Reformer sessions and several specs would have nothing to click.
+- **Time-of-day sensitivity**: at seed time, the seeder skips sessions whose `startsAt` is already past. Running at 09:00 vs 11:00 produces different session sets.
+- **Cross-spec state mutation**: specs that cancel a session (e.g. spec 23) push downstream specs' "next future Reformer session" into a later week, which is why specs 25-28 needed `navigateWeekStripTo()` to page the WeekStrip.
+
+**Anchor-time refactor (planned)**: pin the entire test stack to a fixed instant per spec. Concretely:
+1. Pick anchor (e.g. `2026-05-06T09:00:00Z` — a Wednesday, before the seed's 10:00 sessions).
+2. Add `apps/mobile/lib/server/clock.ts` exporting a `now()` provider that reads `E2E_NOW` env var when set, else `new Date()`. Wire every server-side `new Date()` / `Date.now()` (currently 155+ callsites — `app/api/**/*.ts`, `lib/server/**/*.ts`) through it.
+3. Same for the seed (`scripts/test/seed-e2e.ts`) and spec helpers (`test/e2e/helpers/db.ts`).
+4. In the Playwright `webServer.command`, set `E2E_NOW=<anchor>`.
+5. In `playwright.config.ts` `use.timezoneId` and a `beforeEach` `page.clock.setFixedTime(anchor)` to freeze the BROWSER's `Date` in sync with the server.
+6. Spec test code uses a `getNow()` helper instead of `new Date()`.
+
+Doing this lets us run the suite in CI tomorrow / next week / a year from now and get identical seeds + identical results. Tracked separately because the audit + wiring across 155 callsites is multi-hour work and benefits from being its own focused PR.
 
 ## Out of scope for Phase A
 
