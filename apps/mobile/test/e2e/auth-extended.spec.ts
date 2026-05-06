@@ -14,13 +14,10 @@ const NEW_PASSWORD = "NewPassword456!";
 
 /**
  * Auth flows beyond the smoke layer:
- *   - sign-out (test-plan #4)
- *   - admin sends invite (test-plan #6)
- *   - client redeems invite happy path (test-plan #7)
- *   - expired invite token (test-plan #8)
- *   - used invite token (test-plan #9)
- *   - request password reset (test-plan #10)
- *   - expired reset token (test-plan #11)
+ *   - sign-out
+ *   - admin sends invite; client redeems invite happy path; expired and
+ *     used invite tokens
+ *   - request password reset; expired reset token
  */
 test.describe("auth extended (Serbian)", () => {
   test.beforeAll(async () => {

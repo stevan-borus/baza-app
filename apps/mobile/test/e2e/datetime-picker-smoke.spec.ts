@@ -8,8 +8,8 @@ const SEED_PASSWORD = "Password123!";
  * opens "New session", and confirms the Studio-styled DayPicker calendar
  * + time input render and round-trip a value.
  *
- * This isn't part of the test-plan inventory — it's a fast safety net for
- * the new picker before the scheduling specs (21-30) lean on it.
+ * Fast safety net for the new picker before the scheduling specs lean
+ * on it.
  */
 test.describe("DateTimePicker web smoke", () => {
   test.beforeAll(async () => {

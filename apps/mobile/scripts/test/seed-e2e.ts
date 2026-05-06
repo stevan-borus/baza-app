@@ -1,7 +1,9 @@
 /**
- * Phase A E2E rich seed.
+ * E2E rich seed.
  *
- * Produces the user matrix from docs/test-plan.md (Q12):
+ * Produces the deterministic dataset every test layer resets to before
+ * running. Glossary in CONTEXT.md → "Rich seed" / "Client matrix".
+ *
  * - 1 admin
  * - 2 trainers (Reformer Lead, Energy Lead)
  * - 6 clients with the package state matrix:

@@ -33,7 +33,7 @@ test.describe("cron + reports + EN smoke (Serbian + English)", () => {
     await disconnect();
   });
 
-  // ── Reports (test-plan 64-65) ─────────────────────────────────────────────
+  // ── Reports ───────────────────────────────────────────────────────────────
 
   test("64: admin reports — attendance section renders", async ({ page }) => {
     await page.goto("/sign-in");
@@ -68,7 +68,7 @@ test.describe("cron + reports + EN smoke (Serbian + English)", () => {
     ).toBeVisible({ timeout: 10_000 });
   });
 
-  // ── Cron — direct API (test-plan 66-68) ───────────────────────────────────
+  // ── Cron — direct API ─────────────────────────────────────────────────────
 
   test("66: cron consumes a completed booking (no cancel)", async ({
     page,
@@ -132,7 +132,7 @@ test.describe("cron + reports + EN smoke (Serbian + English)", () => {
     expect(response.status()).toBe(401);
   });
 
-  // ── English smoke (test-plan EN smoke 1-4) ────────────────────────────────
+  // ── English smoke ─────────────────────────────────────────────────────────
 
   async function setLocaleEn(page: Page) {
     await page.goto("/sign-in");

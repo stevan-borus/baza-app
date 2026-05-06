@@ -10,7 +10,7 @@
  *
  * Note: these helpers still depend on the wall clock. The full anchor-
  * time refactor (freezing browser AND server `Date` to a fixed instant)
- * is tracked in docs/test-plan.md as a follow-up.
+ * is unimplemented — see CONTEXT.md → "Anchor time".
  */
 import type { Page } from "@playwright/test";
 

@@ -2,8 +2,9 @@
 set -euo pipefail
 
 # Load .env.test so EXPO_PUBLIC_API_URL / APP_WEB_URL / BASE_URL get baked
-# into the release JS bundle (those vars are read at bundle time, not at
-# runtime — see "Bundled env vars vs runtime env vars" in the test plan).
+# into the release JS bundle. EXPO_PUBLIC_* is read at bundle time, not at
+# runtime — without these in the env, the release JS will hit whatever was
+# the default when the bundle was built (usually production), not localhost.
 if [ -f .env.test ]; then
   set -a
   # shellcheck disable=SC1091

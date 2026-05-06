@@ -28,7 +28,7 @@ Anti-flake:
 - Each test passes in isolation, or the file's `beforeAll` sets up its dependencies.
 - `testID` convention: `<context>-<element>` (e.g. `client-row-${id}`).
 
-Date fragility: the suite reads the wall clock (seed window + `gt: new Date()` filters + `new Date()` in spec code). It drifts by day-of-week, time-of-day, and cross-spec mutation. Anchor-time refactor tracked in `docs/test-plan.md`. Until it lands, sanity-check that any new date-touching spec stays green if run as-of next Saturday. `page.clock.install()` only freezes the browser, not the Node dev server.
+Date fragility: the suite reads the wall clock (seed window + `gt: new Date()` filters + `new Date()` in spec code). It drifts by day-of-week, time-of-day, and cross-spec mutation. Anchor-time refactor not yet implemented — see CONTEXT.md → "Anchor time". Until it lands, sanity-check that any new date-touching spec stays green if run as-of next Saturday. `page.clock.install()` only freezes the browser, not the Node dev server.
 
 ## Worktrees
 

@@ -9,12 +9,7 @@ const SEED_PASSWORD = "Password123!";
  *
  * The auth-form testIDs (auth-email-input, auth-password-input,
  * auth-submit-button) and tab testIDs (tab-clients, tab-index) are wired in
- * sign-in.tsx + lib/tab-layout-theme.tsx. This spec was written against them.
- *
- * Phase A status: scaffolded but not running. Expo Router's web export
- * throws a tslib interop error on first request — see docs/test-plan.md
- * "Phase 2 blockers" for the diagnosis. The spec stays in tree so Phase 2
- * can re-enable it after the runtime is fixed.
+ * sign-in.tsx + lib/tab-layout-theme.tsx.
  */
 test.describe("auth smoke (Serbian)", () => {
   test.beforeAll(async () => {
