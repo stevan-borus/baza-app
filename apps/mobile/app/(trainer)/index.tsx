@@ -258,6 +258,7 @@ export default function TrainerSchedule() {
                     daySessions.map((session) => (
                       <SessionCard
                         key={session.id}
+                        sessionId={session.id}
                         time={`${dayjs(session.startsAt).format("HH:mm")} - ${dayjs(session.endsAt).format("HH:mm")}`}
                         className={session.classTypeName}
                         trainerName={session.trainerName ?? undefined}
@@ -267,6 +268,7 @@ export default function TrainerSchedule() {
                         status={
                           session.availableSlots > 0 ? "available" : "full"
                         }
+                        attendance={session.attendance ?? null}
                         onPress={() => handleEventPress(session)}
                       />
                     ))
