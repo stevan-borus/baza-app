@@ -153,6 +153,23 @@ export const clientsResponseSchema = z.object({
 });
 export type ClientsResponse = z.infer<typeof clientsResponseSchema>;
 
+export const clientByIdResponseSchema = z.object({
+  success: z.boolean(),
+  client: z.object({
+    id: z.string(),
+    notes: z.nullable(z.string()),
+    packageStatus: clientPackageStatusSchema,
+    user: z.object({
+      id: z.string(),
+      fullName: z.string(),
+      email: z.email(),
+      phone: z.nullable(z.string()),
+      isActive: z.boolean(),
+    }),
+  }),
+});
+export type ClientByIdResponse = z.infer<typeof clientByIdResponseSchema>;
+
 export const reportsSummaryResponseSchema = z.object({
   success: z.boolean(),
   summary: z.object({

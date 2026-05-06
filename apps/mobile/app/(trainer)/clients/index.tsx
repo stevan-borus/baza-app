@@ -11,6 +11,7 @@
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
+import { useRouter } from "expo-router";
 import {
   Pressable,
   RefreshControl,
@@ -70,7 +71,7 @@ type Client = {
   id: string;
   notes?: string | null;
   packageStatus: "active" | "expiring" | "expired" | "paused" | "none";
-  user: { fullName: string; email: string };
+  user: { id: string; fullName: string; email: string };
 };
 
 const STATUS_BADGE: Record<
@@ -86,15 +87,17 @@ const STATUS_BADGE: Record<
 
 function ClientRow({ client }: { client: Client }) {
   const { t } = useTranslation();
-  const [expanded, setExpanded] = useState(false);
+  const router = useRouter();
   const initials = getInitials(client.user.fullName);
   const badge = STATUS_BADGE[client.packageStatus];
 
   return (
     <Pressable
-      onPress={() => setExpanded((v) => !v)}
+      onPress={() => router.push(`/clients/${client.user.id}`)}
       accessibilityRole="button"
+      accessibilityLabel={client.user.fullName}
       className="active:opacity-80"
+      testID={`trainer-client-row-${client.user.id}`}
     >
       <GlassCard size="sm">
         <View className="flex-row items-center gap-3">
@@ -130,18 +133,6 @@ function ClientRow({ client }: { client: Client }) {
             <Badge status={badge.tone}>{t(badge.key)}</Badge>
           ) : null}
         </View>
-
-        {expanded && client.notes ? (
-          <View
-            className="mt-3 pt-3"
-            style={{
-              borderTopWidth: 1,
-              borderTopColor: "rgba(255,255,255,0.06)",
-            }}
-          >
-            <Text className="text-xs text-muted leading-5">{client.notes}</Text>
-          </View>
-        ) : null}
       </GlassCard>
     </Pressable>
   );

@@ -551,7 +551,13 @@
       "seats": "{{count}} mesta",
       "sessionName": "Termin",
       "noClients": "Nema prijavljenih klijenata",
-      "statTotal": "Ukupno"
+      "statTotal": "Ukupno",
+      "profileTitle": "Profil klijenta",
+      "notesLabel": "Beleške",
+      "notesEmpty": "Još nema beleški.",
+      "statusActive": "Aktivan",
+      "statusInactive": "Neaktivan",
+      "notLinkedError": "Možete videti samo klijente prijavljene na vaše termine."
     }
   },
   "notifications": {
