@@ -1,0 +1,49 @@
+appId: ${APP_ID}
+name: "Trainer schedule shows post-cron attendance markers"
+env:
+  EMAIL: "trainer.reformer@e2e.test"
+  PASSWORD: "Password123!"
+  # SESSION_ID + DATE_KEY are injected by run-e2e.sh after the
+  # `past-attended-session` seed-extension call.
+---
+- launchApp:
+    clearState: true
+    clearKeychain: true
+
+- waitForAnimationToEnd
+
+- runFlow:
+    when:
+      visible: ".*Retry.*"
+    file: helpers/dismiss-error.yaml
+
+- runFlow:
+    file: helpers/sign-in.yaml
+
+# Land on trainer schedule (tab-index = trainer/index.tsx).
+- assertVisible: "Raspored"
+
+# Tap yesterday's day on the week strip. Yesterday is always within the
+# visible week (locale week starts Monday, so even Sunday's "yesterday"
+# is Saturday-of-the-same-week).
+- extendedWaitUntil:
+    visible:
+      id: "week-strip-day-${DATE_KEY}"
+    timeout: 15000
+
+- tapOn:
+    id: "week-strip-day-${DATE_KEY}"
+
+- waitForAnimationToEnd
+
+# The past session's SessionCard renders with the attendance markers
+# (`1 dolazak · 1 otkazan`). On iOS, `<Pressable onPress>` collapses its
+# descendants into a single accessibility element so the inner Text and
+# `<View testID>` aren't individually addressable — only the wrapper's
+# testID is. Assert the wrapper exists, which proves the past session
+# rendered on yesterday's day. Phase A Playwright spec 51 verifies the
+# inner attendance/canceled text content directly.
+- extendedWaitUntil:
+    visible:
+      id: "session-card-${SESSION_ID}"
+    timeout: 15000

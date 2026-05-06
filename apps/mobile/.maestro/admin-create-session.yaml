@@ -1,0 +1,34 @@
+appId: ${APP_ID}
+name: "Admin can navigate to dashboard and reach the new-session trigger"
+env:
+  EMAIL: "admin.e2e@example.test"
+  PASSWORD: "Password123!"
+---
+- launchApp:
+    clearState: true
+    clearKeychain: true
+
+- waitForAnimationToEnd
+
+- runFlow:
+    when:
+      visible: ".*Retry.*"
+    file: helpers/dismiss-error.yaml
+
+- runFlow:
+    file: helpers/sign-in.yaml
+
+# The new-session sheet (`AppSheet` -> gorhom `BottomSheetModal`) renders
+# its content in a layer that Maestro's iOS view-hierarchy reader cannot
+# traverse. We verify the trigger button is reachable on the dashboard;
+# the sheet's form behavior is covered by Phase A Playwright web E2E
+# (`admin.spec.ts` specs 21-30).
+- extendedWaitUntil:
+    visible:
+      id: "admin-new-session-button"
+    timeout: 15000
+
+- tapOn:
+    id: "admin-new-session-button"
+
+- waitForAnimationToEnd

@@ -1,0 +1,126 @@
+appId: ${APP_ID}
+name: "Trainer can create, edit, and delete a note"
+tags:
+  - android-only
+env:
+  EMAIL: "trainer.reformer@e2e.test"
+  PASSWORD: "Password123!"
+  NOTE_TEXT: "E2E note original"
+  NOTE_TEXT_EDITED: "E2E note edited"
+---
+# Pre-flow: run-e2e.sh links trainer ↔ client via seed-extension.ts so a
+# linked client appears in the note-client picker.
+- launchApp:
+    clearState: true
+    clearKeychain: true
+
+- waitForAnimationToEnd
+
+- runFlow:
+    when:
+      visible: ".*Retry.*"
+    file: helpers/dismiss-error.yaml
+
+- runFlow:
+    file: helpers/sign-in.yaml
+
+- tapOn:
+    id: "tab-notes"
+- waitForAnimationToEnd
+
+# Open the new-note compose sheet.
+- extendedWaitUntil:
+    visible:
+      id: "trainer-new-note-button"
+    timeout: 15000
+- tapOn:
+    id: "trainer-new-note-button"
+- waitForAnimationToEnd
+
+# Pick a session — first option in the Select.
+- extendedWaitUntil:
+    visible:
+      id: "note-session-select"
+    timeout: 5000
+- tapOn:
+    id: "note-session-select"
+- waitForAnimationToEnd
+- tapOn:
+    id: "note-session-option-.*"
+- waitForAnimationToEnd
+
+# Pick a client — first option in the Select.
+- tapOn:
+    id: "note-client-select"
+- waitForAnimationToEnd
+- tapOn:
+    id: "note-client-option-.*"
+- waitForAnimationToEnd
+
+# Type note body.
+- tapOn:
+    id: "note-text-input"
+- inputText: ${NOTE_TEXT}
+
+- runFlow:
+    when:
+      platform: android
+    commands:
+      - hideKeyboard
+
+- tapOn:
+    id: "note-save-button"
+- waitForAnimationToEnd
+
+- extendedWaitUntil:
+    visible: ${NOTE_TEXT}
+    timeout: 10000
+
+# Edit.
+- tapOn: ${NOTE_TEXT}
+- waitForAnimationToEnd
+
+- extendedWaitUntil:
+    visible:
+      id: "note-edit-text-input"
+    timeout: 5000
+- tapOn:
+    id: "note-edit-text-input"
+- eraseText: 50
+- inputText: ${NOTE_TEXT_EDITED}
+
+- runFlow:
+    when:
+      platform: android
+    commands:
+      - hideKeyboard
+
+- tapOn:
+    id: "note-edit-save-button"
+- waitForAnimationToEnd
+
+- extendedWaitUntil:
+    visible: ${NOTE_TEXT_EDITED}
+    timeout: 10000
+
+# Delete.
+- tapOn: ${NOTE_TEXT_EDITED}
+- waitForAnimationToEnd
+
+- extendedWaitUntil:
+    visible:
+      id: "note-edit-delete-button"
+    timeout: 5000
+- tapOn:
+    id: "note-edit-delete-button"
+- waitForAnimationToEnd
+
+- extendedWaitUntil:
+    visible:
+      id: "note-delete-confirm-button"
+    timeout: 5000
+- tapOn:
+    id: "note-delete-confirm-button"
+- waitForAnimationToEnd
+
+- assertNotVisible: ${NOTE_TEXT_EDITED}

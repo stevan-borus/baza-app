@@ -1,0 +1,7 @@
+appId: ${APP_ID}
+# Dismiss PortalDispatchContext crash screen if it appears
+# Taps "Retry" button and waits for app to recover
+---
+- tapOn:
+    text: ".*Retry.*"
+- waitForAnimationToEnd

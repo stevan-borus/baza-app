@@ -1,0 +1,45 @@
+appId: ${APP_ID}
+# Reusable sign-in subflow
+# Input: ${EMAIL}, ${PASSWORD}
+---
+- waitForAnimationToEnd
+
+- extendedWaitUntil:
+    visible:
+      id: "auth-email-input"
+    timeout: 15000
+
+- tapOn:
+    id: "auth-email-input"
+- inputText: ${EMAIL}
+
+- tapOn:
+    id: "auth-password-input"
+- inputText: ${PASSWORD}
+
+# Android: the soft keyboard covers `auth-submit-button` after typing
+# the password. Maestro's hideKeyboard works on Android but fails on
+# iOS, so gate it on platform.
+- runFlow:
+    when:
+      platform: android
+    commands:
+      - hideKeyboard
+
+- tapOn:
+    id: "auth-submit-button"
+
+# iOS prompts "Save Password?" after a successful sign-in form submit.
+# It's a system dialog that blocks Maestro's interaction tree until
+# dismissed. Tap "Not Now" if it appears (it doesn't on Android).
+- runFlow:
+    when:
+      visible: "Not Now"
+    commands:
+      - tapOn: "Not Now"
+      - waitForAnimationToEnd
+
+- extendedWaitUntil:
+    visible:
+      id: "tab-index"
+    timeout: 15000

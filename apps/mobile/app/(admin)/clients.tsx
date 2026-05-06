@@ -200,6 +200,11 @@ export default function AdminClients() {
               ? setShowCreateClient(true)
               : setShowInviteForm(true)
           }
+          testID={
+            tab === "clients"
+              ? "admin-new-client-button"
+              : "admin-new-invite-button"
+          }
           accessibilityLabel={
             tab === "clients"
               ? t("admin.clients.sheetNewClient")

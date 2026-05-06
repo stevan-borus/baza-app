@@ -1,0 +1,29 @@
+appId: ${APP_ID}
+# Reusable sign-out subflow.
+#
+# In Phase A the dedicated sign-out tab/button was replaced by a global
+# ProfileSheet opened from the header avatar. To sign out: tap the avatar
+# (`open-profile-sheet`), then the sheet's `profile-sign-out-button`. Works
+# from any post-auth screen across all roles, so this flow takes no inputs.
+---
+- extendedWaitUntil:
+    visible:
+      id: "open-profile-sheet"
+    timeout: 15000
+
+- tapOn:
+    id: "open-profile-sheet"
+
+- waitForAnimationToEnd
+
+- extendedWaitUntil:
+    visible:
+      id: "profile-sign-out-button"
+    timeout: 15000
+
+- tapOn:
+    id: "profile-sign-out-button"
+
+- extendedWaitUntil:
+    visible: "Prijava"
+    timeout: 15000

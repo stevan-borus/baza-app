@@ -181,6 +181,7 @@ export default function AdminPackages() {
           icon="plus"
           onPress={() => setShowCreate(true)}
           accessibilityLabel={t("admin.manage.sheetNewPackage")}
+          testID="admin-new-package-button"
         />
       }
     >

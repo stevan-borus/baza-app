@@ -3,7 +3,8 @@
 This plan is the output of a structured grilling session that locked in 32 decisions about test scope, framework, seed shape, and merge ordering. It is the source of truth for the test rewrite work on the `tests` branch.
 
 **Phase A deliverable** (landed): ~220 unit + integration tests on the `tests` branch.
-**Phase 2 deliverable** (landed): 73 Playwright web E2E tests, 0 skipped. **Maestro native parity is Phase B**, deferred to a follow-up branch.
+**Phase 2 deliverable** (landed): 73 Playwright web E2E tests, 0 skipped.
+**Phase B deliverable** (landed): Maestro native E2E — 11/11 flows on iOS (iPhone 17), 15/15 on Android (Pixel_10_Pro emulator).
 
 ## Pre-requisites (must land before tests start)
 
@@ -280,9 +281,136 @@ The whole suite depends on the **wall clock**: the seed creates 2 weeks of recur
 
 Doing this lets us run the suite in CI tomorrow / next week / a year from now and get identical seeds + identical results. Tracked separately because the audit + wiring across 155 callsites is multi-hour work and benefits from being its own focused PR.
 
+## Phase B status (Maestro native parity)
+
+**iOS: 11/11 flows passing on iPhone 17 (~8 min). Android: 15/15 flows passing on Pixel_10_Pro emulator (~16 min).** Each flow runs against a **release build** of the app, talking to the same Expo dev server (port 8010) that the Playwright suite uses, hitting the same `5434/baza_app` test DB.
+
+The original Phase B groundwork from commits `974188f` / `f5a4bec` / `22dadfa` survived only as dangling git objects (the originating branches were reset). Recovery used `git show <sha>:<path>` per file, then adapted each to the Phase A app: rich-seed users, current testIDs, Phase A's edit/delete UI, and the platform-specific bundle IDs (`com.steva.borus.baza-pilates` iOS, `com.steva.borus.bazapilates` Android).
+
+### Scope: iOS skips in-sheet content; Android exercises it fully
+
+The current bottom-sheet implementation (gorhom `BottomSheetModal` via `components/ui/sheet.tsx`) renders content in a portal layer. **iOS XCUITest cannot traverse this portal** even with `snapshotKeyHonorModalViews: true` set in the workspace config — text and testIDs inside an open `<AppSheet>` are visible on screen but invisible to Maestro's view-hierarchy reader. **Android UiAutomator can traverse it.**
+
+This produces a deliberate split:
+- **iOS flows** verify the path up to and including the sheet trigger (navigate → trigger button reachable → tap opens sheet). Inside-sheet behavior is covered by Phase A Playwright web-E2E.
+- **Android-only flows** (file prefix `android-`) exercise the full create→edit→delete cycle inside open sheets — ClassType / Room / PackageType / trainer-note. These run on Android only; the runner's bulk loop skips `android-*` files when `PLATFORM=ios`.
+
+### Specs by flow
+
+#### iOS (11 flows, ~8 min)
+
+| File | Pass | Skip | Coverage |
+|---|---:|---:|---|
+| `auth-admin.yaml` | 1 | 0 | Admin sign-in lands on dashboard. |
+| `auth-trainer.yaml` | 1 | 0 | Trainer sign-in lands on schedule. |
+| `auth-client.yaml` | 1 | 0 | Client sign-in lands on home. |
+| `admin-create-session.yaml` | 1 | 0 | Reach the new-session trigger on the admin dashboard. |
+| `admin-invite-client.yaml` | 1 | 0 | Switch to Invites segment, reach the new-invite trigger. |
+| `client-calendar.yaml` | 1 | 0 | Navigate to client calendar. |
+| `client-notifications.yaml` | 1 | 0 | Navigate to client notifications screen. |
+| `trainer-notes.yaml` | 1 | 0 | Navigate to notes tab, reach the new-note trigger. |
+| `trainer-per-client-profile.yaml` | 1 | 0 | Tap a linked client row → per-client profile renders. |
+| `trainer-post-cron-attendance.yaml` | 1 | 0 | Past attended session card renders on yesterday's day. |
+| `password-reset-request.yaml` + `password-reset.yaml` | 1 | 0 | Request token (captured via `E2E_RESET_TOKEN_FILE`) → reset screen accepts the captured token. (Stops at token entry; new-password submit hits an iOS autofill quirk — see "Known issues".) |
+| **Total** | **11** | **0** | |
+
+#### Android (15 flows, ~16 min)
+
+The 11 iOS-parity flows above plus 4 Android-only CRUD flows that exercise content inside open `<AppSheet>` portals (which XCUITest can't reach). Android also runs the password-reset flow's full new-password → submit → "Lozinka ažurirana" cycle (gated by `runFlow when: platform: android`).
+
+| File | Pass | Skip | Coverage |
+|---|---:|---:|---|
+| The 11 iOS flows above | 11 | 0 | Same as iOS, with platform-gated `hideKeyboard` to dismiss the soft keyboard before submit-button taps. Password-reset additionally completes the new-password submit cycle. |
+| `android-admin-class-type-crud.yaml` | 1 | 0 | Create → edit → delete a ClassType, all inside the bottom-sheet form. |
+| `android-admin-room-crud.yaml` | 1 | 0 | Create → edit → delete a StudioRoom, all inside the bottom-sheet form. |
+| `android-admin-package-type-crud.yaml` | 1 | 0 | Create → edit → delete a PackageType, including the `package-class-type-select` ClassType picker. |
+| `android-trainer-note-edit-delete.yaml` | 1 | 0 | Create → edit → delete a trainer note (uses regex `id:` matching for session/client option testIDs). Reuses the trainer↔client link setup from `trainer-per-client-profile.yaml`. |
+| **Total** | **15** | **0** | |
+
+### Cross-platform YAML model
+
+Flow YAMLs are platform-agnostic; per-platform behavior is injected by the runner.
+
+- **`appId: ${APP_ID}`** in every flow + helper. The runner sets `APP_ID` to `IOS_APP_ID` (`com.steva.borus.baza-pilates`) or `ANDROID_APP_ID` (`com.steva.borus.bazapilates`) and passes it via `-e APP_ID=…` on every `maestro test` invocation.
+- **Platform-gated steps** use `runFlow when: platform: android` blocks. Examples:
+  - `helpers/sign-in.yaml` calls `hideKeyboard` after typing the password (Android soft keyboard hides `auth-submit-button`; iOS `hideKeyboard` errors hard).
+  - `password-reset-request.yaml` calls `hideKeyboard` before tapping `reset-send-link-button` (same reason).
+  - `password-reset.yaml`'s new-password → submit → "Lozinka ažurirana" cycle runs only on Android (iOS truncates due to `textContentType="newPassword"` autofill).
+- **`android-*` file prefix** marks flows whose assertions live entirely inside an open bottom-sheet (XCUITest blind spot). The runner's bulk loop skips them when `PLATFORM != "android"`.
+
+### Resolved infrastructure choices
+
+- **Bundle ID corrected.** Old flows used `com.baza.pilates`; the actual `app.json` ships `com.steva.borus.baza-pilates` (iOS) and `com.steva.borus.bazapilates` (Android). All flows + scripts + `.env.test` updated to match.
+- **Bash sources `.env.test` directly.** `dotenv-cli` was assumed by the recovered runner but isn't installed; `set -a; source .env.test; set +a` is functionally equivalent and adds no new dev-dep. Quoting added to `RESEND_FROM_EMAIL` so the email's `<...>` doesn't trigger bash redirection.
+- **Migrations, never `db push`.** The recovered runner called `prisma db push --force-reset`. Rewritten to a new `pnpm test:e2e:prepare` script that runs `prisma migrate reset --force` → `patch-test-db.ts` → `seed-e2e.ts`. Matches the project rule (see `~/.claude/projects/.../memory/feedback_prisma_migrations.md`).
+- **Per-flow DB reset in bulk runs.** When `run-e2e.sh ios` runs every flow back-to-back, each flow gets a fresh seed before it runs (mirrors Phase A's per-spec-file Playwright reset). Single-flow runs reset once at script start. Failures don't halt the loop — a red/green summary lands at the end.
+- **`snapshotKeyHonorModalViews: true` workspace config.** `apps/mobile/.maestro/config.yaml` enables iOS modal traversal in the XCUITest snapshot. Required for the sheet trigger flows to reach the `+` HeaderIconButton (rendered via `ScreenContainerRaw`'s `rightSlot`). Maestro 2.x doesn't auto-load workspace config, so the runner passes `--config .maestro/config.yaml` to every `maestro test` call.
+- **`tslib` and `babel-preset-expo` are now direct deps of `apps/mobile`.** Without them, the iOS release bundle phase fails: `metro.config.js` calls `require.resolve('tslib/tslib.es6.mjs')` (workaround for an Expo-web SSR + framer-motion CJS-interop crash) and Metro's transform-worker calls `require('babel-preset-expo')` — both unreachable from `apps/mobile/node_modules` under pnpm hoisting.
+- **Sign-out helper rewritten.** Phase A replaced the dedicated tab/button with a global ProfileSheet; the helper now taps `open-profile-sheet` (header avatar) → `profile-sign-out-button`. Currently unused by any flow but left in for future expansion.
+- **Dynamic IDs flow through env.** `seed-extension.ts` emits JSON with `sessionId`/`dateKey`; the runner parses it and forwards the values to Maestro via `-e SESSION_ID=... DATE_KEY=...`, so flows can reference IDs that didn't exist when the YAML was written.
+- **Reset-token capture wired into `sendResetEmail`.** When `E2E_RESET_TOKEN_FILE` is set, the API writes the raw token to a JSON file alongside sending the email, and `get-latest-reset-token.ts` reads it back during the password-reset run. Vitest integration test (`password-reset-token-capture.test.ts`) asserts the wiring.
+- **iOS "Save Password?" dialog dismissed in `sign-in.yaml`.** After the form submits successfully, iOS prompts to save credentials; the helper taps "Not Now" if the dialog appears (no-op on Android).
+- **`appId: ${APP_ID}` in every YAML.** iOS bundle ID is hyphenated (`baza-pilates`); the Android package squashes it (`bazapilates`). Hardcoding either broke the cross-platform run. The runner sources `.env.test` (which carries `APP_ID_IOS` / `APP_ID_ANDROID`), picks the right one for the target platform, and forwards it via `-e APP_ID=…` on every `maestro test` invocation.
+- **`hideKeyboard` is platform-gated.** On Android, the soft keyboard covers `auth-submit-button` after typing a password (and `reset-send-link-button` after typing the reset email). Calling `hideKeyboard` before the tap fixes it. On iOS, `hideKeyboard` fails hard with "Couldn't hide the keyboard," so the call lives inside `runFlow when: platform: android` blocks.
+- **`android-*` file prefix gates Android-only flows.** The bulk-loop in `run-e2e.sh` skips files whose basename starts with `android-` when `PLATFORM != "android"`. The 4 flows that exercise content inside open `<AppSheet>` portals (XCUITest blind spot) carry that prefix.
+- **Pixel_10_Pro AVD on Android 17.** The historical default `Pixel_3a_API_34_extension_level_7_arm64-v8a` is no longer present on this machine; `.env.test` overrides `ANDROID_AVD=Pixel_10_Pro`. The Android branch of `build-e2e.sh` defaults `ANDROID_HOME` / `ANDROID_SDK_ROOT` to `~/Library/Android/sdk` if neither is set in the shell, so `gradlew` finds the SDK without a separate `local.properties` file (which `expo prebuild --clean` would clobber every build anyway).
+- **Gradle JVM heap raised for D8.** The Android branch of `build-e2e.sh` exports `GRADLE_OPTS="-Xmx6144m -XX:MaxMetaspaceSize=1024m"`. Without this, `mergeExtDexRelease` OOMs partway through bundling Skia + Reanimated + gesture-handler + keyboard-controller + Prisma into one classes.dex.
+- **`expo prebuild --clean` wipes both `ios/` and `android/`.** Switching platforms requires rebuilding the target platform's app. The build scripts are idempotent against an empty native dir; just re-run `bash scripts/test/build-e2e.sh ios` or `… android` before `run-e2e.sh`.
+
+### testIDs added during Phase B
+
+These were missing from Phase A (where Playwright could fall back to role/text). All non-load-bearing — pure additions.
+
+- `admin-new-session-button` — `+` HeaderIconButton on admin dashboard.
+- `admin-new-class-type-button` — `+` on the ClassTypes screen.
+- `admin-new-room-button` — `+` on the Rooms screen.
+- `admin-new-package-button` — `+` on the Packages tab.
+- `admin-new-client-button`, `admin-new-invite-button` — `+` on the Clients screen (depends on segment).
+- `trainer-new-note-button` — `+` on the trainer Notes tab.
+- `admin-quick-class-types`, `admin-quick-rooms` — admin dashboard quick-action rows.
+- `HeaderIconButton` itself now accepts an optional `testID` prop.
+
+### How to run
+
+```sh
+cd apps/mobile
+# Build (only when native code changes; expo prebuild --clean wipes the
+# other platform's native dir, so switching platforms = rebuild).
+bash scripts/test/build-e2e.sh ios        # ~3-5 min
+bash scripts/test/build-e2e.sh android    # ~3-5 min (Gradle daemon kept warm, much faster on rebuild)
+
+# Run (full pre-flight + run all flows).
+bash scripts/test/run-e2e.sh ios          # iOS:     11 flows  (~8 min on iPhone 17)
+bash scripts/test/run-e2e.sh android      # Android: 15 flows  (~16 min on Pixel_10_Pro)
+
+# One flow at a time.
+bash scripts/test/run-e2e.sh ios trainer-notes.yaml
+bash scripts/test/run-e2e.sh android android-admin-class-type-crud.yaml
+```
+
+The runner sources `.env.test`, runs `pnpm test:e2e:prepare`, reuses or starts the API server on 8010, boots `iPhone 17` (override with `IOS_SIMULATOR_NAME`) or `Pixel_10_Pro` (override with `ANDROID_AVD`), warm-launches + terminates the app, then runs Maestro per flow.
+
+### Phase B artifacts in tree
+
+- `apps/mobile/.maestro/` — 11 cross-platform flow YAMLs + 4 Android-only flow YAMLs (`android-*`) + 3 helpers + `config.yaml`.
+- `apps/mobile/scripts/test/build-e2e.sh` + `run-e2e.sh` — release build + orchestrator.
+- `apps/mobile/scripts/test/patch-test-db.ts` — adds `pgcrypto` extension + UUID/`updatedAt` defaults that the schema doesn't generate.
+- `apps/mobile/scripts/test/seed-extension.ts` — CLI bridge that lets the runner trigger `linkTrainerToClient` / `createPastAttendedSession` from `test/e2e/helpers/db.ts` between flows.
+- `apps/mobile/scripts/test/get-latest-reset-token.ts` — reads the captured reset token JSON.
+- `apps/mobile/lib/server/e2e-reset-token-capture.ts` — capture/read functions; only writes when `E2E_RESET_TOKEN_FILE` is set, no production cost.
+- `apps/mobile/test/integration/api/password-reset-token-capture.test.ts` — Vitest integration test asserting the wiring.
+
+### Known issues / follow-ups
+
+- **gorhom-bottom-sheet content invisible to Maestro on iOS only.** XCUITest cannot traverse the portal layer; UiAutomator can. The 4 `android-*` CRUD flows cover the inside-sheet behavior on Android, and Phase A Playwright covers it on web. On iOS the Maestro suite stops at the sheet trigger. To unblock iOS, swap to a `UIPresentationController`-backed sheet primitive.
+- **iOS `textContentType="newPassword"` autofill conflict.** On iOS `password-reset.yaml` only goes as far as asserting the captured token in the input; the new-password input + submit cycle hits an iOS strong-password-suggestion that blanks the Maestro-typed value. Android (which ignores `textContentType`) runs the full cycle via a `runFlow when: platform: android` block. Phase A Playwright (`auth-extended.spec.ts`) covers the full cycle on web. To re-enable on iOS in Maestro, drop `textContentType` on the reset PasswordInput in test builds.
+- **`<Pressable onPress>` collapses descendants in iOS accessibility.** `trainer-post-cron-attendance.yaml` asserts the SessionCard testID (the wrapper) rather than the inner `1 dolazak` / `1 otkazan` text content. Phase A Playwright spec 51 verifies the inner text directly. Android UiAutomator does not collapse — the same flow works on Android without changes, but the assertion strategy is shared because the wrapper-testID approach is sufficient on both.
+- **WeekStrip date assumption.** `trainer-post-cron-attendance.yaml` taps yesterday's day on the WeekStrip directly. With a Monday-start locale week, yesterday is always in the visible week — but a Saturday→Sunday roll could put yesterday in the previous week, requiring `tapOn: { id: "week-strip-prev" }` first. Anchor-time refactor would resolve this on both platforms at once.
+- **PortalDispatchContext helper retained.** `helpers/dismiss-error.yaml` is referenced from every flow as a precaution. If a future Reanimated config bump confirms the crash is gone, the `runFlow when:` block can be removed across all flow YAMLs.
+
 ## Out of scope for Phase A
 
-- Maestro native parity — Phase B follow-up.
+- Maestro native parity — landed in Phase B (see "Phase B status" above).
 - UI integration layer (formerly `jest.ui.config.ts`) — dropped per Q30; component sanity covered implicitly by E2E.
 - Zod schema unit tests — dropped (user feedback).
 - Soft delete, trainer specialty, payment-processor v2 — not test-plan concerns.
@@ -307,49 +435,13 @@ Local runtimes:
 
 ---
 
-## Maestro setup — preserved from prior work for Phase B
+## Maestro reference (pitfalls + architecture)
 
-Maestro setup was hard-won. The original `tests` branch worked through several pitfalls before reaching a runnable state. Phase A defers Maestro entirely, but Phase B will need this. **A backup of the working Maestro flows + scripts is at `/tmp/baza-tests-snapshot/` (outside git, transient — copy back before reboot).** The original files also exist in git history of the pre-reset `tests` branch (look for commits `974188f`, `f5a4bec`, `22dadfa`).
+This section is reference for future Maestro work — what the runner is doing under the hood, and the pitfalls that cost real time the first time around. The current Phase B state (counts, file list, how to run) lives in **Phase B status** above.
 
 ### Architecture overview
 
 Maestro tests run against a **release build** of the native app on a real simulator/emulator, talking to the Expo dev web server (port 8010) which serves the API routes. There is **no separate API process** — Expo's web export hosts both the JS bundle and the `/api/*` handlers.
-
-### Files & locations
-
-```
-apps/mobile/.maestro/
-├── config.yaml                  # appId + E2E env vars (admin/trainer/client creds)
-├── helpers/
-│   ├── sign-in.yaml             # reusable sign-in subflow (uses ${EMAIL} / ${PASSWORD})
-│   ├── sign-out.yaml            # reusable sign-out (uses ${SIGN_OUT_TAB})
-│   └── dismiss-error.yaml       # taps "Retry" on Reanimated PortalDispatchContext crash
-├── auth-admin.yaml              # 9 flows total covering auth/admin/trainer/client/password reset
-├── auth-trainer.yaml
-├── auth-client.yaml
-├── admin-create-session.yaml
-├── admin-invite-client.yaml
-├── client-calendar.yaml
-├── client-notifications.yaml
-├── trainer-notes.yaml
-├── password-reset-request.yaml  # split into two flows: request-token + use-token
-└── password-reset.yaml
-```
-
-```
-apps/mobile/scripts/test/
-├── build-e2e.sh                 # one-time native build (iOS xcodebuild OR Android gradle)
-├── run-e2e.sh                   # full pre-flight + Maestro run (per-platform)
-├── seed-e2e.ts                  # seeds e2e users + a default PackageType (Phase A rewrites this)
-├── patch-test-db.ts             # post-prisma-push patches (e.g. extension installs)
-└── get-latest-reset-token.ts    # reads the latest reset token from DB for password-reset flow
-```
-
-```
-apps/mobile/.env.test            # E2E_ADMIN_EMAIL/_PASSWORD, _TRAINER_*, _CLIENT_*,
-                                 # RESEND/EXPO/ADMIN_BOOTSTRAP tokens,
-                                 # INVITE_TOKEN_TTL_HOURS=48, RESET_TOKEN_TTL_MINUTES=30
-```
 
 ### Build flow (`scripts/test/build-e2e.sh`)
 
@@ -372,58 +464,25 @@ The build is **separate from the test run** because it's slow (~3-5 min iOS, lon
 
 This is the meat — it orchestrates DB prep, API server, simulator/emulator, app install, and Maestro execution.
 
-1. **`pnpm test:e2e:prepare`** — runs `prisma db push --force-reset`, then `patch-test-db.ts`, then `seed-e2e.ts`. Fresh DB every run.
+1. **`pnpm test:e2e:prepare`** — runs `prisma migrate reset --skip-seed --force`, then `patch-test-db.ts`, then `seed-e2e.ts`. Fresh DB every run.
 2. **API server: reuse-or-start.** `curl /api/health` to detect; if absent, `CI=1 expo start --web --port 8010` in background. Trap on EXIT kills it. **Pitfall:** the password-reset flow needs a DB-fresh state, so the script force-restarts the API server only for that specific flow (`FORCE_API_SERVER_RESTART=true`).
-3. **iOS install:** `xcrun simctl boot "iPhone 16"` (idempotent), `simctl install booted <APP_PATH>`, warm-launch + terminate so first-run JIT doesn't race Maestro's first interactions. **Pitfall:** without the warm launch, the first action timed out waiting for hydration.
+3. **iOS install:** `xcrun simctl boot "$IOS_SIMULATOR_NAME"` (defaults to `iPhone 17`, idempotent), `simctl install booted <APP_PATH>`, warm-launch + terminate so first-run JIT doesn't race Maestro's first interactions. **Pitfall:** without the warm launch, the first action timed out waiting for hydration.
 4. **Android install:** boots the AVD if not running (default `Pixel_3a_API_34_extension_level_7_arm64-v8a`), waits for `boot_completed=1` via `adb shell getprop`, **also waits for `pm list packages`** (separate from boot — package manager comes up later), then `adb reverse tcp:8010 tcp:8010` so the emulator's localhost reaches the host's API server, then `adb install -r`. **Pitfall:** if package manager is unhealthy, reboots and retries once.
-5. **Maestro test:**
-   - Single flow: `maestro test --platform $PLATFORM .maestro/$FLOW`.
-   - All flows: `maestro test --platform $PLATFORM .maestro/`.
-   - Password reset is special: split into two flows. First runs `password-reset-request.yaml` to *trigger* a reset email (which writes a token to DB). Then `get-latest-reset-token.ts` reads that token. Then `password-reset.yaml` runs with `-e RESET_TOKEN=<captured>` to consume it. **Pitfall:** Maestro can't peek at the DB; you must externalise the token-extraction step.
+5. **Per-flow setup hook.** Some flows need fixtures the rich seed deliberately omits (trainer↔client booking link, past attended session). `apply_flow_setup` in the runner shells out to `scripts/test/seed-extension.ts` to create them, and forwards any IDs it returns to Maestro via `-e`.
+6. **Maestro test:**
+   - Single flow: `bash scripts/test/run-e2e.sh ios <flow.yaml>`.
+   - All flows: `bash scripts/test/run-e2e.sh ios` — iterates flow files alphabetically, re-running `pnpm test:e2e:prepare` between each so DB drift never crosses flows. Skips `config.yaml` and the `password-reset*.yaml` pair (handled separately at the end).
+   - Password reset: split into two flows. The first triggers a reset email; `sendResetEmail` honors `E2E_RESET_TOKEN_FILE` and writes the raw token to that JSON file. `get-latest-reset-token.ts` reads it back, and the second flow runs with `-e RESET_TOKEN=<captured>` to consume it. **Pitfall:** Maestro can't peek at the DB; you must externalise the token-extraction step.
 
-### Common pitfalls encountered (to avoid in Phase B)
+### Common pitfalls
 
-1. **Reanimated v4 crash on launch — "PortalDispatchContext" undefined.** Causes a red-screen "Retry" UI. Mitigation: every flow that does `launchApp` runs `helpers/dismiss-error.yaml` conditionally on retry text being visible. **The deeper fix is a Reanimated config thing in `babel.config.js` / `metro.config.js` — verify those configs are stable on the merged `dev` before relying on the helper.**
+1. **Reanimated v4 crash on launch — "PortalDispatchContext" undefined.** Causes a red-screen "Retry" UI. Mitigation: every flow that does `launchApp` runs `helpers/dismiss-error.yaml` conditionally on retry text being visible. The deeper fix is a Reanimated config thing in `babel.config.js` / `metro.config.js` — verify those configs are stable on `dev` before relying on the helper.
 2. **Detox was incompatible with RN New Architecture + Reanimated v4.** Already removed (commit `7916d11`). Maestro was chosen as the replacement specifically because it works against release builds without instrumentation.
 3. **Bundled env vars vs runtime env vars.** `EXPO_PUBLIC_*` is read at *bundle time*, not at runtime. The Xcode build phase needs the env vars exported via `ios/.xcode.env.local` or the release JS will have the wrong API URL baked in.
 4. **iOS sim "first launch" race.** Warm-launch + terminate the app before Maestro starts so JIT/precompile is done.
 5. **Android cleartext.** `usesCleartextTraffic="true"` must be set or emulator HTTP requests to `localhost:8010` are silently dropped.
 6. **Android `pm list packages` race.** Boot completion is not the same as package manager readiness. Both must be polled.
-7. **Test IDs everywhere on auth + key actions.** All flows rely on testIDs (`auth-email-input`, `auth-password-input`, `auth-submit-button`, `tab-index`, `tab-settings`, `sign-out-button`, `password-reset-token-input`, etc.). The Phase A Playwright work should preserve / extend these so Phase B Maestro flows can reuse the same selectors.
+7. **`tslib` must be a direct dep of `apps/mobile`.** `metro.config.js` calls `require.resolve('tslib/tslib.es6.mjs')` to fix a CJS-interop crash on Expo web SSR. Workspace pnpm hoisting put `tslib` only at the workspace root, which the mobile package can't reach — the iOS release bundle phase fails with `Cannot find module 'tslib/tslib.es6.mjs'`. Adding `tslib` to `apps/mobile/package.json` symlinks it into `apps/mobile/node_modules` and resolves both.
 8. **State clearing.** `clearState: true, clearKeychain: true` on `launchApp` is mandatory for cross-flow isolation — otherwise prior session cookies leak.
 9. **Animation timing.** `waitForAnimationToEnd` after every navigation, plus `extendedWaitUntil` with explicit timeouts (15s) for hydration-bound elements.
-
-### Phase B execution prompts
-
-When dispatching Phase B Maestro work in a future session, the agent's brief should include:
-
-- "Restore from snapshot at `/tmp/baza-tests-snapshot/` if present, OR recover from git history of the original `tests` branch — look for commits `974188f` (test infra), `f5a4bec` (Maestro flows), `22dadfa` (Maestro scripts)."
-- "Update `seed-e2e.ts` to produce the **rich seed** described in this plan (the matrix from Q12), not the minimal three-user seed it had originally."
-- "Mirror Phase A's Playwright tests one-for-one as Maestro flows, reusing the existing `helpers/sign-in.yaml` / `helpers/sign-out.yaml` patterns."
-- "Verify the Reanimated 'PortalDispatchContext' crash is gone before adding new flows — if `dev`'s Reanimated config no longer triggers it, the `dismiss-error.yaml` retry helper can be removed from new flows."
-- "Always run `build-e2e.sh` before `run-e2e.sh` after a fresh checkout — there's no auto-rebuild."
-
-### `.env.test` template (for reference)
-
-```
-APP_WEB_URL=http://127.0.0.1:8010
-BASE_URL=http://127.0.0.1:8010
-EXPO_PUBLIC_API_URL=http://127.0.0.1:8010
-DATABASE_URL=postgresql://postgres:postgres@localhost:5434/baza_app?schema=public
-APP_ID_IOS=com.baza.pilates
-APP_ID_ANDROID=com.baza.pilates
-E2E_ADMIN_EMAIL=admin.e2e@example.test
-E2E_ADMIN_PASSWORD=Password123!
-E2E_TRAINER_EMAIL=trainer.e2e@example.test
-E2E_TRAINER_PASSWORD=Password123!
-E2E_CLIENT_EMAIL=client.e2e@example.test
-E2E_CLIENT_PASSWORD=Password123!
-E2E_CLIENT_RESET_PASSWORD=Password123!Reset1
-E2E_RESET_TOKEN_FILE=.maestro/.tmp/password-reset-token.json
-RESEND_API_KEY=test-resend-key
-RESEND_FROM_EMAIL=Baza Tests <no-reply@example.test>
-EXPO_ACCESS_TOKEN=test-access-token
-API_ADMIN_BOOTSTRAP_TOKEN=test-admin-bootstrap-token
-INVITE_TOKEN_TTL_HOURS=48
-RESET_TOKEN_TTL_MINUTES=30
-```
+10. **`source .env.test` requires quoted values containing spaces or shell metachars.** `RESEND_FROM_EMAIL=Baza Tests <no-reply@example.test>` triggers bash redirection on `<`. Quote it: `RESEND_FROM_EMAIL="Baza Tests <no-reply@example.test>"`.

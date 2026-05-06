@@ -282,6 +282,7 @@ export default function TrainerNotes() {
           icon="plus"
           onPress={() => setShowCreate(true)}
           accessibilityLabel={t("trainer.notes.newNote")}
+          testID="trainer-new-note-button"
         />
       }
     >

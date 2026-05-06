@@ -1,0 +1,48 @@
+appId: ${APP_ID}
+name: "Trainer can view a linked client's per-client profile"
+env:
+  EMAIL: "trainer.reformer@e2e.test"
+  PASSWORD: "Password123!"
+---
+# Pre-flow: run-e2e.sh seeds the trainer↔client booking link via
+# scripts/test/seed-extension.ts so the linked client appears.
+- launchApp:
+    clearState: true
+    clearKeychain: true
+
+- waitForAnimationToEnd
+
+- runFlow:
+    when:
+      visible: ".*Retry.*"
+    file: helpers/dismiss-error.yaml
+
+- runFlow:
+    file: helpers/sign-in.yaml
+
+- tapOn:
+    id: "tab-clients"
+
+- waitForAnimationToEnd
+
+# Linked client's full name from the rich seed.
+- extendedWaitUntil:
+    visible: "Active Reformer Client"
+    timeout: 15000
+
+- tapOn: "Active Reformer Client"
+
+- waitForAnimationToEnd
+
+# The per-client profile screen carries this testID even on success or
+# forbidden — the assertion only confirms we routed to the profile.
+- extendedWaitUntil:
+    visible:
+      id: "trainer-client-profile"
+    timeout: 15000
+
+# Linked + happy path: client identity should be visible (not the
+# forbidden-error card). Profile shows full name in the hero.
+- assertVisible: "Active Reformer Client"
+- assertNotVisible:
+    id: "trainer-client-profile-error"

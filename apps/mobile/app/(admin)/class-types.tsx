@@ -100,6 +100,7 @@ export default function AdminSettingsClassTypes() {
           icon="plus"
           onPress={() => setShowCreate(true)}
           accessibilityLabel={t("admin.manage.sheetNewClassType")}
+          testID="admin-new-class-type-button"
         />
       }
     >

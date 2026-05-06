@@ -1,0 +1,22 @@
+appId: ${APP_ID}
+name: "Trainer can sign in and see schedule"
+env:
+  EMAIL: "trainer.reformer@e2e.test"
+  PASSWORD: "Password123!"
+---
+- launchApp:
+    clearState: true
+    clearKeychain: true
+
+- waitForAnimationToEnd
+
+- runFlow:
+    when:
+      visible: ".*Retry.*"
+    file: helpers/dismiss-error.yaml
+
+- runFlow:
+    file: helpers/sign-in.yaml
+
+# Trainer index uses ScreenContainerRaw title={t("tabs.schedule")} → "Raspored".
+- assertVisible: "Raspored"

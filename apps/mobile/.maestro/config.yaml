@@ -1,0 +1,4 @@
+# Workspace config (Maestro 2.x).
+platform:
+  ios:
+    snapshotKeyHonorModalViews: true

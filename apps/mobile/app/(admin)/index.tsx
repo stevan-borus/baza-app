@@ -357,6 +357,7 @@ export default function AdminSchedule() {
           icon="plus"
           onPress={() => setShowCreate(true)}
           accessibilityLabel={t("admin.schedule.newSession")}
+          testID="admin-new-session-button"
         />
       }
     >
@@ -435,6 +436,7 @@ export default function AdminSchedule() {
         >
           <View className="mx-5 border-t border-b border-glass-border">
             <Pressable
+              testID="admin-quick-class-types"
               onPress={() => router.push("/(admin)/class-types")}
               android_ripple={null}
               className="flex-row items-center justify-between py-4 active:opacity-60"
@@ -449,6 +451,7 @@ export default function AdminSchedule() {
             </Pressable>
             <View className="bg-glass-border" style={{ height: 1 }} />
             <Pressable
+              testID="admin-quick-rooms"
               onPress={() => router.push("/(admin)/rooms")}
               android_ripple={null}
               className="flex-row items-center justify-between py-4 active:opacity-60"

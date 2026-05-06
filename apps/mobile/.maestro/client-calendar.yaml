@@ -1,0 +1,26 @@
+appId: ${APP_ID}
+name: "Client can navigate to calendar"
+env:
+  EMAIL: "client.active.reformer@e2e.test"
+  PASSWORD: "Password123!"
+---
+- launchApp:
+    clearState: true
+    clearKeychain: true
+
+- waitForAnimationToEnd
+
+- runFlow:
+    when:
+      visible: ".*Retry.*"
+    file: helpers/dismiss-error.yaml
+
+- runFlow:
+    file: helpers/sign-in.yaml
+
+- tapOn:
+    id: "tab-calendar"
+
+- waitForAnimationToEnd
+
+- assertVisible: "Kalendar"

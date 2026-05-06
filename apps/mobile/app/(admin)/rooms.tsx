@@ -79,6 +79,7 @@ export default function AdminSettingsRooms() {
           icon="plus"
           onPress={() => setShowCreate(true)}
           accessibilityLabel={t("admin.manage.sheetNewRoom")}
+          testID="admin-new-room-button"
         />
       }
     >

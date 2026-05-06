@@ -1,0 +1,112 @@
+appId: ${APP_ID}
+name: "Admin can create, edit, and delete a ClassType"
+tags:
+  - android-only
+env:
+  EMAIL: "admin.e2e@example.test"
+  PASSWORD: "Password123!"
+  CLASS_TYPE_NAME: "E2E ClassType A"
+  CLASS_TYPE_NAME_EDITED: "E2E ClassType A Edited"
+---
+- launchApp:
+    clearState: true
+    clearKeychain: true
+
+- waitForAnimationToEnd
+
+- runFlow:
+    when:
+      visible: ".*Retry.*"
+    file: helpers/dismiss-error.yaml
+
+- runFlow:
+    file: helpers/sign-in.yaml
+
+# Navigate from the admin dashboard to the ClassTypes screen.
+- extendedWaitUntil:
+    visible:
+      id: "admin-quick-class-types"
+    timeout: 15000
+- tapOn:
+    id: "admin-quick-class-types"
+- waitForAnimationToEnd
+
+# Create.
+- extendedWaitUntil:
+    visible:
+      id: "admin-new-class-type-button"
+    timeout: 15000
+- tapOn:
+    id: "admin-new-class-type-button"
+- waitForAnimationToEnd
+
+- extendedWaitUntil:
+    visible:
+      id: "class-type-name-input"
+    timeout: 5000
+- tapOn:
+    id: "class-type-name-input"
+- inputText: ${CLASS_TYPE_NAME}
+
+- runFlow:
+    when:
+      platform: android
+    commands:
+      - hideKeyboard
+
+- tapOn:
+    id: "class-type-create-submit"
+- waitForAnimationToEnd
+
+- extendedWaitUntil:
+    visible: ${CLASS_TYPE_NAME}
+    timeout: 10000
+
+# Edit.
+- tapOn: ${CLASS_TYPE_NAME}
+- waitForAnimationToEnd
+
+- extendedWaitUntil:
+    visible:
+      id: "class-type-edit-name-input"
+    timeout: 5000
+- tapOn:
+    id: "class-type-edit-name-input"
+- eraseText: 50
+- inputText: ${CLASS_TYPE_NAME_EDITED}
+
+- runFlow:
+    when:
+      platform: android
+    commands:
+      - hideKeyboard
+
+- tapOn:
+    id: "class-type-edit-save-button"
+- waitForAnimationToEnd
+
+- extendedWaitUntil:
+    visible: ${CLASS_TYPE_NAME_EDITED}
+    timeout: 10000
+
+# Delete.
+- tapOn: ${CLASS_TYPE_NAME_EDITED}
+- waitForAnimationToEnd
+
+- extendedWaitUntil:
+    visible:
+      id: "class-type-edit-delete-button"
+    timeout: 5000
+- tapOn:
+    id: "class-type-edit-delete-button"
+- waitForAnimationToEnd
+
+- extendedWaitUntil:
+    visible:
+      id: "class-type-delete-confirm-button"
+    timeout: 5000
+- tapOn:
+    id: "class-type-delete-confirm-button"
+- waitForAnimationToEnd
+
+- assertNotVisible: ${CLASS_TYPE_NAME_EDITED}
