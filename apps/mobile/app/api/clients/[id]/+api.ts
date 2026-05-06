@@ -1,3 +1,4 @@
+import type { ClientPackageStatus } from "@baza/types";
 import { UserRole } from "@/generated/prisma";
 import { requireRole } from "@/lib/server/auth-guards";
 import { fail, ok } from "@/lib/server/http";
@@ -6,6 +7,87 @@ import { trainerLinkedToClientProfile } from "@/lib/server/trainer-scope";
 import { tryCatch } from "@/lib/server/try-catch";
 
 type RouteParams = Record<string, string>;
+
+const EXPIRING_WINDOW_DAYS = 14;
+
+/** Returns a single client's profile. Trainers must be linked via an active booking. */
+export async function GET(request: Request, { id }: RouteParams) {
+  const guard = await requireRole(request, [UserRole.ADMIN, UserRole.TRAINER]);
+  if (!guard.ok) return guard.response;
+
+  const clientProfile = await prisma.clientProfile.findUnique({
+    where: { userId: id },
+    select: {
+      id: true,
+      notes: true,
+      user: {
+        select: {
+          id: true,
+          fullName: true,
+          email: true,
+          phone: true,
+          isActive: true,
+        },
+      },
+      packages: { select: { sessionsRemaining: true, expiresAt: true } },
+      packagePauses: {
+        where: {
+          startsAt: { lte: new Date() },
+          endsAt: { gte: new Date() },
+        },
+        select: { id: true },
+        take: 1,
+      },
+    },
+  });
+  if (!clientProfile) return fail("Client not found", 404);
+
+  // Trainers may only see clients they are linked to via active bookings.
+  if (guard.user.role === UserRole.TRAINER) {
+    const allowed = await trainerLinkedToClientProfile(
+      guard.user.id,
+      clientProfile.id,
+    );
+    if (!allowed) return fail("Forbidden", 403);
+  }
+
+  // Compute the same package status used by the list endpoint.
+  // Priority: paused (overrides) > active > expiring > expired > none.
+  const now = new Date();
+  const expiringThreshold = new Date(
+    now.getTime() + EXPIRING_WINDOW_DAYS * 24 * 60 * 60 * 1000,
+  );
+
+  let packageStatus: ClientPackageStatus = "none";
+  if (clientProfile.packagePauses.length > 0) {
+    packageStatus = "paused";
+  } else {
+    let hasExpired = false;
+    for (const p of clientProfile.packages) {
+      const isExpired = p.expiresAt < now || p.sessionsRemaining <= 0;
+      if (isExpired) {
+        hasExpired = true;
+        continue;
+      }
+      if (p.expiresAt <= expiringThreshold) {
+        if (packageStatus !== "active") packageStatus = "expiring";
+      } else {
+        packageStatus = "active";
+      }
+    }
+    if (packageStatus === "none" && hasExpired) packageStatus = "expired";
+  }
+
+  return ok({
+    success: true,
+    client: {
+      id: clientProfile.id,
+      notes: clientProfile.notes,
+      packageStatus,
+      user: clientProfile.user,
+    },
+  });
+}
 
 export async function PATCH(request: Request, { id }: RouteParams) {
   const guard = await requireRole(request, [UserRole.ADMIN, UserRole.TRAINER]);

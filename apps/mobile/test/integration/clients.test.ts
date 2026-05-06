@@ -17,7 +17,7 @@ vi.mock("@/lib/server/auth-guards", async () => {
 });
 
 import { GET, POST } from "@/app/api/clients/+api";
-import { PATCH } from "@/app/api/clients/[id]/+api";
+import { GET as GET_BY_ID, PATCH } from "@/app/api/clients/[id]/+api";
 import { prisma } from "@/lib/server/prisma";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -96,6 +96,7 @@ describe("clients API", () => {
       email: "empty@test.local",
       fullName: "Empty Emma",
     });
+    void empty;
 
     await prisma.clientPackage.create({
       data: {
@@ -146,6 +147,7 @@ describe("clients API", () => {
       email: "stranger@test.local",
       fullName: "Stranger",
     });
+    void stranger;
     const session = await prisma.session.create({
       data: {
         classTypeId: reformer.id,
@@ -347,5 +349,140 @@ describe("clients API", () => {
       where: { id: linked.profile.id },
     });
     expect(reloadedProfile?.notes).toBe("Prefers afternoon classes");
+  });
+});
+
+describe("GET /api/clients/[id]", () => {
+  async function seedForGet() {
+    const admin = await prisma.user.create({
+      data: { email: "admin-get@test.local", fullName: "Admin", role: "ADMIN" },
+    });
+    const trainerLinked = await prisma.user.create({
+      data: { email: "trainer-linked@test.local", fullName: "Linked Trainer", role: "TRAINER" },
+    });
+    const trainerOther = await prisma.user.create({
+      data: { email: "trainer-other@test.local", fullName: "Other Trainer", role: "TRAINER" },
+    });
+    const clientUser = await prisma.user.create({
+      data: { email: "client-get@test.local", fullName: "The Client", role: "CLIENT" },
+    });
+    const clientProfile = await prisma.clientProfile.create({
+      data: { userId: clientUser.id, notes: "Has tight hamstrings" },
+    });
+    const classType = await prisma.classType.create({
+      data: { name: "Reformer Get", maxClients: 6, durationMins: 60 },
+    });
+    const session = await prisma.session.create({
+      data: {
+        classTypeId: classType.id,
+        trainerUserId: trainerLinked.id,
+        startsAt: new Date(Date.now() - DAY_MS),
+        endsAt: new Date(Date.now() - DAY_MS + 60 * 60 * 1000),
+        capacity: 6,
+        isActive: true,
+        status: "SCHEDULED",
+      },
+    });
+    await prisma.booking.create({
+      data: { sessionId: session.id, clientProfileId: clientProfile.id },
+    });
+
+    return { admin, trainerLinked, trainerOther, clientUser, clientProfile };
+  }
+
+  function buildRequest(id: string) {
+    return new Request(`http://test.local/api/clients/${id}`);
+  }
+
+  beforeEach(async () => {
+    await resetDb();
+  });
+  afterAll(async () => {
+    await resetDb();
+    await prisma.$disconnect();
+  });
+
+  it("returns 200 with client data when caller is admin", async () => {
+    const { admin, clientUser, clientProfile } = await seedForGet();
+    setMockUser({
+      id: admin.id,
+      role: "ADMIN",
+      email: admin.email,
+      isActive: true,
+      clientProfile: null,
+    });
+
+    const res = await GET_BY_ID(buildRequest(clientUser.id), { id: clientUser.id });
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json.success).toBe(true);
+    expect(json.client.id).toBe(clientProfile.id);
+    expect(json.client.user.id).toBe(clientUser.id);
+    expect(json.client.user.email).toBe("client-get@test.local");
+    expect(json.client.notes).toBe("Has tight hamstrings");
+  });
+
+  it("returns 200 when trainer is linked to the client via active booking", async () => {
+    const { trainerLinked, clientUser } = await seedForGet();
+    setMockUser({
+      id: trainerLinked.id,
+      role: "TRAINER",
+      email: trainerLinked.email,
+      isActive: true,
+      clientProfile: null,
+    });
+
+    const res = await GET_BY_ID(buildRequest(clientUser.id), { id: clientUser.id });
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json.client.user.id).toBe(clientUser.id);
+  });
+
+  it("returns 403 when trainer is not linked to the client", async () => {
+    const { trainerOther, clientUser } = await seedForGet();
+    setMockUser({
+      id: trainerOther.id,
+      role: "TRAINER",
+      email: trainerOther.email,
+      isActive: true,
+      clientProfile: null,
+    });
+
+    const res = await GET_BY_ID(buildRequest(clientUser.id), { id: clientUser.id });
+    expect(res.status).toBe(403);
+    const json = await res.json();
+    expect(json.success).toBe(false);
+    expect(json.client).toBeUndefined();
+  });
+
+  it("returns 403 when caller is a client", async () => {
+    const { clientUser, clientProfile } = await seedForGet();
+    setMockUser({
+      id: clientUser.id,
+      role: "CLIENT",
+      email: clientUser.email,
+      isActive: true,
+      clientProfile: { id: clientProfile.id },
+    });
+
+    const res = await GET_BY_ID(buildRequest(clientUser.id), { id: clientUser.id });
+    expect(res.status).toBe(403);
+  });
+
+  it("returns 404 when target client does not exist", async () => {
+    const { admin } = await seedForGet();
+    setMockUser({
+      id: admin.id,
+      role: "ADMIN",
+      email: admin.email,
+      isActive: true,
+      clientProfile: null,
+    });
+
+    const res = await GET_BY_ID(
+      buildRequest("00000000-0000-0000-0000-000000000000"),
+      { id: "00000000-0000-0000-0000-000000000000" },
+    );
+    expect(res.status).toBe(404);
   });
 });

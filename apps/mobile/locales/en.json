@@ -553,7 +553,13 @@
       "seats": "{{count}} seats",
       "sessionName": "Session",
       "noClients": "No registered clients",
-      "statTotal": "Total"
+      "statTotal": "Total",
+      "profileTitle": "Client profile",
+      "notesLabel": "Notes",
+      "notesEmpty": "No notes yet.",
+      "statusActive": "Active",
+      "statusInactive": "Inactive",
+      "notLinkedError": "You can only view clients booked into your sessions."
     }
   },
   "notifications": {
