@@ -6,6 +6,12 @@ import { sharedEnv } from "@/lib/env.shared";
 // Local availability schema — duplicates @baza/types but uses z.coerce.date()
 // so the wire format (ISO strings) parses into Date objects for `dayjs(...)`
 // consumers. Kept local to avoid Metro's flaky cross-package HMR.
+const attendanceSchema = z.object({
+  consumedCount: z.number(),
+  canceledCount: z.number(),
+  totalBookings: z.number(),
+});
+
 const availabilityResponseSchema = z.object({
   success: z.boolean(),
   month: z.string(),
@@ -25,9 +31,13 @@ const availabilityResponseSchema = z.object({
       availableSlots: z.number(),
       recurringScheduleId: z.nullable(z.string()).optional(),
       isActive: z.boolean().optional(),
+      // Post-cron attendance markers — present on past sessions only.
+      attendance: z.nullable(attendanceSchema).optional(),
     }),
   ),
 });
+
+export type SessionAttendance = z.infer<typeof attendanceSchema>;
 
 const sessionSchema = z.object({
   id: z.string(),

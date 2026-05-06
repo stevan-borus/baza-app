@@ -71,6 +71,55 @@ export async function GET(request: Request) {
     orderBy: { startsAt: "asc" },
   });
 
+  // Attendance markers (post-cron): only for past sessions. The
+  // SessionConsumption cron creates one row per active booking that found
+  // an eligible package, so:
+  //   consumedCount   → SessionConsumption rows for the session
+  //   canceledCount   → bookings where canceledAt is set
+  //   totalBookings   → all bookings (active + canceled)
+  // Future sessions get `attendance: null` so the UI can omit the marker.
+  const now = new Date();
+  const pastSessionIds = sessions
+    .filter((s: (typeof sessions)[number]) => s.endsAt < now)
+    .map((s: (typeof sessions)[number]) => s.id);
+
+  const attendanceBySessionId = new Map<
+    string,
+    { consumedCount: number; canceledCount: number; totalBookings: number }
+  >();
+
+  if (pastSessionIds.length > 0) {
+    const [consumptions, allBookings] = await Promise.all([
+      prisma.sessionConsumption.groupBy({
+        by: ["sessionId"],
+        where: { sessionId: { in: pastSessionIds } },
+        _count: { _all: true },
+      }),
+      prisma.booking.findMany({
+        where: { sessionId: { in: pastSessionIds } },
+        select: { sessionId: true, canceledAt: true },
+      }),
+    ]);
+
+    for (const id of pastSessionIds) {
+      attendanceBySessionId.set(id, {
+        consumedCount: 0,
+        canceledCount: 0,
+        totalBookings: 0,
+      });
+    }
+    for (const row of consumptions) {
+      const entry = attendanceBySessionId.get(row.sessionId);
+      if (entry) entry.consumedCount = row._count._all;
+    }
+    for (const booking of allBookings) {
+      const entry = attendanceBySessionId.get(booking.sessionId);
+      if (!entry) continue;
+      entry.totalBookings += 1;
+      if (booking.canceledAt) entry.canceledCount += 1;
+    }
+  }
+
   let visibleSessions = sessions;
   if (guard.user.role === UserRole.CLIENT) {
     const clientProfileId = guard.user.clientProfile?.id;
@@ -135,6 +184,7 @@ export async function GET(request: Request) {
         availableSlots: Math.max(session.capacity - session._count.bookings, 0),
         recurringScheduleId: session.recurringScheduleId,
         isActive: visibleToClients,
+        attendance: attendanceBySessionId.get(session.id) ?? null,
       };
     }),
   });
