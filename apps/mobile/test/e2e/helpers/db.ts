@@ -542,6 +542,92 @@ export async function findLatestResetTokenFor(userEmail: string) {
   });
 }
 
+/**
+ * Build a past session with one consumed booking + one canceled booking, so
+ * the trainer schedule has post-cron attendance markers to render. Returns
+ * the session id and the YYYY-MM-DD key for the day the spec should
+ * navigate to.
+ */
+export async function createPastAttendedSession(input: {
+  trainerEmail: string;
+  classTypeName: string;
+  consumedClientEmail: string;
+  canceledClientEmail: string;
+  startsAt: Date;
+}) {
+  const [trainer, classType, consumedUser, canceledUser, room] =
+    await Promise.all([
+      db().user.findUnique({
+        where: { email: input.trainerEmail.toLowerCase() },
+        select: { id: true },
+      }),
+      db().classType.findFirst({
+        where: { name: input.classTypeName },
+        select: { id: true },
+      }),
+      db().user.findUnique({
+        where: { email: input.consumedClientEmail.toLowerCase() },
+        select: { clientProfile: { select: { id: true } } },
+      }),
+      db().user.findUnique({
+        where: { email: input.canceledClientEmail.toLowerCase() },
+        select: { clientProfile: { select: { id: true } } },
+      }),
+      db().studioRoom.findFirst({ select: { id: true } }),
+    ]);
+  if (
+    !trainer ||
+    !classType ||
+    !consumedUser?.clientProfile ||
+    !canceledUser?.clientProfile ||
+    !room
+  ) {
+    throw new Error("Missing seed entities for past attended session");
+  }
+
+  const endsAt = new Date(input.startsAt.getTime() + 60 * 60 * 1000);
+  const session = await db().session.create({
+    data: {
+      classTypeId: classType.id,
+      trainerUserId: trainer.id,
+      roomId: room.id,
+      startsAt: input.startsAt,
+      endsAt,
+      capacity: 6,
+      status: "SCHEDULED",
+    },
+    select: { id: true },
+  });
+
+  // Consumed booking: active, has SessionConsumption row.
+  await db().booking.create({
+    data: {
+      sessionId: session.id,
+      clientProfileId: consumedUser.clientProfile.id,
+    },
+  });
+  await db().sessionConsumption.create({
+    data: {
+      sessionId: session.id,
+      clientProfileId: consumedUser.clientProfile.id,
+    },
+  });
+
+  // Canceled booking: canceledAt set, no SessionConsumption row.
+  await db().booking.create({
+    data: {
+      sessionId: session.id,
+      clientProfileId: canceledUser.clientProfile.id,
+      canceledAt: new Date(input.startsAt.getTime() - 30 * 60 * 1000),
+    },
+  });
+
+  const yyyy = input.startsAt.getFullYear();
+  const mm = String(input.startsAt.getMonth() + 1).padStart(2, "0");
+  const dd = String(input.startsAt.getDate()).padStart(2, "0");
+  return { sessionId: session.id, dateKey: `${yyyy}-${mm}-${dd}` };
+}
+
 export async function disconnect() {
   if (prismaClient) {
     await prismaClient.$disconnect();

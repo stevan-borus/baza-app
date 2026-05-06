@@ -1,6 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import {
   countTrainerNotesFor,
+  createPastAttendedSession,
   disconnect,
   getUserIdByEmail,
   linkTrainerToClient,
@@ -29,10 +30,7 @@ function nextReformerDate(): string {
 }
 
 /**
- * Trainer (Serbian). Test-plan items 40-51.
- *
- * Item 51 is still skipped — post-cron attendance state needs new API
- * surface on the trainer schedule. Tracked in docs/test-plan.md.
+ * Trainer (Serbian). Test-plan items 40-51, all green.
  */
 test.describe("trainer (Serbian)", () => {
   test.beforeAll(async () => {
@@ -439,9 +437,41 @@ test.describe("trainer (Serbian)", () => {
     ).toBeVisible({ timeout: 5_000 });
   });
 
-  test.skip("51: trainer schedule shows post-cron attendance markers", () => {
-    // TODO: SessionCard has no attendance status variant. Add to the UI
-    // and re-enable.
+  test("51: trainer schedule shows post-cron attendance markers", async ({
+    page,
+  }) => {
+    // Create a past session yesterday with one consumed booking + one
+    // canceled booking, so the trainer's schedule should render the
+    // attendance line under the SessionCard.
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    yesterday.setHours(10, 0, 0, 0);
+
+    const { sessionId, dateKey } = await createPastAttendedSession({
+      trainerEmail: REFORMER_TRAINER_EMAIL,
+      classTypeName: "Reformer pilates",
+      consumedClientEmail: ACTIVE_REFORMER_CLIENT_EMAIL,
+      canceledClientEmail: "client.active.energy@e2e.test",
+      startsAt: yesterday,
+    });
+
+    await signInAsReformerTrainer(page);
+
+    // Navigate to yesterday on the week strip.
+    await page
+      .locator(`[data-testid="week-strip-day-${dateKey}"]:visible`)
+      .first()
+      .dispatchEvent("click");
+
+    await expect(
+      page.getByTestId(`session-card-attendance-${sessionId}`),
+    ).toBeVisible({ timeout: 10_000 });
+    await expect(
+      page.getByTestId(`session-card-attended-${sessionId}`),
+    ).toBeVisible();
+    await expect(
+      page.getByTestId(`session-card-canceled-${sessionId}`),
+    ).toBeVisible();
   });
 
   // Suppress the unused-import lint for the energy trainer constant.

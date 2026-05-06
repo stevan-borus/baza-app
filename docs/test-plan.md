@@ -3,7 +3,7 @@
 This plan is the output of a structured grilling session that locked in 32 decisions about test scope, framework, seed shape, and merge ordering. It is the source of truth for the test rewrite work on the `tests` branch.
 
 **Phase A deliverable** (landed): ~220 unit + integration tests on the `tests` branch.
-**Phase 2 deliverable** (landed): 71 Playwright web E2E tests, 2 deliberately skipped pending API/UI work. **Maestro native parity is Phase B**, deferred to a follow-up branch.
+**Phase 2 deliverable** (landed): 73 Playwright web E2E tests, 0 skipped. **Maestro native parity is Phase B**, deferred to a follow-up branch.
 
 ## Pre-requisites (must land before tests start)
 
@@ -213,7 +213,7 @@ i18n: tests import locale JSON and reference keys via the actual translated stri
 
 ## Phase 2 status (E2E layer)
 
-**72 specs passing, 1 skipped, 0 failing.** Full E2E suite runs in ~5 minutes locally.
+**73 specs passing, 0 skipped, 0 failing.** Full E2E suite runs in ~5 minutes locally.
 
 ### Resolved infrastructure issues
 
@@ -235,17 +235,11 @@ Each of these blocked at least one test class on the `tests` branch and was fixe
 | `auth-smoke.spec.ts` | 4 | 0 | Admin/trainer/client sign-in + wrong password. |
 | `auth-extended.spec.ts` | 7 | 0 | Sign-out, invite create + redeem (happy / expired / used), password reset request + expired. |
 | `client.spec.ts` | 12 | 0 | Home, calendar, book + cancel before/after cutoff, full session → waitlist button, notifications, language switch, sign-out, no-package filter. |
-| `trainer.spec.ts` | 11 | 1 | Schedule scoping, clients-list scoping, note create / edit / delete, by-client + by-session filters, search, 403 for unlinked client, non-linked client profile blocked. Skipped: 51 (no post-cron attendance markers — needs new API surface). |
+| `trainer.spec.ts` | 12 | 0 | Schedule scoping, clients-list scoping, note create / edit / delete, by-client + by-session filters, search, 403 for unlinked client, non-linked client profile blocked, post-cron attendance markers on past sessions. |
 | `admin.spec.ts` | 28 | 0 | Catalog CRUD (ClassType / PackageType / Room create + edit + delete), single-session create / edit / cancel, recurring series create / edit single occurrence / edit whole series / cancel single / delete whole, room + trainer double-book conflicts, invite, client list status badges, pause, deactivate, all four billing flows. |
 | `cron-reports-en.spec.ts` | 9 | 0 | Reports sections render, cron consumption (consume / skip pre-cutoff / 401 without token), 4 EN-smoke. |
 | `datetime-picker-smoke.spec.ts` | 1 | 0 | Verifies the new web DateTimePicker mounts the calendar + time input and round-trips a date. |
-| **Total** | **72** | **1** | |
-
-### Skipped specs and why
-
-The remaining skip is blocked by missing API surface, not by the test layer.
-
-- **Spec 51 — trainer schedule shows post-cron attendance markers.** No endpoint surfaces per-booking `SessionConsumption` or cancellation state on past sessions. Adding this would require a new API surface (e.g., extending `/api/sessions` to include per-session attendance counts, or a dedicated `/api/trainer/attendance` endpoint).
+| **Total** | **73** | **0** | |
 
 ### How to run
 
