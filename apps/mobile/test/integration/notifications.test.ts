@@ -1,4 +1,5 @@
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
+import type { Prisma } from "@/generated/prisma";
 import { setMockUser } from "./auth-mock";
 import { resetDb } from "./setup-db";
 
