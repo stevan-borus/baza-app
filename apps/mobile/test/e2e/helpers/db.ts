@@ -280,6 +280,31 @@ export async function countSessionsByStatus(status: "SCHEDULED" | "CANCELED" | "
   return db().session.count({ where: { status } });
 }
 
+export async function countRecurringSchedules() {
+  return db().recurringSchedule.count();
+}
+
+export async function findFutureSeriesSession(scheduleNamePart: string) {
+  // Find a future session whose recurringSchedule's class type contains the
+  // given name fragment. Useful when the spec doesn't know the schedule ID
+  // ahead of time.
+  return db().session.findFirst({
+    where: {
+      startsAt: { gt: new Date() },
+      status: "SCHEDULED",
+      recurringScheduleId: { not: null },
+      classType: { name: { contains: scheduleNamePart } },
+    },
+    orderBy: { startsAt: "asc" },
+    select: {
+      id: true,
+      recurringScheduleId: true,
+      startsAt: true,
+      classType: { select: { name: true } },
+    },
+  });
+}
+
 /**
  * Schedule a future session for a given trainer + class type, starting in
  * `hoursFromNow` hours. Useful when the rich seed's earliest session is

@@ -573,6 +573,7 @@ export default function AdminSchedule() {
             </Text>
             <View className="flex-row gap-2">
               <Button
+                testID="session-create-mode-once"
                 className="flex-1"
                 size="small"
                 variant={!isRecurring ? "primary" : "secondary"}
@@ -581,6 +582,7 @@ export default function AdminSchedule() {
                 {t("admin.schedule.once")}
               </Button>
               <Button
+                testID="session-create-mode-recurring"
                 className="flex-1"
                 size="small"
                 variant={isRecurring ? "primary" : "secondary"}
@@ -671,6 +673,7 @@ export default function AdminSchedule() {
             {isRecurring ? (
               <>
                 <Input
+                  testID="session-create-week-count-input"
                   placeholder={t("admin.schedule.placeholderWeekCount")}
                   keyboardType="numeric"
                   value={newSession.weekCount}
@@ -833,6 +836,7 @@ export default function AdminSchedule() {
           {showEdit?.recurringScheduleId ? (
             <View className="flex-row gap-2">
               <Button
+                testID="session-edit-scope-session"
                 className="flex-1"
                 size="small"
                 variant={editScope === "session" ? "primary" : "secondary"}
@@ -841,6 +845,7 @@ export default function AdminSchedule() {
                 {t("admin.schedule.editScopeSession")}
               </Button>
               <Button
+                testID="session-edit-scope-series"
                 className="flex-1"
                 size="small"
                 variant={editScope === "series" ? "primary" : "secondary"}
@@ -1130,6 +1135,7 @@ export default function AdminSchedule() {
               })()}
 
               <Button
+                testID="series-edit-save-button"
                 disabled={
                   updateSeriesMutation.isPending ||
                   !showEdit?.recurringScheduleId ||
@@ -1167,6 +1173,7 @@ export default function AdminSchedule() {
                 {t("admin.schedule.saveSeriesChanges")}
               </Button>
               <Button
+                testID="series-edit-delete-button"
                 variant="danger"
                 disabled={
                   deleteSeriesMutation.isPending ||
@@ -1189,6 +1196,7 @@ export default function AdminSchedule() {
         </View>
       </AppSheet>
       <ConfirmSheet
+        testID="series-delete-confirm-button"
         open={confirmDeleteSeries}
         onOpenChange={setConfirmDeleteSeries}
         title={t("confirm.deleteSeriesTitle")}

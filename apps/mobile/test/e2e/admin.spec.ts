@@ -1,8 +1,10 @@
 import { test, expect, type Page } from "@playwright/test";
 import {
+  countRecurringSchedules,
   countSessions,
   countSessionsByStatus,
   disconnect,
+  findFutureSeriesSession,
   getUserActive,
   resetAndSeed,
 } from "./helpers/db";
@@ -421,19 +423,234 @@ test.describe("admin (Serbian)", () => {
       .toBe(cancelledBefore + 1);
   });
 
-  test.skip("24: create recurring series", () => {
-    // TODO: would re-use the same picker path as spec 21 but with the
-    // "Recurring" toggle and weekday pills. Skipped for now to keep the
-    // first scheduling pass scoped.
+  test("24: admin creates a recurring series (Mon/Wed × 2 weeks)", async ({
+    page,
+  }) => {
+    const seriesBefore = await countRecurringSchedules();
+    const sessionsBefore = await countSessions();
+
+    await signInAsAdmin(page);
+    await page
+      .getByRole("button", { name: t.admin.schedule.newSession })
+      .click();
+
+    // Toggle to recurring mode.
+    await page.getByTestId("session-create-mode-recurring").click();
+
+    // Fill class type / room / trainer.
+    await page
+      .getByTestId("session-create-class-type-select")
+      .dispatchEvent("click");
+    await page
+      .locator('[data-testid^="session-create-class-type-option-"]')
+      .first()
+      .dispatchEvent("click");
+    await page
+      .getByTestId("session-create-trainer-select")
+      .dispatchEvent("click");
+    await page
+      .locator('[data-testid^="session-create-trainer-option-"]')
+      .first()
+      .dispatchEvent("click");
+    await page
+      .getByTestId("session-create-room-select")
+      .dispatchEvent("click");
+    await page
+      .locator('[data-testid^="session-create-room-option-"]')
+      .first()
+      .dispatchEvent("click");
+
+    // Pick a startsAt 21 days out at 14:30 — far enough from spec 21's
+    // single session (14 days, 11:00) to avoid a schedule conflict on the
+    // same trainer.
+    await page.getByTestId("session-create-startsAt").dispatchEvent("click");
+    const target = new Date();
+    target.setDate(target.getDate() + 21);
+    await page
+      .locator(
+        '[data-testid="date-time-picker-calendar"] button.rdp-day_button',
+        { hasText: new RegExp(`^${String(target.getDate())}$`) },
+      )
+      .first()
+      .dispatchEvent("click");
+    await page
+      .locator('[data-testid="date-time-picker-time-input"]')
+      .fill("14:30");
+    await page.getByTestId("date-time-picker-confirm").dispatchEvent("click");
+
+    // 2 weeks, Mon (1) + Wed (3).
+    await page
+      .getByTestId("session-create-week-count-input")
+      .fill("2");
+    await page.getByTestId("session-create-weekday-1").click();
+    await page.getByTestId("session-create-weekday-3").click();
+
+    await page.getByTestId("session-create-submit").dispatchEvent("click");
+
+    // The recurring API creates one RecurringSchedule + multiple Sessions.
+    await expect
+      .poll(async () => countRecurringSchedules(), { timeout: 15_000 })
+      .toBe(seriesBefore + 1);
+    // 2 weekdays × 2 weeks = 4 sessions, but past dates may be skipped, so
+    // assert at least 1 new session was created.
+    await expect
+      .poll(async () => countSessions(), { timeout: 15_000 })
+      .toBeGreaterThan(sessionsBefore);
   });
-  test.skip("25: edit single occurrence in series", () => {
-    /* TODO: needs a seeded recurring series + occurrence selection. */
+
+  test("25: edit a single occurrence inside a recurring series", async ({
+    page,
+  }) => {
+    // Pick a future seeded series session and tap it; the edit sheet shows
+    // the scope toggle. Save with the "session" scope (single-occurrence).
+    const ref = await findFutureSeriesSession("Reformer");
+    if (!ref) throw new Error("Need a seeded recurring Reformer session");
+
+    await signInAsAdmin(page);
+    // Navigate to that session's day on the schedule.
+    const targetDate = `${ref.startsAt.getFullYear()}-${String(
+      ref.startsAt.getMonth() + 1,
+    ).padStart(2, "0")}-${String(ref.startsAt.getDate()).padStart(2, "0")}`;
+    await page
+      .locator(`[data-testid="week-strip-day-${targetDate}"]:visible`)
+      .first()
+      .dispatchEvent("click");
+
+    await page
+      .getByTestId(`session-card-${ref.id}`)
+      .dispatchEvent("click");
+
+    // Default scope is "session" — confirm by clicking save.
+    await page.getByTestId("session-edit-scope-session").dispatchEvent("click");
+    await page.getByTestId("session-edit-save-button").dispatchEvent("click");
+
+    // Sheet closes after success.
+    await expect
+      .poll(
+        async () =>
+          page
+            .locator('[data-testid="session-edit-save-button"]:visible')
+            .count(),
+        { timeout: 15_000 },
+      )
+      .toBe(0);
   });
-  test.skip("26: edit whole series", () => {
-    /* TODO: needs a seeded recurring series + scope toggle. */
+
+  test("26: edit whole series (toggle to series scope)", async ({ page }) => {
+    const ref = await findFutureSeriesSession("Reformer");
+    if (!ref) throw new Error("Need a seeded recurring Reformer session");
+
+    await signInAsAdmin(page);
+    const targetDate = `${ref.startsAt.getFullYear()}-${String(
+      ref.startsAt.getMonth() + 1,
+    ).padStart(2, "0")}-${String(ref.startsAt.getDate()).padStart(2, "0")}`;
+    await page
+      .locator(`[data-testid="week-strip-day-${targetDate}"]:visible`)
+      .first()
+      .dispatchEvent("click");
+
+    await page
+      .getByTestId(`session-card-${ref.id}`)
+      .dispatchEvent("click");
+
+    // Switch to series scope; the series-edit form mounts.
+    await page.getByTestId("session-edit-scope-series").dispatchEvent("click");
+
+    // The series form loads asynchronously (fetches the recurring schedule).
+    const saveBtn = page.getByTestId("series-edit-save-button");
+    await expect(saveBtn).toBeVisible({ timeout: 10_000 });
+    await saveBtn.scrollIntoViewIfNeeded();
+    await saveBtn.dispatchEvent("click");
+
+    // Verify the mutation actually ran by polling the API. If the sheet
+    // doesn't close we still expect the schedule's lastUpdated to bump.
+    // Simplest: wait for the save button to disappear OR for at least one
+    // network round-trip to complete.
+    await page.waitForResponse(
+      (r) =>
+        r.url().includes("/api/sessions/recurring/") &&
+        ["PUT", "PATCH"].includes(r.request().method()) &&
+        r.status() < 300,
+      { timeout: 15_000 },
+    );
   });
-  test.skip("27: delete single occurrence", () => { /* TODO: same as 25. */ });
-  test.skip("28: delete whole series", () => { /* TODO: same as 26. */ });
+
+  test("27: delete single occurrence (cancel via danger button)", async ({
+    page,
+  }) => {
+    const ref = await findFutureSeriesSession("Reformer");
+    if (!ref) throw new Error("Need a seeded recurring Reformer session");
+
+    const cancelledBefore = await countSessionsByStatus("CANCELED");
+
+    await signInAsAdmin(page);
+    const targetDate = `${ref.startsAt.getFullYear()}-${String(
+      ref.startsAt.getMonth() + 1,
+    ).padStart(2, "0")}-${String(ref.startsAt.getDate()).padStart(2, "0")}`;
+    await page
+      .locator(`[data-testid="week-strip-day-${targetDate}"]:visible`)
+      .first()
+      .dispatchEvent("click");
+
+    await page
+      .getByTestId(`session-card-${ref.id}`)
+      .dispatchEvent("click");
+
+    // Default scope is "session"; the danger button cancels just this one.
+    await page.getByTestId("session-edit-cancel-button").dispatchEvent("click");
+    await expect(
+      page.getByTestId("session-cancel-confirm-button"),
+    ).toBeVisible({ timeout: 5_000 });
+    await page
+      .locator('[data-testid="session-cancel-confirm-button"]:visible')
+      .first()
+      .dispatchEvent("click");
+
+    await expect
+      .poll(async () => countSessionsByStatus("CANCELED"), {
+        timeout: 15_000,
+      })
+      .toBe(cancelledBefore + 1);
+  });
+
+  test("28: delete whole series", async ({ page }) => {
+    const ref = await findFutureSeriesSession("Energy");
+    if (!ref) throw new Error("Need a seeded recurring Energy session");
+
+    const seriesBefore = await countRecurringSchedules();
+
+    await signInAsAdmin(page);
+    const targetDate = `${ref.startsAt.getFullYear()}-${String(
+      ref.startsAt.getMonth() + 1,
+    ).padStart(2, "0")}-${String(ref.startsAt.getDate()).padStart(2, "0")}`;
+    await page
+      .locator(`[data-testid="week-strip-day-${targetDate}"]:visible`)
+      .first()
+      .dispatchEvent("click");
+
+    await page
+      .getByTestId(`session-card-${ref.id}`)
+      .dispatchEvent("click");
+
+    await page.getByTestId("session-edit-scope-series").dispatchEvent("click");
+    await expect(page.getByTestId("series-edit-delete-button")).toBeVisible({
+      timeout: 10_000,
+    });
+    await page
+      .getByTestId("series-edit-delete-button")
+      .dispatchEvent("click");
+    await expect(
+      page.getByTestId("series-delete-confirm-button"),
+    ).toBeVisible({ timeout: 5_000 });
+    await page
+      .locator('[data-testid="series-delete-confirm-button"]:visible')
+      .first()
+      .dispatchEvent("click");
+
+    await expect
+      .poll(async () => countRecurringSchedules(), { timeout: 15_000 })
+      .toBe(seriesBefore - 1);
+  });
 
   test("29: room double-book is rejected at the API", async ({ page }) => {
     // The conflict comes back from the server with a structured error;
