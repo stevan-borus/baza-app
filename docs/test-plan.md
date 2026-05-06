@@ -1,8 +1,9 @@
-# Baza Pilates — Test Plan (Phase A)
+# Baza Pilates — Test Plan (Phase A + Phase 2)
 
 This plan is the output of a structured grilling session that locked in 32 decisions about test scope, framework, seed shape, and merge ordering. It is the source of truth for the test rewrite work on the `tests` branch.
 
-**Phase A deliverable:** ~220 tests covering Playwright web E2E (Serbian + English smoke) + Vitest integration + Vitest unit. **Maestro native parity is Phase B**, deferred to a follow-up branch.
+**Phase A deliverable** (landed): ~220 unit + integration tests on the `tests` branch.
+**Phase 2 deliverable** (landed): 71 Playwright web E2E tests, 2 deliberately skipped pending API/UI work. **Maestro native parity is Phase B**, deferred to a follow-up branch.
 
 ## Pre-requisites (must land before tests start)
 
@@ -212,47 +213,60 @@ i18n: tests import locale JSON and reference keys via the actual translated stri
 
 ## Phase 2 status (E2E layer)
 
-44 specs passing, 28 skipped, 0 failing.
+**71 specs passing, 2 skipped, 0 failing.** Full E2E suite runs in ~5 minutes locally.
 
-### Resolved
+### Resolved infrastructure issues
 
-- **tslib interop error in Expo Router web export.** Root cause: tslib's `package.json` `exports` map routes the `node` import condition (which Expo CLI sets when bundling for SSR) to `./modules/index.js`, whose `import tslib from '../tslib.js'` + destructure pattern fails under Metro's CJS interop because the CJS `tslib.js` does not set `module.exports.default`. First consumer to hit this on `/sign-in` was `framer-motion@6.5.1` (pulled in by `moti`). Fix: a `resolver.resolveRequest` shim in `apps/mobile/metro.config.js` redirecting every `'tslib'` request to `tslib/tslib.es6.mjs`.
+Each of these blocked at least one test class on the `tests` branch and was fixed in the course of writing the suite. They are not test-only fixes — they were real product or platform bugs that the E2E layer surfaced first.
+
+- **tslib interop error in Expo Router web export.** tslib's `package.json` `exports` map routes the `node` import condition (which Expo CLI sets when bundling for SSR) to `./modules/index.js`, whose `import tslib from '../tslib.js'` + destructure pattern fails under Metro's CJS interop because the CJS `tslib.js` does not set `module.exports.default`. First consumer to hit this on `/sign-in` was `framer-motion@6.5.1` (pulled in by `moti`). Fix: a `resolver.resolveRequest` shim in `apps/mobile/metro.config.js` redirecting every `'tslib'` request to `tslib/tslib.es6.mjs`.
 - **`apiFetch` 401-ing on web.** It forced `credentials: "omit"` and pulled the cookie via `authClient.getCookie()` (expo-secure-store, no-op on web). Now uses `credentials: "include"` on web so the browser cookie jar carries the session.
 - **`@gorhom/bottom-sheet`'s `BottomSheetTextInput` crashed on web** (`State.currentlyFocusedInput is not a function`). The `Input` wrapper now falls back to plain `TextInput` on `Platform.OS === "web"`.
 - **`Button`'s `active:scale-[0.97]` made Playwright stability checks time out** (107 retries before failing). Dropped the scale animation; opacity-only feedback matches `StudioButton`.
 - **Sessions list endpoint schema mismatch.** `/api/sessions` (GET) wasn't returning `classTypeId`/`roomId`/`classType`/`room`, so `sessionsListResponseSchema.parse()` threw and the trainer notes Session select was empty. Filled in the missing fields.
+- **`react-native-modal-datetime-picker` rendered nothing on web.** Replaced with a Studio-styled `react-day-picker` calendar + native `<input type="time">` inside an `AppSheet`. Native iOS/Android keep the existing modal flow. Source split across `date-time-picker.tsx`, `date-time-picker-web.tsx`, `date-time-picker-web.native.tsx`, and `date-time-picker-web.css`.
+- **`updateClientMutation` was passing `clientProfile.id` where the API expects `user.id`.** The destructive deactivate flow never persisted before. Patched the call site in `(admin)/clients.tsx`.
+- **Shared `.env` overrode the test cron token.** The `playwright.config.ts` webServer command now pins `API_ADMIN_BOOTSTRAP_TOKEN=test-admin-bootstrap-token` and bumps `NODE_OPTIONS=--max-old-space-size=8192` (without this Metro OOMs partway through the full suite).
 
-### Specs by group (file: passing / skipped)
+### Specs by file (passing / skipped)
 
-- `auth-smoke.spec.ts`: 4/0 — admin/trainer/client sign-in + wrong password.
-- `auth-extended.spec.ts`: 7/0 — sign-out, invite create+redeem (happy + expired + used), password reset request + expired.
-- `client.spec.ts`: 9/3 — home, calendar, booking, cancel-before-cutoff, notifications, language, sign-out, no-package filter. Skipped: 57 (late-cancel forfeit), 58 (full waitlist), 59 (waitlist promotion) — need seed extensions.
-- `trainer.spec.ts`: 7/5 — schedule, clients, notes (create / by-client / second note / search) + 403 for unlinked client. Skipped: 43/44 (no edit/delete UI), 46 (no per-client profile route), 48 (no by-session grouping), 51 (no post-cron attendance markers).
-- `admin.spec.ts`: 8/20 — catalog (ClassType/PackageType/Room create + Package edit/delete), invites, client list, billing nav. Skipped: ClassType/Room edit-delete UI not built (13/14/19/20), all scheduling specs because the DateTimePicker has no usable web fallback (21-30), pause/deactivate/billing-create flows pending testID wiring on placeholder-driven Inputs (33-38).
-- `cron-reports-en.spec.ts`: 9/0 — reports section render, cron consumption + skip + 401, 4 EN-smoke.
+| File | Pass | Skip | Coverage |
+|---|---:|---:|---|
+| `auth-smoke.spec.ts` | 4 | 0 | Admin/trainer/client sign-in + wrong password. |
+| `auth-extended.spec.ts` | 7 | 0 | Sign-out, invite create + redeem (happy / expired / used), password reset request + expired. |
+| `client.spec.ts` | 12 | 0 | Home, calendar, book + cancel before/after cutoff, full session → waitlist button, notifications, language switch, sign-out, no-package filter. |
+| `trainer.spec.ts` | 10 | 2 | Schedule scoping, clients-list scoping, note create / edit / delete, by-client + by-session filters, search, 403 for unlinked client. Skipped: 46 (no per-client profile route — server-side only), 51 (no post-cron attendance markers — needs new API surface). |
+| `admin.spec.ts` | 28 | 0 | Catalog CRUD (ClassType / PackageType / Room create + edit + delete), single-session create / edit / cancel, recurring series create / edit single occurrence / edit whole series / cancel single / delete whole, room + trainer double-book conflicts, invite, client list status badges, pause, deactivate, all four billing flows. |
+| `cron-reports-en.spec.ts` | 9 | 0 | Reports sections render, cron consumption (consume / skip pre-cutoff / 401 without token), 4 EN-smoke. |
+| `datetime-picker-smoke.spec.ts` | 1 | 0 | Verifies the new web DateTimePicker mounts the calendar + time input and round-trips a date. |
+| **Total** | **71** | **2** | |
 
-### Deferred to later phase
+### Skipped specs and why
 
-- Scheduling create/edit/delete via UI: needs a web-friendly DateTimePicker (the current `react-native-modal-datetime-picker` doesn't render on web). API-level integration tests cover the underlying behavior.
-- Class-type / room edit-delete UI: read-only screens today; defer until product adds the affordances.
-- Trainer note edit-delete UI: same reason.
-- Late-cancel forfeit (spec 57), waitlist (58/59), post-cron attendance markers (51): need seed extensions or new UI variants.
+Both skips are blocked by missing API/UI surface, not by the test layer.
+
+- **Spec 46 — trainer cannot view non-linked client's profile.** There is no `/clients/:id` route in the trainer scope today, so there's nothing to navigate to. Server-level enforcement is covered by the integration tests under `test/integration/clients.test.ts`.
+- **Spec 51 — trainer schedule shows post-cron attendance markers.** No endpoint surfaces per-booking `SessionConsumption` or cancellation state on past sessions. Adding this would require a new API surface (e.g., extending `/api/sessions` to include per-session attendance counts, or a dedicated `/api/trainer/attendance` endpoint). Subagent confirmed during the unblock pass — this stays out of scope for the test rewrite.
 
 ### How to run
 
 ```sh
 cd apps/mobile
-pnpm test:e2e            # full suite (~3 minutes, 44 passing)
-pnpm test:e2e -g "53:"   # one spec by name match
+pnpm test:e2e                  # full suite, ~5 minutes
+pnpm test:e2e -g "53:"         # one spec by name fragment
+pnpm test:e2e --reporter=list  # streaming progress
 ```
 
-### Phase A E2E artifacts that ARE in tree (will activate when runtime is fixed)
+The suite starts its own Expo web server on port 8010 (see `playwright.config.ts`'s `webServer` block). Each spec file's `beforeAll` re-applies the rich seed via `scripts/test/seed-e2e.ts`. The test DB is `postgresql://postgres:postgres@localhost:5434/baza_app?schema=public`.
+
+### Phase A E2E artifacts in tree
+
 - `apps/mobile/playwright.config.ts` — webServer + Chromium project + per-spec retain-on-failure traces.
-- `apps/mobile/test/e2e/auth-smoke.spec.ts` — 4 tests (admin/trainer/client sign-in + wrong password).
-- `apps/mobile/test/e2e/helpers/db.ts` — per-spec-file rich-seed reset.
-- `apps/mobile/test/e2e/helpers/locales.ts` — t/en exports for translation-key selectors.
-- `apps/mobile/scripts/test/seed-e2e.ts` — Q12 user matrix.
-- `auth-email-input` / `auth-password-input` / `auth-submit-button` / `tab-${name}` testIDs wired throughout the auth screens and FloatingTabBar.
+- `apps/mobile/test/e2e/*.spec.ts` — seven spec files covering the test plan.
+- `apps/mobile/test/e2e/helpers/db.ts` — Prisma-direct helpers for seeding state the rich seed doesn't cover (invites, reset tokens, trainer-client linkage, future sessions, fillers, waitlist, etc.).
+- `apps/mobile/test/e2e/helpers/locales.ts` — `t` / `t_en` re-exports of the locale JSON for translation-key selectors.
+- `apps/mobile/scripts/test/seed-e2e.ts` — rich seed (Q12 matrix).
+- testIDs wired across the auth, admin, trainer, and client screens to support the suite. Convention: `<context>-<element>` (e.g. `client-row-${id}`, `package-create-submit`). Components that needed it (`Button`, `Select`, `Input`, `ConfirmSheet`, `SessionCard`, `SegmentedControl`, `MetricRow`, `ErrorState`, `DateTimePicker`) accept and forward a `testID` prop.
 
 ## Out of scope for Phase A
 
@@ -262,13 +276,13 @@ pnpm test:e2e -g "53:"   # one spec by name match
 - Soft delete, trainer specialty, payment-processor v2 — not test-plan concerns.
 - CI integration — local-only for now per user direction.
 
-## Time budget (informational)
+## Time budget (measured)
 
-Local runtimes (estimate):
+Local runtimes:
 - Unit: <10s
 - Integration: ~3-5 min
-- Playwright (serial, ~72 tests including EN smoke): ~15-25 min
-- Phase A full local: ~20-30 min, practical pre-merge
+- Playwright E2E (serial, 71 tests): ~5 min
+- Phase A + Phase 2 full local: ~10 min, practical pre-merge
 
 ## Execution notes for the next session
 
