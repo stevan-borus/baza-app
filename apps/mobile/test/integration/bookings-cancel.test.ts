@@ -22,6 +22,7 @@ vi.mock("@/lib/server/notifications", () => ({
 
 import { POST } from "@/app/api/bookings/+api";
 import { prisma } from "@/lib/server/prisma";
+import { now, nowMs } from "@/lib/now";
 
 const HOUR_MS = 60 * 60 * 1000;
 const DAY_MS = 24 * HOUR_MS;
@@ -54,8 +55,8 @@ async function seedBaseline() {
       packageTypeId: packageType.id,
       classTypeId: reformer.id,
       lateCancelHours: 12,
-      startsAt: new Date(Date.now() - 5 * DAY_MS),
-      expiresAt: new Date(Date.now() + 30 * DAY_MS),
+      startsAt: new Date(nowMs() - 5 * DAY_MS),
+      expiresAt: new Date(nowMs() + 30 * DAY_MS),
       sessionsRemaining: 8,
     },
   });
@@ -68,7 +69,7 @@ async function createFutureSession(opts: {
   startsAtMsFromNow: number;
   capacity?: number;
 }) {
-  const startsAt = new Date(Date.now() + opts.startsAtMsFromNow);
+  const startsAt = new Date(nowMs() + opts.startsAtMsFromNow);
   return prisma.session.create({
     data: {
       classTypeId: opts.classTypeId,
@@ -251,8 +252,8 @@ describe("POST /api/bookings cancel", () => {
         packageTypeId: packageType2.id,
         classTypeId: reformer.id,
         lateCancelHours: 12,
-        startsAt: new Date(Date.now() - DAY_MS),
-        expiresAt: new Date(Date.now() + 30 * DAY_MS),
+        startsAt: new Date(nowMs() - DAY_MS),
+        expiresAt: new Date(nowMs() + 30 * DAY_MS),
         sessionsRemaining: 8,
       },
     });

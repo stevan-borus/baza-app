@@ -2,6 +2,10 @@
  * Side-effect-only env preamble for the rich seed.
  * Imported as the first statement of seed-e2e.ts so prisma's env-validating
  * imports see all required vars even when the script runs standalone.
+ *
+ * Includes the test-suite anchor instant so any standalone seed run produces
+ * the same dataset the server (also pinned to the same anchor) expects to
+ * see. See CONTEXT.md → "Anchor time".
  */
 const seedEnvDefaults: Record<string, string> = {
   DATABASE_URL: "postgresql://postgres:postgres@localhost:5434/baza_app?schema=public",
@@ -15,6 +19,7 @@ const seedEnvDefaults: Record<string, string> = {
   CRON_SESSION_CONSUMPTION_INTERVAL_MS: "60000",
   BETTER_AUTH_SECRET: "test-better-auth-secret-min-16-chars",
   BASE_URL: "http://localhost:3010",
+  TEST_ANCHOR_TIME: "2026-05-09T10:00:00Z",
 };
 for (const [key, value] of Object.entries(seedEnvDefaults)) {
   if (!process.env[key]) process.env[key] = value;

@@ -1,5 +1,6 @@
 import { updateRecurringSeriesInputSchema } from "@baza/types";
 import { UserRole } from "@/generated/prisma";
+import { now } from "@/lib/now";
 import { requireRole } from "@/lib/server/auth-guards";
 import { fail, ok } from "@/lib/server/http";
 import { prisma } from "@/lib/server/prisma";
@@ -19,7 +20,7 @@ export async function GET(_request: Request, { id }: RouteParams) {
       canceledAt: null,
       session: {
         recurringScheduleId: id,
-        startsAt: { gte: new Date() },
+        startsAt: { gte: now() },
       },
     },
   });
@@ -69,7 +70,7 @@ export async function PATCH(request: Request, { id }: RouteParams) {
   const nextIsActive =
     data.isActive === undefined ? existing.isActive : data.isActive;
 
-  const now = new Date();
+  const currentInstant = now();
 
   // For schedule-shape edits, refuse if any future session has live bookings —
   // admin must cancel bookings (or edit per-session) before reshaping.
@@ -77,7 +78,7 @@ export async function PATCH(request: Request, { id }: RouteParams) {
     const blocked = await prisma.session.findFirst({
       where: {
         recurringScheduleId: id,
-        startsAt: { gte: now },
+        startsAt: { gte: currentInstant },
         bookings: { some: { canceledAt: null } },
       },
       select: { id: true, startsAt: true },
@@ -96,7 +97,7 @@ export async function PATCH(request: Request, { id }: RouteParams) {
     const blocked = await prisma.session.findFirst({
       where: {
         recurringScheduleId: id,
-        startsAt: { gte: now },
+        startsAt: { gte: currentInstant },
         bookings: { some: { canceledAt: null } },
       },
       select: { id: true },
@@ -128,7 +129,7 @@ export async function PATCH(request: Request, { id }: RouteParams) {
       await tx.session.updateMany({
         where: {
           recurringScheduleId: id,
-          startsAt: { gte: now },
+          startsAt: { gte: currentInstant },
         },
         data: {
           roomId: nextRoomId,
@@ -143,13 +144,13 @@ export async function PATCH(request: Request, { id }: RouteParams) {
       const lastFuture = await tx.session.findFirst({
         where: {
           recurringScheduleId: id,
-          startsAt: { gte: now },
+          startsAt: { gte: currentInstant },
         },
         orderBy: { startsAt: "desc" },
         select: { startsAt: true },
       });
       const horizonMs = lastFuture
-        ? Math.max(lastFuture.startsAt.getTime() - now.getTime(), 0)
+        ? Math.max(lastFuture.startsAt.getTime() - currentInstant.getTime(), 0)
         : 0;
       const defaultWeekCount = Math.max(
         1,
@@ -160,12 +161,12 @@ export async function PATCH(request: Request, { id }: RouteParams) {
       await tx.session.deleteMany({
         where: {
           recurringScheduleId: id,
-          startsAt: { gte: now },
+          startsAt: { gte: currentInstant },
           bookings: { none: { canceledAt: null } },
         },
       });
 
-      const weekStart = new Date(now);
+      const weekStart = new Date(currentInstant);
       weekStart.setHours(0, 0, 0, 0);
       weekStart.setDate(weekStart.getDate() - weekStart.getDay());
 
@@ -179,7 +180,7 @@ export async function PATCH(request: Request, { id }: RouteParams) {
             weekStart.getTime() + (week * 7 + dow) * DAY_MS,
           );
           startsAt.setHours(hours, minutes, 0, 0);
-          if (startsAt.getTime() < now.getTime()) continue;
+          if (startsAt.getTime() < currentInstant.getTime()) continue;
           const endsAt = new Date(
             startsAt.getTime() + nextDuration * 60 * 1000,
           );
@@ -191,7 +192,7 @@ export async function PATCH(request: Request, { id }: RouteParams) {
       const surviving = await tx.session.findMany({
         where: {
           recurringScheduleId: id,
-          startsAt: { gte: now },
+          startsAt: { gte: currentInstant },
         },
         select: { startsAt: true },
       });

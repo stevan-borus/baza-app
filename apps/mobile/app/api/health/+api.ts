@@ -1,3 +1,4 @@
+import { now } from "@/lib/now";
 import { ok } from "@/lib/server/http";
 
 export async function GET() {
@@ -5,6 +6,6 @@ export async function GET() {
     success: true,
     service: "baza-api",
     status: "ok",
-    ts: new Date().toISOString(),
+    ts: now().toISOString(),
   });
 }

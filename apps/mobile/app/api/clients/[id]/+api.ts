@@ -1,5 +1,6 @@
 import type { ClientPackageStatus } from "@baza/types";
 import { UserRole } from "@/generated/prisma";
+import { now } from "@/lib/now";
 import { requireRole } from "@/lib/server/auth-guards";
 import { fail, ok } from "@/lib/server/http";
 import { prisma } from "@/lib/server/prisma";
@@ -14,6 +15,8 @@ const EXPIRING_WINDOW_DAYS = 14;
 export async function GET(request: Request, { id }: RouteParams) {
   const guard = await requireRole(request, [UserRole.ADMIN, UserRole.TRAINER]);
   if (!guard.ok) return guard.response;
+
+  const currentInstant = now();
 
   const clientProfile = await prisma.clientProfile.findUnique({
     where: { userId: id },
@@ -32,8 +35,8 @@ export async function GET(request: Request, { id }: RouteParams) {
       packages: { select: { sessionsRemaining: true, expiresAt: true } },
       packagePauses: {
         where: {
-          startsAt: { lte: new Date() },
-          endsAt: { gte: new Date() },
+          startsAt: { lte: currentInstant },
+          endsAt: { gte: currentInstant },
         },
         select: { id: true },
         take: 1,
@@ -53,9 +56,8 @@ export async function GET(request: Request, { id }: RouteParams) {
 
   // Compute the same package status used by the list endpoint.
   // Priority: paused (overrides) > active > expiring > expired > none.
-  const now = new Date();
   const expiringThreshold = new Date(
-    now.getTime() + EXPIRING_WINDOW_DAYS * 24 * 60 * 60 * 1000,
+    currentInstant.getTime() + EXPIRING_WINDOW_DAYS * 24 * 60 * 60 * 1000,
   );
 
   let packageStatus: ClientPackageStatus = "none";
@@ -64,7 +66,7 @@ export async function GET(request: Request, { id }: RouteParams) {
   } else {
     let hasExpired = false;
     for (const p of clientProfile.packages) {
-      const isExpired = p.expiresAt < now || p.sessionsRemaining <= 0;
+      const isExpired = p.expiresAt < currentInstant || p.sessionsRemaining <= 0;
       if (isExpired) {
         hasExpired = true;
         continue;

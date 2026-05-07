@@ -1,3 +1,4 @@
+import { now } from "@/lib/now";
 import { requireCronAuth } from "@/lib/server/cron-auth";
 import { ok } from "@/lib/server/http";
 import { findEligibleClientPackage } from "@/lib/server/package-eligibility";
@@ -27,8 +28,8 @@ export async function POST(request: Request) {
         : 6;
   const dryRun = url.searchParams.get("dryRun") === "true";
 
-  const now = new Date();
-  const from = new Date(now.getTime() - lookbackHours * 60 * 60 * 1000);
+  const currentInstant = now();
+  const from = new Date(currentInstant.getTime() - lookbackHours * 60 * 60 * 1000);
 
   const candidateBookings = await prisma.booking.findMany({
     where: {
@@ -36,7 +37,7 @@ export async function POST(request: Request) {
       session: {
         endsAt: {
           gt: from,
-          lte: now,
+          lte: currentInstant,
         },
         status: {
           in: ["SCHEDULED", "COMPLETED"],
@@ -183,7 +184,7 @@ export async function POST(request: Request) {
     lookbackHours,
     window: {
       from,
-      to: now,
+      to: currentInstant,
     },
     scannedBookings: candidateBookings.length,
     consumed,

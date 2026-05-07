@@ -1,5 +1,6 @@
 import { registerPushTokenInputSchema } from "@baza/types";
 import { UserRole } from "@/generated/prisma";
+import { now } from "@/lib/now";
 import { requireRole } from "@/lib/server/auth-guards";
 import { fail, ok } from "@/lib/server/http";
 import { prisma } from "@/lib/server/prisma";
@@ -29,12 +30,12 @@ export async function POST(request: Request) {
       deviceId: parsed.data.deviceId,
       expoPushToken: parsed.data.expoPushToken,
       isActive: true,
-      lastSeenAt: new Date(),
+      lastSeenAt: now(),
     },
     update: {
       expoPushToken: parsed.data.expoPushToken,
       isActive: true,
-      lastSeenAt: new Date(),
+      lastSeenAt: now(),
     },
     select: {
       id: true,

@@ -19,6 +19,7 @@ vi.mock("@/lib/server/auth-guards", async () => {
 import { GET, POST } from "@/app/api/clients/+api";
 import { GET as GET_BY_ID, PATCH } from "@/app/api/clients/[id]/+api";
 import { prisma } from "@/lib/server/prisma";
+import { now, nowMs } from "@/lib/now";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -104,8 +105,8 @@ describe("clients API", () => {
         packageTypeId: packageType.id,
         classTypeId: reformer.id,
         lateCancelHours: 12,
-        startsAt: new Date(Date.now() - 5 * DAY_MS),
-        expiresAt: new Date(Date.now() + 25 * DAY_MS),
+        startsAt: new Date(nowMs() - 5 * DAY_MS),
+        expiresAt: new Date(nowMs() + 25 * DAY_MS),
         sessionsRemaining: 8,
       },
     });
@@ -115,8 +116,8 @@ describe("clients API", () => {
         packageTypeId: packageType.id,
         classTypeId: reformer.id,
         lateCancelHours: 12,
-        startsAt: new Date(Date.now() - 60 * DAY_MS),
-        expiresAt: new Date(Date.now() - 7 * DAY_MS),
+        startsAt: new Date(nowMs() - 60 * DAY_MS),
+        expiresAt: new Date(nowMs() - 7 * DAY_MS),
         sessionsRemaining: 4,
       },
     });
@@ -152,8 +153,8 @@ describe("clients API", () => {
       data: {
         classTypeId: reformer.id,
         trainerUserId: trainer.id,
-        startsAt: new Date(Date.now() + DAY_MS),
-        endsAt: new Date(Date.now() + DAY_MS + 60 * 60 * 1000),
+        startsAt: new Date(nowMs() + DAY_MS),
+        endsAt: new Date(nowMs() + DAY_MS + 60 * 60 * 1000),
         capacity: 6,
         isActive: true,
         status: "SCHEDULED",
@@ -263,8 +264,8 @@ describe("clients API", () => {
       data: {
         classTypeId: reformer.id,
         trainerUserId: trainer.id,
-        startsAt: new Date(Date.now() + DAY_MS),
-        endsAt: new Date(Date.now() + DAY_MS + 60 * 60 * 1000),
+        startsAt: new Date(nowMs() + DAY_MS),
+        endsAt: new Date(nowMs() + DAY_MS + 60 * 60 * 1000),
         capacity: 6,
         isActive: true,
         status: "SCHEDULED",
@@ -324,8 +325,8 @@ describe("clients API", () => {
       data: {
         classTypeId: reformer.id,
         trainerUserId: trainer.id,
-        startsAt: new Date(Date.now() + DAY_MS),
-        endsAt: new Date(Date.now() + DAY_MS + 60 * 60 * 1000),
+        startsAt: new Date(nowMs() + DAY_MS),
+        endsAt: new Date(nowMs() + DAY_MS + 60 * 60 * 1000),
         capacity: 6,
         isActive: true,
         status: "SCHEDULED",
@@ -376,8 +377,8 @@ describe("GET /api/clients/[id]", () => {
       data: {
         classTypeId: classType.id,
         trainerUserId: trainerLinked.id,
-        startsAt: new Date(Date.now() - DAY_MS),
-        endsAt: new Date(Date.now() - DAY_MS + 60 * 60 * 1000),
+        startsAt: new Date(nowMs() - DAY_MS),
+        endsAt: new Date(nowMs() - DAY_MS + 60 * 60 * 1000),
         capacity: 6,
         isActive: true,
         status: "SCHEDULED",

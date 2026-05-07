@@ -18,6 +18,7 @@ vi.mock("@/lib/server/auth-guards", async () => {
 
 import { PATCH, DELETE } from "@/app/api/sessions/recurring/[id]/+api";
 import { prisma } from "@/lib/server/prisma";
+import { now, nowMs } from "@/lib/now";
 
 const HOUR_MS = 60 * 60 * 1000;
 const DAY_MS = 24 * HOUR_MS;
@@ -41,8 +42,8 @@ async function seedSeriesWith(opts?: { withBooking?: boolean }) {
     },
   });
   // Two future child sessions.
-  const futureA = new Date(Date.now() + 2 * DAY_MS);
-  const futureB = new Date(Date.now() + 4 * DAY_MS);
+  const futureA = new Date(nowMs() + 2 * DAY_MS);
+  const futureB = new Date(nowMs() + 4 * DAY_MS);
   const sessionA = await prisma.session.create({
     data: {
       classTypeId: reformer.id,

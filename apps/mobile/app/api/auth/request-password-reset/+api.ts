@@ -1,4 +1,5 @@
 import { requestPasswordResetInputSchema } from "@baza/types";
+import { now } from "@/lib/now";
 import { fail, ok } from "@/lib/server/http";
 import { prisma } from "@/lib/server/prisma";
 import { sendResetEmail } from "@/lib/server/resend";
@@ -25,7 +26,7 @@ export async function POST(request: Request) {
 
   const rawToken = generateRawToken();
   const tokenHash = hashToken(rawToken);
-  const expiresAt = addMinutes(new Date(), env.RESET_TOKEN_TTL_MINUTES);
+  const expiresAt = addMinutes(now(), env.RESET_TOKEN_TTL_MINUTES);
 
   await prisma.passwordResetToken.create({
     data: {

@@ -19,6 +19,7 @@ vi.mock("@/lib/server/auth-guards", async () => {
 import { GET, POST } from "@/app/api/packages/client-packages/+api";
 import { POST as POST_PAUSE } from "@/app/api/packages/pause/+api";
 import { prisma } from "@/lib/server/prisma";
+import { now, nowMs } from "@/lib/now";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -127,7 +128,7 @@ describe("packages/client-packages", () => {
         body: JSON.stringify({
           clientProfileId: client.profile.id,
           packageTypeId: "00000000-0000-0000-0000-000000000000",
-          startsAt: new Date().toISOString(),
+          startsAt: now().toISOString(),
         }),
       }),
     );
@@ -150,7 +151,7 @@ describe("packages/client-packages", () => {
         body: JSON.stringify({
           clientProfileId: stranger.profile.id,
           packageTypeId: packageType.id,
-          startsAt: new Date().toISOString(),
+          startsAt: now().toISOString(),
         }),
       }),
     );
@@ -169,8 +170,8 @@ describe("packages/client-packages", () => {
         packageTypeId: packageType.id,
         classTypeId: reformer.id,
         lateCancelHours: 12,
-        startsAt: new Date(Date.now() - 5 * DAY_MS),
-        expiresAt: new Date(Date.now() + 25 * DAY_MS),
+        startsAt: new Date(nowMs() - 5 * DAY_MS),
+        expiresAt: new Date(nowMs() + 25 * DAY_MS),
         sessionsRemaining: 8,
       },
     });
@@ -180,8 +181,8 @@ describe("packages/client-packages", () => {
         packageTypeId: packageType.id,
         classTypeId: reformer.id,
         lateCancelHours: 12,
-        startsAt: new Date(Date.now() - 5 * DAY_MS),
-        expiresAt: new Date(Date.now() + 25 * DAY_MS),
+        startsAt: new Date(nowMs() - 5 * DAY_MS),
+        expiresAt: new Date(nowMs() + 25 * DAY_MS),
         sessionsRemaining: 8,
       },
     });
@@ -223,8 +224,8 @@ describe("packages/client-packages", () => {
         packageTypeId: packageType.id,
         classTypeId: reformer.id,
         lateCancelHours: 12,
-        startsAt: new Date(),
-        expiresAt: new Date(Date.now() + 30 * DAY_MS),
+        startsAt: now(),
+        expiresAt: new Date(nowMs() + 30 * DAY_MS),
         sessionsRemaining: 12,
       },
     });
@@ -234,8 +235,8 @@ describe("packages/client-packages", () => {
         packageTypeId: packageType.id,
         classTypeId: reformer.id,
         lateCancelHours: 12,
-        startsAt: new Date(),
-        expiresAt: new Date(Date.now() + 30 * DAY_MS),
+        startsAt: now(),
+        expiresAt: new Date(nowMs() + 30 * DAY_MS),
         sessionsRemaining: 12,
       },
     });
@@ -258,8 +259,8 @@ describe("packages/client-packages", () => {
           headers: { "content-type": "application/json" },
           body: JSON.stringify({
             clientProfileId: client.profile.id,
-            startsAt: new Date().toISOString(),
-            endsAt: new Date(Date.now() + 14 * DAY_MS).toISOString(),
+            startsAt: now().toISOString(),
+            endsAt: new Date(nowMs() + 14 * DAY_MS).toISOString(),
             reason: "Vacation",
           }),
         }),
@@ -274,15 +275,15 @@ describe("packages/client-packages", () => {
     it("POST returns 400 when endsAt is not after startsAt", async () => {
       const client = await makeClient("invalid@test.local");
       asAdmin();
-      const now = new Date();
+      const currentInstant = now();
       const response = await POST_PAUSE(
         new Request("http://test.local/api/packages/pause", {
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({
             clientProfileId: client.profile.id,
-            startsAt: now.toISOString(),
-            endsAt: now.toISOString(),
+            startsAt: currentInstant.toISOString(),
+            endsAt: currentInstant.toISOString(),
           }),
         }),
       );
@@ -303,8 +304,8 @@ describe("packages/client-packages", () => {
           headers: { "content-type": "application/json" },
           body: JSON.stringify({
             clientProfileId: stranger.profile.id,
-            startsAt: new Date().toISOString(),
-            endsAt: new Date(Date.now() + DAY_MS).toISOString(),
+            startsAt: now().toISOString(),
+            endsAt: new Date(nowMs() + DAY_MS).toISOString(),
           }),
         }),
       );

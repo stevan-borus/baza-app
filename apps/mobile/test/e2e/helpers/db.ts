@@ -14,6 +14,7 @@ import path from "node:path";
 import { Pool } from "pg";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../../../generated/prisma";
+import { now, nowMs } from "../../../lib/now";
 
 const APP_DIR = path.resolve(__dirname, "../../..");
 const DATABASE_URL =
@@ -62,7 +63,7 @@ export async function createInvite(input: CreateInviteInput) {
   const rawToken = generateRawToken();
   const tokenHash = hashToken(rawToken);
   const expiresAt =
-    input.expiresAt ?? new Date(Date.now() + 24 * 60 * 60 * 1000);
+    input.expiresAt ?? new Date(nowMs() + 24 * 60 * 60 * 1000);
   const invite = await db().userInvite.create({
     data: {
       email: input.email.toLowerCase(),
@@ -110,7 +111,7 @@ export async function createPasswordResetToken(input: CreateResetTokenInput) {
     data: {
       userId: user.id,
       tokenHash,
-      expiresAt: input.expiresAt ?? new Date(Date.now() + 30 * 60 * 1000),
+      expiresAt: input.expiresAt ?? new Date(nowMs() + 30 * 60 * 1000),
       usedAt: input.usedAt ?? null,
     },
   });
@@ -142,7 +143,7 @@ export async function linkTrainerToClient(
   const session = await db().session.findFirst({
     where: {
       trainerUserId: trainer.id,
-      startsAt: { gt: new Date() },
+      startsAt: { gt: now() },
       status: "SCHEDULED",
     },
     orderBy: { startsAt: "asc" },
@@ -299,7 +300,7 @@ export async function findFutureSeriesSession(scheduleNamePart: string) {
   // ahead of time.
   return db().session.findFirst({
     where: {
-      startsAt: { gt: new Date() },
+      startsAt: { gt: now() },
       status: "SCHEDULED",
       recurringScheduleId: { not: null },
       classType: { name: { contains: scheduleNamePart } },
@@ -337,7 +338,7 @@ export async function createFutureSession(input: {
   if (!trainer || !classType || !room) {
     throw new Error("Trainer / classType / room not found");
   }
-  const startsAt = new Date(Date.now() + input.hoursFromNow * 60 * 60 * 1000);
+  const startsAt = new Date(nowMs() + input.hoursFromNow * 60 * 60 * 1000);
   const endsAt = new Date(startsAt.getTime() + 60 * 60 * 1000);
   const session = await db().session.create({
     data: {

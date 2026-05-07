@@ -1,4 +1,5 @@
-import { test, expect, type Page } from "@playwright/test";
+import { test, expect, type Page } from "./helpers/fixtures";
+import { now } from "../../lib/now";
 import {
   countTrainerNotesFor,
   createPastAttendedSession,
@@ -16,7 +17,7 @@ const ACTIVE_REFORMER_CLIENT_EMAIL = "client.active.reformer@e2e.test";
 
 function nextReformerDate(): string {
   const days = new Set([1, 3, 5]);
-  const d = new Date();
+  const d = now();
   for (let i = 0; i < 14; i++) {
     if (days.has(d.getDay()) && !(i === 0 && d.getHours() >= 10)) {
       const yyyy = d.getFullYear();
@@ -443,7 +444,7 @@ test.describe("trainer (Serbian)", () => {
     // Create a past session yesterday with one consumed booking + one
     // canceled booking, so the trainer's schedule should render the
     // attendance line under the SessionCard.
-    const yesterday = new Date();
+    const yesterday = now();
     yesterday.setDate(yesterday.getDate() - 1);
     yesterday.setHours(10, 0, 0, 0);
 

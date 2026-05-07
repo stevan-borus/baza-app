@@ -17,3 +17,5 @@ setIfBlank("CRON_PACKAGE_EXPIRY_INTERVAL_MS", "60000");
 setIfBlank("CRON_SESSION_CONSUMPTION_INTERVAL_MS", "60000");
 setIfBlank("BETTER_AUTH_SECRET", "test-better-auth-secret-min-16-chars");
 setIfBlank("APP_WEB_URL", "http://localhost:3010");
+// Anchor time for date-dependent integration tests — see CONTEXT.md → "Anchor time".
+setIfBlank("TEST_ANCHOR_TIME", "2026-05-09T10:00:00Z");

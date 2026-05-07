@@ -27,8 +27,7 @@ Anti-flake:
 - WeekStrip-driven specs must navigate. Use `helpers/dates.ts:navigateWeekStripTo(page, dateKey)` — don't assume the target date is in the visible week.
 - Each test passes in isolation, or the file's `beforeAll` sets up its dependencies.
 - `testID` convention: `<context>-<element>` (e.g. `client-row-${id}`).
-
-Date fragility: the suite reads the wall clock (seed window + `gt: new Date()` filters + `new Date()` in spec code). It drifts by day-of-week, time-of-day, and cross-spec mutation. Anchor-time refactor not yet implemented — see CONTEXT.md → "Anchor time". Until it lands, sanity-check that any new date-touching spec stays green if run as-of next Saturday. `page.clock.install()` only freezes the browser, not the Node dev server.
+- Date-touching code: import `now()` / `nowMs()` from `@/lib/now` instead of calling `new Date()` / `Date.now()` whenever the value semantically means "current time". The test stack pins those helpers to a fixed instant via `TEST_ANCHOR_TIME` — see CONTEXT.md → "Anchor time".
 
 ## Worktrees
 
