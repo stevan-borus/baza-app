@@ -57,14 +57,18 @@ The queue on a full Session. When someone cancels, the next waitlisted Client is
 
 ### Billing
 
-**Flow 1 (atomic)**:
-Admin records a payment for a Client → a BillingRecord and a ClientPackage are created in the same transaction. The default flow.
+**Naplata** (the section): the admin-facing list of past payments, plus the entry point for **Nova uplata**.
 
-**Flow 2 (comp)**:
-Admin assigns a free / comp ClientPackage directly with no BillingRecord. Marked as a "Free / comp package" in the assign sheet.
+**Nova uplata** (Flow 1, atomic):
+The default assignment path. Admin records a payment for a Client → a BillingRecord and a ClientPackage are created in the same transaction. Reachable from (a) the Naplata header `+` (no pre-filled client) and (b) a client row's primary action (client pre-filled).
+_sr_: "Nova uplata" — _en_: "New payment".
+
+**Poklon paket** (Flow 2, comp):
+Admin assigns a free / complimentary ClientPackage directly with no BillingRecord — used for family / friends. Reachable as a secondary action on a client row, never from Naplata.
+_sr_: "Poklon paket" — _en_: "Complimentary package". _Avoid_: "komp paket" (colloquial Serbian, was the old label).
 
 **BillingRecord**:
-A row of money received. Always paired with a ClientPackage in Flow 1.
+A row of money received. Always paired with a ClientPackage in Flow 1 (Nova uplata).
 
 ### Trainer notes
 

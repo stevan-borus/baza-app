@@ -16,8 +16,11 @@ export async function GET(request: Request) {
   });
   if (!parsedQuery.success) return fail("Invalid query params", 400, parsedQuery.error);
 
+  const clientUserId = url.searchParams.get("clientUserId") ?? undefined;
+
   // Cursor-based pagination: skip 1 after cursor to avoid duplicate.
   const payments = await prisma.billingRecord.findMany({
+    where: clientUserId ? { clientUserId } : undefined,
     orderBy: { createdAt: "desc" },
     ...(parsedQuery.data.cursor
       ? { cursor: { id: parsedQuery.data.cursor }, skip: 1 }

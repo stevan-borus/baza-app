@@ -746,7 +746,7 @@ export default function AdminClients() {
               className="text-muted"
               style={{ fontSize: 13 }}
             >
-              {t("admin.clients.assignPackage.heading.comp")}
+              {t("admin.clients.compPackageHeading")}
             </Text>
             <SectionLabel>{t("admin.clients.packageType")}</SectionLabel>
             {(packageTypesQuery.data?.packageTypes ?? []).map((pt) => (

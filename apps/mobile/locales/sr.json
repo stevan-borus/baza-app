@@ -364,11 +364,8 @@
       "filterPaused": "Pauzirani",
       "filterExpired": "Istekli",
       "filterEmpty": "Nema klijenata koji odgovaraju filteru.",
-      "assignPackage": {
-        "heading": {
-          "comp": "Besplatan paket / komp paket"
-        }
-      }
+      "compPackageHeading": "Poklon paket",
+      "newPaymentAction": "Nova uplata"
     },
     "packages": {
       "classType": "Tip treninga",
@@ -493,7 +490,6 @@
       "bookingsEmpty": "Nema podataka o rezervacijama.",
       "packageTypes": "Tipovi paketa",
       "activeAssignments": "Aktivne dodele",
-      "filterAll": "Sve",
       "filterExpiring": "Uskoro ističe",
       "filterExpired": "Istekao",
       "sessionsRemaining": "{{count}} termina preostalo",

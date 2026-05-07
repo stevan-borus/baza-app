@@ -361,11 +361,8 @@
       "filterPaused": "Paused",
       "filterExpired": "Expired",
       "filterEmpty": "No clients match this filter.",
-      "assignPackage": {
-        "heading": {
-          "comp": "Free / comp package"
-        }
-      }
+      "compPackageHeading": "Complimentary package",
+      "newPaymentAction": "New payment"
     },
     "packages": {
       "classType": "Class type",
@@ -490,7 +487,6 @@
       "bookingsEmpty": "No bookings data.",
       "packageTypes": "Package Types",
       "activeAssignments": "Active Assignments",
-      "filterAll": "All",
       "filterExpiring": "Expiring Soon",
       "filterExpired": "Expired",
       "sessionsRemaining": "{{count}} sessions left",

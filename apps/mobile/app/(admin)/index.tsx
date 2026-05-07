@@ -35,6 +35,7 @@ import { trainingsQueries } from "@/lib/queries/trainings-queries-factory";
 import { roomsQueries } from "@/lib/queries/rooms-queries-factory";
 import { reportsQueries } from "@/lib/queries/reports-queries-factory";
 import { usersQueries } from "@/lib/queries/users-queries-factory";
+import { applySessionFormChange } from "@/lib/admin/session-form-state";
 
 /**
  * Design references (from docs/inspiration/):
@@ -601,15 +602,16 @@ export default function AdminSchedule() {
               placeholder={t("admin.schedule.classType")}
               value={newSession.classTypeId}
               onChange={(v) => {
-                const ct = classTypesQuery.data?.classTypes.find(
-                  (c) => c.id === v,
+                setNewSession((s) =>
+                  applySessionFormChange(
+                    s,
+                    { field: "classTypeId", value: v },
+                    {
+                      classTypes: classTypesQuery.data?.classTypes ?? [],
+                      rooms: roomsQuery.data?.rooms ?? [],
+                    },
+                  ),
                 );
-                setNewSession((s) => ({
-                  ...s,
-                  classTypeId: v,
-                  durationMins: ct ? String(ct.durationMins) : s.durationMins,
-                  capacity: ct ? String(ct.maxClients) : s.capacity,
-                }));
               }}
               emptyText={t("admin.schedule.emptyClassTypes")}
               options={(classTypesQuery.data?.classTypes ?? []).map((ct) => ({
@@ -625,7 +627,16 @@ export default function AdminSchedule() {
               placeholder={t("admin.schedule.room")}
               value={newSession.roomId}
               onChange={(v) =>
-                setNewSession((s) => ({ ...s, roomId: v }))
+                setNewSession((s) =>
+                  applySessionFormChange(
+                    s,
+                    { field: "roomId", value: v },
+                    {
+                      classTypes: classTypesQuery.data?.classTypes ?? [],
+                      rooms: roomsQuery.data?.rooms ?? [],
+                    },
+                  ),
+                )
               }
               emptyText={t("admin.schedule.emptyRooms")}
               options={(roomsQuery.data?.rooms ?? []).map((room) => ({
@@ -901,7 +912,16 @@ export default function AdminSchedule() {
               <Select
                 placeholder={t("admin.schedule.room")}
                 value={editForm.roomId}
-                onChange={(v) => setEditForm((s) => ({ ...s, roomId: v }))}
+                onChange={(v) =>
+                  setEditForm((s) => {
+                    const room = (roomsQuery.data?.rooms ?? []).find((r) => r.id === v);
+                    return {
+                      ...s,
+                      roomId: v,
+                      capacity: room ? String(room.capacity) : s.capacity,
+                    };
+                  })
+                }
                 emptyText={t("admin.schedule.emptyRooms")}
                 options={(roomsQuery.data?.rooms ?? []).map((room) => ({
                   value: room.id,
@@ -1086,7 +1106,14 @@ export default function AdminSchedule() {
                 placeholder={t("admin.schedule.room")}
                 value={seriesForm.roomId}
                 onChange={(v) =>
-                  setSeriesForm((s) => ({ ...s, roomId: v }))
+                  setSeriesForm((s) => {
+                    const room = (roomsQuery.data?.rooms ?? []).find((r) => r.id === v);
+                    return {
+                      ...s,
+                      roomId: v,
+                      capacity: room ? String(room.capacity) : s.capacity,
+                    };
+                  })
                 }
                 emptyText={t("admin.schedule.emptyRooms")}
                 options={(roomsQuery.data?.rooms ?? []).map((room) => ({
