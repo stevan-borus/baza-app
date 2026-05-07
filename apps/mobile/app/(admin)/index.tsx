@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Pressable, ScrollView, Switch, Text, View } from "react-native";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import Feather from "@expo/vector-icons/Feather";
 import dayjs from "dayjs";
@@ -298,6 +298,10 @@ export default function AdminSchedule() {
   }
 
   function handleEventPress(session: typeof sessions[0]) {
+    router.push(`/(admin)/sessions/${session.id}`);
+  }
+
+  function openEditForSession(session: typeof sessions[0]) {
     const sessionIsActive = session.isActive ?? true;
     setEditForm({
       startsAt: new Date(session.startsAt),
@@ -323,6 +327,25 @@ export default function AdminSchedule() {
     });
     setEditScope("session");
   }
+
+  // When the detail page's pencil routes back here with ?editSessionId=&focusDate=,
+  // shift selectedDate first so daySessions includes the target, then open the
+  // edit sheet for that session in the next render.
+  const params = useLocalSearchParams<{ editSessionId?: string; focusDate?: string }>();
+  React.useEffect(() => {
+    if (params.focusDate && params.focusDate !== selectedDate) {
+      setSelectedDate(params.focusDate);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params.focusDate]);
+  React.useEffect(() => {
+    if (!params.editSessionId) return;
+    const target = sessions.find((s) => s.id === params.editSessionId);
+    if (!target) return;
+    openEditForSession(target);
+    router.setParams({ editSessionId: undefined, focusDate: undefined });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params.editSessionId, sessions]);
 
   const revenueValue = summary?.revenue ?? 0;
   const attendanceRate =
@@ -857,18 +880,6 @@ export default function AdminSchedule() {
                 })
               : ""}
           </Text>
-          {showEdit ? (
-            <Card>
-              <ListRow
-                title={t("admin.schedule.bookedCount", {
-                  booked: showEdit.bookedCount,
-                  capacity: showEdit.capacity,
-                })}
-                subtitle={`${t("client.calendar.room")}: ${showEdit.roomName ?? "—"} · ${t("admin.schedule.waitlistShort", { count: showEdit.waitlistCount })}`}
-              />
-            </Card>
-          ) : null}
-
           {showEdit?.recurringScheduleId ? (
             <View className="flex-row gap-2">
               <Button
@@ -984,26 +995,6 @@ export default function AdminSchedule() {
                   </View>
                 );
               })()}
-
-              {showEdit?.sessionId ? (
-                <Pressable
-                  testID="session-edit-view-bookings-link"
-                  onPress={() => {
-                    if (!showEdit?.sessionId) return;
-                    setShowEdit(null);
-                    router.push(`/(admin)/sessions/${showEdit.sessionId}`);
-                  }}
-                  android_ripple={null}
-                  style={{ paddingVertical: 8 }}
-                >
-                  <Text
-                    className="text-accent font-body-semibold"
-                    style={{ fontSize: 13, textAlign: "center" }}
-                  >
-                    {t("admin.schedule.viewBookings", { count: showEdit.bookedCount })}
-                  </Text>
-                </Pressable>
-              ) : null}
 
               <Button
                 testID="session-edit-save-button"

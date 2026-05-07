@@ -459,8 +459,8 @@ test.describe("admin (Serbian)", () => {
     await page
       .getByTestId("session-create-week-count-input")
       .fill("2");
-    await page.getByTestId("session-create-weekday-1").click();
-    await page.getByTestId("session-create-weekday-3").click();
+    await page.getByTestId("session-create-weekday-1").dispatchEvent("click");
+    await page.getByTestId("session-create-weekday-3").dispatchEvent("click");
 
     await page.getByTestId("session-create-submit").dispatchEvent("click");
 

@@ -41,12 +41,20 @@ export function nextReformerDayKey(): string {
 }
 
 /**
- * Tap a session card and wait for the edit sheet to appear. Encapsulated so
- * that future flow changes (e.g. promoting tap-card to a detail-page route)
- * only need updating in one place.
+ * Tap a session card and wait for the edit sheet to appear. The tap-card
+ * action navigates to the session detail page; tap the pencil icon to push
+ * back to the dashboard with ?editSessionId= which mounts the edit sheet.
  */
 export async function openSessionEditSheet(page: Page, cardLocator: import("@playwright/test").Locator) {
   await cardLocator.dispatchEvent("click");
+  await page
+    .getByTestId("session-detail-edit-button")
+    .first()
+    .waitFor({ state: "visible", timeout: 10_000 });
+  await page
+    .getByTestId("session-detail-edit-button")
+    .first()
+    .dispatchEvent("click");
   await page
     .getByTestId("session-edit-save-button")
     .first()
