@@ -483,6 +483,7 @@
       "monthlyRevenue": "Mesečni prihod",
       "revenueError": "Nije moguće učitati prihod.",
       "utilization": "Iskorišćenost kapaciteta",
+      "utilizationByRoom": "Po sali",
       "utilizationError": "Nije moguće učitati iskorišćenost.",
       "bookings": "Rezervacije",
       "bookingsError": "Nije moguće učitati rezervacije.",

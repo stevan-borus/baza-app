@@ -48,6 +48,19 @@ const packagesReportResponseSchema = z.object({
   compVsPaid: z.object({ paid: z.number(), comp: z.number(), total: z.number() }),
 });
 
+const utilizationByRoomResponseSchema = z.object({
+  success: z.boolean(),
+  data: z.array(
+    z.object({
+      roomId: z.string(),
+      roomName: z.string(),
+      totalCapacity: z.number(),
+      totalBooked: z.number(),
+      utilization: z.number(),
+    }),
+  ),
+});
+
 export const reportsQueries = {
   summary: () =>
     queryOptions({
@@ -111,6 +124,24 @@ export const reportsQueries = {
         if (!response.ok)
           throw new Error(`Unable to load bookings report (${response.status})`);
         return bookingsResponseSchema.parse(await response.json());
+      },
+      staleTime: 60_000,
+    }),
+
+  utilizationByRoom: (params?: { from?: string; to?: string; period?: string }) =>
+    queryOptions({
+      queryKey: ["reports", "utilization-by-room", params] as const,
+      queryFn: async () => {
+        const endpoint = `${sharedEnv.EXPO_PUBLIC_API_URL}/api/reports/utilization/by-room`;
+        const searchParams = new URLSearchParams();
+        if (params?.from) searchParams.set("from", params.from);
+        if (params?.to) searchParams.set("to", params.to);
+        if (params?.period) searchParams.set("period", params.period);
+        const url = searchParams.size > 0 ? `${endpoint}?${searchParams.toString()}` : endpoint;
+        const response = await apiFetch(url, { credentials: "include" });
+        if (!response.ok)
+          throw new Error(`Unable to load utilization breakdown (${response.status})`);
+        return utilizationByRoomResponseSchema.parse(await response.json());
       },
       staleTime: 60_000,
     }),

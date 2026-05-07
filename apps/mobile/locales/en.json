@@ -479,6 +479,7 @@
       "monthlyRevenue": "Monthly revenue",
       "revenueError": "Unable to load revenue.",
       "utilization": "Capacity utilization",
+      "utilizationByRoom": "By room",
       "utilizationError": "Unable to load utilization.",
       "bookings": "Bookings",
       "bookingsError": "Unable to load bookings.",

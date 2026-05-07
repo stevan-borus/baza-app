@@ -107,6 +107,13 @@ export default function AdminReports() {
       period: periodWindow.bucket,
     }),
   );
+  const utilizationByRoomQuery = useQuery(
+    reportsQueries.utilizationByRoom({
+      from: periodWindow.from,
+      to: periodWindow.to,
+      period: periodWindow.bucket,
+    }),
+  );
   const summary = summaryQuery.data?.summary;
 
   const bookingsData = (bookingsQuery.data?.data ?? []).map((item, i) => ({
@@ -404,6 +411,72 @@ export default function AdminReports() {
               </View>
             </GlassCard>
           ))}
+
+          {/* Per-Sala drilldown */}
+          {(utilizationByRoomQuery.data?.data ?? []).length > 0 ? (
+            <View style={{ gap: 8, marginTop: 8 }}>
+              <Text
+                className="text-muted"
+                style={{ fontSize: 11, letterSpacing: 1.4, textTransform: "uppercase" }}
+              >
+                {t("admin.manage.utilizationByRoom")}
+              </Text>
+              {(utilizationByRoomQuery.data?.data ?? []).map((row) => (
+                <GlassCard
+                  key={row.roomId}
+                  testID={`utilization-by-room-row-${row.roomId}`}
+                  size="md"
+                >
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
+                    <ProgressRing
+                      progress={row.utilization}
+                      size={44}
+                      strokeWidth={4}
+                    />
+                    <View style={{ flex: 1, gap: 5 }}>
+                      <View
+                        style={{
+                          flexDirection: "row",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                        }}
+                      >
+                        <Text
+                          className="text-foreground font-body-semibold"
+                          style={{ fontSize: 14 }}
+                          numberOfLines={1}
+                        >
+                          {row.roomName}
+                        </Text>
+                        <Text
+                          className="text-muted"
+                          style={{ fontSize: 13 }}
+                        >
+                          {row.totalBooked}/{row.totalCapacity}
+                        </Text>
+                      </View>
+                      <View
+                        style={{
+                          height: 4,
+                          borderRadius: 2,
+                          backgroundColor: tokens.glassStrong,
+                        }}
+                      >
+                        <View
+                          style={{
+                            height: 4,
+                            borderRadius: 2,
+                            backgroundColor: tokens.accent,
+                            width: `${Math.round(row.utilization * 100)}%`,
+                          }}
+                        />
+                      </View>
+                    </View>
+                  </View>
+                </GlassCard>
+              ))}
+            </View>
+          ) : null}
         </View>
       </MotiView>
 
