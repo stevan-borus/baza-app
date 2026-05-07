@@ -22,6 +22,7 @@ vi.mock("@/lib/server/notifications", () => ({
 
 import { GET, POST } from "@/app/api/trainer-notes/+api";
 import { prisma } from "@/lib/server/prisma";
+import { now, nowMs } from "@/lib/now";
 
 const HOUR_MS = 60 * 60 * 1000;
 const DAY_MS = 24 * HOUR_MS;
@@ -46,7 +47,7 @@ async function seed() {
 }
 
 async function makeSession(trainerUserId: string, classTypeId: string) {
-  const startsAt = new Date(Date.now() + DAY_MS);
+  const startsAt = new Date(nowMs() + DAY_MS);
   return prisma.session.create({
     data: {
       classTypeId,
@@ -171,7 +172,7 @@ describe("trainer-notes", () => {
       data: {
         sessionId: session.id,
         clientProfileId: clientProfile.id,
-        canceledAt: new Date(),
+        canceledAt: now(),
       },
     });
     asTrainer(trainer);

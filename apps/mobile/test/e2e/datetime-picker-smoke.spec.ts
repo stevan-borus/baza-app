@@ -1,4 +1,5 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./helpers/fixtures";
+import { now } from "../../lib/now";
 import { resetAndSeed, disconnect } from "./helpers/db";
 
 const SEED_PASSWORD = "Password123!";
@@ -55,7 +56,7 @@ test.describe("DateTimePicker web smoke", () => {
     });
 
     // Pick a date 7 days out and a time, then confirm.
-    const target = new Date();
+    const target = now();
     target.setDate(target.getDate() + 7);
     const targetDay = String(target.getDate());
     await page

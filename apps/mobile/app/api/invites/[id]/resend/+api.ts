@@ -1,4 +1,5 @@
 import { InviteStatus, UserRole } from "@/generated/prisma";
+import { now } from "@/lib/now";
 import { requireRole } from "@/lib/server/auth-guards";
 import { env } from "@/lib/server/env";
 import { fail, ok } from "@/lib/server/http";
@@ -23,7 +24,7 @@ export async function POST(request: Request, { id }: RouteParams) {
   // Invalidate old token; new token sent via email.
   const rawToken = generateRawToken();
   const tokenHash = hashToken(rawToken);
-  const expiresAt = addHours(new Date(), env.INVITE_TOKEN_TTL_HOURS);
+  const expiresAt = addHours(now(), env.INVITE_TOKEN_TTL_HOURS);
 
   await prisma.userInvite.update({
     where: { id: invite.id },

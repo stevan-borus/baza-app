@@ -35,6 +35,7 @@ import { POST as POST_RESEND } from "@/app/api/invites/[id]/resend/+api";
 import { POST as POST_REVOKE } from "@/app/api/invites/[id]/revoke/+api";
 import { POST as POST_COMPLETE } from "@/app/api/auth/complete-invite/+api";
 import { generateRawToken, hashToken } from "@/lib/server/tokens";
+import { now, nowMs } from "@/lib/now";
 import { prisma } from "@/lib/server/prisma";
 import { sendInviteEmail } from "@/lib/server/resend";
 
@@ -117,7 +118,7 @@ describe("invites API", () => {
         fullName: "Redeemer",
         role: "CLIENT",
         tokenHash,
-        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+        expiresAt: new Date(nowMs() + 24 * 60 * 60 * 1000),
         createdById: admin.id,
       },
     });
@@ -157,7 +158,7 @@ describe("invites API", () => {
         fullName: "Expired",
         role: "CLIENT",
         tokenHash,
-        expiresAt: new Date(Date.now() - 60 * 1000),
+        expiresAt: new Date(nowMs() - 60 * 1000),
         createdById: admin.id,
       },
     });
@@ -196,7 +197,7 @@ describe("invites API", () => {
         fullName: "To Revoke",
         role: "CLIENT",
         tokenHash: hashToken(generateRawToken()),
-        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+        expiresAt: new Date(nowMs() + 24 * 60 * 60 * 1000),
         createdById: admin.id,
       },
     });
@@ -220,7 +221,7 @@ describe("invites API", () => {
         fullName: "To Resend",
         role: "CLIENT",
         tokenHash: oldTokenHash,
-        expiresAt: new Date(Date.now() + 1000),
+        expiresAt: new Date(nowMs() + 1000),
         createdById: admin.id,
       },
     });
@@ -233,7 +234,7 @@ describe("invites API", () => {
     expect(response.status).toBe(200);
     const updated = await prisma.userInvite.findUnique({ where: { id: invite.id } });
     expect(updated?.tokenHash).not.toBe(oldTokenHash);
-    expect(updated?.expiresAt.getTime()).toBeGreaterThan(Date.now());
+    expect(updated?.expiresAt.getTime()).toBeGreaterThan(nowMs());
     expect(sendInviteEmailMock).toHaveBeenCalledWith(
       expect.objectContaining({ to: "to-resend@test.local" }),
     );
@@ -247,7 +248,7 @@ describe("invites API", () => {
         fullName: "X",
         role: "CLIENT",
         tokenHash: hashToken(generateRawToken()),
-        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+        expiresAt: new Date(nowMs() + 24 * 60 * 60 * 1000),
         status: "REVOKED",
         createdById: admin.id,
       },

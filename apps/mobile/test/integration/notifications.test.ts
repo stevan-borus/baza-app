@@ -52,6 +52,7 @@ vi.mock("@/lib/server/notifications", async () => {
 import { GET, POST } from "@/app/api/notifications/+api";
 import { PATCH } from "@/app/api/notifications/[id]/+api";
 import { prisma } from "@/lib/server/prisma";
+import { now, nowMs } from "@/lib/now";
 
 async function makeUser(opts: { email: string; role?: "ADMIN" | "CLIENT" | "TRAINER" }) {
   const user = await prisma.user.create({
@@ -92,7 +93,7 @@ describe("notifications API", () => {
         title: "old",
         body: "old",
         payload: {},
-        createdAt: new Date(Date.now() - 60_000),
+        createdAt: new Date(nowMs() - 60_000),
       },
     });
     await prisma.notificationLog.create({
@@ -102,6 +103,9 @@ describe("notifications API", () => {
         title: "new",
         body: "new",
         payload: {},
+        // Pin createdAt explicitly so this asserts the order regardless of
+        // DB-side `now()` vs. anchored app-side `now()`.
+        createdAt: now(),
       },
     });
     authAs(me);

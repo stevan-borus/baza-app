@@ -1,3 +1,4 @@
+import { now } from "@/lib/now";
 import { requireCronAuth } from "@/lib/server/cron-auth";
 import { ok } from "@/lib/server/http";
 import { createSystemNotification } from "@/lib/server/notifications";
@@ -19,15 +20,15 @@ export async function POST(request: Request) {
       : 120;
   const dryRun = url.searchParams.get("dryRun") === "true";
 
-  const now = new Date();
+  const currentInstant = now();
   const from =
     mode === "immediate"
-      ? new Date(now.getTime())
-      : new Date(now.getTime() + 23 * 60 * 60 * 1000);
+      ? new Date(currentInstant.getTime())
+      : new Date(currentInstant.getTime() + 23 * 60 * 60 * 1000);
   const to =
     mode === "immediate"
-      ? new Date(now.getTime() + windowMinutes * 60 * 1000)
-      : new Date(now.getTime() + 25 * 60 * 60 * 1000);
+      ? new Date(currentInstant.getTime() + windowMinutes * 60 * 1000)
+      : new Date(currentInstant.getTime() + 25 * 60 * 60 * 1000);
 
   // Sessions in the reminder window with non-canceled bookings.
   const sessions = await prisma.session.findMany({

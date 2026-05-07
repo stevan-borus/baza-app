@@ -1,5 +1,6 @@
 import { updateSessionInputSchema } from "@baza/types";
 import { UserRole } from "@/generated/prisma";
+import { nowMs } from "@/lib/now";
 import { requireRole } from "@/lib/server/auth-guards";
 import { fail, ok } from "@/lib/server/http";
 import { createSystemNotification } from "@/lib/server/notifications";
@@ -57,7 +58,7 @@ export async function PATCH(request: Request, { id }: RouteParams) {
     parsed.data.isActive === false &&
     existing.isActive &&
     !existing.recurringScheduleId &&
-    existing.startsAt.getTime() >= Date.now() &&
+    existing.startsAt.getTime() >= nowMs() &&
     existing.bookings.length > 0
   ) {
     return fail(

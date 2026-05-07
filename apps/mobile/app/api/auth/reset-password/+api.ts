@@ -1,4 +1,5 @@
 import { resetPasswordInputSchema } from "@baza/types";
+import { now } from "@/lib/now";
 import { fail, ok } from "@/lib/server/http";
 import { hashPassword } from "@/lib/server/password";
 import { prisma } from "@/lib/server/prisma";
@@ -26,7 +27,7 @@ export async function POST(request: Request) {
   if (!resetToken) return fail("Invalid reset token", 404);
   // One-time use; prevent replay.
   if (resetToken.usedAt) return fail("Reset token already used", 410);
-  if (resetToken.expiresAt < new Date()) return fail("Reset token has expired", 410);
+  if (resetToken.expiresAt < now()) return fail("Reset token has expired", 410);
 
   const passwordHash = await hashPassword(parsed.data.password);
 
@@ -42,7 +43,7 @@ export async function POST(request: Request) {
     }),
     prisma.passwordResetToken.update({
       where: { id: resetToken.id },
-      data: { usedAt: new Date() },
+      data: { usedAt: now() },
     }),
   ]);
 

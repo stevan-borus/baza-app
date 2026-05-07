@@ -1,5 +1,6 @@
 import { completeInviteInputSchema } from "@baza/types";
 import { type Prisma, InviteStatus, UserRole } from "@/generated/prisma";
+import { now } from "@/lib/now";
 import { auth } from "@/lib/server/auth";
 import { fail, ok } from "@/lib/server/http";
 import { hashPassword } from "@/lib/server/password";
@@ -23,7 +24,7 @@ export async function POST(request: Request) {
 
   if (!invite) return fail("Invalid invite token", 404);
   if (invite.status !== InviteStatus.PENDING) return fail("Invite is no longer active", 410);
-  if (invite.expiresAt < new Date()) {
+  if (invite.expiresAt < now()) {
     // Mark expired so it cannot be retried.
     await prisma.userInvite.update({
       where: { id: invite.id },

@@ -12,6 +12,15 @@ const BASE_URL = process.env.E2E_BASE_URL ?? `http://127.0.0.1:${PORT}`;
 const CRON_TOKEN = "test-admin-bootstrap-token";
 process.env.API_ADMIN_BOOTSTRAP_TOKEN = CRON_TOKEN;
 
+/**
+ * Anchor instant the entire stack pins to during E2E. Server reads
+ * TEST_ANCHOR_TIME via `lib/now.ts`; helpers and the browser fixture
+ * resolve it from this same env var so seed/server/helpers/browser all
+ * agree on "current time". See CONTEXT.md → "Anchor time".
+ */
+const TEST_ANCHOR_TIME = process.env.TEST_ANCHOR_TIME ?? "2026-05-09T10:00:00Z";
+process.env.TEST_ANCHOR_TIME = TEST_ANCHOR_TIME;
+
 export default defineConfig({
   testDir: "./test/e2e",
   testMatch: "**/*.spec.ts",
@@ -35,7 +44,7 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: `CI=1 EXPO_PUBLIC_API_URL=${BASE_URL} BASE_URL=${BASE_URL} APP_WEB_URL=${BASE_URL} API_ADMIN_BOOTSTRAP_TOKEN=${CRON_TOKEN} NODE_OPTIONS="--max-old-space-size=8192" expo start --web --port ${PORT}`,
+    command: `CI=1 EXPO_PUBLIC_API_URL=${BASE_URL} BASE_URL=${BASE_URL} APP_WEB_URL=${BASE_URL} API_ADMIN_BOOTSTRAP_TOKEN=${CRON_TOKEN} TEST_ANCHOR_TIME=${TEST_ANCHOR_TIME} NODE_OPTIONS="--max-old-space-size=8192" expo start --web --port ${PORT}`,
     url: `${BASE_URL}/api/health`,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,

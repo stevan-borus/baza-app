@@ -19,6 +19,7 @@ vi.mock("@/lib/server/auth-guards", async () => {
 import { GET as GET_ATTENDANCE } from "@/app/api/reports/attendance/+api";
 import { GET as GET_UTILIZATION } from "@/app/api/reports/utilization/+api";
 import { prisma } from "@/lib/server/prisma";
+import { now, nowMs } from "@/lib/now";
 
 const HOUR_MS = 60 * 60 * 1000;
 const DAY_MS = 24 * HOUR_MS;
@@ -128,7 +129,7 @@ describe("reports", () => {
           {
             sessionId: session.id,
             clientProfileId: c3.profile.id,
-            canceledAt: new Date(),
+            canceledAt: now(),
           },
         ],
       });

@@ -8,11 +8,12 @@
  * passed — replacing the racy `d.getTime() === Date.now()` pattern that
  * lived in older specs.
  *
- * Note: these helpers still depend on the wall clock. The full anchor-
- * time refactor (freezing browser AND server `Date` to a fixed instant)
- * is unimplemented — see CONTEXT.md → "Anchor time".
+ * Reads the anchor instant via `lib/now.ts` so date math here matches the
+ * dev server (also pinned to the same anchor via `TEST_ANCHOR_TIME`).
+ * See CONTEXT.md → "Anchor time".
  */
 import type { Page } from "@playwright/test";
+import { now } from "../../../lib/now";
 
 const REFORMER_WEEKDAYS = new Set([1, 3, 5]);
 
@@ -29,7 +30,7 @@ export function dateKeyFromDate(d: Date): string {
  * to the next Reformer day. Bounded at 14 days.
  */
 export function nextReformerDayKey(): string {
-  const d = new Date();
+  const d = now();
   for (let i = 0; i < 14; i++) {
     if (REFORMER_WEEKDAYS.has(d.getDay()) && !(i === 0 && d.getHours() >= 10)) {
       return dateKeyFromDate(d);
@@ -60,8 +61,7 @@ export async function navigateWeekStripTo(page: Page, dateKey: string) {
 
   if ((await dayLocator.count()) === 0) {
     const target = new Date(`${dateKey}T00:00:00`);
-    const chevron =
-      target > new Date() ? "week-strip-next" : "week-strip-prev";
+    const chevron = target > now() ? "week-strip-next" : "week-strip-prev";
     for (let i = 0; i < 6; i++) {
       await page.getByTestId(chevron).first().dispatchEvent("click");
       try {

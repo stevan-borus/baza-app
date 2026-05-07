@@ -1,5 +1,6 @@
 import { inviteClientInputSchema } from "@baza/types";
 import { UserRole } from "@/generated/prisma";
+import { now } from "@/lib/now";
 import { requireRole } from "@/lib/server/auth-guards";
 import { env } from "@/lib/server/env";
 import { fail, ok } from "@/lib/server/http";
@@ -58,7 +59,7 @@ export async function POST(request: Request) {
 
   const rawToken = generateRawToken();
   const tokenHash = hashToken(rawToken);
-  const expiresAt = addHours(new Date(), env.INVITE_TOKEN_TTL_HOURS);
+  const expiresAt = addHours(now(), env.INVITE_TOKEN_TTL_HOURS);
   // Store hash only; raw token sent via email for one-time use.
   const invite = await prisma.userInvite.create({
     data: {

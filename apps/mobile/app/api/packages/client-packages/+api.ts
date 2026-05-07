@@ -1,5 +1,6 @@
 import { createClientPackageInputSchema } from "@baza/types";
 import { UserRole } from "@/generated/prisma";
+import { now } from "@/lib/now";
 import { requireRole } from "@/lib/server/auth-guards";
 import { fail, ok } from "@/lib/server/http";
 import { findEligibleClientPackage } from "@/lib/server/package-eligibility";
@@ -43,7 +44,7 @@ export async function GET(request: Request) {
     // Dashboard "active package" is class-agnostic on purpose — drives the
     // home/profile pill, not the bookable calendar. Class scope is enforced at
     // booking + availability time. Here we just look for ANY eligible pack.
-    const now = new Date();
+    const currentInstant = now();
     const activePackage = (() => {
       const distinctClassTypeIds = Array.from(
         new Set(packages.map((p: { classTypeId: string }) => p.classTypeId)),
@@ -64,7 +65,7 @@ export async function GET(request: Request) {
             sessionsRemaining: item.sessionsRemaining,
           })),
           pauses,
-          now,
+          currentInstant,
           classTypeId,
         );
         if (hit) return hit;

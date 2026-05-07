@@ -19,6 +19,7 @@ vi.mock("@/lib/server/auth-guards", async () => {
 import { POST } from "@/app/api/packages/types/+api";
 import { PATCH, DELETE } from "@/app/api/packages/types/[id]/+api";
 import { prisma } from "@/lib/server/prisma";
+import { now, nowMs } from "@/lib/now";
 
 async function seedAdminAndClassType() {
   const admin = await prisma.user.create({
@@ -213,8 +214,8 @@ describe("packages/types CRUD", () => {
         packageTypeId: packageType.id,
         classTypeId: reformer.id,
         lateCancelHours: 12,
-        startsAt: new Date(),
-        expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+        startsAt: now(),
+        expiresAt: new Date(nowMs() + 30 * 24 * 60 * 60 * 1000),
         sessionsRemaining: 12,
       },
     });

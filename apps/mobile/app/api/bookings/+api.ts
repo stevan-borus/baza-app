@@ -1,5 +1,6 @@
 import { bookingMutationInputSchema } from "@baza/types";
 import { type Prisma, UserRole } from "@/generated/prisma";
+import { now } from "@/lib/now";
 import { requireRole } from "@/lib/server/auth-guards";
 import { shouldApplyLateCancelPenalty } from "@/lib/server/cancellation-policy";
 import { fail, ok } from "@/lib/server/http";
@@ -124,7 +125,7 @@ export async function POST(request: Request) {
     return ok({ success: true, state: "BOOKED" });
   }
 
-  const cancellationTime = new Date();
+  const cancellationTime = now();
   const activeBooking = await prisma.booking.findUnique({
     where: { sessionId_clientProfileId: { sessionId, clientProfileId } },
     select: {

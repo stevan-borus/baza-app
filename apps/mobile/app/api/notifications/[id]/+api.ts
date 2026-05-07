@@ -1,4 +1,5 @@
 import { UserRole } from "@/generated/prisma";
+import { now } from "@/lib/now";
 import { requireRole } from "@/lib/server/auth-guards";
 import { fail, ok } from "@/lib/server/http";
 import { prisma } from "@/lib/server/prisma";
@@ -26,7 +27,7 @@ export async function PATCH(request: Request, { id }: RouteParams) {
 
   const updated = await prisma.notificationLog.update({
     where: { id },
-    data: { readAt: notification.readAt ?? new Date() },
+    data: { readAt: notification.readAt ?? now() },
     select: {
       id: true,
       readAt: true,

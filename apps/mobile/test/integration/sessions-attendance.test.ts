@@ -34,6 +34,7 @@ vi.mock("@/lib/server/auth-guards", async () => {
 });
 
 import { GET } from "@/app/api/sessions/availability/+api";
+import { now } from "@/lib/now";
 import { prisma } from "@/lib/server/prisma";
 
 async function seed() {
@@ -67,11 +68,24 @@ function buildRequest(month: string) {
   );
 }
 
-// "today" lives at 2026-05-06 per project memory; use a fixed month we can
-// pick past + future days from without flake.
-const MONTH = "2026-05";
-const PAST = new Date("2026-05-02T10:00:00Z"); // before "now"
-const FUTURE = new Date("2026-05-20T10:00:00Z"); // after "now"
+// Derive PAST / FUTURE / MONTH from the anchor so the spec stays
+// deterministic regardless of which anchor instant is configured. We want
+// MONTH to contain BOTH a past day and a future day relative to "now",
+// so we use the start-of-anchor-month as a base and pick the 1st (past)
+// and last day (future) of that month.
+const ANCHOR_NOW = now();
+const ANCHOR_YEAR = ANCHOR_NOW.getUTCFullYear();
+const ANCHOR_MONTH_IDX = ANCHOR_NOW.getUTCMonth();
+const MONTH = `${ANCHOR_YEAR}-${String(ANCHOR_MONTH_IDX + 1).padStart(2, "0")}`;
+const PAST = new Date(Date.UTC(ANCHOR_YEAR, ANCHOR_MONTH_IDX, 1, 0, 0, 0));
+// Last day of anchor month at 23:00 — guaranteed future when the anchor
+// isn't on the last day; if anchor is on the last day, this still works
+// as long as the hour is after `anchor.getUTCHours()`. With our chosen
+// anchor (`2026-05-09T10:00:00Z`), end-of-month at 23:00 is comfortably
+// in the future.
+const FUTURE = new Date(
+  Date.UTC(ANCHOR_YEAR, ANCHOR_MONTH_IDX + 1, 0, 23, 0, 0),
+);
 
 describe("GET /api/sessions/availability — attendance markers", () => {
   beforeEach(async () => {
