@@ -316,6 +316,31 @@ export async function findFutureSeriesSession(scheduleNamePart: string) {
 }
 
 /**
+ * Cancel every live (canceledAt = null) booking on a recurring schedule's
+ * future sessions. The series PATCH/DELETE handlers refuse to operate when
+ * any future session has bookings (see app/api/sessions/recurring/[id]/+api.ts);
+ * the rich seed places one booking on each schedule so dashboards aren't
+ * empty, so series-edit specs need to clear those bookings first.
+ *
+ * Returns the number of bookings canceled (mostly for sanity).
+ */
+export async function cancelBookingsOnRecurringSchedule(
+  recurringScheduleId: string,
+) {
+  const result = await db().booking.updateMany({
+    where: {
+      canceledAt: null,
+      session: {
+        recurringScheduleId,
+        startsAt: { gte: now() },
+      },
+    },
+    data: { canceledAt: now() },
+  });
+  return result.count;
+}
+
+/**
  * Schedule a future session for a given trainer + class type, starting in
  * `hoursFromNow` hours. Useful when the rich seed's earliest session is
  * outside the late-cancel cutoff.
