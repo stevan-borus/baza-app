@@ -68,7 +68,7 @@ Admin assigns a free / complimentary ClientPackage directly with no BillingRecor
 _sr_: "Poklon paket" — _en_: "Complimentary package". _Avoid_: "komp paket" (colloquial Serbian, was the old label).
 
 **BillingRecord**:
-A row of money received. Always paired with a ClientPackage in Flow 1 (Nova uplata).
+A row of money received. Always paired with a ClientPackage in Flow 1 (Nova uplata). Carries `packageTypeId` (nullable — non-null on Flow 1, null on legacy / non-package payments) so revenue-per-PackageType reporting joins cleanly without inferring from timestamps.
 
 ### Trainer notes
 

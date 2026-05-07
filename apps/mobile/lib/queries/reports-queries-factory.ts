@@ -37,6 +37,17 @@ const bookingsResponseSchema = z.object({
   ),
 });
 
+const packageInsightItemSchema = z.object({
+  packageTypeId: z.string(),
+  name: z.string(),
+});
+const packagesReportResponseSchema = z.object({
+  success: z.boolean(),
+  mostUsed: z.array(packageInsightItemSchema.extend({ count: z.number() })),
+  revenuePerType: z.array(packageInsightItemSchema.extend({ revenue: z.number() })),
+  compVsPaid: z.object({ paid: z.number(), comp: z.number(), total: z.number() }),
+});
+
 export const reportsQueries = {
   summary: () =>
     queryOptions({
@@ -100,6 +111,24 @@ export const reportsQueries = {
         if (!response.ok)
           throw new Error(`Unable to load bookings report (${response.status})`);
         return bookingsResponseSchema.parse(await response.json());
+      },
+      staleTime: 60_000,
+    }),
+
+  packages: (params?: { from?: string; to?: string; period?: string }) =>
+    queryOptions({
+      queryKey: ["reports", "packages", params] as const,
+      queryFn: async () => {
+        const endpoint = `${sharedEnv.EXPO_PUBLIC_API_URL}/api/reports/packages`;
+        const searchParams = new URLSearchParams();
+        if (params?.from) searchParams.set("from", params.from);
+        if (params?.to) searchParams.set("to", params.to);
+        if (params?.period) searchParams.set("period", params.period);
+        const url = searchParams.size > 0 ? `${endpoint}?${searchParams.toString()}` : endpoint;
+        const response = await apiFetch(url, { credentials: "include" });
+        if (!response.ok)
+          throw new Error(`Unable to load packages report (${response.status})`);
+        return packagesReportResponseSchema.parse(await response.json());
       },
       staleTime: 60_000,
     }),

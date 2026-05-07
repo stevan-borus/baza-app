@@ -102,6 +102,7 @@ export async function POST(request: Request) {
         method: parsed.data.method,
         status,
         notes: parsed.data.notes,
+        packageTypeId: parsed.data.packageTypeId ?? null,
       },
     });
 

@@ -499,6 +499,15 @@
       "periodQuarter": "Kvartal",
       "totalRevenue": "Ukupan prihod",
       "transactionCount": "Transakcije",
+      "packagesSection": "Paketi",
+      "packagesMostUsed": "Najprodavaniji",
+      "packagesRevenue": "Prihod po paketu",
+      "packagesCompVsPaid": "Plaćeni nasuprot poklon",
+      "packagesCompLabel": "Poklon",
+      "packagesPaidLabel": "Plaćeni",
+      "packagesCount": "{{count}} prodato",
+      "packagesReportError": "Nije moguće učitati izveštaj o paketima.",
+      "packagesReportEmpty": "Nema podataka o paketima u ovom periodu.",
       "avgPerClient": "Prosek po klijentu"
     }
   },

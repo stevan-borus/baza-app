@@ -496,7 +496,16 @@
       "periodQuarter": "Quarter",
       "totalRevenue": "Total revenue",
       "transactionCount": "Transactions",
-      "avgPerClient": "Avg per client"
+      "avgPerClient": "Avg per client",
+      "packagesSection": "Packages",
+      "packagesMostUsed": "Most used",
+      "packagesRevenue": "Revenue per type",
+      "packagesCompVsPaid": "Paid vs complimentary",
+      "packagesCompLabel": "Complimentary",
+      "packagesPaidLabel": "Paid",
+      "packagesCount": "{{count}} sold",
+      "packagesReportError": "Unable to load packages report.",
+      "packagesReportEmpty": "No package data in this period."
     }
   },
   "trainer": {

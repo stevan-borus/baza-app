@@ -283,6 +283,7 @@ model PackageType {
   updatedAt           DateTime @updatedAt
   classType           ClassType @relation(fields: [classTypeId], references: [id], onDelete: Restrict)
   clientPackages      ClientPackage[]
+  billingRecords      BillingRecord[]
 
   @@index([classTypeId])
 }
@@ -394,6 +395,10 @@ model BillingRecord {
   method        PaymentMethod
   status        BillingStatus @default(PENDING)
   notes         String?
+  packageTypeId String?
+  packageType   PackageType?  @relation(fields: [packageTypeId], references: [id], onDelete: SetNull)
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
+
+  @@index([packageTypeId])
 }

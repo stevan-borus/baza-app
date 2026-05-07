@@ -24,7 +24,7 @@ import { ScreenContainerRaw, useTabBarBottomPadding } from "@/components/ui/scre
 
 type Period = "week" | "month" | "quarter";
 
-const STAGGER = [0, 80, 160, 240, 320];
+const STAGGER = [0, 80, 160, 240, 320, 400];
 
 export default function AdminReports() {
   const { t } = useTranslation();
@@ -44,6 +44,7 @@ export default function AdminReports() {
   const revenueQuery = useQuery(reportsQueries.revenue({ period }));
   const utilizationQuery = useQuery(reportsQueries.utilization({ period }));
   const bookingsQuery = useQuery(reportsQueries.bookings({ period }));
+  const packagesQuery = useQuery(reportsQueries.packages({ period }));
   const summary = summaryQuery.data?.summary;
 
   const bookingsData = (bookingsQuery.data?.data ?? []).map((item, i) => ({
@@ -340,6 +341,140 @@ export default function AdminReports() {
               </View>
             </GlassCard>
           ))}
+        </View>
+      </MotiView>
+
+      {/* Packages — most-used, revenue per type, comp vs paid */}
+      <MotiView
+        from={{ opacity: 0, translateY: 16 }}
+        animate={{ opacity: 1, translateY: 0 }}
+        transition={{ type: "timing", duration: 400, delay: STAGGER[5] }}
+      >
+        <View style={{ gap: 10 }}>
+          <SectionLabel>{t("admin.manage.packagesSection")}</SectionLabel>
+          {packagesQuery.isError ? (
+            <ErrorState message={t("admin.manage.packagesReportError")} />
+          ) : null}
+          {!packagesQuery.isError &&
+          !packagesQuery.isLoading &&
+          (packagesQuery.data?.mostUsed.length ?? 0) === 0 ? (
+            <EmptyState title={t("admin.manage.packagesReportEmpty")} />
+          ) : null}
+          {(packagesQuery.data?.mostUsed ?? []).slice(0, 5).map((item, index) => {
+            const max = packagesQuery.data?.mostUsed[0]?.count ?? 1;
+            const fillRatio = item.count / max;
+            return (
+              <GlassCard
+                key={item.packageTypeId}
+                testID={`packages-most-used-row-${item.packageTypeId}`}
+                size="md"
+              >
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
+                  <Text
+                    style={{
+                      fontSize: 28,
+                      fontWeight: "800",
+                      color: "rgba(255,255,255,0.12)",
+                      width: 36,
+                      textAlign: "center",
+                      lineHeight: 32,
+                    }}
+                  >
+                    {index + 1}
+                  </Text>
+                  <View style={{ flex: 1, gap: 6 }}>
+                    <View
+                      style={{
+                        flexDirection: "row",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                      }}
+                    >
+                      <Text
+                        className="text-foreground font-body-semibold"
+                        style={{ fontSize: 14 }}
+                      >
+                        {item.name}
+                      </Text>
+                      <Text
+                        className="text-accent font-body-semibold"
+                        style={{ fontSize: 13 }}
+                      >
+                        {t("admin.manage.packagesCount", { count: item.count })}
+                      </Text>
+                    </View>
+                    <View
+                      style={{
+                        height: 4,
+                        borderRadius: 2,
+                        backgroundColor: "rgba(255,255,255,0.08)",
+                      }}
+                    >
+                      <View
+                        style={{
+                          height: 4,
+                          borderRadius: 2,
+                          backgroundColor: tokens.accent,
+                          width: `${Math.round(fillRatio * 100)}%`,
+                        }}
+                      />
+                    </View>
+                  </View>
+                </View>
+              </GlassCard>
+            );
+          })}
+
+          {packagesQuery.data?.compVsPaid &&
+          packagesQuery.data.compVsPaid.total > 0 ? (
+            <GlassCard testID="packages-comp-vs-paid" size="md">
+              <View style={{ gap: 10 }}>
+                <Text
+                  className="text-muted"
+                  style={{ fontSize: 12, letterSpacing: 1 }}
+                >
+                  {t("admin.manage.packagesCompVsPaid").toUpperCase()}
+                </Text>
+                <View style={{ flexDirection: "row", gap: 10 }}>
+                  <View style={{ flex: packagesQuery.data.compVsPaid.paid || 0.001 }}>
+                    <View
+                      style={{
+                        height: 8,
+                        backgroundColor: tokens.accent,
+                        borderTopLeftRadius: 4,
+                        borderBottomLeftRadius: 4,
+                      }}
+                    />
+                  </View>
+                  <View style={{ flex: packagesQuery.data.compVsPaid.comp || 0.001 }}>
+                    <View
+                      style={{
+                        height: 8,
+                        backgroundColor: "rgba(255,255,255,0.18)",
+                        borderTopRightRadius: 4,
+                        borderBottomRightRadius: 4,
+                      }}
+                    />
+                  </View>
+                </View>
+                <View
+                  style={{
+                    flexDirection: "row",
+                    justifyContent: "space-between",
+                  }}
+                >
+                  <Text className="text-foreground" style={{ fontSize: 13 }}>
+                    {t("admin.manage.packagesPaidLabel")} ·{" "}
+                    {packagesQuery.data.compVsPaid.paid}
+                  </Text>
+                  <Text className="text-muted" style={{ fontSize: 13 }}>
+                    {t("admin.manage.packagesCompLabel")} ·{" "}
+                    {packagesQuery.data.compVsPaid.comp}
+                  </Text>
+                </View>
+              </View>
+            </GlassCard>
+          ) : null}
         </View>
       </MotiView>
       </ScrollView>
