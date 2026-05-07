@@ -27,12 +27,14 @@ export type BillingRecord = z.infer<typeof billingRecordSchema>;
 
 async function fetchBillingPage(
   cursor?: string | null,
-  filters?: { clientUserId?: string },
+  filters?: { clientUserId?: string; from?: string; to?: string },
 ) {
   const endpoint = `${sharedEnv.EXPO_PUBLIC_API_URL}/api/billing`;
   const searchParams = new URLSearchParams();
   if (cursor) searchParams.set("cursor", cursor);
   if (filters?.clientUserId) searchParams.set("clientUserId", filters.clientUserId);
+  if (filters?.from) searchParams.set("from", filters.from);
+  if (filters?.to) searchParams.set("to", filters.to);
   const url =
     searchParams.size > 0 ? `${endpoint}?${searchParams.toString()}` : endpoint;
   const response = await apiFetch(url, { credentials: "include" });
@@ -49,7 +51,7 @@ export const billingQueries = {
       staleTime: 30_000,
     }),
 
-  listInfinite: (filters?: { clientUserId?: string }) =>
+  listInfinite: (filters?: { clientUserId?: string; from?: string; to?: string }) =>
     infiniteQueryOptions({
       queryKey: ["billing", "list-infinite", filters] as const,
       queryFn: ({ pageParam }) => fetchBillingPage(pageParam, filters),

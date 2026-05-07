@@ -59,11 +59,54 @@ export default function AdminReports() {
     setRefreshing(false);
   }
 
+  // Derive a from/to window from the period pill so each pill shows a distinct
+  // time range. The server-side parser only accepts "day" | "week" | "month";
+  // we send "week" for the bucket granularity and pick the time span here.
+  const periodWindow = (() => {
+    const to = new Date();
+    const from = new Date(to);
+    if (period === "week") {
+      from.setDate(to.getDate() - 7);
+      return { from: from.toISOString(), to: to.toISOString(), bucket: "day" };
+    }
+    if (period === "month") {
+      from.setDate(to.getDate() - 30);
+      return { from: from.toISOString(), to: to.toISOString(), bucket: "week" };
+    }
+    // quarter
+    from.setDate(to.getDate() - 90);
+    return { from: from.toISOString(), to: to.toISOString(), bucket: "month" };
+  })();
+
   const summaryQuery = useQuery(reportsQueries.summary());
-  const revenueQuery = useQuery(reportsQueries.revenue({ period }));
-  const utilizationQuery = useQuery(reportsQueries.utilization({ period }));
-  const bookingsQuery = useQuery(reportsQueries.bookings({ period }));
-  const packagesQuery = useQuery(reportsQueries.packages({ period }));
+  const revenueQuery = useQuery(
+    reportsQueries.revenue({
+      from: periodWindow.from,
+      to: periodWindow.to,
+      period: periodWindow.bucket,
+    }),
+  );
+  const utilizationQuery = useQuery(
+    reportsQueries.utilization({
+      from: periodWindow.from,
+      to: periodWindow.to,
+      period: periodWindow.bucket,
+    }),
+  );
+  const bookingsQuery = useQuery(
+    reportsQueries.bookings({
+      from: periodWindow.from,
+      to: periodWindow.to,
+      period: periodWindow.bucket,
+    }),
+  );
+  const packagesQuery = useQuery(
+    reportsQueries.packages({
+      from: periodWindow.from,
+      to: periodWindow.to,
+      period: periodWindow.bucket,
+    }),
+  );
   const summary = summaryQuery.data?.summary;
 
   const bookingsData = (bookingsQuery.data?.data ?? []).map((item, i) => ({
@@ -234,7 +277,8 @@ export default function AdminReports() {
                     style={{
                       fontSize: 28,
                       fontWeight: "800",
-                      color: "rgba(255,255,255,0.12)",
+                      color: tokens.muted,
+                      opacity: 0.35,
                       width: 36,
                       textAlign: "center",
                       lineHeight: 32,
@@ -268,7 +312,7 @@ export default function AdminReports() {
                       style={{
                         height: 4,
                         borderRadius: 2,
-                        backgroundColor: "rgba(255,255,255,0.08)",
+                        backgroundColor: tokens.glassStrong,
                       }}
                     >
                       <View
@@ -393,7 +437,8 @@ export default function AdminReports() {
                     style={{
                       fontSize: 28,
                       fontWeight: "800",
-                      color: "rgba(255,255,255,0.12)",
+                      color: tokens.muted,
+                      opacity: 0.35,
                       width: 36,
                       textAlign: "center",
                       lineHeight: 32,
@@ -426,7 +471,7 @@ export default function AdminReports() {
                       style={{
                         height: 4,
                         borderRadius: 2,
-                        backgroundColor: "rgba(255,255,255,0.08)",
+                        backgroundColor: tokens.glassStrong,
                       }}
                     >
                       <View
@@ -444,56 +489,6 @@ export default function AdminReports() {
             );
           })}
 
-          {packagesQuery.data?.compVsPaid &&
-          packagesQuery.data.compVsPaid.total > 0 ? (
-            <GlassCard testID="packages-comp-vs-paid" size="md">
-              <View style={{ gap: 10 }}>
-                <Text
-                  className="text-muted"
-                  style={{ fontSize: 12, letterSpacing: 1 }}
-                >
-                  {t("admin.manage.packagesCompVsPaid").toUpperCase()}
-                </Text>
-                <View style={{ flexDirection: "row", gap: 10 }}>
-                  <View style={{ flex: packagesQuery.data.compVsPaid.paid || 0.001 }}>
-                    <View
-                      style={{
-                        height: 8,
-                        backgroundColor: tokens.accent,
-                        borderTopLeftRadius: 4,
-                        borderBottomLeftRadius: 4,
-                      }}
-                    />
-                  </View>
-                  <View style={{ flex: packagesQuery.data.compVsPaid.comp || 0.001 }}>
-                    <View
-                      style={{
-                        height: 8,
-                        backgroundColor: "rgba(255,255,255,0.18)",
-                        borderTopRightRadius: 4,
-                        borderBottomRightRadius: 4,
-                      }}
-                    />
-                  </View>
-                </View>
-                <View
-                  style={{
-                    flexDirection: "row",
-                    justifyContent: "space-between",
-                  }}
-                >
-                  <Text className="text-foreground" style={{ fontSize: 13 }}>
-                    {t("admin.manage.packagesPaidLabel")} ·{" "}
-                    {packagesQuery.data.compVsPaid.paid}
-                  </Text>
-                  <Text className="text-muted" style={{ fontSize: 13 }}>
-                    {t("admin.manage.packagesCompLabel")} ·{" "}
-                    {packagesQuery.data.compVsPaid.comp}
-                  </Text>
-                </View>
-              </View>
-            </GlassCard>
-          ) : null}
         </View>
       </MotiView>
       </ScrollView>

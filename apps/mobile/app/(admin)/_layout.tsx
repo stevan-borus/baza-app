@@ -64,6 +64,8 @@ export default function AdminLayout() {
       {/* Hidden detail routes pushed from the dashboard. */}
       <Tabs.Screen name="class-types" options={{ href: null }} />
       <Tabs.Screen name="rooms" options={{ href: null }} />
+      <Tabs.Screen name="packages/active-assignments" options={{ href: null }} />
+      <Tabs.Screen name="sessions/[id]" options={{ href: null }} />
     </Tabs>
   );
 }

@@ -18,10 +18,25 @@ export async function GET(request: Request) {
   if (!parsedQuery.success) return fail("Invalid query params", 400, parsedQuery.error);
 
   const clientUserId = url.searchParams.get("clientUserId") ?? undefined;
+  const fromParam = url.searchParams.get("from");
+  const toParam = url.searchParams.get("to");
+  const from = fromParam ? new Date(fromParam) : undefined;
+  const to = toParam ? new Date(toParam) : undefined;
+
+  const where: Record<string, unknown> = {};
+  if (clientUserId) where.clientUserId = clientUserId;
+  const fromValid = from && !Number.isNaN(from.getTime());
+  const toValid = to && !Number.isNaN(to.getTime());
+  if (fromValid || toValid) {
+    const range: Record<string, Date> = {};
+    if (fromValid) range.gte = from!;
+    if (toValid) range.lt = to!;
+    where.createdAt = range;
+  }
 
   // Cursor-based pagination: skip 1 after cursor to avoid duplicate.
   const payments = await prisma.billingRecord.findMany({
-    where: clientUserId ? { clientUserId } : undefined,
+    where: Object.keys(where).length > 0 ? where : undefined,
     orderBy: { createdAt: "desc" },
     ...(parsedQuery.data.cursor
       ? { cursor: { id: parsedQuery.data.cursor }, skip: 1 }

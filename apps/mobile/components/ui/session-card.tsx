@@ -36,8 +36,14 @@ const classTypeAccentColor: Record<string, string> = {
 };
 
 /**
- * Renders a "HH:MM - HH:MM" time range as two stacked lines with a slight
- * diagonal offset so the column doesn't dominate the card width.
+ * Editorial time block for the session card. Renders "HH:mm / HH:mm" as a
+ * three-part composition: bold start time, oversized hairline slash that
+ * tilts back like an italic quote glyph, muted end time. The slash is the
+ * design element — it does the visual work of separating the two times so
+ * neither needs to be dominant.
+ *
+ * Sized to feel small in the layout (~64px wide) while letting the slash
+ * grow tall enough to draw the eye to the time block first.
  */
 function SessionCardTime({ time }: { time: string }) {
   const parts = time.split(/\s*[-–]\s*/);
@@ -50,11 +56,47 @@ function SessionCardTime({ time }: { time: string }) {
   }
   const [start, end] = parts;
   return (
-    <View style={{ minWidth: 54 }}>
-      <Text className="text-base font-body-bold text-foreground">{start}</Text>
+    <View
+      style={{
+        flexDirection: "row",
+        alignItems: "center",
+        minWidth: 64,
+      }}
+    >
       <Text
-        className="text-xs font-body-semibold text-muted"
-        style={{ marginLeft: 14, marginTop: -2 }}
+        className="text-foreground"
+        style={{
+          fontFamily: "AlbertSans-Bold",
+          fontSize: 15,
+          letterSpacing: -0.5,
+          lineHeight: 18,
+        }}
+      >
+        {start}
+      </Text>
+      <Text
+        className="text-accent"
+        style={{
+          fontFamily: "AlbertSans-Light",
+          fontSize: 28,
+          lineHeight: 28,
+          marginHorizontal: 2,
+          marginTop: -4,
+          transform: [{ skewX: "-12deg" }],
+          opacity: 0.55,
+        }}
+      >
+        /
+      </Text>
+      <Text
+        className="text-muted"
+        style={{
+          fontFamily: "AlbertSans-Medium",
+          fontSize: 13,
+          letterSpacing: -0.3,
+          lineHeight: 18,
+          marginTop: 4,
+        }}
       >
         {end}
       </Text>

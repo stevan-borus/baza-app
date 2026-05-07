@@ -14,7 +14,6 @@ import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-nati
 import dayjs from "dayjs";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { MotiView } from "@/components/ui/styled";
-import { LegendList } from "@legendapp/list";
 import { getDateLocale } from "@/lib/i18n";
 import { AppSheet } from "@/components/ui/sheet";
 import { Badge, Card } from "@/components/ui/card";
@@ -63,10 +62,14 @@ export default function AdminBilling() {
     packageTypeId: "",
   });
 
+  const monthFrom = selectedMonth.startOf("month").toISOString();
+  const monthTo = selectedMonth.endOf("month").toISOString();
   const billingQuery = useInfiniteQuery(
-    billingQueries.listInfinite(
-      filterClientUserId ? { clientUserId: filterClientUserId } : undefined,
-    ),
+    billingQueries.listInfinite({
+      ...(filterClientUserId ? { clientUserId: filterClientUserId } : {}),
+      from: monthFrom,
+      to: monthTo,
+    }),
   );
   const clientsQuery = useQuery(clientsQueries.list());
   const packageTypesQuery = useQuery(packagesQueries.types());
@@ -147,6 +150,16 @@ export default function AdminBilling() {
       <ScrollView
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
+        onScroll={({ nativeEvent }) => {
+          // Infinite scroll: when within 200px of the bottom, fetch next page.
+          const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
+          if (
+            layoutMeasurement.height + contentOffset.y >= contentSize.height - 200
+          ) {
+            handleEndReached();
+          }
+        }}
+        scrollEventThrottle={400}
         contentContainerStyle={{
           paddingTop: 16,
           paddingHorizontal: 24,
@@ -292,7 +305,7 @@ export default function AdminBilling() {
           <SkeletonCard />
         </View>
       ) : null}
-      {filteredRecords.length === 0 && !billingQuery.isLoading ? (
+      {filteredRecords.length === 0 && !billingQuery.isLoading && !billingQuery.isError ? (
         <EmptyState title={t("admin.manage.billingEmpty")} />
       ) : null}
 
@@ -302,13 +315,10 @@ export default function AdminBilling() {
           from={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ type: "timing", duration: 350, delay: 240 }}
-          style={{ height: 400 }}
         >
-          <LegendList
-            data={filteredRecords}
-            keyExtractor={(item) => item.id}
-            renderItem={({ item }: { item: BillingRecord }) => (
-              <View className="px-1 py-1.5">
+          <View style={{ gap: 8 }}>
+            {filteredRecords.map((item) => (
+              <View key={item.id} className="px-1 py-1.5">
                 <Card testID={`billing-row-${item.id}`}>
                   <View className="flex-col gap-2">
                     <View className="flex-row justify-between items-center">
@@ -349,15 +359,11 @@ export default function AdminBilling() {
                   </View>
                 </Card>
               </View>
-            )}
-            onEndReached={handleEndReached}
-            onEndReachedThreshold={0.5}
-            ListFooterComponent={
-              billingQuery.isFetchingNextPage ? (
-                <ActivityIndicator style={{ padding: 16 }} />
-              ) : null
-            }
-          />
+            ))}
+            {billingQuery.isFetchingNextPage ? (
+              <ActivityIndicator style={{ padding: 16 }} />
+            ) : null}
+          </View>
         </MotiView>
       ) : null}
 
