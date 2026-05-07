@@ -1,0 +1,130 @@
+import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { setMockUser } from "./auth-mock";
+import { resetDb } from "./setup-db";
+
+vi.mock("@/lib/server/auth-guards", async () => {
+  const { fail } = await import("@/lib/server/http");
+  const mod = await import("./auth-mock");
+  return {
+    requireRole: async (_req: Request, allowed: string[]) => {
+      const user = mod.getMockUser();
+      if (!user) return { ok: false as const, response: fail("Unauthorized", 401) };
+      if (!allowed.includes(user.role)) return { ok: false as const, response: fail("Forbidden", 403) };
+      return { ok: true as const, user };
+    },
+    getRequestUser: async () => mod.getMockUser(),
+  };
+});
+
+import { GET } from "@/app/api/packages/client-packages/+api";
+import { prisma } from "@/lib/server/prisma";
+import { now } from "@/lib/now";
+
+async function seedTwoClientsTwoPackages() {
+  const admin = await prisma.user.create({
+    data: { email: "admin@test.local", fullName: "Admin", role: "ADMIN" },
+  });
+  const reformer = await prisma.classType.create({
+    data: { name: "Reformer", maxClients: 6, durationMins: 60 },
+  });
+  const r12 = await prisma.packageType.create({
+    data: {
+      name: "Reformer 12",
+      sessionCount: 12,
+      validityDays: 30,
+      lateCancelHours: 12,
+      classTypeId: reformer.id,
+    },
+  });
+  const ana = await prisma.user.create({
+    data: { email: "ana@test.local", fullName: "Ana Anić", role: "CLIENT" },
+  });
+  const anaProfile = await prisma.clientProfile.create({ data: { userId: ana.id } });
+  const milos = await prisma.user.create({
+    data: { email: "milos@test.local", fullName: "Miloš Mitrović", role: "CLIENT" },
+  });
+  const milosProfile = await prisma.clientProfile.create({ data: { userId: milos.id } });
+  const startsAt = now();
+  const expiresAt = new Date(startsAt.getTime() + 30 * 24 * 60 * 60 * 1000);
+  await prisma.clientPackage.create({
+    data: {
+      clientProfileId: anaProfile.id,
+      packageTypeId: r12.id,
+      classTypeId: reformer.id,
+      lateCancelHours: 12,
+      startsAt,
+      expiresAt,
+      sessionsRemaining: 12,
+    },
+  });
+  await prisma.clientPackage.create({
+    data: {
+      clientProfileId: milosProfile.id,
+      packageTypeId: r12.id,
+      classTypeId: reformer.id,
+      lateCancelHours: 12,
+      startsAt,
+      expiresAt,
+      sessionsRemaining: 8,
+    },
+  });
+  return { admin, ana, milos };
+}
+
+function asAdmin(admin: { id: string; email: string }) {
+  setMockUser({
+    id: admin.id,
+    role: "ADMIN",
+    email: admin.email,
+    isActive: true,
+    clientProfile: null,
+  });
+}
+
+describe("GET /api/packages/client-packages — admin listing", () => {
+  beforeEach(async () => {
+    await resetDb();
+  });
+
+  afterAll(async () => {
+    await prisma.$disconnect();
+  });
+
+  it("admin list includes client name + email on each ClientPackage row", async () => {
+    const { admin } = await seedTwoClientsTwoPackages();
+    asAdmin(admin);
+    const response = await GET(
+      new Request("http://test.local/api/packages/client-packages"),
+    );
+    const body = await response.json();
+    expect(body.success).toBe(true);
+    expect(body.packages).toHaveLength(2);
+    const first = body.packages[0];
+    expect(first.client).toEqual(
+      expect.objectContaining({ fullName: expect.any(String), email: expect.any(String) }),
+    );
+  });
+
+  it("filters admin list by client search (name or email substring, case-insensitive)", async () => {
+    const { admin } = await seedTwoClientsTwoPackages();
+    asAdmin(admin);
+    const response = await GET(
+      new Request("http://test.local/api/packages/client-packages?search=ana"),
+    );
+    const body = await response.json();
+    expect(body.success).toBe(true);
+    expect(body.packages).toHaveLength(1);
+    expect(body.packages[0].client.fullName).toBe("Ana Anić");
+  });
+
+  it("search by email substring returns the matching client's packages", async () => {
+    const { admin } = await seedTwoClientsTwoPackages();
+    asAdmin(admin);
+    const response = await GET(
+      new Request("http://test.local/api/packages/client-packages?search=milos"),
+    );
+    const body = await response.json();
+    expect(body.packages).toHaveLength(1);
+    expect(body.packages[0].client.email).toBe("milos@test.local");
+  });
+});

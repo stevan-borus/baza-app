@@ -21,13 +21,32 @@ import { useThemeTokens } from "@/components/ui/tokens";
 import { StatStrip } from "@/components/ui/studio";
 import { reportsQueries } from "@/lib/queries/reports-queries-factory";
 import { ScreenContainerRaw, useTabBarBottomPadding } from "@/components/ui/screen-container";
+import dayjs from "dayjs";
 
 type Period = "week" | "month" | "quarter";
 
 const STAGGER = [0, 80, 160, 240, 320, 400];
 
+function formatBucketLabel(period: string, lang: string) {
+  // Month buckets: "YYYY-MM" → "May 2026"
+  if (/^\d{4}-\d{2}$/.test(period)) {
+    return dayjs(`${period}-01`).locale(lang).format("MMMM YYYY");
+  }
+  // Week buckets: "YYYY-Www" → "W19 · 2026"
+  if (/^\d{4}-W\d{2}$/.test(period)) {
+    const [year, week] = period.split("-W");
+    return `${week} · ${year}`;
+  }
+  // Day buckets: "YYYY-MM-DD" → "May 7"
+  if (/^\d{4}-\d{2}-\d{2}$/.test(period)) {
+    return dayjs(period).locale(lang).format("D. MMM");
+  }
+  return period;
+}
+
 export default function AdminReports() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const lang = i18n.language === "en" ? "en" : "sr";
   const queryClient = useQueryClient();
   const tokens = useThemeTokens();
   const bottomPad = useTabBarBottomPadding();
@@ -151,7 +170,7 @@ export default function AdminReports() {
           {bookingsQuery.isError ? (
             <ErrorState message={t("admin.manage.bookingsError")} />
           ) : null}
-          {bookingsData.length > 0 ? (
+          {bookingsData.some((d) => d.y > 0) ? (
             <HeroCard tone="accent">
               <View style={{ height: 220 }}>
                 <CartesianChart
@@ -235,7 +254,7 @@ export default function AdminReports() {
                         className="text-foreground font-body-semibold"
                         style={{ fontSize: 14 }}
                       >
-                        {item.period}
+                        {formatBucketLabel(item.period, lang)}
                       </Text>
                       <Text
                         className="text-accent font-body-semibold"
@@ -309,7 +328,7 @@ export default function AdminReports() {
                       className="text-foreground font-body-semibold"
                       style={{ fontSize: 14 }}
                     >
-                      {item.period}
+                      {formatBucketLabel(item.period, lang)}
                     </Text>
                     <Text
                       className="text-muted"

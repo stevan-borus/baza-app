@@ -59,7 +59,7 @@ export function Select<V extends string>({
             paddingLeft: SIDE_PADDING,
             paddingRight: SIDE_PADDING,
           }}
-          className={`border rounded-2xl flex-row items-center bg-glass ${
+          className={`border rounded-lg flex-row items-center bg-glass ${
             error ? "border-danger" : "border-glass-border"
           } ${disabled ? "opacity-50" : ""}`}
         >
@@ -106,7 +106,7 @@ export function Select<V extends string>({
           from={{ opacity: 0, translateY: -4 }}
           animate={{ opacity: 1, translateY: 0 }}
           transition={{ type: "timing", duration: 150 }}
-          className="border border-glass-border rounded-2xl bg-glass overflow-hidden"
+          className="border border-glass-border rounded-lg bg-glass overflow-hidden"
         >
           {options.length === 0 ? (
             <View className="px-4 py-3 items-center">

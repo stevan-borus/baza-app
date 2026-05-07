@@ -35,6 +35,33 @@ const classTypeAccentColor: Record<string, string> = {
   HIIT: "#f87171",
 };
 
+/**
+ * Renders a "HH:MM - HH:MM" time range as two stacked lines with a slight
+ * diagonal offset so the column doesn't dominate the card width.
+ */
+function SessionCardTime({ time }: { time: string }) {
+  const parts = time.split(/\s*[-–]\s*/);
+  if (parts.length !== 2) {
+    return (
+      <Text className="text-base font-body-bold min-w-[54px] text-foreground">
+        {time}
+      </Text>
+    );
+  }
+  const [start, end] = parts;
+  return (
+    <View style={{ minWidth: 54 }}>
+      <Text className="text-base font-body-bold text-foreground">{start}</Text>
+      <Text
+        className="text-xs font-body-semibold text-muted"
+        style={{ marginLeft: 14, marginTop: -2 }}
+      >
+        {end}
+      </Text>
+    </View>
+  );
+}
+
 const statusConfig: Record<SessionStatus, { label: string; status: "success" | "warning" }> = {
   booked: { label: "Booked", status: "success" },
   waitlisted: { label: "Waitlisted", status: "warning" },
@@ -75,9 +102,7 @@ export function SessionCard({
         <GlassCard accentBorder={accentBorder} accentBorderColor={accentBorderColor}>
           <View className="flex-col gap-2">
             <View className="flex-row items-center gap-3">
-              <Text className="text-base font-body-bold min-w-[54px] text-foreground">
-                {time}
-              </Text>
+              <SessionCardTime time={time} />
               <View className="flex-1 gap-0.5">
                 <Text className="text-sm font-body-semibold text-foreground">
                   {className}

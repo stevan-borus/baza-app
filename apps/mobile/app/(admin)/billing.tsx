@@ -47,6 +47,7 @@ export default function AdminBilling() {
   const [showCreate, setShowCreate] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState(() => dayjs());
   const [activeFilter, setActiveFilter] = useState<FilterTab>("all");
+  const [filterClientUserId, setFilterClientUserId] = useState<string>("");
   const filterTabs: { value: FilterTab; label: string }[] = [
     { value: "all", label: t("admin.manage.filterAll") },
     { value: "confirmed", label: t("admin.manage.statusConfirmed") },
@@ -61,7 +62,11 @@ export default function AdminBilling() {
     packageTypeId: "",
   });
 
-  const billingQuery = useInfiniteQuery(billingQueries.listInfinite());
+  const billingQuery = useInfiniteQuery(
+    billingQueries.listInfinite(
+      filterClientUserId ? { clientUserId: filterClientUserId } : undefined,
+    ),
+  );
   const clientsQuery = useQuery(clientsQueries.list());
   const packageTypesQuery = useQuery(packagesQueries.types());
   const records = billingQuery.data?.pages.flatMap((p) => p.records) ?? [];
@@ -250,6 +255,29 @@ export default function AdminBilling() {
             />
           ))}
         </ScrollView>
+      </MotiView>
+
+      {/* Per-client filter */}
+      <MotiView
+        from={{ opacity: 0, translateY: 8 }}
+        animate={{ opacity: 1, translateY: 0 }}
+        transition={{ type: "timing", duration: 350, delay: 240 }}
+      >
+        <Select
+          testID="billing-filter-client-select"
+          optionTestIDPrefix="billing-filter-client-option"
+          placeholder={t("admin.manage.filterClientPlaceholder")}
+          value={filterClientUserId}
+          onChange={setFilterClientUserId}
+          emptyText={t("admin.manage.filterClientEmpty")}
+          options={[
+            { value: "", label: t("admin.manage.filterAll") },
+            ...(clientsQuery.data?.clients ?? []).map((c) => ({
+              value: c.user.id,
+              label: c.user.fullName ?? c.user.email,
+            })),
+          ]}
+        />
       </MotiView>
 
       {/* Errors / empty */}

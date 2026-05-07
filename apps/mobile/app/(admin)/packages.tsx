@@ -22,8 +22,10 @@ import { ScreenContainerRaw, useTabBarBottomPadding } from "@/components/ui/scre
 import { HeaderIconButton } from "@/components/ui/app-header";
 import { useThemeTokens } from "@/components/ui/tokens";
 import { FilterChip } from "@/components/ui/studio";
+import { useRouter } from "expo-router";
 import { packagesQueries } from "@/lib/queries/packages-queries-factory";
 import { trainingsQueries } from "@/lib/queries/trainings-queries-factory";
+import Feather from "@expo/vector-icons/Feather";
 
 // ─── SessionCountIcon ─────────────────────────────────────────────────────────
 // Circular badge used on package-type rows to display session count.
@@ -98,24 +100,9 @@ export default function AdminPackages() {
     setRefreshing(false);
   }
 
+  const router = useRouter();
   const typesQuery = useQuery(packagesQueries.types());
   const classTypesQuery = useQuery(trainingsQueries.classTypes());
-  const clientPackagesQuery = useQuery(packagesQueries.clientPackages());
-  const allAssignments = clientPackagesQuery.data?.packages ?? [];
-
-  const filteredAssignments = useMemo(() => {
-    const now = dayjs();
-    if (assignmentFilter === "expiring") {
-      return allAssignments.filter((p) => {
-        const exp = dayjs(p.expiresAt);
-        return exp.isAfter(now) && exp.diff(now, "day") <= 7;
-      });
-    }
-    if (assignmentFilter === "expired") {
-      return allAssignments.filter((p) => dayjs(p.expiresAt).isBefore(now));
-    }
-    return allAssignments;
-  }, [allAssignments, assignmentFilter]);
 
   const createMutation = useMutation({
     ...packagesQueries.createType(),
@@ -278,7 +265,7 @@ export default function AdminPackages() {
           ) : null}
         </MotiView>
 
-        {/* ── Active assignments section ────────────────────────────────────── */}
+        {/* ── Link to standalone Aktivne dodele page ─────────────────────────── */}
         <MotiView
           from={{ opacity: 0, translateY: -4 }}
           animate={{ opacity: 1, translateY: 0 }}
@@ -286,82 +273,32 @@ export default function AdminPackages() {
           style={{ gap: 10 }}
         >
           <SectionLabel>{t("admin.manage.activeAssignments")}</SectionLabel>
-
-          {/* Filter chips */}
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ gap: 8, paddingRight: 4 }}
+          <Pressable
+            testID="active-assignments-link"
+            onPress={() => router.push("/(admin)/packages/active-assignments")}
+            android_ripple={null}
+            style={{ borderRadius: 14 }}
           >
-            {FILTERS.map(({ key, labelKey }) => (
-              <FilterChip
-                key={key}
-                active={assignmentFilter === key}
-                label={t(labelKey)}
-                onPress={() => setAssignmentFilter(key)}
-              />
-            ))}
-          </ScrollView>
-        </MotiView>
-
-        {/* ── Assignment rows ───────────────────────────────────────────────── */}
-        <MotiView
-          from={{ opacity: 0, translateY: 8 }}
-          animate={{ opacity: 1, translateY: 0 }}
-          transition={{ type: "timing", duration: 300, delay: 240 }}
-          style={{ gap: 10 }}
-        >
-          {clientPackagesQuery.isError ? (
-            <ErrorState message={t("admin.manage.packagesError")} />
-          ) : null}
-
-          {filteredAssignments.length === 0 && !clientPackagesQuery.isLoading ? (
-            <EmptyState title={t("admin.manage.assignmentsEmpty")} />
-          ) : null}
-
-          {filteredAssignments.map((pkg) => {
-            const isExpired = dayjs(pkg.expiresAt).isBefore(dayjs());
-            const isExpiring =
-              !isExpired && dayjs(pkg.expiresAt).diff(dayjs(), "day") <= 7;
-            const packageName = pkg.packageType?.name ?? pkg.packageTypeId;
-            return (
-              <GlassCard key={pkg.id} size="md">
-                <View className="flex-row items-center gap-3">
-                  <AssignmentAvatar name={packageName} />
-                  <View className="flex-1 flex-col gap-0.5">
-                    <Text
-                      className="text-foreground font-body-semibold"
-                      style={{ fontSize: 15 }}
-                      numberOfLines={1}
-                    >
-                      {packageName}
-                    </Text>
-                    <Text className="text-muted" style={{ fontSize: 13 }}>
-                      {t("admin.manage.sessionsRemaining", {
-                        count: pkg.sessionsRemaining,
-                      })}
-                    </Text>
-                    <Text className="text-muted" style={{ fontSize: 12 }}>
-                      {t("admin.manage.expiresOn", {
-                        date: dayjs(pkg.expiresAt).locale(lang).format("MMM D, YYYY"),
-                      })}
-                    </Text>
-                  </View>
-                  <Badge
-                    status={
-                      isExpired ? "danger" : isExpiring ? "warning" : "success"
-                    }
-                  >
-                    {isExpired
-                      ? t("client.profileTab.expired")
-                      : isExpiring
-                        ? t("admin.manage.filterExpiring")
-                        : t("client.package.active")}
-                  </Badge>
+            <GlassCard size="md">
+              <View className="flex-row items-center gap-3">
+                <View className="items-center justify-center w-10 h-10 rounded-full bg-accent-soft">
+                  <Feather name="users" size={16} color={tokens.accent} />
                 </View>
-              </GlassCard>
-            );
-          })}
+                <View className="flex-1">
+                  <Text
+                    className="text-foreground font-body-semibold"
+                    style={{ fontSize: 15 }}
+                  >
+                    {t("admin.manage.activeAssignmentsLinkLabel")}
+                  </Text>
+                  <Text className="text-muted" style={{ fontSize: 12 }}>
+                    {t("admin.manage.activeAssignmentsLinkHint")}
+                  </Text>
+                </View>
+                <Feather name="chevron-right" size={18} color={tokens.muted} />
+              </View>
+            </GlassCard>
+          </Pressable>
         </MotiView>
 
         {/* ═══════════════════════════════════════════════════════════════════

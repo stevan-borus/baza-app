@@ -810,6 +810,9 @@ export default function AdminClients() {
               placeholder={t("admin.clients.pauseReason")}
               value={pauseForm.reason}
               onChangeText={(v) => setPauseForm((s) => ({ ...s, reason: v }))}
+              multiline
+              numberOfLines={3}
+              style={{ minHeight: 80, textAlignVertical: "top" }}
             />
             <Button
               testID="pause-submit-button"

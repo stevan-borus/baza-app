@@ -86,15 +86,37 @@ export async function GET(request: Request) {
     if (guard.user.role !== UserRole.ADMIN) {
       return fail("clientProfileId query param is required", 400);
     }
+    const search = url.searchParams.get("search")?.trim();
     const packages = await prisma.clientPackage.findMany({
+      where: search
+        ? {
+            clientProfile: {
+              user: {
+                OR: [
+                  { fullName: { contains: search, mode: "insensitive" } },
+                  { email: { contains: search, mode: "insensitive" } },
+                ],
+              },
+            },
+          }
+        : undefined,
       orderBy: { startsAt: "desc" },
       include: {
         packageType: {
           select: { name: true, sessionCount: true, validityDays: true },
         },
+        clientProfile: {
+          select: {
+            user: { select: { id: true, fullName: true, email: true } },
+          },
+        },
       },
     });
-    return ok({ success: true, packages });
+    const shaped = packages.map((p) => ({
+      ...p,
+      client: p.clientProfile.user,
+    }));
+    return ok({ success: true, packages: shaped });
   }
 
   // Trainers may only view packages for clients they are linked to.

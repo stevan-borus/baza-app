@@ -31,6 +31,12 @@ const embeddedPackageTypeSchema = z.object({
   lateCancelHours: z.number().optional(),
 });
 
+const embeddedClientSchema = z.object({
+  id: z.string(),
+  fullName: z.string(),
+  email: z.string(),
+});
+
 const clientPackageSchema = z.object({
   id: z.string(),
   clientProfileId: z.string(),
@@ -40,6 +46,7 @@ const clientPackageSchema = z.object({
   expiresAt: z.string(),
   sessionsRemaining: z.number(),
   packageType: embeddedPackageTypeSchema.optional(),
+  client: embeddedClientSchema.optional(),
 });
 
 const clientPackagesResponseSchema = z.object({
@@ -76,6 +83,22 @@ export const packagesQueries = {
           { credentials: "include" },
         );
         if (!response.ok) throw new Error(`Unable to load packages (${response.status})`);
+        return clientPackagesResponseSchema.parse(await response.json());
+      },
+      staleTime: 30_000,
+    }),
+
+  clientPackagesAdminList: (params?: { search?: string }) =>
+    queryOptions({
+      queryKey: ["packages", "client-packages", "admin", params] as const,
+      queryFn: async () => {
+        const qs = new URLSearchParams();
+        if (params?.search) qs.set("search", params.search);
+        const url = qs.size > 0
+          ? `${sharedEnv.EXPO_PUBLIC_API_URL}/api/packages/client-packages?${qs.toString()}`
+          : `${sharedEnv.EXPO_PUBLIC_API_URL}/api/packages/client-packages`;
+        const response = await apiFetch(url, { credentials: "include" });
+        if (!response.ok) throw new Error(`Unable to load assignments (${response.status})`);
         return clientPackagesResponseSchema.parse(await response.json());
       },
       staleTime: 30_000,

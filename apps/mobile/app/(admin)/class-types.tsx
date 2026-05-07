@@ -143,16 +143,6 @@ export default function AdminSettingsClassTypes() {
           >
             <GlassCard style={{ padding: 0, borderRadius: 16, overflow: "hidden" }}>
               <View className="flex-row items-center px-4 py-3.5 gap-3.5">
-                {/* Colored dot indicator */}
-                <View
-                  style={{
-                    width: 10,
-                    height: 10,
-                    borderRadius: 5,
-                    backgroundColor: DOT_COLORS[idx % DOT_COLORS.length],
-                  }}
-                />
-
                 {/* Name */}
                 <Text
                   className="text-foreground font-body-medium flex-1"

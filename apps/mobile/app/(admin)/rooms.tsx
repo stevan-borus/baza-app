@@ -122,19 +122,6 @@ export default function AdminSettingsRooms() {
           >
             <GlassCard style={{ padding: 0, borderRadius: 16, overflow: "hidden" }}>
               <View className="flex-row items-center px-4 py-3.5 gap-3.5">
-                {/* Door / location icon */}
-                <View
-                  className="items-center justify-center"
-                  style={{
-                    width: 32,
-                    height: 32,
-                    borderRadius: 10,
-                    backgroundColor: "rgba(74,140,107,0.15)",
-                  }}
-                >
-                  <FontAwesome name="map-marker" size={15} color={ACCENT_LIGHT} />
-                </View>
-
                 {/* Name */}
                 <Text
                   className="text-foreground font-body-medium flex-1"
