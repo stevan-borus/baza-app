@@ -2,6 +2,7 @@
  * Report utilities: date parsing, bucket labels (day/week/month), timeframe normalization.
  */
 import type { ReportsPeriod } from "@baza/types";
+import { now } from "@/lib/now";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -51,7 +52,7 @@ export function parseReportTimeframe(searchParams: URLSearchParams): Timeframe |
   const period = searchParams.get("period");
   const includeDeltas = searchParams.get("includeDeltas") === "true";
 
-  const finalTo = to ?? new Date();
+  const finalTo = to ?? now();
   const finalFrom = from ?? new Date(finalTo.getTime() - 30 * DAY_MS);
   const finalPeriod: ReportsPeriod =
     period === "week" || period === "month" ? period : "day";

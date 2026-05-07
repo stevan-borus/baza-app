@@ -1,5 +1,6 @@
 import { monthlyAvailabilityQuerySchema } from "@baza/types";
 import { UserRole } from "@/generated/prisma";
+import { now } from "@/lib/now";
 import { requireRole } from "@/lib/server/auth-guards";
 import { fail, ok } from "@/lib/server/http";
 import { findEligibleClientPackage } from "@/lib/server/package-eligibility";
@@ -78,9 +79,9 @@ export async function GET(request: Request) {
   //   canceledCount   → bookings where canceledAt is set
   //   totalBookings   → all bookings (active + canceled)
   // Future sessions get `attendance: null` so the UI can omit the marker.
-  const now = new Date();
+  const currentInstant = now();
   const pastSessionIds = sessions
-    .filter((s: (typeof sessions)[number]) => s.endsAt < now)
+    .filter((s: (typeof sessions)[number]) => s.endsAt < currentInstant)
     .map((s: (typeof sessions)[number]) => s.id);
 
   const attendanceBySessionId = new Map<

@@ -1,3 +1,4 @@
+import { now } from "@/lib/now";
 import { requireCronAuth } from "@/lib/server/cron-auth";
 import { ok } from "@/lib/server/http";
 import { createSystemNotification } from "@/lib/server/notifications";
@@ -20,14 +21,14 @@ export async function POST(request: Request) {
       : 3;
   const dryRun = url.searchParams.get("dryRun") === "true";
 
-  const now = new Date();
-  const soon = new Date(now.getTime() + windowDays * 24 * 60 * 60 * 1000);
+  const currentInstant = now();
+  const soon = new Date(currentInstant.getTime() + windowDays * 24 * 60 * 60 * 1000);
 
   // Only active packages that have started and have sessions left.
   const packages = await prisma.clientPackage.findMany({
     where: {
       sessionsRemaining: { gt: 0 },
-      startsAt: { lte: now },
+      startsAt: { lte: currentInstant },
     },
     select: {
       id: true,
@@ -56,10 +57,10 @@ export async function POST(request: Request) {
         expiresAt: pkg.expiresAt,
       },
       pkg.clientProfile.packagePauses,
-      now,
+      currentInstant,
     );
     // Skip if already expired or outside the notification window.
-    if (effectiveExpiresAt < now || effectiveExpiresAt > soon) continue;
+    if (effectiveExpiresAt < currentInstant || effectiveExpiresAt > soon) continue;
 
     if (dryRun) {
       sent += 1;
@@ -86,7 +87,7 @@ export async function POST(request: Request) {
     dryRun,
     windowDays,
     window: {
-      from: now,
+      from: currentInstant,
       to: soon,
     },
     sent,

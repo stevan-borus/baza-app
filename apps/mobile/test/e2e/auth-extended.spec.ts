@@ -1,4 +1,5 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./helpers/fixtures";
+import { nowMs } from "../../lib/now";
 import {
   createInvite,
   createPasswordResetToken,
@@ -77,7 +78,7 @@ test.describe("auth extended (Serbian)", () => {
     const { rawToken } = await createInvite({
       email: "expired.invite@e2e.test",
       fullName: "Expired Invite Client",
-      expiresAt: new Date(Date.now() - 24 * 60 * 60 * 1000),
+      expiresAt: new Date(nowMs() - 24 * 60 * 60 * 1000),
     });
 
     await page.goto(`/accept-invite?token=${rawToken}`);
@@ -174,7 +175,7 @@ test.describe("auth extended (Serbian)", () => {
   test("expired reset token shows error UI on submit", async ({ page }) => {
     const { rawToken } = await createPasswordResetToken({
       userEmail: "client.active.reformer@e2e.test",
-      expiresAt: new Date(Date.now() - 60 * 60 * 1000),
+      expiresAt: new Date(nowMs() - 60 * 60 * 1000),
     });
 
     await page.goto("/reset-password");

@@ -22,6 +22,7 @@ vi.mock("@/lib/server/notifications", () => ({
 
 import { POST } from "@/app/api/bookings/+api";
 import { prisma } from "@/lib/server/prisma";
+import { now, nowMs } from "@/lib/now";
 
 async function seed() {
   const trainer = await prisma.user.create({
@@ -84,9 +85,9 @@ async function createPackage(opts: {
       packageTypeId: packageType.id,
       classTypeId: opts.classTypeId,
       lateCancelHours: 12,
-      startsAt: opts.startsAt ?? new Date(Date.now() - 24 * 60 * 60 * 1000),
+      startsAt: opts.startsAt ?? new Date(nowMs() - 24 * 60 * 60 * 1000),
       expiresAt:
-        opts.expiresAt ?? new Date(Date.now() + 60 * 24 * 60 * 60 * 1000),
+        opts.expiresAt ?? new Date(nowMs() + 60 * 24 * 60 * 60 * 1000),
       sessionsRemaining: opts.sessionsRemaining ?? 12,
     },
   });
@@ -118,7 +119,7 @@ describe("POST /api/bookings class-scoping", () => {
     const session = await createSession({
       classTypeId: reformer.id,
       trainerUserId: trainer.id,
-      startsAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      startsAt: new Date(nowMs() + 24 * 60 * 60 * 1000),
     });
 
     setMockUser({
@@ -146,7 +147,7 @@ describe("POST /api/bookings class-scoping", () => {
     const session = await createSession({
       classTypeId: reformer.id,
       trainerUserId: trainer.id,
-      startsAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      startsAt: new Date(nowMs() + 24 * 60 * 60 * 1000),
     });
 
     setMockUser({

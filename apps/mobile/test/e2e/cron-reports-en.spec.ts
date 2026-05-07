@@ -1,4 +1,5 @@
-import { test, expect, type Page, type APIResponse } from "@playwright/test";
+import { test, expect, type Page, type APIResponse } from "./helpers/fixtures";
+import { nowMs } from "../../lib/now";
 import {
   createPastSessionWithBooking,
   disconnect,
@@ -73,7 +74,7 @@ test.describe("cron + reports + EN smoke (Serbian + English)", () => {
   test("66: cron consumes a completed booking (no cancel)", async ({
     page,
   }) => {
-    const startsAt = new Date(Date.now() - 2 * 60 * 60 * 1000); // 2h ago
+    const startsAt = new Date(nowMs() - 2 * 60 * 60 * 1000); // 2h ago
     const { clientPackageId, sessionsRemainingBefore } =
       await createPastSessionWithBooking({
         trainerEmail: REFORMER_TRAINER_EMAIL,
@@ -96,7 +97,7 @@ test.describe("cron + reports + EN smoke (Serbian + English)", () => {
   test("67: cron skips a pre-cutoff cancellation (no consumption)", async ({
     page,
   }) => {
-    const startsAt = new Date(Date.now() - 2 * 60 * 60 * 1000);
+    const startsAt = new Date(nowMs() - 2 * 60 * 60 * 1000);
     const { clientPackageId, sessionsRemainingBefore } =
       await createPastSessionWithBooking({
         trainerEmail: REFORMER_TRAINER_EMAIL,

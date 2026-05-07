@@ -22,6 +22,7 @@ vi.mock("@/lib/server/notifications", () => ({
 
 import { DELETE } from "@/app/api/sessions/[id]/+api";
 import { prisma } from "@/lib/server/prisma";
+import { now, nowMs } from "@/lib/now";
 
 const HOUR_MS = 60 * 60 * 1000;
 const DAY_MS = 24 * HOUR_MS;
@@ -33,7 +34,7 @@ async function seedSessionWith(opts?: { withBooking?: boolean }) {
   const reformer = await prisma.classType.create({
     data: { name: "Reformer", maxClients: 6, durationMins: 60 },
   });
-  const startsAt = new Date(Date.now() + 2 * DAY_MS);
+  const startsAt = new Date(nowMs() + 2 * DAY_MS);
   const session = await prisma.session.create({
     data: {
       classTypeId: reformer.id,

@@ -1,5 +1,6 @@
 import { billingRecordInputSchema, paginationQuerySchema } from "@baza/types";
 import { UserRole } from "@/generated/prisma";
+import { now } from "@/lib/now";
 import { requireRole } from "@/lib/server/auth-guards";
 import { fail, ok } from "@/lib/server/http";
 import { prisma } from "@/lib/server/prisma";
@@ -84,7 +85,7 @@ export async function POST(request: Request) {
     packageTypeRow = packageType;
   }
 
-  const startsAt = new Date();
+  const startsAt = now();
   const expiresAt = packageTypeRow
     ? new Date(
         startsAt.getTime() + packageTypeRow.validityDays * 24 * 60 * 60 * 1000,

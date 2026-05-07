@@ -9,6 +9,7 @@ vi.mock("@/lib/server/notifications", () => ({
 
 import { POST as REMINDERS } from "@/app/api/cron/notifications/reminders/+api";
 import { POST as EXPIRY } from "@/app/api/cron/notifications/package-expiry/+api";
+import { now, nowMs } from "@/lib/now";
 import { createSystemNotification } from "@/lib/server/notifications";
 import { prisma } from "@/lib/server/prisma";
 
@@ -71,7 +72,7 @@ describe("cron: reminders + package-expiry", () => {
       const c2 = await makeClientWithProfile("c2@test.local");
       const c3 = await makeClientWithProfile("c3-canceled@test.local");
 
-      const startsAt = new Date(Date.now() + HOUR_MS); // inside 180-min window
+      const startsAt = new Date(nowMs() + HOUR_MS); // inside 180-min window
       const session = await prisma.session.create({
         data: {
           classTypeId: reformer.id,
@@ -90,7 +91,7 @@ describe("cron: reminders + package-expiry", () => {
           {
             sessionId: session.id,
             clientProfileId: c3.profile.id,
-            canceledAt: new Date(),
+            canceledAt: now(),
           },
         ],
       });
@@ -117,7 +118,7 @@ describe("cron: reminders + package-expiry", () => {
         data: { email: "t2@test.local", fullName: "T2", role: "TRAINER" },
       });
       const c = await makeClientWithProfile("future@test.local");
-      const startsAt = new Date(Date.now() + 5 * DAY_MS); // far outside 180min
+      const startsAt = new Date(nowMs() + 5 * DAY_MS); // far outside 180min
       const session = await prisma.session.create({
         data: {
           classTypeId: reformer.id,
@@ -174,8 +175,8 @@ describe("cron: reminders + package-expiry", () => {
           packageTypeId: packageType.id,
           classTypeId: reformer.id,
           lateCancelHours: 12,
-          startsAt: new Date(Date.now() - 5 * DAY_MS),
-          expiresAt: new Date(Date.now() + 5 * DAY_MS),
+          startsAt: new Date(nowMs() - 5 * DAY_MS),
+          expiresAt: new Date(nowMs() + 5 * DAY_MS),
           sessionsRemaining: 4,
         },
       });
@@ -216,8 +217,8 @@ describe("cron: reminders + package-expiry", () => {
           packageTypeId: packageType.id,
           classTypeId: reformer.id,
           lateCancelHours: 12,
-          startsAt: new Date(Date.now() - DAY_MS),
-          expiresAt: new Date(Date.now() + 5 * DAY_MS),
+          startsAt: new Date(nowMs() - DAY_MS),
+          expiresAt: new Date(nowMs() + 5 * DAY_MS),
           sessionsRemaining: 0,
         },
       });
@@ -227,8 +228,8 @@ describe("cron: reminders + package-expiry", () => {
           packageTypeId: packageType.id,
           classTypeId: reformer.id,
           lateCancelHours: 12,
-          startsAt: new Date(Date.now() - DAY_MS),
-          expiresAt: new Date(Date.now() + 90 * DAY_MS),
+          startsAt: new Date(nowMs() - DAY_MS),
+          expiresAt: new Date(nowMs() + 90 * DAY_MS),
           sessionsRemaining: 8,
         },
       });

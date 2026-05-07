@@ -10,6 +10,7 @@
  *
  * Exits non-zero on failure so the runner can surface the error.
  */
+import { nowMs } from "../../lib/now";
 import {
   createPastAttendedSession,
   disconnect,
@@ -34,7 +35,7 @@ async function main() {
       // 25h ago — comfortably past the late-cancel cutoff (the seed uses
       // 12h windows for Reformer) so the cron-driven attendance markers
       // resolve to consumed/canceled cleanly.
-      const startsAt = new Date(Date.now() - 25 * 60 * 60 * 1000);
+      const startsAt = new Date(nowMs() - 25 * 60 * 60 * 1000);
       const result = await createPastAttendedSession({
         trainerEmail: "trainer.reformer@e2e.test",
         classTypeName: "Reformer pilates",

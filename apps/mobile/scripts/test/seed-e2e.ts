@@ -25,6 +25,7 @@
 import "./seed-e2e-env";
 
 import { UserRole } from "../../generated/prisma";
+import { now, nowMs } from "../../lib/now";
 import { hashPassword } from "../../lib/server/password";
 import { prisma } from "../../lib/server/prisma";
 
@@ -234,7 +235,7 @@ async function seedClientPackages(opts: {
   clients: Map<keyof typeof USERS, { clientProfileId: string }>;
   packageTypes: Map<string, { id: string; classTypeId: string; sessionCount: number; validityDays: number; lateCancelHours: number }>;
 }) {
-  const now = new Date();
+  const currentInstant = now();
   const reformer12 = opts.packageTypes.get("Reformer 12-pack")!;
   const energy12 = opts.packageTypes.get("Energy 12-pack")!;
 
@@ -245,8 +246,8 @@ async function seedClientPackages(opts: {
       packageTypeId: reformer12.id,
       classTypeId: reformer12.classTypeId,
       lateCancelHours: reformer12.lateCancelHours,
-      startsAt: new Date(now.getTime() - 5 * DAY_MS),
-      expiresAt: new Date(now.getTime() + 25 * DAY_MS),
+      startsAt: new Date(currentInstant.getTime() - 5 * DAY_MS),
+      expiresAt: new Date(currentInstant.getTime() + 25 * DAY_MS),
       sessionsRemaining: 8,
     },
   });
@@ -258,8 +259,8 @@ async function seedClientPackages(opts: {
       packageTypeId: energy12.id,
       classTypeId: energy12.classTypeId,
       lateCancelHours: energy12.lateCancelHours,
-      startsAt: new Date(now.getTime() - 2 * DAY_MS),
-      expiresAt: new Date(now.getTime() + 28 * DAY_MS),
+      startsAt: new Date(currentInstant.getTime() - 2 * DAY_MS),
+      expiresAt: new Date(currentInstant.getTime() + 28 * DAY_MS),
       sessionsRemaining: 12,
     },
   });
@@ -271,8 +272,8 @@ async function seedClientPackages(opts: {
       packageTypeId: reformer12.id,
       classTypeId: reformer12.classTypeId,
       lateCancelHours: reformer12.lateCancelHours,
-      startsAt: new Date(now.getTime() - 37 * DAY_MS),
-      expiresAt: new Date(now.getTime() - 7 * DAY_MS),
+      startsAt: new Date(currentInstant.getTime() - 37 * DAY_MS),
+      expiresAt: new Date(currentInstant.getTime() - 7 * DAY_MS),
       sessionsRemaining: 4,
     },
   });
@@ -284,16 +285,16 @@ async function seedClientPackages(opts: {
       packageTypeId: reformer12.id,
       classTypeId: reformer12.classTypeId,
       lateCancelHours: reformer12.lateCancelHours,
-      startsAt: new Date(now.getTime() - 5 * DAY_MS),
-      expiresAt: new Date(now.getTime() + 25 * DAY_MS),
+      startsAt: new Date(currentInstant.getTime() - 5 * DAY_MS),
+      expiresAt: new Date(currentInstant.getTime() + 25 * DAY_MS),
       sessionsRemaining: 10,
     },
   });
   await prisma.packagePause.create({
     data: {
       clientProfileId: opts.clients.get("paused")!.clientProfileId,
-      startsAt: new Date(now.getTime() - DAY_MS),
-      endsAt: new Date(now.getTime() + 7 * DAY_MS),
+      startsAt: new Date(currentInstant.getTime() - DAY_MS),
+      endsAt: new Date(currentInstant.getTime() + 7 * DAY_MS),
       reason: "Vacation",
     },
   });
@@ -305,8 +306,8 @@ async function seedClientPackages(opts: {
       packageTypeId: reformer12.id,
       classTypeId: reformer12.classTypeId,
       lateCancelHours: reformer12.lateCancelHours,
-      startsAt: new Date(now.getTime() + 7 * DAY_MS),
-      expiresAt: new Date(now.getTime() + 37 * DAY_MS),
+      startsAt: new Date(currentInstant.getTime() + 7 * DAY_MS),
+      expiresAt: new Date(currentInstant.getTime() + 37 * DAY_MS),
       sessionsRemaining: 12,
     },
   });
@@ -324,7 +325,7 @@ async function seedSessions(opts: {
   const sala1 = opts.rooms.find((r) => r.name === "Sala 1")!;
   const sala2 = opts.rooms.find((r) => r.name === "Sala 2")!;
 
-  const baseDay = new Date();
+  const baseDay = now();
   baseDay.setHours(10, 0, 0, 0);
 
   // Two recurring schedules: Reformer Mon/Wed/Fri × 2 weeks at 10:00 (Sala 1),
@@ -381,7 +382,7 @@ async function seedSessions(opts: {
       for (const dow of spec.weekdays) {
         const startsAt = new Date(weekStart.getTime() + week * WEEK_MS + dow * DAY_MS);
         startsAt.setHours(spec.timeOfDayHours, 0, 0, 0);
-        if (startsAt.getTime() < Date.now()) continue;
+        if (startsAt.getTime() < nowMs()) continue;
         const endsAt = new Date(startsAt.getTime() + 60 * 60 * 1000);
         await prisma.session.create({
           data: {

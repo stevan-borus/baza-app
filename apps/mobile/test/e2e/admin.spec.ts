@@ -1,4 +1,5 @@
-import { test, expect, type Page } from "@playwright/test";
+import { test, expect, type Page } from "./helpers/fixtures";
+import { now } from "../../lib/now";
 import {
   countRecurringSchedules,
   countSessions,
@@ -317,7 +318,7 @@ test.describe("admin (Serbian)", () => {
       .getByTestId("session-create-startsAt")
       .dispatchEvent("click");
 
-    const target = new Date();
+    const target = now();
     target.setDate(target.getDate() + 14);
     const targetDay = String(target.getDate());
     await page
@@ -438,7 +439,7 @@ test.describe("admin (Serbian)", () => {
     // single session (14 days, 11:00) to avoid a schedule conflict on the
     // same trainer.
     await page.getByTestId("session-create-startsAt").dispatchEvent("click");
-    const target = new Date();
+    const target = now();
     target.setDate(target.getDate() + 21);
     await page
       .locator(
@@ -747,9 +748,9 @@ test.describe("admin (Serbian)", () => {
     await page.getByTestId("client-action-pause").dispatchEvent("click");
 
     // Fill ISO dates spanning a 7-day window starting tomorrow.
-    const start = new Date();
+    const start = now();
     start.setDate(start.getDate() + 1);
-    const end = new Date();
+    const end = now();
     end.setDate(end.getDate() + 8);
     const fmt = (d: Date) =>
       `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;

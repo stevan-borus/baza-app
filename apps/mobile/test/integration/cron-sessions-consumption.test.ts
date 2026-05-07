@@ -3,6 +3,7 @@ import { resetDb } from "./setup-db";
 
 import { POST } from "@/app/api/cron/sessions/consumption/+api";
 import { prisma } from "@/lib/server/prisma";
+import { now, nowMs } from "@/lib/now";
 
 const TEST_BOOTSTRAP_TOKEN = "test-bootstrap-token";
 
@@ -34,8 +35,8 @@ async function seed() {
       packageTypeId: packageType.id,
       classTypeId: reformer.id,
       lateCancelHours: 12,
-      startsAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000),
-      expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      startsAt: new Date(nowMs() - 10 * 24 * 60 * 60 * 1000),
+      expiresAt: new Date(nowMs() + 30 * 24 * 60 * 60 * 1000),
       sessionsRemaining: 8,
     },
   });
@@ -47,7 +48,7 @@ async function createPastSession(opts: {
   trainerUserId: string;
   endedHoursAgo: number;
 }) {
-  const endsAt = new Date(Date.now() - opts.endedHoursAgo * 60 * 60 * 1000);
+  const endsAt = new Date(nowMs() - opts.endedHoursAgo * 60 * 60 * 1000);
   const startsAt = new Date(endsAt.getTime() - 60 * 60 * 1000);
   return prisma.session.create({
     data: {

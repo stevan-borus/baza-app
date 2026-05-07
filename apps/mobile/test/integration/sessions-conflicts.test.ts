@@ -24,6 +24,7 @@ import { POST as POST_SESSION } from "@/app/api/sessions/+api";
 import { PATCH as PATCH_SESSION } from "@/app/api/sessions/[id]/+api";
 import { POST as POST_RECURRING } from "@/app/api/sessions/recurring/+api";
 import { prisma } from "@/lib/server/prisma";
+import { now, nowMs } from "@/lib/now";
 
 const HOUR_MS = 60 * 60 * 1000;
 const DAY_MS = 24 * HOUR_MS;
@@ -57,7 +58,7 @@ function asAdmin() {
   });
 }
 
-const futureStart = new Date(Date.now() + 2 * DAY_MS);
+const futureStart = new Date(nowMs() + 2 * DAY_MS);
 const futureEnd = new Date(futureStart.getTime() + HOUR_MS);
 
 function jsonRequest(url: string, method: string, body: unknown) {
@@ -231,10 +232,10 @@ describe("schedule conflict enforcement", () => {
   it("POST /api/sessions/recurring refuses with 409 when the first generated slot conflicts", async () => {
     const { trainerA, reformer, room1 } = await seedCatalog();
     // Block the first Mon slot of the recurring series we're about to create.
-    const now = new Date();
-    const daysUntilMon = (1 - now.getUTCDay() + 7) % 7 || 7;
-    const nextMon = new Date(now);
-    nextMon.setUTCDate(now.getUTCDate() + daysUntilMon);
+    const currentInstant = now();
+    const daysUntilMon = (1 - currentInstant.getUTCDay() + 7) % 7 || 7;
+    const nextMon = new Date(currentInstant);
+    nextMon.setUTCDate(currentInstant.getUTCDate() + daysUntilMon);
     nextMon.setUTCHours(10, 0, 0, 0);
     const blockEnd = new Date(nextMon.getTime() + HOUR_MS);
     await prisma.session.create({

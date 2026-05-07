@@ -1,4 +1,5 @@
-import { test, expect, type Page } from "@playwright/test";
+import { test, expect, type Page } from "./helpers/fixtures";
+import { now } from "../../lib/now";
 import {
   addToWaitlist,
   countActiveBookingsFor,
@@ -19,7 +20,7 @@ const SEED_PASSWORD = "Password123!";
  */
 function nextReformerDate(): string {
   const reformerDays = new Set([1, 3, 5]);
-  const d = new Date();
+  const d = now();
   for (let i = 0; i < 14; i++) {
     if (reformerDays.has(d.getDay())) {
       // If today is a Reformer day but the 10:00 slot has passed, skip.

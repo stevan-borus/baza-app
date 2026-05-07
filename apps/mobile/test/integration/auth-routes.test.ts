@@ -35,6 +35,7 @@ import { POST as POST_SIGN_OUT } from "@/app/api/auth/sign-out/+api";
 import { POST as POST_REQ_RESET } from "@/app/api/auth/request-password-reset/+api";
 import { POST as POST_RESET } from "@/app/api/auth/reset-password/+api";
 import { hashPassword } from "@/lib/server/password";
+import { now, nowMs } from "@/lib/now";
 import { generateRawToken, hashToken } from "@/lib/server/tokens";
 import { prisma } from "@/lib/server/prisma";
 import { sendResetEmail } from "@/lib/server/resend";
@@ -198,7 +199,7 @@ describe("auth routes", () => {
       });
       const rawToken = generateRawToken();
       const tokenHash = hashToken(rawToken);
-      const expiresAt = new Date(Date.now() + (opts?.expiresInMs ?? 30 * 60 * 1000));
+      const expiresAt = new Date(nowMs() + (opts?.expiresInMs ?? 30 * 60 * 1000));
       await prisma.passwordResetToken.create({
         data: {
           userId: user.id,
@@ -250,7 +251,7 @@ describe("auth routes", () => {
     });
 
     it("returns 410 when the token has already been used (one-time-use)", async () => {
-      const { rawToken } = await seedUserWithResetToken({ usedAt: new Date() });
+      const { rawToken } = await seedUserWithResetToken({ usedAt: now() });
       const response = await POST_RESET(
         jsonRequest("http://test.local/api/auth/reset-password", {
           token: rawToken,

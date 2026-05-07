@@ -19,6 +19,7 @@ vi.mock("@/lib/server/auth-guards", async () => {
 import { GET, POST } from "@/app/api/billing/+api";
 import { POST as POST_CLIENT_PACK } from "@/app/api/packages/client-packages/+api";
 import { prisma } from "@/lib/server/prisma";
+import { now, nowMs } from "@/lib/now";
 
 async function seedAdminClientPackageType() {
   const admin = await prisma.user.create({
@@ -129,7 +130,7 @@ describe("billing extras", () => {
         body: JSON.stringify({
           clientProfileId: profile.id,
           packageTypeId: packageType.id,
-          startsAt: new Date().toISOString(),
+          startsAt: now().toISOString(),
         }),
       }),
     );
@@ -142,7 +143,7 @@ describe("billing extras", () => {
 
   it("GET as admin returns BillingRecords newest-first with cursor pagination", async () => {
     const { admin, client } = await seedAdminClientPackageType();
-    const baseTime = Date.now();
+    const baseTime = nowMs();
     for (let i = 0; i < 3; i++) {
       await prisma.billingRecord.create({
         data: {
