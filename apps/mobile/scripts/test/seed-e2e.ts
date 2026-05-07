@@ -491,10 +491,15 @@ async function seedBookings(opts: {
   // Find first reformer session and first energy session by joining via ClassType.
   const reformerCt = await prisma.classType.findFirst({ where: { name: "Reformer pilates" }, select: { id: true } });
   const energyCt = await prisma.classType.findFirst({ where: { name: "Energy pilates" }, select: { id: true } });
-  const firstReformer = upcoming.find((s) => s.classTypeId === reformerCt?.id);
-  const firstEnergy = upcoming.find((s) => s.classTypeId === energyCt?.id);
+  // Use the SECOND matching session (skip index 0) so e2e tests that book
+  // "the first session of the day" still find an empty seat.
+  const reformerSessions = upcoming.filter((s) => s.classTypeId === reformerCt?.id);
+  const energySessions = upcoming.filter((s) => s.classTypeId === energyCt?.id);
+  const firstReformer = reformerSessions[1] ?? reformerSessions[0];
+  const firstEnergy = energySessions[1] ?? energySessions[0];
 
-  // Active reformer client → first reformer session.
+  // Active reformer client → second reformer session (so the day's first
+  // session stays bookable for e2e specs).
   if (firstReformer) {
     const ar = opts.clients.get("activeReformer");
     if (ar) {

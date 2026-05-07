@@ -41,13 +41,16 @@ export default function AdminSessionDetail() {
       rightSlot={
         session ? (
           <HeaderIconButton
+            testID="session-detail-edit-button"
             icon="pencil"
-            onPress={() =>
-              router.push({
+            onPress={() => {
+              if (!session) return;
+              const dateKey = dayjs(session.startsAt).format("YYYY-MM-DD");
+              router.replace({
                 pathname: "/(admin)",
-                params: { editSessionId: session.id },
-              })
-            }
+                params: { editSessionId: session.id, focusDate: dateKey },
+              });
+            }}
             accessibilityLabel={t("admin.sessionDetail.editAction")}
           />
         ) : undefined

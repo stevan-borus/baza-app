@@ -419,6 +419,9 @@
       "editScopeSeries": "Cela serija",
       "placeholderTimeOfDay": "Vreme (HH:MM)",
       "placeholderWeekCountOptional": "Broj nedelja (opciono)",
+      "viewBookings_one": "Pogledaj {{count}} rezervaciju →",
+      "viewBookings_few": "Pogledaj {{count}} rezervacije →",
+      "viewBookings_other": "Pogledaj {{count}} rezervacija →",
       "cancelSession": "Otkaži termin",
       "updateError": "Ažuriranje nije uspelo."
     },

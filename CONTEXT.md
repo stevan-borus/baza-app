@@ -101,7 +101,7 @@ The 6-Client shape inside the rich seed, named to make package-state coverage ob
 - `client.empty@e2e.test` — no packages at all
 
 **Anchor time**:
-A fixed instant the entire stack (seed, server, helpers, browser, integration tests) is pinned to so date-dependent tests don't drift over wall-clock time. The current anchor is `2026-05-09T10:00:00Z` (Saturday morning). Toggle via the `TEST_ANCHOR_TIME` env var — set to a parseable ISO string to override, leave unset for production / wall-clock behaviour. Server, seed, helpers and Vitest setup all read it through `apps/mobile/lib/now.ts` (`now()` / `nowMs()`); Playwright additionally pins the browser clock via `page.clock.install` in the e2e fixture. Maestro flows still use the device's wall clock — keep date-relative assertions out of Maestro.
+A fixed instant the entire stack (seed, server, helpers, browser, integration tests) is pinned to so date-dependent tests don't drift over wall-clock time. The current anchor is `2026-05-11T09:00:00Z` (Monday morning, just before the 10:00 seeded session) — picking a Monday means the seeded weekly schedule (Reformer Mon/Wed/Fri, Energy Tue/Thu) all fall inside the visible week. Toggle via the `TEST_ANCHOR_TIME` env var — set to a parseable ISO string to override, leave unset for production / wall-clock behaviour. Server, seed, helpers and Vitest setup all read it through `apps/mobile/lib/now.ts` (`now()` / `nowMs()`); Playwright additionally pins the browser clock via `page.clock.install` in the e2e fixture. Maestro flows still use the device's wall clock — keep date-relative assertions out of Maestro.
 
 ## Relationships
 

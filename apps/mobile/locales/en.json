@@ -417,7 +417,9 @@
       "placeholderTimeOfDay": "Time (HH:MM)",
       "placeholderWeekCountOptional": "Number of weeks (optional)",
       "cancelSession": "Cancel session",
-      "updateError": "Update failed."
+      "updateError": "Update failed.",
+      "viewBookings_one": "View {{count}} booking →",
+      "viewBookings_other": "View {{count}} bookings →"
     },
     "sessionDetail": {
       "title": "Session",
