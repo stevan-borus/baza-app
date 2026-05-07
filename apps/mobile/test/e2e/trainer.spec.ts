@@ -8,6 +8,7 @@ import {
   linkTrainerToClient,
   resetAndSeed,
 } from "./helpers/db";
+import { navigateWeekStripTo } from "./helpers/dates";
 import { t } from "./helpers/locales";
 
 const SEED_PASSWORD = "Password123!";
@@ -462,11 +463,11 @@ test.describe("trainer (Serbian)", () => {
 
     await signInAsReformerTrainer(page);
 
-    // Navigate to yesterday on the week strip.
-    await page
-      .locator(`[data-testid="week-strip-day-${dateKey}"]:visible`)
-      .first()
-      .dispatchEvent("click");
+    // Navigate to yesterday on the week strip. Yesterday may sit in the
+    // previous visible week (e.g. when the anchor lands on a Monday and
+    // yesterday is Sunday), so use the strip-paging helper instead of
+    // assuming the day pill is already visible.
+    await navigateWeekStripTo(page, dateKey);
 
     await expect(
       page.getByTestId(`session-card-attendance-${sessionId}`),

@@ -1,6 +1,7 @@
 import { test, expect, type Page } from "./helpers/fixtures";
 import { now } from "../../lib/now";
 import {
+  cancelBookingsOnRecurringSchedule,
   countRecurringSchedules,
   countSessions,
   countSessionsByStatus,
@@ -511,6 +512,15 @@ test.describe("admin (Serbian)", () => {
     const ref = await findFutureSeriesSession("Reformer");
     if (!ref) throw new Error("Need a seeded recurring Reformer session");
 
+    // Series-shape edits (weekdays/time/duration/weekCount) are refused by
+    // the API when any future session in the series has live bookings —
+    // the rich seed places one such booking on the Reformer schedule so the
+    // home dashboard isn't empty. Cancel those bookings before saving so
+    // the PATCH succeeds.
+    if (ref.recurringScheduleId) {
+      await cancelBookingsOnRecurringSchedule(ref.recurringScheduleId);
+    }
+
     await signInAsAdmin(page);
     await navigateWeekStripTo(page, dateKeyFromDate(ref.startsAt));
 
@@ -571,6 +581,13 @@ test.describe("admin (Serbian)", () => {
   test("28: delete whole series", async ({ page }) => {
     const ref = await findFutureSeriesSession("Energy");
     if (!ref) throw new Error("Need a seeded recurring Energy session");
+
+    // The DELETE handler refuses if any session in the series has a live
+    // booking; the rich seed places one such booking on the Energy
+    // schedule. Cancel it first so the delete actually runs.
+    if (ref.recurringScheduleId) {
+      await cancelBookingsOnRecurringSchedule(ref.recurringScheduleId);
+    }
 
     const seriesBefore = await countRecurringSchedules();
 
