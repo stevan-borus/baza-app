@@ -14,6 +14,7 @@ import { ConfirmSheet } from "@/components/ui/confirm-sheet";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState, ErrorState } from "@/components/ui/states";
+import { SkeletonCard } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { GlassCard } from "@/components/ui/glass-card";
 import { SectionLabel } from "@/components/ui/typography";
@@ -202,7 +203,14 @@ export default function AdminPackages() {
             <ErrorState message={t("admin.manage.packagesError")} />
           ) : null}
 
-          {!typesQuery.isError && (typesQuery.data?.packageTypes ?? []).length === 0 ? (
+          {typesQuery.isLoading ? (
+            <View style={{ gap: 8 }}>
+              <SkeletonCard />
+              <SkeletonCard />
+            </View>
+          ) : null}
+
+          {!typesQuery.isError && !typesQuery.isLoading && (typesQuery.data?.packageTypes ?? []).length === 0 ? (
             <EmptyState title={t("admin.manage.packagesEmpty")} />
           ) : null}
 

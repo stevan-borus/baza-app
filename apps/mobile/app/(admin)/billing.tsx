@@ -25,6 +25,7 @@ import { useThemeTokens } from "@/components/ui/tokens";
 import Feather from "@expo/vector-icons/Feather";
 import { Button } from "@/components/ui/button";
 import { EmptyState, ErrorState } from "@/components/ui/states";
+import { SkeletonCard } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { packagesQueries } from "@/lib/queries/packages-queries-factory";
@@ -280,9 +281,16 @@ export default function AdminBilling() {
         />
       </MotiView>
 
-      {/* Errors / empty */}
+      {/* Errors / empty / loading */}
       {billingQuery.isError ? (
         <ErrorState message={t("admin.manage.billingError")} />
+      ) : null}
+      {billingQuery.isLoading ? (
+        <View style={{ gap: 8 }}>
+          <SkeletonCard />
+          <SkeletonCard />
+          <SkeletonCard />
+        </View>
       ) : null}
       {filteredRecords.length === 0 && !billingQuery.isLoading ? (
         <EmptyState title={t("admin.manage.billingEmpty")} />

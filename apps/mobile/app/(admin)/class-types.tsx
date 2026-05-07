@@ -15,6 +15,7 @@ import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { MotiView } from "@/components/ui/styled";
 import { Button } from "@/components/ui/button";
 import { ErrorState } from "@/components/ui/states";
+import { SkeletonCard } from "@/components/ui/skeleton";
 import { GlassCard } from "@/components/ui/glass-card";
 import { Input } from "@/components/ui/input";
 import { AppSheet } from "@/components/ui/sheet";
@@ -126,6 +127,15 @@ export default function AdminSettingsClassTypes() {
           </SectionLabel>
         </View>
       </MotiView>
+
+      {/* Loading skeletons */}
+      {classTypesQuery.isLoading ? (
+        <View style={{ gap: 8 }}>
+          <SkeletonCard />
+          <SkeletonCard />
+          <SkeletonCard />
+        </View>
+      ) : null}
 
       {/* Class type list */}
       {classTypes.map((ct, idx) => (

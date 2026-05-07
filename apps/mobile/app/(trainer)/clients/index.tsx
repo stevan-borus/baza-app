@@ -23,6 +23,7 @@ import { MotiView } from "@/components/ui/styled";
 import { GlassCard } from "@/components/ui/glass-card";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState, ErrorState } from "@/components/ui/states";
+import { SkeletonCard } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import {
   ScreenContainerRaw,
@@ -246,6 +247,12 @@ export default function TrainerClients() {
         >
           {clientsQuery.isError ? (
             <ErrorState message={t("trainer.clients.error")} />
+          ) : clientsQuery.isLoading ? (
+            <>
+              <SkeletonCard />
+              <SkeletonCard />
+              <SkeletonCard />
+            </>
           ) : filtered.length === 0 ? (
             <EmptyState
               title={

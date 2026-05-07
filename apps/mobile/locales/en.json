@@ -419,6 +419,13 @@
       "cancelSession": "Cancel session",
       "updateError": "Update failed."
     },
+    "sessionDetail": {
+      "title": "Session",
+      "editAction": "Edit session",
+      "loadError": "Unable to load session.",
+      "bookedClients": "Booked clients",
+      "noBookings": "No bookings yet."
+    },
     "manage": {
       "title": "Manage",
       "tabPackages": "Packages",

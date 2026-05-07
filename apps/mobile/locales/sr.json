@@ -422,6 +422,13 @@
       "cancelSession": "Otkaži termin",
       "updateError": "Ažuriranje nije uspelo."
     },
+    "sessionDetail": {
+      "title": "Termin",
+      "editAction": "Uredi termin",
+      "loadError": "Nije moguće učitati termin.",
+      "bookedClients": "Klijenti rezervisani",
+      "noBookings": "Još nema rezervacija."
+    },
     "manage": {
       "title": "Upravljanje",
       "tabPackages": "Paketi",

@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Pressable, ScrollView, Switch, Text, View } from "react-native";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import Feather from "@expo/vector-icons/Feather";
 import dayjs from "dayjs";
@@ -58,6 +58,13 @@ export default function AdminSchedule() {
   const tokens = useThemeTokens();
   const bottomPad = useTabBarBottomPadding(24);
   const [selectedDate, setSelectedDate] = useState(dayjs().format("YYYY-MM-DD"));
+  const prevDateRef = React.useRef(selectedDate);
+  const dayDirection = React.useMemo(() => {
+    const prev = prevDateRef.current;
+    const dir = selectedDate > prev ? 1 : selectedDate < prev ? -1 : 1;
+    prevDateRef.current = selectedDate;
+    return dir;
+  }, [selectedDate]);
   const [month, setMonth] = useState(() => monthKeyFromDate(dayjs()));
   const [weekStart, setWeekStart] = useState(() => startOfLocaleWeek(dayjs()));
   const [monthDate, setMonthDate] = useState(() => dayjs().startOf("month"));
@@ -291,6 +298,10 @@ export default function AdminSchedule() {
   }
 
   function handleEventPress(session: typeof sessions[0]) {
+    router.push(`/(admin)/sessions/${session.id}`);
+  }
+
+  function openEditForSession(session: typeof sessions[0]) {
     const sessionIsActive = session.isActive ?? true;
     setEditForm({
       startsAt: new Date(session.startsAt),
@@ -316,6 +327,18 @@ export default function AdminSchedule() {
     });
     setEditScope("session");
   }
+
+  // Open the edit sheet when arriving back from the detail page with ?editSessionId=…
+  const params = useLocalSearchParams<{ editSessionId?: string }>();
+  React.useEffect(() => {
+    if (!params.editSessionId) return;
+    const target = sessions.find((s) => s.id === params.editSessionId);
+    if (!target) return;
+    openEditForSession(target);
+    // Clear the param so re-renders don't re-open.
+    router.setParams({ editSessionId: undefined });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params.editSessionId, sessions]);
 
   const revenueValue = summary?.revenue ?? 0;
   const attendanceRate =
@@ -528,9 +551,23 @@ export default function AdminSchedule() {
                   {daySessions.length === 0 ? (
                     <EmptyState title={t("client.dayView.noSessions")} />
                   ) : (
-                    daySessions.map((session) => (
+                    daySessions.map((session, idx) => (
+                      <MotiView
+                        // Re-key on selectedDate so MotiView remounts and replays the entry
+                        // animation when the user navigates between days.
+                        key={`${selectedDate}-${session.id}`}
+                        from={{
+                          opacity: 0,
+                          translateX: dayDirection * 24,
+                        }}
+                        animate={{ opacity: 1, translateX: 0 }}
+                        transition={{
+                          type: "timing",
+                          duration: 220,
+                          delay: Math.min(idx, 8) * 30,
+                        }}
+                      >
                       <SessionCard
-                        key={session.id}
                         testID={`session-card-${session.id}`}
                         time={`${dayjs(session.startsAt).format("HH:mm")} - ${dayjs(session.endsAt).format("HH:mm")}`}
                         className={session.classTypeName}
@@ -543,6 +580,7 @@ export default function AdminSchedule() {
                         hiddenLabel={t("admin.schedule.hiddenBadge")}
                         onPress={() => handleEventPress(session)}
                       />
+                      </MotiView>
                     ))
                   )}
                 </View>

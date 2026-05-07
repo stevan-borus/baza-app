@@ -20,6 +20,7 @@ import { ConfirmSheet } from "@/components/ui/confirm-sheet";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState, ErrorState } from "@/components/ui/states";
+import { SkeletonCard } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { SectionLabel } from "@/components/ui/typography";
 import { GlassCard } from "@/components/ui/glass-card";
@@ -304,9 +305,16 @@ export default function AdminClients() {
           {tab === "clients" ? (
             <>
               {clientsQuery.isError ? <ErrorState message={t("admin.clients.error")} /> : null}
-              {!clientsQuery.isError && filteredClients.length === 0 && filter !== "all" ? (
+              {clientsQuery.isLoading ? (
+                <View style={{ gap: 8 }}>
+                  <SkeletonCard />
+                  <SkeletonCard />
+                  <SkeletonCard />
+                </View>
+              ) : null}
+              {!clientsQuery.isError && !clientsQuery.isLoading && filteredClients.length === 0 && filter !== "all" ? (
                 <EmptyState title={t("admin.clients.filterEmpty")} />
-              ) : !clientsQuery.isError && searchedClients.length === 0 ? (
+              ) : !clientsQuery.isError && !clientsQuery.isLoading && searchedClients.length === 0 ? (
                 <EmptyState title={t("admin.clients.empty")} />
               ) : null}
 

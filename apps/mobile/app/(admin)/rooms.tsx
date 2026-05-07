@@ -15,6 +15,7 @@ import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { MotiView } from "@/components/ui/styled";
 import { Button } from "@/components/ui/button";
 import { ErrorState } from "@/components/ui/states";
+import { SkeletonCard } from "@/components/ui/skeleton";
 import { GlassCard } from "@/components/ui/glass-card";
 import { Input } from "@/components/ui/input";
 import { AppSheet } from "@/components/ui/sheet";
@@ -107,6 +108,13 @@ export default function AdminSettingsRooms() {
       </MotiView>
 
       {/* Room list */}
+      {roomsQuery.isLoading ? (
+        <View style={{ gap: 8 }}>
+          <SkeletonCard />
+          <SkeletonCard />
+        </View>
+      ) : null}
+
       {rooms.map((room, idx) => (
         <MotiView
           key={room.id}

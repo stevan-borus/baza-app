@@ -57,7 +57,40 @@ const sessionsListResponseSchema = z.object({
   sessions: z.array(sessionSchema),
 });
 
+const sessionDetailSchema = z.object({
+  id: z.string(),
+  startsAt: z.string(),
+  endsAt: z.string(),
+  status: z.enum(["SCHEDULED", "CANCELED", "COMPLETED"]),
+  capacity: z.number(),
+  isActive: z.boolean(),
+  classTypeId: z.string(),
+  roomId: z.nullable(z.string()),
+  trainerUserId: z.nullable(z.string()),
+  recurringScheduleId: z.nullable(z.string()).optional(),
+  classType: z.object({ id: z.string(), name: z.string() }).nullable(),
+  room: z.object({ id: z.string(), name: z.string() }).nullable(),
+  trainer: z.object({ id: z.string(), fullName: z.string() }).nullable(),
+  bookings: z.array(
+    z.object({
+      id: z.string(),
+      createdAt: z.string(),
+      client: z.object({
+        id: z.string(),
+        fullName: z.string(),
+        email: z.string(),
+      }),
+    }),
+  ),
+});
+
+const sessionDetailResponseSchema = z.object({
+  success: z.boolean(),
+  session: sessionDetailSchema,
+});
+
 export type Session = z.infer<typeof sessionSchema>;
+export type SessionDetail = z.infer<typeof sessionDetailSchema>;
 
 export const sessionsQueries = {
   availabilityByMonth: (month: string) =>
@@ -87,6 +120,21 @@ export const sessionsQueries = {
         return sessionsListResponseSchema.parse(await response.json());
       },
       staleTime: 30_000,
+    }),
+
+  byId: (id: string) =>
+    queryOptions({
+      queryKey: ["sessions", "by-id", id] as const,
+      queryFn: async () => {
+        const response = await apiFetch(
+          `${sharedEnv.EXPO_PUBLIC_API_URL}/api/sessions/${encodeURIComponent(id)}`,
+          { credentials: "include" },
+        );
+        if (!response.ok) throw new Error(`Unable to load session (${response.status})`);
+        return sessionDetailResponseSchema.parse(await response.json());
+      },
+      staleTime: 30_000,
+      enabled: !!id,
     }),
 
   create: () =>

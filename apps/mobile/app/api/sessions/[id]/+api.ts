@@ -12,6 +12,65 @@ import { tryCatch } from "@/lib/server/try-catch";
 
 type RouteParams = Record<string, string>;
 
+export async function GET(request: Request, { id }: RouteParams) {
+  const guard = await requireRole(request, [UserRole.ADMIN, UserRole.TRAINER]);
+  if (!guard.ok) return guard.response;
+
+  if (guard.user.role === UserRole.TRAINER) {
+    const ownsSession = await trainerOwnsSession(guard.user.id, id);
+    if (!ownsSession) return fail("Forbidden", 403);
+  }
+
+  const session = await prisma.session.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      startsAt: true,
+      endsAt: true,
+      status: true,
+      capacity: true,
+      isActive: true,
+      classTypeId: true,
+      roomId: true,
+      trainerUserId: true,
+      recurringScheduleId: true,
+      classType: { select: { id: true, name: true } },
+      room: { select: { id: true, name: true } },
+      trainer: { select: { id: true, fullName: true } },
+      bookings: {
+        where: { canceledAt: null },
+        orderBy: { createdAt: "asc" },
+        select: {
+          id: true,
+          createdAt: true,
+          clientProfile: {
+            select: {
+              id: true,
+              user: { select: { id: true, fullName: true, email: true } },
+            },
+          },
+        },
+      },
+    },
+  });
+  if (!session) return fail("Session not found", 404);
+
+  const shaped = {
+    ...session,
+    bookings: session.bookings.map((b) => ({
+      id: b.id,
+      createdAt: b.createdAt,
+      client: {
+        id: b.clientProfile.user.id,
+        fullName: b.clientProfile.user.fullName,
+        email: b.clientProfile.user.email,
+      },
+    })),
+  };
+
+  return ok({ success: true, session: shaped });
+}
+
 export async function PATCH(request: Request, { id }: RouteParams) {
   const guard = await requireRole(request, [UserRole.ADMIN, UserRole.TRAINER]);
   if (!guard.ok) return guard.response;
