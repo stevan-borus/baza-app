@@ -232,53 +232,83 @@ async function seedCatalog() {
 }
 
 async function seedClientPackages(opts: {
-  clients: Map<keyof typeof USERS, { clientProfileId: string }>;
+  clients: Map<keyof typeof USERS, { clientProfileId: string; userId: string }>;
   packageTypes: Map<string, { id: string; classTypeId: string; sessionCount: number; validityDays: number; lateCancelHours: number }>;
 }) {
   const currentInstant = now();
   const reformer12 = opts.packageTypes.get("Reformer 12-pack")!;
   const energy12 = opts.packageTypes.get("Energy 12-pack")!;
 
-  // Active reformer — 12-pack with 8 remaining, plenty of time left.
-  await prisma.clientPackage.create({
-    data: {
-      clientProfileId: opts.clients.get("activeReformer")!.clientProfileId,
-      packageTypeId: reformer12.id,
-      classTypeId: reformer12.classTypeId,
-      lateCancelHours: reformer12.lateCancelHours,
-      startsAt: new Date(currentInstant.getTime() - 5 * DAY_MS),
-      expiresAt: new Date(currentInstant.getTime() + 25 * DAY_MS),
-      sessionsRemaining: 8,
-    },
+  // Helper: create a paid (Flow 1) ClientPackage + paired BillingRecord.
+  async function createPaidPackage(args: {
+    clientKey: keyof typeof USERS;
+    packageType: typeof reformer12;
+    startsAt: Date;
+    expiresAt: Date;
+    sessionsRemaining: number;
+    amount: number;
+    method: "CASH" | "CARD" | "COMPANY" | "QR" | "MANUAL_ONLINE";
+    paidAt?: Date;
+  }) {
+    const client = opts.clients.get(args.clientKey)!;
+    await prisma.clientPackage.create({
+      data: {
+        clientProfileId: client.clientProfileId,
+        packageTypeId: args.packageType.id,
+        classTypeId: args.packageType.classTypeId,
+        lateCancelHours: args.packageType.lateCancelHours,
+        startsAt: args.startsAt,
+        expiresAt: args.expiresAt,
+        sessionsRemaining: args.sessionsRemaining,
+      },
+    });
+    await prisma.billingRecord.create({
+      data: {
+        clientUserId: client.userId,
+        amount: args.amount,
+        method: args.method,
+        status: "CONFIRMED",
+        packageTypeId: args.packageType.id,
+        createdAt: args.paidAt ?? args.startsAt,
+      },
+    });
+  }
+
+  // Active reformer (Flow 1, paid) — 12-pack with 8 remaining, plenty of time left.
+  await createPaidPackage({
+    clientKey: "activeReformer",
+    packageType: reformer12,
+    startsAt: new Date(currentInstant.getTime() - 5 * DAY_MS),
+    expiresAt: new Date(currentInstant.getTime() + 25 * DAY_MS),
+    sessionsRemaining: 8,
+    amount: 12000,
+    method: "CARD",
   });
 
-  // Active energy — 12-pack full of sessions.
-  await prisma.clientPackage.create({
-    data: {
-      clientProfileId: opts.clients.get("activeEnergy")!.clientProfileId,
-      packageTypeId: energy12.id,
-      classTypeId: energy12.classTypeId,
-      lateCancelHours: energy12.lateCancelHours,
-      startsAt: new Date(currentInstant.getTime() - 2 * DAY_MS),
-      expiresAt: new Date(currentInstant.getTime() + 28 * DAY_MS),
-      sessionsRemaining: 12,
-    },
+  // Active energy (Flow 1, paid) — 12-pack full of sessions.
+  await createPaidPackage({
+    clientKey: "activeEnergy",
+    packageType: energy12,
+    startsAt: new Date(currentInstant.getTime() - 2 * DAY_MS),
+    expiresAt: new Date(currentInstant.getTime() + 28 * DAY_MS),
+    sessionsRemaining: 12,
+    amount: 13000,
+    method: "CASH",
   });
 
-  // Expired — Reformer pack expired 7 days ago.
-  await prisma.clientPackage.create({
-    data: {
-      clientProfileId: opts.clients.get("expired")!.clientProfileId,
-      packageTypeId: reformer12.id,
-      classTypeId: reformer12.classTypeId,
-      lateCancelHours: reformer12.lateCancelHours,
-      startsAt: new Date(currentInstant.getTime() - 37 * DAY_MS),
-      expiresAt: new Date(currentInstant.getTime() - 7 * DAY_MS),
-      sessionsRemaining: 4,
-    },
+  // Expired (Flow 1, paid) — Reformer pack expired 7 days ago.
+  await createPaidPackage({
+    clientKey: "expired",
+    packageType: reformer12,
+    startsAt: new Date(currentInstant.getTime() - 37 * DAY_MS),
+    expiresAt: new Date(currentInstant.getTime() - 7 * DAY_MS),
+    sessionsRemaining: 4,
+    amount: 12000,
+    method: "CARD",
   });
 
-  // Paused — Reformer pack inside an active pause window.
+  // Paused (Flow 2, comp) — kept on Flow 2 to preserve coverage of the
+  // Poklon paket / comp branch in dev + e2e dashboards.
   await prisma.clientPackage.create({
     data: {
       clientProfileId: opts.clients.get("paused")!.clientProfileId,
@@ -299,17 +329,16 @@ async function seedClientPackages(opts: {
     },
   });
 
-  // Future — Reformer pack startsAt is 7 days from now.
-  await prisma.clientPackage.create({
-    data: {
-      clientProfileId: opts.clients.get("future")!.clientProfileId,
-      packageTypeId: reformer12.id,
-      classTypeId: reformer12.classTypeId,
-      lateCancelHours: reformer12.lateCancelHours,
-      startsAt: new Date(currentInstant.getTime() + 7 * DAY_MS),
-      expiresAt: new Date(currentInstant.getTime() + 37 * DAY_MS),
-      sessionsRemaining: 12,
-    },
+  // Future (Flow 1, paid) — Reformer pack startsAt is 7 days from now.
+  await createPaidPackage({
+    clientKey: "future",
+    packageType: reformer12,
+    startsAt: new Date(currentInstant.getTime() + 7 * DAY_MS),
+    expiresAt: new Date(currentInstant.getTime() + 37 * DAY_MS),
+    sessionsRemaining: 12,
+    amount: 12000,
+    method: "QR",
+    paidAt: new Date(currentInstant.getTime() - DAY_MS),
   });
 
   // Empty — no clientPackage rows. Nothing to do.
@@ -417,10 +446,13 @@ export async function seedE2E() {
 
   const catalog = await seedCatalog();
 
-  const clientProfiles = new Map<keyof typeof USERS, { clientProfileId: string }>();
+  const clientProfiles = new Map<keyof typeof USERS, { clientProfileId: string; userId: string }>();
   for (const [key, value] of seeded.entries()) {
     if (value.clientProfileId) {
-      clientProfiles.set(key, { clientProfileId: value.clientProfileId });
+      clientProfiles.set(key, {
+        clientProfileId: value.clientProfileId,
+        userId: value.user.id,
+      });
     }
   }
   await seedClientPackages({
@@ -436,6 +468,73 @@ export async function seedE2E() {
     classTypes: catalog.classTypeByName,
     rooms: catalog.rooms.map((r) => ({ id: r.id, name: r.name })),
   });
+
+  await seedBookings({ clients: clientProfiles });
+}
+
+/**
+ * Seeds bookings on the upcoming sessions so dashboards show non-zero traffic.
+ * Bookings are placed on the soonest matching session (by ClassType) for each
+ * eligible client. The package-class-scoping rule means a Reformer ClientPackage
+ * can only book Reformer sessions, etc.
+ */
+async function seedBookings(opts: {
+  clients: Map<keyof typeof USERS, { clientProfileId: string; userId: string }>;
+}) {
+  const upcoming = await prisma.session.findMany({
+    where: { startsAt: { gte: now() }, isActive: true, status: "SCHEDULED" },
+    orderBy: { startsAt: "asc" },
+    select: { id: true, classTypeId: true, capacity: true, startsAt: true },
+  });
+
+  const reformerSession = upcoming.find((s) => s.capacity > 0 && true);
+  // Find first reformer session and first energy session by joining via ClassType.
+  const reformerCt = await prisma.classType.findFirst({ where: { name: "Reformer pilates" }, select: { id: true } });
+  const energyCt = await prisma.classType.findFirst({ where: { name: "Energy pilates" }, select: { id: true } });
+  const firstReformer = upcoming.find((s) => s.classTypeId === reformerCt?.id);
+  const firstEnergy = upcoming.find((s) => s.classTypeId === energyCt?.id);
+
+  // Active reformer client → first reformer session.
+  if (firstReformer) {
+    const ar = opts.clients.get("activeReformer");
+    if (ar) {
+      const pkg = await prisma.clientPackage.findFirst({
+        where: { clientProfileId: ar.clientProfileId, classTypeId: reformerCt!.id },
+        select: { id: true },
+      });
+      if (pkg) {
+        await prisma.booking.create({
+          data: {
+            clientProfileId: ar.clientProfileId,
+            sessionId: firstReformer.id,
+            clientPackageId: pkg.id,
+          },
+        });
+      }
+    }
+  }
+
+  // Active energy client → first energy session.
+  if (firstEnergy) {
+    const ae = opts.clients.get("activeEnergy");
+    if (ae) {
+      const pkg = await prisma.clientPackage.findFirst({
+        where: { clientProfileId: ae.clientProfileId, classTypeId: energyCt!.id },
+        select: { id: true },
+      });
+      if (pkg) {
+        await prisma.booking.create({
+          data: {
+            clientProfileId: ae.clientProfileId,
+            sessionId: firstEnergy.id,
+            clientPackageId: pkg.id,
+          },
+        });
+      }
+    }
+  }
+
+  void reformerSession;
 }
 
 async function main() {
