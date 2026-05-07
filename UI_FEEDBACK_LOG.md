@@ -1,99 +1,42 @@
 # UI Feedback Log — `fix/ui` branch
 
-Comprehensive log of every item you asked for in this session, with status. Use this in a future session as a reference for what's done, what's not, and what regressed.
+Comprehensive log of every item asked for in the multi-session UI feedback round, with final status. Use this in a future session as a canonical reference for what shipped, where, and what's open.
 
-Branch: `fix/ui`. Latest commit: `c79a623 fix(e2e): repair test plan failures after Phase B-3 + anchor-time merge`.
-
----
-
-## Done and verified (committed in this branch)
-
-### Phase A — bugs
-
-- [x] **#7 i18n key collision** — `admin.clients.assignPackage` was defined as both a string (action label, line 319) and an object (sheet header, line 367) in both `sr.json` and `en.json`. The object overwrote the string at runtime, so the action sheet showed the literal error string. Renamed nested key to `compPackageHeading`. Added a unit test (`test/unit/i18n-no-duplicate-keys.test.ts`) that scans the raw JSON for duplicate keys at any depth so this can't regress.
-- [x] **#9 "komp paket" → "Poklon paket" / "Complimentary package"** — full word in Serbian and English; documented in `CONTEXT.md`.
-- [x] **#4 Sala → Max klijenata refresh bug** — extracted `applySessionFormChange` helper (`apps/mobile/lib/admin/session-form-state.ts`) so picking a Sala always overwrites capacity to that room's capacity, on first AND subsequent changes. Wired into create + edit + series sheets. 5 unit tests cover the coupling rules.
-- [x] **#17 API rejects visibility=off when bookings exist** — confirmed already shipped in a prior commit (`apps/mobile/app/api/sessions/[id]/+api.ts:57`) with corresponding integration test in `sessions-crud.test.ts:233`.
-
-### Phase B — domain features
-
-- [x] **Naplata `?clientUserId=` filter API** — `GET /api/billing` now accepts a client filter. 3 integration tests in `billing-client-filter.test.ts`.
-- [x] **#16 Izveštaji Paketi insights** — new endpoint `GET /api/reports/packages` returning most-used PackageTypes (count), revenue per PackageType (sum), and comp-vs-paid ratio. New "Paketi" section on the reports screen with ranked cards + a paid-vs-comp bar. 4 integration tests in `reports-packages.test.ts`.
-- [x] **BillingRecord schema link** — added `packageTypeId String?` (nullable FK to PackageType, ON DELETE SET NULL) so revenue-per-PackageType reporting joins cleanly. Migration `20260507182120_billing_record_package_link`.
-- [x] **#11 Aktivne dodele standalone page** — new route `/admin/packages/active-assignments` with per-client server-side search (`?search=`), status filter chips, and (intent) client name as the primary line on each card. 3 integration tests in `client-packages-admin-list.test.ts`. **NOTE: see #27 in the regression list below — the screenshot still shows package name as primary, not client name. UI rendering needs verification.**
-- [x] **#12 Naplata client filter UI** — wired the existing API filter to a Select dropdown on Naplata; same dropdown pattern as other selects.
-
-### Phase C — visual polish
-
-- [x] **#1 StatStrip column centering** — fixed-height label slot + `minHeight: 96` + `justifyContent: "space-between"` on each column so labels that wrap to two lines no longer push the value down. **NOTE: see #32 in the regression list — user reports the 2x2 grid on the dashboard isn't centered. May be a different component or stale bundle.**
-- [x] **#2 Removed colored dot** from `Tipovi treninga` (ClassType list).
-- [x] **#3 Removed map-pin icon** from `Sale` (rooms) list.
-- [x] **#5 Session card time → diagonal stack** — implemented `SessionCardTime` helper in `session-card.tsx` that splits `"HH:mm - HH:mm"` and renders start above, end below + indented. **NOTE: see #25 — user's screenshot still shows wide horizontal range; may be stale bundle.**
-- [x] **#8 Razlog → textarea** (3 lines, `textAlignVertical: "top"`).
-- [x] **#10 Border radius mismatch** — Select dropdown radius aligned to Input's `rounded-lg`.
-- [x] **#13 Rezervacije empty-state guard** — chart now checks `bookingsData.some(d => d.y > 0)` so a series of all-zeros renders the styled EmptyState instead of an empty accent card.
-- [x] **#14 Iskorišćenost label fix** — bucket labels now reformatted (e.g. "Maj 2026" instead of "2026-05") via `formatBucketLabel` helper. Per-Sala drilldown deferred → task #23 follow-up.
-
-### Phase B-3 — session detail + animation
-
-- [x] **#15 Session detail page exists** — route at `/admin/sessions/[id]` with header (date · time · trainer · room · capacity), pencil icon for edit, booked-clients list with avatar/name/email/chevron tappable to client profile. New GET handler on `/api/sessions/[id]` (admin + trainers-of-session). 2 integration tests.
-- [x] **#15 Slide+fade animation** — day-view session cards animate in with translateX direction tied to date direction; staggered up to 30ms × min(idx, 8). Re-keyed on `${selectedDate}-id` so MotiView remounts on day navigation.
-- [x] **Session detail entry — REVERTED design** — originally I made tap-card navigate to detail page and pencil-on-detail open edit sheet. That broke admin tests 26/28 reproducibly. Reverted to: tap-card opens edit sheet directly (preserves all existing tests). Detail page is reachable via a **"View N bookings →"** link inside the edit sheet. **NOTE: see #26 in the regression list — user reports the link isn't visible in the sheet, possibly below the fold.**
-
-### Phase D — loading states
-
-- [x] **#6 Loading skeletons** — added 2-3 SkeletonCards on initial isLoading for: admin/clients, admin/billing, admin/class-types, admin/rooms, admin/packages, trainer/clients. (admin/sessions/[id] and packages/active-assignments shipped with skeletons inline.)
-
-### Phase E — seed and infra
-
-- [x] **#18 Rich seed: paid clients via Flow 1** — `activeReformer` / `activeEnergy` / `expired` / `future` are now paid via `BillingRecord` paired with `ClientPackage`. `paused` stays on Flow 2 to preserve coverage of the comp branch.
-- [x] **#19 Seeded bookings** — one Reformer booking + one Energy booking on the second matching upcoming session (so the e2e booking spec, which picks the first session of the day, still finds an empty seat). Updated trainer test 41 to assert one client appears, not the empty state.
-- [x] **#22 Anchor-time refactor** — separate worktree, PR #8, merged. Pin point now `2026-05-11T09:00:00Z` (Monday morning, anchor revised from Saturday during e2e debugging).
-- [x] **#20 E2E client books a session** — verified existing test #55 in `client.spec.ts` covers it end-to-end.
-- [x] **#21 Booking constraints integration** — verified comprehensive coverage already exists in `bookings-class-scoping.test.ts` + `bookings-cancel.test.ts` + `cron-sessions-consumption.test.ts`.
+Branch: `fix/ui`. Latest commit: `5f67a24 feat(reports): per-Sala utilization drilldown`. Pushed to origin.
 
 ---
 
-## Open follow-ups (captured but not done)
+## Final test status
 
-- [ ] **#23 Per-Sala utilization drilldown** — during grilling you picked option (A + per-Sala drilldown) for #14. Only the label fix shipped in this PR; the drilldown needs a new endpoint shape (`GET /api/reports/utilization/by-room`) and a sub-route. Captured as a follow-up task.
-- [x] **#24 Admin 26/28 + trainer 51 e2e failures** — Subagent fixed via PR #9 (https://github.com/stevan-borus/baza-app/pull/9). Root causes: admin 26/28 — seed bookings caused PATCH/DELETE to 409, test's `waitForResponse(r.status() < 300)` never matched; fix cancels bookings via DB helper before save. Trainer 51 — Sun 5/10 was off the visible week post anchor change; routed click through `navigateWeekStripTo`. 73/73 e2e green. **Awaiting merge.**
-
----
-
-## Regressions / unfinished items you flagged in the second round
-
-These I marked as completed but you screenshot-verified they're not actually done in the running app. Most likely stale Metro bundle for some, real code bugs for others.
-
-- [ ] **#25 Session card time** — superseded by **#34** (slash design). Original diagonal layout was rejected.
-- [ ] **#26 Session detail page not reachable** — superseded by **#37** (re-instate detail-page-as-primary).
-- [ ] **#27 Aktivne dodele cards: client name as primary** — actually working in latest screenshot once the new route loads. The old screenshot showed cached state.
-- [ ] **#28 Naplata double scroller** — there's a stacked scrollbar on Naplata. Likely a nested ScrollView inside a parent scroll container.
-- [ ] **#29 Naplata month chevrons don't filter** — `selectedMonth` state changes but `billingQuery` doesn't accept a month parameter. Either filter client-side after fetch, or extend the API.
-- [ ] **#30 Mesečni prihod card layout** — the rank-list card with proportional bars has degenerated to a single tiny row. Restore the original layout.
-- [ ] **#31 Izveštaji period pills don't change numbers** — toggling Week/Month/Quarter doesn't refetch with the new period. Verify SegmentedControl wires `period` into `reportsQueries.revenue/utilization/bookings/packages`.
-- [x] **#32 Stat grid 2x2 numbers not centered** — RESOLVED after Metro cache clear (`pnpm --filter mobile dev --clear`). User confirmed "the numbers are centered on this page, that is ok in the 2x2 grid." StatStrip fix took effect once bundle rebuilt.
+- Unit: **36 / 36** passing
+- Integration: **204 / 204** passing
+- E2E (Playwright): **73 / 73** passing
+- Type-check: clean
 
 ---
 
-## Third round of feedback (after Metro clear, looking at running app)
+## Login credentials (rich seed)
 
-- [ ] **#33 CRITICAL: New routes appear in admin tab bar** — Expo Router auto-registers `(admin)/packages/active-assignments.tsx` and `(admin)/sessions/[id].tsx` as tabs because they're nested inside the `(admin)` tab group. User sees `packages... sessions/...` extra tabs in the bottom nav. Must explicitly hide them from the Tabs config in `_layout.tsx`, or restructure the routes.
-- [ ] **#34 Session card time → bigger slash format (18:00/19:00)** — user wants "something fancy like `18:00/19:00` with bigger slash". Replaces the diagonal stack from #25. Use frontend-design treatment.
-- [ ] **#35 Naplata client filter throws error** — selecting any client from the filter dropdown causes "Nije moguće učitati naplatu". The `useInfiniteQuery` retry/cache invalidation may not handle filter changes correctly, or the API returns 500 on the filter param. Investigate the actual network response.
-- [ ] **#36 Remove "Plaćeni nasuprot poklon" card from Izveštaji** — user feedback: not useful. Remove the card render only; keep the API endpoint and underlying data.
-- [x] **#37 Tap session card → detail page first** — Implemented after PR #9 merged. `handleEventPress` now navigates to `/admin/sessions/[id]`; the detail-page pencil pushes back with `?editSessionId&focusDate` so the edit sheet opens on the dashboard. Removed the redundant `0/X zakazano · Sala · Č. lista` top card from the edit sheet (info lives on the detail page header). Removed the now-redundant "View N bookings →" link (the user is already coming from the detail page). E2E helper `openSessionEditSheet` updated to follow the new path. **73/73 e2e green** including admin 22/23/25/26/27/28 (the series-scope tests now pass thanks to PR #9's `cancelBookingsOnRecurringSchedule` helper). Also fixed test 24 stability: switched `.click()` to `.dispatchEvent("click")` on weekday buttons (MotiView animation made the plain click flaky).
+- **Admin**: `admin.e2e@example.test` / `Password123!`
+- **Trainer (Reformer)**: `trainer.reformer@e2e.test` / `Password123!`
+- **Client (active Reformer)**: `client.active.reformer@e2e.test` / `Password123!`
+
+Defined in `apps/mobile/scripts/test/seed-e2e.ts`. Note: `pnpm test:integration` and `pnpm test:e2e:prepare` both wipe the DB and re-apply the seed; if login breaks, run `pnpm --filter mobile test:db:seed-e2e`.
 
 ---
 
-## What's been shipped as commits on `fix/ui`
+## Commit history on `fix/ui`
 
 ```
+5f67a24 feat(reports): per-Sala utilization drilldown
+9d97f12 feat(admin): tap session card → detail page (final design)
+4465e27 fix(admin): UI feedback round 3 — tab bar, billing filters, slash time, comp card
+29c93fb fix(e2e): clear remaining 3 failures from test plan (#9)         ← merged from PR #9
 c79a623 fix(e2e): repair test plan failures after Phase B-3 + anchor-time merge
-00821be Merge remote-tracking branch 'origin/dev' into fix/ui
 f27df1b test(seed): paid clients (Flow 1) + bookings on upcoming sessions
 f6a67e4 feat(admin): session detail page + slide+fade card animation + loading skeletons
 a9037c2 feat(admin): UI feedback round 2 — Aktivne dodele page, Naplata client filter, polish
+00821be Merge remote-tracking branch 'origin/dev' into fix/ui
 7c2f0f3 feat(reports): Paketi insights section + BillingRecord package link
 d9f2228 fix(admin): UI feedback round 1 — bug fixes + billing client filter
 752e293 refactor(test): pin entire test stack to a single anchor instant (#8)  ← merged from PR #8
@@ -101,27 +44,131 @@ d9f2228 fix(admin): UI feedback round 1 — bug fixes + billing client filter
 
 ---
 
-## Domain language captured in CONTEXT.md (during grilling)
+## All tasks (37 total) — final status
+
+### Phase A: bugs
+
+- [x] **#7** i18n key collision `admin.clients.assignPackage` (string at line 319, object at line 367, in both `sr.json` + `en.json`). Renamed nested key to `compPackageHeading`. Added `test/unit/i18n-no-duplicate-keys.test.ts` to scan raw JSON for duplicates at any depth.
+- [x] **#9** "komp paket" → "Poklon paket" / "Complimentary package".
+- [x] **#4** Sala → Max klijenata refresh bug. Extracted `applySessionFormChange` helper in `apps/mobile/lib/admin/session-form-state.ts`. 5 unit tests cover coupling rules. Wired into create + edit + series sheets.
+- [x] **#17** API rejects `visibleToClients=false` when bookings exist. Confirmed already shipped in a prior commit.
+
+### Phase B: domain features
+
+- [x] **Naplata `?clientUserId=` filter API** + 3 integration tests in `billing-client-filter.test.ts`.
+- [x] **#16** Izveštaji Paketi insights section: new endpoint `GET /api/reports/packages` (most-used, revenue per type, comp vs paid). 4 integration tests in `reports-packages.test.ts`. Comp-vs-paid card later removed in #36 per user feedback.
+- [x] **BillingRecord schema link**: added nullable `packageTypeId String?` FK to `PackageType` (ON DELETE SET NULL). Migration `20260507182120_billing_record_package_link`.
+- [x] **#11** Aktivne dodele standalone page at `/admin/packages/active-assignments` with per-client server-side `?search=` and status filter chips. Client name as primary line on each card. 3 integration tests.
+- [x] **#12** Naplata per-client filter UI wired to the existing API filter.
+
+### Phase C: visual polish (round 1)
+
+- [x] **#1** StatStrip column centering fix (fixed-height label slot + min height + space-between).
+- [x] **#2** Removed colored dot from `Tipovi treninga` (ClassType list).
+- [x] **#3** Removed map-pin icon from `Sale` (rooms) list.
+- [x] **#5** Session card time → diagonal stack. Superseded by **#34** (slash design).
+- [x] **#8** Razlog → 3-line textarea.
+- [x] **#10** Border radius mismatch fixed: Select dropdown radius aligned to Input's `rounded-lg`.
+- [x] **#13** Rezervacije empty-state guard: chart now uses `bookingsData.some(d => d.y > 0)` so all-zero series renders the EmptyState rather than an empty accent card.
+- [x] **#14** Iskorišćenost label fix via `formatBucketLabel` helper (e.g. "Maj 2026" instead of "2026-05"). Per-Sala drilldown initially deferred → shipped as **#23**.
+
+### Phase B-3: session detail + animation
+
+- [x] **#15** Session detail page at `/admin/sessions/[id]` with header (date · time · trainer · room · capacity), pencil icon, booked-clients list (avatar/name/email/chevron). New GET handler on `/api/sessions/[id]`. 2 integration tests. Slide+fade animation on day-view cards (translateX direction tied to date direction; staggered ≤30ms × min(idx, 8); re-keyed on `${selectedDate}-id`).
+
+### Phase D: loading states
+
+- [x] **#6** Loading skeletons on initial isLoading for: admin/clients, admin/billing, admin/class-types, admin/rooms, admin/packages, trainer/clients. (admin/sessions/[id] and packages/active-assignments shipped with skeletons inline.)
+
+### Phase E: seed and infra
+
+- [x] **#18** Rich seed: paid clients via Flow 1 (BillingRecord paired with ClientPackage). `paused` stays Flow 2 to preserve comp coverage.
+- [x] **#19** Seeded bookings on upcoming sessions (second matching session, so e2e `book a session` test still finds an empty seat).
+- [x] **#20** E2E client books a session (existing test #55 in `client.spec.ts`).
+- [x] **#21** Booking constraints integration coverage (existing `bookings-class-scoping.test.ts` + `bookings-cancel.test.ts` + `cron-sessions-consumption.test.ts`).
+- [x] **#22** Anchor-time refactor (PR #8, separate worktree). Anchor = `2026-05-11T09:00:00Z` (Monday morning), revised from Saturday during e2e debugging. Pinned by `TEST_ANCHOR_TIME` env var; helper `apps/mobile/lib/now.ts`.
+
+### Round 2 regressions (after Metro cache clear)
+
+- [x] **#25** Session card time wide range — superseded by **#34**.
+- [x] **#26** Session detail page reachable — superseded by **#37** (detail page is now primary tap target).
+- [x] **#27** Aktivne dodele cards: client name primary — verified working post-cache-clear.
+- [x] **#28** Naplata double scroller: removed virtualized `LegendList` (which had `height: 400`), replaced with plain `.map`, infinite-scroll wired to outer ScrollView's `onScroll`.
+- [x] **#29** Naplata month chevrons now filter records: extended `GET /api/billing` with `?from=` + `?to=`; UI sends `selectedMonth.startOf/endOf("month")`.
+- [x] **#30** Mesečni prihod card layout: rank number `rgba(255,255,255,0.12)` was invisible on bone background; switched to `tokens.muted` at 35% opacity, bar bg to `tokens.glassStrong`.
+- [x] **#31** Izveštaji period pills now produce different data: each pill (week/month/quarter) derives a from/to window (7/30/90 days) plus its bucket granularity (day/week/month).
+- [x] **#32** Stat grid 2x2 numbers centered — resolved after Metro cache clear; user confirmed.
+
+### Round 3 (after looking at running app)
+
+- [x] **#33** Hidden `(admin)/packages/active-assignments` and `(admin)/sessions/[id]` from the bottom tab bar via `<Tabs.Screen href={null}>`. Expo Router auto-registers nested files in tab groups; fix uses the same pattern as `class-types` and `rooms` already in `_layout.tsx`.
+- [x] **#34** Session card time → editorial slash format (`HH:mm / HH:mm` with oversized -12deg skewed accent slash). Replaced the diagonal stack from #25.
+- [x] **#35** Naplata client filter "error" — root cause was `<ErrorState>` and `<EmptyState>` rendering simultaneously when query errored; gated empty state on `!isError`. Defensive null-checks added in API where-clause builder.
+- [x] **#36** Removed "Plaćeni nasuprot poklon" card from Izveštaji per user feedback. API endpoint and `compVsPaid` field kept for data availability.
+- [x] **#37** Tap session card → detail page first (final design). After PR #9 merged, `handleEventPress` now navigates to `/admin/sessions/[id]`; the detail-page pencil pushes back with `?editSessionId&focusDate` so the edit sheet opens on the dashboard. Removed redundant `0/X zakazano · Sala · Č. lista` top card from edit sheet (info lives on detail page header). Removed redundant "View N bookings →" link. Updated `openSessionEditSheet` e2e helper. Fixed test 24 stability (`.click()` → `.dispatchEvent("click")` for Tamagui-Pressable buttons that aren't stable during MotiView animation).
+
+### Infrastructure
+
+- [x] **#24** Subagent-fixed e2e failures: PR #9. Root causes: admin 26/28 — seed bookings caused PATCH/DELETE to 409, test's `waitForResponse(r.status() < 300)` never matched; fix cancels bookings via `cancelBookingsOnRecurringSchedule` DB helper before save. Trainer 51 — Sun 5/10 was off the visible week post anchor change; routed click through `navigateWeekStripTo`.
+
+### Round 4 (this session, follow-ups)
+
+- [x] **#23** Per-Sala utilization drilldown shipped. New endpoint `GET /api/reports/utilization/by-room` accepts the same `?from=&to=&period=` query params as `/utilization` but groups by `roomId` instead of by time bucket. Returns `{ roomId, roomName, totalCapacity, totalBooked, utilization }` per row, sorted by utilization desc (busiest first). 3 integration tests in `reports-utilization-by-room.test.ts`. UI: a "Po sali" / "By room" sub-section under Iskorišćenost kapaciteta on Izveštaji, with one smaller GlassCard (44px ring) per Sala. Always shown when data exists, no toggle.
+
+---
+
+## Domain language captured in CONTEXT.md
 
 - **Naplata** (section name) — admin-facing list of past payments, plus the entry point for **Nova uplata**.
 - **Nova uplata** (Flow 1) — sr "Nova uplata" / en "New payment". Default assignment path: BillingRecord + ClientPackage created atomically.
 - **Poklon paket** (Flow 2) — sr "Poklon paket" / en "Complimentary package". Free assignment for family/friends, no BillingRecord. Replaces the old "komp paket" label.
 - **BillingRecord.packageTypeId** — nullable FK linking a payment to the PackageType it bought (non-null on Flow 1 going forward).
+- **Anchor time** — `TEST_ANCHOR_TIME` env var; default `2026-05-11T09:00:00Z`.
 
 ---
 
-## Test status as of the last commit
+## Files added in this session
 
-- Unit: 36 / 36 passing
-- Integration: 201 / 201 passing
-- Type-check: clean
-- E2E: 70 / 73 passing (3 failing → captured as task #24, subagent on it)
+```
+apps/mobile/lib/admin/session-form-state.ts
+apps/mobile/app/(admin)/sessions/[id].tsx
+apps/mobile/app/(admin)/packages/active-assignments.tsx
+apps/mobile/app/api/reports/packages/+api.ts
+apps/mobile/app/api/reports/utilization/by-room/+api.ts
+apps/mobile/prisma/migrations/20260507182120_billing_record_package_link/migration.sql
+apps/mobile/test/unit/i18n-no-duplicate-keys.test.ts
+apps/mobile/test/unit/session-form-coupling.test.ts
+apps/mobile/test/integration/billing-client-filter.test.ts
+apps/mobile/test/integration/client-packages-admin-list.test.ts
+apps/mobile/test/integration/reports-packages.test.ts
+apps/mobile/test/integration/reports-utilization-by-room.test.ts
+apps/mobile/test/integration/sessions-by-id-get.test.ts
+UI_FEEDBACK_LOG.md
+```
 
 ---
 
-## Next session — pick up here
+## Open / deferred items (none ship-blocking)
 
-1. Restart Metro with `--clear` and verify which of #25–#32 are real code issues vs stale bundle.
-2. Wait for the subagent's PR (task #24) and merge into `fix/ui`.
-3. Work through #25–#32 in order. Most should be quick once the runtime UI is verified.
-4. Open the parent PR for `fix/ui` against `dev` once #25–#32 are clean.
+None. All 37 tasks closed. The branch is ready for a PR against `dev`:
+
+```
+gh pr create --base dev --title "feat(admin): UI feedback rounds 1-4 — bugs, polish, new pages, reports drilldown" --body "..."
+```
+
+A future session might want to investigate:
+
+1. **Per-ClassType / per-Trainer utilization drilldowns** (parallel to #23). Pattern is the same — `/api/reports/utilization/by-class-type`, `/by-trainer`. Worth doing if any of those become operational questions.
+2. **Reports period for "all-time"** — currently capped at 90 days (the "quarter" pill). Useful for year-over-year comparisons. Would need explicit "all-time" pill or a custom date-range picker.
+3. **Seed deterministic bookings count** — currently 1 Reformer + 1 Energy booking. Reports/dashboards have minimal data variation. If reports start showing edge-case bugs, beef up the seed with mixed cancellation states (pre-cutoff, late-cancel) and waitlist entries.
+
+---
+
+## How to pick this up in a new session
+
+1. `cd /Users/stevanborus/Desktop/baza-app/.claude/worktrees/fix/ui`
+2. `git pull --rebase origin fix/ui` to sync with origin.
+3. Read this file end-to-end.
+4. Read `CONTEXT.md` for domain language; `AGENTS.md` for project conventions (pnpm, anchor-time, test discipline).
+5. If logging in: `pnpm --filter mobile test:db:seed-e2e` then `pnpm --filter mobile dev`.
+6. Verify suite is still green: `pnpm --filter mobile test:unit` + `pnpm --filter mobile test:integration` + `pnpm --filter mobile test:e2e`.
