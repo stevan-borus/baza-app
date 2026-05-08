@@ -539,6 +539,55 @@ async function seedBookings(opts: {
     }
   }
 
+  // Mixed cancellation states + waitlist entries — gives reports/dashboards
+  // realistic data variety. Without these, the reports page shows mostly
+  // green/100% and never surfaces the late-cancel or waitlist UI paths.
+  const futureClient = opts.clients.get("future");
+  const expiredClient = opts.clients.get("expired");
+  const reformerSessionsForExtra = reformerSessions.slice(2, 6);
+
+  // 1. Pre-cutoff cancellation — canceled comfortably before the cutoff,
+  //    so no penalty (sessionsRemaining wasn't consumed).
+  if (futureClient && reformerSessionsForExtra[0]) {
+    const target = reformerSessionsForExtra[0];
+    const cancelDays = 3;
+    await prisma.booking.create({
+      data: {
+        clientProfileId: futureClient.clientProfileId,
+        sessionId: target.id,
+        clientPackageId: null,
+        canceledAt: new Date(target.startsAt.getTime() - cancelDays * DAY_MS),
+      },
+    });
+  }
+
+  // 2. Late cancel — canceled inside the lateCancelHours window, so this
+  //    one DID consume a session and surfaces the late-cancel marker.
+  if (expiredClient && reformerSessionsForExtra[1]) {
+    const target = reformerSessionsForExtra[1];
+    await prisma.booking.create({
+      data: {
+        clientProfileId: expiredClient.clientProfileId,
+        sessionId: target.id,
+        clientPackageId: null,
+        canceledAt: new Date(target.startsAt.getTime() - 2 * HOUR_MS),
+      },
+    });
+  }
+
+  // 3. Waitlist entry — on the same session the active reformer client is
+  //    booked into. Gives the WaitlistBadge / waitlistCount > 0 path a
+  //    test fixture without needing to fully fill the session.
+  if (futureClient && firstReformer) {
+    await prisma.waitlistEntry.create({
+      data: {
+        clientProfileId: futureClient.clientProfileId,
+        sessionId: firstReformer.id,
+        position: 1,
+      },
+    });
+  }
+
   void reformerSession;
 }
 

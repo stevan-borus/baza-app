@@ -277,7 +277,7 @@ model PackageType {
   name                String
   sessionCount        Int
   validityDays        Int
-  lateCancelHours     Int      @default(12)
+  lateCancelHours     Int      @default(8)
   classTypeId         String
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt

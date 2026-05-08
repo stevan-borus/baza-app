@@ -148,19 +148,77 @@ UI_FEEDBACK_LOG.md
 
 ---
 
-## Open / deferred items (none ship-blocking)
+## Round 5 (after running app on iPhone 17 sim)
 
-None. All 37 tasks closed. The branch is ready for a PR against `dev`:
+Issues raised after walking the running app:
+
+### Routing
+- [x] **#38** Tab bar still showed `packages…/sessions/…` entries despite `<Tabs.Screen href={null}>`. Root cause: Expo Router was registering each top-level file as a tab; the `href: null` on `name="packages/active-assignments"` (with a slash) didn't take because the screen registration is keyed on the *folder* not the slashed name. Fix: convert the two leaking tabs into folder-tabs, mirroring the working `(trainer)/clients/` pattern.
+  - `(admin)/packages.tsx` → `(admin)/packages/index.tsx`, plus `(admin)/packages/_layout.tsx` (Stack). `active-assignments.tsx` already lived in the folder; the new layout makes Paketi a single tab with `active-assignments` as a nested stack route.
+  - `(admin)/sessions/` becomes a folder-tab too: `(admin)/sessions/_layout.tsx` (Stack) + `(admin)/sessions/[id].tsx`. The session-detail route is the only screen in the stack; the tab itself is hidden via `<Tabs.Screen name="sessions" href={null} />` so it never shows in the bar but the nested route is still pushable from the dashboard via `router.push("/(admin)/sessions/${id}")`.
+  - The Pregled tab keeps its flat `index.tsx` — turning it into an `index/` folder breaks Expo Router's route collapsing (URL becomes `/(admin)/index` rather than `/(admin)`), so the simpler approach was to leave the dashboard flat and only nest sessions/[id] inside its own folder-tab.
+- [x] **#39** Pencil on session detail used to `router.replace("/(admin)?editSessionId=&focusDate=")` which routed back to the dashboard before opening the edit sheet. Refactored: extracted the edit sheet + state machine into `<SessionEditSheet>` + `useSessionEditSheet()` hook in `apps/mobile/components/ui/session-edit-sheet.tsx`. Both the dashboard and the session detail page now mount the sheet inline. The dashboard's param-watching `useEffect` was removed.
+
+### Visual
+- [x] **#40** Slash session card time digits realigned. Both digit groups now share `lineHeight: 20`; the slash uses `lineHeight: 20` too (was 28) and is positioned via `transform: [{translateY: -1}]` so it visually crosses through without affecting layout. Skew bumped from -12° to -14°. Min width 78px (was 64) leaves room for "HH:mm / HH:mm" without clipping.
+- [x] **#41** Sala (room) moved to its own row under the class-type meta line. Previously crowded the trainer chip via `[trainerName, room].join(" · ")`; now `room` renders below at the same left padding (`pl-[78px]`) as the time block.
+- [x] **#42** Tap on booked-client row in session detail no longer navigates to `/klijenti`. The whole row is now a non-interactive `View` with no chevron. Just shows avatar + name + email.
+- [x] **#43** Confirm-delete dialog buttons (`OTKAŽI` / `OBRIŠI`) had `className="rounded …"` (Tailwind `rounded` = 4px), inconsistent with the rest of the app's `rounded-2xl` buttons. Replaced bespoke `Pressable`s with the standard `<Button variant="secondary">` and `<Button variant="danger">` so radius, height, and haptic feedback match.
+
+### Filters & data
+- [x] **#44** Default `lateCancelHours` 12h → 8h. Updated Prisma schema default + migration `20260508134700_default_late_cancel_8h` + UI form defaults in `(admin)/packages.tsx` (create + edit forms).
+- [x] **#45** Naplata month chevrons now actually filter records. Stabilised `billingQueries.listInfinite` cache key from `["billing", "list-infinite", filters]` (object) to `["billing", "list-infinite", clientUserId, from, to]` (primitives). Added `billing-month-filter.test.ts` proving the API filter works for April / May / June.
+- [x] **#46** Naplata client filter dropdown now filters records (same primitive-key fix as #45 unblocked it).
+- [x] **#47** Izveštaji period pills (`Nedelja / Mesec / Kvartal`) now produce different stat strip data. Root cause: `reportsQueries.summary()` had a static queryKey `["reports", "summary"]` and the API ignored `from/to`. Fix: `summary()` now accepts optional `from/to`, and `/api/reports/summary` filters `totalSessions`, `revenue`, and `activeClients` by the window when params are present (totalClients stays all-time — it's the directory size). When called with no params (e.g. dashboard tile) the endpoint returns all-time totals as before.
+- [x] **#48** Izveštaji section bodies (Rezervacije / Mesečni prihod / Iskorišćenost / Paketi) now render reliably. Each section was `null`-ing both the empty-state and the body during `isLoading`; switched to a clear ternary that shows skeleton while loading, error if errored, empty-state if no data, otherwise the body.
+- [x] **#49** Added `Godina` (yearly) period pill. Window: real-now − 1 year, bucket = `month`. New i18n keys `admin.manage.periodYear`.
+
+### New features
+- [x] **#50** Per-ClassType + per-Trainer utilization drilldowns (parallel to #23). New endpoints `/api/reports/utilization/by-class-type` and `/by-trainer` return rows of `{ id, name, totalCapacity, totalBooked, utilization }` sorted busiest-first. Two new reusable `<UtilizationDrilldown>` blocks under the existing "Po sali" section. 4 new integration tests (`reports-utilization-by-class-type.test.ts`, `reports-utilization-by-trainer.test.ts`).
+- [x] **#51** Beefier seed bookings: in addition to the two clean bookings, the rich seed now creates a pre-cutoff cancellation (no penalty), a late cancellation (consumed a session), and a waitlist entry on the same session. Surfaces edge cases that reports / dashboards used to never see in dev.
+
+### Investigations
+- [x] **#52** Splash logo absent — root cause is the splash screen + app icon are **native build resources** baked into the dev client at prebuild time. Editing `app.json` or replacing `splash-icon.png` requires a fresh dev client build (`npx expo run:ios` or EAS) — Metro hot-reload does not refresh native bundle resources. The asset files (`apps/mobile/assets/images/splash-icon.png`, `assets/studio/baza-logo*.webp`) are intact: white-on-transparent renders correctly when composited on the `#2e5b42` splash background; the raw file viewer just makes them look blank because the page background is also white.
+- [x] **#53** Reports page hammered the API server — terminal showed hundreds of identical `GET /api/reports/*` requests/sec. Root cause: `periodWindow` was an inline IIFE that called `new Date()` on every render → `to.toISOString()` differed by milliseconds each pass → eight queryKeys changed → eight queries refetched → state updated → re-render → repeat. Fix: wrap `periodWindow` in `useMemo([period])` and anchor `to` to the *start of tomorrow in UTC* (so `toISOString()` is stable for the whole day). The window is still wide enough that the report data is correct, but the queryKeys are now stable across renders.
+
+---
+
+## Round 5 — files changed
 
 ```
-gh pr create --base dev --title "feat(admin): UI feedback rounds 1-4 — bugs, polish, new pages, reports drilldown" --body "..."
+apps/mobile/app/(admin)/_layout.tsx                                   (sessions hidden via href: null; class-types/rooms unchanged)
+apps/mobile/app/(admin)/billing.tsx                                    (no functional change; primitive-key fix is in factory)
+apps/mobile/app/(admin)/clients.tsx                                    (replace bespoke confirm-delete buttons with Button component)
+apps/mobile/app/(admin)/index.tsx                                      (param-watch effect removed; SessionEditSheet wired)
+apps/mobile/app/(admin)/sessions/_layout.tsx                           (NEW — Stack for the sessions folder-tab)
+apps/mobile/app/(admin)/sessions/[id].tsx                              (pencil opens sheet inline; booked-client row de-pressable-ified)
+apps/mobile/app/(admin)/packages/_layout.tsx                           (NEW — Paketi stack)
+apps/mobile/app/(admin)/packages/index.tsx                             (moved from (admin)/packages.tsx; default lateCancelHours 12 → 8)
+apps/mobile/app/(admin)/reports.tsx                                    (Godina pill, summary-with-window, defensive section ternaries, UtilizationDrilldown)
+apps/mobile/app/api/reports/summary/+api.ts                            (optional from/to/period; activeClients = unique bookers in window)
+apps/mobile/app/api/reports/utilization/by-class-type/+api.ts          (NEW)
+apps/mobile/app/api/reports/utilization/by-trainer/+api.ts             (NEW)
+apps/mobile/components/ui/session-card.tsx                             (slash time alignment + room on second row)
+apps/mobile/components/ui/session-edit-sheet.tsx                       (NEW — extracted edit sheet + useSessionEditSheet hook)
+apps/mobile/lib/queries/billing-queries-factory.ts                     (primitive cache key)
+apps/mobile/lib/queries/reports-queries-factory.ts                     (primitive cache keys; summary-with-window; new factories for by-class-type, by-trainer)
+apps/mobile/locales/{en,sr}.json                                       (periodYear, utilizationByClassType, utilizationByTrainer)
+apps/mobile/prisma/migrations/20260508134700_default_late_cancel_8h/   (NEW — DEFAULT 12 → 8)
+apps/mobile/prisma/schema.prisma                                       (lateCancelHours @default(8))
+apps/mobile/scripts/test/seed-e2e.ts                                   (mixed cancel states + waitlist entry)
+apps/mobile/test/integration/billing-month-filter.test.ts              (NEW — 3 tests)
+apps/mobile/test/integration/reports-utilization-by-class-type.test.ts (NEW — 2 tests)
+apps/mobile/test/integration/reports-utilization-by-trainer.test.ts    (NEW — 2 tests)
 ```
 
-A future session might want to investigate:
+---
 
-1. **Per-ClassType / per-Trainer utilization drilldowns** (parallel to #23). Pattern is the same — `/api/reports/utilization/by-class-type`, `/by-trainer`. Worth doing if any of those become operational questions.
-2. **Reports period for "all-time"** — currently capped at 90 days (the "quarter" pill). Useful for year-over-year comparisons. Would need explicit "all-time" pill or a custom date-range picker.
-3. **Seed deterministic bookings count** — currently 1 Reformer + 1 Energy booking. Reports/dashboards have minimal data variation. If reports start showing edge-case bugs, beef up the seed with mixed cancellation states (pre-cutoff, late-cancel) and waitlist entries.
+## Open / deferred items
+
+None ship-blocking. Suggested next:
+
+1. **Tighten anchor / wall-time for dev seed.** Reports + dashboard use real wall-clock `new Date()` on the frontend; the e2e seed sometimes pins to `TEST_ANCHOR_TIME` (set in `seed-e2e-env.ts` to `2026-05-09`) which can drift up to a few days from wall time. If empty-section regressions reappear, re-seed with `pnpm --filter mobile test:db:seed-e2e` (uses wall time when `TEST_ANCHOR_TIME` env is unset) so the period-pill window catches the data.
+2. **All-time pill** for Izveštaji (in addition to Godina). Still useful for year-over-year comparisons.
 
 ---
 

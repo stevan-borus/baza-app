@@ -659,20 +659,17 @@ export default function AdminClients() {
                   </Text>
                 </View>
                 <View className="flex-row gap-3">
-                  <Pressable
+                  <Button
+                    variant="secondary"
+                    className="flex-1"
                     onPress={() => setShowDeleteFor(null)}
-                    android_ripple={null}
-                    className="flex-1 items-center justify-center py-3.5 rounded border border-glass-border active:opacity-70"
                   >
-                    <Text
-                      className="font-body-semibold uppercase text-foreground"
-                      style={{ fontSize: 12, letterSpacing: 1.4 }}
-                    >
-                      {t("admin.clients.cancel", { defaultValue: "Otkaži" })}
-                    </Text>
-                  </Pressable>
-                  <Pressable
+                    {t("admin.clients.cancel", { defaultValue: "Otkaži" })}
+                  </Button>
+                  <Button
                     testID="client-delete-confirm-button"
+                    variant="danger"
+                    className="flex-1"
                     onPress={() => {
                       updateClientMutation.mutate({
                         id: client.user.id,
@@ -680,16 +677,9 @@ export default function AdminClients() {
                       });
                       setShowDeleteFor(null);
                     }}
-                    android_ripple={null}
-                    className="flex-1 items-center justify-center py-3.5 rounded bg-danger active:opacity-90"
                   >
-                    <Text
-                      className="font-body-semibold uppercase text-white"
-                      style={{ fontSize: 12, letterSpacing: 1.4 }}
-                    >
-                      {t("admin.clients.delete")}
-                    </Text>
-                  </Pressable>
+                    {t("admin.clients.delete")}
+                  </Button>
                 </View>
               </View>
             );

@@ -81,14 +81,14 @@ export default function AdminPackages() {
     name: "",
     sessionCount: "",
     validityDays: "",
-    lateCancelHours: "12",
+    lateCancelHours: "8",
     classTypeId: "",
   });
   const [editForm, setEditForm] = useState({
     name: "",
     sessionCount: "",
     validityDays: "",
-    lateCancelHours: "12",
+    lateCancelHours: "8",
     classTypeId: "",
   });
 
@@ -114,7 +114,7 @@ export default function AdminPackages() {
         name: "",
         sessionCount: "",
         validityDays: "",
-        lateCancelHours: "12",
+        lateCancelHours: "8",
         classTypeId: "",
       });
     },
@@ -375,7 +375,7 @@ export default function AdminPackages() {
                   name: form.name,
                   sessionCount: parseInt(form.sessionCount, 10),
                   validityDays: parseInt(form.validityDays, 10),
-                  lateCancelHours: parseInt(form.lateCancelHours, 10) || 12,
+                  lateCancelHours: parseInt(form.lateCancelHours, 10) || 8,
                   classTypeId: form.classTypeId,
                 })
               }
@@ -462,7 +462,7 @@ export default function AdminPackages() {
                   name: editForm.name,
                   sessionCount: parseInt(editForm.sessionCount, 10),
                   validityDays: parseInt(editForm.validityDays, 10),
-                  lateCancelHours: parseInt(editForm.lateCancelHours, 10) || 12,
+                  lateCancelHours: parseInt(editForm.lateCancelHours, 10) || 8,
                   classTypeId: editForm.classTypeId,
                 });
               }}

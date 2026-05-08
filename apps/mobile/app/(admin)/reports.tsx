@@ -5,7 +5,7 @@
  *   - WHOOP iOS Apr 2024: ring + metric combos, insights layout
  *   - Apple Fitness iOS Feb 2026: ring as summary
  */
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { RefreshControl, ScrollView, Text, View } from "react-native";
@@ -16,6 +16,7 @@ import { HeroCard } from "@/components/ui/hero-card";
 import { ProgressRing } from "@/components/ui/progress-ring";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { EmptyState, ErrorState } from "@/components/ui/states";
+import { SkeletonCard } from "@/components/ui/skeleton";
 import { SectionLabel } from "@/components/ui/typography";
 import { useThemeTokens } from "@/components/ui/tokens";
 import { StatStrip } from "@/components/ui/studio";
@@ -23,7 +24,7 @@ import { reportsQueries } from "@/lib/queries/reports-queries-factory";
 import { ScreenContainerRaw, useTabBarBottomPadding } from "@/components/ui/screen-container";
 import dayjs from "dayjs";
 
-type Period = "week" | "month" | "quarter";
+type Period = "week" | "month" | "quarter" | "year";
 
 const STAGGER = [0, 80, 160, 240, 320, 400];
 
@@ -61,24 +62,41 @@ export default function AdminReports() {
 
   // Derive a from/to window from the period pill so each pill shows a distinct
   // time range. The server-side parser only accepts "day" | "week" | "month";
-  // we send "week" for the bucket granularity and pick the time span here.
-  const periodWindow = (() => {
+  // we pick the bucket granularity that produces the right number of points
+  // per pill (week → daily ticks, month → weekly, quarter+year → monthly).
+  //
+  // useMemo + a stable `to` (anchored to the start of the current day in UTC)
+  // is critical: without it `new Date().toISOString()` differs every render
+  // by milliseconds, the queryKey changes, the query refetches, and the cycle
+  // never settles — the dev server logs hundreds of identical requests/sec.
+  const periodWindow = useMemo(() => {
     const to = new Date();
+    to.setUTCHours(0, 0, 0, 0);
+    to.setUTCDate(to.getUTCDate() + 1);
     const from = new Date(to);
     if (period === "week") {
-      from.setDate(to.getDate() - 7);
+      from.setUTCDate(to.getUTCDate() - 7);
       return { from: from.toISOString(), to: to.toISOString(), bucket: "day" };
     }
     if (period === "month") {
-      from.setDate(to.getDate() - 30);
+      from.setUTCDate(to.getUTCDate() - 30);
       return { from: from.toISOString(), to: to.toISOString(), bucket: "week" };
     }
+    if (period === "year") {
+      from.setUTCFullYear(to.getUTCFullYear() - 1);
+      return { from: from.toISOString(), to: to.toISOString(), bucket: "month" };
+    }
     // quarter
-    from.setDate(to.getDate() - 90);
+    from.setUTCDate(to.getUTCDate() - 90);
     return { from: from.toISOString(), to: to.toISOString(), bucket: "month" };
-  })();
+  }, [period]);
 
-  const summaryQuery = useQuery(reportsQueries.summary());
+  const summaryQuery = useQuery(
+    reportsQueries.summary({
+      from: periodWindow.from,
+      to: periodWindow.to,
+    }),
+  );
   const revenueQuery = useQuery(
     reportsQueries.revenue({
       from: periodWindow.from,
@@ -109,6 +127,20 @@ export default function AdminReports() {
   );
   const utilizationByRoomQuery = useQuery(
     reportsQueries.utilizationByRoom({
+      from: periodWindow.from,
+      to: periodWindow.to,
+      period: periodWindow.bucket,
+    }),
+  );
+  const utilizationByClassTypeQuery = useQuery(
+    reportsQueries.utilizationByClassType({
+      from: periodWindow.from,
+      to: periodWindow.to,
+      period: periodWindow.bucket,
+    }),
+  );
+  const utilizationByTrainerQuery = useQuery(
+    reportsQueries.utilizationByTrainer({
       from: periodWindow.from,
       to: periodWindow.to,
       period: periodWindow.bucket,
@@ -166,6 +198,7 @@ export default function AdminReports() {
             { value: "week" as const, label: t("admin.manage.periodWeek") },
             { value: "month" as const, label: t("admin.manage.periodMonth") },
             { value: "quarter" as const, label: t("admin.manage.periodQuarter") },
+            { value: "year" as const, label: t("admin.manage.periodYear") },
           ]}
           value={period}
           onChange={setPeriod}
@@ -219,8 +252,9 @@ export default function AdminReports() {
           <SectionLabel>{t("admin.manage.bookings")}</SectionLabel>
           {bookingsQuery.isError ? (
             <ErrorState message={t("admin.manage.bookingsError")} />
-          ) : null}
-          {bookingsData.some((d) => d.y > 0) ? (
+          ) : bookingsQuery.isLoading ? (
+            <SkeletonCard />
+          ) : bookingsData.some((d) => d.y > 0) ? (
             <HeroCard tone="accent">
               <View style={{ height: 220 }}>
                 <CartesianChart
@@ -244,9 +278,9 @@ export default function AdminReports() {
                 </CartesianChart>
               </View>
             </HeroCard>
-          ) : !bookingsQuery.isLoading ? (
+          ) : (
             <EmptyState title={t("admin.manage.bookingsEmpty")} />
-          ) : null}
+          )}
         </View>
       </MotiView>
 
@@ -260,10 +294,9 @@ export default function AdminReports() {
           <SectionLabel>{t("admin.manage.monthlyRevenue")}</SectionLabel>
           {revenueQuery.isError ? (
             <ErrorState message={t("admin.manage.revenueError")} />
-          ) : null}
-          {!revenueQuery.isError &&
-          !revenueQuery.isLoading &&
-          (revenueQuery.data?.data ?? []).length === 0 ? (
+          ) : revenueQuery.isLoading ? (
+            <SkeletonCard />
+          ) : (revenueQuery.data?.data ?? []).length === 0 ? (
             <EmptyState title={t("admin.manage.revenueEmpty")} />
           ) : null}
           {(revenueQuery.data?.data ?? []).map((item, index) => {
@@ -349,10 +382,9 @@ export default function AdminReports() {
           <SectionLabel>{t("admin.manage.utilization")}</SectionLabel>
           {utilizationQuery.isError ? (
             <ErrorState message={t("admin.manage.utilizationError")} />
-          ) : null}
-          {!utilizationQuery.isError &&
-          !utilizationQuery.isLoading &&
-          utilizationData.length === 0 ? (
+          ) : utilizationQuery.isLoading ? (
+            <SkeletonCard />
+          ) : utilizationData.length === 0 ? (
             <EmptyState title={t("admin.manage.utilizationEmpty")} />
           ) : null}
           {utilizationData.map((item) => (
@@ -414,68 +446,50 @@ export default function AdminReports() {
 
           {/* Per-Sala drilldown */}
           {(utilizationByRoomQuery.data?.data ?? []).length > 0 ? (
-            <View style={{ gap: 8, marginTop: 8 }}>
-              <Text
-                className="text-muted"
-                style={{ fontSize: 11, letterSpacing: 1.4, textTransform: "uppercase" }}
-              >
-                {t("admin.manage.utilizationByRoom")}
-              </Text>
-              {(utilizationByRoomQuery.data?.data ?? []).map((row) => (
-                <GlassCard
-                  key={row.roomId}
-                  testID={`utilization-by-room-row-${row.roomId}`}
-                  size="md"
-                >
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
-                    <ProgressRing
-                      progress={row.utilization}
-                      size={44}
-                      strokeWidth={4}
-                    />
-                    <View style={{ flex: 1, gap: 5 }}>
-                      <View
-                        style={{
-                          flexDirection: "row",
-                          justifyContent: "space-between",
-                          alignItems: "center",
-                        }}
-                      >
-                        <Text
-                          className="text-foreground font-body-semibold"
-                          style={{ fontSize: 14 }}
-                          numberOfLines={1}
-                        >
-                          {row.roomName}
-                        </Text>
-                        <Text
-                          className="text-muted"
-                          style={{ fontSize: 13 }}
-                        >
-                          {row.totalBooked}/{row.totalCapacity}
-                        </Text>
-                      </View>
-                      <View
-                        style={{
-                          height: 4,
-                          borderRadius: 2,
-                          backgroundColor: tokens.glassStrong,
-                        }}
-                      >
-                        <View
-                          style={{
-                            height: 4,
-                            borderRadius: 2,
-                            backgroundColor: tokens.accent,
-                            width: `${Math.round(row.utilization * 100)}%`,
-                          }}
-                        />
-                      </View>
-                    </View>
-                  </View>
-                </GlassCard>
-              ))}
-            </View>
+            <UtilizationDrilldown
+              caption={t("admin.manage.utilizationByRoom")}
+              tokens={tokens}
+              rows={(utilizationByRoomQuery.data?.data ?? []).map((row) => ({
+                key: row.roomId,
+                testID: `utilization-by-room-row-${row.roomId}`,
+                name: row.roomName,
+                booked: row.totalBooked,
+                capacity: row.totalCapacity,
+                utilization: row.utilization,
+              }))}
+            />
+          ) : null}
+
+          {/* Per-ClassType drilldown */}
+          {(utilizationByClassTypeQuery.data?.data ?? []).length > 0 ? (
+            <UtilizationDrilldown
+              caption={t("admin.manage.utilizationByClassType")}
+              tokens={tokens}
+              rows={(utilizationByClassTypeQuery.data?.data ?? []).map((row) => ({
+                key: row.classTypeId,
+                testID: `utilization-by-class-type-row-${row.classTypeId}`,
+                name: row.name,
+                booked: row.totalBooked,
+                capacity: row.totalCapacity,
+                utilization: row.utilization,
+              }))}
+            />
+          ) : null}
+
+          {/* Per-Trainer drilldown */}
+          {(utilizationByTrainerQuery.data?.data ?? []).length > 0 ? (
+            <UtilizationDrilldown
+              caption={t("admin.manage.utilizationByTrainer")}
+              tokens={tokens}
+              rows={(utilizationByTrainerQuery.data?.data ?? []).map((row) => ({
+                key: row.trainerUserId,
+                testID: `utilization-by-trainer-row-${row.trainerUserId}`,
+                name: row.trainerName,
+                booked: row.totalBooked,
+                capacity: row.totalCapacity,
+                utilization: row.utilization,
+              }))}
+            />
           ) : null}
         </View>
       </MotiView>
@@ -490,10 +504,9 @@ export default function AdminReports() {
           <SectionLabel>{t("admin.manage.packagesSection")}</SectionLabel>
           {packagesQuery.isError ? (
             <ErrorState message={t("admin.manage.packagesReportError")} />
-          ) : null}
-          {!packagesQuery.isError &&
-          !packagesQuery.isLoading &&
-          (packagesQuery.data?.mostUsed.length ?? 0) === 0 ? (
+          ) : packagesQuery.isLoading ? (
+            <SkeletonCard />
+          ) : (packagesQuery.data?.mostUsed.length ?? 0) === 0 ? (
             <EmptyState title={t("admin.manage.packagesReportEmpty")} />
           ) : null}
           {(packagesQuery.data?.mostUsed ?? []).slice(0, 5).map((item, index) => {
@@ -566,5 +579,78 @@ export default function AdminReports() {
       </MotiView>
       </ScrollView>
     </ScreenContainerRaw>
+  );
+}
+
+type DrilldownRow = {
+  key: string;
+  testID: string;
+  name: string;
+  booked: number;
+  capacity: number;
+  utilization: number;
+};
+
+function UtilizationDrilldown({
+  caption,
+  tokens,
+  rows,
+}: {
+  caption: string;
+  tokens: ReturnType<typeof useThemeTokens>;
+  rows: DrilldownRow[];
+}) {
+  return (
+    <View style={{ gap: 8, marginTop: 8 }}>
+      <Text
+        className="text-muted"
+        style={{ fontSize: 11, letterSpacing: 1.4, textTransform: "uppercase" }}
+      >
+        {caption}
+      </Text>
+      {rows.map((row) => (
+        <GlassCard key={row.key} testID={row.testID} size="md">
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
+            <ProgressRing progress={row.utilization} size={44} strokeWidth={4} />
+            <View style={{ flex: 1, gap: 5 }}>
+              <View
+                style={{
+                  flexDirection: "row",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
+              >
+                <Text
+                  className="text-foreground font-body-semibold"
+                  style={{ fontSize: 14 }}
+                  numberOfLines={1}
+                >
+                  {row.name}
+                </Text>
+                <Text className="text-muted" style={{ fontSize: 13 }}>
+                  {row.booked}/{row.capacity}
+                </Text>
+              </View>
+              <View
+                style={{
+                  height: 4,
+                  borderRadius: 2,
+                  backgroundColor: tokens.glassStrong,
+                }}
+              >
+                <View
+                  style={{
+                    height: 4,
+                    borderRadius: 2,
+                    backgroundColor: tokens.accent,
+                    width: `${Math.round(row.utilization * 100)}%`,
+                  }}
+                />
+              </View>
+            </View>
+          </View>
+        </GlassCard>
+      ))}
+    </View>
   );
 }

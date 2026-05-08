@@ -37,13 +37,12 @@ const classTypeAccentColor: Record<string, string> = {
 
 /**
  * Editorial time block for the session card. Renders "HH:mm / HH:mm" as a
- * three-part composition: bold start time, oversized hairline slash that
- * tilts back like an italic quote glyph, muted end time. The slash is the
- * design element — it does the visual work of separating the two times so
- * neither needs to be dominant.
- *
- * Sized to feel small in the layout (~64px wide) while letting the slash
- * grow tall enough to draw the eye to the time block first.
+ * three-part composition: bold start time on the left baseline, oversized
+ * hairline slash crossing through, muted end time on the right baseline.
+ * Both digit groups sit on the same baseline so the slash reads as the
+ * connective tissue, not a stair-step. Same fontFamily and same lineHeight
+ * on both digit groups; the slash is positioned absolutely over them so its
+ * own line-height never pushes anything around.
  */
 function SessionCardTime({ time }: { time: string }) {
   const parts = time.split(/\s*[-–]\s*/);
@@ -60,7 +59,8 @@ function SessionCardTime({ time }: { time: string }) {
       style={{
         flexDirection: "row",
         alignItems: "center",
-        minWidth: 64,
+        minWidth: 78,
+        position: "relative",
       }}
     >
       <Text
@@ -68,8 +68,8 @@ function SessionCardTime({ time }: { time: string }) {
         style={{
           fontFamily: "AlbertSans-Bold",
           fontSize: 15,
-          letterSpacing: -0.5,
-          lineHeight: 18,
+          letterSpacing: -0.4,
+          lineHeight: 20,
         }}
       >
         {start}
@@ -78,12 +78,11 @@ function SessionCardTime({ time }: { time: string }) {
         className="text-accent"
         style={{
           fontFamily: "AlbertSans-Light",
-          fontSize: 28,
-          lineHeight: 28,
-          marginHorizontal: 2,
-          marginTop: -4,
-          transform: [{ skewX: "-12deg" }],
-          opacity: 0.55,
+          fontSize: 26,
+          lineHeight: 20,
+          marginHorizontal: 4,
+          transform: [{ skewX: "-14deg" }, { translateY: -1 }],
+          opacity: 0.5,
         }}
       >
         /
@@ -93,9 +92,8 @@ function SessionCardTime({ time }: { time: string }) {
         style={{
           fontFamily: "AlbertSans-Medium",
           fontSize: 13,
-          letterSpacing: -0.3,
-          lineHeight: 18,
-          marginTop: 4,
+          letterSpacing: -0.2,
+          lineHeight: 20,
         }}
       >
         {end}
@@ -149,9 +147,9 @@ export function SessionCard({
                 <Text className="text-sm font-body-semibold text-foreground">
                   {className}
                 </Text>
-                {trainerName || room ? (
-                  <Text className="text-xs text-muted">
-                    {[trainerName, room].filter(Boolean).join(" · ")}
+                {trainerName ? (
+                  <Text className="text-xs text-muted" numberOfLines={1}>
+                    {trainerName}
                   </Text>
                 ) : null}
               </View>
@@ -161,6 +159,11 @@ export function SessionCard({
                 <Badge status={config.status}>{badgeLabel}</Badge>
               ) : null}
             </View>
+            {room ? (
+              <Text className="text-xs text-muted pl-[78px]" numberOfLines={1}>
+                {room}
+              </Text>
+            ) : null}
             {attendance ? (
               <View
                 testID={
@@ -168,7 +171,7 @@ export function SessionCard({
                     ? `session-card-attendance-${sessionId}`
                     : "session-card-attendance"
                 }
-                className="flex-row items-center gap-2 pl-[66px]"
+                className="flex-row items-center gap-2 pl-[78px]"
               >
                 <Text
                   testID={

@@ -1,8 +1,8 @@
 import React from "react";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useLocalSearchParams } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { ScrollView, Text, View } from "react-native";
 import dayjs from "dayjs";
 import Feather from "@expo/vector-icons/Feather";
 import { GlassCard } from "@/components/ui/glass-card";
@@ -12,15 +12,19 @@ import { SectionLabel } from "@/components/ui/typography";
 import { ScreenContainerRaw, useTabBarBottomPadding } from "@/components/ui/screen-container";
 import { HeaderIconButton } from "@/components/ui/app-header";
 import { useThemeTokens } from "@/components/ui/tokens";
+import {
+  SessionEditSheet,
+  useSessionEditSheet,
+} from "@/components/ui/session-edit-sheet";
 import { sessionsQueries } from "@/lib/queries/sessions-queries-factory";
 
 export default function AdminSessionDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const router = useRouter();
   const { t, i18n } = useTranslation();
   const lang = i18n.language === "en" ? "en" : "sr";
   const tokens = useThemeTokens();
   const bottomPad = useTabBarBottomPadding();
+  const editSheet = useSessionEditSheet();
 
   const query = useQuery(sessionsQueries.byId(String(id ?? "")));
   const session = query.data?.session;
@@ -45,10 +49,18 @@ export default function AdminSessionDetail() {
             icon="pencil"
             onPress={() => {
               if (!session) return;
-              const dateKey = dayjs(session.startsAt).format("YYYY-MM-DD");
-              router.replace({
-                pathname: "/(admin)",
-                params: { editSessionId: session.id, focusDate: dateKey },
+              editSheet.openForSession({
+                id: session.id,
+                classTypeName: session.classType?.name ?? "",
+                roomId: session.roomId ?? null,
+                roomName: session.room?.name ?? null,
+                trainerUserId: session.trainerUserId ?? null,
+                bookedCount: session.bookings.length,
+                capacity: session.capacity,
+                startsAt: session.startsAt,
+                endsAt: session.endsAt,
+                recurringScheduleId: session.recurringScheduleId ?? null,
+                isActive: session.isActive,
               });
             }}
             accessibilityLabel={t("admin.sessionDetail.editAction")}
@@ -116,17 +128,7 @@ export default function AdminSessionDetail() {
                 <EmptyState title={t("admin.sessionDetail.noBookings")} />
               ) : (
                 session.bookings.map((b) => (
-                  <Pressable
-                    key={b.id}
-                    testID={`session-detail-booking-${b.id}`}
-                    onPress={() =>
-                      router.push({
-                        pathname: "/(admin)/clients",
-                        params: { clientUserId: b.client.id },
-                      })
-                    }
-                    android_ripple={null}
-                  >
+                  <View key={b.id} testID={`session-detail-booking-${b.id}`}>
                     <GlassCard size="md">
                       <View
                         style={{
@@ -164,20 +166,16 @@ export default function AdminSessionDetail() {
                             {b.client.email}
                           </Text>
                         </View>
-                        <Feather
-                          name="chevron-right"
-                          size={16}
-                          color={tokens.muted}
-                        />
                       </View>
                     </GlassCard>
-                  </Pressable>
+                  </View>
                 ))
               )}
             </View>
           </>
         ) : null}
       </ScrollView>
+      <SessionEditSheet {...editSheet.bind()} />
     </ScreenContainerRaw>
   );
 }

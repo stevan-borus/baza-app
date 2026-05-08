@@ -53,7 +53,17 @@ export const billingQueries = {
 
   listInfinite: (filters?: { clientUserId?: string; from?: string; to?: string }) =>
     infiniteQueryOptions({
-      queryKey: ["billing", "list-infinite", filters] as const,
+      // Spread into the key as primitives so React Query's deep-equal cache
+      // lookup compares strings, not object references — avoids the bug where
+      // the same logical filters produced a "new" cache miss every render but
+      // changing values didn't always invalidate as expected.
+      queryKey: [
+        "billing",
+        "list-infinite",
+        filters?.clientUserId ?? "",
+        filters?.from ?? "",
+        filters?.to ?? "",
+      ] as const,
       queryFn: ({ pageParam }) => fetchBillingPage(pageParam, filters),
       initialPageParam: null as string | null,
       getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,

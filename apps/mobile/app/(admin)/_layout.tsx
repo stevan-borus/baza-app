@@ -61,11 +61,16 @@ export default function AdminLayout() {
           tabBarIcon: ({ color }) => <TabIcon name="bar-chart" color={color} />,
         }}
       />
-      {/* Hidden detail routes pushed from the dashboard. */}
+      {/* Detail routes hidden from the tab bar. `packages/active-assignments`
+       *  is nested inside the Paketi stack (folder tab + _layout.tsx) so it
+       *  doesn't auto-register as its own tab. `sessions/` is its own folder
+       *  for the same reason — the [id] page lives inside its stack and is
+       *  pushed from the dashboard via router.push. `class-types` / `rooms`
+       *  stay flat but are href={null} so they don't appear in the bar.
+       */}
       <Tabs.Screen name="class-types" options={{ href: null }} />
       <Tabs.Screen name="rooms" options={{ href: null }} />
-      <Tabs.Screen name="packages/active-assignments" options={{ href: null }} />
-      <Tabs.Screen name="sessions/[id]" options={{ href: null }} />
+      <Tabs.Screen name="sessions" options={{ href: null }} />
     </Tabs>
   );
 }
