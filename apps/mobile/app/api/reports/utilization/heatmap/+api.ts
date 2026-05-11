@@ -44,13 +44,16 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const from = parseDateInput(url.searchParams.get("from"));
   const to = parseDateInput(url.searchParams.get("to"));
-  if (!from || !to || from >= to) {
+  // All-time pill omits both params — the heatmap then folds every SCHEDULED
+  // session ever into the 7×4 grid (no time filter on the query).
+  if ((from && !to) || (!from && to) || (from && to && from >= to)) {
     return fail("Invalid timeframe", 400);
   }
+  const dateFilter = from && to ? { startsAt: { gte: from, lt: to } } : {};
 
   const sessions = await prisma.session.findMany({
     where: {
-      startsAt: { gte: from, lt: to },
+      ...dateFilter,
       status: "SCHEDULED",
     },
     select: {

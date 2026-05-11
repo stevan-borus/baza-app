@@ -42,20 +42,63 @@ test.describe("admin (Serbian)", () => {
     await page.getByTestId("auth-email-input").fill("admin.e2e@example.test");
     await page.getByTestId("auth-password-input").fill(SEED_PASSWORD);
     await page.getByTestId("auth-submit-button").click();
-    await expect(page.getByTestId("tab-clients")).toBeVisible({
+    // Phase 1 collapsed the admin tab bar to four tabs (Pregled / Klijenti /
+    // Naplata / Izveštaji); the leftmost is `pregled`, which is the admin
+    // landing tab.
+    await expect(page.getByTestId("tab-pregled")).toBeVisible({
       timeout: 15_000,
     });
+  }
+
+  /**
+   * Open the catalog screens via the avatar menu (Phase 1: catalog screens
+   * are no longer top-level tabs — they live behind the grid-icon avatar
+   * trigger on every admin tab's header). The signed-in admin lands on the
+   * Pregled tab, where the AvatarMenu is rendered in the header's rightSlot.
+   *
+   * The AppSheet animates out asynchronously after the row tap routes; the
+   * gorhom-bottom-sheet backdrop element can persist briefly after the URL
+   * changes. Wait for the destination URL before assuming the next click is
+   * unblocked.
+   */
+  async function openCatalog(
+    page: Page,
+    target: "classTypes" | "rooms" | "packageTypes",
+  ) {
+    const expectedSegment = {
+      classTypes: "tipovi-treninga",
+      rooms: "sale",
+      packageTypes: "tipovi-paketa",
+    }[target];
+    await page.getByTestId("open-catalog-menu").click();
+    await page.getByTestId(`catalog-menu-${target}`).click();
+    await page.waitForURL(new RegExp(`/katalog/${expectedSegment}$`), {
+      timeout: 10_000,
+    });
+    // Best-effort: wait for the backdrop element to either be removed or to
+    // stop intercepting pointer events. On web the gorhom sheet leaves a
+    // residual backdrop sometimes; we tolerate it remaining as long as
+    // pointer-events is none.
+    await page
+      .locator('button[aria-label="Bottom sheet backdrop"]')
+      .first()
+      .waitFor({ state: "hidden", timeout: 5_000 })
+      .catch(() => {
+        /* tolerated — the catalog page may still mount the residual node */
+      });
   }
 
   // ── Catalog ───────────────────────────────────────────────────────────────
 
   test("12: admin creates a new ClassType", async ({ page }) => {
     await signInAsAdmin(page);
-    await page.goto("/class-types");
+    await openCatalog(page, "classTypes");
 
+    // dispatchEvent bypasses pointer-events checks — the gorhom backdrop
+    // from the catalog sheet can briefly linger on web after router.push.
     await page
       .getByRole("button", { name: t.admin.manage.sheetNewClassType })
-      .click();
+      .dispatchEvent("click");
     const name = `E2E ClassType ${Date.now()}`;
     await page.getByTestId("class-type-name-input").fill(name);
     await page.getByTestId("class-type-max-clients-input").fill("8");
@@ -69,7 +112,7 @@ test.describe("admin (Serbian)", () => {
 
   test("13: admin edits a ClassType", async ({ page }) => {
     await signInAsAdmin(page);
-    await page.goto("/class-types");
+    await openCatalog(page, "classTypes");
 
     // Pick the first row, edit the name, save, assert the new name renders.
     await page
@@ -90,13 +133,13 @@ test.describe("admin (Serbian)", () => {
 
   test("14: admin deletes a ClassType (no dependents)", async ({ page }) => {
     await signInAsAdmin(page);
-    await page.goto("/class-types");
+    await openCatalog(page, "classTypes");
 
     // Create a disposable ClassType, then delete it.
     const name = `Disposable ClassType ${Date.now()}`;
     await page
       .getByRole("button", { name: t.admin.manage.sheetNewClassType })
-      .click();
+      .dispatchEvent("click");
     await page.getByTestId("class-type-name-input").fill(name);
     await page.getByTestId("class-type-max-clients-input").fill("8");
     await page.getByTestId("class-type-duration-input").fill("60");
@@ -123,11 +166,11 @@ test.describe("admin (Serbian)", () => {
     page,
   }) => {
     await signInAsAdmin(page);
-    await page.goto("/packages");
+    await openCatalog(page, "packageTypes");
 
     await page
       .getByRole("button", { name: t.admin.manage.sheetNewPackage })
-      .click();
+      .dispatchEvent("click");
 
     const name = `E2E Package ${Date.now()}`;
     await page.getByTestId("package-name-input").fill(name);
@@ -151,7 +194,7 @@ test.describe("admin (Serbian)", () => {
 
   test("16: admin edits a PackageType", async ({ page }) => {
     await signInAsAdmin(page);
-    await page.goto("/packages");
+    await openCatalog(page, "packageTypes");
 
     // Pick the first package row, edit its name, save.
     const firstRow = page
@@ -174,12 +217,12 @@ test.describe("admin (Serbian)", () => {
     // First create a brand-new package with no dependents — guaranteed safe
     // to delete.
     await signInAsAdmin(page);
-    await page.goto("/packages");
+    await openCatalog(page, "packageTypes");
 
     const name = `Disposable Package ${Date.now()}`;
     await page
       .getByRole("button", { name: t.admin.manage.sheetNewPackage })
-      .click();
+      .dispatchEvent("click");
     await page.getByTestId("package-name-input").fill(name);
     await page
       .getByTestId("package-class-type-select")
@@ -215,11 +258,14 @@ test.describe("admin (Serbian)", () => {
 
   test("18: admin creates a new StudioRoom", async ({ page }) => {
     await signInAsAdmin(page);
-    await page.goto("/rooms");
+    await openCatalog(page, "rooms");
 
+    // dispatchEvent bypasses pointer-events checks; the gorhom backdrop from
+    // the catalog sheet can briefly linger on web after router.push and
+    // intercept .click().
     await page
       .getByRole("button", { name: t.admin.manage.sheetNewRoom })
-      .click();
+      .dispatchEvent("click");
     const name = `E2E Room ${Date.now()}`;
     await page.getByTestId("room-name-input").fill(name);
     await page.getByTestId("room-capacity-input").fill("12");
@@ -232,7 +278,7 @@ test.describe("admin (Serbian)", () => {
 
   test("19: admin edits a StudioRoom", async ({ page }) => {
     await signInAsAdmin(page);
-    await page.goto("/rooms");
+    await openCatalog(page, "rooms");
 
     await page
       .locator('[data-testid^="room-row-"]')
@@ -250,12 +296,12 @@ test.describe("admin (Serbian)", () => {
 
   test("20: admin deletes a StudioRoom (no dependents)", async ({ page }) => {
     await signInAsAdmin(page);
-    await page.goto("/rooms");
+    await openCatalog(page, "rooms");
 
     const name = `Disposable Room ${Date.now()}`;
     await page
       .getByRole("button", { name: t.admin.manage.sheetNewRoom })
-      .click();
+      .dispatchEvent("click");
     await page.getByTestId("room-name-input").fill(name);
     await page.getByTestId("room-capacity-input").fill("8");
     await page.getByTestId("room-create-submit").dispatchEvent("click");
@@ -708,7 +754,7 @@ test.describe("admin (Serbian)", () => {
     // navigation continues to work.
     const inviteEmail = `admin-invite.${Date.now()}@e2e.test`;
     await signInAsAdmin(page);
-    await page.getByTestId("tab-clients").click();
+    await page.getByTestId("tab-klijenti").click();
     await page.getByTestId("admin-clients-tab-invites").click();
     await page
       .getByRole("button", { name: t.admin.clients.sheetInvite })
@@ -726,7 +772,7 @@ test.describe("admin (Serbian)", () => {
 
   test("32: admin client list shows package status badges", async ({ page }) => {
     await signInAsAdmin(page);
-    await page.getByTestId("tab-clients").click();
+    await page.getByTestId("tab-klijenti").click();
 
     // The seed produces six clients with different package statuses. The
     // badge text comes from i18n. Assert that at least one of each status
@@ -744,16 +790,17 @@ test.describe("admin (Serbian)", () => {
 
   test("33: admin pauses a client's package", async ({ page }) => {
     await signInAsAdmin(page);
-    await page.getByTestId("tab-clients").click();
+    await page.getByTestId("tab-klijenti").click();
 
-    // Open the first client's actions sheet, choose pause, fill the form,
-    // submit. The seed has the active reformer client at the top of the
-    // list — taking the first row keeps the spec deterministic.
-    const firstClient = page
-      .locator('[data-testid^="client-row-"]')
+    // Phase 1 split the row: tapping the row navigates to /klijenti/[id];
+    // the action sheet is opened via the pencil button on the right. Use
+    // the first pencil — seed places the active reformer client at top of
+    // the list — to keep the spec deterministic.
+    const firstPencil = page
+      .locator('[data-testid^="client-pencil-"]')
       .first();
-    await expect(firstClient).toBeVisible({ timeout: 10_000 });
-    await firstClient.dispatchEvent("click");
+    await expect(firstPencil).toBeVisible({ timeout: 10_000 });
+    await firstPencil.dispatchEvent("click");
 
     await page.getByTestId("client-action-pause").dispatchEvent("click");
 
@@ -780,14 +827,22 @@ test.describe("admin (Serbian)", () => {
 
   test("34: admin deactivates a client", async ({ page }) => {
     await signInAsAdmin(page);
-    await page.getByTestId("tab-clients").click();
+    await page.getByTestId("tab-klijenti").click();
 
     // Pick a row whose deactivation won't ripple into other tests' assumptions
     // about the active reformer client. The empty-pack client has no packages
-    // and is safe to deactivate.
-    const targetRow = page.getByText("Empty Pack Client").first();
+    // and is safe to deactivate. Phase 1: row tap navigates to the detail
+    // page — the actions sheet opens via the pencil button. Scope the pencil
+    // to the matching row by its name text.
+    const targetRow = page
+      .locator('[data-testid^="client-row-"]', {
+        hasText: "Empty Pack Client",
+      })
+      .first();
     await expect(targetRow).toBeVisible({ timeout: 10_000 });
-    await targetRow.dispatchEvent("click");
+    await targetRow
+      .locator('[data-testid^="client-pencil-"]')
+      .dispatchEvent("click");
 
     await page.getByTestId("client-action-delete").dispatchEvent("click");
     // Wait for the second sheet (delete confirmation) to fully mount.
@@ -818,7 +873,7 @@ test.describe("admin (Serbian)", () => {
     page,
   }) => {
     await signInAsAdmin(page);
-    await page.goto("/billing");
+    await page.goto("/naplata");
 
     await page
       .getByRole("button", { name: t.admin.manage.sheetNewPayment })
@@ -856,7 +911,7 @@ test.describe("admin (Serbian)", () => {
     page,
   }) => {
     await signInAsAdmin(page);
-    await page.goto("/billing");
+    await page.goto("/naplata");
 
     await page
       .getByRole("button", { name: t.admin.manage.sheetNewPayment })
@@ -885,7 +940,7 @@ test.describe("admin (Serbian)", () => {
     page,
   }) => {
     await signInAsAdmin(page);
-    await page.goto("/billing");
+    await page.goto("/naplata");
 
     await page
       .getByRole("button", { name: t.admin.manage.sheetNewPayment })
@@ -918,11 +973,18 @@ test.describe("admin (Serbian)", () => {
     await resetAndSeed();
 
     await signInAsAdmin(page);
-    await page.getByTestId("tab-clients").click();
+    await page.getByTestId("tab-klijenti").click();
 
-    await page
-      .getByText("Empty Pack Client")
-      .first()
+    // Open the actions sheet via the pencil button (Phase 1: row tap goes
+    // to the detail page).
+    const targetRow = page
+      .locator('[data-testid^="client-row-"]', {
+        hasText: "Empty Pack Client",
+      })
+      .first();
+    await expect(targetRow).toBeVisible({ timeout: 10_000 });
+    await targetRow
+      .locator('[data-testid^="client-pencil-"]')
       .dispatchEvent("click");
 
     await page
@@ -950,7 +1012,7 @@ test.describe("admin (Serbian)", () => {
 
   test("39: admin sees billing history", async ({ page }) => {
     await signInAsAdmin(page);
-    await page.goto("/billing");
+    await page.goto("/naplata");
 
     // The seed has no billing records yet, so the screen renders the
     // empty state. We assert the screen loaded by looking for the page

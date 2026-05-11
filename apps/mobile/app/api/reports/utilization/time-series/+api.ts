@@ -3,8 +3,10 @@
  *
  * One bucket per point. Bucket granularity is driven by the `period` query
  * param coming off the UI period pill — `week` and `month` get daily
- * buckets, `quarter` gets weekly, `year` gets monthly. Mirrors the
- * Prihod time-series bucketing 1:1 — they share `buildPeriodBuckets`.
+ * buckets, `quarter` gets weekly, `year` gets monthly. `all` (the "Sve
+ * vreme" option) switches to yearly buckets anchored at the earliest
+ * SCHEDULED session. Mirrors the Prihod time-series bucketing 1:1 — they
+ * share `buildPeriodBuckets`.
  *
  * Sessions are bucketed by `startsAt`. Only `SCHEDULED` sessions count —
  * canceled-status sessions are dropped (they don't represent real
@@ -18,6 +20,7 @@ import {
   buildPeriodBuckets,
   bucketSizeForPeriod,
   parseDateInput,
+  resolveAllTimeWindow,
 } from "@/lib/server/reports";
 
 export async function GET(request: Request) {
@@ -25,12 +28,25 @@ export async function GET(request: Request) {
   if (!guard.ok) return guard.response;
 
   const url = new URL(request.url);
-  const from = parseDateInput(url.searchParams.get("from"));
-  const to = parseDateInput(url.searchParams.get("to"));
-  if (!from || !to || from >= to) {
+  const rawFrom = parseDateInput(url.searchParams.get("from"));
+  const rawTo = parseDateInput(url.searchParams.get("to"));
+  const earliest = rawFrom || rawTo
+    ? null
+    : (
+        await prisma.session.findFirst({
+          where: { status: "SCHEDULED" },
+          orderBy: { startsAt: "asc" },
+          select: { startsAt: true },
+        })
+      )?.startsAt ?? null;
+  const window = resolveAllTimeWindow(rawFrom, rawTo, earliest);
+  if (!window) {
     return fail("Invalid timeframe", 400);
   }
-  const size = bucketSizeForPeriod(url.searchParams.get("period"));
+  const { from, to, isAllTime } = window;
+  const size = bucketSizeForPeriod(
+    isAllTime ? "all" : url.searchParams.get("period"),
+  );
 
   const buckets = buildPeriodBuckets(from, to, size);
 

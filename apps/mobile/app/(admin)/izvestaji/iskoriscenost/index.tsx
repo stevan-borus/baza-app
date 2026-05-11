@@ -158,12 +158,15 @@ export default function IzvestajiIskoriscenost() {
 
   const dateLocale = i18n.language === "en" ? "en-US" : "sr-RS";
   const rangeLabel = useMemo(() => {
+    if (!periodWindow.from || !periodWindow.to) {
+      return t("admin.manage.periodAll");
+    }
     const fromD = new Date(periodWindow.from);
     const toD = new Date(periodWindow.to);
     const inclusiveTo = new Date(toD.getTime() - 1);
     const fmt: Intl.DateTimeFormatOptions = { day: "numeric", month: "short" };
     return `${fromD.toLocaleDateString(dateLocale, fmt)} – ${inclusiveTo.toLocaleDateString(dateLocale, fmt)}`;
-  }, [periodWindow.from, periodWindow.to, dateLocale]);
+  }, [periodWindow.from, periodWindow.to, dateLocale, t]);
 
   // Trend line — width budget identical to the Prihod chart so the two
   // sub-pages feel visually consistent.
@@ -210,6 +213,7 @@ export default function IzvestajiIskoriscenost() {
               { value: "month" as Period, label: t("admin.manage.periodMonth") },
               { value: "quarter" as Period, label: t("admin.manage.periodQuarter") },
               { value: "year" as Period, label: t("admin.manage.periodYear") },
+              { value: "all" as Period, label: t("admin.manage.periodAll") },
             ]}
             value={period}
             onChange={setPeriod}

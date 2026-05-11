@@ -85,12 +85,15 @@ export default function IzvestajiRezervacije() {
 
   const dateLocale = i18n.language === "en" ? "en-US" : "sr-RS";
   const rangeLabel = useMemo(() => {
+    if (!periodWindow.from || !periodWindow.to) {
+      return t("admin.manage.periodAll");
+    }
     const fromD = new Date(periodWindow.from);
     const toD = new Date(periodWindow.to);
     const inclusiveTo = new Date(toD.getTime() - 1);
     const fmt: Intl.DateTimeFormatOptions = { day: "numeric", month: "short" };
     return `${fromD.toLocaleDateString(dateLocale, fmt)} – ${inclusiveTo.toLocaleDateString(dateLocale, fmt)}`;
-  }, [periodWindow.from, periodWindow.to, dateLocale]);
+  }, [periodWindow.from, periodWindow.to, dateLocale, t]);
 
   // Width budget — full screen minus 24px page padding either side, minus
   // the card's 20px inner padding either side. Mirrors Prihod chart math.
@@ -154,6 +157,7 @@ export default function IzvestajiRezervacije() {
               { value: "month" as Period, label: t("admin.manage.periodMonth") },
               { value: "quarter" as Period, label: t("admin.manage.periodQuarter") },
               { value: "year" as Period, label: t("admin.manage.periodYear") },
+              { value: "all" as Period, label: t("admin.manage.periodAll") },
             ]}
             value={period}
             onChange={setPeriod}

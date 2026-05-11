@@ -20,18 +20,18 @@
  *  - **Sold in period** = count of ClientPackage rows where `startsAt ∈
  *    [from, to)`. Period-dependent.
  *
- * Paid-vs-comp uses the shared `matchBillingToPackages` helper to keep this
+ * Paid-vs-comp uses the shared `linkPackagesToBilling` helper to keep this
  * surface and the per-client `/api/packages/client-packages` endpoint
- * classifying rows identically. For each ClientPackage started in the
- * window, we fetch the owning client's confirmed BillingRecords with
- * `packageTypeId IS NOT NULL` and run the zipping algorithm per-client. A
- * match means "paid"; otherwise "comp". O(clients) DB queries for now —
+ * classifying rows identically. Primary semantics are the explicit
+ * `BillingRecord.clientPackageId` FK; legacy rows still pending backfill
+ * fall back to the chronological-zip heuristic inside the same helper.
+ * A match means "paid"; otherwise "comp". O(clients) DB queries for now —
  * optimization can come later if needed.
  */
 import { UserRole } from "@/generated/prisma";
 import { requireRole } from "@/lib/server/auth-guards";
 import {
-  matchBillingToPackages,
+  linkPackagesToBilling,
   type BillingForMatch,
   type PackageForMatch,
 } from "@/lib/server/billing-package-link";
@@ -52,9 +52,14 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const from = parseDateInput(url.searchParams.get("from"));
   const to = parseDateInput(url.searchParams.get("to"));
-  if (!from || !to || from >= to) {
+  // All-time pill omits both params — every period-dependent aggregate
+  // (sold-in-period, consumption rate, most-sold, paid-vs-comp) then covers
+  // every ClientPackage ever created. Active + expiring-soon are already
+  // period-independent so they don't change.
+  if ((from && !to) || (!from && to) || (from && to && from >= to)) {
     return fail("Invalid timeframe", 400);
   }
+  const dateFilter = from && to ? { startsAt: { gte: from, lt: to } } : {};
   const currentInstant = now();
   const expiringSoonCutoff = new Date(
     currentInstant.getTime() + EXPIRING_SOON_WINDOW_MS,
@@ -80,7 +85,7 @@ export async function GET(request: Request) {
   // We pull everything we need for sold-in-period, most-sold, consumption
   // rate, and paid-vs-comp from this one query.
   const periodPackages = await prisma.clientPackage.findMany({
-    where: { startsAt: { gte: from, lt: to } },
+    where: dateFilter,
     orderBy: { startsAt: "desc" },
     select: {
       id: true,
@@ -169,13 +174,13 @@ export async function GET(request: Request) {
           where: {
             clientUserId: userId,
             status: "CONFIRMED",
-            packageTypeId: { not: null },
           },
           select: {
             id: true,
             amount: true,
             method: true,
             packageTypeId: true,
+            clientPackageId: true,
             createdAt: true,
           },
         }),
@@ -190,9 +195,10 @@ export async function GET(request: Request) {
         amount: b.amount,
         method: b.method,
         packageTypeId: b.packageTypeId,
+        clientPackageId: b.clientPackageId,
         createdAt: b.createdAt,
       }));
-      const linkMap = matchBillingToPackages(pkgInputs, billingInputs);
+      const linkMap = linkPackagesToBilling(pkgInputs, billingInputs);
       for (const id of bucket.inWindowIds) {
         if (linkMap.has(id)) paidIds.add(id);
       }

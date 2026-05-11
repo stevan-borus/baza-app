@@ -303,6 +303,7 @@ model ClientPackage {
   packageType       PackageType         @relation(fields: [packageTypeId], references: [id], onDelete: Restrict)
   classType         ClassType           @relation(fields: [classTypeId], references: [id], onDelete: Restrict)
   bookings          Booking[]
+  billingRecord     BillingRecord?
 
   @@index([classTypeId])
   @@index([clientProfileId, classTypeId])
@@ -389,16 +390,18 @@ model TrainerNote {
 }
 
 model BillingRecord {
-  id            String        @id @default(uuid())
-  clientUserId  String
-  amount        Int
-  method        PaymentMethod
-  status        BillingStatus @default(PENDING)
-  notes         String?
-  packageTypeId String?
-  packageType   PackageType?  @relation(fields: [packageTypeId], references: [id], onDelete: SetNull)
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  id              String         @id @default(uuid())
+  clientUserId    String
+  amount          Int
+  method          PaymentMethod
+  status          BillingStatus  @default(PENDING)
+  notes           String?
+  packageTypeId   String?
+  packageType     PackageType?   @relation(fields: [packageTypeId], references: [id], onDelete: SetNull)
+  clientPackageId String?        @unique
+  clientPackage   ClientPackage? @relation(fields: [clientPackageId], references: [id], onDelete: SetNull)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
 
   @@index([packageTypeId])
 }

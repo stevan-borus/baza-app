@@ -205,6 +205,53 @@ describe("assign-package paid mode (POST /api/billing)", () => {
     });
   });
 
+  it("populates billingRecord.clientPackageId atomically on paid activation", async () => {
+    // After the FK migration the BillingRecord row written inside the
+    // activatePackageOnConfirm transaction must point at the ClientPackage
+    // it just activated. The @unique constraint enforces 1:1 — read it back
+    // from both sides to confirm.
+    const { adminUser, clientUser, packageType } = await seed();
+    setMockUser({
+      id: adminUser.id,
+      role: "ADMIN",
+      email: adminUser.email,
+      isActive: true,
+      clientProfile: null,
+    });
+
+    const res = await POST(
+      buildJsonRequest({
+        clientUserId: clientUser.id,
+        amount: 18000,
+        method: "CASH",
+        packageTypeId: packageType.id,
+        activatePackageOnConfirm: true,
+      }),
+    );
+    expect(res.status).toBe(201);
+    const json = (await res.json()) as {
+      payment: { id: string };
+      clientPackage: { id: string };
+    };
+    const billingId = json.payment.id;
+    const packageId = json.clientPackage.id;
+
+    // Forward direction: BillingRecord.clientPackageId points at the package.
+    const billing = await prisma.billingRecord.findUnique({
+      where: { id: billingId },
+      select: { clientPackageId: true },
+    });
+    expect(billing?.clientPackageId).toBe(packageId);
+
+    // Reverse direction via the @unique index: looking up by clientPackageId
+    // resolves to exactly the BillingRecord we created.
+    const linkedBilling = await prisma.billingRecord.findUnique({
+      where: { clientPackageId: packageId },
+      select: { id: true },
+    });
+    expect(linkedBilling?.id).toBe(billingId);
+  });
+
   it("paid mode: rejects negative amount and creates neither row", async () => {
     const { adminUser, clientUser, packageType } = await seed();
     setMockUser({

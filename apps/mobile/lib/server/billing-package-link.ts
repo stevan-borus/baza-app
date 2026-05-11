@@ -1,21 +1,24 @@
 /**
  * Pair ClientPackage rows with the BillingRecord that funded them.
  *
- * There is no FK from BillingRecord → ClientPackage (P2-5 decision —
- * BillingRecord only links to PackageType so it can keep working when a
- * package is voided or re-issued). To reconstruct the link at query time we
- * match by tuple `(packageType, chronological order)`:
+ * As of the BillingRecord.clientPackageId FK migration the source of truth
+ * for new paid activations is the explicit FK: every row written via the
+ * `activatePackageOnConfirm: true` transaction in POST /api/billing lands
+ * with `clientPackageId` populated. The `@unique` constraint on that column
+ * enforces the 1:1 invariant — one payment funds at most one package.
  *
- *   1. Bucket both arrays by `packageTypeId`.
- *   2. Within each bucket, sort packages ASC by `startsAt` and confirmed
- *      billing records ASC by `createdAt`.
- *   3. Zip the two lists by index: the i-th package of a given type pairs
- *      with the i-th confirmed payment of that type.
+ * Two helpers live here:
  *
- * Extras on either side are dropped. A ClientPackage with no match is a comp
- * / gift; a BillingRecord with no match represents a payment whose package
- * hasn't been issued yet (rare, but possible if a refund-then-reissue race
- * happens).
+ *   - `linkPackagesToBilling` (preferred). Builds the link map from the FK
+ *     in a single pass, then falls back to the legacy chronological-zip
+ *     heuristic only for the leftover packages whose paired billing row
+ *     pre-dates the backfill and is still NULL.
+ *
+ *   - `matchBillingToPackages` (legacy, kept exported). Tuple-zip by
+ *     `(packageTypeId, chronological order)` for the same-typed packages
+ *     and confirmed payments. Useful indefinitely as the fallback inside
+ *     `linkPackagesToBilling` and for any code path that still hasn't been
+ *     migrated to read the FK.
  *
  * Used by:
  *   - `app/api/packages/client-packages/+api.ts` (per-client list, surfaces
@@ -39,6 +42,7 @@ export type BillingForMatch = {
   amount: number;
   method: string;
   packageTypeId: string | null;
+  clientPackageId?: string | null;
   createdAt: Date;
 };
 
@@ -79,5 +83,49 @@ export function matchBillingToPackages(
       if (match) linkMap.set(p.id, match);
     });
   }
+  return linkMap;
+}
+
+/**
+ * Preferred package→billing matcher.
+ *
+ * Walks `billingRecords` once and indexes by `clientPackageId` — every row
+ * with the FK set lands in the map immediately. Any package that didn't
+ * pick up a match from the FK pass is handed to `matchBillingToPackages`
+ * along with the still-unclaimed billing rows; this preserves correct
+ * pairings for legacy data that pre-dates the backfill.
+ *
+ * Drop-in replacement for `matchBillingToPackages` — same return shape.
+ */
+export function linkPackagesToBilling(
+  packages: PackageForMatch[],
+  billingRecords: BillingForMatch[],
+): Map<string, BillingForMatch> {
+  const linkMap = new Map<string, BillingForMatch>();
+  const claimedBillingIds = new Set<string>();
+
+  // FK pass — index by clientPackageId.
+  const billingByPackageId = new Map<string, BillingForMatch>();
+  for (const b of billingRecords) {
+    if (b.clientPackageId) billingByPackageId.set(b.clientPackageId, b);
+  }
+  const stillPendingPackages: PackageForMatch[] = [];
+  for (const p of packages) {
+    const fkMatch = billingByPackageId.get(p.id);
+    if (fkMatch) {
+      linkMap.set(p.id, fkMatch);
+      claimedBillingIds.add(fkMatch.id);
+    } else {
+      stillPendingPackages.push(p);
+    }
+  }
+
+  if (stillPendingPackages.length === 0) return linkMap;
+
+  // Fallback pass — exclude already-claimed billing rows so the chronological
+  // zip doesn't double-assign.
+  const fallbackBilling = billingRecords.filter((b) => !claimedBillingIds.has(b.id));
+  const fallbackMap = matchBillingToPackages(stillPendingPackages, fallbackBilling);
+  for (const [pkgId, billing] of fallbackMap) linkMap.set(pkgId, billing);
   return linkMap;
 }

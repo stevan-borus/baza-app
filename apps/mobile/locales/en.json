@@ -553,6 +553,7 @@
       "periodMonth": "Month",
       "periodQuarter": "Quarter",
       "periodYear": "Year",
+      "periodAll": "All time",
       "totalRevenue": "Total revenue",
       "transactionCount": "Transactions",
       "avgPerClient": "Avg per client",
