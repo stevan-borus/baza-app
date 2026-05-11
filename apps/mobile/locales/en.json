@@ -527,6 +527,15 @@
       "packagesReportEmpty": "No package data in this period."
     }
   },
+  "adminMenu": {
+    "catalog": "Catalog",
+    "openMenu": "Open catalog menu",
+    "classTypes": "Class types",
+    "rooms": "Rooms",
+    "packageTypes": "Package types",
+    "language": "Language",
+    "logout": "Log out"
+  },
   "trainer": {
     "schedule": {
       "title": "My schedule",

@@ -25,28 +25,21 @@ export default function AdminLayout() {
       tabBar={(props) => <FloatingTabBar {...props} isDark={isDark} />}
     >
       <Tabs.Screen
-        name="index"
+        name="pregled"
         options={{
-          title: t("tabs.dashboard"),
+          title: t("tabs.overview"),
           tabBarIcon: ({ color }) => <TabIcon name="home" color={color} />,
         }}
       />
       <Tabs.Screen
-        name="clients"
+        name="klijenti"
         options={{
           title: t("tabs.clients"),
           tabBarIcon: ({ color }) => <TabIcon name="users" color={color} />,
         }}
       />
       <Tabs.Screen
-        name="packages"
-        options={{
-          title: t("tabs.packages"),
-          tabBarIcon: ({ color }) => <TabIcon name="archive" color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="billing"
+        name="naplata"
         options={{
           title: t("tabs.billing"),
           tabBarIcon: ({ color }) => (
@@ -55,22 +48,13 @@ export default function AdminLayout() {
         }}
       />
       <Tabs.Screen
-        name="reports"
+        name="izvestaji"
         options={{
           title: t("tabs.reports"),
           tabBarIcon: ({ color }) => <TabIcon name="bar-chart" color={color} />,
         }}
       />
-      {/* Detail routes hidden from the tab bar. `packages/active-assignments`
-       *  is nested inside the Paketi stack (folder tab + _layout.tsx) so it
-       *  doesn't auto-register as its own tab. `sessions/` is its own folder
-       *  for the same reason — the [id] page lives inside its stack and is
-       *  pushed from the dashboard via router.push. `class-types` / `rooms`
-       *  stay flat but are href={null} so they don't appear in the bar.
-       */}
-      <Tabs.Screen name="class-types" options={{ href: null }} />
-      <Tabs.Screen name="rooms" options={{ href: null }} />
-      <Tabs.Screen name="sessions" options={{ href: null }} />
+      <Tabs.Screen name="katalog" options={{ href: null }} />
     </Tabs>
   );
 }

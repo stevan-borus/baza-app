@@ -28,6 +28,7 @@ import { SegmentedControl } from "@/components/ui/tabs";
 import { useThemeTokens } from "@/components/ui/tokens";
 import { ScreenContainerRaw, useTabBarBottomPadding } from "@/components/ui/screen-container";
 import { HeaderIconButton } from "@/components/ui/app-header";
+import { AvatarMenu } from "@/components/admin/avatar-menu";
 import { FilterChip } from "@/components/ui/studio";
 import { clientsQueries } from "@/lib/queries/clients-queries-factory";
 import { invitesQueries, type Invite } from "@/lib/queries/invites-queries-factory";
@@ -194,24 +195,27 @@ export default function AdminClients() {
     <ScreenContainerRaw
       title={t("tabs.clients")}
       rightSlot={
-        <HeaderIconButton
-          icon="plus"
-          onPress={() =>
-            tab === "clients"
-              ? setShowCreateClient(true)
-              : setShowInviteForm(true)
-          }
-          testID={
-            tab === "clients"
-              ? "admin-new-client-button"
-              : "admin-new-invite-button"
-          }
-          accessibilityLabel={
-            tab === "clients"
-              ? t("admin.clients.sheetNewClient")
-              : t("admin.clients.sheetInvite")
-          }
-        />
+        <View style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
+          <AvatarMenu />
+          <HeaderIconButton
+            icon="plus"
+            onPress={() =>
+              tab === "clients"
+                ? setShowCreateClient(true)
+                : setShowInviteForm(true)
+            }
+            testID={
+              tab === "clients"
+                ? "admin-new-client-button"
+                : "admin-new-invite-button"
+            }
+            accessibilityLabel={
+              tab === "clients"
+                ? t("admin.clients.sheetNewClient")
+                : t("admin.clients.sheetInvite")
+            }
+          />
+        </View>
       }
     >
       <ScrollView

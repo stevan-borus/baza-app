@@ -1,5 +1,4 @@
 import React from "react";
-import { useLocalSearchParams } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { ScrollView, Text, View } from "react-native";
@@ -18,15 +17,14 @@ import {
 } from "@/components/ui/session-edit-sheet";
 import { sessionsQueries } from "@/lib/queries/sessions-queries-factory";
 
-export default function AdminSessionDetail() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+export function SessionDetail({ id }: { id: string }) {
   const { t, i18n } = useTranslation();
   const lang = i18n.language === "en" ? "en" : "sr";
   const tokens = useThemeTokens();
   const bottomPad = useTabBarBottomPadding();
   const editSheet = useSessionEditSheet();
 
-  const query = useQuery(sessionsQueries.byId(String(id ?? "")));
+  const query = useQuery(sessionsQueries.byId(id));
   const session = query.data?.session;
 
   const headerTitle = session?.classType?.name ?? t("admin.sessionDetail.title");

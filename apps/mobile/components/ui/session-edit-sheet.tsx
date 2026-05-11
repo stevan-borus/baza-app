@@ -47,7 +47,7 @@ type UpdateSeriesMutation = UseMutationResult<unknown, Error, UpdateSeriesVars>;
 type DeleteSeriesMutation = UseMutationResult<unknown, Error, string>;
 
 /**
- * Reusable session edit sheet — extracted from `apps/mobile/app/(admin)/index/index.tsx`.
+ * Reusable session edit sheet — extracted from `apps/mobile/app/(admin)/pregled/index.tsx`.
  *
  * Renders an `<AppSheet>` for editing a single session OR an entire recurring
  * series, plus a confirm-cancel sheet. State, mutations and the

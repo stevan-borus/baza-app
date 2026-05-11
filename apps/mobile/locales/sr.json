@@ -531,6 +531,15 @@
       "avgPerClient": "Prosek po klijentu"
     }
   },
+  "adminMenu": {
+    "catalog": "Katalog",
+    "openMenu": "Otvori meni kataloga",
+    "classTypes": "Tipovi treninga",
+    "rooms": "Sale",
+    "packageTypes": "Tipovi paketa",
+    "language": "Jezik",
+    "logout": "Odjavi se"
+  },
   "trainer": {
     "schedule": {
       "title": "Moj raspored",

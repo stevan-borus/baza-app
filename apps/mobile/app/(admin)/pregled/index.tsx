@@ -27,6 +27,7 @@ import {
 import { useThemeTokens } from "@/components/ui/tokens";
 import { CapsLabel, StudioWeekStrip, StatStrip } from "@/components/ui/studio";
 import { HeaderIconButton } from "@/components/ui/app-header";
+import { AvatarMenu } from "@/components/admin/avatar-menu";
 import {
   SessionEditSheet,
   useSessionEditSheet,
@@ -202,7 +203,7 @@ export default function AdminSchedule() {
   }
 
   function handleEventPress(session: typeof sessions[0]) {
-    router.push(`/(admin)/sessions/${session.id}`);
+    router.push(`/(admin)/pregled/sessions/${session.id}`);
   }
 
   const revenueValue = summary?.revenue ?? 0;
@@ -242,12 +243,15 @@ export default function AdminSchedule() {
     <ScreenContainerRaw
       title={t("tabs.dashboard")}
       rightSlot={
-        <HeaderIconButton
-          icon="plus"
-          onPress={() => setShowCreate(true)}
-          accessibilityLabel={t("admin.schedule.newSession")}
-          testID="admin-new-session-button"
-        />
+        <View style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
+          <AvatarMenu />
+          <HeaderIconButton
+            icon="plus"
+            onPress={() => setShowCreate(true)}
+            accessibilityLabel={t("admin.schedule.newSession")}
+            testID="admin-new-session-button"
+          />
+        </View>
       }
     >
       <ScrollView
@@ -326,7 +330,7 @@ export default function AdminSchedule() {
           <View className="mx-5 border-t border-b border-glass-border">
             <Pressable
               testID="admin-quick-class-types"
-              onPress={() => router.push("/(admin)/class-types")}
+              onPress={() => router.push("/(admin)/katalog/tipovi-treninga")}
               android_ripple={null}
               className="flex-row items-center justify-between py-4 active:opacity-60"
             >
@@ -341,7 +345,7 @@ export default function AdminSchedule() {
             <View className="bg-glass-border" style={{ height: 1 }} />
             <Pressable
               testID="admin-quick-rooms"
-              onPress={() => router.push("/(admin)/rooms")}
+              onPress={() => router.push("/(admin)/katalog/sale")}
               android_ripple={null}
               className="flex-row items-center justify-between py-4 active:opacity-60"
             >

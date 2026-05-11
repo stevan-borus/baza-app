@@ -101,10 +101,8 @@ export const reportsQueries = {
         const searchParams = new URLSearchParams();
         if (params?.from) searchParams.set("from", params.from);
         if (params?.to) searchParams.set("to", params.to);
-        const url =
-          searchParams.size > 0
-            ? `${endpoint}?${searchParams.toString()}`
-            : endpoint;
+        const qs = searchParams.toString();
+        const url = qs ? `${endpoint}?${qs}` : endpoint;
         const response = await apiFetch(url, { credentials: "include" });
         if (!response.ok) throw new Error(`Unable to load reports (${response.status})`);
         return reportsSummaryResponseSchema.parse(await response.json());
@@ -127,7 +125,8 @@ export const reportsQueries = {
         if (params?.from) searchParams.set("from", params.from);
         if (params?.to) searchParams.set("to", params.to);
         if (params?.period) searchParams.set("period", params.period);
-        const url = searchParams.size > 0 ? `${endpoint}?${searchParams.toString()}` : endpoint;
+        const qs = searchParams.toString();
+        const url = qs ? `${endpoint}?${qs}` : endpoint;
         const response = await apiFetch(url, { credentials: "include" });
         if (!response.ok) throw new Error(`Unable to load revenue report (${response.status})`);
         return revenueResponseSchema.parse(await response.json());
@@ -150,7 +149,8 @@ export const reportsQueries = {
         if (params?.from) searchParams.set("from", params.from);
         if (params?.to) searchParams.set("to", params.to);
         if (params?.period) searchParams.set("period", params.period);
-        const url = searchParams.size > 0 ? `${endpoint}?${searchParams.toString()}` : endpoint;
+        const qs = searchParams.toString();
+        const url = qs ? `${endpoint}?${qs}` : endpoint;
         const response = await apiFetch(url, { credentials: "include" });
         if (!response.ok)
           throw new Error(`Unable to load utilization report (${response.status})`);
@@ -174,7 +174,8 @@ export const reportsQueries = {
         if (params?.from) searchParams.set("from", params.from);
         if (params?.to) searchParams.set("to", params.to);
         if (params?.period) searchParams.set("period", params.period);
-        const url = searchParams.size > 0 ? `${endpoint}?${searchParams.toString()}` : endpoint;
+        const qs = searchParams.toString();
+        const url = qs ? `${endpoint}?${qs}` : endpoint;
         const response = await apiFetch(url, { credentials: "include" });
         if (!response.ok)
           throw new Error(`Unable to load bookings report (${response.status})`);
@@ -198,7 +199,8 @@ export const reportsQueries = {
         if (params?.from) searchParams.set("from", params.from);
         if (params?.to) searchParams.set("to", params.to);
         if (params?.period) searchParams.set("period", params.period);
-        const url = searchParams.size > 0 ? `${endpoint}?${searchParams.toString()}` : endpoint;
+        const qs = searchParams.toString();
+        const url = qs ? `${endpoint}?${qs}` : endpoint;
         const response = await apiFetch(url, { credentials: "include" });
         if (!response.ok)
           throw new Error(`Unable to load utilization breakdown (${response.status})`);
@@ -222,7 +224,8 @@ export const reportsQueries = {
         if (params?.from) searchParams.set("from", params.from);
         if (params?.to) searchParams.set("to", params.to);
         if (params?.period) searchParams.set("period", params.period);
-        const url = searchParams.size > 0 ? `${endpoint}?${searchParams.toString()}` : endpoint;
+        const qs = searchParams.toString();
+        const url = qs ? `${endpoint}?${qs}` : endpoint;
         const response = await apiFetch(url, { credentials: "include" });
         if (!response.ok)
           throw new Error(`Unable to load utilization breakdown (${response.status})`);
@@ -246,7 +249,8 @@ export const reportsQueries = {
         if (params?.from) searchParams.set("from", params.from);
         if (params?.to) searchParams.set("to", params.to);
         if (params?.period) searchParams.set("period", params.period);
-        const url = searchParams.size > 0 ? `${endpoint}?${searchParams.toString()}` : endpoint;
+        const qs = searchParams.toString();
+        const url = qs ? `${endpoint}?${qs}` : endpoint;
         const response = await apiFetch(url, { credentials: "include" });
         if (!response.ok)
           throw new Error(`Unable to load utilization breakdown (${response.status})`);
@@ -270,7 +274,8 @@ export const reportsQueries = {
         if (params?.from) searchParams.set("from", params.from);
         if (params?.to) searchParams.set("to", params.to);
         if (params?.period) searchParams.set("period", params.period);
-        const url = searchParams.size > 0 ? `${endpoint}?${searchParams.toString()}` : endpoint;
+        const qs = searchParams.toString();
+        const url = qs ? `${endpoint}?${qs}` : endpoint;
         const response = await apiFetch(url, { credentials: "include" });
         if (!response.ok)
           throw new Error(`Unable to load packages report (${response.status})`);
