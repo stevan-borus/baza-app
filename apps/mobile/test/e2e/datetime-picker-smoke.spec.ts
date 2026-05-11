@@ -27,7 +27,8 @@ test.describe("DateTimePicker web smoke", () => {
     await page.getByTestId("auth-email-input").fill("admin.e2e@example.test");
     await page.getByTestId("auth-password-input").fill(SEED_PASSWORD);
     await page.getByTestId("auth-submit-button").click();
-    await expect(page.getByTestId("tab-clients")).toBeVisible({
+    // Phase 1: admin landing tab is `pregled`.
+    await expect(page.getByTestId("tab-pregled")).toBeVisible({
       timeout: 15_000,
     });
 

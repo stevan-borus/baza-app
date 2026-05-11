@@ -41,13 +41,14 @@ test.describe("cron + reports + EN smoke (Serbian + English)", () => {
     await page.getByTestId("auth-email-input").fill("admin.e2e@example.test");
     await page.getByTestId("auth-password-input").fill(SEED_PASSWORD);
     await page.getByTestId("auth-submit-button").click();
-    await expect(page.getByTestId("tab-clients")).toBeVisible({
+    // Phase 1 admin shell — landing tab is `pregled`; reports moved to `/izvestaji`.
+    await expect(page.getByTestId("tab-pregled")).toBeVisible({
       timeout: 15_000,
     });
-    await page.goto("/reports");
+    // Phase 1: reports landing is a hub of 4 cards; the utilization breakdown
+    // (the closest analogue of "attendance") lives on its own sub-page.
+    await page.goto("/izvestaji/iskoriscenost");
 
-    // Reports page renders the section labels (utilization is the closest
-    // analogue of "attendance" in the current screen).
     await expect(
       page.getByText(t.admin.manage.utilization).first(),
     ).toBeVisible({ timeout: 10_000 });
@@ -58,14 +59,15 @@ test.describe("cron + reports + EN smoke (Serbian + English)", () => {
     await page.getByTestId("auth-email-input").fill("admin.e2e@example.test");
     await page.getByTestId("auth-password-input").fill(SEED_PASSWORD);
     await page.getByTestId("auth-submit-button").click();
-    await expect(page.getByTestId("tab-clients")).toBeVisible({
+    await expect(page.getByTestId("tab-pregled")).toBeVisible({
       timeout: 15_000,
     });
-    await page.goto("/reports");
+    // Phase 1: revenue lives on its own sub-page; the headline text
+    // ("Ukupan prihod") is the closest analogue to the old strip label.
+    await page.goto("/izvestaji/prihod");
 
-    // Revenue / bookings is the second analytics strip on the screen.
     await expect(
-      page.getByText(t.admin.manage.revenue).first(),
+      page.getByText(t.admin.izvestaji.prihod.headline).first(),
     ).toBeVisible({ timeout: 10_000 });
   });
 
@@ -140,7 +142,8 @@ test.describe("cron + reports + EN smoke (Serbian + English)", () => {
     await page.getByTestId("auth-email-input").fill("admin.e2e@example.test");
     await page.getByTestId("auth-password-input").fill(SEED_PASSWORD);
     await page.getByTestId("auth-submit-button").click();
-    await expect(page.getByTestId("tab-clients")).toBeVisible({
+    // Phase 1 admin shell — landing tab is `pregled`.
+    await expect(page.getByTestId("tab-pregled")).toBeVisible({
       timeout: 15_000,
     });
     await page.getByTestId("open-profile-sheet").click();
@@ -161,7 +164,7 @@ test.describe("cron + reports + EN smoke (Serbian + English)", () => {
     await page.getByTestId("auth-email-input").fill("admin.e2e@example.test");
     await page.getByTestId("auth-password-input").fill(SEED_PASSWORD);
     await page.getByTestId("auth-submit-button").click();
-    await expect(page.getByTestId("tab-clients")).toBeVisible({
+    await expect(page.getByTestId("tab-pregled")).toBeVisible({
       timeout: 15_000,
     });
   });
