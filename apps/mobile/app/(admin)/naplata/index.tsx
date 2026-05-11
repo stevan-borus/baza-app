@@ -99,6 +99,17 @@ export default function AdminBilling() {
     return records;
   }, [records, activeFilter]);
 
+  // Filtered-totals subtitle (P4-2). "Filters active" here means the user
+  // has narrowed the list below the default month view — i.e. picked a
+  // specific client or a non-"all" status chip. The month chooser always
+  // has a value, so we don't count from/to as "filters" for this UI cue.
+  const filtersActive = filterClientUserId !== "" || activeFilter !== "all";
+  const filteredCount = filteredRecords.length;
+  const filteredAmount = useMemo(
+    () => filteredRecords.reduce((sum, r) => sum + r.amount, 0),
+    [filteredRecords],
+  );
+
   function navigateBillingMonth(direction: -1 | 1) {
     setSelectedMonth((m) => m.add(direction, "month"));
   }
@@ -275,6 +286,18 @@ export default function AdminBilling() {
             },
           ]}
         />
+        {filtersActive ? (
+          <Text
+            testID="naplata-filtered-subtitle"
+            className="text-muted font-body-medium mt-2"
+            style={{ fontSize: 13 }}
+          >
+            {t("admin.manage.filteredSubtitle", {
+              count: filteredCount,
+              amount: filteredAmount.toLocaleString("sr-RS"),
+            })}
+          </Text>
+        ) : null}
       </MotiView>
 
       {/* Filter chips */}
@@ -349,6 +372,18 @@ export default function AdminBilling() {
               <View key={item.id} className="px-1 py-1.5">
                 <Card testID={`billing-row-${item.id}`}>
                   <View className="flex-col gap-2">
+                    {/* Primary identity: client name leads the card so admins
+                        can scan the list by WHO paid, not just amount/method. */}
+                    {item.client?.fullName ? (
+                      <Text
+                        testID={`billing-row-client-${item.id}`}
+                        className="text-foreground font-body-semibold"
+                        style={{ fontSize: 15 }}
+                        numberOfLines={1}
+                      >
+                        {item.client.fullName}
+                      </Text>
+                    ) : null}
                     <View className="flex-row justify-between items-center">
                       <Text className="text-foreground font-extrabold" style={{ fontSize: 20 }}>
                         {item.amount} RSD

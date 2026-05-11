@@ -556,6 +556,7 @@
       "totalRevenue": "Total revenue",
       "transactionCount": "Transactions",
       "avgPerClient": "Avg per client",
+      "filteredSubtitle": "Filtered: {{count}} payments · {{amount}} RSD",
       "packagesSection": "Packages",
       "packagesMostUsed": "Most used",
       "packagesRevenue": "Revenue per type",
