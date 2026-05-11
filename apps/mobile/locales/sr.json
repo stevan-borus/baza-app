@@ -595,6 +595,14 @@
       "paketi": {
         "title": "Paketi",
         "activeAssignmentsLink": "Aktivne dodele",
+        "newAssignment": "Nova dodela",
+        "flow": {
+          "pickClient": "Izaberi klijenta",
+          "pickMode": "Tip dodele",
+          "modeComp": "Pokloni paket",
+          "modePaid": "Nova uplata",
+          "searchPlaceholder": "Traži klijenta…"
+        },
         "tiles": {
           "active": "Aktivni paketi",
           "expiringSoon": "Ističe uskoro",

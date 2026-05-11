@@ -591,6 +591,14 @@
       "paketi": {
         "title": "Packages",
         "activeAssignmentsLink": "Active assignments",
+        "newAssignment": "New assignment",
+        "flow": {
+          "pickClient": "Pick a client",
+          "pickMode": "Assignment type",
+          "modeComp": "Gift package",
+          "modePaid": "New payment",
+          "searchPlaceholder": "Search clients…"
+        },
         "tiles": {
           "active": "Active packages",
           "expiringSoon": "Expiring soon",

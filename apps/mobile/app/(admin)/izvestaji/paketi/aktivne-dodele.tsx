@@ -10,7 +10,9 @@ import { Input } from "@/components/ui/input";
 import { GlassCard } from "@/components/ui/glass-card";
 import { SkeletonCard } from "@/components/ui/skeleton";
 import { ScreenContainerRaw, useTabBarBottomPadding } from "@/components/ui/screen-container";
+import { HeaderIconButton } from "@/components/ui/app-header";
 import { FilterChip } from "@/components/ui/studio";
+import { AssignPackageFlow } from "@/components/admin/assign-package-flow";
 import { packagesQueries } from "@/lib/queries/packages-queries-factory";
 import { now } from "@/lib/now";
 
@@ -44,6 +46,7 @@ export default function AdminActiveAssignments() {
   const bottomPad = useTabBarBottomPadding();
   const [filter, setFilter] = useState<AssignmentFilter>("all");
   const [search, setSearch] = useState("");
+  const [showAssignFlow, setShowAssignFlow] = useState(false);
 
   const query = useQuery(
     packagesQueries.clientPackagesAdminList({ search: search.trim() || undefined }),
@@ -65,7 +68,18 @@ export default function AdminActiveAssignments() {
   }, [query.data?.packages, filter]);
 
   return (
-    <ScreenContainerRaw title={t("admin.manage.activeAssignments")}>
+    <ScreenContainerRaw
+      title={t("admin.manage.activeAssignments")}
+      headerVariant="detail"
+      rightSlot={
+        <HeaderIconButton
+          icon="plus"
+          onPress={() => setShowAssignFlow(true)}
+          testID="active-assignments-new-button"
+          accessibilityLabel={t("admin.izvestaji.paketi.newAssignment")}
+        />
+      }
+    >
       <ScrollView
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
@@ -187,6 +201,7 @@ export default function AdminActiveAssignments() {
           })}
         </MotiView>
       </ScrollView>
+      <AssignPackageFlow open={showAssignFlow} onOpenChange={setShowAssignFlow} />
     </ScreenContainerRaw>
   );
 }
