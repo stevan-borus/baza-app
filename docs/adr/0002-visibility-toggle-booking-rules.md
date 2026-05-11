@@ -1,0 +1,3 @@
+# Visibility toggle disable rules differ by save path
+
+The `visibleToClients` toggle in the session edit sheet must be disabled when the change would break existing bookings, but the rule differs by save path. **Single-occurrence save**: disabled iff that Session's `bookedCount > 0`. **Series save**: disabled iff any Session in the series has `bookedCount > 0`. We picked dual rules rather than a single per-series check because the two save paths are semantically distinct — editing one Monday occurrence has nothing to do with bookings on Wednesday. The API GET endpoint returns both `bookedCount` (this session) and `seriesBookedCount` (sum across the recurring series) so the UI can apply the right rule without a follow-up request.
