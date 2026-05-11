@@ -630,6 +630,30 @@
           "fri": "Fri",
           "sat": "Sat"
         }
+      },
+      "rezervacije": {
+        "title": "Bookings",
+        "tiles": {
+          "total": "Total bookings",
+          "showRate": "Show rate",
+          "canceled": "Cancellations",
+          "canceledSub": "{{preCutoff}} regular · {{late}} late",
+          "waitlist": "Waitlist"
+        },
+        "cancelBreakdown": {
+          "title": "Regular vs. late cancellations",
+          "preCutoff": "Pre-cutoff",
+          "late": "Late",
+          "empty": "No cancellations in this period."
+        },
+        "chart": {
+          "title": "Bookings over time"
+        },
+        "topSessions": {
+          "title": "Top sessions",
+          "bookedOfCapacity": "{{booked}}/{{capacity}} booked"
+        },
+        "noData": "No data for the selected period."
       }
     }
   },

@@ -148,6 +148,35 @@ const utilizationTimeSeriesResponseSchema = z.object({
   ),
 });
 
+const bookingsDetailResponseSchema = z.object({
+  success: z.boolean(),
+  headline: z.object({
+    totalBookings: z.number(),
+    showRate: z.number(),
+    canceledTotal: z.number(),
+    canceledPreCutoff: z.number(),
+    canceledLate: z.number(),
+    waitlistCount: z.number(),
+  }),
+  timeSeries: z.array(
+    z.object({
+      bucketStart: z.string(),
+      bucketEnd: z.string(),
+      bookingCount: z.number(),
+    }),
+  ),
+  topSessions: z.array(
+    z.object({
+      sessionId: z.string(),
+      startsAt: z.string(),
+      classTypeName: z.string(),
+      roomName: z.string().nullable(),
+      bookedCount: z.number(),
+      capacity: z.number(),
+    }),
+  ),
+});
+
 export const reportsQueries = {
   summary: (params?: { from?: string; to?: string }) =>
     queryOptions({
@@ -441,6 +470,31 @@ export const reportsQueries = {
         if (!response.ok)
           throw new Error(`Unable to load revenue by method (${response.status})`);
         return revenueByMethodResponseSchema.parse(await response.json());
+      },
+      staleTime: 60_000,
+    }),
+
+  bookingsDetail: (params?: { from?: string; to?: string; period?: string }) =>
+    queryOptions({
+      queryKey: [
+        "reports",
+        "bookings-detail",
+        params?.from ?? "",
+        params?.to ?? "",
+        params?.period ?? "",
+      ] as const,
+      queryFn: async () => {
+        const endpoint = `${sharedEnv.EXPO_PUBLIC_API_URL}/api/reports/bookings/detail`;
+        const searchParams = new URLSearchParams();
+        if (params?.from) searchParams.set("from", params.from);
+        if (params?.to) searchParams.set("to", params.to);
+        if (params?.period) searchParams.set("period", params.period);
+        const qs = searchParams.toString();
+        const url = qs ? `${endpoint}?${qs}` : endpoint;
+        const response = await apiFetch(url, { credentials: "include" });
+        if (!response.ok)
+          throw new Error(`Unable to load bookings detail (${response.status})`);
+        return bookingsDetailResponseSchema.parse(await response.json());
       },
       staleTime: 60_000,
     }),

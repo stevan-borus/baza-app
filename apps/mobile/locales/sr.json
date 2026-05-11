@@ -635,6 +635,30 @@
           "fri": "Pet",
           "sat": "Sub"
         }
+      },
+      "rezervacije": {
+        "title": "Rezervacije",
+        "tiles": {
+          "total": "Ukupno rezervacija",
+          "showRate": "Stopa pohađanja",
+          "canceled": "Otkazivanja",
+          "canceledSub": "{{preCutoff}} redovnih · {{late}} kasnih",
+          "waitlist": "Lista čekanja"
+        },
+        "cancelBreakdown": {
+          "title": "Redovna vs. kasna otkazivanja",
+          "preCutoff": "Redovna",
+          "late": "Kasna",
+          "empty": "Nema otkazivanja u ovom periodu."
+        },
+        "chart": {
+          "title": "Rezervacije kroz vreme"
+        },
+        "topSessions": {
+          "title": "Najpopularnije sesije",
+          "bookedOfCapacity": "{{booked}}/{{capacity}} zauzeto"
+        },
+        "noData": "Nema podataka za izabrani period."
       }
     }
   },
