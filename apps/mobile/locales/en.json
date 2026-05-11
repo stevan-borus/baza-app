@@ -589,6 +589,19 @@
       },
       "paketi": {
         "activeAssignmentsLink": "Active assignments"
+      },
+      "prihod": {
+        "title": "Revenue",
+        "headline": "Total revenue",
+        "chart": {
+          "title": "Revenue over time"
+        },
+        "byPackageType": "By package type",
+        "byMethod": "By payment method",
+        "recentPayments": "Recent payments",
+        "noData": "No data for the selected period.",
+        "paymentsCount_one": "{{count}} payment",
+        "paymentsCount_other": "{{count}} payments"
       }
     }
   },

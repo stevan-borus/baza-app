@@ -26,8 +26,7 @@ import { useThemeTokens } from "@/components/ui/tokens";
 import { reportsQueries } from "@/lib/queries/reports-queries-factory";
 import { ScreenContainerRaw, useTabBarBottomPadding } from "@/components/ui/screen-container";
 import { AvatarMenu } from "@/components/admin/avatar-menu";
-
-type Period = "week" | "month" | "quarter" | "year";
+import { usePeriodPill } from "@/lib/admin/use-period-pill";
 
 export default function AdminReportsLanding() {
   const { t } = useTranslation();
@@ -35,28 +34,13 @@ export default function AdminReportsLanding() {
   const tokens = useThemeTokens();
   const bottomPad = useTabBarBottomPadding();
   const [refreshing, setRefreshing] = useState(false);
-  const [period, setPeriod] = useState<Period>("month");
+  const { period, setPeriod, window: periodWindow } = usePeriodPill("month");
 
   async function handleRefresh() {
     setRefreshing(true);
     await queryClient.invalidateQueries({ queryKey: ["reports"] });
     setRefreshing(false);
   }
-
-  // Anchor the from/to window to the top of the current day so the queryKey
-  // is stable across renders (otherwise React Query refetches every render
-  // and the dev server logs hundreds of identical requests per second).
-  const periodWindow = useMemo(() => {
-    const to = new Date();
-    to.setUTCHours(0, 0, 0, 0);
-    to.setUTCDate(to.getUTCDate() + 1);
-    const from = new Date(to);
-    if (period === "week") from.setUTCDate(to.getUTCDate() - 7);
-    else if (period === "month") from.setUTCDate(to.getUTCDate() - 30);
-    else if (period === "quarter") from.setUTCDate(to.getUTCDate() - 90);
-    else from.setUTCFullYear(to.getUTCFullYear() - 1);
-    return { from: from.toISOString(), to: to.toISOString() };
-  }, [period]);
 
   const summaryQuery = useQuery(reportsQueries.summary(periodWindow));
   const utilizationQuery = useQuery(

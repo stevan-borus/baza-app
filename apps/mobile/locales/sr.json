@@ -593,6 +593,20 @@
       },
       "paketi": {
         "activeAssignmentsLink": "Aktivne dodele"
+      },
+      "prihod": {
+        "title": "Prihod",
+        "headline": "Ukupan prihod",
+        "chart": {
+          "title": "Prihod kroz vreme"
+        },
+        "byPackageType": "Po paketu",
+        "byMethod": "Po načinu plaćanja",
+        "recentPayments": "Poslednje uplate",
+        "noData": "Nema podataka za izabrani period.",
+        "paymentsCount_one": "{{count}} uplata",
+        "paymentsCount_few": "{{count}} uplate",
+        "paymentsCount_other": "{{count}} uplata"
       }
     }
   },
