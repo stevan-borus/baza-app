@@ -602,6 +602,34 @@
         "noData": "No data for the selected period.",
         "paymentsCount_one": "{{count}} payment",
         "paymentsCount_other": "{{count}} payments"
+      },
+      "iskoriscenost": {
+        "title": "Utilization",
+        "headline": "Capacity utilization",
+        "summary": "{{booked}} of {{capacity}} seats",
+        "trend": {
+          "title": "Trend"
+        },
+        "heatmap": {
+          "title": "By day and time of day",
+          "morning": "Morning",
+          "midday": "Midday",
+          "afternoon": "Afternoon",
+          "evening": "Evening"
+        },
+        "bySala": "By room",
+        "byClassType": "By class type",
+        "byTrainer": "By trainer",
+        "noData": "No data for the selected period.",
+        "dayShort": {
+          "sun": "Sun",
+          "mon": "Mon",
+          "tue": "Tue",
+          "wed": "Wed",
+          "thu": "Thu",
+          "fri": "Fri",
+          "sat": "Sat"
+        }
       }
     }
   },

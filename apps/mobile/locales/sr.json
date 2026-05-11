@@ -607,6 +607,34 @@
         "paymentsCount_one": "{{count}} uplata",
         "paymentsCount_few": "{{count}} uplate",
         "paymentsCount_other": "{{count}} uplata"
+      },
+      "iskoriscenost": {
+        "title": "Iskorišćenost",
+        "headline": "Iskorišćenost kapaciteta",
+        "summary": "{{booked}} od {{capacity}} termina",
+        "trend": {
+          "title": "Trend"
+        },
+        "heatmap": {
+          "title": "Po danu i delu dana",
+          "morning": "Jutro",
+          "midday": "Podne",
+          "afternoon": "Popodne",
+          "evening": "Veče"
+        },
+        "bySala": "Po sali",
+        "byClassType": "Po tipu treninga",
+        "byTrainer": "Po treneru",
+        "noData": "Nema podataka za izabrani period.",
+        "dayShort": {
+          "sun": "Ned",
+          "mon": "Pon",
+          "tue": "Uto",
+          "wed": "Sre",
+          "thu": "Čet",
+          "fri": "Pet",
+          "sat": "Sub"
+        }
       }
     }
   },

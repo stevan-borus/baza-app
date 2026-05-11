@@ -122,6 +122,32 @@ const utilizationByTrainerResponseSchema = z.object({
   ),
 });
 
+const utilizationHeatmapResponseSchema = z.object({
+  success: z.boolean(),
+  cells: z.array(
+    z.object({
+      dayOfWeek: z.number().int().min(0).max(6),
+      timeBucket: z.enum(["morning", "midday", "afternoon", "evening"]),
+      booked: z.number(),
+      capacity: z.number(),
+      utilization: z.number(),
+    }),
+  ),
+});
+
+const utilizationTimeSeriesResponseSchema = z.object({
+  success: z.boolean(),
+  buckets: z.array(
+    z.object({
+      bucketStart: z.string(),
+      bucketEnd: z.string(),
+      booked: z.number(),
+      capacity: z.number(),
+      utilization: z.number(),
+    }),
+  ),
+});
+
 export const reportsQueries = {
   summary: (params?: { from?: string; to?: string }) =>
     queryOptions({
@@ -340,6 +366,58 @@ export const reportsQueries = {
             `Unable to load revenue by package type (${response.status})`,
           );
         return revenueByPackageTypeResponseSchema.parse(await response.json());
+      },
+      staleTime: 60_000,
+    }),
+
+  utilizationHeatmap: (params?: { from?: string; to?: string; period?: string }) =>
+    queryOptions({
+      queryKey: [
+        "reports",
+        "utilization-heatmap",
+        params?.from ?? "",
+        params?.to ?? "",
+        params?.period ?? "",
+      ] as const,
+      queryFn: async () => {
+        const endpoint = `${sharedEnv.EXPO_PUBLIC_API_URL}/api/reports/utilization/heatmap`;
+        const searchParams = new URLSearchParams();
+        if (params?.from) searchParams.set("from", params.from);
+        if (params?.to) searchParams.set("to", params.to);
+        if (params?.period) searchParams.set("period", params.period);
+        const qs = searchParams.toString();
+        const url = qs ? `${endpoint}?${qs}` : endpoint;
+        const response = await apiFetch(url, { credentials: "include" });
+        if (!response.ok)
+          throw new Error(`Unable to load utilization heatmap (${response.status})`);
+        return utilizationHeatmapResponseSchema.parse(await response.json());
+      },
+      staleTime: 60_000,
+    }),
+
+  utilizationTimeSeries: (params?: { from?: string; to?: string; period?: string }) =>
+    queryOptions({
+      queryKey: [
+        "reports",
+        "utilization-time-series",
+        params?.from ?? "",
+        params?.to ?? "",
+        params?.period ?? "",
+      ] as const,
+      queryFn: async () => {
+        const endpoint = `${sharedEnv.EXPO_PUBLIC_API_URL}/api/reports/utilization/time-series`;
+        const searchParams = new URLSearchParams();
+        if (params?.from) searchParams.set("from", params.from);
+        if (params?.to) searchParams.set("to", params.to);
+        if (params?.period) searchParams.set("period", params.period);
+        const qs = searchParams.toString();
+        const url = qs ? `${endpoint}?${qs}` : endpoint;
+        const response = await apiFetch(url, { credentials: "include" });
+        if (!response.ok)
+          throw new Error(
+            `Unable to load utilization time series (${response.status})`,
+          );
+        return utilizationTimeSeriesResponseSchema.parse(await response.json());
       },
       staleTime: 60_000,
     }),

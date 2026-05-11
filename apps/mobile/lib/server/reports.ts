@@ -83,8 +83,13 @@ export function getPreviousTimeframe(timeframe: Pick<Timeframe, "from" | "to">) 
  * the UI drives this: week→day (7 bars), month→day (≤31 bars),
  * quarter→week (≈13 bars), year→month (12 bars). Daily covers both week and
  * month — the count is what differs, not the bucket shape.
+ *
+ * Both Prihod and Iskorišćenost time-series share this — we keep the
+ * `RevenueBucketSize` alias for back-compat and add a neutral `BucketSize`
+ * alias for new callers.
  */
 export type RevenueBucketSize = "day" | "week" | "month";
+export type BucketSize = RevenueBucketSize;
 
 /**
  * Maps the UI period pill value to the bucket granularity the time-series
@@ -153,6 +158,19 @@ export function buildRevenueBuckets(
   from: Date,
   to: Date,
   size: RevenueBucketSize,
+): Array<{ bucketStart: Date; bucketEnd: Date }> {
+  return buildPeriodBuckets(from, to, size);
+}
+
+/**
+ * Neutral alias for `buildRevenueBuckets`. Same implementation — the only
+ * reason to use this name is to make non-revenue callers (utilization,
+ * future bookings/packages time-series) read naturally at the call site.
+ */
+export function buildPeriodBuckets(
+  from: Date,
+  to: Date,
+  size: BucketSize,
 ): Array<{ bucketStart: Date; bucketEnd: Date }> {
   const alignedStart =
     size === "day"
