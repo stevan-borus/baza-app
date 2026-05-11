@@ -15,6 +15,7 @@ const required = [
   "klijenti/_layout.tsx",
   "klijenti/index.tsx",
   "klijenti/[id]/index.tsx",
+  "klijenti/[id]/istorija.tsx",
   "klijenti/sessions/[id].tsx",
   "naplata/_layout.tsx",
   "naplata/index.tsx",

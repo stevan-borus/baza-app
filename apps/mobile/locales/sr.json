@@ -381,6 +381,8 @@
       "noUpcoming": "Nema predstojećih termina.",
       "upcomingError": "Nije moguće učitati predstojeće termine.",
       "viewHistory": "Istorija treninga",
+      "noPastBookings": "Nema prošlih treninga.",
+      "canceledTag": "Otkazano",
       "comp": "Poklon paket",
       "paid": "Plaćeno {{amount}} RSD",
       "sessionsRemaining": "{{remaining}}/{{total}} termina",

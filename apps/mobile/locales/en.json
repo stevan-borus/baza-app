@@ -378,6 +378,8 @@
       "noUpcoming": "No upcoming bookings.",
       "upcomingError": "Unable to load upcoming bookings.",
       "viewHistory": "Training history",
+      "noPastBookings": "No past bookings.",
+      "canceledTag": "Canceled",
       "comp": "Complimentary",
       "paid": "Paid {{amount}} RSD",
       "sessionsRemaining": "{{remaining}}/{{total}} sessions",

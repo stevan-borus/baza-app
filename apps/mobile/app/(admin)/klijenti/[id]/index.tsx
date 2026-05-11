@@ -26,6 +26,7 @@ import { HeaderIconButton } from "@/components/ui/app-header";
 import { clientsQueries } from "@/lib/queries/clients-queries-factory";
 import { packagesQueries, type ClientPackage } from "@/lib/queries/packages-queries-factory";
 import { bookingsQueries } from "@/lib/queries/bookings-queries-factory";
+import { BookingRow } from "@/components/admin/booking-row";
 
 // ─── InitialsAvatar ───────────────────────────────────────────────────────────
 // Larger variant of the list-row avatar; same styling rules as the row but
@@ -342,26 +343,7 @@ export default function AdminClientDetail() {
                           style={{ height: 1, marginLeft: 16 }}
                         />
                       ) : null}
-                      <View
-                        testID={`upcoming-booking-${b.id}`}
-                        className="flex-col gap-0.5 px-4 py-3"
-                      >
-                        <Text
-                          className="text-foreground font-body-semibold"
-                          style={{ fontSize: 14 }}
-                          numberOfLines={1}
-                        >
-                          {b.session.classType.name}
-                        </Text>
-                        <Text className="text-muted" style={{ fontSize: 12 }}>
-                          {`${dayjs(b.session.startsAt).locale(lang).format("ddd, D.M.")} · ${dayjs(b.session.startsAt).format("HH:mm")}–${dayjs(b.session.endsAt).format("HH:mm")}`}
-                        </Text>
-                        <Text className="text-muted" style={{ fontSize: 12 }}>
-                          {[b.session.room?.name, b.session.trainer?.fullName]
-                            .filter(Boolean)
-                            .join(" · ")}
-                        </Text>
-                      </View>
+                      <BookingRow booking={b} />
                     </React.Fragment>
                   ))}
                 </View>
