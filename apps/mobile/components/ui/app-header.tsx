@@ -77,9 +77,13 @@ export function AppHeader({
           resizeMode="contain"
         />
 
-        {/* Right slot — fixed 36pt mirror */}
+        {/* Right slot — minWidth 36pt mirrors the left slot but expands for
+            consumers that need to render multiple controls (e.g. AvatarMenu
+            + HeaderIconButton row on the admin tab indexes). The logo stays
+            centered by justifyContent: "space-between" on the row, not by
+            matched slot widths, so this asymmetry doesn't decenter it. */}
         <View
-          style={{ width: 36, alignItems: "flex-end", justifyContent: "center" }}
+          style={{ minWidth: 36, alignItems: "flex-end", justifyContent: "center" }}
         >
           {rightSlot}
         </View>
