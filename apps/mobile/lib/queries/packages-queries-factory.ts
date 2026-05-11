@@ -37,6 +37,11 @@ const embeddedClientSchema = z.object({
   email: z.string(),
 });
 
+const embeddedBillingRecordSchema = z.object({
+  amount: z.number(),
+  method: z.string(),
+});
+
 const clientPackageSchema = z.object({
   id: z.string(),
   clientProfileId: z.string(),
@@ -47,6 +52,10 @@ const clientPackageSchema = z.object({
   sessionsRemaining: z.number(),
   packageType: embeddedPackageTypeSchema.optional(),
   client: embeddedClientSchema.optional(),
+  // Per-client GET path attaches the matching CONFIRMED BillingRecord (or
+  // null for comp/gift packages). Admin list-all path omits this field —
+  // it stays optional so both responses validate against the same schema.
+  billingRecord: embeddedBillingRecordSchema.nullable().optional(),
 });
 
 const clientPackagesResponseSchema = z.object({

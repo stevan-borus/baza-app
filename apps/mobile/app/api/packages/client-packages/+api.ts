@@ -125,17 +125,111 @@ export async function GET(request: Request) {
     if (!canAccessClient) return fail("Forbidden", 403);
   }
 
-  const packages = await prisma.clientPackage.findMany({
-    where: { clientProfileId },
-    orderBy: { startsAt: "desc" },
-    include: {
-      packageType: {
-        select: { name: true, sessionCount: true, validityDays: true },
+  // Resolve the underlying User id so we can correlate to BillingRecord
+  // (which keys by clientUserId, not clientProfileId).
+  const clientProfile = await prisma.clientProfile.findUnique({
+    where: { id: clientProfileId },
+    select: { userId: true },
+  });
+  if (!clientProfile) return fail("Client profile not found", 404);
+
+  const [packages, billingRecords] = await Promise.all([
+    prisma.clientPackage.findMany({
+      where: { clientProfileId },
+      orderBy: { startsAt: "desc" },
+      include: {
+        packageType: {
+          select: { name: true, sessionCount: true, validityDays: true },
+        },
       },
-    },
+    }),
+    prisma.billingRecord.findMany({
+      where: {
+        clientUserId: clientProfile.userId,
+        status: "CONFIRMED",
+        packageTypeId: { not: null },
+      },
+      select: {
+        id: true,
+        amount: true,
+        method: true,
+        packageTypeId: true,
+        createdAt: true,
+      },
+      orderBy: { createdAt: "asc" },
+    }),
+  ]);
+
+  // Pair each ClientPackage with the BillingRecord that funded it. There's
+  // no FK between the two tables (P2-5 decision: BillingRecord only links
+  // to PackageType). We instead match by tuple (clientUserId + packageTypeId)
+  // and zip in chronological order: the i-th package of a given type pairs
+  // with the i-th confirmed payment of that type. Extra packages with no
+  // match are comp / gift packages.
+  const linkMap = matchBillingToPackages(packages, billingRecords);
+  const shaped = packages.map((p) => {
+    const match = linkMap.get(p.id) ?? null;
+    return {
+      ...p,
+      billingRecord: match
+        ? { amount: match.amount, method: match.method }
+        : null,
+    };
   });
 
-  return ok({ success: true, packages });
+  return ok({ success: true, packages: shaped });
+}
+
+type PackageForMatch = { id: string; packageTypeId: string; startsAt: Date };
+type BillingForMatch = {
+  id: string;
+  amount: number;
+  method: string;
+  packageTypeId: string | null;
+  createdAt: Date;
+};
+
+/**
+ * Build a map ClientPackage.id → matching BillingRecord by zipping the
+ * packages and records of each PackageType in chronological order.
+ *
+ * Matching key is `packageTypeId`. Within each type bucket, packages are
+ * sorted ASC by `startsAt` and billing records ASC by `createdAt`, then
+ * paired by index. Extras on either side are dropped (the package is a
+ * comp / gift; or the payment hasn't been spent on a package yet).
+ */
+function matchBillingToPackages(
+  packages: PackageForMatch[],
+  billingRecords: BillingForMatch[],
+): Map<string, BillingForMatch> {
+  const packagesByType = new Map<string, PackageForMatch[]>();
+  for (const p of packages) {
+    const list = packagesByType.get(p.packageTypeId) ?? [];
+    list.push(p);
+    packagesByType.set(p.packageTypeId, list);
+  }
+  const billingByType = new Map<string, BillingForMatch[]>();
+  for (const b of billingRecords) {
+    if (!b.packageTypeId) continue;
+    const list = billingByType.get(b.packageTypeId) ?? [];
+    list.push(b);
+    billingByType.set(b.packageTypeId, list);
+  }
+
+  const linkMap = new Map<string, BillingForMatch>();
+  for (const [typeId, pkgs] of packagesByType) {
+    const sortedPkgs = [...pkgs].sort(
+      (a, b) => a.startsAt.getTime() - b.startsAt.getTime(),
+    );
+    const records = [...(billingByType.get(typeId) ?? [])].sort(
+      (a, b) => a.createdAt.getTime() - b.createdAt.getTime(),
+    );
+    sortedPkgs.forEach((p, i) => {
+      const match = records[i];
+      if (match) linkMap.set(p.id, match);
+    });
+  }
+  return linkMap;
 }
 
 export async function POST(request: Request) {

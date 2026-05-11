@@ -365,7 +365,47 @@
       "filterExpired": "Istekli",
       "filterEmpty": "Nema klijenata koji odgovaraju filteru.",
       "compPackageHeading": "Poklon paket",
-      "newPaymentAction": "Nova uplata"
+      "newPaymentAction": "Nova uplata",
+      "newPaymentSubmit": "Sačuvaj uplatu",
+      "paymentAmount": "Iznos (RSD)",
+      "paymentMethod": {
+        "label": "Način plaćanja",
+        "cash": "Gotovina",
+        "card": "Kartica",
+        "invoice": "Račun"
+      },
+      "amountRequired": "Iznos je obavezan.",
+      "amountPositive": "Iznos mora biti veći od 0.",
+      "openActions": "Otvori akcije",
+      "viewProfile": "Otvori profil"
+    },
+    "clientDetail": {
+      "title": "Klijent",
+      "openActions": "Akcije za klijenta",
+      "loadError": "Nije moguće učitati klijenta.",
+      "currentPackage": "Trenutni paket",
+      "noActivePackage": "Nema aktivnog paketa.",
+      "packageHistory": "Istorija paketa",
+      "noPackages": "Još nema paketa.",
+      "packagesError": "Nije moguće učitati pakete.",
+      "upcomingBookings": "Predstojeći termini",
+      "noUpcoming": "Nema predstojećih termina.",
+      "upcomingError": "Nije moguće učitati predstojeće termine.",
+      "viewHistory": "Istorija treninga",
+      "noPastBookings": "Nema prošlih treninga.",
+      "canceledTag": "Otkazano",
+      "comp": "Poklon paket",
+      "paid": "Plaćeno {{amount}} RSD",
+      "sessionsRemaining": "{{remaining}}/{{total}} termina",
+      "validUntil": "Važi do {{date}}",
+      "status": {
+        "active": "Aktivan",
+        "paused": "Pauziran",
+        "expiring": "Ističe uskoro",
+        "expired": "Istekao",
+        "usedUp": "Iskorišćen",
+        "none": "Bez paketa"
+      }
     },
     "packages": {
       "classType": "Tip treninga",
