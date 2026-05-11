@@ -102,10 +102,12 @@ export default function AdminClientDetail() {
   const clientQuery = useQuery(clientsQueries.byId(id));
   const client = clientQuery.data?.client;
 
-  // Filter packages to this client by email (most precise match server-side).
+  // Use the per-client GET path so the response includes the matched
+  // BillingRecord per ClientPackage (closes the P2 TODO). The admin list-all
+  // path doesn't attach billingRecord.
   const packagesQuery = useQuery({
-    ...packagesQueries.clientPackagesAdminList({ search: client?.user.email }),
-    enabled: !!client?.user.email,
+    ...packagesQueries.clientPackages(client?.id),
+    enabled: !!client?.id,
   });
 
   const upcomingQuery = useInfiniteQuery({
@@ -283,8 +285,6 @@ export default function AdminClientDetail() {
                             >
                               {p.packageType?.name ?? "—"}
                             </Text>
-                            {/* TODO P2: surface billingRecord on ClientPackage list response;
-                                until then we only show package + dates + sessions. */}
                             {expired ? (
                               <Badge status="danger">
                                 {t("admin.clientDetail.status.expired")}
@@ -302,12 +302,29 @@ export default function AdminClientDetail() {
                           <Text className="text-muted" style={{ fontSize: 12 }}>
                             {`${dayjs(p.startsAt).locale(lang).format("D.M.YYYY.")} — ${dayjs(p.expiresAt).locale(lang).format("D.M.YYYY.")}`}
                           </Text>
-                          <Text className="text-muted" style={{ fontSize: 12 }}>
-                            {t("admin.clientDetail.sessionsRemaining", {
-                              remaining: p.sessionsRemaining,
-                              total: p.packageType?.sessionCount ?? "—",
-                            })}
-                          </Text>
+                          <View className="flex-row items-center justify-between gap-3">
+                            <Text className="text-muted" style={{ fontSize: 12 }}>
+                              {t("admin.clientDetail.sessionsRemaining", {
+                                remaining: p.sessionsRemaining,
+                                total: p.packageType?.sessionCount ?? "—",
+                              })}
+                            </Text>
+                            {/* P2 follow-up: payment/comp tag derived from
+                                the BillingRecord attached server-side. Null =
+                                no matching CONFIRMED payment found, so the
+                                package was a comp / gift. */}
+                            <Text
+                              testID={`package-history-row-${p.id}-billing-tag`}
+                              className="text-muted font-body-medium"
+                              style={{ fontSize: 12 }}
+                            >
+                              {p.billingRecord
+                                ? t("admin.clientDetail.paid", {
+                                    amount: p.billingRecord.amount,
+                                  })
+                                : t("admin.clientDetail.comp")}
+                            </Text>
+                          </View>
                         </View>
                       </React.Fragment>
                     );

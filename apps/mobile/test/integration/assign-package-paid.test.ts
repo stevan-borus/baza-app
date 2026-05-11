@@ -28,6 +28,7 @@ vi.mock("@/lib/server/auth-guards", async () => {
 });
 
 import { POST } from "@/app/api/billing/+api";
+import { GET as GET_CLIENT_PACKAGES, POST as POST_CLIENT_PACKAGE } from "@/app/api/packages/client-packages/+api";
 import { prisma } from "@/lib/server/prisma";
 
 async function seed() {
@@ -126,6 +127,82 @@ describe("assign-package paid mode (POST /api/billing)", () => {
 
     // (e) Package sessions seeded from the PackageType snapshot.
     expect(pack.sessionsRemaining).toBe(8);
+  });
+
+  it("GET /api/packages/client-packages?clientProfileId attaches billingRecord to paid packages and null to comp packages", async () => {
+    const { adminUser, clientUser, clientProfile, packageType } = await seed();
+    setMockUser({
+      id: adminUser.id,
+      role: "ADMIN",
+      email: adminUser.email,
+      isActive: true,
+      clientProfile: null,
+    });
+
+    // 1) Paid package — goes through POST /api/billing with
+    //    activatePackageOnConfirm: true. The server uses now() for both
+    //    the BillingRecord.createdAt and the ClientPackage.startsAt, so
+    //    they share a logical clock tick and are the first of each type.
+    const paidRes = await POST(
+      buildJsonRequest({
+        clientUserId: clientUser.id,
+        amount: 32000,
+        method: "CARD",
+        packageTypeId: packageType.id,
+        activatePackageOnConfirm: true,
+      }),
+    );
+    expect(paidRes.status).toBe(201);
+
+    // 2) Comp package — created later (startsAt one hour ahead) via the
+    //    plain POST /api/packages/client-packages, no billing row. After
+    //    chronological zipping the paid package (older startsAt) pairs
+    //    with the only BillingRecord; the comp package (newer startsAt,
+    //    no record at index 1) stays unpaired.
+    const compRes = await POST_CLIENT_PACKAGE(
+      new Request("http://test.local/api/packages/client-packages", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          clientProfileId: clientProfile.id,
+          packageTypeId: packageType.id,
+          startsAt: new Date(now().getTime() + 60 * 60 * 1000).toISOString(),
+        }),
+      }),
+    );
+    expect(compRes.status).toBe(201);
+
+    // Sanity: two ClientPackages, one BillingRecord.
+    const allPacks = await prisma.clientPackage.findMany({
+      orderBy: { startsAt: "asc" },
+    });
+    expect(allPacks).toHaveLength(2);
+    const paidPackId = allPacks[0]!.id;
+    const compPackId = allPacks[1]!.id;
+
+    // Hit the GET endpoint and inspect billingRecord per package.
+    const getRes = await GET_CLIENT_PACKAGES(
+      new Request(
+        `http://test.local/api/packages/client-packages?clientProfileId=${clientProfile.id}`,
+      ),
+    );
+    expect(getRes.status).toBe(200);
+    const body = (await getRes.json()) as {
+      success: boolean;
+      packages: Array<{
+        id: string;
+        billingRecord: { amount: number; method: string } | null;
+      }>;
+    };
+    expect(body.success).toBe(true);
+    expect(body.packages).toHaveLength(2);
+
+    const byId = new Map(body.packages.map((p) => [p.id, p]));
+    expect(byId.get(compPackId)?.billingRecord).toBeNull();
+    expect(byId.get(paidPackId)?.billingRecord).toEqual({
+      amount: 32000,
+      method: "CARD",
+    });
   });
 
   it("paid mode: rejects negative amount and creates neither row", async () => {
