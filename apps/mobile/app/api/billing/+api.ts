@@ -44,9 +44,35 @@ export async function GET(request: Request) {
     take: parsedQuery.data.take,
   });
 
+  // Resolve `client.fullName` for the page in one round-trip. BillingRecord
+  // has no formal FK to User in the schema (clientUserId is just a string),
+  // so we batch-fetch users for the page and join in-memory rather than
+  // adding a migration for one read path. Admins need WHO paid on every
+  // row, not just package/method/amount.
+  const clientUserIds = Array.from(
+    new Set(payments.map((p) => p.clientUserId)),
+  );
+  const users =
+    clientUserIds.length > 0
+      ? await prisma.user.findMany({
+          where: { id: { in: clientUserIds } },
+          select: { id: true, fullName: true, email: true },
+        })
+      : [];
+  const userById = new Map(users.map((u) => [u.id, u] as const));
+  const records = payments.map((p) => {
+    const u = userById.get(p.clientUserId);
+    return {
+      ...p,
+      client: u
+        ? { fullName: u.fullName, email: u.email }
+        : null,
+    };
+  });
+
   return ok({
     success: true,
-    records: payments,
+    records,
     nextCursor:
       payments.length === parsedQuery.data.take
         ? payments[payments.length - 1]?.id ?? null

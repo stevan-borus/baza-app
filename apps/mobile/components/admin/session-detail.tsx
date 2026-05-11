@@ -16,6 +16,7 @@ import {
   useSessionEditSheet,
 } from "@/components/ui/session-edit-sheet";
 import { sessionsQueries } from "@/lib/queries/sessions-queries-factory";
+import { ReturnToPill } from "@/components/admin/return-to-pill";
 
 export function SessionDetail({ id }: { id: string }) {
   const { t, i18n } = useTranslation();
@@ -53,7 +54,8 @@ export function SessionDetail({ id }: { id: string }) {
                 roomId: session.roomId ?? null,
                 roomName: session.room?.name ?? null,
                 trainerUserId: session.trainerUserId ?? null,
-                bookedCount: session.bookings.length,
+                bookedCount: session.bookedCount,
+                seriesBookedCount: session.seriesBookedCount,
                 capacity: session.capacity,
                 startsAt: session.startsAt,
                 endsAt: session.endsAt,
@@ -75,6 +77,8 @@ export function SessionDetail({ id }: { id: string }) {
           gap: 16,
         }}
       >
+        <ReturnToPill testID="session-detail-return-to-pill" />
+
         {query.isLoading ? (
           <>
             <SkeletonCard />

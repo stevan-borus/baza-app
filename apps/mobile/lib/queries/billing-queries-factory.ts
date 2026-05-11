@@ -15,6 +15,17 @@ const billingRecordSchema = z.object({
   status: z.enum(["PENDING", "CONFIRMED", "CANCELED"]),
   notes: z.nullable(z.string()).optional(),
   createdAt: z.string(),
+  // Client identity for the Naplata list card. Nullable because the GET
+  // endpoint joins in-memory (no FK) and a deleted-user payment would
+  // otherwise drop off the list.
+  client: z
+    .nullable(
+      z.object({
+        fullName: z.string(),
+        email: z.string(),
+      }),
+    )
+    .optional(),
 });
 
 const billingResponseSchema = z.object({

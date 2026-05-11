@@ -67,6 +67,10 @@ export type EditSessionInput = {
   roomName?: string | null;
   trainerUserId: string | null;
   bookedCount: number;
+  // ADR-0002: bookings across the whole recurring series (non-canceled).
+  // Equal to bookedCount for singleton sessions. Defaults to bookedCount
+  // when the caller doesn't have it (e.g. availability list snapshots).
+  seriesBookedCount?: number;
   capacity: number;
   availableSlots?: number;
   waitlistCount?: number;
@@ -81,6 +85,7 @@ type ShowEditState = {
   classTypeName: string;
   roomName: string | null;
   bookedCount: number;
+  seriesBookedCount: number;
   capacity: number;
   availableSlots: number;
   waitlistCount: number;
@@ -243,6 +248,9 @@ export function useSessionEditSheet() {
       classTypeName: session.classTypeName,
       roomName: session.roomName ?? null,
       bookedCount: session.bookedCount,
+      // Fall back to bookedCount when the caller didn't supply
+      // seriesBookedCount — for singletons they're identical.
+      seriesBookedCount: session.seriesBookedCount ?? session.bookedCount,
       capacity: session.capacity,
       availableSlots: session.availableSlots ?? 0,
       waitlistCount: session.waitlistCount ?? 0,
@@ -414,10 +422,11 @@ export function SessionEditSheet(props: SessionEditSheetBoundProps) {
               />
 
               {(() => {
-                const cannotHide =
-                  editForm.isActive &&
-                  !showEdit?.recurringScheduleId &&
-                  (showEdit?.bookedCount ?? 0) > 0;
+                // ADR-0002 occurrence rule: per-session save path is disabled
+                // iff THIS session has bookings, regardless of whether it
+                // belongs to a recurring series.
+                const sessionBookedCount = showEdit?.bookedCount ?? 0;
+                const cannotHide = editForm.isActive && sessionBookedCount > 0;
                 return (
                   <View className="gap-1">
                     <View className="flex-row items-center justify-between px-1 py-1">
@@ -436,7 +445,9 @@ export function SessionEditSheet(props: SessionEditSheetBoundProps) {
                     </View>
                     {cannotHide ? (
                       <Text className="text-xs text-muted px-1">
-                        {t("admin.schedule.hideBlockedSession")}
+                        {t("admin.schedule.hideBlockedSession", {
+                          count: sessionBookedCount,
+                        })}
                       </Text>
                     ) : null}
                   </View>
@@ -615,8 +626,17 @@ export function SessionEditSheet(props: SessionEditSheetBoundProps) {
               />
 
               {(() => {
-                const cannotHide =
-                  seriesForm.isActive && futureBookingsCount > 0;
+                // ADR-0002 series rule: whole-series save path is disabled
+                // iff ANY session in the series has bookings. We prefer the
+                // session GET's seriesBookedCount (counts non-canceled
+                // bookings across every session in the series, past+future);
+                // fall back to the schedule endpoint's futureBookingsCount
+                // when seriesBookedCount wasn't supplied by the caller.
+                const seriesCount = Math.max(
+                  showEdit?.seriesBookedCount ?? 0,
+                  futureBookingsCount,
+                );
+                const cannotHide = seriesForm.isActive && seriesCount > 0;
                 return (
                   <View className="gap-1">
                     <View className="flex-row items-center justify-between px-1 py-1">
@@ -636,7 +656,7 @@ export function SessionEditSheet(props: SessionEditSheetBoundProps) {
                     {cannotHide ? (
                       <Text className="text-xs text-muted px-1">
                         {t("admin.schedule.hideBlockedSeries", {
-                          count: futureBookingsCount,
+                          count: seriesCount,
                         })}
                       </Text>
                     ) : null}

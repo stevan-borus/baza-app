@@ -36,64 +36,58 @@ const classTypeAccentColor: Record<string, string> = {
 };
 
 /**
- * Editorial time block for the session card. Renders "HH:mm / HH:mm" as a
- * three-part composition: bold start time on the left baseline, oversized
- * hairline slash crossing through, muted end time on the right baseline.
- * Both digit groups sit on the same baseline so the slash reads as the
- * connective tissue, not a stair-step. Same fontFamily and same lineHeight
- * on both digit groups; the slash is positioned absolutely over them so its
- * own line-height never pushes anything around.
+ * Stacked time block for the session card — final design locked in
+ * UI_FEEDBACK_LOG row #5. Start time above a hairline divider, end time
+ * below. Both digits in `tokens.fg` at the same weight (the muted-end
+ * variant was explicitly vetoed during the round-6 grill).
+ *
+ * Fraunces-SemiBold, 22px / lineHeight 24 / letterSpacing -0.3, with
+ * `fontVariant: ["tabular-nums"]` so "08:00" and "09:00" align
+ * character-by-character. The divider spans only the visual width of the
+ * time text, not the full card.
  */
 function SessionCardTime({ time }: { time: string }) {
   const parts = time.split(/\s*[-–]\s*/);
   if (parts.length !== 2) {
     return (
-      <Text className="text-base font-body-bold min-w-[54px] text-foreground">
+      <Text
+        className="font-display text-foreground"
+        style={{
+          fontSize: 22,
+          lineHeight: 24,
+          letterSpacing: -0.3,
+          fontVariant: ["tabular-nums"],
+        }}
+      >
         {time}
       </Text>
     );
   }
   const [start, end] = parts;
   return (
-    <View
-      style={{
-        flexDirection: "row",
-        alignItems: "center",
-        minWidth: 78,
-        position: "relative",
-      }}
-    >
+    <View className="items-center self-start">
       <Text
-        className="text-foreground"
+        className="font-display text-foreground"
         style={{
-          fontFamily: "AlbertSans-Bold",
-          fontSize: 15,
-          letterSpacing: -0.4,
-          lineHeight: 20,
+          fontSize: 22,
+          lineHeight: 24,
+          letterSpacing: -0.3,
+          fontVariant: ["tabular-nums"],
         }}
       >
         {start}
       </Text>
+      <View
+        className="bg-glass-border self-stretch my-1"
+        style={{ height: 1 }}
+      />
       <Text
-        className="text-accent"
+        className="font-display text-foreground"
         style={{
-          fontFamily: "AlbertSans-Light",
-          fontSize: 26,
-          lineHeight: 20,
-          marginHorizontal: 4,
-          transform: [{ skewX: "-14deg" }, { translateY: -1 }],
-          opacity: 0.5,
-        }}
-      >
-        /
-      </Text>
-      <Text
-        className="text-muted"
-        style={{
-          fontFamily: "AlbertSans-Medium",
-          fontSize: 13,
-          letterSpacing: -0.2,
-          lineHeight: 20,
+          fontSize: 22,
+          lineHeight: 24,
+          letterSpacing: -0.3,
+          fontVariant: ["tabular-nums"],
         }}
       >
         {end}
@@ -139,7 +133,11 @@ export function SessionCard({
   return (
     <Pressable testID={testID} onPress={onPress} className="active:opacity-80">
       <View style={{ opacity: hidden ? 0.5 : 1 }}>
-        <GlassCard accentBorder={accentBorder} accentBorderColor={accentBorderColor}>
+        <GlassCard
+          accentBorder={accentBorder}
+          accentBorderColor={accentBorderColor}
+          style={{ paddingVertical: 12 }}
+        >
           <View className="flex-col gap-2">
             <View className="flex-row items-center gap-3">
               <SessionCardTime time={time} />

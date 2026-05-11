@@ -425,8 +425,8 @@
       "trainer": "Trainer",
       "trainerAdminSuffix": " (admin)",
       "visibleToClients": "Visible to clients",
-      "hideBlockedSession": "Cannot hide — session has active bookings. Cancel them first.",
-      "hideBlockedSeries": "Cannot hide — {{count}} active bookings. Cancel them first.",
+      "hideBlockedSession": "Can't hide: this session already has {{count}} bookings.",
+      "hideBlockedSeries": "Can't hide: the series already has {{count}} bookings.",
       "hiddenBadge": "Hidden",
       "emptyClassTypes": "No class types available",
       "emptyRooms": "No rooms available",
@@ -556,6 +556,7 @@
       "totalRevenue": "Total revenue",
       "transactionCount": "Transactions",
       "avgPerClient": "Avg per client",
+      "filteredSubtitle": "Filtered: {{count}} payments · {{amount}} RSD",
       "packagesSection": "Packages",
       "packagesMostUsed": "Most used",
       "packagesRevenue": "Revenue per type",
@@ -590,6 +591,14 @@
       "paketi": {
         "title": "Packages",
         "activeAssignmentsLink": "Active assignments",
+        "newAssignment": "New assignment",
+        "flow": {
+          "pickClient": "Pick a client",
+          "pickMode": "Assignment type",
+          "modeComp": "Gift package",
+          "modePaid": "New payment",
+          "searchPlaceholder": "Search clients…"
+        },
         "tiles": {
           "active": "Active packages",
           "expiringSoon": "Expiring soon",

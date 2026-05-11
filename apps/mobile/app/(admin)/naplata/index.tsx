@@ -11,9 +11,8 @@ import {
 } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-native";
-import { router } from "expo-router";
 import dayjs from "dayjs";
-import { useReturnToPill } from "@/lib/admin/return-to";
+import { ReturnToPill } from "@/components/admin/return-to-pill";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { MotiView } from "@/components/ui/styled";
 import { getDateLocale } from "@/lib/i18n";
@@ -47,7 +46,6 @@ export default function AdminBilling() {
   const queryClient = useQueryClient();
   const tokens = useThemeTokens();
   const bottomPad = useTabBarBottomPadding();
-  const returnTo = useReturnToPill();
   const [showCreate, setShowCreate] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState(() => dayjs());
   const [activeFilter, setActiveFilter] = useState<FilterTab>("all");
@@ -98,6 +96,17 @@ export default function AdminBilling() {
       return records.filter((r) => r.status === "CANCELED");
     return records;
   }, [records, activeFilter]);
+
+  // Filtered-totals subtitle (P4-2). "Filters active" here means the user
+  // has narrowed the list below the default month view — i.e. picked a
+  // specific client or a non-"all" status chip. The month chooser always
+  // has a value, so we don't count from/to as "filters" for this UI cue.
+  const filtersActive = filterClientUserId !== "" || activeFilter !== "all";
+  const filteredCount = filteredRecords.length;
+  const filteredAmount = useMemo(
+    () => filteredRecords.reduce((sum, r) => sum + r.amount, 0),
+    [filteredRecords],
+  );
 
   function navigateBillingMonth(direction: -1 | 1) {
     setSelectedMonth((m) => m.add(direction, "month"));
@@ -175,25 +184,7 @@ export default function AdminBilling() {
         }}
       >
       {/* Return-to pill — only when arriving from a cross-tab drill */}
-      {returnTo ? (
-        <MotiView
-          from={{ opacity: 0, translateY: -4 }}
-          animate={{ opacity: 1, translateY: 0 }}
-          transition={{ type: "timing", duration: 250 }}
-        >
-          <Pressable
-            testID="naplata-return-to-pill"
-            onPress={() => router.replace(returnTo.path as Parameters<typeof router.replace>[0])}
-            hitSlop={8}
-            android_ripple={null}
-            className="self-start active:opacity-60 rounded-full border border-glass-border bg-glass px-3 py-1.5"
-          >
-            <Text className="text-foreground font-body-semibold" style={{ fontSize: 12 }}>
-              {t("admin.izvestaji.backTo", { label: returnTo.label })}
-            </Text>
-          </Pressable>
-        </MotiView>
-      ) : null}
+      <ReturnToPill testID="naplata-return-to-pill" />
 
       {/* Period selector — caps label between Feather chevrons */}
       <MotiView
@@ -275,6 +266,18 @@ export default function AdminBilling() {
             },
           ]}
         />
+        {filtersActive ? (
+          <Text
+            testID="naplata-filtered-subtitle"
+            className="text-muted font-body-medium mt-2"
+            style={{ fontSize: 13 }}
+          >
+            {t("admin.manage.filteredSubtitle", {
+              count: filteredCount,
+              amount: filteredAmount.toLocaleString("sr-RS"),
+            })}
+          </Text>
+        ) : null}
       </MotiView>
 
       {/* Filter chips */}
@@ -349,6 +352,18 @@ export default function AdminBilling() {
               <View key={item.id} className="px-1 py-1.5">
                 <Card testID={`billing-row-${item.id}`}>
                   <View className="flex-col gap-2">
+                    {/* Primary identity: client name leads the card so admins
+                        can scan the list by WHO paid, not just amount/method. */}
+                    {item.client?.fullName ? (
+                      <Text
+                        testID={`billing-row-client-${item.id}`}
+                        className="text-foreground font-body-semibold"
+                        style={{ fontSize: 15 }}
+                        numberOfLines={1}
+                      >
+                        {item.client.fullName}
+                      </Text>
+                    ) : null}
                     <View className="flex-row justify-between items-center">
                       <Text className="text-foreground font-extrabold" style={{ fontSize: 20 }}>
                         {item.amount} RSD

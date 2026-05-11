@@ -55,8 +55,26 @@ export async function GET(request: Request, { id }: RouteParams) {
   });
   if (!session) return fail("Session not found", 404);
 
+  // ADR-0002: surface bookedCount + seriesBookedCount so the edit sheet can
+  // gate the "visible to clients" toggle by both rules. For a singleton
+  // session (no recurring linkage) they're equal — the series IS this one
+  // session. For a recurring series, count non-canceled bookings across
+  // every session sharing the same recurringScheduleId, matching the
+  // bookings list selector above (`canceledAt: null`).
+  const bookedCount = session.bookings.length;
+  const seriesBookedCount = session.recurringScheduleId
+    ? await prisma.booking.count({
+        where: {
+          session: { recurringScheduleId: session.recurringScheduleId },
+          canceledAt: null,
+        },
+      })
+    : bookedCount;
+
   const shaped = {
     ...session,
+    bookedCount,
+    seriesBookedCount,
     bookings: session.bookings.map((b) => ({
       id: b.id,
       createdAt: b.createdAt,

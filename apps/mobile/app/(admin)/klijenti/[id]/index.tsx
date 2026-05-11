@@ -28,6 +28,7 @@ import { packagesQueries, type ClientPackage } from "@/lib/queries/packages-quer
 import { bookingsQueries } from "@/lib/queries/bookings-queries-factory";
 import { BookingRow } from "@/components/admin/booking-row";
 import { AssignPackageSheetContent } from "@/components/admin/assign-package-sheet-content";
+import { ReturnToPill } from "@/components/admin/return-to-pill";
 
 // ─── InitialsAvatar ───────────────────────────────────────────────────────────
 // Larger variant of the list-row avatar; same styling rules as the row but
@@ -171,6 +172,8 @@ export default function AdminClientDetail() {
           gap: 16,
         }}
       >
+        <ReturnToPill testID="client-detail-return-to-pill" />
+
         {clientQuery.isLoading ? (
           <>
             <SkeletonCard />
