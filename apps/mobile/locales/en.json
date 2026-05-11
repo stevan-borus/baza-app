@@ -363,6 +363,7 @@
       "filterEmpty": "No clients match this filter.",
       "compPackageHeading": "Complimentary package",
       "newPaymentAction": "New payment",
+      "openActions": "Open actions",
       "viewProfile": "View profile"
     },
     "clientDetail": {

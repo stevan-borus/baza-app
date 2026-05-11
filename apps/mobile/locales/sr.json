@@ -366,6 +366,7 @@
       "filterEmpty": "Nema klijenata koji odgovaraju filteru.",
       "compPackageHeading": "Poklon paket",
       "newPaymentAction": "Nova uplata",
+      "openActions": "Otvori akcije",
       "viewProfile": "Otvori profil"
     },
     "clientDetail": {

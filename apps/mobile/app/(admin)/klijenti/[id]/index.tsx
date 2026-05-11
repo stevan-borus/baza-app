@@ -86,6 +86,10 @@ export default function AdminClientDetail() {
   const [showActions, setShowActions] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
   const [showAssign, setShowAssign] = useState(false);
+  // P2-4: mode is pre-armed by the action-sheet rows. "comp" = Dodeli paket,
+  // "paid" = Nova uplata. The sheet body still renders the comp-only form
+  // for now; P2-5 makes it mode-aware.
+  const [showAssignMode, setShowAssignMode] = useState<"comp" | "paid">("comp");
   const [showPause, setShowPause] = useState(false);
   const [showDelete, setShowDelete] = useState(false);
 
@@ -410,11 +414,22 @@ export default function AdminClientDetail() {
               }}
             />
             <ActionRow
+              testID="client-action-new-payment"
+              icon="dollar-sign"
+              label={t("admin.clients.newPaymentAction")}
+              onPress={() => {
+                setShowActions(false);
+                setShowAssignMode("paid");
+                setShowAssign(true);
+              }}
+            />
+            <ActionRow
               testID="client-action-assign-package"
               icon="gift"
               label={t("admin.clients.assignPackage")}
               onPress={() => {
                 setShowActions(false);
+                setShowAssignMode("comp");
                 setShowAssign(true);
               }}
             />
@@ -503,6 +518,9 @@ export default function AdminClientDetail() {
 
       {/* Assign-package sheet */}
       <AppSheet open={showAssign} onOpenChange={setShowAssign}>
+        {/* TODO P2-5: render mode-specific content based on showAssignMode
+            ("comp" vs "paid"). For now the body renders the comp-only
+            form regardless of mode. */}
         <View className="flex-col gap-4">
           <Text
             className="text-foreground font-body-bold"

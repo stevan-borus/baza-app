@@ -16,6 +16,7 @@ import {
 } from "react-native";
 import { MotiView } from "@/components/ui/styled";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
+import Feather from "@expo/vector-icons/Feather";
 import { AppSheet } from "@/components/ui/sheet";
 import { ConfirmSheet } from "@/components/ui/confirm-sheet";
 import { Badge } from "@/components/ui/badge";
@@ -75,6 +76,10 @@ export default function AdminClients() {
   const [showCreateClient, setShowCreateClient] = useState(false);
   const [showEditClient, setShowEditClient] = useState<string | null>(null);
   const [showAssignPackage, setShowAssignPackage] = useState<string | null>(null);
+  // P2-4: when the assign sheet opens, callers pre-arm the mode here.
+  // "comp" = Dodeli paket (existing flow), "paid" = Nova uplata (P2-5 wires
+  // up the actual payment fields). For now the sheet body is comp-only.
+  const [showAssignPackageMode, setShowAssignPackageMode] = useState<"comp" | "paid">("comp");
   const [showPause, setShowPause] = useState<string | null>(null);
   // Actions sheet — opened by tapping a client row in the list.
   const [showActionsFor, setShowActionsFor] = useState<string | null>(null);
@@ -323,10 +328,12 @@ export default function AdminClients() {
                 <EmptyState title={t("admin.clients.empty")} />
               ) : null}
 
-              {/* Compact rows. Tap a row → opens the actions sheet (Uredi /
-                  Dodeli paket / Pauziraj / Obriši). Status badge sits to
-                  the right of the email so density stays low even with
-                  hundreds of clients on screen. */}
+              {/* Compact rows. P2-4: tap the card → push detail page
+                  (/klijenti/[user.id]). Tap the pencil on the right →
+                  open the actions sheet (Uredi / Nova uplata / Dodeli
+                  paket / Pauziraj / Obriši). The pencil is a nested
+                  Pressable — RN captures the inner press first, so the
+                  outer push() does not fire. */}
               <View className="bg-surface rounded-lg overflow-hidden">
                 {filteredClients.map((client, idx) => (
                   <React.Fragment key={client.id}>
@@ -338,7 +345,7 @@ export default function AdminClients() {
                     ) : null}
                     <Pressable
                       testID={`client-row-${client.id}`}
-                      onPress={() => setShowActionsFor(client.id)}
+                      onPress={() => router.push(`/(admin)/klijenti/${client.user.id}`)}
                       android_ripple={null}
                       className="flex-row items-center gap-3 px-4 py-3 active:opacity-70"
                     >
@@ -377,11 +384,21 @@ export default function AdminClients() {
                           {t("admin.clients.filterExpired")}
                         </Badge>
                       ) : null}
-                      <FontAwesome
-                        name="chevron-right"
-                        size={11}
-                        color={tokens.faint}
-                      />
+                      <Pressable
+                        testID={`client-pencil-${client.user.id}`}
+                        onPress={() => setShowActionsFor(client.id)}
+                        hitSlop={12}
+                        android_ripple={null}
+                        accessibilityRole="button"
+                        accessibilityLabel={t("admin.clients.openActions")}
+                        className="w-8 h-8 items-center justify-center -mr-1 active:opacity-60"
+                      >
+                        <Feather
+                          name="edit-2"
+                          size={16}
+                          color={tokens.faint}
+                        />
+                      </Pressable>
                     </Pressable>
                   </React.Fragment>
                 ))}
@@ -587,15 +604,6 @@ export default function AdminClients() {
                 </View>
                 <View className="bg-glass-border" style={{ height: 1 }} />
                 <ActionRow
-                  testID="client-action-view-profile"
-                  icon="user"
-                  label={t("admin.clients.viewProfile")}
-                  onPress={() => {
-                    setShowActionsFor(null);
-                    router.push(`/(admin)/klijenti/${client.user.id}`);
-                  }}
-                />
-                <ActionRow
                   testID="client-action-edit"
                   icon="edit-2"
                   label={t("admin.clients.edit")}
@@ -611,11 +619,22 @@ export default function AdminClients() {
                   }}
                 />
                 <ActionRow
+                  testID="client-action-new-payment"
+                  icon="dollar-sign"
+                  label={t("admin.clients.newPaymentAction")}
+                  onPress={() => {
+                    setShowActionsFor(null);
+                    setShowAssignPackageMode("paid");
+                    setShowAssignPackage(client.id);
+                  }}
+                />
+                <ActionRow
                   testID="client-action-assign-package"
                   icon="gift"
                   label={t("admin.clients.assignPackage")}
                   onPress={() => {
                     setShowActionsFor(null);
+                    setShowAssignPackageMode("comp");
                     setShowAssignPackage(client.id);
                   }}
                 />
@@ -745,6 +764,10 @@ export default function AdminClients() {
         </AppSheet>
 
         <AppSheet open={!!showAssignPackage} onOpenChange={() => setShowAssignPackage(null)}>
+          {/* TODO P2-5: render mode-specific content based on
+              showAssignPackageMode ("comp" vs "paid"). For now, the body
+              renders the comp-only form regardless of mode — both action-
+              sheet rows funnel into the same sheet. */}
           <View className="flex-col gap-4">
             <SheetHeader
               title={t("admin.clients.sheetAssign")}
@@ -870,8 +893,6 @@ export default function AdminClients() {
 // ─── ActionRow ───────────────────────────────────────────────────────────────
 // Used inside the client-actions sheet. Feather icon + label + chevron, full
 // width, hairline-divided. Destructive variant tints icon + label red.
-
-import Feather from "@expo/vector-icons/Feather";
 
 /**
  * SheetHeader — back chevron on the left of the sheet title. The chevron
