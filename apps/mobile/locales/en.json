@@ -528,6 +528,8 @@
     }
   },
   "adminMenu": {
+    "catalog": "Catalog",
+    "openMenu": "Open catalog menu",
     "classTypes": "Class types",
     "rooms": "Rooms",
     "packageTypes": "Package types",

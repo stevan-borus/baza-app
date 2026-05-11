@@ -532,6 +532,8 @@
     }
   },
   "adminMenu": {
+    "catalog": "Katalog",
+    "openMenu": "Otvori meni kataloga",
     "classTypes": "Tipovi treninga",
     "rooms": "Sale",
     "packageTypes": "Tipovi paketa",

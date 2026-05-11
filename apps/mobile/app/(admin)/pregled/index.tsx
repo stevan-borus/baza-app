@@ -27,6 +27,7 @@ import {
 import { useThemeTokens } from "@/components/ui/tokens";
 import { CapsLabel, StudioWeekStrip, StatStrip } from "@/components/ui/studio";
 import { HeaderIconButton } from "@/components/ui/app-header";
+import { AvatarMenu } from "@/components/admin/avatar-menu";
 import {
   SessionEditSheet,
   useSessionEditSheet,
@@ -242,12 +243,15 @@ export default function AdminSchedule() {
     <ScreenContainerRaw
       title={t("tabs.dashboard")}
       rightSlot={
-        <HeaderIconButton
-          icon="plus"
-          onPress={() => setShowCreate(true)}
-          accessibilityLabel={t("admin.schedule.newSession")}
-          testID="admin-new-session-button"
-        />
+        <View style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
+          <AvatarMenu />
+          <HeaderIconButton
+            icon="plus"
+            onPress={() => setShowCreate(true)}
+            accessibilityLabel={t("admin.schedule.newSession")}
+            testID="admin-new-session-button"
+          />
+        </View>
       }
     >
       <ScrollView

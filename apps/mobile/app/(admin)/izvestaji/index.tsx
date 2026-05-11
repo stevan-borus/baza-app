@@ -22,6 +22,7 @@ import { useThemeTokens } from "@/components/ui/tokens";
 import { StatStrip } from "@/components/ui/studio";
 import { reportsQueries } from "@/lib/queries/reports-queries-factory";
 import { ScreenContainerRaw, useTabBarBottomPadding } from "@/components/ui/screen-container";
+import { AvatarMenu } from "@/components/admin/avatar-menu";
 import dayjs from "dayjs";
 
 type Period = "week" | "month" | "quarter" | "year";
@@ -168,7 +169,7 @@ export default function AdminReports() {
       : 1;
 
   return (
-    <ScreenContainerRaw title={t("admin.manage.tabReports")}>
+    <ScreenContainerRaw title={t("admin.manage.tabReports")} rightSlot={<AvatarMenu />}>
       <ScrollView
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
