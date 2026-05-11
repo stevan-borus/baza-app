@@ -5,6 +5,7 @@
 import React, { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
+import { router } from "expo-router";
 import {
   Pressable,
   RefreshControl,
@@ -585,6 +586,15 @@ export default function AdminClients() {
                   </View>
                 </View>
                 <View className="bg-glass-border" style={{ height: 1 }} />
+                <ActionRow
+                  testID="client-action-view-profile"
+                  icon="user"
+                  label={t("admin.clients.viewProfile")}
+                  onPress={() => {
+                    setShowActionsFor(null);
+                    router.push(`/(admin)/klijenti/${client.user.id}`);
+                  }}
+                />
                 <ActionRow
                   testID="client-action-edit"
                   icon="edit-2"

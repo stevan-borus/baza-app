@@ -362,7 +362,34 @@
       "filterExpired": "Expired",
       "filterEmpty": "No clients match this filter.",
       "compPackageHeading": "Complimentary package",
-      "newPaymentAction": "New payment"
+      "newPaymentAction": "New payment",
+      "viewProfile": "View profile"
+    },
+    "clientDetail": {
+      "title": "Client",
+      "openActions": "Client actions",
+      "loadError": "Unable to load client.",
+      "currentPackage": "Current package",
+      "noActivePackage": "No active package.",
+      "packageHistory": "Package history",
+      "noPackages": "No packages yet.",
+      "packagesError": "Unable to load packages.",
+      "upcomingBookings": "Upcoming bookings",
+      "noUpcoming": "No upcoming bookings.",
+      "upcomingError": "Unable to load upcoming bookings.",
+      "viewHistory": "Training history",
+      "comp": "Complimentary",
+      "paid": "Paid {{amount}} RSD",
+      "sessionsRemaining": "{{remaining}}/{{total}} sessions",
+      "validUntil": "Valid until {{date}}",
+      "status": {
+        "active": "Active",
+        "paused": "Paused",
+        "expiring": "Expiring soon",
+        "expired": "Expired",
+        "usedUp": "Used up",
+        "none": "No package"
+      }
     },
     "packages": {
       "classType": "Class type",
