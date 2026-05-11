@@ -565,6 +565,117 @@
       "packagesCount": "{{count}} sold",
       "packagesReportError": "Unable to load packages report.",
       "packagesReportEmpty": "No package data in this period."
+    },
+    "izvestaji": {
+      "placeholder": "Content coming soon.",
+      "backTo": "← Back to {{label}}",
+      "openCard": "Open",
+      "sections": {
+        "prihod": "Revenue",
+        "iskoriscenost": "Utilization",
+        "rezervacije": "Bookings",
+        "paketi": "Packages"
+      },
+      "headlines": {
+        "prihodSub": "Total revenue",
+        "iskoriscenostSub": "Capacity utilization",
+        "rezervacijeSub": "Bookings",
+        "paketiSub": "Active clients"
+      },
+      "labels": {
+        "izvestaji": "Reports",
+        "naplata": "Billing",
+        "thisPeriod": "this period"
+      },
+      "paketi": {
+        "title": "Packages",
+        "activeAssignmentsLink": "Active assignments",
+        "tiles": {
+          "active": "Active packages",
+          "expiringSoon": "Expiring soon",
+          "consumptionRate": "Consumption rate",
+          "soldInPeriod": "Sold in period"
+        },
+        "mostSold": {
+          "title": "Most-sold packages"
+        },
+        "compVsPaid": {
+          "title": "Paid vs. comp",
+          "paid": "Paid",
+          "comp": "Comp"
+        },
+        "recentActivations": {
+          "title": "Recent activations",
+          "paidTag": "Paid",
+          "compTag": "Comp"
+        },
+        "noData": "No data for the selected period."
+      },
+      "prihod": {
+        "title": "Revenue",
+        "headline": "Total revenue",
+        "chart": {
+          "title": "Revenue over time"
+        },
+        "byPackageType": "By package type",
+        "byMethod": "By payment method",
+        "recentPayments": "Recent payments",
+        "noData": "No data for the selected period.",
+        "paymentsCount_one": "{{count}} payment",
+        "paymentsCount_other": "{{count}} payments"
+      },
+      "iskoriscenost": {
+        "title": "Utilization",
+        "headline": "Capacity utilization",
+        "summary": "{{booked}} of {{capacity}} seats",
+        "trend": {
+          "title": "Trend"
+        },
+        "heatmap": {
+          "title": "By day and time of day",
+          "morning": "Morning",
+          "midday": "Midday",
+          "afternoon": "Afternoon",
+          "evening": "Evening"
+        },
+        "bySala": "By room",
+        "byClassType": "By class type",
+        "byTrainer": "By trainer",
+        "noData": "No data for the selected period.",
+        "dayShort": {
+          "sun": "Sun",
+          "mon": "Mon",
+          "tue": "Tue",
+          "wed": "Wed",
+          "thu": "Thu",
+          "fri": "Fri",
+          "sat": "Sat"
+        }
+      },
+      "rezervacije": {
+        "title": "Bookings",
+        "tiles": {
+          "total": "Total bookings",
+          "showRate": "Show rate",
+          "canceled": "Cancellations",
+          "canceledSub": "{{preCutoff}} regular · {{late}} late",
+          "waitlist": "Waitlist"
+        },
+        "cancelBreakdown": {
+          "title": "Regular vs. late cancellations",
+          "preCutoff": "Pre-cutoff",
+          "late": "Late",
+          "empty": "No cancellations in this period."
+        },
+        "chart": {
+          "title": "Bookings over time"
+        },
+        "topSessions": {
+          "title": "Top sessions",
+          "bookedOfCapacity": "{{booked}}/{{capacity}} booked"
+        },
+        "noData": "No data for the selected period."
+      }
     }
   },
   "adminMenu": {

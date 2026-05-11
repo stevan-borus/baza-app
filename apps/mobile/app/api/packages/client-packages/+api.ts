@@ -2,6 +2,7 @@ import { createClientPackageInputSchema } from "@baza/types";
 import { UserRole } from "@/generated/prisma";
 import { now } from "@/lib/now";
 import { requireRole } from "@/lib/server/auth-guards";
+import { matchBillingToPackages } from "@/lib/server/billing-package-link";
 import { fail, ok } from "@/lib/server/http";
 import { findEligibleClientPackage } from "@/lib/server/package-eligibility";
 import { prisma } from "@/lib/server/prisma";
@@ -81,7 +82,7 @@ export async function GET(request: Request) {
   }
 
   // Admins may list all client packages across the studio when no clientProfileId
-  // is supplied (used by /(admin)/izvestaji/aktivne-dodele assignment list).
+  // is supplied (used by /(admin)/izvestaji/paketi/aktivne-dodele assignment list).
   if (!clientProfileId) {
     if (guard.user.role !== UserRole.ADMIN) {
       return fail("clientProfileId query param is required", 400);
@@ -178,58 +179,6 @@ export async function GET(request: Request) {
   });
 
   return ok({ success: true, packages: shaped });
-}
-
-type PackageForMatch = { id: string; packageTypeId: string; startsAt: Date };
-type BillingForMatch = {
-  id: string;
-  amount: number;
-  method: string;
-  packageTypeId: string | null;
-  createdAt: Date;
-};
-
-/**
- * Build a map ClientPackage.id → matching BillingRecord by zipping the
- * packages and records of each PackageType in chronological order.
- *
- * Matching key is `packageTypeId`. Within each type bucket, packages are
- * sorted ASC by `startsAt` and billing records ASC by `createdAt`, then
- * paired by index. Extras on either side are dropped (the package is a
- * comp / gift; or the payment hasn't been spent on a package yet).
- */
-function matchBillingToPackages(
-  packages: PackageForMatch[],
-  billingRecords: BillingForMatch[],
-): Map<string, BillingForMatch> {
-  const packagesByType = new Map<string, PackageForMatch[]>();
-  for (const p of packages) {
-    const list = packagesByType.get(p.packageTypeId) ?? [];
-    list.push(p);
-    packagesByType.set(p.packageTypeId, list);
-  }
-  const billingByType = new Map<string, BillingForMatch[]>();
-  for (const b of billingRecords) {
-    if (!b.packageTypeId) continue;
-    const list = billingByType.get(b.packageTypeId) ?? [];
-    list.push(b);
-    billingByType.set(b.packageTypeId, list);
-  }
-
-  const linkMap = new Map<string, BillingForMatch>();
-  for (const [typeId, pkgs] of packagesByType) {
-    const sortedPkgs = [...pkgs].sort(
-      (a, b) => a.startsAt.getTime() - b.startsAt.getTime(),
-    );
-    const records = [...(billingByType.get(typeId) ?? [])].sort(
-      (a, b) => a.createdAt.getTime() - b.createdAt.getTime(),
-    );
-    sortedPkgs.forEach((p, i) => {
-      const match = records[i];
-      if (match) linkMap.set(p.id, match);
-    });
-  }
-  return linkMap;
 }
 
 export async function POST(request: Request) {
