@@ -16,6 +16,7 @@ import {
   useSessionEditSheet,
 } from "@/components/ui/session-edit-sheet";
 import { sessionsQueries } from "@/lib/queries/sessions-queries-factory";
+import { ReturnToPill } from "@/components/admin/return-to-pill";
 
 export function SessionDetail({ id }: { id: string }) {
   const { t, i18n } = useTranslation();
@@ -76,6 +77,8 @@ export function SessionDetail({ id }: { id: string }) {
           gap: 16,
         }}
       >
+        <ReturnToPill testID="session-detail-return-to-pill" />
+
         {query.isLoading ? (
           <>
             <SkeletonCard />

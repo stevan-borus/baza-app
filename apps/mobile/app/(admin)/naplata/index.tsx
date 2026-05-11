@@ -11,9 +11,8 @@ import {
 } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-native";
-import { router } from "expo-router";
 import dayjs from "dayjs";
-import { useReturnToPill } from "@/lib/admin/return-to";
+import { ReturnToPill } from "@/components/admin/return-to-pill";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { MotiView } from "@/components/ui/styled";
 import { getDateLocale } from "@/lib/i18n";
@@ -47,7 +46,6 @@ export default function AdminBilling() {
   const queryClient = useQueryClient();
   const tokens = useThemeTokens();
   const bottomPad = useTabBarBottomPadding();
-  const returnTo = useReturnToPill();
   const [showCreate, setShowCreate] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState(() => dayjs());
   const [activeFilter, setActiveFilter] = useState<FilterTab>("all");
@@ -186,25 +184,7 @@ export default function AdminBilling() {
         }}
       >
       {/* Return-to pill — only when arriving from a cross-tab drill */}
-      {returnTo ? (
-        <MotiView
-          from={{ opacity: 0, translateY: -4 }}
-          animate={{ opacity: 1, translateY: 0 }}
-          transition={{ type: "timing", duration: 250 }}
-        >
-          <Pressable
-            testID="naplata-return-to-pill"
-            onPress={() => router.replace(returnTo.path as Parameters<typeof router.replace>[0])}
-            hitSlop={8}
-            android_ripple={null}
-            className="self-start active:opacity-60 rounded-full border border-glass-border bg-glass px-3 py-1.5"
-          >
-            <Text className="text-foreground font-body-semibold" style={{ fontSize: 12 }}>
-              {t("admin.izvestaji.backTo", { label: returnTo.label })}
-            </Text>
-          </Pressable>
-        </MotiView>
-      ) : null}
+      <ReturnToPill testID="naplata-return-to-pill" />
 
       {/* Period selector — caps label between Feather chevrons */}
       <MotiView
