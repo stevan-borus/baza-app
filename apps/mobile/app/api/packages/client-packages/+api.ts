@@ -2,7 +2,7 @@ import { createClientPackageInputSchema } from "@baza/types";
 import { UserRole } from "@/generated/prisma";
 import { now } from "@/lib/now";
 import { requireRole } from "@/lib/server/auth-guards";
-import { matchBillingToPackages } from "@/lib/server/billing-package-link";
+import { linkPackagesToBilling } from "@/lib/server/billing-package-link";
 import { fail, ok } from "@/lib/server/http";
 import { findEligibleClientPackage } from "@/lib/server/package-eligibility";
 import { prisma } from "@/lib/server/prisma";
@@ -148,26 +148,24 @@ export async function GET(request: Request) {
       where: {
         clientUserId: clientProfile.userId,
         status: "CONFIRMED",
-        packageTypeId: { not: null },
       },
       select: {
         id: true,
         amount: true,
         method: true,
         packageTypeId: true,
+        clientPackageId: true,
         createdAt: true,
       },
       orderBy: { createdAt: "asc" },
     }),
   ]);
 
-  // Pair each ClientPackage with the BillingRecord that funded it. There's
-  // no FK between the two tables (P2-5 decision: BillingRecord only links
-  // to PackageType). We instead match by tuple (clientUserId + packageTypeId)
-  // and zip in chronological order: the i-th package of a given type pairs
-  // with the i-th confirmed payment of that type. Extra packages with no
-  // match are comp / gift packages.
-  const linkMap = matchBillingToPackages(packages, billingRecords);
+  // Pair each ClientPackage with the BillingRecord that funded it. The
+  // primary semantics are the explicit FK on BillingRecord.clientPackageId;
+  // any leftover legacy rows (FK still NULL pending backfill) are matched
+  // by the chronological-zip fallback inside linkPackagesToBilling.
+  const linkMap = linkPackagesToBilling(packages, billingRecords);
   const shaped = packages.map((p) => {
     const match = linkMap.get(p.id) ?? null;
     return {

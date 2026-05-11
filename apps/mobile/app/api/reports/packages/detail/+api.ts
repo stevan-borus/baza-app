@@ -20,18 +20,18 @@
  *  - **Sold in period** = count of ClientPackage rows where `startsAt ∈
  *    [from, to)`. Period-dependent.
  *
- * Paid-vs-comp uses the shared `matchBillingToPackages` helper to keep this
+ * Paid-vs-comp uses the shared `linkPackagesToBilling` helper to keep this
  * surface and the per-client `/api/packages/client-packages` endpoint
- * classifying rows identically. For each ClientPackage started in the
- * window, we fetch the owning client's confirmed BillingRecords with
- * `packageTypeId IS NOT NULL` and run the zipping algorithm per-client. A
- * match means "paid"; otherwise "comp". O(clients) DB queries for now —
+ * classifying rows identically. Primary semantics are the explicit
+ * `BillingRecord.clientPackageId` FK; legacy rows still pending backfill
+ * fall back to the chronological-zip heuristic inside the same helper.
+ * A match means "paid"; otherwise "comp". O(clients) DB queries for now —
  * optimization can come later if needed.
  */
 import { UserRole } from "@/generated/prisma";
 import { requireRole } from "@/lib/server/auth-guards";
 import {
-  matchBillingToPackages,
+  linkPackagesToBilling,
   type BillingForMatch,
   type PackageForMatch,
 } from "@/lib/server/billing-package-link";
@@ -174,13 +174,13 @@ export async function GET(request: Request) {
           where: {
             clientUserId: userId,
             status: "CONFIRMED",
-            packageTypeId: { not: null },
           },
           select: {
             id: true,
             amount: true,
             method: true,
             packageTypeId: true,
+            clientPackageId: true,
             createdAt: true,
           },
         }),
@@ -195,9 +195,10 @@ export async function GET(request: Request) {
         amount: b.amount,
         method: b.method,
         packageTypeId: b.packageTypeId,
+        clientPackageId: b.clientPackageId,
         createdAt: b.createdAt,
       }));
-      const linkMap = matchBillingToPackages(pkgInputs, billingInputs);
+      const linkMap = linkPackagesToBilling(pkgInputs, billingInputs);
       for (const id of bucket.inWindowIds) {
         if (linkMap.has(id)) paidIds.add(id);
       }
