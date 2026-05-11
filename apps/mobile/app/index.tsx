@@ -23,7 +23,7 @@ export default function RootIndex() {
   }
   const role = session.role;
 
-  if (role === "ADMIN") return <Redirect href="/(admin)" />;
+  if (role === "ADMIN") return <Redirect href="/(admin)/pregled" />;
   if (role === "TRAINER") return <Redirect href="/(trainer)" />;
   return <Redirect href="/(client)" />;
 }
