@@ -35,8 +35,12 @@ async function fetchBillingPage(
   if (filters?.clientUserId) searchParams.set("clientUserId", filters.clientUserId);
   if (filters?.from) searchParams.set("from", filters.from);
   if (filters?.to) searchParams.set("to", filters.to);
-  const url =
-    searchParams.size > 0 ? `${endpoint}?${searchParams.toString()}` : endpoint;
+  // Don't use `searchParams.size` — RN's URLSearchParams polyfill returns
+  // `undefined` for it, so `size > 0` is always false and the query string
+  // gets dropped. `toString()` returns the empty string when no params are
+  // set, which we can check directly.
+  const qs = searchParams.toString();
+  const url = qs ? `${endpoint}?${qs}` : endpoint;
   const response = await apiFetch(url, { credentials: "include" });
   if (!response.ok)
     throw new Error(`Unable to load billing (${response.status})`);
