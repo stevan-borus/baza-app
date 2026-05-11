@@ -81,7 +81,7 @@ export async function GET(request: Request) {
   }
 
   // Admins may list all client packages across the studio when no clientProfileId
-  // is supplied (used by /(admin)/packages.tsx assignment list).
+  // is supplied (used by /(admin)/izvestaji/aktivne-dodele assignment list).
   if (!clientProfileId) {
     if (guard.user.role !== UserRole.ADMIN) {
       return fail("clientProfileId query param is required", 400);

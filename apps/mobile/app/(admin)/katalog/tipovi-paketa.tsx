@@ -283,7 +283,7 @@ export default function AdminPackages() {
           <SectionLabel>{t("admin.manage.activeAssignments")}</SectionLabel>
           <Pressable
             testID="active-assignments-link"
-            onPress={() => router.push("/(admin)/packages/active-assignments")}
+            onPress={() => router.push("/(admin)/izvestaji/aktivne-dodele")}
             android_ripple={null}
             style={{ borderRadius: 14 }}
           >
