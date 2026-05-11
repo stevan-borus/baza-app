@@ -71,6 +71,8 @@ const sessionDetailSchema = z.object({
   classType: z.object({ id: z.string(), name: z.string() }).nullable(),
   room: z.object({ id: z.string(), name: z.string() }).nullable(),
   trainer: z.object({ id: z.string(), fullName: z.string() }).nullable(),
+  bookedCount: z.number(),
+  seriesBookedCount: z.number(),
   bookings: z.array(
     z.object({
       id: z.string(),
