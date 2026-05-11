@@ -27,6 +27,7 @@ import { clientsQueries } from "@/lib/queries/clients-queries-factory";
 import { packagesQueries, type ClientPackage } from "@/lib/queries/packages-queries-factory";
 import { bookingsQueries } from "@/lib/queries/bookings-queries-factory";
 import { BookingRow } from "@/components/admin/booking-row";
+import { AssignPackageSheetContent } from "@/components/admin/assign-package-sheet-content";
 
 // ─── InitialsAvatar ───────────────────────────────────────────────────────────
 // Larger variant of the list-row avatar; same styling rules as the row but
@@ -95,7 +96,6 @@ export default function AdminClientDetail() {
 
   // Forms (mirror klijenti/index.tsx initial shapes).
   const [editForm, setEditForm] = useState({ fullName: "", phone: "", notes: "", isActive: true });
-  const [assignForm, setAssignForm] = useState({ packageTypeId: "", startsAt: "" });
   const [pauseForm, setPauseForm] = useState({ startsAt: "", endsAt: "", reason: "" });
 
   // ── Queries ────────────────────────────────────────────────────────────────
@@ -107,7 +107,6 @@ export default function AdminClientDetail() {
     ...packagesQueries.clientPackagesAdminList({ search: client?.user.email }),
     enabled: !!client?.user.email,
   });
-  const packageTypesQuery = useQuery(packagesQueries.types());
 
   const upcomingQuery = useInfiniteQuery({
     ...bookingsQueries.byClient({ clientUserId: id, period: "upcoming", limit: 20 }),
@@ -132,14 +131,6 @@ export default function AdminClientDetail() {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["clients"] });
       setShowEdit(false);
-    },
-  });
-  const assignPackageMutation = useMutation({
-    ...packagesQueries.createClientPackage(),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["packages"] });
-      setShowAssign(false);
-      setAssignForm({ packageTypeId: "", startsAt: "" });
     },
   });
   const pauseMutation = useMutation({
@@ -518,59 +509,23 @@ export default function AdminClientDetail() {
 
       {/* Assign-package sheet */}
       <AppSheet open={showAssign} onOpenChange={setShowAssign}>
-        {/* TODO P2-5: render mode-specific content based on showAssignMode
-            ("comp" vs "paid"). For now the body renders the comp-only
-            form regardless of mode. */}
-        <View className="flex-col gap-4">
-          <Text
-            className="text-foreground font-body-bold"
-            style={{ fontSize: 20, letterSpacing: -0.3 }}
-          >
-            {t("admin.clients.sheetAssign")}
-          </Text>
-          <Text className="text-muted" style={{ fontSize: 13 }}>
-            {t("admin.clients.compPackageHeading")}
-          </Text>
-          <SectionLabel>{t("admin.clients.packageType")}</SectionLabel>
-          {(packageTypesQuery.data?.packageTypes ?? []).map((pt) => (
-            <Button
-              key={pt.id}
-              testID={`assign-package-option-${pt.id}`}
-              size="small"
-              variant={assignForm.packageTypeId === pt.id ? "primary" : "secondary"}
-              onPress={() => setAssignForm((s) => ({ ...s, packageTypeId: pt.id }))}
+        {client ? (
+          <View className="flex-col gap-4">
+            <Text
+              className="text-foreground font-body-bold"
+              style={{ fontSize: 20, letterSpacing: -0.3 }}
             >
-              {t("admin.clients.sessionsCount", { name: pt.name, count: pt.sessionCount })}
-            </Button>
-          ))}
-          <Input
-            placeholder={t("admin.clients.placeholderStart")}
-            value={assignForm.startsAt}
-            onChangeText={(v) => setAssignForm((s) => ({ ...s, startsAt: v }))}
-          />
-          <Button
-            testID="assign-package-submit"
-            disabled={
-              assignPackageMutation.isPending ||
-              !assignForm.packageTypeId ||
-              !assignForm.startsAt ||
-              !client
-            }
-            onPress={() => {
-              if (!client) return;
-              assignPackageMutation.mutate({
-                clientProfileId: client.id,
-                packageTypeId: assignForm.packageTypeId,
-                startsAt: assignForm.startsAt,
-              });
-            }}
-          >
-            {t("admin.clients.assign")}
-          </Button>
-          {assignPackageMutation.isError ? (
-            <ErrorState message={t("admin.clients.assignError")} />
-          ) : null}
-        </View>
+              {showAssignMode === "paid"
+                ? t("admin.clients.newPaymentAction")
+                : t("admin.clients.sheetAssign")}
+            </Text>
+            <AssignPackageSheetContent
+              client={client}
+              mode={showAssignMode}
+              onSuccess={() => setShowAssign(false)}
+            />
+          </View>
+        ) : null}
       </AppSheet>
 
       {/* Pause sheet */}

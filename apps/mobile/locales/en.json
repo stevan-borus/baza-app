@@ -363,6 +363,16 @@
       "filterEmpty": "No clients match this filter.",
       "compPackageHeading": "Complimentary package",
       "newPaymentAction": "New payment",
+      "newPaymentSubmit": "Save payment",
+      "paymentAmount": "Amount (RSD)",
+      "paymentMethod": {
+        "label": "Payment method",
+        "cash": "Cash",
+        "card": "Card",
+        "invoice": "Invoice"
+      },
+      "amountRequired": "Amount is required.",
+      "amountPositive": "Amount must be greater than 0.",
       "openActions": "Open actions",
       "viewProfile": "View profile"
     },
