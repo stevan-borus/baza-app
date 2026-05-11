@@ -43,6 +43,7 @@ import {
   buildPeriodBuckets,
   bucketSizeForPeriod,
   parseDateInput,
+  resolveAllTimeWindow,
 } from "@/lib/server/reports";
 
 const HOUR_MS = 60 * 60 * 1000;
@@ -53,12 +54,25 @@ export async function GET(request: Request) {
   if (!guard.ok) return guard.response;
 
   const url = new URL(request.url);
-  const from = parseDateInput(url.searchParams.get("from"));
-  const to = parseDateInput(url.searchParams.get("to"));
-  if (!from || !to || from >= to) {
+  const rawFrom = parseDateInput(url.searchParams.get("from"));
+  const rawTo = parseDateInput(url.searchParams.get("to"));
+  // All-time: span yearly buckets from the earliest booking forward.
+  const earliest = rawFrom || rawTo
+    ? null
+    : (
+        await prisma.booking.findFirst({
+          orderBy: { createdAt: "asc" },
+          select: { createdAt: true },
+        })
+      )?.createdAt ?? null;
+  const window = resolveAllTimeWindow(rawFrom, rawTo, earliest);
+  if (!window) {
     return fail("Invalid timeframe", 400);
   }
-  const size = bucketSizeForPeriod(url.searchParams.get("period"));
+  const { from, to, isAllTime } = window;
+  const size = bucketSizeForPeriod(
+    isAllTime ? "all" : url.searchParams.get("period"),
+  );
   const buckets = buildPeriodBuckets(from, to, size);
   const currentInstant = now();
 

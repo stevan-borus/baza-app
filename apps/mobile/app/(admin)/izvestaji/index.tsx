@@ -127,6 +127,7 @@ export default function AdminReportsLanding() {
               { value: "month" as const, label: t("admin.manage.periodMonth") },
               { value: "quarter" as const, label: t("admin.manage.periodQuarter") },
               { value: "year" as const, label: t("admin.manage.periodYear") },
+              { value: "all" as const, label: t("admin.manage.periodAll") },
             ]}
             value={period}
             onChange={setPeriod}

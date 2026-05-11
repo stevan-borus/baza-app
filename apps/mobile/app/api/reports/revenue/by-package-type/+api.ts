@@ -23,15 +23,18 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const from = parseDateInput(url.searchParams.get("from"));
   const to = parseDateInput(url.searchParams.get("to"));
-  if (!from || !to || from >= to) {
+  // All-time pill omits both params — drop the createdAt filter entirely.
+  // A one-sided window is still treated as a client bug → 400.
+  if ((from && !to) || (!from && to) || (from && to && from >= to)) {
     return fail("Invalid timeframe", 400);
   }
+  const dateFilter = from && to ? { createdAt: { gte: from, lt: to } } : {};
 
   const grouped = await prisma.billingRecord.groupBy({
     by: ["packageTypeId"],
     where: {
       status: "CONFIRMED",
-      createdAt: { gte: from, lt: to },
+      ...dateFilter,
       packageTypeId: { not: null },
     },
     _sum: { amount: true },

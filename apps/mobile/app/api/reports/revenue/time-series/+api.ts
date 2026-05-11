@@ -3,8 +3,11 @@
  *
  * One bucket per bar. Bucket granularity is driven by the `period` query param
  * coming off the UI period pill — `week` and `month` get daily buckets,
- * `quarter` gets weekly, `year` gets monthly. `from`/`to` bound the window;
- * empty buckets are emitted so the chart layout stays stable across periods.
+ * `quarter` gets weekly, `year` gets monthly. `all` (the "Sve vreme" option)
+ * switches to yearly buckets and spans from the earliest CONFIRMED payment
+ * to today, so the chart scales as the studio ages instead of dumping
+ * hundreds of daily bars. `from`/`to` bound the window; empty buckets are
+ * emitted so the chart layout stays stable across periods.
  *
  * Only CONFIRMED BillingRecords contribute — pending and canceled rows would
  * inflate the bar heights misleadingly. Aggregation is in-process: pulling
@@ -19,6 +22,7 @@ import {
   buildRevenueBuckets,
   bucketSizeForPeriod,
   parseDateInput,
+  resolveAllTimeWindow,
 } from "@/lib/server/reports";
 
 export async function GET(request: Request) {
@@ -26,12 +30,28 @@ export async function GET(request: Request) {
   if (!guard.ok) return guard.response;
 
   const url = new URL(request.url);
-  const from = parseDateInput(url.searchParams.get("from"));
-  const to = parseDateInput(url.searchParams.get("to"));
-  if (!from || !to || from >= to) {
+  const rawFrom = parseDateInput(url.searchParams.get("from"));
+  const rawTo = parseDateInput(url.searchParams.get("to"));
+  // For "all time" we anchor the lower bound to the earliest CONFIRMED
+  // payment so the chart's leftmost bar lines up with the studio's first
+  // sale, not the Unix epoch.
+  const earliest = rawFrom || rawTo
+    ? null
+    : (
+        await prisma.billingRecord.findFirst({
+          where: { status: "CONFIRMED" },
+          orderBy: { createdAt: "asc" },
+          select: { createdAt: true },
+        })
+      )?.createdAt ?? null;
+  const window = resolveAllTimeWindow(rawFrom, rawTo, earliest);
+  if (!window) {
     return fail("Invalid timeframe", 400);
   }
-  const size = bucketSizeForPeriod(url.searchParams.get("period"));
+  const { from, to, isAllTime } = window;
+  const size = bucketSizeForPeriod(
+    isAllTime ? "all" : url.searchParams.get("period"),
+  );
 
   const buckets = buildRevenueBuckets(from, to, size);
 

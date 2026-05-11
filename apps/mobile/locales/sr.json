@@ -557,6 +557,7 @@
       "periodMonth": "Mesec",
       "periodQuarter": "Kvartal",
       "periodYear": "Godina",
+      "periodAll": "Sve vreme",
       "totalRevenue": "Ukupan prihod",
       "transactionCount": "Transakcije",
       "filteredSubtitle": "Filtrirano: {{count}} uplata · {{amount}} RSD",

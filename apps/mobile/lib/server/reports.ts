@@ -6,6 +6,33 @@ import { now } from "@/lib/now";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
+/**
+ * Resolve a query-string `from`/`to` pair into an "all-time" window when both
+ * are missing. Time-series + heatmap endpoints need a real lower bound to
+ * build their buckets — we fall back to `earliest` (typically the table's
+ * MIN(createdAt)/MIN(startsAt)) so the chart spans from the studio's first
+ * row to today. When `earliest` is null (empty table), we anchor to today so
+ * the loop produces zero buckets and the caller short-circuits gracefully.
+ */
+export function resolveAllTimeWindow(
+  from: Date | null,
+  to: Date | null,
+  earliest: Date | null,
+): { from: Date; to: Date; isAllTime: boolean } | null {
+  if (from && to && from < to) {
+    return { from, to, isAllTime: false };
+  }
+  if (from || to) {
+    // Partial input — treat as invalid so callers can 400.
+    return null;
+  }
+  const finalTo = new Date(now().getTime());
+  finalTo.setUTCHours(0, 0, 0, 0);
+  finalTo.setUTCDate(finalTo.getUTCDate() + 1);
+  const finalFrom = earliest ?? new Date(finalTo.getTime() - DAY_MS);
+  return { from: finalFrom, to: finalTo, isAllTime: true };
+}
+
 export type Timeframe = {
   from: Date;
   to: Date;
@@ -45,6 +72,12 @@ export function getReportBucketLabel(date: Date, period: ReportsPeriod) {
 
 /**
  * Parses and normalizes report timeframe query params.
+ *
+ * When the caller passes no `from`/`to` (the "all-time" pill), we still need
+ * a bounding window — most callers slot the result into a Prisma `gte`/`lt`
+ * — but we want it to be effectively unbounded. `from` falls back to the
+ * Unix epoch and `to` to "now" so the resulting range covers every row
+ * without the helper having to know about the underlying table.
  */
 export function parseReportTimeframe(searchParams: URLSearchParams): Timeframe | null {
   const from = parseDateInput(searchParams.get("from"));
@@ -53,7 +86,11 @@ export function parseReportTimeframe(searchParams: URLSearchParams): Timeframe |
   const includeDeltas = searchParams.get("includeDeltas") === "true";
 
   const finalTo = to ?? now();
-  const finalFrom = from ?? new Date(finalTo.getTime() - 30 * DAY_MS);
+  // When `from` is omitted entirely, treat as "all time" → epoch. When the
+  // caller passes a single side we still need a sane window so the rest of
+  // the pipeline doesn't blow up; the existing 30-day fallback only kicks
+  // in when at least `to` was supplied.
+  const finalFrom = from ?? (to ? new Date(finalTo.getTime() - 30 * DAY_MS) : new Date(0));
   const finalPeriod: ReportsPeriod =
     period === "week" || period === "month" ? period : "day";
 
@@ -88,15 +125,20 @@ export function getPreviousTimeframe(timeframe: Pick<Timeframe, "from" | "to">) 
  * `RevenueBucketSize` alias for back-compat and add a neutral `BucketSize`
  * alias for new callers.
  */
-export type RevenueBucketSize = "day" | "week" | "month";
+export type RevenueBucketSize = "day" | "week" | "month" | "year";
 export type BucketSize = RevenueBucketSize;
 
 /**
  * Maps the UI period pill value to the bucket granularity the time-series
  * endpoint should emit. Anything unrecognized falls back to daily so the
  * caller always gets *some* shape.
+ *
+ * `all` (the "Sve vreme" / All-time pill option) returns yearly buckets so
+ * one bar = one calendar year — keeps the chart readable as the studio ages
+ * instead of dumping a year's worth of daily bars.
  */
 export function bucketSizeForPeriod(period: string | null | undefined): RevenueBucketSize {
+  if (period === "all") return "year";
   if (period === "year") return "month";
   if (period === "quarter") return "week";
   if (period === "week" || period === "month") return "day";
@@ -131,6 +173,13 @@ function floorUtcMonth(d: Date): Date {
 }
 
 /**
+ * Floor a Date to the first day of its UTC year at midnight (Jan 1).
+ */
+function floorUtcYear(d: Date): Date {
+  return new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+}
+
+/**
  * Advance a bucket-start by one bucket of the given size.
  */
 function advanceBucket(start: Date, size: RevenueBucketSize): Date {
@@ -143,6 +192,9 @@ function advanceBucket(start: Date, size: RevenueBucketSize): Date {
     const out = new Date(start);
     out.setUTCDate(out.getUTCDate() + 7);
     return out;
+  }
+  if (size === "year") {
+    return new Date(Date.UTC(start.getUTCFullYear() + 1, 0, 1));
   }
   // month
   return new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth() + 1, 1));
@@ -177,7 +229,9 @@ export function buildPeriodBuckets(
       ? floorUtcDay(from)
       : size === "week"
         ? floorUtcWeek(from)
-        : floorUtcMonth(from);
+        : size === "year"
+          ? floorUtcYear(from)
+          : floorUtcMonth(from);
   const out: Array<{ bucketStart: Date; bucketEnd: Date }> = [];
   let cursor = alignedStart;
   // Hard cap so a misuse can't infinite-loop the server.

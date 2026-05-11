@@ -52,9 +52,14 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const from = parseDateInput(url.searchParams.get("from"));
   const to = parseDateInput(url.searchParams.get("to"));
-  if (!from || !to || from >= to) {
+  // All-time pill omits both params — every period-dependent aggregate
+  // (sold-in-period, consumption rate, most-sold, paid-vs-comp) then covers
+  // every ClientPackage ever created. Active + expiring-soon are already
+  // period-independent so they don't change.
+  if ((from && !to) || (!from && to) || (from && to && from >= to)) {
     return fail("Invalid timeframe", 400);
   }
+  const dateFilter = from && to ? { startsAt: { gte: from, lt: to } } : {};
   const currentInstant = now();
   const expiringSoonCutoff = new Date(
     currentInstant.getTime() + EXPIRING_SOON_WINDOW_MS,
@@ -80,7 +85,7 @@ export async function GET(request: Request) {
   // We pull everything we need for sold-in-period, most-sold, consumption
   // rate, and paid-vs-comp from this one query.
   const periodPackages = await prisma.clientPackage.findMany({
-    where: { startsAt: { gte: from, lt: to } },
+    where: dateFilter,
     orderBy: { startsAt: "desc" },
     select: {
       id: true,
