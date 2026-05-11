@@ -148,6 +148,37 @@ const utilizationTimeSeriesResponseSchema = z.object({
   ),
 });
 
+const packagesDetailResponseSchema = z.object({
+  success: z.boolean(),
+  headline: z.object({
+    activePackages: z.number(),
+    expiringSoon: z.number(),
+    consumptionRate: z.number(),
+    soldInPeriod: z.number(),
+  }),
+  mostSold: z.array(
+    z.object({
+      packageTypeId: z.string(),
+      packageTypeName: z.string(),
+      count: z.number(),
+    }),
+  ),
+  compVsPaid: z.object({
+    paid: z.number(),
+    comp: z.number(),
+  }),
+  recentActivations: z.array(
+    z.object({
+      clientPackageId: z.string(),
+      clientUserId: z.string(),
+      clientFullName: z.string(),
+      packageTypeName: z.string(),
+      startsAt: z.string(),
+      isPaid: z.boolean(),
+    }),
+  ),
+});
+
 const bookingsDetailResponseSchema = z.object({
   success: z.boolean(),
   headline: z.object({
@@ -495,6 +526,31 @@ export const reportsQueries = {
         if (!response.ok)
           throw new Error(`Unable to load bookings detail (${response.status})`);
         return bookingsDetailResponseSchema.parse(await response.json());
+      },
+      staleTime: 60_000,
+    }),
+
+  packagesDetail: (params?: { from?: string; to?: string; period?: string }) =>
+    queryOptions({
+      queryKey: [
+        "reports",
+        "packages-detail",
+        params?.from ?? "",
+        params?.to ?? "",
+        params?.period ?? "",
+      ] as const,
+      queryFn: async () => {
+        const endpoint = `${sharedEnv.EXPO_PUBLIC_API_URL}/api/reports/packages/detail`;
+        const searchParams = new URLSearchParams();
+        if (params?.from) searchParams.set("from", params.from);
+        if (params?.to) searchParams.set("to", params.to);
+        if (params?.period) searchParams.set("period", params.period);
+        const qs = searchParams.toString();
+        const url = qs ? `${endpoint}?${qs}` : endpoint;
+        const response = await apiFetch(url, { credentials: "include" });
+        if (!response.ok)
+          throw new Error(`Unable to load packages detail (${response.status})`);
+        return packagesDetailResponseSchema.parse(await response.json());
       },
       staleTime: 60_000,
     }),

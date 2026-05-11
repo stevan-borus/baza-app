@@ -592,7 +592,28 @@
         "thisPeriod": "u ovom periodu"
       },
       "paketi": {
-        "activeAssignmentsLink": "Aktivne dodele"
+        "title": "Paketi",
+        "activeAssignmentsLink": "Aktivne dodele",
+        "tiles": {
+          "active": "Aktivni paketi",
+          "expiringSoon": "Ističe uskoro",
+          "consumptionRate": "Stopa potrošnje",
+          "soldInPeriod": "Prodato u periodu"
+        },
+        "mostSold": {
+          "title": "Najprodavaniji paketi"
+        },
+        "compVsPaid": {
+          "title": "Plaćeni vs. pokloni",
+          "paid": "Plaćeni",
+          "comp": "Pokloni"
+        },
+        "recentActivations": {
+          "title": "Nedavne aktivacije",
+          "paidTag": "Plaćen",
+          "compTag": "Poklon"
+        },
+        "noData": "Nema podataka za izabrani period."
       },
       "prihod": {
         "title": "Prihod",

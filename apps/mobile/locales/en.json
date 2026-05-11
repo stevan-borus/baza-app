@@ -588,7 +588,28 @@
         "thisPeriod": "this period"
       },
       "paketi": {
-        "activeAssignmentsLink": "Active assignments"
+        "title": "Packages",
+        "activeAssignmentsLink": "Active assignments",
+        "tiles": {
+          "active": "Active packages",
+          "expiringSoon": "Expiring soon",
+          "consumptionRate": "Consumption rate",
+          "soldInPeriod": "Sold in period"
+        },
+        "mostSold": {
+          "title": "Most-sold packages"
+        },
+        "compVsPaid": {
+          "title": "Paid vs. comp",
+          "paid": "Paid",
+          "comp": "Comp"
+        },
+        "recentActivations": {
+          "title": "Recent activations",
+          "paidTag": "Paid",
+          "compTag": "Comp"
+        },
+        "noData": "No data for the selected period."
       },
       "prihod": {
         "title": "Revenue",
