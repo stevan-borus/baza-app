@@ -569,6 +569,31 @@
       "packagesReportError": "Nije moguće učitati izveštaj o paketima.",
       "packagesReportEmpty": "Nema podataka o paketima u ovom periodu.",
       "avgPerClient": "Prosek po klijentu"
+    },
+    "izvestaji": {
+      "placeholder": "Sadržaj uskoro.",
+      "backTo": "← Nazad u {{label}}",
+      "openCard": "Otvori",
+      "sections": {
+        "prihod": "Prihod",
+        "iskoriscenost": "Iskorišćenost",
+        "rezervacije": "Rezervacije",
+        "paketi": "Paketi"
+      },
+      "headlines": {
+        "prihodSub": "Ukupan prihod",
+        "iskoriscenostSub": "Iskorišćenost kapaciteta",
+        "rezervacijeSub": "Rezervacije",
+        "paketiSub": "Aktivni klijenti"
+      },
+      "labels": {
+        "izvestaji": "Izveštaji",
+        "naplata": "Naplata",
+        "thisPeriod": "u ovom periodu"
+      },
+      "paketi": {
+        "activeAssignmentsLink": "Aktivne dodele"
+      }
     }
   },
   "adminMenu": {

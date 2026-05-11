@@ -565,6 +565,31 @@
       "packagesCount": "{{count}} sold",
       "packagesReportError": "Unable to load packages report.",
       "packagesReportEmpty": "No package data in this period."
+    },
+    "izvestaji": {
+      "placeholder": "Content coming soon.",
+      "backTo": "← Back to {{label}}",
+      "openCard": "Open",
+      "sections": {
+        "prihod": "Revenue",
+        "iskoriscenost": "Utilization",
+        "rezervacije": "Bookings",
+        "paketi": "Packages"
+      },
+      "headlines": {
+        "prihodSub": "Total revenue",
+        "iskoriscenostSub": "Capacity utilization",
+        "rezervacijeSub": "Bookings",
+        "paketiSub": "Active clients"
+      },
+      "labels": {
+        "izvestaji": "Reports",
+        "naplata": "Billing",
+        "thisPeriod": "this period"
+      },
+      "paketi": {
+        "activeAssignmentsLink": "Active assignments"
+      }
     }
   },
   "adminMenu": {
