@@ -29,14 +29,11 @@ enum PaymentMethod {
   CASH
   CARD
   COMPANY
-  QR
   MANUAL_ONLINE
 }
 
 enum BillingStatus {
-  PENDING
   CONFIRMED
-  CANCELED
 }
 
 enum SessionStatus {
@@ -394,7 +391,7 @@ model BillingRecord {
   clientUserId    String
   amount          Int
   method          PaymentMethod
-  status          BillingStatus  @default(PENDING)
+  status          BillingStatus  @default(CONFIRMED)
   notes           String?
   packageTypeId   String?
   packageType     PackageType?   @relation(fields: [packageTypeId], references: [id], onDelete: SetNull)
