@@ -8,14 +8,15 @@
  * counts derived from packageStatus.
  */
 
-import { useMemo, useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useDeferredValue, useMemo, useState } from "react";
+import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { useRouter } from "expo-router";
 import {
+  ActivityIndicator,
+  FlatList,
   Pressable,
   RefreshControl,
-  ScrollView,
   Text,
   View,
 } from "react-native";
@@ -147,8 +148,20 @@ export default function TrainerClients() {
   const bottomPad = useTabBarBottomPadding(24);
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  // useDeferredValue gives a "good-enough" debounce without the timer
+  // overhead — React keeps the previous result visible until the next
+  // render after the keystroke settles. The server-side q-filter does the
+  // heavy lifting; this just avoids hammering the API on every keystroke.
+  const deferredQuery = useDeferredValue(searchQuery.trim());
 
-  const clientsQuery = useQuery(clientsQueries.list());
+  const clientsQuery = useInfiniteQuery(
+    clientsQueries.list({ q: deferredQuery || undefined }),
+  );
+
+  const clients = useMemo(
+    () => clientsQuery.data?.pages.flatMap((p) => p.clients) ?? [],
+    [clientsQuery.data],
+  );
 
   async function handleRefresh() {
     setRefreshing(true);
@@ -156,8 +169,13 @@ export default function TrainerClients() {
     setRefreshing(false);
   }
 
-  const clients = clientsQuery.data?.clients ?? [];
-
+  // The stat strip used to count from the unpaginated list. With cursor
+  // pagination we'd only see counts for the rows we've fetched, which is
+  // misleading. Keep the visual but compute from what we have; once a
+  // dedicated stats endpoint exists we can wire that in. The "total" count
+  // is intentionally `clients.length` (what's loaded), not a server total —
+  // adding a count query for this one stat is not worth a separate round
+  // trip on every paged fetch.
   const stats = useMemo(() => {
     let active = 0;
     let expiring = 0;
@@ -170,21 +188,28 @@ export default function TrainerClients() {
     return { active, expiring, expired };
   }, [clients]);
 
-  const filtered = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase();
-    if (!q) return clients;
-    return clients.filter(
-      (c) =>
-        c.user.fullName.toLowerCase().includes(q) ||
-        c.user.email.toLowerCase().includes(q),
-    );
-  }, [clients, searchQuery]);
+  function handleEndReached() {
+    if (clientsQuery.hasNextPage && !clientsQuery.isFetchingNextPage) {
+      clientsQuery.fetchNextPage();
+    }
+  }
+
+  const isInitialLoading =
+    clientsQuery.isLoading && clients.length === 0;
+  const showEmpty =
+    !isInitialLoading && !clientsQuery.isError && clients.length === 0;
 
   return (
     <ScreenContainerRaw title={t("tabs.clients")}>
-      <ScrollView
+      <FlatList
+        data={clients}
+        keyExtractor={(c) => c.id}
+        renderItem={({ item }) => <ClientRow client={item} />}
+        ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
+        onEndReached={handleEndReached}
+        onEndReachedThreshold={0.5}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -197,77 +222,76 @@ export default function TrainerClients() {
           paddingHorizontal: 24,
           paddingTop: 16,
           paddingBottom: bottomPad,
-          gap: 16,
         }}
-      >
-        {/* Search */}
-        <MotiView
-          from={{ opacity: 0, translateY: -6 }}
-          animate={{ opacity: 1, translateY: 0 }}
-          transition={{ type: "timing", duration: 300, delay: 60 }}
-        >
-          <Input
-            placeholder={t("admin.clients.searchPlaceholder")}
-            leftIcon="search"
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            autoCapitalize="none"
-            autoCorrect={false}
-          />
-        </MotiView>
+        ListHeaderComponent={
+          <View style={{ gap: 16, marginBottom: clients.length > 0 ? 16 : 0 }}>
+            {/* Search */}
+            <MotiView
+              from={{ opacity: 0, translateY: -6 }}
+              animate={{ opacity: 1, translateY: 0 }}
+              transition={{ type: "timing", duration: 300, delay: 60 }}
+            >
+              <Input
+                placeholder={t("admin.clients.searchPlaceholder")}
+                leftIcon="search"
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+            </MotiView>
 
-        {/* Stat strip — total / active / expiring */}
-        <MotiView
-          from={{ opacity: 0, translateY: -4 }}
-          animate={{ opacity: 1, translateY: 0 }}
-          transition={{ type: "timing", duration: 300, delay: 140 }}
-        >
-          <View className="flex-row gap-2">
-            <StatPill
-              value={clients.length}
-              label={t("trainer.clients.statTotal")}
-            />
-            <StatPill
-              value={stats.active}
-              label={t("admin.clients.filterActive")}
-            />
-            <StatPill
-              value={stats.expiring}
-              label={t("admin.clients.filterExpiring")}
-            />
+            {/* Stat strip — total / active / expiring */}
+            <MotiView
+              from={{ opacity: 0, translateY: -4 }}
+              animate={{ opacity: 1, translateY: 0 }}
+              transition={{ type: "timing", duration: 300, delay: 140 }}
+            >
+              <View className="flex-row gap-2">
+                <StatPill
+                  value={clients.length}
+                  label={t("trainer.clients.statTotal")}
+                />
+                <StatPill
+                  value={stats.active}
+                  label={t("admin.clients.filterActive")}
+                />
+                <StatPill
+                  value={stats.expiring}
+                  label={t("admin.clients.filterExpiring")}
+                />
+              </View>
+            </MotiView>
+
+            {clientsQuery.isError ? (
+              <ErrorState message={t("trainer.clients.error")} />
+            ) : null}
+
+            {isInitialLoading ? (
+              <View style={{ gap: 10 }}>
+                <SkeletonCard />
+                <SkeletonCard />
+                <SkeletonCard />
+              </View>
+            ) : null}
+
+            {showEmpty ? (
+              <EmptyState
+                title={
+                  searchQuery
+                    ? t("admin.clients.filterEmpty")
+                    : t("admin.clients.empty")
+                }
+              />
+            ) : null}
           </View>
-        </MotiView>
-
-        {/* Error / empty / list */}
-        <MotiView
-          from={{ opacity: 0, translateY: 8 }}
-          animate={{ opacity: 1, translateY: 0 }}
-          transition={{ type: "timing", duration: 300, delay: 220 }}
-          style={{ gap: 10 }}
-        >
-          {clientsQuery.isError ? (
-            <ErrorState message={t("trainer.clients.error")} />
-          ) : clientsQuery.isLoading ? (
-            <>
-              <SkeletonCard />
-              <SkeletonCard />
-              <SkeletonCard />
-            </>
-          ) : filtered.length === 0 ? (
-            <EmptyState
-              title={
-                searchQuery
-                  ? t("admin.clients.filterEmpty")
-                  : t("admin.clients.empty")
-              }
-            />
-          ) : (
-            filtered.map((client) => (
-              <ClientRow key={client.id} client={client} />
-            ))
-          )}
-        </MotiView>
-      </ScrollView>
+        }
+        ListFooterComponent={
+          clientsQuery.isFetchingNextPage ? (
+            <ActivityIndicator style={{ padding: 16 }} color="#2e5b42" />
+          ) : null
+        }
+      />
     </ScreenContainerRaw>
   );
 }

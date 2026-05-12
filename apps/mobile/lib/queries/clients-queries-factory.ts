@@ -1,4 +1,8 @@
-import { queryOptions, mutationOptions } from "@tanstack/react-query";
+import {
+  queryOptions,
+  mutationOptions,
+  infiniteQueryOptions,
+} from "@tanstack/react-query";
 import { clientByIdResponseSchema, clientsResponseSchema } from "@baza/types";
 import { apiFetch } from "@/lib/api";
 import { sharedEnv } from "@/lib/env.shared";
@@ -10,17 +14,43 @@ export class ClientForbiddenError extends Error {
   }
 }
 
+const DEFAULT_TAKE = 20;
+
 export const clientsQueries = {
-  list: () =>
-    queryOptions({
-      queryKey: ["clients", "list"] as const,
-      queryFn: async () => {
-        const response = await apiFetch(`${sharedEnv.EXPO_PUBLIC_API_URL}/api/clients`, {
-          credentials: "include",
-        });
-        if (!response.ok) throw new Error(`Unable to load clients (${response.status})`);
+  /**
+   * Cursor-paginated client list with optional server-side substring search.
+   *
+   * Why this shape: every consumer of the old `useQuery(clientsQueries.list())`
+   * rendered all rows in one ScrollView and filtered client-side. With ~1000
+   * clients that's 1000 rows mounted at once and an O(n) filter on every
+   * keystroke. The infinite-query variant keeps the page size manageable
+   * and lets each consumer pass `q` so the search happens in Postgres.
+   *
+   * Page params are the opaque `nextCursor` returned by the API (the last
+   * clientProfile.id on the page). `null` means "first page".
+   */
+  list: (opts: { q?: string; take?: number } = {}) =>
+    infiniteQueryOptions({
+      queryKey: [
+        "clients",
+        "list",
+        { q: opts.q ?? "", take: opts.take ?? DEFAULT_TAKE },
+      ] as const,
+      queryFn: async ({ pageParam }) => {
+        const params = new URLSearchParams();
+        if (pageParam) params.set("cursor", pageParam);
+        if (opts.q) params.set("q", opts.q);
+        params.set("take", String(opts.take ?? DEFAULT_TAKE));
+        const response = await apiFetch(
+          `${sharedEnv.EXPO_PUBLIC_API_URL}/api/clients?${params.toString()}`,
+          { credentials: "include" },
+        );
+        if (!response.ok)
+          throw new Error(`Unable to load clients (${response.status})`);
         return clientsResponseSchema.parse(await response.json());
       },
+      initialPageParam: null as string | null,
+      getNextPageParam: (last) => last.nextCursor ?? null,
       staleTime: 60_000,
     }),
 

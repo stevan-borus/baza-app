@@ -15,9 +15,9 @@
 // backdrop, swipe-down, or onSuccess) resets the flow so the next open
 // starts fresh at step "pickClient".
 
-import React, { useEffect, useState } from "react";
-import { Pressable, ScrollView, Text, View } from "react-native";
-import { useQuery } from "@tanstack/react-query";
+import React, { useDeferredValue, useEffect, useMemo, useState } from "react";
+import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-native";
+import { useInfiniteQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import Feather from "@expo/vector-icons/Feather";
 import { AppSheet } from "@/components/ui/sheet";
@@ -119,17 +119,18 @@ function ClientPickerStep({
 }) {
   const { t } = useTranslation();
   const [search, setSearch] = useState("");
-  const clientsQuery = useQuery(clientsQueries.list());
-  const clients = clientsQuery.data?.clients ?? [];
-
-  const q = search.trim().toLowerCase();
-  const filtered = q
-    ? clients.filter(
-        (c) =>
-          c.user.fullName.toLowerCase().includes(q) ||
-          c.user.email.toLowerCase().includes(q),
-      )
-    : clients;
+  // useDeferredValue batches keystrokes into a single server query. The
+  // sheet is a small surface so we keep the page modest and rely on the
+  // search to surface clients further down the list. Scrolling to the
+  // bottom fetches the next page automatically.
+  const deferredSearch = useDeferredValue(search.trim());
+  const clientsQuery = useInfiniteQuery(
+    clientsQueries.list({ q: deferredSearch || undefined }),
+  );
+  const filtered = useMemo(
+    () => clientsQuery.data?.pages.flatMap((p) => p.clients) ?? [],
+    [clientsQuery.data],
+  );
 
   return (
     <View className="flex-col gap-4">
@@ -153,12 +154,24 @@ function ClientPickerStep({
       <ScrollView
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
+        onScroll={({ nativeEvent }) => {
+          const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
+          if (
+            layoutMeasurement.height + contentOffset.y >=
+              contentSize.height - 200 &&
+            clientsQuery.hasNextPage &&
+            !clientsQuery.isFetchingNextPage
+          ) {
+            clientsQuery.fetchNextPage();
+          }
+        }}
+        scrollEventThrottle={400}
       >
         {clientsQuery.isError ? (
           <ErrorState message={t("admin.clients.error")} />
         ) : null}
 
-        {clientsQuery.isLoading ? (
+        {clientsQuery.isLoading && filtered.length === 0 ? (
           <View style={{ gap: 8 }}>
             <SkeletonCard />
             <SkeletonCard />
@@ -169,20 +182,20 @@ function ClientPickerStep({
         {!clientsQuery.isLoading && !clientsQuery.isError && filtered.length === 0 ? (
           <EmptyState
             title={
-              q.length > 0
+              deferredSearch.length > 0
                 ? t("admin.clients.filterEmpty")
                 : t("admin.clients.empty")
             }
           />
         ) : null}
 
-        <View className="bg-surface rounded-lg overflow-hidden">
+        <View>
           {filtered.map((c, idx) => (
             <React.Fragment key={c.id}>
               {idx > 0 ? (
                 <View
                   className="bg-glass-border"
-                  style={{ height: 1, marginLeft: 64 }}
+                  style={{ height: 1, marginLeft: 52 }}
                 />
               ) : null}
               <Pressable
@@ -198,7 +211,7 @@ function ClientPickerStep({
                   })
                 }
                 android_ripple={null}
-                className="flex-row items-center gap-3 px-4 py-3 active:opacity-70"
+                className="flex-row items-center gap-3 py-3 active:opacity-70"
               >
                 <PickerAvatar name={c.user.fullName} />
                 <View className="flex-1 gap-0.5">
@@ -221,6 +234,9 @@ function ClientPickerStep({
             </React.Fragment>
           ))}
         </View>
+        {clientsQuery.isFetchingNextPage ? (
+          <ActivityIndicator style={{ padding: 16 }} />
+        ) : null}
       </ScrollView>
     </View>
   );

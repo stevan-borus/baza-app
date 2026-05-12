@@ -2,7 +2,7 @@
  * Design references (from docs/inspiration/):
  * - Stripe Dashboard ios Jun 2023/ — period selector, hero revenue, transaction list detail
  */
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   useMutation,
   useQuery,
@@ -72,7 +72,21 @@ export default function AdminBilling() {
       to: monthTo,
     }),
   );
-  const clientsQuery = useQuery(clientsQueries.list());
+  // Naplata uses clients in two places: the filter Select and the create-
+  // payment Select. Both render every option upfront — pagination on the
+  // server is still worth it (the API doesn't have to compute packageStatus
+  // for 1000 clients) but here we eagerly drain pages so the dropdown shows
+  // the full set. take=100 hits the server cap and keeps round-trips few.
+  const clientsQuery = useInfiniteQuery(clientsQueries.list({ take: 100 }));
+  useEffect(() => {
+    if (clientsQuery.hasNextPage && !clientsQuery.isFetchingNextPage) {
+      clientsQuery.fetchNextPage();
+    }
+  }, [clientsQuery.hasNextPage, clientsQuery.isFetchingNextPage, clientsQuery]);
+  const allClients = useMemo(
+    () => clientsQuery.data?.pages.flatMap((p) => p.clients) ?? [],
+    [clientsQuery.data],
+  );
   const packageTypesQuery = useQuery(packagesQueries.types());
   const records = billingQuery.data?.pages.flatMap((p) => p.records) ?? [];
 
@@ -313,7 +327,7 @@ export default function AdminBilling() {
           emptyText={t("admin.manage.filterClientEmpty")}
           options={[
             { value: "", label: t("admin.manage.filterAll") },
-            ...(clientsQuery.data?.clients ?? []).map((c) => ({
+            ...allClients.map((c) => ({
               value: c.user.id,
               label: c.user.fullName ?? c.user.email,
             })),
@@ -422,7 +436,7 @@ export default function AdminBilling() {
               value={form.clientUserId}
               onChange={(v) => setForm((s) => ({ ...s, clientUserId: v }))}
               emptyText={t("admin.manage.emptyClients")}
-              options={(clientsQuery.data?.clients ?? []).map((c) => ({
+              options={allClients.map((c) => ({
                 value: c.user.id,
                 label: c.user.fullName,
                 hint: c.user.email,
