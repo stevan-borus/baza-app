@@ -25,14 +25,13 @@ import { billingQueries } from "@/lib/queries/billing-queries-factory";
 
 export type AssignPackageMode = "comp" | "paid";
 
-const PAYMENT_METHODS = ["CASH", "CARD", "COMPANY", "QR", "MANUAL_ONLINE"] as const;
+const PAYMENT_METHODS = ["CASH", "CARD", "COMPANY", "MANUAL_ONLINE"] as const;
 type PaymentMethod = (typeof PAYMENT_METHODS)[number];
 
 const METHOD_LABEL_KEY: Record<PaymentMethod, string> = {
   CASH: "admin.manage.methodCash",
   CARD: "admin.manage.methodCard",
   COMPANY: "admin.manage.methodCompany",
-  QR: "admin.manage.methodQr",
   MANUAL_ONLINE: "admin.manage.methodOnline",
 };
 

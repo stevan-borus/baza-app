@@ -335,7 +335,7 @@ export const billingRecordInputSchema = BillingRecordInputSchema.pick({
 }).extend({
   amount: z.number().int().positive(),
   notes: z.string().max(500).optional(),
-  status: z.enum(["PENDING", "CONFIRMED", "CANCELED"]).optional(),
+  status: z.enum(["CONFIRMED"]).optional(),
   packageTypeId: z.uuid().optional(),
   activatePackageOnConfirm: z.boolean().default(true),
 });
