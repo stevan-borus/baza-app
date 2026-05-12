@@ -51,15 +51,10 @@ test.describe("admin (Serbian)", () => {
   }
 
   /**
-   * Open the catalog screens via the avatar menu (Phase 1: catalog screens
-   * are no longer top-level tabs — they live behind the grid-icon avatar
-   * trigger on every admin tab's header). The signed-in admin lands on the
-   * Pregled tab, where the AvatarMenu is rendered in the header's rightSlot.
-   *
-   * The AppSheet animates out asynchronously after the row tap routes; the
-   * gorhom-bottom-sheet backdrop element can persist briefly after the URL
-   * changes. Wait for the destination URL before assuming the next click is
-   * unblocked.
+   * Open a catalog screen via the Katalog tab. The Katalog tab is the
+   * canonical home for class-type, room, and package-type management;
+   * tapping a row on the landing screen pushes the corresponding
+   * `/katalog/<segment>` route.
    */
   async function openCatalog(
     page: Page,
@@ -70,23 +65,66 @@ test.describe("admin (Serbian)", () => {
       rooms: "sale",
       packageTypes: "tipovi-paketa",
     }[target];
-    await page.getByTestId("open-catalog-menu").click();
-    await page.getByTestId(`catalog-menu-${target}`).click();
+    const rowTestId = {
+      classTypes: "katalog-row-class-types",
+      rooms: "katalog-row-rooms",
+      packageTypes: "katalog-row-package-types",
+    }[target];
+    await page.getByTestId("tab-katalog").click();
+    await page.getByTestId(rowTestId).dispatchEvent("click");
     await page.waitForURL(new RegExp(`/katalog/${expectedSegment}$`), {
       timeout: 10_000,
     });
-    // Best-effort: wait for the backdrop element to either be removed or to
-    // stop intercepting pointer events. On web the gorhom sheet leaves a
-    // residual backdrop sometimes; we tolerate it remaining as long as
-    // pointer-events is none.
-    await page
-      .locator('button[aria-label="Bottom sheet backdrop"]')
-      .first()
-      .waitFor({ state: "hidden", timeout: 5_000 })
-      .catch(() => {
-        /* tolerated — the catalog page may still mount the residual node */
-      });
   }
+
+  /**
+   * Open the new-session sheet via the Katalog tab's hero "Novi termin" row.
+   * The "+" button on the Pregled header has been removed; Katalog is the
+   * single entry point for creating a session.
+   */
+  async function openNewSessionSheet(page: Page) {
+    await page.getByTestId("tab-katalog").click();
+    await page.getByTestId("katalog-novi-termin").dispatchEvent("click");
+    await expect(page.getByTestId("session-create-submit")).toBeVisible({
+      timeout: 5_000,
+    });
+  }
+
+  // ── Header / Pregled cleanup invariants ──────────────────────────────────
+
+  test("Pregled header no longer renders the '+' new-session button", async ({
+    page,
+  }) => {
+    await signInAsAdmin(page);
+    await expect(
+      page.getByTestId("admin-new-session-button"),
+    ).toHaveCount(0);
+  });
+
+  test("no admin screen mounts the legacy catalog avatar menu", async ({
+    page,
+  }) => {
+    await signInAsAdmin(page);
+    for (const tabId of [
+      "tab-pregled",
+      "tab-katalog",
+      "tab-klijenti",
+      "tab-naplata",
+      "tab-izvestaji",
+    ]) {
+      await page.getByTestId(tabId).click();
+      await expect(page.getByTestId("open-catalog-menu")).toHaveCount(0);
+    }
+  });
+
+  test("Pregled does not show the legacy quick-action rows", async ({
+    page,
+  }) => {
+    await signInAsAdmin(page);
+    await page.getByTestId("tab-pregled").click();
+    await expect(page.getByTestId("admin-quick-class-types")).toHaveCount(0);
+    await expect(page.getByTestId("admin-quick-rooms")).toHaveCount(0);
+  });
 
   // ── Catalog ───────────────────────────────────────────────────────────────
 
@@ -329,10 +367,9 @@ test.describe("admin (Serbian)", () => {
     const sessionsBefore = await countSessions();
 
     await signInAsAdmin(page);
-    // The schedule is the admin landing screen.
-    await page
-      .getByRole("button", { name: t.admin.schedule.newSession })
-      .click();
+    // The "+" button on Pregled has been removed; Novi termin lives on
+    // the Katalog tab's hero row.
+    await openNewSessionSheet(page);
 
     // Class type select — pick the first available option.
     await page
@@ -453,9 +490,7 @@ test.describe("admin (Serbian)", () => {
     const sessionsBefore = await countSessions();
 
     await signInAsAdmin(page);
-    await page
-      .getByRole("button", { name: t.admin.schedule.newSession })
-      .click();
+    await openNewSessionSheet(page);
 
     // Toggle to recurring mode.
     await page.getByTestId("session-create-mode-recurring").click();

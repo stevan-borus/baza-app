@@ -22,12 +22,16 @@ env:
 - runFlow:
     file: helpers/sign-in.yaml
 
+- tapOn:
+    id: "tab-katalog"
+- waitForAnimationToEnd
+
 - extendedWaitUntil:
     visible:
-      id: "admin-quick-rooms"
+      id: "katalog-row-rooms"
     timeout: 15000
 - tapOn:
-    id: "admin-quick-rooms"
+    id: "katalog-row-rooms"
 - waitForAnimationToEnd
 
 # Create.

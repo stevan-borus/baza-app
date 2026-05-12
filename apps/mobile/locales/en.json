@@ -414,7 +414,6 @@
       "viewDay": "Day",
       "viewWeek": "Week",
       "viewMonth": "Month",
-      "newSession": "+ New session",
       "error": "Unable to load schedule.",
       "sheetRecurring": "Recurring sessions",
       "sheetNew": "New session",
@@ -696,15 +695,6 @@
       "noviTermin": "New session",
       "noviTerminSub": "One-time or recurring"
     }
-  },
-  "adminMenu": {
-    "catalog": "Catalog",
-    "openMenu": "Open catalog menu",
-    "classTypes": "Class types",
-    "rooms": "Rooms",
-    "packageTypes": "Package types",
-    "language": "Language",
-    "logout": "Log out"
   },
   "trainer": {
     "schedule": {

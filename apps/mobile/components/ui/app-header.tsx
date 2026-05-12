@@ -78,8 +78,7 @@ export function AppHeader({
         />
 
         {/* Right slot — minWidth 36pt mirrors the left slot but expands for
-            consumers that need to render multiple controls (e.g. AvatarMenu
-            + HeaderIconButton row on the admin tab indexes). The logo stays
+            consumers that need to render multiple controls. The logo stays
             centered by justifyContent: "space-between" on the row, not by
             matched slot widths, so this asymmetry doesn't decenter it. */}
         <View

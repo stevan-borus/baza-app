@@ -22,13 +22,17 @@ env:
 - runFlow:
     file: helpers/sign-in.yaml
 
-# Navigate from the admin dashboard to the ClassTypes screen.
+# Navigate from the admin dashboard to the ClassTypes screen via Katalog.
+- tapOn:
+    id: "tab-katalog"
+- waitForAnimationToEnd
+
 - extendedWaitUntil:
     visible:
-      id: "admin-quick-class-types"
+      id: "katalog-row-class-types"
     timeout: 15000
 - tapOn:
-    id: "admin-quick-class-types"
+    id: "katalog-row-class-types"
 - waitForAnimationToEnd
 
 # Create.

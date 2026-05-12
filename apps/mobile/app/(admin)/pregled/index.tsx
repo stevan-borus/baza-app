@@ -1,9 +1,8 @@
 import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { ScrollView, Text, View } from "react-native";
 import { useRouter } from "expo-router";
-import Feather from "@expo/vector-icons/Feather";
 import dayjs from "dayjs";
 import { MotiView } from "@/components/ui/styled";
 import { NumberRollup } from "@/components/ui/number-rollup";
@@ -18,11 +17,7 @@ import {
   SkeletonList,
   SkeletonStatCard,
 } from "@/components/ui/skeleton";
-import { useThemeTokens } from "@/components/ui/tokens";
 import { CapsLabel, StudioWeekStrip, StatStrip } from "@/components/ui/studio";
-import { HeaderIconButton } from "@/components/ui/app-header";
-import { AvatarMenu } from "@/components/admin/avatar-menu";
-import { NewSessionSheet } from "@/components/admin/new-session-sheet";
 import {
   SessionEditSheet,
   useSessionEditSheet,
@@ -47,7 +42,6 @@ export default function AdminSchedule() {
   const { t, i18n } = useTranslation();
   const lang = i18n.language === "en" ? "en" : "sr";
   const router = useRouter();
-  const tokens = useThemeTokens();
   const bottomPad = useTabBarBottomPadding(24);
   const [selectedDate, setSelectedDate] = useState(dayjs().format("YYYY-MM-DD"));
   const prevDateRef = React.useRef(selectedDate);
@@ -61,7 +55,6 @@ export default function AdminSchedule() {
   const [weekStart, setWeekStart] = useState(() => startOfLocaleWeek(dayjs()));
   const [monthDate, setMonthDate] = useState(() => dayjs().startOf("month"));
   const [scheduleTab, setScheduleTab] = useState<ScheduleTab>("day");
-  const [showCreate, setShowCreate] = useState(false);
   const editSheet = useSessionEditSheet();
 
   const displayDate = dayjs(selectedDate);
@@ -170,20 +163,7 @@ export default function AdminSchedule() {
   }
 
   return (
-    <ScreenContainerRaw
-      title={t("tabs.dashboard")}
-      rightSlot={
-        <View style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
-          <AvatarMenu />
-          <HeaderIconButton
-            icon="plus"
-            onPress={() => setShowCreate(true)}
-            accessibilityLabel={t("admin.schedule.newSession")}
-            testID="admin-new-session-button"
-          />
-        </View>
-      }
-    >
+    <ScreenContainerRaw title={t("tabs.dashboard")}>
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingTop: 16, paddingBottom: bottomPad }}
@@ -248,46 +228,6 @@ export default function AdminSchedule() {
               },
             ]}
           />
-        </MotiView>
-
-        {/* ── Studio quick-actions: hairline list rows ── */}
-        <MotiView
-          from={{ opacity: 0, translateY: -4 }}
-          animate={{ opacity: 1, translateY: 0 }}
-          transition={{ type: "timing", duration: 350, delay: 220 }}
-          className="mb-6"
-        >
-          <View className="mx-5 border-t border-b border-glass-border">
-            <Pressable
-              testID="admin-quick-class-types"
-              onPress={() => router.push("/(admin)/katalog/tipovi-treninga")}
-              android_ripple={null}
-              className="flex-row items-center justify-between py-4 active:opacity-60"
-            >
-              <View className="flex-row items-center gap-3 flex-1">
-                <Feather name="list" size={16} color={tokens.muted} />
-                <Text className="text-foreground font-body-medium" style={{ fontSize: 15 }}>
-                  {t("admin.manage.classTypes")}
-                </Text>
-              </View>
-              <Feather name="chevron-right" size={16} color={tokens.faint} />
-            </Pressable>
-            <View className="bg-glass-border" style={{ height: 1 }} />
-            <Pressable
-              testID="admin-quick-rooms"
-              onPress={() => router.push("/(admin)/katalog/sale")}
-              android_ripple={null}
-              className="flex-row items-center justify-between py-4 active:opacity-60"
-            >
-              <View className="flex-row items-center gap-3 flex-1">
-                <Feather name="home" size={16} color={tokens.muted} />
-                <Text className="text-foreground font-body-medium" style={{ fontSize: 15 }}>
-                  {t("admin.manage.rooms")}
-                </Text>
-              </View>
-              <Feather name="chevron-right" size={16} color={tokens.faint} />
-            </Pressable>
-          </View>
         </MotiView>
 
         {/* ── Schedule section ───────────────────────────────────────── */}
@@ -401,7 +341,6 @@ export default function AdminSchedule() {
 
       </ScrollView>
 
-      <NewSessionSheet open={showCreate} onOpenChange={setShowCreate} />
       <SessionEditSheet {...editSheet.bind()} />
     </ScreenContainerRaw>
   );

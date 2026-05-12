@@ -36,7 +36,6 @@ import { ProgressRing } from "@/components/ui/progress-ring";
 import { useThemeTokens } from "@/components/ui/tokens";
 import { reportsQueries } from "@/lib/queries/reports-queries-factory";
 import { ScreenContainerRaw, useTabBarBottomPadding } from "@/components/ui/screen-container";
-import { AvatarMenu } from "@/components/admin/avatar-menu";
 import { usePeriodPill, type Period } from "@/lib/admin/use-period-pill";
 
 const BAR_HEIGHT_MAX = 90;
@@ -182,7 +181,6 @@ export default function IzvestajiIskoriscenost() {
     <ScreenContainerRaw
       headerVariant="detail"
       title={t("admin.izvestaji.iskoriscenost.title")}
-      rightSlot={<AvatarMenu />}
     >
       <ScrollView
         showsVerticalScrollIndicator={false}
