@@ -164,6 +164,7 @@ export default function AdminPackages() {
   return (
     <ScreenContainerRaw
       title={t("tabs.packages")}
+      headerVariant="detail"
       rightSlot={
         <HeaderIconButton
           icon="plus"
@@ -283,7 +284,7 @@ export default function AdminPackages() {
           <SectionLabel>{t("admin.manage.activeAssignments")}</SectionLabel>
           <Pressable
             testID="active-assignments-link"
-            onPress={() => router.push("/(admin)/izvestaji/paketi/aktivne-dodele")}
+            onPress={() => router.push("/(admin)/katalog/aktivne-dodele")}
             android_ripple={null}
             style={{ borderRadius: 14 }}
           >

@@ -1,5 +1,5 @@
 import { ActiveAssignments } from "@/components/admin/active-assignments";
 
-export default function IzvestajiActiveAssignments() {
+export default function KatalogActiveAssignments() {
   return <ActiveAssignments />;
 }
