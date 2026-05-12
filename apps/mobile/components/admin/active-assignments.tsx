@@ -1,17 +1,24 @@
+// Migration note: the assignments list is rendered through `<PaginatedList>`
+// and the search input + filter chips live in the existing fixed View ABOVE
+// the list so they stay pinned while rows scroll underneath. The hand-rolled
+// `ScrollView + onScroll → fetchNextPage` plumbing, the ActivityIndicator
+// footer, and the skeleton/empty/error fallbacks are gone — the wrapper owns
+// all of them.
+
 import React, { useDeferredValue, useMemo, useState } from "react";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { ActivityIndicator, ScrollView, Text, View } from "react-native";
+import { ScrollView, Text, View } from "react-native";
 import dayjs from "dayjs";
 import { MotiView } from "@/components/ui/styled";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState, ErrorState } from "@/components/ui/states";
 import { Input } from "@/components/ui/input";
 import { GlassCard } from "@/components/ui/glass-card";
-import { SkeletonCard } from "@/components/ui/skeleton";
 import { ScreenContainerRaw, useTabBarBottomPadding } from "@/components/ui/screen-container";
 import { HeaderIconButton } from "@/components/ui/app-header";
 import { FilterChip } from "@/components/ui/studio";
+import { PaginatedList } from "@/components/ui/paginated-list";
 import { AssignPackageFlow } from "@/components/admin/assign-package-flow";
 import { packagesQueries } from "@/lib/queries/packages-queries-factory";
 import { now } from "@/lib/now";
@@ -57,10 +64,10 @@ export function ActiveAssignments() {
     }),
   );
 
-  // Known limitation: the filter chips (all/expiring/expired) narrow across
-  // only the pages already loaded, not the full server-side dataset. With
-  // dozens-to-hundreds of assignments this is fine; the real fix would push
-  // `filter` to the API as a separate query param. Not in scope for this PR.
+  // Filter chips (all/expiring/expired) narrow client-side over the loaded
+  // pages — same trade-off as Klijenti and Naplata. Pushing `filter` to the
+  // server would require extending the API; most admins toggle chips across
+  // the current view rather than asking for "ALL expired" globally.
   const loadedPackages = useMemo(
     () => query.data?.pages.flatMap((p) => p.packages) ?? [],
     [query.data],
@@ -79,6 +86,8 @@ export function ActiveAssignments() {
     return loadedPackages;
   }, [loadedPackages, filter]);
 
+  type Pkg = (typeof loadedPackages)[number];
+
   return (
     <ScreenContainerRaw
       title={t("admin.manage.activeAssignments")}
@@ -92,93 +101,64 @@ export function ActiveAssignments() {
         />
       }
     >
-      <View
-        style={{
-          paddingTop: 16,
-          paddingHorizontal: 24,
-          paddingBottom: 16,
-          gap: 16,
-        }}
-      >
-        <MotiView
-          from={{ opacity: 0, translateY: 8 }}
-          animate={{ opacity: 1, translateY: 0 }}
-          transition={{ type: "timing", duration: 300 }}
+      <View style={{ flex: 1 }}>
+        {/* ── Sticky header ──────────────────────────────────────────────────
+            Lives OUTSIDE the list so the search input and filter chips stay
+            pinned while rows scroll underneath. The MotiView entry animations
+            are preserved — they only run once on mount, not on every list
+            scroll. */}
+        <View
+          style={{
+            paddingTop: 16,
+            paddingHorizontal: 24,
+            paddingBottom: 16,
+            gap: 16,
+          }}
         >
-          <Input
-            testID="active-assignments-search-input"
-            placeholder={t("admin.manage.searchAssignmentsPlaceholder")}
-            value={search}
-            onChangeText={setSearch}
-          />
-        </MotiView>
-
-        <MotiView
-          from={{ opacity: 0, translateY: -4 }}
-          animate={{ opacity: 1, translateY: 0 }}
-          transition={{ type: "timing", duration: 300, delay: 80 }}
-        >
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ gap: 8, paddingRight: 4 }}
+          <MotiView
+            from={{ opacity: 0, translateY: 8 }}
+            animate={{ opacity: 1, translateY: 0 }}
+            transition={{ type: "timing", duration: 300 }}
           >
-            {FILTERS.map(({ key, labelKey }) => (
-              <FilterChip
-                key={key}
-                active={filter === key}
-                label={t(labelKey)}
-                onPress={() => setFilter(key)}
-              />
-            ))}
-          </ScrollView>
-        </MotiView>
-      </View>
+            <Input
+              testID="active-assignments-search-input"
+              placeholder={t("admin.manage.searchAssignmentsPlaceholder")}
+              value={search}
+              onChangeText={setSearch}
+            />
+          </MotiView>
 
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-        onScroll={({ nativeEvent }) => {
-          const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
-          if (
-            layoutMeasurement.height + contentOffset.y >=
-              contentSize.height - 200 &&
-            query.hasNextPage &&
-            !query.isFetchingNextPage
-          ) {
-            query.fetchNextPage();
-          }
-        }}
-        scrollEventThrottle={400}
-        contentContainerStyle={{
-          paddingHorizontal: 24,
-          paddingBottom: bottomPad,
-          gap: 10,
-        }}
-      >
-        <MotiView
-          from={{ opacity: 0, translateY: 8 }}
-          animate={{ opacity: 1, translateY: 0 }}
-          transition={{ type: "timing", duration: 300, delay: 160 }}
-          style={{ gap: 10 }}
-        >
-          {query.isError ? (
-            <ErrorState message={t("admin.manage.assignmentsError")} />
-          ) : null}
+          <MotiView
+            from={{ opacity: 0, translateY: -4 }}
+            animate={{ opacity: 1, translateY: 0 }}
+            transition={{ type: "timing", duration: 300, delay: 80 }}
+          >
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ gap: 8, paddingRight: 4 }}
+            >
+              {FILTERS.map(({ key, labelKey }) => (
+                <FilterChip
+                  key={key}
+                  active={filter === key}
+                  label={t(labelKey)}
+                  onPress={() => setFilter(key)}
+                />
+              ))}
+            </ScrollView>
+          </MotiView>
+        </View>
 
-          {query.isLoading ? (
-            <>
-              <SkeletonCard />
-              <SkeletonCard />
-              <SkeletonCard />
-            </>
-          ) : null}
-
-          {!query.isLoading && filtered.length === 0 ? (
-            <EmptyState title={t("admin.manage.assignmentsEmpty")} />
-          ) : null}
-
-          {filtered.map((pkg) => {
+        {/* ── List body ─────────────────────────────────────────────────────
+            Filter chips narrow client-side over already-loaded pages
+            (documented above). The wrapper owns loading / empty / error /
+            fetch-next-page footer states. */}
+        <PaginatedList<Pkg>
+          query={query}
+          data={filtered}
+          keyExtractor={(pkg) => pkg.id}
+          renderItem={({ item: pkg }) => {
             const expiresAt = new Date(pkg.expiresAt);
             const today = now();
             const isExpired = expiresAt <= today;
@@ -188,59 +168,55 @@ export function ActiveAssignments() {
             const packageName = pkg.packageType?.name ?? pkg.packageTypeId;
             const clientName = pkg.client?.fullName ?? "—";
             return (
-              <GlassCard
-                key={pkg.id}
-                size="md"
-                testID={`active-assignment-row-${pkg.id}`}
-              >
-                <View className="flex-row items-center gap-3">
-                  <AssignmentAvatar name={clientName} />
-                  <View className="flex-1 flex-col gap-0.5">
-                    <Text
-                      className="text-foreground font-body-semibold"
-                      style={{ fontSize: 15 }}
-                      numberOfLines={1}
+              <View style={{ paddingBottom: 10 }}>
+                <GlassCard size="md" testID={`active-assignment-row-${pkg.id}`}>
+                  <View className="flex-row items-center gap-3">
+                    <AssignmentAvatar name={clientName} />
+                    <View className="flex-1 flex-col gap-0.5">
+                      <Text
+                        className="text-foreground font-body-semibold"
+                        style={{ fontSize: 15 }}
+                        numberOfLines={1}
+                      >
+                        {clientName}
+                      </Text>
+                      <Text className="text-muted" style={{ fontSize: 13 }} numberOfLines={1}>
+                        {packageName}
+                      </Text>
+                      <Text className="text-muted" style={{ fontSize: 12 }}>
+                        {t("admin.manage.sessionsRemaining", {
+                          count: pkg.sessionsRemaining,
+                        })}{" "}
+                        ·{" "}
+                        {t("admin.manage.expiresOn", {
+                          date: dayjs(pkg.expiresAt).locale(lang).format("MMM D, YYYY"),
+                        })}
+                      </Text>
+                    </View>
+                    <Badge
+                      status={
+                        isExpired ? "danger" : isExpiring ? "warning" : "success"
+                      }
                     >
-                      {clientName}
-                    </Text>
-                    <Text className="text-muted" style={{ fontSize: 13 }} numberOfLines={1}>
-                      {packageName}
-                    </Text>
-                    <Text className="text-muted" style={{ fontSize: 12 }}>
-                      {t("admin.manage.sessionsRemaining", {
-                        count: pkg.sessionsRemaining,
-                      })}{" "}
-                      ·{" "}
-                      {t("admin.manage.expiresOn", {
-                        date: dayjs(pkg.expiresAt).locale(lang).format("MMM D, YYYY"),
-                      })}
-                    </Text>
+                      {isExpired
+                        ? t("client.profileTab.expired")
+                        : isExpiring
+                          ? t("admin.manage.filterExpiring")
+                          : t("client.package.active")}
+                    </Badge>
                   </View>
-                  <Badge
-                    status={
-                      isExpired ? "danger" : isExpiring ? "warning" : "success"
-                    }
-                  >
-                    {isExpired
-                      ? t("client.profileTab.expired")
-                      : isExpiring
-                        ? t("admin.manage.filterExpiring")
-                        : t("client.package.active")}
-                  </Badge>
-                </View>
-              </GlassCard>
+                </GlassCard>
+              </View>
             );
-          })}
-          {query.isFetchingNextPage ? (
-            <View
-              testID="active-assignments-loading-more"
-              style={{ paddingVertical: 12 }}
-            >
-              <ActivityIndicator />
-            </View>
-          ) : null}
-        </MotiView>
-      </ScrollView>
+          }}
+          contentContainerStyle={{
+            paddingHorizontal: 24,
+            paddingBottom: bottomPad,
+          }}
+          errorState={<ErrorState message={t("admin.manage.assignmentsError")} />}
+          emptyState={<EmptyState title={t("admin.manage.assignmentsEmpty")} />}
+        />
+      </View>
       <AssignPackageFlow open={showAssignFlow} onOpenChange={setShowAssignFlow} />
     </ScreenContainerRaw>
   );

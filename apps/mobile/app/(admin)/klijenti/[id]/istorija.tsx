@@ -1,17 +1,20 @@
 // P2-3: Past bookings sub-route — paginated infinite list of the client's
-// past bookings (period=past on bookings.byClient). Mirrors the
-// naplata/index.tsx infinite-scroll pattern (ScrollView + onScroll instead of
-// FlatList) so we stay consistent with the rest of the admin shell — see
-// apps/mobile/app/(admin)/naplata/index.tsx for the canonical example.
+// past bookings (period=past on bookings.byClient).
+//
+// Migration note: the list is rendered through `<PaginatedList>` and the
+// client-name subtitle lives in a fixed View ABOVE the list. The hand-rolled
+// `ScrollView + onScroll → fetchNextPage` plumbing, the ActivityIndicator
+// footer, and the skeleton/empty/error fallbacks are gone — the wrapper owns
+// all of them.
 
 import React from "react";
 import { useQuery, useInfiniteQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { ActivityIndicator, ScrollView, Text, View } from "react-native";
+import { Text, View } from "react-native";
 import { useLocalSearchParams } from "expo-router";
 import { EmptyState, ErrorState } from "@/components/ui/states";
-import { SkeletonCard } from "@/components/ui/skeleton";
 import { ScreenContainerRaw, useTabBarBottomPadding } from "@/components/ui/screen-container";
+import { PaginatedList } from "@/components/ui/paginated-list";
 import { clientsQueries } from "@/lib/queries/clients-queries-factory";
 import { bookingsQueries } from "@/lib/queries/bookings-queries-factory";
 import { BookingRow } from "@/components/admin/booking-row";
@@ -36,85 +39,65 @@ export default function AdminClientHistory() {
     return pages.flatMap((p) => p.bookings);
   }, [pastQuery.data?.pages]);
 
-  function handleEndReached() {
-    if (pastQuery.hasNextPage && !pastQuery.isFetchingNextPage) {
-      pastQuery.fetchNextPage();
-    }
-  }
+  type Booking = (typeof pastBookings)[number];
 
   return (
     <ScreenContainerRaw
       title={t("admin.clientDetail.viewHistory")}
       headerVariant="detail"
     >
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        onScroll={({ nativeEvent }) => {
-          // Infinite scroll: trigger when within 200px of the bottom (same
-          // threshold as naplata/index.tsx).
-          const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
-          if (
-            layoutMeasurement.height + contentOffset.y >=
-            contentSize.height - 200
-          ) {
-            handleEndReached();
-          }
-        }}
-        scrollEventThrottle={400}
-        contentContainerStyle={{
-          paddingTop: 16,
-          paddingHorizontal: 20,
-          paddingBottom: bottomPad,
-          gap: 12,
-        }}
-      >
-        {/* Subtitle so the admin knows whose history they're viewing. */}
+      <View style={{ flex: 1 }}>
+        {/* ── Sticky header ──────────────────────────────────────────────────
+            Just the client-name subtitle — no search, no filters on this
+            route. Lives OUTSIDE the list so it stays pinned while rows
+            scroll underneath. */}
         {client ? (
-          <Text
-            testID="client-history-subtitle"
-            className="text-muted"
-            style={{ fontSize: 13 }}
-            numberOfLines={1}
+          <View
+            style={{
+              paddingTop: 16,
+              paddingHorizontal: 20,
+              paddingBottom: 12,
+            }}
           >
-            {client.user.fullName}
-          </Text>
-        ) : null}
-
-        {pastQuery.isLoading ? (
-          <>
-            <SkeletonCard />
-            <SkeletonCard />
-            <SkeletonCard />
-          </>
-        ) : null}
-
-        {pastQuery.isError ? (
-          <ErrorState message={t("admin.clientDetail.upcomingError")} />
-        ) : null}
-
-        {!pastQuery.isLoading && !pastQuery.isError && pastBookings.length === 0 ? (
-          <EmptyState title={t("admin.clientDetail.noPastBookings")} />
-        ) : null}
-
-        {pastBookings.length > 0 ? (
-          <View className="bg-surface rounded-lg overflow-hidden">
-            {pastBookings.map((b, idx) => (
-              <React.Fragment key={b.id}>
-                {idx > 0 ? (
-                  <View
-                    className="bg-glass-border"
-                    style={{ height: 1, marginLeft: 16 }}
-                  />
-                ) : null}
-                <BookingRow booking={b} showCanceledTag />
-              </React.Fragment>
-            ))}
-            {pastQuery.isFetchingNextPage ? (
-              <ActivityIndicator style={{ padding: 16 }} />
-            ) : null}
+            <Text
+              testID="client-history-subtitle"
+              className="text-muted"
+              style={{ fontSize: 13 }}
+              numberOfLines={1}
+            >
+              {client.user.fullName}
+            </Text>
           </View>
         ) : null}
-      </ScrollView>
+
+        {/* ── List body ─────────────────────────────────────────────────────
+            The wrapper owns loading / empty / error / fetch-next-page footer
+            states. Rows render flush with a 1px hairline divider between
+            them, wrapped in a rounded surface container via the
+            contentContainerStyle. */}
+        <PaginatedList<Booking>
+          query={pastQuery}
+          data={pastBookings}
+          keyExtractor={(b) => b.id}
+          renderItem={({ item, index }) => (
+            <View>
+              {index > 0 ? (
+                <View
+                  className="bg-glass-border"
+                  style={{ height: 1, marginLeft: 16 }}
+                />
+              ) : null}
+              <BookingRow booking={item} showCanceledTag />
+            </View>
+          )}
+          contentContainerStyle={{
+            paddingHorizontal: 20,
+            paddingBottom: bottomPad,
+          }}
+          errorState={<ErrorState message={t("admin.clientDetail.upcomingError")} />}
+          emptyState={<EmptyState title={t("admin.clientDetail.noPastBookings")} />}
+        />
+      </View>
     </ScreenContainerRaw>
   );
 }

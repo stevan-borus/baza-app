@@ -765,6 +765,53 @@ export async function seedExtraBillingRecords(count: number) {
   return created;
 }
 
+/**
+ * Seed N extra clients AND book each onto the given trainer's soonest future
+ * session, establishing a link-by-booking relationship so the trainer's
+ * `/api/clients` query returns all of them. Used by the trainer-clients
+ * sticky-header spec — the rich seed only produces one linked client, which
+ * doesn't overflow the viewport. Reuses `seedExtraClients` for the user/
+ * profile records, then upserts a Booking per (session, profile).
+ */
+export async function seedExtraTrainerLinkedClients(
+  trainerEmail: string,
+  count: number,
+) {
+  const trainer = await db().user.findUnique({
+    where: { email: trainerEmail.toLowerCase() },
+    select: { id: true },
+  });
+  if (!trainer) throw new Error(`Trainer ${trainerEmail} not found`);
+  const session = await db().session.findFirst({
+    where: {
+      trainerUserId: trainer.id,
+      startsAt: { gt: now() },
+      status: "SCHEDULED",
+    },
+    orderBy: { startsAt: "asc" },
+    select: { id: true },
+  });
+  if (!session) throw new Error("No future session for trainer");
+  const profiles = await seedExtraClients(count);
+  for (const p of profiles) {
+    await db().booking.upsert({
+      where: {
+        sessionId_clientProfileId: {
+          sessionId: session.id,
+          clientProfileId: p.profileId,
+        },
+      },
+      create: {
+        sessionId: session.id,
+        clientProfileId: p.profileId,
+      },
+      update: { canceledAt: null },
+      select: { id: true },
+    });
+  }
+  return profiles;
+}
+
 export async function disconnect() {
   if (prismaClient) {
     await prismaClient.$disconnect();
