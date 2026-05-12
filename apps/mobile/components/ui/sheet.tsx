@@ -20,6 +20,18 @@ type AppSheetProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   children: React.ReactNode;
+  /**
+   * When `true`, AppSheet renders its children directly (no wrapping
+   * BottomSheetScrollView). Use this when the caller wants to mount a
+   * `BottomSheetFlatList` / `BottomSheetSectionList` / its own scroll
+   * primitive — those must be direct children of `BottomSheetModal` for
+   * gesture composition to work. Caller is responsible for handling the
+   * sheet's padding (top/bottom/horizontal) and dynamic sizing.
+   *
+   * Default `false`: wraps in `BottomSheetScrollView` with the studio's
+   * standard padding, which works for every "fits-or-grows" sheet form.
+   */
+  rawContent?: boolean;
 };
 
 /**
@@ -37,7 +49,12 @@ type AppSheetProps = {
  *
  * Requires `<BottomSheetModalProvider>` mounted at the app root (see _layout).
  */
-export function AppSheet({ open, onOpenChange, children }: AppSheetProps) {
+export function AppSheet({
+  open,
+  onOpenChange,
+  children,
+  rawContent = false,
+}: AppSheetProps) {
   const ref = useRef<BottomSheetModal>(null);
   const tokens = useThemeTokens();
 
@@ -80,19 +97,25 @@ export function AppSheet({ open, onOpenChange, children }: AppSheetProps) {
       backgroundStyle={{ backgroundColor: tokens.surface }}
       handleIndicatorStyle={{ backgroundColor: tokens.muted }}
     >
-      <BottomSheetScrollView
-        contentContainerStyle={{
-          paddingHorizontal: 24,
-          paddingTop: 8,
-          paddingBottom: 40,
-        }}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-      >
+      {rawContent ? (
         <InsideBottomSheetContext.Provider value={true}>
           {children}
         </InsideBottomSheetContext.Provider>
-      </BottomSheetScrollView>
+      ) : (
+        <BottomSheetScrollView
+          contentContainerStyle={{
+            paddingHorizontal: 24,
+            paddingTop: 8,
+            paddingBottom: 40,
+          }}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <InsideBottomSheetContext.Provider value={true}>
+            {children}
+          </InsideBottomSheetContext.Provider>
+        </BottomSheetScrollView>
+      )}
     </BottomSheetModal>
   );
 }

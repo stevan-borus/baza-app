@@ -16,10 +16,11 @@
 // starts fresh at step "pickClient".
 
 import React, { useDeferredValue, useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-native";
+import { ActivityIndicator, Pressable, Text, View } from "react-native";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import Feather from "@expo/vector-icons/Feather";
+import { BottomSheetFlatList } from "@gorhom/bottom-sheet";
 import { AppSheet } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -62,7 +63,14 @@ export function AssignPackageFlow({ open, onOpenChange }: AssignPackageFlowProps
   }, [open]);
 
   return (
-    <AppSheet open={open} onOpenChange={onOpenChange}>
+    <AppSheet
+      open={open}
+      onOpenChange={onOpenChange}
+      // pickClient uses BottomSheetFlatList directly for sticky title +
+      // search above a scrollable list. Other steps render through the
+      // default BottomSheetScrollView wrapper.
+      rawContent={step === "pickClient"}
+    >
       {step === "pickClient" ? (
         <ClientPickerStep
           onPick={(client) => {
@@ -132,15 +140,14 @@ function ClientPickerStep({
     [clientsQuery.data],
   );
 
-  return (
-    <View className="flex-col gap-4">
+  const Header = (
+    <View>
       <Text
         className="text-foreground font-body-bold"
-        style={{ fontSize: 20, letterSpacing: -0.3 }}
+        style={{ fontSize: 20, letterSpacing: -0.3, marginBottom: 12 }}
       >
         {t("admin.izvestaji.paketi.flow.pickClient")}
       </Text>
-
       <Input
         testID="assign-flow-client-search"
         placeholder={t("admin.izvestaji.paketi.flow.searchPlaceholder")}
@@ -150,95 +157,94 @@ function ClientPickerStep({
         autoCapitalize="none"
         autoCorrect={false}
       />
-
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-        onScroll={({ nativeEvent }) => {
-          const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
-          if (
-            layoutMeasurement.height + contentOffset.y >=
-              contentSize.height - 200 &&
-            clientsQuery.hasNextPage &&
-            !clientsQuery.isFetchingNextPage
-          ) {
-            clientsQuery.fetchNextPage();
-          }
-        }}
-        scrollEventThrottle={400}
-      >
-        {clientsQuery.isError ? (
-          <ErrorState message={t("admin.clients.error")} />
-        ) : null}
-
-        {clientsQuery.isLoading && filtered.length === 0 ? (
-          <View style={{ gap: 8 }}>
-            <SkeletonCard />
-            <SkeletonCard />
-            <SkeletonCard />
-          </View>
-        ) : null}
-
-        {!clientsQuery.isLoading && !clientsQuery.isError && filtered.length === 0 ? (
-          <EmptyState
-            title={
-              deferredSearch.length > 0
-                ? t("admin.clients.filterEmpty")
-                : t("admin.clients.empty")
-            }
-          />
-        ) : null}
-
-        <View>
-          {filtered.map((c, idx) => (
-            <React.Fragment key={c.id}>
-              {idx > 0 ? (
-                <View
-                  className="bg-glass-border"
-                  style={{ height: 1, marginLeft: 52 }}
-                />
-              ) : null}
-              <Pressable
-                testID={`assign-flow-client-row-${c.user.id}`}
-                onPress={() =>
-                  onPick({
-                    id: c.id,
-                    user: {
-                      id: c.user.id,
-                      fullName: c.user.fullName,
-                      email: c.user.email,
-                    },
-                  })
-                }
-                android_ripple={null}
-                className="flex-row items-center gap-3 py-3 active:opacity-70"
-              >
-                <PickerAvatar name={c.user.fullName} />
-                <View className="flex-1 gap-0.5">
-                  <Text
-                    className="text-foreground font-body-semibold"
-                    style={{ fontSize: 15 }}
-                    numberOfLines={1}
-                  >
-                    {c.user.fullName}
-                  </Text>
-                  <Text
-                    className="text-muted"
-                    style={{ fontSize: 12 }}
-                    numberOfLines={1}
-                  >
-                    {c.user.email}
-                  </Text>
-                </View>
-              </Pressable>
-            </React.Fragment>
-          ))}
-        </View>
-        {clientsQuery.isFetchingNextPage ? (
-          <ActivityIndicator style={{ padding: 16 }} />
-        ) : null}
-      </ScrollView>
     </View>
+  );
+
+  const Empty = clientsQuery.isError ? (
+    <ErrorState message={t("admin.clients.error")} />
+  ) : clientsQuery.isLoading && filtered.length === 0 ? (
+    <View style={{ gap: 8, paddingTop: 12 }}>
+      <SkeletonCard />
+      <SkeletonCard />
+      <SkeletonCard />
+    </View>
+  ) : (
+    <View style={{ paddingTop: 12 }}>
+      <EmptyState
+        title={
+          deferredSearch.length > 0
+            ? t("admin.clients.filterEmpty")
+            : t("admin.clients.empty")
+        }
+      />
+    </View>
+  );
+
+  return (
+    <BottomSheetFlatList
+      data={filtered}
+      keyExtractor={(c) => c.id}
+      keyboardShouldPersistTaps="handled"
+      contentContainerStyle={{
+        paddingHorizontal: 24,
+        paddingTop: 8,
+        paddingBottom: 40,
+      }}
+      ListHeaderComponent={Header}
+      ListEmptyComponent={Empty}
+      ItemSeparatorComponent={() => (
+        <View
+          className="bg-glass-border"
+          style={{ height: 1, marginLeft: 52 }}
+        />
+      )}
+      ListFooterComponent={
+        clientsQuery.isFetchingNextPage ? (
+          <ActivityIndicator style={{ padding: 16 }} />
+        ) : null
+      }
+      onEndReached={() => {
+        if (clientsQuery.hasNextPage && !clientsQuery.isFetchingNextPage) {
+          clientsQuery.fetchNextPage();
+        }
+      }}
+      onEndReachedThreshold={0.4}
+      renderItem={({ item: c }) => (
+        <Pressable
+          testID={`assign-flow-client-row-${c.user.id}`}
+          onPress={() =>
+            onPick({
+              id: c.id,
+              user: {
+                id: c.user.id,
+                fullName: c.user.fullName,
+                email: c.user.email,
+              },
+            })
+          }
+          android_ripple={null}
+          className="flex-row items-center gap-3 py-3 active:opacity-70"
+        >
+          <PickerAvatar name={c.user.fullName} />
+          <View className="flex-1 gap-0.5">
+            <Text
+              className="text-foreground font-body-semibold"
+              style={{ fontSize: 15 }}
+              numberOfLines={1}
+            >
+              {c.user.fullName}
+            </Text>
+            <Text
+              className="text-muted"
+              style={{ fontSize: 12 }}
+              numberOfLines={1}
+            >
+              {c.user.email}
+            </Text>
+          </View>
+        </Pressable>
+      )}
+    />
   );
 }
 
