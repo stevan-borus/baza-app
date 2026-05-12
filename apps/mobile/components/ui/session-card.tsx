@@ -2,6 +2,7 @@ import React from "react";
 import { Pressable, Text, View } from "react-native";
 import { useTranslation } from "react-i18next";
 import { GlassCard } from "./glass-card";
+import { Badge } from "./badge";
 import { CapsLabel } from "./studio/typography";
 
 type SessionStatus = "booked" | "waitlisted" | "full" | "available";
@@ -101,9 +102,10 @@ function SessionCardTime({ time }: { time: string }) {
 }
 
 /**
- * Capacity fraction — "booked / capacity" in tabular-nums.
+ * Capacity badge — "booked / capacity" in a neutral pill. Renders
+ * `null` when capacity is 0.
  */
-function SessionCapacity({
+function SessionCapacityBadge({
   bookedCount,
   capacity,
   sessionId,
@@ -117,13 +119,11 @@ function SessionCapacity({
     ? `session-card-capacity-${sessionId}`
     : "session-card-capacity";
   return (
-    <Text
-      testID={testID}
-      className="text-xs text-muted"
-      style={{ fontVariant: ["tabular-nums"] }}
-    >
-      {bookedCount} / {capacity}
-    </Text>
+    <View testID={testID}>
+      <Badge status="neutral">
+        {bookedCount} / {capacity}
+      </Badge>
+    </View>
   );
 }
 
@@ -160,9 +160,16 @@ export function SessionCard({
           <View className="flex-row items-center gap-3">
             <SessionCardTime time={time} />
             <View className="flex-1 gap-0.5">
-              <Text className="text-sm font-body-semibold text-foreground">
-                {className}
-              </Text>
+              <View className="flex-row items-center gap-2">
+                <Text className="flex-1 text-sm font-body-semibold text-foreground" numberOfLines={1}>
+                  {className}
+                </Text>
+                <SessionCapacityBadge
+                  bookedCount={bookedCount}
+                  capacity={capacity}
+                  sessionId={sessionId}
+                />
+              </View>
               {trainerName ? (
                 <Text className="text-xs text-muted" numberOfLines={1}>
                   {trainerName}
@@ -178,13 +185,6 @@ export function SessionCard({
                   {hiddenLabel}
                 </CapsLabel>
               ) : null}
-              <View className="mt-1">
-                <SessionCapacity
-                  bookedCount={bookedCount}
-                  capacity={capacity}
-                  sessionId={sessionId}
-                />
-              </View>
               {attendance ? (
                 <View
                   testID={
