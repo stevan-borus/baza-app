@@ -102,4 +102,53 @@ test.describe.serial("klijenti pagination (admin)", () => {
       .toBeLessThan(firstPageCount);
     await expect(page.getByText("Pagi Client 007").first()).toBeVisible();
   });
+
+  test("search + filter chips stay pinned while the list scrolls", async ({
+    page,
+  }) => {
+    await page.goto("/sign-in");
+    await page.getByTestId("auth-email-input").fill("admin.e2e@example.test");
+    await page.getByTestId("auth-password-input").fill(SEED_PASSWORD);
+    await page.getByTestId("auth-submit-button").click();
+    await expect(page.getByTestId("tab-klijenti")).toBeVisible({
+      timeout: 15_000,
+    });
+    await page.getByTestId("tab-klijenti").click();
+
+    const search = page.getByTestId("klijenti-search-input");
+    await expect(search).toBeVisible({ timeout: 10_000 });
+    const rows = page.locator('[data-testid^="client-row-"]');
+    await expect(rows.first()).toBeVisible({ timeout: 10_000 });
+
+    // Capture the search input's Y coordinate before scrolling.
+    const beforeBox = await search.boundingBox();
+    expect(beforeBox).not.toBeNull();
+
+    // Scroll the inner list to the bottom — same pattern as the pagination
+    // test above. The sticky header MUST stay at the same Y coordinate.
+    await page.evaluate(() => {
+      const row = document.querySelector('[data-testid^="client-row-"]');
+      if (!row) return;
+      let node: HTMLElement | null = row as HTMLElement;
+      while (node && node !== document.body) {
+        const cs = getComputedStyle(node);
+        if (
+          /(auto|scroll)/.test(cs.overflowY) &&
+          node.scrollHeight > node.clientHeight
+        ) {
+          node.scrollTop = node.scrollHeight;
+          return;
+        }
+        node = node.parentElement;
+      }
+    });
+
+    // Allow one rAF for the scroll to settle.
+    await page.waitForTimeout(150);
+
+    const afterBox = await search.boundingBox();
+    expect(afterBox).not.toBeNull();
+    // 2px slack covers sub-pixel layout rounding on RN-Web.
+    expect(Math.abs((afterBox!.y) - (beforeBox!.y))).toBeLessThan(2);
+  });
 });
