@@ -51,13 +51,45 @@ test.describe.serial("klijenti pagination (admin)", () => {
     expect(firstPageCount).toBeLessThanOrEqual(20);
     expect(firstPageCount).toBeGreaterThan(0);
 
-    // Scroll to the bottom to trigger fetchNextPage.
+    // Scroll the inner ScrollView (not the window) until fetchNextPage
+    // fires. React Native Web's ScrollView is a div with overflow:auto;
+    // walk up from a row to find its scrollable ancestor and drive that.
     await page.evaluate(() => {
-      window.scrollTo(0, document.body.scrollHeight);
+      const row = document.querySelector('[data-testid^="client-row-"]');
+      if (!row) return;
+      let node: HTMLElement | null = row as HTMLElement;
+      while (node && node !== document.body) {
+        const cs = getComputedStyle(node);
+        if (/(auto|scroll)/.test(cs.overflowY) && node.scrollHeight > node.clientHeight) {
+          node.scrollTop = node.scrollHeight;
+          return;
+        }
+        node = node.parentElement;
+      }
     });
-    // Give the next page a beat to arrive.
+    // Give the next page a beat to arrive. Re-scroll while polling — RN-Web
+    // throttles onScroll, so one event may not be enough to cross the
+    // 200px threshold guard in the component.
     await expect
-      .poll(() => rows.count(), { timeout: 10_000 })
+      .poll(
+        async () => {
+          await page.evaluate(() => {
+            const row = document.querySelector('[data-testid^="client-row-"]');
+            if (!row) return;
+            let node: HTMLElement | null = row as HTMLElement;
+            while (node && node !== document.body) {
+              const cs = getComputedStyle(node);
+              if (/(auto|scroll)/.test(cs.overflowY) && node.scrollHeight > node.clientHeight) {
+                node.scrollTop = node.scrollHeight;
+                return;
+              }
+              node = node.parentElement;
+            }
+          });
+          return await rows.count();
+        },
+        { timeout: 15_000, intervals: [500, 1000] },
+      )
       .toBeGreaterThan(firstPageCount);
 
     // Server-side search: type a query that only matches one of our seeded
