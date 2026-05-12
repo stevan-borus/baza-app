@@ -3,11 +3,15 @@
  * - Stripe Dashboard ios Jun 2023/ — period selector, hero revenue, transaction list detail
  *
  * Migration note: the billing list is rendered through `<PaginatedList>` and
- * the period selector + hero + StatStrip + filter chips + per-client filter
- * live in a fixed View ABOVE the list so they no longer drift off-screen as
- * the user scrolls. The hand-rolled `ScrollView + onScroll → fetchNextPage`
- * plumbing, the skeleton fallback, and the ActivityIndicator footer are gone
- * — the wrapper owns all three.
+ * the period selector + hero + StatStrip + per-client filter live in a fixed
+ * View ABOVE the list so they no longer drift off-screen as the user scrolls.
+ *
+ * PR β trim (2026-05-12): the status filter chip strip (Sve / Potvrđen /
+ * Na čekanju / Otkazan) is gone — the studio doesn't run a payment-
+ * confirmation workflow, so PENDING and CANCELED rows never existed in
+ * practice and the chips for them just produced empty lists. List rows
+ * also moved from GlassCard chrome to a hairline-row pattern that triples
+ * on-screen density (matches Klijenti's row style).
  *
  * Hidden search input: a `testID="naplata-search-input"` Input is mounted
  * in the sticky header purely as the e2e anchor for the sticky-header spec.
@@ -23,15 +27,15 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import dayjs from "dayjs";
 import { ReturnToPill } from "@/components/admin/return-to-pill";
 import { MotiView } from "@/components/ui/styled";
 import { getDateLocale } from "@/lib/i18n";
 import { AppSheet } from "@/components/ui/sheet";
-import { Badge, Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/card";
 import { NumberRollup } from "@/components/ui/number-rollup";
-import { CapsLabel, FilterChip, StatStrip } from "@/components/ui/studio";
+import { CapsLabel, StatStrip } from "@/components/ui/studio";
 import { useThemeTokens } from "@/components/ui/tokens";
 import Feather from "@expo/vector-icons/Feather";
 import { Button } from "@/components/ui/button";
@@ -48,8 +52,6 @@ import { clientsQueries } from "@/lib/queries/clients-queries-factory";
 import { ScreenContainerRaw, useTabBarBottomPadding } from "@/components/ui/screen-container";
 import { HeaderIconButton } from "@/components/ui/app-header";
 
-type FilterTab = "all" | "confirmed" | "canceled" | "pending";
-
 export default function AdminBilling() {
   const { t, i18n } = useTranslation();
   const lang = i18n.language === "en" ? "en" : "sr";
@@ -58,15 +60,8 @@ export default function AdminBilling() {
   const bottomPad = useTabBarBottomPadding();
   const [showCreate, setShowCreate] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState(() => dayjs());
-  const [activeFilter, setActiveFilter] = useState<FilterTab>("all");
   const [filterClientUserId, setFilterClientUserId] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState("");
-  const filterTabs: { value: FilterTab; label: string }[] = [
-    { value: "all", label: t("admin.manage.filterAll") },
-    { value: "confirmed", label: t("admin.manage.statusConfirmed") },
-    { value: "pending", label: t("admin.manage.statusPending") },
-    { value: "canceled", label: t("admin.manage.statusCanceled") },
-  ];
   const [form, setForm] = useState({
     clientUserId: "",
     amount: "",
@@ -111,6 +106,10 @@ export default function AdminBilling() {
   // listInfinite migration (the old non-paginated endpoint returned the same
   // set in one go). Worth tightening to a server aggregate later — out of
   // scope for this UI-migration PR.
+  //
+  // PR β note: BillingStatus is now a single-value enum (CONFIRMED), so the
+  // status filter is a no-op kept here for clarity in case the enum ever
+  // grows again. Today every record satisfies it.
   const summaryStats = useMemo(() => {
     const confirmed = records.filter((r) => r.status === "CONFIRMED");
     const totalRevenue = confirmed.reduce((sum, r) => sum + r.amount, 0);
@@ -120,19 +119,14 @@ export default function AdminBilling() {
     return { totalRevenue, count, avg };
   }, [records]);
 
-  // Status filter chips + search input narrow client-side over already-loaded
-  // pages — same trade-off as Klijenti and ActiveAssignments. Pushing status
-  // to the server would require extending the API; most admins toggle status
-  // across the current view rather than asking for "ALL canceled" globally.
+  // Search input narrows client-side over already-loaded pages — same
+  // trade-off as Klijenti and ActiveAssignments. The status filter chip
+  // strip (PR β) is gone because the studio's workflow only ever produced
+  // CONFIRMED rows in practice, so the chips for PENDING / CANCELED were
+  // dead UX.
   const filteredRecords = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     let out: BillingRecord[] = records;
-    if (activeFilter === "confirmed")
-      out = out.filter((r) => r.status === "CONFIRMED");
-    else if (activeFilter === "pending")
-      out = out.filter((r) => r.status === "PENDING");
-    else if (activeFilter === "canceled")
-      out = out.filter((r) => r.status === "CANCELED");
     if (q) {
       out = out.filter((r) => {
         const name = r.client?.fullName?.toLowerCase() ?? "";
@@ -141,15 +135,14 @@ export default function AdminBilling() {
       });
     }
     return out;
-  }, [records, activeFilter, searchQuery]);
+  }, [records, searchQuery]);
 
   // Filtered-totals subtitle (P4-2). "Filters active" here means the user
   // has narrowed the list below the default month view — i.e. picked a
-  // specific client or a non-"all" status chip or typed a search. The month
-  // chooser always has a value, so we don't count from/to as "filters" for
-  // this UI cue.
+  // specific client or typed a search. The month chooser always has a
+  // value, so we don't count from/to as "filters" for this UI cue.
   const filtersActive =
-    filterClientUserId !== "" || activeFilter !== "all" || searchQuery.trim() !== "";
+    filterClientUserId !== "" || searchQuery.trim() !== "";
   const filteredCount = filteredRecords.length;
   const filteredAmount = useMemo(
     () => filteredRecords.reduce((sum, r) => sum + r.amount, 0),
@@ -179,15 +172,9 @@ export default function AdminBilling() {
     CASH: "admin.manage.methodCash",
     CARD: "admin.manage.methodCard",
     COMPANY: "admin.manage.methodCompany",
-    QR: "admin.manage.methodQr",
     MANUAL_ONLINE: "admin.manage.methodOnline",
   };
-  const statusLabelKeys: Record<string, string> = {
-    PENDING: "admin.manage.statusPending",
-    CONFIRMED: "admin.manage.statusConfirmed",
-    CANCELED: "admin.manage.statusCanceled",
-  };
-  const methods = ["CASH", "CARD", "COMPANY", "QR", "MANUAL_ONLINE"] as const;
+  const methods = ["CASH", "CARD", "COMPANY", "MANUAL_ONLINE"] as const;
   const dateLocale = getDateLocale();
 
   const periodLabel = selectedMonth.locale(lang).format("MMMM YYYY");
@@ -206,15 +193,18 @@ export default function AdminBilling() {
       <View style={{ flex: 1 }}>
         {/* ── Sticky header ──────────────────────────────────────────────────
             Lives OUTSIDE the list so the period selector, hero revenue,
-            StatStrip, search input, and filter chips stay pinned while
-            rows scroll underneath. The MotiView entry animations are
-            preserved — they only run once on mount, not on every list
-            scroll. */}
+            StatStrip, search input, and per-client filter stay pinned
+            while rows scroll underneath. The MotiView entry animations
+            are preserved — they only run once on mount, not on every list
+            scroll.
+
+            PR β: paddingTop/Bottom tightened (16 → 8) on the period
+            selector wrapper to bring the hero higher up the viewport. */}
         <View
           style={{
-            paddingTop: 16,
+            paddingTop: 8,
             paddingHorizontal: 24,
-            paddingBottom: 12,
+            paddingBottom: 8,
             gap: 16,
           }}
         >
@@ -317,7 +307,7 @@ export default function AdminBilling() {
 
           {/* Search input — pinned in the header (testID anchors the e2e
               sticky-header spec). Filter narrows client-side over the
-              loaded pages; behaves the same way as the status chips. */}
+              loaded pages. */}
           <MotiView
             from={{ opacity: 0, translateY: -6 }}
             animate={{ opacity: 1, translateY: 0 }}
@@ -332,28 +322,6 @@ export default function AdminBilling() {
               autoCapitalize="none"
               autoCorrect={false}
             />
-          </MotiView>
-
-          {/* Filter chips */}
-          <MotiView
-            from={{ opacity: 0, translateY: 8 }}
-            animate={{ opacity: 1, translateY: 0 }}
-            transition={{ type: "timing", duration: 350, delay: 200 }}
-          >
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={{ gap: 8 }}
-            >
-              {filterTabs.map((tab) => (
-                <FilterChip
-                  key={tab.value}
-                  label={tab.label}
-                  active={activeFilter === tab.value}
-                  onPress={() => setActiveFilter(tab.value)}
-                />
-              ))}
-            </ScrollView>
           </MotiView>
 
           {/* Per-client filter */}
@@ -381,69 +349,28 @@ export default function AdminBilling() {
         </View>
 
         {/* ── List body ─────────────────────────────────────────────────────
-            Status filter chips + search input narrow client-side over
-            already-loaded pages (documented above). The wrapper owns
-            loading / empty / error / fetch-next-page footer states. */}
+            Search input narrows client-side over already-loaded pages
+            (documented above). The wrapper owns loading / empty / error /
+            fetch-next-page footer states.
+
+            PR β row shape: hairline list rows (~56-64px tall) instead of
+            GlassCard chrome — same pattern as Klijenti. Two-line layout:
+            client name + amount on the top row, method · date + status
+            badge underneath. ItemSeparator is a 1px hairline indented
+            20px from the left edge for editorial feel. */}
         <PaginatedList<BillingRecord>
           query={billingQuery}
           data={filteredRecords}
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => (
-            <View className="px-1 py-1.5">
-              <Card testID={`billing-row-${item.id}`}>
-                <View className="flex-col gap-2">
-                  {/* Primary identity: client name leads the card so admins
-                      can scan the list by WHO paid, not just amount/method. */}
-                  {item.client?.fullName ? (
-                    <Text
-                      testID={`billing-row-client-${item.id}`}
-                      className="text-foreground font-body-semibold"
-                      style={{ fontSize: 15 }}
-                      numberOfLines={1}
-                    >
-                      {item.client.fullName}
-                    </Text>
-                  ) : null}
-                  <View className="flex-row justify-between items-center">
-                    <Text
-                      className="text-foreground font-extrabold"
-                      style={{ fontSize: 20 }}
-                    >
-                      {item.amount} RSD
-                    </Text>
-                    <Badge
-                      status={
-                        item.status === "CONFIRMED"
-                          ? "success"
-                          : item.status === "PENDING"
-                            ? "warning"
-                            : "danger"
-                      }
-                    >
-                      {statusLabelKeys[item.status]
-                        ? t(statusLabelKeys[item.status])
-                        : item.status}
-                    </Badge>
-                  </View>
-                  <View className="flex-row justify-between items-center">
-                    <Text className="text-muted" style={{ fontSize: 13 }}>
-                      {methodLabelKeys[item.method]
-                        ? t(methodLabelKeys[item.method])
-                        : item.method}
-                    </Text>
-                    <Text className="text-muted" style={{ fontSize: 12 }}>
-                      {new Date(item.createdAt).toLocaleDateString(dateLocale)}
-                    </Text>
-                  </View>
-                  {item.notes ? (
-                    <Text className="text-muted" style={{ fontSize: 12 }}>
-                      {item.notes}
-                    </Text>
-                  ) : null}
-                </View>
-              </Card>
-            </View>
+            <BillingRow
+              item={item}
+              t={t}
+              dateLocale={dateLocale}
+              methodLabelKeys={methodLabelKeys}
+            />
           )}
+          ItemSeparatorComponent={BillingRowSeparator}
           contentContainerStyle={{
             paddingHorizontal: 24,
             paddingBottom: bottomPad,
@@ -545,5 +472,75 @@ export default function AdminBilling() {
         </View>
       </AppSheet>
     </ScreenContainerRaw>
+  );
+}
+
+// ─── Row components ─────────────────────────────────────────────────────────
+// PR β: hairline list row matching Klijenti's pattern. Two text rows + a
+// status badge — drop the surrounding GlassCard so per-row height shrinks
+// from ~140px to ~56-64px and the list shows 3x as many records per
+// viewport.
+
+function BillingRow({
+  item,
+  t,
+  dateLocale,
+  methodLabelKeys,
+}: {
+  item: BillingRecord;
+  t: (key: string, opts?: Record<string, unknown>) => string;
+  dateLocale: ReturnType<typeof getDateLocale>;
+  methodLabelKeys: Record<string, string>;
+}) {
+  const methodLabel = methodLabelKeys[item.method]
+    ? t(methodLabelKeys[item.method])
+    : item.method;
+  const dateLabel = new Date(item.createdAt).toLocaleDateString(dateLocale);
+  return (
+    <View
+      testID={`billing-row-${item.id}`}
+      className="flex-row items-center gap-3 py-3"
+    >
+      <View className="flex-1 gap-0.5">
+        {item.client?.fullName ? (
+          <Text
+            testID={`billing-row-client-${item.id}`}
+            className="text-foreground font-body-semibold"
+            style={{ fontSize: 15 }}
+            numberOfLines={1}
+          >
+            {item.client.fullName}
+          </Text>
+        ) : null}
+        <Text
+          className="text-muted"
+          style={{ fontSize: 12 }}
+          numberOfLines={1}
+        >
+          {methodLabel} · {dateLabel}
+        </Text>
+      </View>
+      <View className="items-end gap-1">
+        <Text
+          className="text-foreground font-body-semibold"
+          style={{ fontSize: 15 }}
+          numberOfLines={1}
+        >
+          {item.amount.toLocaleString("sr-RS")} RSD
+        </Text>
+        <Badge status="success">{t("admin.manage.statusConfirmed")}</Badge>
+      </View>
+    </View>
+  );
+}
+
+function BillingRowSeparator() {
+  // Hairline divider, slight indent for editorial feel — same shape as
+  // Klijenti's ClientRowSeparator (which uses a 64px inset to clear the
+  // avatar). Naplata rows have no leading avatar, so a smaller 20px
+  // indent gets the same "row content is what's separated" cue without
+  // over-indenting.
+  return (
+    <View className="bg-glass-border" style={{ height: 1, marginLeft: 20 }} />
   );
 }

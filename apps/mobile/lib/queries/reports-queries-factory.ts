@@ -102,7 +102,7 @@ const revenueByMethodResponseSchema = z.object({
   success: z.boolean(),
   rows: z.array(
     z.object({
-      method: z.enum(["CASH", "CARD", "COMPANY", "QR", "MANUAL_ONLINE"]),
+      method: z.enum(["CASH", "CARD", "COMPANY", "MANUAL_ONLINE"]),
       revenue: z.number(),
       paymentCount: z.number(),
     }),

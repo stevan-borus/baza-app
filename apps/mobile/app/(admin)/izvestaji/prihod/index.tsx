@@ -46,7 +46,6 @@ const methodLabelKeys: Record<string, string> = {
   CASH: "admin.manage.methodCash",
   CARD: "admin.manage.methodCard",
   COMPANY: "admin.manage.methodCompany",
-  QR: "admin.manage.methodQr",
   MANUAL_ONLINE: "admin.manage.methodOnline",
 };
 

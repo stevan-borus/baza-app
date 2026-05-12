@@ -11,8 +11,8 @@ const billingRecordSchema = z.object({
   id: z.string(),
   clientUserId: z.string(),
   amount: z.number(),
-  method: z.enum(["CASH", "CARD", "COMPANY", "QR", "MANUAL_ONLINE"]),
-  status: z.enum(["PENDING", "CONFIRMED", "CANCELED"]),
+  method: z.enum(["CASH", "CARD", "COMPANY", "MANUAL_ONLINE"]),
+  status: z.enum(["CONFIRMED"]),
   notes: z.nullable(z.string()).optional(),
   createdAt: z.string(),
   // Client identity for the Naplata list card. Nullable because the GET

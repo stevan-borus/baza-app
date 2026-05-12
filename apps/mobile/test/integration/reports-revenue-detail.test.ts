@@ -78,7 +78,7 @@ describe("reports/revenue/time-series", () => {
     expect(body.buckets[6].bucketEnd).toBe("2026-07-08T00:00:00.000Z");
   });
 
-  it("aggregates CONFIRMED payments into the correct daily bucket and ignores other statuses", async () => {
+  it("aggregates CONFIRMED payments into the correct daily bucket", async () => {
     const client = await prisma.user.create({
       data: { email: "c@test.local", fullName: "C", role: "CLIENT" },
     });
@@ -111,16 +111,10 @@ describe("reports/revenue/time-series", () => {
         createdAt: new Date("2026-07-03T12:00:00Z"),
       },
     });
-    // Pending payment same day — must NOT count.
-    await prisma.billingRecord.create({
-      data: {
-        clientUserId: client.id,
-        amount: 9999,
-        method: "CASH",
-        status: "PENDING",
-        createdAt: new Date("2026-07-03T13:00:00Z"),
-      },
-    });
+    // PR β removed PENDING/CANCELED from BillingStatus, so the historical
+    // "must NOT count" guard row is no longer constructible. The API's
+    // status=CONFIRMED filter is still in place as defense in depth in
+    // case the enum ever grows again.
 
     asAdmin();
     const response = await GET_TIME_SERIES(
@@ -323,26 +317,22 @@ describe("reports/revenue/by-method", () => {
         createdAt: at,
       },
     });
-    // QR: 1000
+    // COMPANY: 1000 (smallest)
     await prisma.billingRecord.create({
       data: {
         clientUserId: client.id,
         amount: 1000,
-        method: "QR",
+        method: "COMPANY",
         status: "CONFIRMED",
         createdAt: at,
       },
     });
-    // Canceled — must NOT count.
-    await prisma.billingRecord.create({
-      data: {
-        clientUserId: client.id,
-        amount: 9999,
-        method: "CARD",
-        status: "CANCELED",
-        createdAt: at,
-      },
-    });
+
+    // PR β removed PaymentMethod.QR and BillingStatus.PENDING/CANCELED, so
+    // there's no longer a "must NOT count" canceled row to seed — every row
+    // in the table is CONFIRMED by construction. The by-method API still
+    // filters where status=CONFIRMED for defense in depth and to keep the
+    // contract intact if the enum ever grows again.
 
     asAdmin();
     const response = await GET_BY_METHOD(
@@ -357,7 +347,7 @@ describe("reports/revenue/by-method", () => {
     expect(body.rows).toEqual([
       { method: "CARD", revenue: 8000, paymentCount: 1 },
       { method: "CASH", revenue: 5500, paymentCount: 2 },
-      { method: "QR", revenue: 1000, paymentCount: 1 },
+      { method: "COMPANY", revenue: 1000, paymentCount: 1 },
     ]);
   });
 
