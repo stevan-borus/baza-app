@@ -87,7 +87,18 @@ export async function GET(request: Request) {
     if (guard.user.role !== UserRole.ADMIN) {
       return fail("clientProfileId query param is required", 400);
     }
+    // Cursor-based pagination over a stable id ordering. We keep
+    // `startsAt: desc` for the primary visible sort and add `id: asc` as the
+    // tiebreaker so cursors stay deterministic across pages even when many
+    // rows share the same startsAt instant (seed data does this).
     const search = url.searchParams.get("search")?.trim();
+    const rawTake = url.searchParams.get("take");
+    const parsedTake = rawTake ? parseInt(rawTake, 10) : 20;
+    const take = Number.isFinite(parsedTake)
+      ? Math.min(Math.max(parsedTake, 1), 100)
+      : 20;
+    const cursor = url.searchParams.get("cursor") ?? undefined;
+
     const packages = await prisma.clientPackage.findMany({
       where: search
         ? {
@@ -101,7 +112,9 @@ export async function GET(request: Request) {
             },
           }
         : undefined,
-      orderBy: { startsAt: "desc" },
+      orderBy: [{ startsAt: "desc" }, { id: "asc" }],
+      take: take + 1,
+      ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
       include: {
         packageType: {
           select: { name: true, sessionCount: true, validityDays: true },
@@ -113,11 +126,16 @@ export async function GET(request: Request) {
         },
       },
     });
-    const shaped = packages.map((p) => ({
+    const hasMore = packages.length > take;
+    const pagePackages = hasMore ? packages.slice(0, take) : packages;
+    const nextCursor = hasMore
+      ? pagePackages[pagePackages.length - 1]?.id ?? null
+      : null;
+    const shaped = pagePackages.map((p) => ({
       ...p,
       client: p.clientProfile.user,
     }));
-    return ok({ success: true, packages: shaped });
+    return ok({ success: true, packages: shaped, nextCursor });
   }
 
   // Trainers may only view packages for clients they are linked to.

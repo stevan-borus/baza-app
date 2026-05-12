@@ -1,7 +1,7 @@
-import React, { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import React, { useDeferredValue, useMemo, useState } from "react";
+import { useInfiniteQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { ScrollView, Text, View } from "react-native";
+import { ActivityIndicator, ScrollView, Text, View } from "react-native";
 import dayjs from "dayjs";
 import { MotiView } from "@/components/ui/styled";
 import { Badge } from "@/components/ui/badge";
@@ -48,24 +48,36 @@ export function ActiveAssignments() {
   const [search, setSearch] = useState("");
   const [showAssignFlow, setShowAssignFlow] = useState(false);
 
-  const query = useQuery(
-    packagesQueries.clientPackagesAdminList({ search: search.trim() || undefined }),
+  // useDeferredValue batches keystrokes into a single server query — same
+  // pattern as the ClientPickerStep in assign-package-flow.
+  const deferredSearch = useDeferredValue(search.trim());
+  const query = useInfiniteQuery(
+    packagesQueries.clientPackagesAdminList({
+      search: deferredSearch || undefined,
+    }),
   );
 
+  // Known limitation: the filter chips (all/expiring/expired) narrow across
+  // only the pages already loaded, not the full server-side dataset. With
+  // dozens-to-hundreds of assignments this is fine; the real fix would push
+  // `filter` to the API as a separate query param. Not in scope for this PR.
+  const loadedPackages = useMemo(
+    () => query.data?.pages.flatMap((p) => p.packages) ?? [],
+    [query.data],
+  );
   const filtered = useMemo(() => {
-    const list = query.data?.packages ?? [];
     const today = now();
     if (filter === "expiring") {
-      return list.filter((p) => {
+      return loadedPackages.filter((p) => {
         const expiresAt = new Date(p.expiresAt);
         return expiresAt > today && expiresAt.getTime() - today.getTime() <= 7 * 24 * 60 * 60 * 1000;
       });
     }
     if (filter === "expired") {
-      return list.filter((p) => new Date(p.expiresAt) <= today);
+      return loadedPackages.filter((p) => new Date(p.expiresAt) <= today);
     }
-    return list;
-  }, [query.data?.packages, filter]);
+    return loadedPackages;
+  }, [loadedPackages, filter]);
 
   return (
     <ScreenContainerRaw
@@ -126,6 +138,18 @@ export function ActiveAssignments() {
       <ScrollView
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
+        onScroll={({ nativeEvent }) => {
+          const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
+          if (
+            layoutMeasurement.height + contentOffset.y >=
+              contentSize.height - 200 &&
+            query.hasNextPage &&
+            !query.isFetchingNextPage
+          ) {
+            query.fetchNextPage();
+          }
+        }}
+        scrollEventThrottle={400}
         contentContainerStyle={{
           paddingHorizontal: 24,
           paddingBottom: bottomPad,
@@ -207,6 +231,14 @@ export function ActiveAssignments() {
               </GlassCard>
             );
           })}
+          {query.isFetchingNextPage ? (
+            <View
+              testID="active-assignments-loading-more"
+              style={{ paddingVertical: 12 }}
+            >
+              <ActivityIndicator />
+            </View>
+          ) : null}
         </MotiView>
       </ScrollView>
       <AssignPackageFlow open={showAssignFlow} onOpenChange={setShowAssignFlow} />
