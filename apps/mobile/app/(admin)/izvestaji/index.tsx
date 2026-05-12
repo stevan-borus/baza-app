@@ -22,6 +22,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
 import { router, type Href } from "expo-router";
+import Feather from "@expo/vector-icons/Feather";
 import { MotiView } from "@/components/ui/styled";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { ErrorState } from "@/components/ui/states";
@@ -128,7 +129,7 @@ export default function AdminReportsLanding() {
               { value: "month" as const, label: t("admin.manage.periodMonth") },
               { value: "quarter" as const, label: t("admin.manage.periodQuarter") },
               { value: "year" as const, label: t("admin.manage.periodYear") },
-              { value: "all" as const, label: t("admin.manage.periodAll") },
+              { value: "all" as const, label: t("admin.manage.periodAllShort") },
             ]}
             value={period}
             onChange={setPeriod}
@@ -187,7 +188,7 @@ function LandingCard({
       testID={testID}
       onPress={() => router.push(target)}
       android_ripple={null}
-      className="active:opacity-60"
+      className="active:opacity-60 bg-surface"
       style={{
         aspectRatio: 1,
         borderRadius: 18,
@@ -197,10 +198,20 @@ function LandingCard({
         justifyContent: "space-between",
       }}
     >
-      {/* Caps overline label top-left. */}
-      <CapsLabel size={11} tracking={2.4} className="text-muted">
-        {title}
-      </CapsLabel>
+      {/* Top row — caps overline left, chevron right. The chevron is the
+          tappability cue that separates these landing tiles from the
+          chrome-less editorial tiles inside each sub-page. */}
+      <View className="flex-row items-start justify-between">
+        <CapsLabel size={11} tracking={2.4} className="text-muted flex-1">
+          {title}
+        </CapsLabel>
+        <Feather
+          name="chevron-right"
+          size={14}
+          color={tokens.faint}
+          style={{ marginTop: 1 }}
+        />
+      </View>
 
       {/* Numeral block, anchored to the bottom of the square. The unit
           sits under the numeral as a quiet caps row — never as a sub-

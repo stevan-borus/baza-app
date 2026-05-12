@@ -9,6 +9,7 @@
 import React, { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
+import { formatMutationError } from "@/lib/admin/format-mutation-error";
 import { Pressable, Switch, Text, View } from "react-native";
 import { AppSheet } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
@@ -54,7 +55,8 @@ const INITIAL_FORM: SessionFormState = {
 };
 
 export function NewSessionSheet({ open, onOpenChange }: NewSessionSheetProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const lang = i18n.language === "en" ? "en" : "sr";
   const queryClient = useQueryClient();
   const tokens = useThemeTokens();
 
@@ -341,7 +343,12 @@ export function NewSessionSheet({ open, onOpenChange }: NewSessionSheetProps) {
         {createMutation.isError || createRecurringMutation.isError ? (
           <ErrorState
             testID="session-create-error"
-            message={t("admin.schedule.createError")}
+            message={formatMutationError(
+              createMutation.error ?? createRecurringMutation.error,
+              t,
+              lang,
+              t("admin.schedule.createError"),
+            )}
           />
         ) : null}
       </View>

@@ -60,7 +60,6 @@ export default function AdminBilling() {
   const bottomPad = useTabBarBottomPadding();
   const [showCreate, setShowCreate] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState(() => dayjs());
-  const [filterClientUserId, setFilterClientUserId] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState("");
   const [form, setForm] = useState({
     clientUserId: "",
@@ -74,7 +73,6 @@ export default function AdminBilling() {
   const monthTo = selectedMonth.endOf("month").toISOString();
   const billingQuery = useInfiniteQuery(
     billingQueries.listInfinite({
-      ...(filterClientUserId ? { clientUserId: filterClientUserId } : {}),
       from: monthFrom,
       to: monthTo,
     }),
@@ -138,11 +136,10 @@ export default function AdminBilling() {
   }, [records, searchQuery]);
 
   // Filtered-totals subtitle (P4-2). "Filters active" here means the user
-  // has narrowed the list below the default month view — i.e. picked a
-  // specific client or typed a search. The month chooser always has a
-  // value, so we don't count from/to as "filters" for this UI cue.
-  const filtersActive =
-    filterClientUserId !== "" || searchQuery.trim() !== "";
+  // has narrowed the list below the default month view by typing a search.
+  // The month chooser always has a value, so we don't count from/to as a
+  // "filter" for this UI cue.
+  const filtersActive = searchQuery.trim() !== "";
   const filteredCount = filteredRecords.length;
   const filteredAmount = useMemo(
     () => filteredRecords.reduce((sum, r) => sum + r.amount, 0),
@@ -306,8 +303,9 @@ export default function AdminBilling() {
           </MotiView>
 
           {/* Search input — pinned in the header (testID anchors the e2e
-              sticky-header spec). Filter narrows client-side over the
-              loaded pages. */}
+              sticky-header spec). The per-client filter dropdown was
+              dropped — the search field already filters by client name /
+              notes, so the dropdown was a redundant second affordance. */}
           <MotiView
             from={{ opacity: 0, translateY: -6 }}
             animate={{ opacity: 1, translateY: 0 }}
@@ -321,29 +319,6 @@ export default function AdminBilling() {
               onChangeText={setSearchQuery}
               autoCapitalize="none"
               autoCorrect={false}
-            />
-          </MotiView>
-
-          {/* Per-client filter */}
-          <MotiView
-            from={{ opacity: 0, translateY: 8 }}
-            animate={{ opacity: 1, translateY: 0 }}
-            transition={{ type: "timing", duration: 350, delay: 240 }}
-          >
-            <Select
-              testID="billing-filter-client-select"
-              optionTestIDPrefix="billing-filter-client-option"
-              placeholder={t("admin.manage.filterClientPlaceholder")}
-              value={filterClientUserId}
-              onChange={setFilterClientUserId}
-              emptyText={t("admin.manage.filterClientEmpty")}
-              options={[
-                { value: "", label: t("admin.manage.filterAll") },
-                ...allClients.map((c) => ({
-                  value: c.user.id,
-                  label: c.user.fullName ?? c.user.email,
-                })),
-              ]}
             />
           </MotiView>
         </View>
@@ -535,12 +510,8 @@ function BillingRow({
 }
 
 function BillingRowSeparator() {
-  // Hairline divider, slight indent for editorial feel — same shape as
-  // Klijenti's ClientRowSeparator (which uses a 64px inset to clear the
-  // avatar). Naplata rows have no leading avatar, so a smaller 20px
-  // indent gets the same "row content is what's separated" cue without
-  // over-indenting.
-  return (
-    <View className="bg-glass-border" style={{ height: 1, marginLeft: 20 }} />
-  );
+  // Hairline divider flush with the row content. Klijenti uses a left
+  // inset to clear the avatar; Naplata rows have no leading adornment, so
+  // an indented hairline reads as a misalignment.
+  return <View className="bg-glass-border" style={{ height: 1 }} />;
 }

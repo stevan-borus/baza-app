@@ -1,6 +1,6 @@
 import { queryOptions, mutationOptions, keepPreviousData } from "@tanstack/react-query";
 import { z } from "zod";
-import { apiFetch } from "@/lib/api";
+import { apiFetch, throwIfNotOk } from "@/lib/api";
 import { sharedEnv } from "@/lib/env.shared";
 
 // Local availability schema — duplicates @baza/types but uses z.coerce.date()
@@ -157,7 +157,7 @@ export const sessionsQueries = {
           headers: { "content-type": "application/json" },
           body: JSON.stringify(payload),
         });
-        if (!response.ok) throw new Error(`Unable to create session (${response.status})`);
+        await throwIfNotOk(response, "Unable to create session");
         return response.json();
       },
     }),
@@ -184,7 +184,7 @@ export const sessionsQueries = {
           headers: { "content-type": "application/json" },
           body: JSON.stringify(payload),
         });
-        if (!response.ok) throw new Error(`Unable to update session (${response.status})`);
+        await throwIfNotOk(response, "Unable to update session");
         return response.json();
       },
     }),
@@ -212,8 +212,7 @@ export const sessionsQueries = {
             body: JSON.stringify(payload),
           },
         );
-        if (!response.ok)
-          throw new Error(`Unable to create recurring sessions (${response.status})`);
+        await throwIfNotOk(response, "Unable to create recurring sessions");
         return response.json();
       },
     }),
@@ -276,10 +275,7 @@ export const sessionsQueries = {
             body: JSON.stringify(payload),
           },
         );
-        if (!response.ok) {
-          const text = await response.text();
-          throw new Error(text || `Unable to update series (${response.status})`);
-        }
+        await throwIfNotOk(response, "Unable to update series");
         return response.json();
       },
     }),
@@ -292,10 +288,7 @@ export const sessionsQueries = {
           `${sharedEnv.EXPO_PUBLIC_API_URL}/api/sessions/recurring/${id}`,
           { method: "DELETE", credentials: "include" },
         );
-        if (!response.ok) {
-          const text = await response.text();
-          throw new Error(text || `Unable to delete series (${response.status})`);
-        }
+        await throwIfNotOk(response, "Unable to delete series");
         return response.json();
       },
     }),

@@ -33,8 +33,7 @@ import { GlassCard } from "@/components/ui/glass-card";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { ErrorState } from "@/components/ui/states";
 import { SkeletonCard } from "@/components/ui/skeleton";
-import { CapsLabel } from "@/components/ui/studio";
-import { NumberRollup } from "@/components/ui/number-rollup";
+import { CapsLabel, StatStrip } from "@/components/ui/studio";
 import { useThemeTokens } from "@/components/ui/tokens";
 import { reportsQueries } from "@/lib/queries/reports-queries-factory";
 import {
@@ -90,7 +89,11 @@ export default function IzvestajiRezervacije() {
     const fromD = new Date(periodWindow.from);
     const toD = new Date(periodWindow.to);
     const inclusiveTo = new Date(toD.getTime() - 1);
-    const fmt: Intl.DateTimeFormatOptions = { day: "numeric", month: "short" };
+    const crossesYear =
+      fromD.getUTCFullYear() !== inclusiveTo.getUTCFullYear();
+    const fmt: Intl.DateTimeFormatOptions = crossesYear
+      ? { day: "numeric", month: "short", year: "numeric" }
+      : { day: "numeric", month: "short" };
     return `${fromD.toLocaleDateString(dateLocale, fmt)} – ${inclusiveTo.toLocaleDateString(dateLocale, fmt)}`;
   }, [periodWindow.from, periodWindow.to, dateLocale, t]);
 
@@ -99,14 +102,15 @@ export default function IzvestajiRezervacije() {
   const chartWidth = Math.max(width - 24 * 2 - 20 * 2, 200);
   const barGap = 4;
   const bucketCount = Math.max(timeSeries.length, 1);
-  const barWidth = Math.max(
-    (chartWidth - barGap * (bucketCount - 1)) / bucketCount,
-    6,
+  // Cap bar width so a single bucket (period=all, young studio) doesn't
+  // render as a giant flood-fill bar that swallows the chart card.
+  const BAR_WIDTH_MAX = 56;
+  const barWidth = Math.min(
+    BAR_WIDTH_MAX,
+    Math.max((chartWidth - barGap * (bucketCount - 1)) / bucketCount, 6),
   );
 
-  // Headline tile values — render 0 when the query is still loading or
-  // errored. NumberRollup animates from the previous value so brief loads
-  // don't flash.
+  // Headline tile values — render 0 when the query is still loading or errored.
   const totalBookings = headline?.totalBookings ?? 0;
   const showRatePct = Math.round((headline?.showRate ?? 0) * 100);
   const canceledTotal = headline?.canceledTotal ?? 0;
@@ -154,55 +158,68 @@ export default function IzvestajiRezervacije() {
               { value: "month" as Period, label: t("admin.manage.periodMonth") },
               { value: "quarter" as Period, label: t("admin.manage.periodQuarter") },
               { value: "year" as Period, label: t("admin.manage.periodYear") },
-              { value: "all" as Period, label: t("admin.manage.periodAll") },
+              { value: "all" as Period, label: t("admin.manage.periodAllShort") },
             ]}
             value={period}
             onChange={setPeriod}
           />
         </MotiView>
 
-        {/* Headline tiles — 2×2 grid. */}
+        {/* Headline tiles — editorial 2×2 with hairline cross-rules. Mirrors
+            the Pregled-landing StatStrip so non-clickable stats read as
+            information, not affordances. The canceled-breakdown sub-line
+            sits below as a quiet footnote (the strip itself only takes
+            label + numeral). */}
         <MotiView
           from={{ opacity: 0, translateY: 8 }}
           animate={{ opacity: 1, translateY: 0 }}
           transition={{ type: "timing", duration: 350, delay: 60 }}
         >
-          <View style={{ gap: 12 }}>
+          <View style={{ gap: 8 }}>
             <Text className="text-muted" style={{ fontSize: 12 }}>
               {rangeLabel}
             </Text>
-            <View style={{ flexDirection: "row", gap: 12 }}>
-              <Tile
-                testID="rezervacije-tile-total"
-                label={t("admin.izvestaji.rezervacije.tiles.total")}
-                value={totalBookings}
-                formatter={(n) => n.toLocaleString(dateLocale)}
-              />
-              <Tile
-                testID="rezervacije-tile-show-rate"
-                label={t("admin.izvestaji.rezervacije.tiles.showRate")}
-                value={showRatePct}
-                formatter={(n) => `${n}%`}
-              />
-            </View>
-            <View style={{ flexDirection: "row", gap: 12 }}>
-              <Tile
-                testID="rezervacije-tile-canceled"
-                label={t("admin.izvestaji.rezervacije.tiles.canceled")}
-                value={canceledTotal}
-                formatter={(n) => n.toLocaleString(dateLocale)}
-                sub={t("admin.izvestaji.rezervacije.tiles.canceledSub", {
+            <StatStrip
+              className=""
+              columns={2}
+              items={[
+                {
+                  label: t("admin.izvestaji.rezervacije.tiles.total"),
+                  value: totalBookings
+                    ? totalBookings.toLocaleString(dateLocale)
+                    : undefined,
+                },
+                {
+                  label: t("admin.izvestaji.rezervacije.tiles.showRate"),
+                  value: totalBookings ? `${showRatePct}%` : undefined,
+                  accent: true,
+                },
+                {
+                  label: t("admin.izvestaji.rezervacije.tiles.canceled"),
+                  value: canceledTotal
+                    ? canceledTotal.toLocaleString(dateLocale)
+                    : undefined,
+                },
+                {
+                  label: t("admin.izvestaji.rezervacije.tiles.waitlist"),
+                  value: waitlistCount
+                    ? waitlistCount.toLocaleString(dateLocale)
+                    : undefined,
+                },
+              ]}
+            />
+            {canceledTotal > 0 ? (
+              <Text
+                testID="rezervacije-canceled-sub"
+                className="text-muted"
+                style={{ fontSize: 11 }}
+              >
+                {t("admin.izvestaji.rezervacije.tiles.canceledSub", {
                   preCutoff: canceledPreCutoff,
                   late: canceledLate,
                 })}
-              />
-              <Tile
-                testID="rezervacije-tile-waitlist"
-                label={t("admin.izvestaji.rezervacije.tiles.waitlist")}
-                value={waitlistCount}
-                formatter={(n) => n.toLocaleString(dateLocale)}
-              />
-            </View>
+              </Text>
+            ) : null}
           </View>
         </MotiView>
 
@@ -260,6 +277,7 @@ export default function IzvestajiRezervacije() {
                   style={{
                     flexDirection: "row",
                     alignItems: "flex-end",
+                    justifyContent: "center",
                     height: BAR_HEIGHT_MAX + 4,
                     gap: barGap,
                   }}
@@ -293,24 +311,35 @@ export default function IzvestajiRezervacije() {
                 <View
                   style={{
                     flexDirection: "row",
-                    justifyContent: "space-between",
+                    justifyContent:
+                      timeSeries.length > 1 ? "space-between" : "center",
                     paddingTop: 8,
                   }}
                 >
                   {[0, Math.floor(timeSeries.length / 2), timeSeries.length - 1]
                     .filter((v, i, arr) => arr.indexOf(v) === i && v >= 0)
-                    .map((idx) => (
-                      <Text
-                        key={idx}
-                        className="text-muted"
-                        style={{ fontSize: 10 }}
-                      >
-                        {new Date(timeSeries[idx].bucketStart).toLocaleDateString(
-                          dateLocale,
-                          { day: "numeric", month: "short" },
-                        )}
-                      </Text>
-                    ))}
+                    .map((idx) => {
+                      // Single yearly bucket (period=all on a young studio):
+                      // swap the Jan-1 label for just the year so it matches
+                      // the bucket span, not its lower bound.
+                      const start = new Date(timeSeries[idx].bucketStart);
+                      const label =
+                        timeSeries.length === 1
+                          ? String(start.getUTCFullYear())
+                          : start.toLocaleDateString(dateLocale, {
+                              day: "numeric",
+                              month: "short",
+                            });
+                      return (
+                        <Text
+                          key={idx}
+                          className="text-muted"
+                          style={{ fontSize: 10 }}
+                        >
+                          {label}
+                        </Text>
+                      );
+                    })}
                 </View>
               </View>
             ) : null}
@@ -348,7 +377,7 @@ export default function IzvestajiRezervacije() {
                   {t("admin.izvestaji.rezervacije.noData")}
                 </Text>
               ) : null}
-              {topSessions.map((s) => (
+              {topSessions.map((s, idx) => (
                 <Pressable
                   key={s.sessionId}
                   testID={`rezervacije-top-${s.sessionId}`}
@@ -357,7 +386,7 @@ export default function IzvestajiRezervacije() {
                   className="active:opacity-70"
                   style={{
                     paddingVertical: 8,
-                    borderBottomWidth: 1,
+                    borderBottomWidth: idx < topSessions.length - 1 ? 1 : 0,
                     borderBottomColor: tokens.glassBorder,
                   }}
                 >
@@ -400,41 +429,6 @@ export default function IzvestajiRezervacije() {
   );
 }
 
-type TileProps = {
-  testID: string;
-  label: string;
-  value: number;
-  formatter: (n: number) => string;
-  sub?: string;
-};
-
-function Tile({ testID, label, value, formatter, sub }: TileProps) {
-  return (
-    <View
-      testID={testID}
-      style={{ flex: 1 }}
-    >
-      <GlassCard size="md">
-        <View style={{ gap: 4 }}>
-          <CapsLabel size={10} tracking={1.4} className="text-muted">
-            {label}
-          </CapsLabel>
-          <NumberRollup
-            value={value}
-            formatter={formatter}
-            className="text-foreground font-body-bold"
-            style={{ fontSize: 28, lineHeight: 32, letterSpacing: -0.5 }}
-          />
-          {sub ? (
-            <Text className="text-muted" style={{ fontSize: 11 }} numberOfLines={1}>
-              {sub}
-            </Text>
-          ) : null}
-        </View>
-      </GlassCard>
-    </View>
-  );
-}
 
 type CancelBreakdownProps = {
   preCutoff: number;

@@ -32,8 +32,7 @@ import { GlassCard } from "@/components/ui/glass-card";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { ErrorState } from "@/components/ui/states";
 import { SkeletonCard } from "@/components/ui/skeleton";
-import { CapsLabel } from "@/components/ui/studio";
-import { NumberRollup } from "@/components/ui/number-rollup";
+import { CapsLabel, StatStrip } from "@/components/ui/studio";
 import { useThemeTokens } from "@/components/ui/tokens";
 import { reportsQueries } from "@/lib/queries/reports-queries-factory";
 import {
@@ -82,7 +81,11 @@ export default function IzvestajiPaketi() {
     const fromD = new Date(periodWindow.from);
     const toD = new Date(periodWindow.to);
     const inclusiveTo = new Date(toD.getTime() - 1);
-    const fmt: Intl.DateTimeFormatOptions = { day: "numeric", month: "short" };
+    const crossesYear =
+      fromD.getUTCFullYear() !== inclusiveTo.getUTCFullYear();
+    const fmt: Intl.DateTimeFormatOptions = crossesYear
+      ? { day: "numeric", month: "short", year: "numeric" }
+      : { day: "numeric", month: "short" };
     return `${fromD.toLocaleDateString(dateLocale, fmt)} – ${inclusiveTo.toLocaleDateString(dateLocale, fmt)}`;
   }, [periodWindow.from, periodWindow.to, dateLocale, t]);
 
@@ -139,51 +142,54 @@ export default function IzvestajiPaketi() {
               { value: "month" as Period, label: t("admin.manage.periodMonth") },
               { value: "quarter" as Period, label: t("admin.manage.periodQuarter") },
               { value: "year" as Period, label: t("admin.manage.periodYear") },
-              { value: "all" as Period, label: t("admin.manage.periodAll") },
+              { value: "all" as Period, label: t("admin.manage.periodAllShort") },
             ]}
             value={period}
             onChange={setPeriod}
           />
         </MotiView>
 
-        {/* Headline tiles — 2×2 grid. */}
+        {/* Headline tiles — editorial 2×2 with hairline cross-rules. Mirrors
+            the Pregled-landing StatStrip so non-clickable stats read as
+            information, not affordances. */}
         <MotiView
           from={{ opacity: 0, translateY: 8 }}
           animate={{ opacity: 1, translateY: 0 }}
           transition={{ type: "timing", duration: 350, delay: 60 }}
         >
-          <View style={{ gap: 12 }}>
+          <View style={{ gap: 8 }}>
             <Text className="text-muted" style={{ fontSize: 12 }}>
               {rangeLabel}
             </Text>
-            <View style={{ flexDirection: "row", gap: 12 }}>
-              <Tile
-                testID="paketi-tile-active"
-                label={t("admin.izvestaji.paketi.tiles.active")}
-                value={activePackages}
-                formatter={(n) => n.toLocaleString(dateLocale)}
-              />
-              <Tile
-                testID="paketi-tile-expiring"
-                label={t("admin.izvestaji.paketi.tiles.expiringSoon")}
-                value={expiringSoon}
-                formatter={(n) => n.toLocaleString(dateLocale)}
-              />
-            </View>
-            <View style={{ flexDirection: "row", gap: 12 }}>
-              <Tile
-                testID="paketi-tile-consumption"
-                label={t("admin.izvestaji.paketi.tiles.consumptionRate")}
-                value={consumptionPct}
-                formatter={(n) => `${n}%`}
-              />
-              <Tile
-                testID="paketi-tile-sold"
-                label={t("admin.izvestaji.paketi.tiles.soldInPeriod")}
-                value={soldInPeriod}
-                formatter={(n) => n.toLocaleString(dateLocale)}
-              />
-            </View>
+            <StatStrip
+              className=""
+              columns={2}
+              items={[
+                {
+                  label: t("admin.izvestaji.paketi.tiles.active"),
+                  value: activePackages
+                    ? activePackages.toLocaleString(dateLocale)
+                    : undefined,
+                },
+                {
+                  label: t("admin.izvestaji.paketi.tiles.expiringSoon"),
+                  value: expiringSoon
+                    ? expiringSoon.toLocaleString(dateLocale)
+                    : undefined,
+                },
+                {
+                  label: t("admin.izvestaji.paketi.tiles.consumptionRate"),
+                  value: consumptionPct ? `${consumptionPct}%` : undefined,
+                  accent: true,
+                },
+                {
+                  label: t("admin.izvestaji.paketi.tiles.soldInPeriod"),
+                  value: soldInPeriod
+                    ? soldInPeriod.toLocaleString(dateLocale)
+                    : undefined,
+                },
+              ]}
+            />
           </View>
         </MotiView>
 
@@ -305,7 +311,7 @@ export default function IzvestajiPaketi() {
                   {t("admin.izvestaji.paketi.noData")}
                 </Text>
               ) : null}
-              {recentActivations.map((row) => (
+              {recentActivations.map((row, idx) => (
                 <Pressable
                   key={row.clientPackageId}
                   testID={`paketi-recent-${row.clientPackageId}`}
@@ -314,7 +320,8 @@ export default function IzvestajiPaketi() {
                   className="active:opacity-70"
                   style={{
                     paddingVertical: 10,
-                    borderBottomWidth: 1,
+                    borderBottomWidth:
+                      idx < recentActivations.length - 1 ? 1 : 0,
                     borderBottomColor: tokens.glassBorder,
                   }}
                 >
@@ -404,32 +411,6 @@ export default function IzvestajiPaketi() {
   );
 }
 
-type TileProps = {
-  testID: string;
-  label: string;
-  value: number;
-  formatter: (n: number) => string;
-};
-
-function Tile({ testID, label, value, formatter }: TileProps) {
-  return (
-    <View testID={testID} style={{ flex: 1 }}>
-      <GlassCard size="md">
-        <View style={{ gap: 4 }}>
-          <CapsLabel size={10} tracking={1.4} className="text-muted">
-            {label}
-          </CapsLabel>
-          <NumberRollup
-            value={value}
-            formatter={formatter}
-            className="text-foreground font-body-bold"
-            style={{ fontSize: 28, lineHeight: 32, letterSpacing: -0.5 }}
-          />
-        </View>
-      </GlassCard>
-    </View>
-  );
-}
 
 type PaidVsCompBarProps = {
   paid: number;

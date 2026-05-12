@@ -18,6 +18,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import { ErrorState } from "@/components/ui/states";
 import { SectionLabel } from "@/components/ui/typography";
 import { packagesQueries } from "@/lib/queries/packages-queries-factory";
@@ -186,19 +187,17 @@ export function AssignPackageSheetContent({
           ) : null}
 
           <SectionLabel>{t("admin.clients.paymentMethod.label")}</SectionLabel>
-          {/* Buttons mirror the package-type picker above — visually
-              consistent and fits 5 enum values without cramming. */}
-          {PAYMENT_METHODS.map((m) => (
-            <Button
-              key={m}
-              testID={`assign-package-method-${m}`}
-              size="small"
-              variant={method === m ? "primary" : "secondary"}
-              onPress={() => setMethod(m)}
-            >
-              {t(METHOD_LABEL_KEY[m])}
-            </Button>
-          ))}
+          <Select<PaymentMethod>
+            testID="assign-package-method-select"
+            optionTestIDPrefix="assign-package-method"
+            placeholder={t("admin.clients.paymentMethod.label")}
+            value={method}
+            onChange={(v) => setMethod(v)}
+            options={PAYMENT_METHODS.map((m) => ({
+              value: m,
+              label: t(METHOD_LABEL_KEY[m]),
+            }))}
+          />
         </>
       ) : null}
 

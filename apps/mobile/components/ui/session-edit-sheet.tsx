@@ -19,6 +19,7 @@ import { useThemeTokens } from "@/components/ui/tokens";
 import { sessionsQueries } from "@/lib/queries/sessions-queries-factory";
 import { roomsQueries } from "@/lib/queries/rooms-queries-factory";
 import { usersQueries } from "@/lib/queries/users-queries-factory";
+import { formatMutationError } from "@/lib/admin/format-mutation-error";
 
 // Mutation payload shapes (kept in sync with sessionsQueries factory).
 type UpdateSessionVars = {
@@ -315,7 +316,8 @@ export function SessionEditSheet(props: SessionEditSheetBoundProps) {
     updateSeriesMutation,
     deleteSeriesMutation,
   } = props;
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const lang = i18n.language === "en" ? "en" : "sr";
   const tokens = useThemeTokens();
 
   const roomsQuery = useQuery(roomsQueries.list());
@@ -488,10 +490,12 @@ export function SessionEditSheet(props: SessionEditSheetBoundProps) {
               </Button>
               {updateMutation.isError ? (
                 <ErrorState
-                  message={
-                    (updateMutation.error as Error)?.message ??
-                    t("admin.schedule.updateError")
-                  }
+                  message={formatMutationError(
+                    updateMutation.error,
+                    t,
+                    lang,
+                    t("admin.schedule.updateError"),
+                  )}
                 />
               ) : null}
             </>
@@ -715,10 +719,12 @@ export function SessionEditSheet(props: SessionEditSheetBoundProps) {
               </Button>
               {updateSeriesMutation.isError ? (
                 <ErrorState
-                  message={
-                    (updateSeriesMutation.error as Error)?.message ??
-                    t("admin.schedule.updateError")
-                  }
+                  message={formatMutationError(
+                    updateSeriesMutation.error,
+                    t,
+                    lang,
+                    t("admin.schedule.updateError"),
+                  )}
                 />
               ) : null}
             </>
@@ -735,8 +741,12 @@ export function SessionEditSheet(props: SessionEditSheetBoundProps) {
         loading={deleteSeriesMutation.isPending}
         errorMessage={
           deleteSeriesMutation.isError
-            ? (deleteSeriesMutation.error as Error)?.message ??
-              t("admin.schedule.updateError")
+            ? formatMutationError(
+                deleteSeriesMutation.error,
+                t,
+                lang,
+                t("admin.schedule.updateError"),
+              )
             : null
         }
         onConfirm={() => {
@@ -754,8 +764,12 @@ export function SessionEditSheet(props: SessionEditSheetBoundProps) {
         loading={updateMutation.isPending}
         errorMessage={
           updateMutation.isError && confirmCancelSession
-            ? (updateMutation.error as Error)?.message ??
-              t("admin.schedule.updateError")
+            ? formatMutationError(
+                updateMutation.error,
+                t,
+                lang,
+                t("admin.schedule.updateError"),
+              )
             : null
         }
         onConfirm={() => {

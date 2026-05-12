@@ -97,7 +97,7 @@ function ClientRow({
       testID={`client-row-${client.id}`}
       onPress={onPress}
       android_ripple={null}
-      className="flex-row items-center gap-3 px-4 py-3 active:opacity-70"
+      className="flex-row items-center gap-3 py-3 active:opacity-70"
     >
       <InitialsAvatar name={client.user.fullName} />
       <View className="flex-1 gap-0.5">
@@ -139,9 +139,9 @@ function ClientRow({
 
 function ClientRowSeparator() {
   // Hairline divider that lines up with the row content (starts after the
-  // 40px avatar + 12px gap + 16px padding = 68px ≈ the original 64px inset).
+  // 40px avatar + 12px gap = 52px).
   return (
-    <View className="bg-glass-border" style={{ height: 1, marginLeft: 64 }} />
+    <View className="bg-glass-border" style={{ height: 1, marginLeft: 52 }} />
   );
 }
 

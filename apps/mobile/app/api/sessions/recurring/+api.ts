@@ -75,22 +75,50 @@ export async function POST(request: Request) {
     return fail("No sessions to create — selected weekdays produce no slots", 400);
   }
 
-  // Schedule conflict: check the first generated slot against existing live
-  // sessions for the same room (when set) or trainer. Phase A is "good
-  // enough" — full per-occurrence conflict scan can come later.
-  const firstSlot = createData[0]!;
-  const conflict = await findScheduleConflict({
-    startsAt: firstSlot.startsAt,
-    endsAt: firstSlot.endsAt,
-    roomId: firstSlot.roomId,
-    trainerUserId: firstSlot.trainerUserId,
-  });
-  if (conflict) {
+  // Schedule conflict: scan EVERY generated occurrence, not just the first.
+  // The previous "first slot only" check let a series silently conflict on a
+  // later Monday (e.g. trainer had a one-off booked on the 3rd Monday). We
+  // cap the response at MAX_CONFLICTS_REPORTED — long lists aren't useful;
+  // the admin needs to pick a different slot or skip those dates.
+  const MAX_CONFLICTS_REPORTED = 3;
+  const conflicts: Array<{
+    occurrenceStartsAt: string;
+    occurrenceEndsAt: string;
+    kind: "room" | "trainer";
+    sessionId: string;
+    existingStartsAt: string;
+    existingEndsAt: string;
+    existingRoomName: string | null;
+    existingTrainerName: string | null;
+    existingClassTypeName: string | null;
+  }> = [];
+  let totalConflictCount = 0;
+  for (const slot of createData) {
+    const conflict = await findScheduleConflict({
+      startsAt: slot.startsAt,
+      endsAt: slot.endsAt,
+      roomId: slot.roomId,
+      trainerUserId: slot.trainerUserId,
+    });
+    if (conflict) {
+      totalConflictCount += 1;
+      if (conflicts.length < MAX_CONFLICTS_REPORTED) {
+        conflicts.push({
+          occurrenceStartsAt: slot.startsAt.toISOString(),
+          occurrenceEndsAt: slot.endsAt.toISOString(),
+          ...conflict,
+        });
+      }
+    }
+  }
+  if (conflicts.length > 0) {
     return Response.json(
       {
         success: false,
         error: "Schedule conflict",
-        conflict,
+        conflicts,
+        conflictCount: totalConflictCount,
+        totalOccurrences: createData.length,
       },
       { status: 409 },
     );

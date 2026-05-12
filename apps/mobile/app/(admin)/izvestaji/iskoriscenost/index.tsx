@@ -163,7 +163,11 @@ export default function IzvestajiIskoriscenost() {
     const fromD = new Date(periodWindow.from);
     const toD = new Date(periodWindow.to);
     const inclusiveTo = new Date(toD.getTime() - 1);
-    const fmt: Intl.DateTimeFormatOptions = { day: "numeric", month: "short" };
+    const crossesYear =
+      fromD.getUTCFullYear() !== inclusiveTo.getUTCFullYear();
+    const fmt: Intl.DateTimeFormatOptions = crossesYear
+      ? { day: "numeric", month: "short", year: "numeric" }
+      : { day: "numeric", month: "short" };
     return `${fromD.toLocaleDateString(dateLocale, fmt)} – ${inclusiveTo.toLocaleDateString(dateLocale, fmt)}`;
   }, [periodWindow.from, periodWindow.to, dateLocale, t]);
 
@@ -172,9 +176,12 @@ export default function IzvestajiIskoriscenost() {
   const chartWidth = Math.max(width - 24 * 2 - 20 * 2, 200);
   const barGap = 4;
   const bucketCount = Math.max(trendBuckets.length, 1);
-  const barWidth = Math.max(
-    (chartWidth - barGap * (bucketCount - 1)) / bucketCount,
-    6,
+  // Cap bar width so a single bucket (period=all, young studio) doesn't
+  // render as a giant flood-fill bar that swallows the chart card.
+  const BAR_WIDTH_MAX = 56;
+  const barWidth = Math.min(
+    BAR_WIDTH_MAX,
+    Math.max((chartWidth - barGap * (bucketCount - 1)) / bucketCount, 6),
   );
 
   return (
@@ -210,7 +217,7 @@ export default function IzvestajiIskoriscenost() {
               { value: "month" as Period, label: t("admin.manage.periodMonth") },
               { value: "quarter" as Period, label: t("admin.manage.periodQuarter") },
               { value: "year" as Period, label: t("admin.manage.periodYear") },
-              { value: "all" as Period, label: t("admin.manage.periodAll") },
+              { value: "all" as Period, label: t("admin.manage.periodAllShort") },
             ]}
             value={period}
             onChange={setPeriod}
@@ -276,6 +283,7 @@ export default function IzvestajiIskoriscenost() {
                   style={{
                     flexDirection: "row",
                     alignItems: "flex-end",
+                    justifyContent: "center",
                     height: BAR_HEIGHT_MAX + 4,
                     gap: barGap,
                   }}
@@ -308,24 +316,35 @@ export default function IzvestajiIskoriscenost() {
                 <View
                   style={{
                     flexDirection: "row",
-                    justifyContent: "space-between",
+                    justifyContent:
+                      trendBuckets.length > 1 ? "space-between" : "center",
                     paddingTop: 8,
                   }}
                 >
                   {[0, Math.floor(trendBuckets.length / 2), trendBuckets.length - 1]
                     .filter((v, i, arr) => arr.indexOf(v) === i && v >= 0)
-                    .map((idx) => (
-                      <Text
-                        key={idx}
-                        className="text-muted"
-                        style={{ fontSize: 10 }}
-                      >
-                        {new Date(trendBuckets[idx].bucketStart).toLocaleDateString(
-                          dateLocale,
-                          { day: "numeric", month: "short" },
-                        )}
-                      </Text>
-                    ))}
+                    .map((idx) => {
+                      // Single yearly bucket (period=all on a young studio):
+                      // swap the Jan-1 label for just the year so it matches
+                      // the bucket span, not its lower bound.
+                      const start = new Date(trendBuckets[idx].bucketStart);
+                      const label =
+                        trendBuckets.length === 1
+                          ? String(start.getUTCFullYear())
+                          : start.toLocaleDateString(dateLocale, {
+                              day: "numeric",
+                              month: "short",
+                            });
+                      return (
+                        <Text
+                          key={idx}
+                          className="text-muted"
+                          style={{ fontSize: 10 }}
+                        >
+                          {label}
+                        </Text>
+                      );
+                    })}
                 </View>
               </View>
             ) : null}

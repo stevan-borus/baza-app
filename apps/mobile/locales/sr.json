@@ -287,6 +287,18 @@
     }
   },
   "admin": {
+    "errors": {
+      "scheduleConflict": {
+        "trainerBusyShort": "Trener je već zauzet: {{detail}}",
+        "roomBusyShort": "Sala je već zauzeta: {{detail}}",
+        "trainerBusy": "Trener {{name}} je već zauzet",
+        "roomBusy": "Sala {{name}} je već zauzeta",
+        "recurringHeader": "Termin se preklapa sa {{count}} već postojećih:",
+        "recurringHeaderMore": "Prikazano {{shown}} od {{total}} preklapanja:",
+        "fallbackRoom": "sala",
+        "fallbackTrainer": "trener"
+      }
+    },
     "dashboard": {
       "title": "Admin Kontrola",
       "loggedIn": "Ulogovan: {{email}}",
@@ -390,6 +402,8 @@
       "noPackages": "Još nema paketa.",
       "packagesError": "Nije moguće učitati pakete.",
       "upcomingBookings": "Predstojeći termini",
+      "upcomingTab": "Predstojeći",
+      "historyTab": "Istorija",
       "noUpcoming": "Nema predstojećih termina.",
       "upcomingError": "Nije moguće učitati predstojeće termine.",
       "viewHistory": "Istorija treninga",
@@ -564,6 +578,7 @@
       "periodQuarter": "Kvartal",
       "periodYear": "Godina",
       "periodAll": "Sve vreme",
+      "periodAllShort": "Sve",
       "totalRevenue": "Ukupan prihod",
       "transactionCount": "Transakcije",
       "filteredSubtitle": "Filtrirano: {{count}} uplata · {{amount}} RSD",

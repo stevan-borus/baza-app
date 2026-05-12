@@ -285,6 +285,18 @@
     }
   },
   "admin": {
+    "errors": {
+      "scheduleConflict": {
+        "trainerBusyShort": "Trainer already booked: {{detail}}",
+        "roomBusyShort": "Room already booked: {{detail}}",
+        "trainerBusy": "Trainer {{name}} is already booked",
+        "roomBusy": "Room {{name}} is already booked",
+        "recurringHeader": "Series conflicts with {{count}} existing session(s):",
+        "recurringHeaderMore": "Showing {{shown}} of {{total}} conflicts:",
+        "fallbackRoom": "room",
+        "fallbackTrainer": "trainer"
+      }
+    },
     "dashboard": {
       "title": "Admin control",
       "loggedIn": "Logged in: {{email}}",
@@ -387,6 +399,8 @@
       "noPackages": "No packages yet.",
       "packagesError": "Unable to load packages.",
       "upcomingBookings": "Upcoming bookings",
+      "upcomingTab": "Upcoming",
+      "historyTab": "History",
       "noUpcoming": "No upcoming bookings.",
       "upcomingError": "Unable to load upcoming bookings.",
       "viewHistory": "Training history",
@@ -560,6 +574,7 @@
       "periodQuarter": "Quarter",
       "periodYear": "Year",
       "periodAll": "All time",
+      "periodAllShort": "All",
       "totalRevenue": "Total revenue",
       "transactionCount": "Transactions",
       "avgPerClient": "Avg per client",

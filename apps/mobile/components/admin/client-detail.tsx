@@ -17,7 +17,6 @@ import React, { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient, useInfiniteQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Pressable, ScrollView, Switch, Text, View } from "react-native";
-import { router } from "expo-router";
 import dayjs from "dayjs";
 import Feather from "@expo/vector-icons/Feather";
 import { AppSheet } from "@/components/ui/sheet";
@@ -38,6 +37,7 @@ import { bookingsQueries, type ClientBooking } from "@/lib/queries/bookings-quer
 import { BookingRow } from "@/components/admin/booking-row";
 import { AssignPackageSheetContent } from "@/components/admin/assign-package-sheet-content";
 import { ReturnToPill } from "@/components/admin/return-to-pill";
+import { TreninziSubTab } from "@/components/admin/treninzi-sub-tab";
 import {
   ClientDetailTabBar,
   type ClientDetailTab,
@@ -259,10 +259,6 @@ export function ClientDetail({ id }: { id: string }) {
                 upcomingError={upcomingQuery.isError}
                 lang={lang}
                 bottomPad={bottomPad}
-                onNewPayment={openNewPayment}
-                onAssign={openAssign}
-                onPause={openPause}
-                onDelete={openDelete}
                 onViewAllTreninzi={() => setActiveTab("treninzi")}
               />
             ) : null}
@@ -281,7 +277,6 @@ export function ClientDetail({ id }: { id: string }) {
                 upcomingQuery={upcomingQuery}
                 upcomingBookings={upcomingBookings}
                 clientUserId={id}
-                tokens={tokens}
                 bottomPad={bottomPad}
               />
             ) : null}
@@ -540,10 +535,6 @@ function PregledTab({
   upcomingError,
   lang,
   bottomPad,
-  onNewPayment,
-  onAssign,
-  onPause,
-  onDelete,
   onViewAllTreninzi,
 }: {
   activePackage: ClientPackage | null;
@@ -553,10 +544,6 @@ function PregledTab({
   upcomingError: boolean;
   lang: "sr" | "en";
   bottomPad: number;
-  onNewPayment: () => void;
-  onAssign: () => void;
-  onPause: () => void;
-  onDelete: () => void;
   onViewAllTreninzi: () => void;
 }) {
   const { t } = useTranslation();
@@ -646,46 +633,8 @@ function PregledTab({
           </Pressable>
         ) : null}
       </View>
-
-      <View className="gap-2">
-        <SectionLabel>{t("admin.clientDetail.quickActions.title")}</SectionLabel>
-        <View className="bg-surface rounded-lg overflow-hidden">
-          <QuickActionRow
-            testID="client-quick-action-new-payment"
-            icon="dollar-sign"
-            label={t("admin.clients.newPaymentAction")}
-            onPress={onNewPayment}
-          />
-          <RowDivider />
-          <QuickActionRow
-            testID="client-quick-action-assign-package"
-            icon="gift"
-            label={t("admin.clients.assignPackage")}
-            onPress={onAssign}
-          />
-          <RowDivider />
-          <QuickActionRow
-            testID="client-quick-action-pause"
-            icon="pause"
-            label={t("admin.clients.pause")}
-            onPress={onPause}
-          />
-          <RowDivider />
-          <QuickActionRow
-            testID="client-quick-action-delete"
-            icon="trash-2"
-            label={t("admin.clients.delete")}
-            destructive
-            onPress={onDelete}
-          />
-        </View>
-      </View>
     </ScrollView>
   );
-}
-
-function RowDivider() {
-  return <View className="bg-glass-border" style={{ height: 1, marginLeft: 44 }} />;
 }
 
 function PaketiTab({
@@ -788,64 +737,102 @@ function PaketiTab({
   );
 }
 
+type TreninziSub = "upcoming" | "history";
+
 function TreninziTab({
   upcomingQuery,
   upcomingBookings,
   clientUserId,
-  tokens,
   bottomPad,
 }: {
   upcomingQuery: ReturnType<typeof useInfiniteQuery>;
   upcomingBookings: ClientBooking[];
   clientUserId: string;
-  tokens: ReturnType<typeof useThemeTokens>;
   bottomPad: number;
 }) {
   const { t } = useTranslation();
+  const [sub, setSub] = useState<TreninziSub>("upcoming");
+
+  // The past-bookings query is started lazily — it only fires when the
+  // history pill is tapped, so opening the tab doesn't fan out a second
+  // request for a panel the user might never look at.
+  const pastQuery = useInfiniteQuery({
+    ...bookingsQueries.byClient({
+      clientUserId,
+      period: "past",
+      limit: 20,
+    }),
+    enabled: sub === "history",
+  });
+  const pastBookings = useMemo<ClientBooking[]>(
+    () => (pastQuery.data?.pages ?? []).flatMap((p) => p.bookings),
+    [pastQuery.data?.pages],
+  );
+
+  const query = sub === "upcoming" ? upcomingQuery : pastQuery;
+  const data = sub === "upcoming" ? upcomingBookings : pastBookings;
+
   return (
     <View
       testID="client-detail-tab-content-treninzi"
       style={{ flex: 1, paddingHorizontal: 20 }}
     >
-      <View style={{ paddingBottom: 8 }}>
-        <SectionLabel>{t("admin.clientDetail.upcomingBookings")}</SectionLabel>
+      {/* Underline tab row — quieter than chip pills, reads unambiguously
+          as sub-tabs nested under the main Pregled/Paketi/Treninzi bar. */}
+      <View
+        className="flex-row border-b border-glass-border"
+        style={{ gap: 20, marginBottom: 12 }}
+      >
+        <TreninziSubTab
+          testID="client-detail-treninzi-pill-upcoming"
+          label={t("admin.clientDetail.upcomingTab")}
+          active={sub === "upcoming"}
+          onPress={() => setSub("upcoming")}
+        />
+        <TreninziSubTab
+          testID="client-detail-treninzi-pill-history"
+          label={t("admin.clientDetail.historyTab")}
+          active={sub === "history"}
+          onPress={() => setSub("history")}
+        />
       </View>
       <PaginatedList<ClientBooking>
-        query={upcomingQuery}
-        data={upcomingBookings}
+        query={query}
+        data={data}
         keyExtractor={(b) => b.id}
-        renderItem={({ item, index }) => (
-          <View>
-            {index > 0 ? (
-              <View
-                className="bg-glass-border"
-                style={{ height: 1, marginLeft: 16 }}
-              />
-            ) : null}
-            <BookingRow booking={item} />
+        renderItem={({ item }) => (
+          <View
+            className="bg-surface rounded-lg overflow-hidden"
+            style={{ marginBottom: 8 }}
+          >
+            <BookingRow
+              booking={item}
+              showCanceledTag={sub === "history"}
+            />
           </View>
         )}
         contentContainerStyle={{
           paddingBottom: bottomPad,
         }}
-        errorState={<ErrorState message={t("admin.clientDetail.upcomingError")} />}
-        emptyState={<EmptyState title={t("admin.clientDetail.noUpcoming")} />}
+        errorState={
+          <ErrorState
+            message={t(
+              sub === "upcoming"
+                ? "admin.clientDetail.upcomingError"
+                : "admin.history.error",
+            )}
+          />
+        }
+        emptyState={
+          <EmptyState
+            title={t(
+              sub === "upcoming"
+                ? "admin.clientDetail.noUpcoming"
+                : "admin.clientDetail.noPastBookings",
+            )}
+          />
+        }
       />
-      <Pressable
-        testID="client-detail-history-link"
-        onPress={() => router.push(`/(admin)/klijenti/${clientUserId}/istorija`)}
-        android_ripple={null}
-        className="flex-row items-center justify-between px-4 py-3 bg-surface rounded-lg active:opacity-70"
-        style={{ marginBottom: 12 }}
-      >
-        <Text
-          className="text-foreground font-body-medium"
-          style={{ fontSize: 14 }}
-        >
-          {t("admin.clientDetail.viewHistory")}
-        </Text>
-        <Feather name="chevron-right" size={16} color={tokens.faint} />
-      </Pressable>
     </View>
   );
 }
@@ -914,45 +901,3 @@ function ActionRow({
   );
 }
 
-function QuickActionRow({
-  icon,
-  label,
-  onPress,
-  destructive = false,
-  testID,
-}: {
-  icon: React.ComponentProps<typeof Feather>["name"];
-  label: string;
-  onPress: () => void;
-  destructive?: boolean;
-  testID?: string;
-}) {
-  const tokens = useThemeTokens();
-  return (
-    <Pressable
-      testID={testID}
-      onPress={onPress}
-      android_ripple={null}
-      className="flex-row items-center gap-3 px-4 py-3.5 active:opacity-70"
-    >
-      <Feather
-        name={icon}
-        size={18}
-        color={destructive ? "#dc2626" : tokens.foreground}
-      />
-      <Text
-        className={
-          destructive
-            ? "text-danger font-body-medium flex-1"
-            : "text-foreground font-body-medium flex-1"
-        }
-        style={{ fontSize: 15 }}
-      >
-        {label}
-      </Text>
-      {!destructive ? (
-        <Feather name="chevron-right" size={16} color={tokens.faint} />
-      ) : null}
-    </Pressable>
-  );
-}

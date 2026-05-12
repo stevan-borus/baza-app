@@ -248,9 +248,14 @@ describe("Izveštaji landing — card grid", () => {
     expect(aspectMatches.length).toBeGreaterThanOrEqual(4);
   });
 
-  it("drops the chevron-right icon from each card (the whole card is pressable)", () => {
+  it("renders a chevron-right on each card as a tappability cue (round-9 feedback)", () => {
+    // PR γ originally dropped the chevron because the whole card is pressable.
+    // Round-9 user feedback: the tiles didn't read as tappable without one.
+    // The chevron now distinguishes the (bordered, tappable) landing tiles
+    // from the (chrome-less) editorial StatStrip cells on the sub-pages.
     const html = render();
-    expect(html).not.toContain('data-icon="chevron-right"');
+    const matches = html.match(/data-icon="chevron-right"/g) ?? [];
+    expect(matches.length).toBeGreaterThanOrEqual(4);
   });
 
   it("drops the top-right icon (trending-up, pie-chart, calendar, package) from each card", () => {

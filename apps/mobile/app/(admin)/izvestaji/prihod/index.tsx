@@ -124,7 +124,13 @@ export default function IzvestajiPrihod() {
     const toD = new Date(periodWindow.to);
     // toD is exclusive — display the last calendar day.
     const inclusiveTo = new Date(toD.getTime() - 1);
-    const fmt: Intl.DateTimeFormatOptions = { day: "numeric", month: "short" };
+    // Include the year when the window crosses a calendar boundary —
+    // otherwise "13. maj – 13. maj" on Godina reads as the same day.
+    const crossesYear =
+      fromD.getUTCFullYear() !== inclusiveTo.getUTCFullYear();
+    const fmt: Intl.DateTimeFormatOptions = crossesYear
+      ? { day: "numeric", month: "short", year: "numeric" }
+      : { day: "numeric", month: "short" };
     return `${fromD.toLocaleDateString(dateLocale, fmt)} – ${inclusiveTo.toLocaleDateString(dateLocale, fmt)}`;
   }, [periodWindow.from, periodWindow.to, dateLocale, t]);
 
@@ -133,7 +139,13 @@ export default function IzvestajiPrihod() {
   const chartWidth = Math.max(width - 24 * 2 - 20 * 2, 200);
   const barGap = 4;
   const bucketCount = Math.max(buckets.length, 1);
-  const barWidth = Math.max((chartWidth - barGap * (bucketCount - 1)) / bucketCount, 6);
+  // Cap bar width so a single bucket (period=all, young studio) doesn't
+  // render as a giant flood-fill bar that swallows the chart card.
+  const BAR_WIDTH_MAX = 56;
+  const barWidth = Math.min(
+    BAR_WIDTH_MAX,
+    Math.max((chartWidth - barGap * (bucketCount - 1)) / bucketCount, 6),
+  );
 
   function drillToBucket(bucketStart: string, bucketEnd: string) {
     router.push({
@@ -186,7 +198,7 @@ export default function IzvestajiPrihod() {
               { value: "month" as Period, label: t("admin.manage.periodMonth") },
               { value: "quarter" as Period, label: t("admin.manage.periodQuarter") },
               { value: "year" as Period, label: t("admin.manage.periodYear") },
-              { value: "all" as Period, label: t("admin.manage.periodAll") },
+              { value: "all" as Period, label: t("admin.manage.periodAllShort") },
             ]}
             value={period}
             onChange={setPeriod}
@@ -250,6 +262,7 @@ export default function IzvestajiPrihod() {
                   style={{
                     flexDirection: "row",
                     alignItems: "flex-end",
+                    justifyContent: "center",
                     height: BAR_HEIGHT_MAX + 4,
                     gap: barGap,
                   }}
@@ -287,28 +300,42 @@ export default function IzvestajiPrihod() {
                   })}
                 </View>
                 {/* X-axis bucket labels — render first, middle and last only
-                    to keep the row legible at 30+ buckets. */}
+                    to keep the row legible at 30+ buckets. With a single
+                    bucket (period=all on a young studio) we center the
+                    single label under the centered bar. */}
                 <View
                   style={{
                     flexDirection: "row",
-                    justifyContent: "space-between",
+                    justifyContent: buckets.length > 1 ? "space-between" : "center",
                     paddingTop: 8,
                   }}
                 >
                   {[0, Math.floor(buckets.length / 2), buckets.length - 1]
                     .filter((v, i, arr) => arr.indexOf(v) === i && v >= 0)
-                    .map((idx) => (
-                      <Text
-                        key={idx}
-                        className="text-muted"
-                        style={{ fontSize: 10 }}
-                      >
-                        {new Date(buckets[idx].bucketStart).toLocaleDateString(
-                          dateLocale,
-                          { day: "numeric", month: "short" },
-                        )}
-                      </Text>
-                    ))}
+                    .map((idx) => {
+                      // Single yearly bucket (period=all on a young studio):
+                      // the bucketStart is Jan 1 of the year. Showing that
+                      // literally reads as "everything happened on Jan 1" —
+                      // swap for just the year so the label matches the
+                      // bucket span instead of its lower bound.
+                      const start = new Date(buckets[idx].bucketStart);
+                      const label =
+                        buckets.length === 1
+                          ? String(start.getUTCFullYear())
+                          : start.toLocaleDateString(dateLocale, {
+                              day: "numeric",
+                              month: "short",
+                            });
+                      return (
+                        <Text
+                          key={idx}
+                          className="text-muted"
+                          style={{ fontSize: 10 }}
+                        >
+                          {label}
+                        </Text>
+                      );
+                    })}
                 </View>
               </View>
             ) : null}
@@ -491,7 +518,7 @@ export default function IzvestajiPrihod() {
               recentPayments.length === 0 ? (
                 <EmptyState title={t("admin.manage.billingEmpty")} />
               ) : null}
-              {recentPayments.map((p) => (
+              {recentPayments.map((p, idx) => (
                 <Pressable
                   key={p.id}
                   testID={`prihod-recent-${p.id}`}
@@ -500,7 +527,7 @@ export default function IzvestajiPrihod() {
                   className="active:opacity-70"
                   style={{
                     paddingVertical: 8,
-                    borderBottomWidth: 1,
+                    borderBottomWidth: idx < recentPayments.length - 1 ? 1 : 0,
                     borderBottomColor: tokens.glassBorder,
                   }}
                 >
