@@ -1,4 +1,8 @@
-import { queryOptions, mutationOptions } from "@tanstack/react-query";
+import {
+  queryOptions,
+  mutationOptions,
+  infiniteQueryOptions,
+} from "@tanstack/react-query";
 import { z } from "zod";
 import { apiFetch } from "@/lib/api";
 import { sharedEnv } from "@/lib/env.shared";
@@ -61,6 +65,11 @@ const clientPackageSchema = z.object({
 const clientPackagesResponseSchema = z.object({
   success: z.boolean(),
   packages: z.array(clientPackageSchema),
+  // Cursor-based pagination: opaque string (clientPackage.id) of the last
+  // row on this page, or null when this is the final page. Optional in the
+  // response shape so the non-paginated branches (per-client list) still
+  // validate against the same schema.
+  nextCursor: z.nullable(z.string()).optional(),
 });
 
 export type PackageType = z.infer<typeof packageTypeSchema>;
@@ -97,19 +106,36 @@ export const packagesQueries = {
       staleTime: 30_000,
     }),
 
-  clientPackagesAdminList: (params?: { search?: string }) =>
-    queryOptions({
-      queryKey: ["packages", "client-packages", "admin", params] as const,
-      queryFn: async () => {
+  /**
+   * Cursor-paginated admin list of every ClientPackage in the studio with
+   * optional server-side substring search (matches client fullName or email).
+   *
+   * Mirrors the clients-list infinite-query shape: page param is the opaque
+   * nextCursor returned by the API (the last clientPackage.id on the page);
+   * `null` means "first page". The consumer wires onScroll + fetchNextPage
+   * and uses useDeferredValue to batch search keystrokes.
+   */
+  clientPackagesAdminList: (params?: { search?: string; take?: number }) =>
+    infiniteQueryOptions({
+      queryKey: [
+        "packages",
+        "client-packages",
+        "admin",
+        { search: params?.search ?? "", take: params?.take ?? 20 },
+      ] as const,
+      queryFn: async ({ pageParam }) => {
         const qs = new URLSearchParams();
+        if (pageParam) qs.set("cursor", pageParam);
         if (params?.search) qs.set("search", params.search);
-        const url = qs.size > 0
-          ? `${sharedEnv.EXPO_PUBLIC_API_URL}/api/packages/client-packages?${qs.toString()}`
-          : `${sharedEnv.EXPO_PUBLIC_API_URL}/api/packages/client-packages`;
+        qs.set("take", String(params?.take ?? 20));
+        const url = `${sharedEnv.EXPO_PUBLIC_API_URL}/api/packages/client-packages?${qs.toString()}`;
         const response = await apiFetch(url, { credentials: "include" });
-        if (!response.ok) throw new Error(`Unable to load assignments (${response.status})`);
+        if (!response.ok)
+          throw new Error(`Unable to load assignments (${response.status})`);
         return clientPackagesResponseSchema.parse(await response.json());
       },
+      initialPageParam: null as string | null,
+      getNextPageParam: (last) => last.nextCursor ?? null,
       staleTime: 30_000,
     }),
 

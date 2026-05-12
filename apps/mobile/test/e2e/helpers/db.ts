@@ -693,6 +693,43 @@ export async function seedExtraClients(count: number) {
   return created;
 }
 
+/**
+ * Insert N additional ClientPackages on top of whatever the rich seed already
+ * produced. Reuses `seedExtraClients` to mint fresh ClientProfile parents so
+ * we don't perturb the seeded matrix, then attaches each to the first
+ * available PackageType + ClassType. Used by the active-assignments
+ * pagination spec — the rich seed only produces a handful of ClientPackages
+ * so we need to push past the default page size of 20.
+ */
+export async function seedExtraClientPackages(count: number) {
+  const profiles = await seedExtraClients(count);
+  const packageType = await db().packageType.findFirst({
+    select: { id: true, classTypeId: true, sessionCount: true, validityDays: true, lateCancelHours: true },
+  });
+  if (!packageType) throw new Error("No PackageType in seed");
+  const startsAt = now();
+  const expiresAt = new Date(
+    startsAt.getTime() + packageType.validityDays * 24 * 60 * 60 * 1000,
+  );
+  const created: { id: string; clientProfileId: string }[] = [];
+  for (const p of profiles) {
+    const pkg = await db().clientPackage.create({
+      data: {
+        clientProfileId: p.profileId,
+        packageTypeId: packageType.id,
+        classTypeId: packageType.classTypeId,
+        lateCancelHours: packageType.lateCancelHours,
+        startsAt,
+        expiresAt,
+        sessionsRemaining: packageType.sessionCount,
+      },
+      select: { id: true, clientProfileId: true },
+    });
+    created.push(pkg);
+  }
+  return created;
+}
+
 export async function disconnect() {
   if (prismaClient) {
     await prismaClient.$disconnect();
