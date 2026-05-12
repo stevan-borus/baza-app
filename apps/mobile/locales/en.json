@@ -403,6 +403,14 @@
         "expired": "Expired",
         "usedUp": "Used up",
         "none": "No package"
+      },
+      "tabs": {
+        "pregled": "Overview",
+        "paketi": "Packages",
+        "treninzi": "Trainings"
+      },
+      "quickActions": {
+        "title": "Quick actions"
       }
     },
     "packages": {
