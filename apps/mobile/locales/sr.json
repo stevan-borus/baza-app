@@ -549,6 +549,7 @@
       "activeAssignmentsLinkHint": "Pretraga po klijentu, filter po statusu",
       "assignmentsError": "Nije moguće učitati aktivne dodele.",
       "searchAssignmentsPlaceholder": "Pretraga po imenu ili email-u klijenta…",
+      "searchPlaceholder": "Pretraži uplate…",
       "filterExpiring": "Uskoro ističe",
       "filterExpired": "Istekao",
       "sessionsRemaining": "{{count}} termina preostalo",
