@@ -35,7 +35,6 @@ import { useThemeTokens } from "@/components/ui/tokens";
 import { reportsQueries } from "@/lib/queries/reports-queries-factory";
 import { billingQueries } from "@/lib/queries/billing-queries-factory";
 import { ScreenContainerRaw, useTabBarBottomPadding } from "@/components/ui/screen-container";
-import { AvatarMenu } from "@/components/admin/avatar-menu";
 import { usePeriodPill, type Period } from "@/lib/admin/use-period-pill";
 import { encodeReturnTo } from "@/lib/admin/return-to";
 
@@ -159,7 +158,6 @@ export default function IzvestajiPrihod() {
     <ScreenContainerRaw
       headerVariant="detail"
       title={t("admin.izvestaji.prihod.title")}
-      rightSlot={<AvatarMenu />}
     >
       <ScrollView
         showsVerticalScrollIndicator={false}

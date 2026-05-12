@@ -41,7 +41,6 @@ import {
   ScreenContainerRaw,
   useTabBarBottomPadding,
 } from "@/components/ui/screen-container";
-import { AvatarMenu } from "@/components/admin/avatar-menu";
 import { usePeriodPill, type Period } from "@/lib/admin/use-period-pill";
 import { encodeReturnTo } from "@/lib/admin/return-to";
 
@@ -126,7 +125,6 @@ export default function IzvestajiRezervacije() {
     <ScreenContainerRaw
       headerVariant="detail"
       title={t("admin.izvestaji.rezervacije.title")}
-      rightSlot={<AvatarMenu />}
     >
       <ScrollView
         showsVerticalScrollIndicator={false}

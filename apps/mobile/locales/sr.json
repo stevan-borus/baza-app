@@ -417,7 +417,6 @@
       "viewDay": "Dan",
       "viewWeek": "Nedelja",
       "viewMonth": "Mesec",
-      "newSession": "+ Novi termin",
       "error": "Nije moguće učitati raspored.",
       "sheetRecurring": "Ponavljajući termini",
       "sheetNew": "Novi termin",
@@ -701,15 +700,6 @@
       "noviTermin": "Novi termin",
       "noviTerminSub": "Jednokratno ili serija"
     }
-  },
-  "adminMenu": {
-    "catalog": "Katalog",
-    "openMenu": "Otvori meni kataloga",
-    "classTypes": "Tipovi treninga",
-    "rooms": "Sale",
-    "packageTypes": "Tipovi paketa",
-    "language": "Jezik",
-    "logout": "Odjavi se"
   },
   "trainer": {
     "schedule": {

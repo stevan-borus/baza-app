@@ -25,7 +25,6 @@ import { NumberRollup } from "@/components/ui/number-rollup";
 import { useThemeTokens } from "@/components/ui/tokens";
 import { reportsQueries } from "@/lib/queries/reports-queries-factory";
 import { ScreenContainerRaw, useTabBarBottomPadding } from "@/components/ui/screen-container";
-import { AvatarMenu } from "@/components/admin/avatar-menu";
 import { usePeriodPill } from "@/lib/admin/use-period-pill";
 
 export default function AdminReportsLanding() {
@@ -96,7 +95,7 @@ export default function AdminReportsLanding() {
   ];
 
   return (
-    <ScreenContainerRaw title={t("tabs.reports")} rightSlot={<AvatarMenu />}>
+    <ScreenContainerRaw title={t("tabs.reports")}>
       <ScrollView
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"

@@ -36,7 +36,6 @@ import {
 import { clientsQueries } from "@/lib/queries/clients-queries-factory";
 import { ScreenContainerRaw, useTabBarBottomPadding } from "@/components/ui/screen-container";
 import { HeaderIconButton } from "@/components/ui/app-header";
-import { AvatarMenu } from "@/components/admin/avatar-menu";
 
 type FilterTab = "all" | "confirmed" | "canceled" | "pending";
 
@@ -153,14 +152,11 @@ export default function AdminBilling() {
     <ScreenContainerRaw
       title={t("tabs.billing")}
       rightSlot={
-        <View style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
-          <AvatarMenu />
-          <HeaderIconButton
-            icon="plus"
-            onPress={() => setShowCreate(true)}
-            accessibilityLabel={t("admin.manage.sheetNewPayment")}
-          />
-        </View>
+        <HeaderIconButton
+          icon="plus"
+          onPress={() => setShowCreate(true)}
+          accessibilityLabel={t("admin.manage.sheetNewPayment")}
+        />
       }
     >
       <ScrollView
