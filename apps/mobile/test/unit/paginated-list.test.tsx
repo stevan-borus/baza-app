@@ -374,3 +374,25 @@ describe("PaginatedList — loading / empty / error states", () => {
     expect(html).toContain("Alpha");
   });
 });
+
+describe("PaginatedList — refreshControl forwarding", () => {
+  // Why: callers (Klijenti et al.) need to attach pull-to-refresh to the
+  // list itself. The sticky header lives outside the list, so wrapping the
+  // whole screen in a ScrollView with RefreshControl is no longer an
+  // option — the wrapper must accept a refreshControl React element and
+  // pass it straight to LegendList (which forwards it to its inner
+  // ScrollView, identical to FlatList / SectionList semantics).
+  it("forwards a provided refreshControl element to LegendList", () => {
+    const RR = require("react");
+    const refreshControl = RR.createElement("span", {
+      "data-testid": "test-refresh-control",
+    });
+    renderList({ refreshControl } as any);
+    expect(lastListProps.current.refreshControl).toBe(refreshControl);
+  });
+
+  it("does not set refreshControl when prop is undefined", () => {
+    renderList();
+    expect(lastListProps.current.refreshControl).toBeUndefined();
+  });
+});

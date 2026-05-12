@@ -1,6 +1,12 @@
 // P2-T9: Admin clients — Linear-style searchable list with filter chips, GlassCard rows,
 // segmented Clients/Invites tabs. All five AppSheets (create, edit, invite, assign-package,
 // pause) are preserved verbatim with their form state and mutations unchanged.
+//
+// Migration note: the clients list is rendered through `<PaginatedList>` and the
+// search input + filter chips live in a fixed View ABOVE the list so they no
+// longer drift off-screen as the user scrolls. The hand-rolled
+// `ScrollView + onScroll → fetchNextPage` plumbing and the ActivityIndicator
+// footer are gone — the wrapper owns both.
 
 import React, { useDeferredValue, useMemo, useState } from "react";
 import {
@@ -12,7 +18,6 @@ import {
 import { useTranslation } from "react-i18next";
 import { router } from "expo-router";
 import {
-  ActivityIndicator,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -28,7 +33,6 @@ import { ConfirmSheet } from "@/components/ui/confirm-sheet";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState, ErrorState } from "@/components/ui/states";
-import { SkeletonCard } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { SectionLabel } from "@/components/ui/typography";
 import { GlassCard } from "@/components/ui/glass-card";
@@ -38,9 +42,13 @@ import { ScreenContainerRaw, useTabBarBottomPadding } from "@/components/ui/scre
 import { HeaderIconButton } from "@/components/ui/app-header";
 import { AssignPackageSheetContent } from "@/components/admin/assign-package-sheet-content";
 import { FilterChip } from "@/components/ui/studio";
+import { PaginatedList } from "@/components/ui/paginated-list";
 import { clientsQueries } from "@/lib/queries/clients-queries-factory";
 import { invitesQueries, type Invite } from "@/lib/queries/invites-queries-factory";
 import { packagesQueries } from "@/lib/queries/packages-queries-factory";
+import type { ClientsResponse } from "@baza/types";
+
+type ClientListItem = ClientsResponse["clients"][number];
 
 // ─── InitialsAvatar ───────────────────────────────────────────────────────────
 
@@ -63,6 +71,79 @@ function InitialsAvatar({ name }: { name: string }) {
 // ─── FilterType ───────────────────────────────────────────────────────────────
 
 type FilterType = "all" | "active" | "expiring" | "paused" | "expired";
+
+// ─── ClientRow / Separator ────────────────────────────────────────────────────
+// Extracted from the inline map so the new <PaginatedList> can hand each item
+// to renderItem. Behavior identical to the old row: tapping the card pushes
+// the detail page, tapping the pencil opens the actions sheet. The pencil is
+// a nested Pressable — RN consumes the inner press first so the outer push()
+// never fires from the same tap.
+
+function ClientRow({
+  client,
+  tokens,
+  t,
+  onPress,
+  onPressActions,
+}: {
+  client: ClientListItem;
+  tokens: ReturnType<typeof useThemeTokens>;
+  t: (key: string, opts?: Record<string, unknown>) => string;
+  onPress: () => void;
+  onPressActions: () => void;
+}) {
+  return (
+    <Pressable
+      testID={`client-row-${client.id}`}
+      onPress={onPress}
+      android_ripple={null}
+      className="flex-row items-center gap-3 px-4 py-3 active:opacity-70"
+    >
+      <InitialsAvatar name={client.user.fullName} />
+      <View className="flex-1 gap-0.5">
+        <Text
+          className="text-foreground font-body-semibold"
+          style={{ fontSize: 15 }}
+          numberOfLines={1}
+        >
+          {client.user.fullName}
+        </Text>
+        <Text className="text-muted" style={{ fontSize: 12 }} numberOfLines={1}>
+          {client.user.email}
+          {client.user.phone ? ` · ${client.user.phone}` : ""}
+        </Text>
+      </View>
+      {client.packageStatus === "active" ? (
+        <Badge status="success">{t("admin.clients.filterActive")}</Badge>
+      ) : client.packageStatus === "expiring" ? (
+        <Badge status="warning">{t("admin.clients.filterExpiring")}</Badge>
+      ) : client.packageStatus === "paused" ? (
+        <Badge status="neutral">{t("admin.clients.filterPaused")}</Badge>
+      ) : client.packageStatus === "expired" ? (
+        <Badge status="danger">{t("admin.clients.filterExpired")}</Badge>
+      ) : null}
+      <Pressable
+        testID={`client-pencil-${client.user.id}`}
+        onPress={onPressActions}
+        hitSlop={12}
+        android_ripple={null}
+        accessibilityRole="button"
+        accessibilityLabel={t("admin.clients.openActions")}
+        className="w-8 h-8 items-center justify-center -mr-1 active:opacity-60"
+      >
+        <Feather name="edit-2" size={16} color={tokens.faint} />
+      </Pressable>
+    </Pressable>
+  );
+}
+
+function ClientRowSeparator() {
+  // Hairline divider that lines up with the row content (starts after the
+  // 40px avatar + 12px gap + 16px padding = 68px ≈ the original 64px inset).
+  return (
+    <View className="bg-glass-border" style={{ height: 1, marginLeft: 64 }} />
+  );
+}
 
 // ─── Main screen ─────────────────────────────────────────────────────────────
 
@@ -173,6 +254,10 @@ export default function AdminClients() {
       : clients.filter((c) => c.packageStatus === filter);
 
   // ── Refresh ───────────────────────────────────────────────────────────────
+  // Behavior preserved verbatim: pull-to-refresh invalidates both clients
+  // and invites caches. Now mounted on the list (via <PaginatedList>'s new
+  // refreshControl prop) rather than the outer container — the sticky
+  // header is not pull-able by design.
   async function handleRefresh() {
     setRefreshing(true);
     await Promise.all([
@@ -180,16 +265,6 @@ export default function AdminClients() {
       queryClient.invalidateQueries({ queryKey: ["invites"] }),
     ]);
     setRefreshing(false);
-  }
-
-  function handleClientsEndReached() {
-    if (
-      tab === "clients" &&
-      clientsQuery.hasNextPage &&
-      !clientsQuery.isFetchingNextPage
-    ) {
-      clientsQuery.fetchNextPage();
-    }
   }
 
   const inviteStatusKeys: Record<string, string> = {
@@ -231,285 +306,222 @@ export default function AdminClients() {
         />
       }
     >
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-        contentContainerStyle={{ flexGrow: 1 }}
-        // FlatList inside a ScrollView would either re-virtualize wrong or
-        // require nestedScrollEnabled gymnastics; with cursor pagination the
-        // ScrollView's onScroll → fetchNextPage pattern (same as naplata)
-        // is enough. The page size is ~20, so even a 1000-row list mounts
-        // ~50 pages and React Native handles that comfortably.
-        onScroll={({ nativeEvent }) => {
-          const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
-          if (
-            layoutMeasurement.height + contentOffset.y >=
-            contentSize.height - 200
-          ) {
-            handleClientsEndReached();
-          }
-        }}
-        scrollEventThrottle={400}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={handleRefresh}
-            tintColor={tokens.accent}
-            colors={[tokens.accent]}
-          />
-        }
-      >
-      <View
-        className="px-5 flex-col gap-4 flex-1"
-        style={{ paddingTop: 16, paddingBottom: bottomPad }}
-      >
-        {/* ── Search input ────────────────────────────────────────────────── */}
-        <MotiView
-          from={{ opacity: 0, translateY: -6 }}
-          animate={{ opacity: 1, translateY: 0 }}
-          transition={{ type: "timing", duration: 300, delay: 80 }}
+      <View style={{ flex: 1 }}>
+        {/* ── Sticky header ───────────────────────────────────────────────
+            Lives OUTSIDE the list so the search input, segmented control,
+            and filter chips stay pinned while rows scroll underneath. The
+            entry animations on each block are preserved — they only run
+            once on mount, not on every list scroll. */}
+        <View
+          style={{
+            paddingHorizontal: 24,
+            paddingTop: 16,
+            paddingBottom: 12,
+            gap: 16,
+          }}
         >
-          <Input
-            placeholder={t("admin.clients.searchPlaceholder")}
-            leftIcon="search"
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            autoCapitalize="none"
-            autoCorrect={false}
-          />
-        </MotiView>
-
-        {/* ── Segmented control ───────────────────────────────────────────── */}
-        <MotiView
-          from={{ opacity: 0, translateY: -6 }}
-          animate={{ opacity: 1, translateY: 0 }}
-          transition={{ type: "timing", duration: 300, delay: 160 }}
-        >
-          <SegmentedControl
-            segments={[
-              {
-                value: "clients" as const,
-                label: t("admin.clients.tabClients", { count: clients.length }),
-                testID: "admin-clients-tab-clients",
-              },
-              {
-                value: "invites" as const,
-                label: t("admin.clients.tabInvites", { count: invites.length }),
-                testID: "admin-clients-tab-invites",
-              },
-            ]}
-            value={tab}
-            onValueChange={setTab}
-          />
-        </MotiView>
-
-        {/* ── Filter chips (clients tab only) ─────────────────────────────── */}
-        {tab === "clients" ? (
           <MotiView
-            from={{ opacity: 0, translateY: -4 }}
+            from={{ opacity: 0, translateY: -6 }}
             animate={{ opacity: 1, translateY: 0 }}
-            transition={{ type: "timing", duration: 300, delay: 200 }}
+            transition={{ type: "timing", duration: 300, delay: 80 }}
           >
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={{ gap: 8, paddingRight: 4 }}
-            >
-              {FILTERS.map(({ key, labelKey }) => (
-                <FilterChip
-                  key={key}
-                  active={filter === key}
-                  label={t(labelKey)}
-                  onPress={() => setFilter(key)}
-                />
-              ))}
-            </ScrollView>
+            <Input
+              testID="klijenti-search-input"
+              placeholder={t("admin.clients.searchPlaceholder")}
+              leftIcon="search"
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
           </MotiView>
-        ) : null}
 
-        {/* ── List content ────────────────────────────────────────────────── */}
-        <MotiView
-          from={{ opacity: 0, translateY: 8 }}
-          animate={{ opacity: 1, translateY: 0 }}
-          transition={{ type: "timing", duration: 300, delay: 240 }}
-          style={{ gap: 10 }}
-        >
+          <MotiView
+            from={{ opacity: 0, translateY: -6 }}
+            animate={{ opacity: 1, translateY: 0 }}
+            transition={{ type: "timing", duration: 300, delay: 160 }}
+          >
+            <SegmentedControl
+              segments={[
+                {
+                  value: "clients" as const,
+                  label: t("admin.clients.tabClients", { count: clients.length }),
+                  testID: "admin-clients-tab-clients",
+                },
+                {
+                  value: "invites" as const,
+                  label: t("admin.clients.tabInvites", { count: invites.length }),
+                  testID: "admin-clients-tab-invites",
+                },
+              ]}
+              value={tab}
+              onValueChange={setTab}
+            />
+          </MotiView>
+
           {tab === "clients" ? (
-            <>
-              {clientsQuery.isError ? <ErrorState message={t("admin.clients.error")} /> : null}
-              {clientsQuery.isLoading && clients.length === 0 ? (
-                <View style={{ gap: 8 }}>
-                  <SkeletonCard />
-                  <SkeletonCard />
-                  <SkeletonCard />
-                </View>
-              ) : null}
-              {!clientsQuery.isError &&
-              !clientsQuery.isLoading &&
-              filteredClients.length === 0 &&
-              filter !== "all" ? (
-                <EmptyState title={t("admin.clients.filterEmpty")} />
-              ) : !clientsQuery.isError &&
-                !clientsQuery.isLoading &&
-                clients.length === 0 ? (
-                <EmptyState
-                  title={
-                    deferredSearch
+            <MotiView
+              from={{ opacity: 0, translateY: -4 }}
+              animate={{ opacity: 1, translateY: 0 }}
+              transition={{ type: "timing", duration: 300, delay: 200 }}
+            >
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ gap: 8, paddingRight: 4 }}
+              >
+                {FILTERS.map(({ key, labelKey }) => (
+                  <FilterChip
+                    key={key}
+                    active={filter === key}
+                    label={t(labelKey)}
+                    onPress={() => setFilter(key)}
+                  />
+                ))}
+              </ScrollView>
+            </MotiView>
+          ) : null}
+        </View>
+
+        {/* ── List body ─────────────────────────────────────────────────────
+            Filter chips narrow client-side over already-loaded pages —
+            same trade-off as ActiveAssignments. Lifting `filter` to the
+            API would require extending the endpoint; most admins toggle
+            chips across the current view rather than asking for "ALL
+            paused" globally. */}
+        {tab === "clients" ? (
+          <PaginatedList<ClientListItem>
+            query={clientsQuery}
+            data={filteredClients}
+            keyExtractor={(client) => client.id}
+            renderItem={({ item }) => (
+              <ClientRow
+                client={item}
+                tokens={tokens}
+                t={t}
+                onPress={() =>
+                  router.push(`/(admin)/klijenti/${item.user.id}`)
+                }
+                onPressActions={() => setShowActionsFor(item.id)}
+              />
+            )}
+            ItemSeparatorComponent={ClientRowSeparator}
+            contentContainerStyle={{
+              paddingHorizontal: 24,
+              paddingBottom: bottomPad,
+            }}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={handleRefresh}
+                tintColor={tokens.accent}
+                colors={[tokens.accent]}
+              />
+            }
+            errorState={<ErrorState message={t("admin.clients.error")} />}
+            emptyState={
+              <EmptyState
+                title={
+                  filter !== "all"
+                    ? t("admin.clients.filterEmpty")
+                    : deferredSearch
                       ? t("admin.clients.filterEmpty")
                       : t("admin.clients.empty")
-                  }
-                />
-              ) : null}
+                }
+              />
+            }
+          />
+        ) : (
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            contentContainerStyle={{
+              paddingHorizontal: 24,
+              paddingBottom: bottomPad,
+              gap: 10,
+            }}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={handleRefresh}
+                tintColor={tokens.accent}
+                colors={[tokens.accent]}
+              />
+            }
+          >
+            {invitesQuery.isError ? (
+              <ErrorState message={t("admin.clients.invitesError")} />
+            ) : null}
+            {invites.length === 0 ? (
+              <EmptyState title={t("admin.clients.invitesEmpty")} />
+            ) : null}
 
-              {/* Compact rows. P2-4: tap the card → push detail page
-                  (/klijenti/[user.id]). Tap the pencil on the right →
-                  open the actions sheet (Uredi / Nova uplata / Dodeli
-                  paket / Pauziraj / Obriši). The pencil is a nested
-                  Pressable — RN captures the inner press first, so the
-                  outer push() does not fire. */}
-              <View className="bg-surface rounded-lg overflow-hidden">
-                {filteredClients.map((client, idx) => (
-                  <React.Fragment key={client.id}>
-                    {idx > 0 ? (
-                      <View
-                        className="bg-glass-border"
-                        style={{ height: 1, marginLeft: 64 }}
-                      />
-                    ) : null}
-                    <Pressable
-                      testID={`client-row-${client.id}`}
-                      onPress={() => router.push(`/(admin)/klijenti/${client.user.id}`)}
-                      android_ripple={null}
-                      className="flex-row items-center gap-3 px-4 py-3 active:opacity-70"
-                    >
-                      <InitialsAvatar name={client.user.fullName} />
-                      <View className="flex-1 gap-0.5">
-                        <Text
-                          className="text-foreground font-body-semibold"
-                          style={{ fontSize: 15 }}
-                          numberOfLines={1}
-                        >
-                          {client.user.fullName}
-                        </Text>
-                        <Text
-                          className="text-muted"
-                          style={{ fontSize: 12 }}
-                          numberOfLines={1}
-                        >
-                          {client.user.email}
-                          {client.user.phone ? ` · ${client.user.phone}` : ""}
-                        </Text>
-                      </View>
-                      {client.packageStatus === "active" ? (
-                        <Badge status="success">
-                          {t("admin.clients.filterActive")}
-                        </Badge>
-                      ) : client.packageStatus === "expiring" ? (
-                        <Badge status="warning">
-                          {t("admin.clients.filterExpiring")}
-                        </Badge>
-                      ) : client.packageStatus === "paused" ? (
-                        <Badge status="neutral">
-                          {t("admin.clients.filterPaused")}
-                        </Badge>
-                      ) : client.packageStatus === "expired" ? (
-                        <Badge status="danger">
-                          {t("admin.clients.filterExpired")}
-                        </Badge>
-                      ) : null}
-                      <Pressable
-                        testID={`client-pencil-${client.user.id}`}
-                        onPress={() => setShowActionsFor(client.id)}
-                        hitSlop={12}
-                        android_ripple={null}
-                        accessibilityRole="button"
-                        accessibilityLabel={t("admin.clients.openActions")}
-                        className="w-8 h-8 items-center justify-center -mr-1 active:opacity-60"
+            {invites.map((invite: Invite) => (
+              <GlassCard key={invite.id} testID={`invite-row-${invite.id}`}>
+                <View className="flex-col gap-2.5">
+                  <View className="flex-row justify-between items-center">
+                    <View className="flex-1 flex-col">
+                      <Text
+                        className="text-foreground font-body-semibold"
+                        style={{ fontSize: 15 }}
                       >
-                        <Feather
-                          name="edit-2"
-                          size={16}
-                          color={tokens.faint}
-                        />
-                      </Pressable>
-                    </Pressable>
-                  </React.Fragment>
-                ))}
-              </View>
-              {clientsQuery.isFetchingNextPage ? (
-                <ActivityIndicator
-                  style={{ padding: 16 }}
-                  color={tokens.accent}
-                />
-              ) : null}
-            </>
-          ) : (
-            <>
-              {invitesQuery.isError ? <ErrorState message={t("admin.clients.invitesError")} /> : null}
-              {invites.length === 0 ? <EmptyState title={t("admin.clients.invitesEmpty")} /> : null}
-
-              {invites.map((invite: Invite) => (
-                <GlassCard key={invite.id} testID={`invite-row-${invite.id}`}>
-                  <View className="flex-col gap-2.5">
-                    <View className="flex-row justify-between items-center">
-                      <View className="flex-1 flex-col">
-                        <Text className="text-foreground font-body-semibold" style={{ fontSize: 15 }}>
-                          {invite.fullName}
-                        </Text>
-                        <Text className="text-muted" style={{ fontSize: 13 }}>
-                          {invite.email}
-                        </Text>
-                      </View>
-                      <Badge
-                        status={
-                          invite.status === "COMPLETED"
-                            ? "success"
-                            : invite.status === "PENDING"
-                              ? "warning"
-                              : "danger"
-                        }
-                      >
-                        {inviteStatusKeys[invite.status]
-                          ? t(inviteStatusKeys[invite.status])
-                          : invite.status}
-                      </Badge>
+                        {invite.fullName}
+                      </Text>
+                      <Text className="text-muted" style={{ fontSize: 13 }}>
+                        {invite.email}
+                      </Text>
                     </View>
-                    {invite.status === "PENDING" ? (
-                      <View className="flex-row gap-2">
-                        <Pressable
-                          onPress={() => resendMutation.mutate(invite.id)}
-                          disabled={resendMutation.isPending}
-                          className="flex-1 flex-row items-center justify-center gap-1.5 py-2 rounded-lg"
-                          style={{ backgroundColor: "rgba(255,255,255,0.06)" }}
-                        >
-                          <FontAwesome name="refresh" size={12} color="#a1a1aa" />
-                          <Text className="text-muted" style={{ fontSize: 12, fontWeight: "600" }}>
-                            {t("admin.clients.resend")}
-                          </Text>
-                        </Pressable>
-                        <Pressable
-                          onPress={() => setConfirmRevokeId(invite.id)}
-                          disabled={revokeMutation.isPending}
-                          className="flex-1 flex-row items-center justify-center gap-1.5 py-2 rounded-lg"
-                          style={{ backgroundColor: "rgba(255,0,0,0.08)" }}
-                        >
-                          <FontAwesome name="ban" size={12} color="#ef4444" />
-                          <Text style={{ fontSize: 12, fontWeight: "600", color: "#ef4444" }}>
-                            {t("admin.clients.revoke")}
-                          </Text>
-                        </Pressable>
-                      </View>
-                    ) : null}
+                    <Badge
+                      status={
+                        invite.status === "COMPLETED"
+                          ? "success"
+                          : invite.status === "PENDING"
+                            ? "warning"
+                            : "danger"
+                      }
+                    >
+                      {inviteStatusKeys[invite.status]
+                        ? t(inviteStatusKeys[invite.status])
+                        : invite.status}
+                    </Badge>
                   </View>
-                </GlassCard>
-              ))}
-            </>
-          )}
-        </MotiView>
+                  {invite.status === "PENDING" ? (
+                    <View className="flex-row gap-2">
+                      <Pressable
+                        onPress={() => resendMutation.mutate(invite.id)}
+                        disabled={resendMutation.isPending}
+                        className="flex-1 flex-row items-center justify-center gap-1.5 py-2 rounded-lg"
+                        style={{ backgroundColor: "rgba(255,255,255,0.06)" }}
+                      >
+                        <FontAwesome name="refresh" size={12} color="#a1a1aa" />
+                        <Text className="text-muted" style={{ fontSize: 12, fontWeight: "600" }}>
+                          {t("admin.clients.resend")}
+                        </Text>
+                      </Pressable>
+                      <Pressable
+                        onPress={() => setConfirmRevokeId(invite.id)}
+                        disabled={revokeMutation.isPending}
+                        className="flex-1 flex-row items-center justify-center gap-1.5 py-2 rounded-lg"
+                        style={{ backgroundColor: "rgba(255,0,0,0.08)" }}
+                      >
+                        <FontAwesome name="ban" size={12} color="#ef4444" />
+                        <Text style={{ fontSize: 12, fontWeight: "600", color: "#ef4444" }}>
+                          {t("admin.clients.revoke")}
+                        </Text>
+                      </Pressable>
+                    </View>
+                  ) : null}
+                </View>
+              </GlassCard>
+            ))}
+          </ScrollView>
+        )}
+      </View>
 
-        {/* ═══════════════════════════════════════════════════════════════════
-            ALL FIVE APPSHEETS — preserved verbatim
-        ═══════════════════════════════════════════════════════════════════ */}
+      {/* ═══════════════════════════════════════════════════════════════════
+          ALL FIVE APPSHEETS — preserved verbatim (now mounted as siblings
+          of the list, not inside the old ScrollView).
+      ═══════════════════════════════════════════════════════════════════ */}
 
         {/* Create Client Sheet */}
         <AppSheet open={showCreateClient} onOpenChange={setShowCreateClient}>
@@ -879,8 +891,6 @@ export default function AdminClients() {
             {pauseMutation.isError ? <ErrorState message={t("admin.clients.pauseError")} /> : null}
           </View>
         </AppSheet>
-      </View>
-      </ScrollView>
       <ConfirmSheet
         open={!!confirmRevokeId}
         onOpenChange={(o) => !o && setConfirmRevokeId(null)}

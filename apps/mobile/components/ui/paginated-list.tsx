@@ -25,6 +25,7 @@
 import React, { useCallback } from "react";
 import {
   ActivityIndicator,
+  type RefreshControlProps,
   StyleProp,
   View,
   ViewStyle,
@@ -81,6 +82,20 @@ export type PaginatedListProps<T> = {
    * Hint for the first render. Falls through to LegendList. Optional.
    */
   estimatedItemSize?: number;
+
+  /**
+   * Pull-to-refresh control. Forwarded straight to LegendList's inner
+   * ScrollView (same prop shape as FlatList / ScrollView). Callers
+   * construct the `<RefreshControl />` element themselves so tint
+   * colors, onRefresh handlers, and progressViewOffset stay caller-owned.
+   *
+   * Why on the list and not a parent ScrollView? With a sticky header
+   * above the list, wrapping the whole screen in a ScrollView defeats
+   * the sticky layout. Pull-to-refresh therefore lives on the list — the
+   * user pulls down on rows, not on the header (header isn't scrollable
+   * anyway).
+   */
+  refreshControl?: React.ReactElement<RefreshControlProps>;
 };
 
 const DEFAULT_LOADING = (
@@ -119,6 +134,7 @@ export function PaginatedList<T>(
     testID,
     onEndReachedThreshold = 0.4,
     estimatedItemSize,
+    refreshControl,
   } = props;
 
   const handleEndReached = useCallback(() => {
@@ -159,6 +175,7 @@ export function PaginatedList<T>(
       keyboardShouldPersistTaps="handled"
       showsVerticalScrollIndicator={false}
       estimatedItemSize={estimatedItemSize}
+      refreshControl={refreshControl}
       style={{ flex: 1 }}
       testID={testID}
     />
