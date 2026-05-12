@@ -247,7 +247,7 @@ async function seedClientPackages(opts: {
     expiresAt: Date;
     sessionsRemaining: number;
     amount: number;
-    method: "CASH" | "CARD" | "COMPANY" | "QR" | "MANUAL_ONLINE";
+    method: "CASH" | "CARD" | "COMPANY" | "MANUAL_ONLINE";
     paidAt?: Date;
   }) {
     const client = opts.clients.get(args.clientKey)!;
@@ -337,7 +337,9 @@ async function seedClientPackages(opts: {
     expiresAt: new Date(currentInstant.getTime() + 37 * DAY_MS),
     sessionsRemaining: 12,
     amount: 12000,
-    method: "QR",
+    // Future pack was historically tagged QR; that enum value is gone now
+    // (PR β migrated QR rows -> CASH), so this seeds with CASH directly.
+    method: "CASH",
     paidAt: new Date(currentInstant.getTime() - DAY_MS),
   });
 

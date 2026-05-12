@@ -97,28 +97,12 @@ describe("billing extras", () => {
     expect(await prisma.billingRecord.count()).toBe(1);
   });
 
-  it("POST does not activate the package when status is PENDING even if activatePackageOnConfirm is true", async () => {
-    const { admin, client, packageType } = await seedAdminClientPackageType();
-    asAdmin(admin);
-    const response = await POST(
-      new Request("http://test.local/api/billing", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          clientUserId: client.id,
-          amount: 12000,
-          method: "CASH",
-          status: "PENDING",
-          packageTypeId: packageType.id,
-          activatePackageOnConfirm: true,
-        }),
-      }),
-    );
-    expect(response.status).toBe(201);
-    const billing = await prisma.billingRecord.findFirst();
-    expect(billing?.status).toBe("PENDING");
-    expect(await prisma.clientPackage.count()).toBe(0);
-  });
+  // The previous test here asserted the API DOES NOT activate the package
+  // when status=PENDING. PR β removed PENDING + CANCELED from BillingStatus
+  // (the studio's workflow only ever produces CONFIRMED rows), so the
+  // "status guards activation" branch is no longer reachable. The Flow-1-
+  // with-activation path is still covered by the assign-package-paid.test.ts
+  // suite and the e2e admin.spec.ts billing creation test.
 
   it("Flow 2: admin assigns a comp pack via /packages/client-packages with NO BillingRecord side-effect", async () => {
     const { admin, profile, packageType } = await seedAdminClientPackageType();
