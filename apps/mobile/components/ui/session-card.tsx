@@ -2,7 +2,7 @@ import React from "react";
 import { Pressable, Text, View } from "react-native";
 import { useTranslation } from "react-i18next";
 import { GlassCard } from "./glass-card";
-import { Badge } from "./badge";
+import { CapsLabel } from "./studio/typography";
 
 type SessionStatus = "booked" | "waitlisted" | "full" | "available";
 
@@ -20,6 +20,11 @@ type SessionCardProps = {
   bookedCount: number;
   capacity: number;
   classType?: string;
+  /**
+   * Carried through for back-compat with existing call sites — the
+   * redesigned card no longer renders status badges, but the type stays
+   * so callers don't need to change.
+   */
   status: SessionStatus;
   hidden?: boolean;
   hiddenLabel?: string;
@@ -36,15 +41,18 @@ const classTypeAccentColor: Record<string, string> = {
 };
 
 /**
- * Stacked time block for the session card — final design locked in
- * UI_FEEDBACK_LOG row #5. Start time above a hairline divider, end time
- * below. Both digits in `tokens.fg` at the same weight (the muted-end
- * variant was explicitly vetoed during the round-6 grill).
+ * Stacked time block for the session card — editorial slot redesign.
+ * Start time above a hairline divider, end time below. Both digits in
+ * `tokens.fg` at the same weight.
  *
- * Fraunces-SemiBold, 22px / lineHeight 24 / letterSpacing -0.3, with
+ * Fraunces-SemiBold, 28px / lineHeight 30 / letterSpacing -0.4, with
  * `fontVariant: ["tabular-nums"]` so "08:00" and "09:00" align
- * character-by-character. The divider spans only the visual width of the
- * time text, not the full card.
+ * character-by-character. The block is vertically centered against the
+ * middle column (no `self-start` anchor); the wrapping row has
+ * `items-center` so the cross-axis alignment falls out for free.
+ *
+ * The badge slot is gone — capacity now lives as a hairline bar inside
+ * the middle column, not as a right-aligned pill.
  */
 function SessionCardTime({ time }: { time: string }) {
   const parts = time.split(/\s*[-–]\s*/);
@@ -53,9 +61,9 @@ function SessionCardTime({ time }: { time: string }) {
       <Text
         className="font-display text-foreground"
         style={{
-          fontSize: 22,
-          lineHeight: 24,
-          letterSpacing: -0.3,
+          fontSize: 28,
+          lineHeight: 30,
+          letterSpacing: -0.4,
           fontVariant: ["tabular-nums"],
         }}
       >
@@ -65,28 +73,28 @@ function SessionCardTime({ time }: { time: string }) {
   }
   const [start, end] = parts;
   return (
-    <View className="items-center self-start">
+    <View className="items-center self-center">
       <Text
         className="font-display text-foreground"
         style={{
-          fontSize: 22,
-          lineHeight: 24,
-          letterSpacing: -0.3,
+          fontSize: 28,
+          lineHeight: 30,
+          letterSpacing: -0.4,
           fontVariant: ["tabular-nums"],
         }}
       >
         {start}
       </Text>
       <View
-        className="bg-glass-border self-stretch my-1"
+        className="bg-glass-border self-stretch my-1.5"
         style={{ height: 1 }}
       />
       <Text
         className="font-display text-foreground"
         style={{
-          fontSize: 22,
-          lineHeight: 24,
-          letterSpacing: -0.3,
+          fontSize: 28,
+          lineHeight: 30,
+          letterSpacing: -0.4,
           fontVariant: ["tabular-nums"],
         }}
       >
@@ -96,12 +104,37 @@ function SessionCardTime({ time }: { time: string }) {
   );
 }
 
-const statusConfig: Record<SessionStatus, { label: string; status: "success" | "warning" }> = {
-  booked: { label: "Booked", status: "success" },
-  waitlisted: { label: "Waitlisted", status: "warning" },
-  full: { label: "Full", status: "warning" },
-  available: { label: "", status: "success" },
-};
+/**
+ * Hairline capacity bar — single accent fill, no threshold colour
+ * shifts. Replaces the old "X spots" badge. Filled width is
+ * (bookedCount / capacity) clamped to [0, 100]. Returns `null` when
+ * capacity is 0 (nothing meaningful to render).
+ */
+function SessionCapacityBar({
+  bookedCount,
+  capacity,
+  sessionId,
+}: {
+  bookedCount: number;
+  capacity: number;
+  sessionId?: string;
+}) {
+  if (capacity <= 0) return null;
+  const ratio = Math.max(0, Math.min(1, bookedCount / capacity));
+  const fillPct = Math.round(ratio * 100);
+  const testID = sessionId
+    ? `session-card-capacity-bar-${sessionId}`
+    : "session-card-capacity-bar";
+  return (
+    <View
+      testID={testID}
+      className="flex-row bg-glass-border"
+      style={{ height: 1, width: "100%" }}
+    >
+      <View className="bg-accent" style={{ width: `${fillPct}%`, height: 1 }} />
+    </View>
+  );
+}
 
 export function SessionCard({
   time,
@@ -111,7 +144,6 @@ export function SessionCard({
   bookedCount,
   capacity,
   classType,
-  status,
   hidden,
   hiddenLabel,
   onPress,
@@ -120,10 +152,6 @@ export function SessionCard({
   attendance,
 }: SessionCardProps) {
   const { t } = useTranslation();
-  const config = statusConfig[status];
-  const spotsLeft = capacity - bookedCount;
-  const badgeLabel =
-    status === "available" ? `${spotsLeft} spot${spotsLeft !== 1 ? "s" : ""}` : config.label;
   const accentBorder = classType && classTypeAccentColor[classType] ? "left" : undefined;
   const accentBorderColor =
     classType && classTypeAccentColor[classType]
@@ -138,70 +166,75 @@ export function SessionCard({
           accentBorderColor={accentBorderColor}
           style={{ paddingVertical: 12 }}
         >
-          <View className="flex-col gap-2">
-            <View className="flex-row items-center gap-3">
-              <SessionCardTime time={time} />
-              <View className="flex-1 gap-0.5">
-                <Text className="text-sm font-body-semibold text-foreground">
-                  {className}
-                </Text>
-                {trainerName ? (
-                  <Text className="text-xs text-muted" numberOfLines={1}>
-                    {trainerName}
-                  </Text>
-                ) : null}
-              </View>
-              {hidden && hiddenLabel ? (
-                <Badge status="warning">{hiddenLabel}</Badge>
-              ) : badgeLabel ? (
-                <Badge status={config.status}>{badgeLabel}</Badge>
-              ) : null}
-            </View>
-            {room ? (
-              <Text className="text-xs text-muted pl-[78px]" numberOfLines={1}>
-                {room}
+          <View className="flex-row items-center gap-3">
+            <SessionCardTime time={time} />
+            <View className="flex-1 gap-0.5">
+              <Text className="text-sm font-body-semibold text-foreground">
+                {className}
               </Text>
-            ) : null}
-            {attendance ? (
-              <View
-                testID={
-                  sessionId
-                    ? `session-card-attendance-${sessionId}`
-                    : "session-card-attendance"
-                }
-                className="flex-row items-center gap-2 pl-[78px]"
-              >
-                <Text
+              {trainerName ? (
+                <Text className="text-xs text-muted" numberOfLines={1}>
+                  {trainerName}
+                </Text>
+              ) : null}
+              {room ? (
+                <Text className="text-xs text-muted" numberOfLines={1}>
+                  {room}
+                </Text>
+              ) : null}
+              {hidden && hiddenLabel ? (
+                <CapsLabel size={11} tracking={2.4} className="text-muted mt-1">
+                  {hiddenLabel}
+                </CapsLabel>
+              ) : null}
+              <View className="mt-1.5">
+                <SessionCapacityBar
+                  bookedCount={bookedCount}
+                  capacity={capacity}
+                  sessionId={sessionId}
+                />
+              </View>
+              {attendance ? (
+                <View
                   testID={
                     sessionId
-                      ? `session-card-attended-${sessionId}`
-                      : "session-card-attended"
+                      ? `session-card-attendance-${sessionId}`
+                      : "session-card-attendance"
                   }
-                  className="text-xs text-accent font-body-semibold"
+                  className="flex-row items-center gap-2 mt-1"
                 >
-                  {t("trainer.schedule.attendance.consumed", {
-                    count: attendance.consumedCount,
-                  })}
-                </Text>
-                {attendance.canceledCount > 0 ? (
-                  <>
-                    <Text className="text-xs text-muted">·</Text>
-                    <Text
-                      testID={
-                        sessionId
-                          ? `session-card-canceled-${sessionId}`
-                          : "session-card-canceled"
-                      }
-                      className="text-xs text-muted"
-                    >
-                      {t("trainer.schedule.attendance.canceled", {
-                        count: attendance.canceledCount,
-                      })}
-                    </Text>
-                  </>
-                ) : null}
-              </View>
-            ) : null}
+                  <Text
+                    testID={
+                      sessionId
+                        ? `session-card-attended-${sessionId}`
+                        : "session-card-attended"
+                    }
+                    className="text-xs text-accent font-body-semibold"
+                  >
+                    {t("trainer.schedule.attendance.consumed", {
+                      count: attendance.consumedCount,
+                    })}
+                  </Text>
+                  {attendance.canceledCount > 0 ? (
+                    <>
+                      <Text className="text-xs text-muted">·</Text>
+                      <Text
+                        testID={
+                          sessionId
+                            ? `session-card-canceled-${sessionId}`
+                            : "session-card-canceled"
+                        }
+                        className="text-xs text-muted"
+                      >
+                        {t("trainer.schedule.attendance.canceled", {
+                          count: attendance.canceledCount,
+                        })}
+                      </Text>
+                    </>
+                  ) : null}
+                </View>
+              ) : null}
+            </View>
           </View>
         </GlassCard>
       </View>
