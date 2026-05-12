@@ -1,9 +1,17 @@
-// P2-2: Admin client detail page — header (avatar + pencil → action sheet),
-// current package card, full package history (newest first), and the first
-// page of upcoming bookings powered by bookings.byClient. "Istorija
-// treninga →" deep-links into the past-bookings sub-route (P2-3). The action
-// sheet rows mirror klijenti/index.tsx — "Nova uplata" + card-tap/pencil
-// split land in P2-4.
+// PR δ (round-7 UI sweep): the flat-scroll ClientDetail page was split into
+// three tabs — Pregled / Paketi / Treninzi. Why? With ~10 packages + ~10
+// upcoming sessions the old layout buried "Istorija treninga →" at the
+// bottom of a screen that grew unboundedly with each client's history.
+// Tabs keep the page navigable at any data scale. Quick-action rows on the
+// Pregled tab surface Nova uplata / Dodeli paket / Pauziraj that used to
+// hide behind the pencil action sheet — discoverability fix for one-off
+// admin tasks that new users won't think to look for.
+//
+// What stays: the pencil header icon still opens the AppSheet with the
+// same five actions (power-user shortcut), all existing testIDs on the
+// action sheet rows are preserved, the istorija sub-route at
+// /klijenti/[id]/istorija continues to render past bookings and is now
+// linked from the Treninzi tab footer.
 
 import React, { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient, useInfiniteQuery } from "@tanstack/react-query";
@@ -23,16 +31,17 @@ import { GlassCard } from "@/components/ui/glass-card";
 import { useThemeTokens } from "@/components/ui/tokens";
 import { ScreenContainerRaw, useTabBarBottomPadding } from "@/components/ui/screen-container";
 import { HeaderIconButton } from "@/components/ui/app-header";
+import { PaginatedList } from "@/components/ui/paginated-list";
 import { clientsQueries } from "@/lib/queries/clients-queries-factory";
 import { packagesQueries, type ClientPackage } from "@/lib/queries/packages-queries-factory";
-import { bookingsQueries } from "@/lib/queries/bookings-queries-factory";
+import { bookingsQueries, type ClientBooking } from "@/lib/queries/bookings-queries-factory";
 import { BookingRow } from "@/components/admin/booking-row";
 import { AssignPackageSheetContent } from "@/components/admin/assign-package-sheet-content";
 import { ReturnToPill } from "@/components/admin/return-to-pill";
-
-// ─── InitialsAvatar ───────────────────────────────────────────────────────────
-// Larger variant of the list-row avatar; same styling rules as the row but
-// sized for a profile header.
+import {
+  ClientDetailTabBar,
+  type ClientDetailTab,
+} from "@/components/admin/client-detail-tab-bar";
 
 function InitialsAvatar({ name, size = 56 }: { name: string; size?: number }) {
   const initials = name
@@ -56,14 +65,6 @@ function InitialsAvatar({ name, size = 56 }: { name: string; size?: number }) {
   );
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-/**
- * Pick the most-recently-started "active" package: not expired and still has
- * sessions. Server-side eligibility (pauses, class-type scope) is
- * deliberately not duplicated here — this is a profile pill, not a booking
- * gate. The list is already returned newest-first by the API.
- */
 function pickActivePackage(packages: ClientPackage[]): ClientPackage | null {
   const nowMs = Date.now();
   for (const p of packages) {
@@ -74,8 +75,6 @@ function pickActivePackage(packages: ClientPackage[]): ClientPackage | null {
   return null;
 }
 
-// ─── Main screen ──────────────────────────────────────────────────────────────
-
 export function ClientDetail({ id }: { id: string }) {
   const queryClient = useQueryClient();
   const tokens = useThemeTokens();
@@ -83,28 +82,25 @@ export function ClientDetail({ id }: { id: string }) {
   const lang = i18n.language === "en" ? "en" : "sr";
   const bottomPad = useTabBarBottomPadding();
 
-  // Sheets state — mirrors klijenti/index.tsx but scoped to this one client.
+  // Tab state — Pregled is the default landing tab. State-based, not
+  // expo-router nested tabs: the three tabs share a single sticky header +
+  // single set of mounted AppSheets; nesting would duplicate that shell on
+  // every tab change and re-run queries.
+  const [activeTab, setActiveTab] = useState<ClientDetailTab>("pregled");
+
   const [showActions, setShowActions] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
   const [showAssign, setShowAssign] = useState(false);
-  // P2-4: mode is pre-armed by the action-sheet rows. "comp" = Dodeli paket,
-  // "paid" = Nova uplata. The sheet body still renders the comp-only form
-  // for now; P2-5 makes it mode-aware.
   const [showAssignMode, setShowAssignMode] = useState<"comp" | "paid">("comp");
   const [showPause, setShowPause] = useState(false);
   const [showDelete, setShowDelete] = useState(false);
 
-  // Forms (mirror klijenti/index.tsx initial shapes).
   const [editForm, setEditForm] = useState({ fullName: "", phone: "", notes: "", isActive: true });
   const [pauseForm, setPauseForm] = useState({ startsAt: "", endsAt: "", reason: "" });
 
-  // ── Queries ────────────────────────────────────────────────────────────────
   const clientQuery = useQuery(clientsQueries.byId(id));
   const client = clientQuery.data?.client;
 
-  // Use the per-client GET path so the response includes the matched
-  // BillingRecord per ClientPackage (closes the P2 TODO). The admin list-all
-  // path doesn't attach billingRecord.
   const packagesQuery = useQuery({
     ...packagesQueries.clientPackages(client?.id),
     enabled: !!client?.id,
@@ -115,19 +111,19 @@ export function ClientDetail({ id }: { id: string }) {
     enabled: !!id,
   });
 
-  // ── Derived ────────────────────────────────────────────────────────────────
   const allPackages = useMemo(
     () => packagesQuery.data?.packages ?? [],
     [packagesQuery.data?.packages],
   );
   const activePackage = useMemo(() => pickActivePackage(allPackages), [allPackages]);
 
-  const upcomingBookings = useMemo(() => {
+  // Treninzi tab + Pregled-preview both read from the same infinite query.
+  // Pregled shows the first three; Treninzi shows the full paginated list.
+  const upcomingBookings = useMemo<ClientBooking[]>(() => {
     const pages = upcomingQuery.data?.pages ?? [];
-    return pages.flatMap((p) => p.bookings).slice(0, 10);
+    return pages.flatMap((p) => p.bookings);
   }, [upcomingQuery.data?.pages]);
 
-  // ── Mutations ─────────────────────────────────────────────────────────────
   const updateClientMutation = useMutation({
     ...clientsQueries.update(),
     onSuccess: async () => {
@@ -144,8 +140,39 @@ export function ClientDetail({ id }: { id: string }) {
     },
   });
 
-  // ── Loading / error states (single shell so we keep the back button) ──────
   const headerTitle = client?.user.fullName ?? t("admin.clientDetail.title");
+
+  // Quick-action handlers — shared between the pencil-sheet rows and the
+  // Pregled quick-action rows so both surfaces land in identical sheets.
+  function openEdit() {
+    if (!client) return;
+    setEditForm({
+      fullName: client.user.fullName,
+      phone: client.user.phone ?? "",
+      notes: client.notes ?? "",
+      isActive: client.user.isActive,
+    });
+    setShowActions(false);
+    setShowEdit(true);
+  }
+  function openNewPayment() {
+    setShowActions(false);
+    setShowAssignMode("paid");
+    setShowAssign(true);
+  }
+  function openAssign() {
+    setShowActions(false);
+    setShowAssignMode("comp");
+    setShowAssign(true);
+  }
+  function openPause() {
+    setShowActions(false);
+    setShowPause(true);
+  }
+  function openDelete() {
+    setShowActions(false);
+    setShowDelete(true);
+  }
 
   return (
     <ScreenContainerRaw
@@ -162,229 +189,108 @@ export function ClientDetail({ id }: { id: string }) {
         ) : undefined
       }
     >
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{
-          paddingTop: 16,
-          paddingHorizontal: 20,
-          paddingBottom: bottomPad,
-          gap: 16,
-        }}
-      >
-        <ReturnToPill testID="client-detail-return-to-pill" />
-
+      <View style={{ flex: 1 }}>
         {clientQuery.isLoading ? (
-          <>
+          <View style={{ paddingTop: 16, paddingHorizontal: 20, gap: 12 }}>
             <SkeletonCard />
             <SkeletonCard />
-            <SkeletonCard />
-          </>
+          </View>
         ) : null}
         {clientQuery.isError ? (
-          <ErrorState message={t("admin.clientDetail.loadError")} />
+          <View style={{ paddingTop: 16, paddingHorizontal: 20 }}>
+            <ErrorState message={t("admin.clientDetail.loadError")} />
+          </View>
         ) : null}
 
         {client ? (
           <>
-            {/* ── Section 1: Header card (avatar + email/phone + status pill) ── */}
-            <GlassCard size="md">
-              <View className="flex-row items-center gap-3">
-                <InitialsAvatar name={client.user.fullName} />
-                <View className="flex-1 gap-0.5">
-                  <Text
-                    className="text-foreground font-body-bold"
-                    style={{ fontSize: 17, letterSpacing: -0.2 }}
-                    numberOfLines={1}
-                  >
-                    {client.user.fullName}
-                  </Text>
-                  <Text
-                    className="text-muted"
-                    style={{ fontSize: 13 }}
-                    numberOfLines={1}
-                  >
-                    {client.user.email}
-                  </Text>
-                  {client.user.phone ? (
+            {/* Sticky header strip — identity sits pinned above the tab bar. */}
+            <View
+              style={{
+                paddingTop: 16,
+                paddingHorizontal: 20,
+                paddingBottom: 12,
+                gap: 12,
+              }}
+            >
+              <ReturnToPill testID="client-detail-return-to-pill" />
+              <GlassCard size="md">
+                <View className="flex-row items-center gap-3">
+                  <InitialsAvatar name={client.user.fullName} />
+                  <View className="flex-1 gap-0.5">
+                    <Text
+                      className="text-foreground font-body-bold"
+                      style={{ fontSize: 17, letterSpacing: -0.2 }}
+                      numberOfLines={1}
+                    >
+                      {client.user.fullName}
+                    </Text>
                     <Text
                       className="text-muted"
                       style={{ fontSize: 13 }}
                       numberOfLines={1}
                     >
-                      {client.user.phone}
+                      {client.user.email}
                     </Text>
-                  ) : null}
-                </View>
-                <PackageStatusPill status={client.packageStatus} />
-              </View>
-            </GlassCard>
-
-            {/* ── Section 2: Current package ───────────────────────────── */}
-            <View className="gap-2">
-              <SectionLabel>{t("admin.clientDetail.currentPackage")}</SectionLabel>
-              {packagesQuery.isLoading ? (
-                <SkeletonCard />
-              ) : activePackage ? (
-                <GlassCard size="md">
-                  <View className="flex-row items-start gap-3">
-                    <View className="flex-1 gap-1">
+                    {client.user.phone ? (
                       <Text
-                        className="text-foreground font-body-semibold"
-                        style={{ fontSize: 15 }}
+                        className="text-muted"
+                        style={{ fontSize: 13 }}
                         numberOfLines={1}
                       >
-                        {activePackage.packageType?.name ?? "—"}
+                        {client.user.phone}
                       </Text>
-                      <Text className="text-muted" style={{ fontSize: 13 }}>
-                        {t("admin.clientDetail.sessionsRemaining", {
-                          remaining: activePackage.sessionsRemaining,
-                          total: activePackage.packageType?.sessionCount ?? "—",
-                        })}
-                      </Text>
-                      <Text className="text-muted" style={{ fontSize: 13 }}>
-                        {t("admin.clientDetail.validUntil", {
-                          date: dayjs(activePackage.expiresAt).locale(lang).format("D.M.YYYY."),
-                        })}
-                      </Text>
-                    </View>
-                    <Badge status="success">
-                      {t("admin.clientDetail.status.active")}
-                    </Badge>
+                    ) : null}
                   </View>
-                </GlassCard>
-              ) : (
-                <EmptyState title={t("admin.clientDetail.noActivePackage")} />
-              )}
-            </View>
-
-            {/* ── Section 3: Package history (newest first) ───────────── */}
-            <View className="gap-2">
-              <SectionLabel>{t("admin.clientDetail.packageHistory")}</SectionLabel>
-              {packagesQuery.isLoading ? null : allPackages.length === 0 ? (
-                <EmptyState title={t("admin.clientDetail.noPackages")} />
-              ) : (
-                <View className="bg-surface rounded-lg overflow-hidden">
-                  {allPackages.map((p, idx) => {
-                    const expired = new Date(p.expiresAt).getTime() < Date.now();
-                    const usedUp = p.sessionsRemaining <= 0;
-                    return (
-                      <React.Fragment key={p.id}>
-                        {idx > 0 ? (
-                          <View
-                            className="bg-glass-border"
-                            style={{ height: 1, marginLeft: 16 }}
-                          />
-                        ) : null}
-                        <View
-                          testID={`package-history-row-${p.id}`}
-                          className="flex-col gap-1 px-4 py-3"
-                        >
-                          <View className="flex-row items-center justify-between gap-3">
-                            <Text
-                              className="text-foreground font-body-semibold flex-1"
-                              style={{ fontSize: 14 }}
-                              numberOfLines={1}
-                            >
-                              {p.packageType?.name ?? "—"}
-                            </Text>
-                            {expired ? (
-                              <Badge status="danger">
-                                {t("admin.clientDetail.status.expired")}
-                              </Badge>
-                            ) : usedUp ? (
-                              <Badge status="neutral">
-                                {t("admin.clientDetail.status.usedUp")}
-                              </Badge>
-                            ) : (
-                              <Badge status="success">
-                                {t("admin.clientDetail.status.active")}
-                              </Badge>
-                            )}
-                          </View>
-                          <Text className="text-muted" style={{ fontSize: 12 }}>
-                            {`${dayjs(p.startsAt).locale(lang).format("D.M.YYYY.")} — ${dayjs(p.expiresAt).locale(lang).format("D.M.YYYY.")}`}
-                          </Text>
-                          <View className="flex-row items-center justify-between gap-3">
-                            <Text className="text-muted" style={{ fontSize: 12 }}>
-                              {t("admin.clientDetail.sessionsRemaining", {
-                                remaining: p.sessionsRemaining,
-                                total: p.packageType?.sessionCount ?? "—",
-                              })}
-                            </Text>
-                            {/* P2 follow-up: payment/comp tag derived from
-                                the BillingRecord attached server-side. Null =
-                                no matching CONFIRMED payment found, so the
-                                package was a comp / gift. */}
-                            <Text
-                              testID={`package-history-row-${p.id}-billing-tag`}
-                              className="text-muted font-body-medium"
-                              style={{ fontSize: 12 }}
-                            >
-                              {p.billingRecord
-                                ? t("admin.clientDetail.paid", {
-                                    amount: p.billingRecord.amount,
-                                  })
-                                : t("admin.clientDetail.comp")}
-                            </Text>
-                          </View>
-                        </View>
-                      </React.Fragment>
-                    );
-                  })}
+                  <PackageStatusPill status={client.packageStatus} />
                 </View>
-              )}
-              {packagesQuery.isError ? (
-                <ErrorState message={t("admin.clientDetail.packagesError")} />
-              ) : null}
+              </GlassCard>
+              <ClientDetailTabBar active={activeTab} onChange={setActiveTab} />
             </View>
 
-            {/* ── Section 4: Upcoming bookings (first page only) ────────── */}
-            <View className="gap-2">
-              <SectionLabel>{t("admin.clientDetail.upcomingBookings")}</SectionLabel>
-              {upcomingQuery.isLoading ? (
-                <SkeletonCard />
-              ) : upcomingQuery.isError ? (
-                <ErrorState message={t("admin.clientDetail.upcomingError")} />
-              ) : upcomingBookings.length === 0 ? (
-                <EmptyState title={t("admin.clientDetail.noUpcoming")} />
-              ) : (
-                <View className="bg-surface rounded-lg overflow-hidden">
-                  {upcomingBookings.map((b, idx) => (
-                    <React.Fragment key={b.id}>
-                      {idx > 0 ? (
-                        <View
-                          className="bg-glass-border"
-                          style={{ height: 1, marginLeft: 16 }}
-                        />
-                      ) : null}
-                      <BookingRow booking={b} />
-                    </React.Fragment>
-                  ))}
-                </View>
-              )}
+            {/* Tab body — conditional render. Cheap to remount; queries are
+                cached, no measured layouts to preserve. */}
+            {activeTab === "pregled" ? (
+              <PregledTab
+                activePackage={activePackage}
+                packagesLoading={packagesQuery.isLoading}
+                upcomingBookings={upcomingBookings.slice(0, 3)}
+                upcomingLoading={upcomingQuery.isLoading}
+                upcomingError={upcomingQuery.isError}
+                lang={lang}
+                bottomPad={bottomPad}
+                onNewPayment={openNewPayment}
+                onAssign={openAssign}
+                onPause={openPause}
+                onDelete={openDelete}
+                onViewAllTreninzi={() => setActiveTab("treninzi")}
+              />
+            ) : null}
 
-              <Pressable
-                testID="client-detail-history-link"
-                onPress={() => router.push(`/(admin)/klijenti/${id}/istorija`)}
-                android_ripple={null}
-                className="flex-row items-center justify-between px-4 py-3 bg-surface rounded-lg active:opacity-70"
-              >
-                <Text
-                  className="text-foreground font-body-medium"
-                  style={{ fontSize: 14 }}
-                >
-                  {t("admin.clientDetail.viewHistory")}
-                </Text>
-                <Feather name="chevron-right" size={16} color={tokens.faint} />
-              </Pressable>
-            </View>
+            {activeTab === "paketi" ? (
+              <PaketiTab
+                packagesQuery={packagesQuery}
+                allPackages={allPackages}
+                lang={lang}
+                bottomPad={bottomPad}
+              />
+            ) : null}
+
+            {activeTab === "treninzi" ? (
+              <TreninziTab
+                upcomingQuery={upcomingQuery}
+                upcomingBookings={upcomingBookings}
+                clientUserId={id}
+                tokens={tokens}
+                bottomPad={bottomPad}
+              />
+            ) : null}
           </>
         ) : null}
-      </ScrollView>
+      </View>
 
-      {/* ═══════════════════════════════════════════════════════════════════
-          Action sheet — opened by tapping the pencil button.
-      ═══════════════════════════════════════════════════════════════════ */}
+      {/* Pencil-opened action sheet — power-user shortcut. The Pregled tab
+          surfaces the same actions as visible rows for new admins. */}
       <AppSheet open={showActions} onOpenChange={setShowActions}>
         {client ? (
           <View className="flex-col gap-2">
@@ -412,61 +318,37 @@ export function ClientDetail({ id }: { id: string }) {
               testID="client-action-edit"
               icon="edit-2"
               label={t("admin.clients.edit")}
-              onPress={() => {
-                setEditForm({
-                  fullName: client.user.fullName,
-                  phone: client.user.phone ?? "",
-                  notes: client.notes ?? "",
-                  isActive: client.user.isActive,
-                });
-                setShowActions(false);
-                setShowEdit(true);
-              }}
+              onPress={openEdit}
             />
             <ActionRow
               testID="client-action-new-payment"
               icon="dollar-sign"
               label={t("admin.clients.newPaymentAction")}
-              onPress={() => {
-                setShowActions(false);
-                setShowAssignMode("paid");
-                setShowAssign(true);
-              }}
+              onPress={openNewPayment}
             />
             <ActionRow
               testID="client-action-assign-package"
               icon="gift"
               label={t("admin.clients.assignPackage")}
-              onPress={() => {
-                setShowActions(false);
-                setShowAssignMode("comp");
-                setShowAssign(true);
-              }}
+              onPress={openAssign}
             />
             <ActionRow
               testID="client-action-pause"
               icon="pause"
               label={t("admin.clients.pause")}
-              onPress={() => {
-                setShowActions(false);
-                setShowPause(true);
-              }}
+              onPress={openPause}
             />
             <ActionRow
               testID="client-action-delete"
               icon="trash-2"
               label={t("admin.clients.delete")}
               destructive
-              onPress={() => {
-                setShowActions(false);
-                setShowDelete(true);
-              }}
+              onPress={openDelete}
             />
           </View>
         ) : null}
       </AppSheet>
 
-      {/* Edit sheet */}
       <AppSheet open={showEdit} onOpenChange={setShowEdit}>
         <View className="flex-col gap-4">
           <Text
@@ -526,7 +408,6 @@ export function ClientDetail({ id }: { id: string }) {
         </View>
       </AppSheet>
 
-      {/* Assign-package sheet */}
       <AppSheet open={showAssign} onOpenChange={setShowAssign}>
         {client ? (
           <View className="flex-col gap-4">
@@ -547,7 +428,6 @@ export function ClientDetail({ id }: { id: string }) {
         ) : null}
       </AppSheet>
 
-      {/* Pause sheet */}
       <AppSheet open={showPause} onOpenChange={setShowPause}>
         <View className="flex-col gap-4">
           <Text
@@ -602,7 +482,6 @@ export function ClientDetail({ id }: { id: string }) {
         </View>
       </AppSheet>
 
-      {/* Delete confirmation */}
       <AppSheet open={showDelete} onOpenChange={setShowDelete}>
         {client ? (
           <View className="flex-col gap-5">
@@ -653,7 +532,323 @@ export function ClientDetail({ id }: { id: string }) {
   );
 }
 
-// ─── PackageStatusPill ────────────────────────────────────────────────────────
+function PregledTab({
+  activePackage,
+  packagesLoading,
+  upcomingBookings,
+  upcomingLoading,
+  upcomingError,
+  lang,
+  bottomPad,
+  onNewPayment,
+  onAssign,
+  onPause,
+  onDelete,
+  onViewAllTreninzi,
+}: {
+  activePackage: ClientPackage | null;
+  packagesLoading: boolean;
+  upcomingBookings: ClientBooking[];
+  upcomingLoading: boolean;
+  upcomingError: boolean;
+  lang: "sr" | "en";
+  bottomPad: number;
+  onNewPayment: () => void;
+  onAssign: () => void;
+  onPause: () => void;
+  onDelete: () => void;
+  onViewAllTreninzi: () => void;
+}) {
+  const { t } = useTranslation();
+  return (
+    <ScrollView
+      testID="client-detail-tab-content-pregled"
+      showsVerticalScrollIndicator={false}
+      contentContainerStyle={{
+        paddingHorizontal: 20,
+        paddingBottom: bottomPad,
+        gap: 16,
+      }}
+    >
+      <View className="gap-2">
+        <SectionLabel>{t("admin.clientDetail.currentPackage")}</SectionLabel>
+        {packagesLoading ? (
+          <SkeletonCard />
+        ) : activePackage ? (
+          <GlassCard size="md">
+            <View className="flex-row items-start gap-3">
+              <View className="flex-1 gap-1">
+                <Text
+                  className="text-foreground font-body-semibold"
+                  style={{ fontSize: 15 }}
+                  numberOfLines={1}
+                >
+                  {activePackage.packageType?.name ?? "—"}
+                </Text>
+                <Text className="text-muted" style={{ fontSize: 13 }}>
+                  {t("admin.clientDetail.sessionsRemaining", {
+                    remaining: activePackage.sessionsRemaining,
+                    total: activePackage.packageType?.sessionCount ?? "—",
+                  })}
+                </Text>
+                <Text className="text-muted" style={{ fontSize: 13 }}>
+                  {t("admin.clientDetail.validUntil", {
+                    date: dayjs(activePackage.expiresAt).locale(lang).format("D.M.YYYY."),
+                  })}
+                </Text>
+              </View>
+              <Badge status="success">
+                {t("admin.clientDetail.status.active")}
+              </Badge>
+            </View>
+          </GlassCard>
+        ) : (
+          <EmptyState title={t("admin.clientDetail.noActivePackage")} />
+        )}
+      </View>
+
+      <View className="gap-2">
+        <SectionLabel>{t("admin.clientDetail.upcomingBookings")}</SectionLabel>
+        {upcomingLoading ? (
+          <SkeletonCard />
+        ) : upcomingError ? (
+          <ErrorState message={t("admin.clientDetail.upcomingError")} />
+        ) : upcomingBookings.length === 0 ? (
+          <EmptyState title={t("admin.clientDetail.noUpcoming")} />
+        ) : (
+          <View className="bg-surface rounded-lg overflow-hidden">
+            {upcomingBookings.map((b, idx) => (
+              <React.Fragment key={b.id}>
+                {idx > 0 ? (
+                  <View
+                    className="bg-glass-border"
+                    style={{ height: 1, marginLeft: 16 }}
+                  />
+                ) : null}
+                <BookingRow booking={b} />
+              </React.Fragment>
+            ))}
+          </View>
+        )}
+        {upcomingBookings.length > 0 ? (
+          <Pressable
+            testID="client-detail-pregled-see-all-treninzi"
+            onPress={onViewAllTreninzi}
+            android_ripple={null}
+            className="self-start active:opacity-70 py-1.5"
+          >
+            <Text
+              className="text-accent font-body-medium"
+              style={{ fontSize: 13 }}
+            >
+              {t("admin.clientDetail.viewHistory")}
+            </Text>
+          </Pressable>
+        ) : null}
+      </View>
+
+      <View className="gap-2">
+        <SectionLabel>{t("admin.clientDetail.quickActions.title")}</SectionLabel>
+        <View className="bg-surface rounded-lg overflow-hidden">
+          <QuickActionRow
+            testID="client-quick-action-new-payment"
+            icon="dollar-sign"
+            label={t("admin.clients.newPaymentAction")}
+            onPress={onNewPayment}
+          />
+          <RowDivider />
+          <QuickActionRow
+            testID="client-quick-action-assign-package"
+            icon="gift"
+            label={t("admin.clients.assignPackage")}
+            onPress={onAssign}
+          />
+          <RowDivider />
+          <QuickActionRow
+            testID="client-quick-action-pause"
+            icon="pause"
+            label={t("admin.clients.pause")}
+            onPress={onPause}
+          />
+          <RowDivider />
+          <QuickActionRow
+            testID="client-quick-action-delete"
+            icon="trash-2"
+            label={t("admin.clients.delete")}
+            destructive
+            onPress={onDelete}
+          />
+        </View>
+      </View>
+    </ScrollView>
+  );
+}
+
+function RowDivider() {
+  return <View className="bg-glass-border" style={{ height: 1, marginLeft: 44 }} />;
+}
+
+function PaketiTab({
+  packagesQuery,
+  allPackages,
+  lang,
+  bottomPad,
+}: {
+  packagesQuery: ReturnType<typeof useQuery>;
+  allPackages: ClientPackage[];
+  lang: "sr" | "en";
+  bottomPad: number;
+}) {
+  const { t } = useTranslation();
+  return (
+    <ScrollView
+      testID="client-detail-tab-content-paketi"
+      showsVerticalScrollIndicator={false}
+      contentContainerStyle={{
+        paddingHorizontal: 20,
+        paddingBottom: bottomPad,
+        gap: 8,
+      }}
+    >
+      <SectionLabel>{t("admin.clientDetail.packageHistory")}</SectionLabel>
+      {packagesQuery.isLoading ? (
+        <SkeletonCard />
+      ) : packagesQuery.isError ? (
+        <ErrorState message={t("admin.clientDetail.packagesError")} />
+      ) : allPackages.length === 0 ? (
+        <EmptyState title={t("admin.clientDetail.noPackages")} />
+      ) : (
+        <View className="bg-surface rounded-lg overflow-hidden">
+          {allPackages.map((p, idx) => {
+            const expired = new Date(p.expiresAt).getTime() < Date.now();
+            const usedUp = p.sessionsRemaining <= 0;
+            return (
+              <React.Fragment key={p.id}>
+                {idx > 0 ? (
+                  <View
+                    className="bg-glass-border"
+                    style={{ height: 1, marginLeft: 16 }}
+                  />
+                ) : null}
+                <View
+                  testID={`package-history-row-${p.id}`}
+                  className="flex-col gap-1 px-4 py-3"
+                >
+                  <View className="flex-row items-center justify-between gap-3">
+                    <Text
+                      className="text-foreground font-body-semibold flex-1"
+                      style={{ fontSize: 14 }}
+                      numberOfLines={1}
+                    >
+                      {p.packageType?.name ?? "—"}
+                    </Text>
+                    {expired ? (
+                      <Badge status="danger">
+                        {t("admin.clientDetail.status.expired")}
+                      </Badge>
+                    ) : usedUp ? (
+                      <Badge status="neutral">
+                        {t("admin.clientDetail.status.usedUp")}
+                      </Badge>
+                    ) : (
+                      <Badge status="success">
+                        {t("admin.clientDetail.status.active")}
+                      </Badge>
+                    )}
+                  </View>
+                  <Text className="text-muted" style={{ fontSize: 12 }}>
+                    {`${dayjs(p.startsAt).locale(lang).format("D.M.YYYY.")} — ${dayjs(p.expiresAt).locale(lang).format("D.M.YYYY.")}`}
+                  </Text>
+                  <View className="flex-row items-center justify-between gap-3">
+                    <Text className="text-muted" style={{ fontSize: 12 }}>
+                      {t("admin.clientDetail.sessionsRemaining", {
+                        remaining: p.sessionsRemaining,
+                        total: p.packageType?.sessionCount ?? "—",
+                      })}
+                    </Text>
+                    <Text
+                      testID={`package-history-row-${p.id}-billing-tag`}
+                      className="text-muted font-body-medium"
+                      style={{ fontSize: 12 }}
+                    >
+                      {p.billingRecord
+                        ? t("admin.clientDetail.paid", {
+                            amount: p.billingRecord.amount,
+                          })
+                        : t("admin.clientDetail.comp")}
+                    </Text>
+                  </View>
+                </View>
+              </React.Fragment>
+            );
+          })}
+        </View>
+      )}
+    </ScrollView>
+  );
+}
+
+function TreninziTab({
+  upcomingQuery,
+  upcomingBookings,
+  clientUserId,
+  tokens,
+  bottomPad,
+}: {
+  upcomingQuery: ReturnType<typeof useInfiniteQuery>;
+  upcomingBookings: ClientBooking[];
+  clientUserId: string;
+  tokens: ReturnType<typeof useThemeTokens>;
+  bottomPad: number;
+}) {
+  const { t } = useTranslation();
+  return (
+    <View
+      testID="client-detail-tab-content-treninzi"
+      style={{ flex: 1, paddingHorizontal: 20 }}
+    >
+      <View style={{ paddingBottom: 8 }}>
+        <SectionLabel>{t("admin.clientDetail.upcomingBookings")}</SectionLabel>
+      </View>
+      <PaginatedList<ClientBooking>
+        query={upcomingQuery}
+        data={upcomingBookings}
+        keyExtractor={(b) => b.id}
+        renderItem={({ item, index }) => (
+          <View>
+            {index > 0 ? (
+              <View
+                className="bg-glass-border"
+                style={{ height: 1, marginLeft: 16 }}
+              />
+            ) : null}
+            <BookingRow booking={item} />
+          </View>
+        )}
+        contentContainerStyle={{
+          paddingBottom: bottomPad,
+        }}
+        errorState={<ErrorState message={t("admin.clientDetail.upcomingError")} />}
+        emptyState={<EmptyState title={t("admin.clientDetail.noUpcoming")} />}
+      />
+      <Pressable
+        testID="client-detail-history-link"
+        onPress={() => router.push(`/(admin)/klijenti/${clientUserId}/istorija`)}
+        android_ripple={null}
+        className="flex-row items-center justify-between px-4 py-3 bg-surface rounded-lg active:opacity-70"
+        style={{ marginBottom: 12 }}
+      >
+        <Text
+          className="text-foreground font-body-medium"
+          style={{ fontSize: 14 }}
+        >
+          {t("admin.clientDetail.viewHistory")}
+        </Text>
+        <Feather name="chevron-right" size={16} color={tokens.faint} />
+      </Pressable>
+    </View>
+  );
+}
 
 function PackageStatusPill({
   status,
@@ -676,8 +871,6 @@ function PackageStatusPill({
   return <Badge status="neutral">{t("admin.clientDetail.status.none")}</Badge>;
 }
 
-// ─── ActionRow ────────────────────────────────────────────────────────────────
-
 function ActionRow({
   icon,
   label,
@@ -698,6 +891,49 @@ function ActionRow({
       onPress={onPress}
       android_ripple={null}
       className="flex-row items-center gap-3 py-3.5 active:opacity-70"
+    >
+      <Feather
+        name={icon}
+        size={18}
+        color={destructive ? "#dc2626" : tokens.foreground}
+      />
+      <Text
+        className={
+          destructive
+            ? "text-danger font-body-medium flex-1"
+            : "text-foreground font-body-medium flex-1"
+        }
+        style={{ fontSize: 15 }}
+      >
+        {label}
+      </Text>
+      {!destructive ? (
+        <Feather name="chevron-right" size={16} color={tokens.faint} />
+      ) : null}
+    </Pressable>
+  );
+}
+
+function QuickActionRow({
+  icon,
+  label,
+  onPress,
+  destructive = false,
+  testID,
+}: {
+  icon: React.ComponentProps<typeof Feather>["name"];
+  label: string;
+  onPress: () => void;
+  destructive?: boolean;
+  testID?: string;
+}) {
+  const tokens = useThemeTokens();
+  return (
+    <Pressable
+      testID={testID}
+      onPress={onPress}
+      android_ripple={null}
+      className="flex-row items-center gap-3 px-4 py-3.5 active:opacity-70"
     >
       <Feather
         name={icon}

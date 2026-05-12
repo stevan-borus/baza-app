@@ -406,6 +406,14 @@
         "expired": "Istekao",
         "usedUp": "Iskorišćen",
         "none": "Bez paketa"
+      },
+      "tabs": {
+        "pregled": "Pregled",
+        "paketi": "Paketi",
+        "treninzi": "Treninzi"
+      },
+      "quickActions": {
+        "title": "Brze akcije"
       }
     },
     "packages": {
