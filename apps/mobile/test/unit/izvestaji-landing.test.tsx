@@ -241,11 +241,10 @@ describe("Izveštaji landing — card grid", () => {
 
   it("applies aspectRatio: 1 to each card so all four are equal squares", () => {
     const html = render();
-    // Each Pressable card should carry an aspectRatio: 1 style entry. The
-    // exact serialisation depends on how style flows through Pressable, so
-    // assert the JSON snapshot contains the key/value pair on all four
-    // cards.
-    const aspectMatches = html.match(/"aspectRatio":1/g) ?? [];
+    // React serialises the inline `style` object to kebab-case CSS in the
+    // rendered output: `aspectRatio: 1` -> `aspect-ratio:1`. Each of the
+    // four Pressable cards carries that exact pair in its style attribute.
+    const aspectMatches = html.match(/aspect-ratio:\s*1/g) ?? [];
     expect(aspectMatches.length).toBeGreaterThanOrEqual(4);
   });
 

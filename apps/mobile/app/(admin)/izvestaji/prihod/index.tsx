@@ -184,7 +184,6 @@ export default function IzvestajiPrihod() {
         >
           <SegmentedControl
             options={[
-              { value: "week" as Period, label: t("admin.manage.periodWeek") },
               { value: "month" as Period, label: t("admin.manage.periodMonth") },
               { value: "quarter" as Period, label: t("admin.manage.periodQuarter") },
               { value: "year" as Period, label: t("admin.manage.periodYear") },
