@@ -51,6 +51,7 @@
     "notifications": "Obaveštenja",
     "schedule": "Raspored",
     "clients": "Klijenti",
+    "catalog": "Katalog",
     "manage": "Upravljanje",
     "packages": "Paketi",
     "billing": "Naplata",
@@ -691,6 +692,14 @@
         },
         "noData": "Nema podataka za izabrani period."
       }
+    },
+    "katalog": {
+      "sections": {
+        "kreiraj": "Kreiraj",
+        "katalog": "Katalog"
+      },
+      "noviTermin": "Novi termin",
+      "noviTerminSub": "Jednokratno ili serija"
     }
   },
   "adminMenu": {

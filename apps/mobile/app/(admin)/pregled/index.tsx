@@ -1,23 +1,17 @@
 import React, { useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { Pressable, ScrollView, Switch, Text, View } from "react-native";
+import { Pressable, ScrollView, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import Feather from "@expo/vector-icons/Feather";
 import dayjs from "dayjs";
 import { MotiView } from "@/components/ui/styled";
-import { AppSheet } from "@/components/ui/sheet";
-import { Button } from "@/components/ui/button";
 import { NumberRollup } from "@/components/ui/number-rollup";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { SessionCard } from "@/components/ui/session-card";
 import { startOfLocaleWeek } from "@/components/ui/week-strip";
 import { MonthView } from "@/components/ui/month-view";
 import { EmptyState, ErrorState } from "@/components/ui/states";
-import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
-import { DateTimePicker } from "@/components/ui/date-time-picker";
-import { SectionLabel } from "@/components/ui/typography";
 import { ScreenContainerRaw, useTabBarBottomPadding } from "@/components/ui/screen-container";
 import {
   SkeletonCard,
@@ -28,16 +22,13 @@ import { useThemeTokens } from "@/components/ui/tokens";
 import { CapsLabel, StudioWeekStrip, StatStrip } from "@/components/ui/studio";
 import { HeaderIconButton } from "@/components/ui/app-header";
 import { AvatarMenu } from "@/components/admin/avatar-menu";
+import { NewSessionSheet } from "@/components/admin/new-session-sheet";
 import {
   SessionEditSheet,
   useSessionEditSheet,
 } from "@/components/ui/session-edit-sheet";
 import { sessionsQueries } from "@/lib/queries/sessions-queries-factory";
-import { trainingsQueries } from "@/lib/queries/trainings-queries-factory";
-import { roomsQueries } from "@/lib/queries/rooms-queries-factory";
 import { reportsQueries } from "@/lib/queries/reports-queries-factory";
-import { usersQueries } from "@/lib/queries/users-queries-factory";
-import { applySessionFormChange } from "@/lib/admin/session-form-state";
 
 /**
  * Design references (from docs/inspiration/):
@@ -56,7 +47,6 @@ export default function AdminSchedule() {
   const { t, i18n } = useTranslation();
   const lang = i18n.language === "en" ? "en" : "sr";
   const router = useRouter();
-  const queryClient = useQueryClient();
   const tokens = useThemeTokens();
   const bottomPad = useTabBarBottomPadding(24);
   const [selectedDate, setSelectedDate] = useState(dayjs().format("YYYY-MM-DD"));
@@ -72,8 +62,6 @@ export default function AdminSchedule() {
   const [monthDate, setMonthDate] = useState(() => dayjs().startOf("month"));
   const [scheduleTab, setScheduleTab] = useState<ScheduleTab>("day");
   const [showCreate, setShowCreate] = useState(false);
-  const [isRecurring, setIsRecurring] = useState(false);
-  const [createIsActive, setCreateIsActive] = useState(true);
   const editSheet = useSessionEditSheet();
 
   const displayDate = dayjs(selectedDate);
@@ -81,66 +69,8 @@ export default function AdminSchedule() {
   const availabilityQuery = useQuery(
     sessionsQueries.availabilityByMonth(month),
   );
-  const classTypesQuery = useQuery(trainingsQueries.classTypes());
-  const roomsQuery = useQuery(roomsQueries.list());
-  const trainersQuery = useQuery(usersQueries.trainers());
   const summaryQuery = useQuery(reportsQueries.summary());
   const summary = summaryQuery.data?.summary;
-
-  const [newSession, setNewSession] = useState<{
-    classTypeId: string;
-    roomId: string;
-    trainerUserId: string;
-    startsAt: Date | null;
-    endsAt: Date | null;
-    capacity: string;
-    durationMins: string;
-    weekCount: string;
-    weekdays: number[];
-  }>({
-    classTypeId: "",
-    roomId: "",
-    trainerUserId: "",
-    startsAt: null,
-    endsAt: null,
-    capacity: "",
-    durationMins: "",
-    weekCount: "",
-    weekdays: [],
-  });
-
-  const createMutation = useMutation({
-    ...sessionsQueries.create(),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["sessions"] });
-      setShowCreate(false);
-      resetCreateForm();
-    },
-  });
-  const createRecurringMutation = useMutation({
-    ...sessionsQueries.createRecurring(),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["sessions"] });
-      setShowCreate(false);
-      resetCreateForm();
-    },
-  });
-
-  function resetCreateForm() {
-    setNewSession({
-      classTypeId: "",
-      roomId: "",
-      trainerUserId: "",
-      startsAt: null,
-      endsAt: null,
-      capacity: "",
-      durationMins: "",
-      weekCount: "",
-      weekdays: [],
-    });
-    setIsRecurring(false);
-    setCreateIsActive(true);
-  }
 
   const sessions = availabilityQuery.data?.sessions ?? [];
 
@@ -471,264 +401,7 @@ export default function AdminSchedule() {
 
       </ScrollView>
 
-      {/* Create Session Sheet */}
-      <AppSheet open={showCreate} onOpenChange={setShowCreate}>
-        <View className="flex-col gap-5 pb-5">
-            <Text
-              className="text-foreground font-body-bold"
-              style={{ fontSize: 20, letterSpacing: -0.3 }}
-            >
-              {isRecurring
-                ? t("admin.schedule.sheetRecurring")
-                : t("admin.schedule.sheetNew")}
-            </Text>
-            <View className="flex-row gap-2">
-              <Button
-                testID="session-create-mode-once"
-                className="flex-1"
-                size="small"
-                variant={!isRecurring ? "primary" : "secondary"}
-                onPress={() => setIsRecurring(false)}
-              >
-                {t("admin.schedule.once")}
-              </Button>
-              <Button
-                testID="session-create-mode-recurring"
-                className="flex-1"
-                size="small"
-                variant={isRecurring ? "primary" : "secondary"}
-                onPress={() => setIsRecurring(true)}
-              >
-                {t("admin.schedule.recurring")}
-              </Button>
-            </View>
-
-            <Select
-              testID="session-create-class-type-select"
-              optionTestIDPrefix="session-create-class-type-option"
-              placeholder={t("admin.schedule.classType")}
-              value={newSession.classTypeId}
-              onChange={(v) => {
-                setNewSession((s) =>
-                  applySessionFormChange(
-                    s,
-                    { field: "classTypeId", value: v },
-                    {
-                      classTypes: classTypesQuery.data?.classTypes ?? [],
-                      rooms: roomsQuery.data?.rooms ?? [],
-                    },
-                  ),
-                );
-              }}
-              emptyText={t("admin.schedule.emptyClassTypes")}
-              options={(classTypesQuery.data?.classTypes ?? []).map((ct) => ({
-                value: ct.id,
-                label: ct.name,
-                hint: `${ct.durationMins} min · ${ct.maxClients} ${t("admin.schedule.maxClientsHint")}`,
-              }))}
-            />
-
-            <Select
-              testID="session-create-room-select"
-              optionTestIDPrefix="session-create-room-option"
-              placeholder={t("admin.schedule.room")}
-              value={newSession.roomId}
-              onChange={(v) =>
-                setNewSession((s) =>
-                  applySessionFormChange(
-                    s,
-                    { field: "roomId", value: v },
-                    {
-                      classTypes: classTypesQuery.data?.classTypes ?? [],
-                      rooms: roomsQuery.data?.rooms ?? [],
-                    },
-                  ),
-                )
-              }
-              emptyText={t("admin.schedule.emptyRooms")}
-              options={(roomsQuery.data?.rooms ?? []).map((room) => ({
-                value: room.id,
-                label: room.name,
-                hint: t("admin.schedule.roomCap", {
-                  name: room.name,
-                  capacity: room.capacity,
-                }),
-              }))}
-            />
-
-            <Select
-              testID="session-create-trainer-select"
-              optionTestIDPrefix="session-create-trainer-option"
-              placeholder={t("admin.schedule.trainer")}
-              value={newSession.trainerUserId}
-              onChange={(v) =>
-                setNewSession((s) => ({ ...s, trainerUserId: v }))
-              }
-              emptyText={t("admin.schedule.emptyTrainers")}
-              options={(trainersQuery.data?.users ?? []).map((u) => ({
-                value: u.id,
-                label: u.fullName,
-              }))}
-            />
-
-            <DateTimePicker
-              testID="session-create-startsAt"
-              placeholder={t("admin.schedule.placeholderStart")}
-              value={newSession.startsAt}
-              onChange={(date) =>
-                setNewSession((s) => ({ ...s, startsAt: date }))
-              }
-              mode="datetime"
-              minimumDate={new Date()}
-            />
-
-            <Input
-              placeholder={t("admin.schedule.placeholderDuration")}
-              keyboardType="numeric"
-              value={newSession.durationMins}
-              onChangeText={(v) =>
-                setNewSession((s) => ({ ...s, durationMins: v }))
-              }
-            />
-
-            {isRecurring ? (
-              <>
-                <Input
-                  testID="session-create-week-count-input"
-                  placeholder={t("admin.schedule.placeholderWeekCount")}
-                  keyboardType="numeric"
-                  value={newSession.weekCount}
-                  onChangeText={(v) =>
-                    setNewSession((s) => ({ ...s, weekCount: v }))
-                  }
-                />
-                <View className="gap-2">
-                  <SectionLabel>
-                    {t("admin.schedule.weekdaysLabel")}
-                  </SectionLabel>
-                  <View className="flex-row gap-2">
-                    {[1, 2, 3, 4, 5, 6, 0].map((dow) => {
-                      const selected = newSession.weekdays.includes(dow);
-                      return (
-                        <Pressable
-                          key={dow}
-                          testID={`session-create-weekday-${dow}`}
-                          onPress={() =>
-                            setNewSession((s) => ({
-                              ...s,
-                              weekdays: selected
-                                ? s.weekdays.filter((d) => d !== dow)
-                                : [...s.weekdays, dow],
-                            }))
-                          }
-                          className={`flex-1 h-12 rounded-2xl border items-center justify-center ${
-                            selected
-                              ? "border-accent bg-accent"
-                              : "border-glass-border bg-glass"
-                          }`}
-                        >
-                          <Text
-                            className={`text-sm font-body-semibold ${
-                              selected ? "text-white" : "text-foreground"
-                            }`}
-                          >
-                            {t(`admin.schedule.weekday${dow}Short` as never)}
-                          </Text>
-                        </Pressable>
-                      );
-                    })}
-                  </View>
-                </View>
-              </>
-            ) : null}
-
-            <Input
-              placeholder={t("admin.schedule.placeholderCapacity")}
-              keyboardType="numeric"
-              value={newSession.capacity}
-              onChangeText={(v) =>
-                setNewSession((s) => ({ ...s, capacity: v }))
-              }
-            />
-
-            <View className="flex-row items-center justify-between px-1 py-1">
-              <Text className="text-sm text-muted">
-                {t("admin.schedule.visibleToClients")}
-              </Text>
-              <Switch
-                value={createIsActive}
-                onValueChange={setCreateIsActive}
-                trackColor={{ false: tokens.glassStrong, true: tokens.accent }}
-                style={{ transform: [{ scale: 0.85 }] }}
-              />
-            </View>
-            <Button
-              testID="session-create-submit"
-              disabled={
-                (isRecurring
-                  ? createRecurringMutation.isPending
-                  : createMutation.isPending) ||
-                !newSession.classTypeId ||
-                !newSession.trainerUserId ||
-                !newSession.startsAt ||
-                !newSession.capacity ||
-                !newSession.durationMins ||
-                (isRecurring
-                  ? !newSession.weekCount || newSession.weekdays.length === 0
-                  : false)
-              }
-              onPress={() => {
-                if (!newSession.startsAt) return;
-                if (!newSession.trainerUserId) return;
-                const capacity = parseInt(newSession.capacity, 10);
-                if (!Number.isFinite(capacity) || capacity <= 0) return;
-                const durationMins = parseInt(newSession.durationMins, 10);
-                if (!Number.isFinite(durationMins) || durationMins <= 0) return;
-                if (isRecurring) {
-                  const weekCount = parseInt(newSession.weekCount, 10);
-                  if (
-                    !Number.isFinite(weekCount) ||
-                    newSession.weekdays.length === 0
-                  )
-                    return;
-                  createRecurringMutation.mutate({
-                    classTypeId: newSession.classTypeId,
-                    roomId: newSession.roomId || undefined,
-                    trainerUserId: newSession.trainerUserId,
-                    startsAt: newSession.startsAt.toISOString(),
-                    durationMins,
-                    capacity,
-                    weekCount,
-                    weekdays: newSession.weekdays,
-                    isActive: createIsActive,
-                  });
-                } else {
-                  const endsAt = new Date(
-                    newSession.startsAt.getTime() + durationMins * 60 * 1000,
-                  );
-                  createMutation.mutate({
-                    classTypeId: newSession.classTypeId,
-                    roomId: newSession.roomId || undefined,
-                    trainerUserId: newSession.trainerUserId,
-                    startsAt: newSession.startsAt.toISOString(),
-                    endsAt: endsAt.toISOString(),
-                    capacity,
-                    isActive: createIsActive,
-                  });
-                }
-              }}
-            >
-              {t("admin.manage.create")}
-            </Button>
-            {createMutation.isError || createRecurringMutation.isError ? (
-              <ErrorState
-                testID="session-create-error"
-                message={t("admin.schedule.createError")}
-              />
-            ) : null}
-        </View>
-      </AppSheet>
-
+      <NewSessionSheet open={showCreate} onOpenChange={setShowCreate} />
       <SessionEditSheet {...editSheet.bind()} />
     </ScreenContainerRaw>
   );

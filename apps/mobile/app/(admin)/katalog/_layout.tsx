@@ -5,7 +5,6 @@ export default function AdminKatalogStack() {
     <Stack
       screenOptions={{
         headerShown: false,
-        presentation: "modal",
       }}
     />
   );

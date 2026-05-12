@@ -51,6 +51,7 @@
     "notifications": "Notifications",
     "schedule": "Schedule",
     "clients": "Clients",
+    "catalog": "Catalog",
     "manage": "Manage",
     "packages": "Packages",
     "billing": "Billing",
@@ -686,6 +687,14 @@
         },
         "noData": "No data for the selected period."
       }
+    },
+    "katalog": {
+      "sections": {
+        "kreiraj": "Create",
+        "katalog": "Catalog"
+      },
+      "noviTermin": "New session",
+      "noviTerminSub": "One-time or recurring"
     }
   },
   "adminMenu": {

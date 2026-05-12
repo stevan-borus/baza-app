@@ -32,6 +32,13 @@ export default function AdminLayout() {
         }}
       />
       <Tabs.Screen
+        name="katalog"
+        options={{
+          title: t("tabs.catalog"),
+          tabBarIcon: ({ color }) => <TabIcon name="th-large" color={color} />,
+        }}
+      />
+      <Tabs.Screen
         name="klijenti"
         options={{
           title: t("tabs.clients"),
@@ -54,7 +61,6 @@ export default function AdminLayout() {
           tabBarIcon: ({ color }) => <TabIcon name="bar-chart" color={color} />,
         }}
       />
-      <Tabs.Screen name="katalog" options={{ href: null }} />
     </Tabs>
   );
 }
