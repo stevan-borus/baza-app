@@ -7,6 +7,20 @@ type Props = Omit<TextProps, "children"> & {
   formatter?: (n: number) => string;
 };
 
+/**
+ * Animated numeric counter.
+ *
+ * On mount the component renders `value` statically — no animation. The
+ * previous behaviour animated from 0 → value on first mount, which read
+ * as a placeholder peak when parents mounted the rollup with the final
+ * loaded number directly (e.g. when a query resolved before the rollup
+ * mounted). Subsequent prop changes still animate.
+ *
+ * Implementation note: the static initial seed is done via `useState`'s
+ * initializer so server-render and the first client paint show the real
+ * value. `fromRef` is then primed to the same value so the next animation
+ * starts from there instead of 0.
+ */
 export function NumberRollup({
   value,
   durationMs = 600,
@@ -14,10 +28,17 @@ export function NumberRollup({
   className,
   ...rest
 }: Props) {
-  const [display, setDisplay] = useState(0);
-  const fromRef = useRef(0);
+  const [display, setDisplay] = useState(value);
+  const fromRef = useRef(value);
+  const isFirstRenderRef = useRef(true);
 
   useEffect(() => {
+    if (isFirstRenderRef.current) {
+      isFirstRenderRef.current = false;
+      fromRef.current = value;
+      setDisplay(value);
+      return;
+    }
     const start = Date.now();
     const from = fromRef.current;
     const to = value;
