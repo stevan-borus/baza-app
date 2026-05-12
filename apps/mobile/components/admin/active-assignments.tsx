@@ -80,13 +80,11 @@ export function ActiveAssignments() {
         />
       }
     >
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-        contentContainerStyle={{
+      <View
+        style={{
           paddingTop: 16,
           paddingHorizontal: 24,
-          paddingBottom: bottomPad,
+          paddingBottom: 16,
           gap: 16,
         }}
       >
@@ -123,7 +121,17 @@ export function ActiveAssignments() {
             ))}
           </ScrollView>
         </MotiView>
+      </View>
 
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        contentContainerStyle={{
+          paddingHorizontal: 24,
+          paddingBottom: bottomPad,
+          gap: 10,
+        }}
+      >
         <MotiView
           from={{ opacity: 0, translateY: 8 }}
           animate={{ opacity: 1, translateY: 0 }}
