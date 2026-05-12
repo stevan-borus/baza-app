@@ -6,6 +6,13 @@
  * The empty hero card from the previous design is gone — it conveyed nothing
  * useful. The stat strip now sits inline with the search and shows real
  * counts derived from packageStatus.
+ *
+ * Migration note: the client list is rendered through `<PaginatedList>` and
+ * the search input + stat strip live in a fixed View ABOVE the list so they
+ * stay pinned while rows scroll underneath. The previous build kept those in
+ * `ListHeaderComponent`, which scrolls away with the rows. The hand-rolled
+ * ActivityIndicator footer, skeleton/empty/error fallbacks, and onEndReached
+ * plumbing are gone — the wrapper owns all of them.
  */
 
 import { useDeferredValue, useMemo, useState } from "react";
@@ -13,8 +20,6 @@ import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { useRouter } from "expo-router";
 import {
-  ActivityIndicator,
-  FlatList,
   Pressable,
   RefreshControl,
   Text,
@@ -24,12 +29,12 @@ import { MotiView } from "@/components/ui/styled";
 import { GlassCard } from "@/components/ui/glass-card";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState, ErrorState } from "@/components/ui/states";
-import { SkeletonCard } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import {
   ScreenContainerRaw,
   useTabBarBottomPadding,
 } from "@/components/ui/screen-container";
+import { PaginatedList } from "@/components/ui/paginated-list";
 import { clientsQueries } from "@/lib/queries/clients-queries-factory";
 
 // ─── helpers ────────────────────────────────────────────────────────────────
@@ -140,6 +145,10 @@ function ClientRow({ client }: { client: Client }) {
   );
 }
 
+function ClientRowSeparator() {
+  return <View style={{ height: 10 }} />;
+}
+
 // ─── screen ──────────────────────────────────────────────────────────────────
 
 export default function TrainerClients() {
@@ -188,110 +197,96 @@ export default function TrainerClients() {
     return { active, expiring, expired };
   }, [clients]);
 
-  function handleEndReached() {
-    if (clientsQuery.hasNextPage && !clientsQuery.isFetchingNextPage) {
-      clientsQuery.fetchNextPage();
-    }
-  }
-
-  const isInitialLoading =
-    clientsQuery.isLoading && clients.length === 0;
-  const showEmpty =
-    !isInitialLoading && !clientsQuery.isError && clients.length === 0;
-
   return (
     <ScreenContainerRaw title={t("tabs.clients")}>
-      <FlatList
-        data={clients}
-        keyExtractor={(c) => c.id}
-        renderItem={({ item }) => <ClientRow client={item} />}
-        ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-        onEndReached={handleEndReached}
-        onEndReachedThreshold={0.5}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={handleRefresh}
-            tintColor="#2e5b42"
-            colors={["#2e5b42"]}
-          />
-        }
-        contentContainerStyle={{
-          paddingHorizontal: 24,
-          paddingTop: 16,
-          paddingBottom: bottomPad,
-        }}
-        ListHeaderComponent={
-          <View style={{ gap: 16, marginBottom: clients.length > 0 ? 16 : 0 }}>
-            {/* Search */}
-            <MotiView
-              from={{ opacity: 0, translateY: -6 }}
-              animate={{ opacity: 1, translateY: 0 }}
-              transition={{ type: "timing", duration: 300, delay: 60 }}
-            >
-              <Input
-                placeholder={t("admin.clients.searchPlaceholder")}
-                leftIcon="search"
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-                autoCapitalize="none"
-                autoCorrect={false}
+      <View style={{ flex: 1 }}>
+        {/* ── Sticky header ──────────────────────────────────────────────────
+            Lives OUTSIDE the list so the search input and stat strip stay
+            pinned while rows scroll underneath. Previously these sat inside
+            FlatList's ListHeaderComponent and scrolled away with the rows.
+            The MotiView entry animations are preserved — they only run once
+            on mount, not on every list scroll. */}
+        <View
+          style={{
+            paddingTop: 16,
+            paddingHorizontal: 24,
+            paddingBottom: 12,
+            gap: 16,
+          }}
+        >
+          {/* Search */}
+          <MotiView
+            from={{ opacity: 0, translateY: -6 }}
+            animate={{ opacity: 1, translateY: 0 }}
+            transition={{ type: "timing", duration: 300, delay: 60 }}
+          >
+            <Input
+              testID="trainer-clients-search-input"
+              placeholder={t("admin.clients.searchPlaceholder")}
+              leftIcon="search"
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+          </MotiView>
+
+          {/* Stat strip — total / active / expiring */}
+          <MotiView
+            from={{ opacity: 0, translateY: -4 }}
+            animate={{ opacity: 1, translateY: 0 }}
+            transition={{ type: "timing", duration: 300, delay: 140 }}
+          >
+            <View className="flex-row gap-2">
+              <StatPill
+                value={clients.length}
+                label={t("trainer.clients.statTotal")}
               />
-            </MotiView>
-
-            {/* Stat strip — total / active / expiring */}
-            <MotiView
-              from={{ opacity: 0, translateY: -4 }}
-              animate={{ opacity: 1, translateY: 0 }}
-              transition={{ type: "timing", duration: 300, delay: 140 }}
-            >
-              <View className="flex-row gap-2">
-                <StatPill
-                  value={clients.length}
-                  label={t("trainer.clients.statTotal")}
-                />
-                <StatPill
-                  value={stats.active}
-                  label={t("admin.clients.filterActive")}
-                />
-                <StatPill
-                  value={stats.expiring}
-                  label={t("admin.clients.filterExpiring")}
-                />
-              </View>
-            </MotiView>
-
-            {clientsQuery.isError ? (
-              <ErrorState message={t("trainer.clients.error")} />
-            ) : null}
-
-            {isInitialLoading ? (
-              <View style={{ gap: 10 }}>
-                <SkeletonCard />
-                <SkeletonCard />
-                <SkeletonCard />
-              </View>
-            ) : null}
-
-            {showEmpty ? (
-              <EmptyState
-                title={
-                  searchQuery
-                    ? t("admin.clients.filterEmpty")
-                    : t("admin.clients.empty")
-                }
+              <StatPill
+                value={stats.active}
+                label={t("admin.clients.filterActive")}
               />
-            ) : null}
-          </View>
-        }
-        ListFooterComponent={
-          clientsQuery.isFetchingNextPage ? (
-            <ActivityIndicator style={{ padding: 16 }} color="#2e5b42" />
-          ) : null
-        }
-      />
+              <StatPill
+                value={stats.expiring}
+                label={t("admin.clients.filterExpiring")}
+              />
+            </View>
+          </MotiView>
+        </View>
+
+        {/* ── List body ─────────────────────────────────────────────────────
+            The wrapper owns loading / empty / error / fetch-next-page footer
+            states. */}
+        <PaginatedList<Client>
+          query={clientsQuery}
+          data={clients}
+          keyExtractor={(c) => c.id}
+          renderItem={({ item }) => <ClientRow client={item} />}
+          ItemSeparatorComponent={ClientRowSeparator}
+          contentContainerStyle={{
+            paddingHorizontal: 24,
+            paddingBottom: bottomPad,
+          }}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+              tintColor="#2e5b42"
+              colors={["#2e5b42"]}
+            />
+          }
+          errorState={<ErrorState message={t("trainer.clients.error")} />}
+          emptyState={
+            <EmptyState
+              title={
+                searchQuery
+                  ? t("admin.clients.filterEmpty")
+                  : t("admin.clients.empty")
+              }
+            />
+          }
+        />
+      </View>
     </ScreenContainerRaw>
   );
 }
