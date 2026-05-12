@@ -730,6 +730,41 @@ export async function seedExtraClientPackages(count: number) {
   return created;
 }
 
+/**
+ * Insert N additional BillingRecord rows for an existing seeded client.
+ * Used by the Naplata sticky-header spec — the rich seed only produces a
+ * handful of billing rows, which doesn't reliably overflow a desktop
+ * viewport. Picks the first active CLIENT user and creates CONFIRMED
+ * records dated within the current month so they land in the default
+ * billingQuery.listInfinite filter window.
+ */
+export async function seedExtraBillingRecords(count: number) {
+  const client = await db().user.findFirst({
+    where: { role: "CLIENT", isActive: true },
+    select: { id: true },
+  });
+  if (!client) throw new Error("No CLIENT user in seed");
+  const anchor = now();
+  const created: { id: string }[] = [];
+  for (let i = 0; i < count; i++) {
+    // Stagger paidAt within the anchor's month so they sort sensibly and
+    // never spill into a different month bucket than the default view.
+    const paidAt = new Date(anchor.getTime() - i * 60 * 1000);
+    const row = await db().billingRecord.create({
+      data: {
+        clientUserId: client.id,
+        amount: 1000 + i,
+        method: "CASH",
+        status: "CONFIRMED",
+        createdAt: paidAt,
+      },
+      select: { id: true },
+    });
+    created.push(row);
+  }
+  return created;
+}
+
 export async function disconnect() {
   if (prismaClient) {
     await prismaClient.$disconnect();

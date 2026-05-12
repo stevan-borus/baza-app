@@ -545,6 +545,7 @@
       "activeAssignmentsLinkHint": "Search by client, filter by status",
       "assignmentsError": "Unable to load assignments.",
       "searchAssignmentsPlaceholder": "Search by client name or email…",
+      "searchPlaceholder": "Search payments…",
       "filterExpiring": "Expiring Soon",
       "filterExpired": "Expired",
       "sessionsRemaining": "{{count}} sessions left",
