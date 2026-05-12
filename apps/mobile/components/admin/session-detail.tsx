@@ -1,7 +1,8 @@
 import React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { ScrollView, Text, View } from "react-native";
+import { Pressable, ScrollView, Text, View } from "react-native";
+import { router, type Href } from "expo-router";
 import dayjs from "dayjs";
 import Feather from "@expo/vector-icons/Feather";
 import { GlassCard } from "@/components/ui/glass-card";
@@ -18,7 +19,23 @@ import {
 import { sessionsQueries } from "@/lib/queries/sessions-queries-factory";
 import { ReturnToPill } from "@/components/admin/return-to-pill";
 
-export function SessionDetail({ id }: { id: string }) {
+type SessionDetailProps = {
+  id: string;
+  /**
+   * Builds the route to a client detail page from a `userId`. Defaults to
+   * the Klijenti tab. Pass a different builder (e.g. from the Pregled
+   * wrapper) to keep the back-stack inside the current tab.
+   */
+  buildClientHref?: (clientUserId: string) => Href;
+};
+
+const defaultBuildClientHref = (clientUserId: string): Href =>
+  `/(admin)/klijenti/${clientUserId}` as Href;
+
+export function SessionDetail({
+  id,
+  buildClientHref = defaultBuildClientHref,
+}: SessionDetailProps) {
   const { t, i18n } = useTranslation();
   const lang = i18n.language === "en" ? "en" : "sr";
   const tokens = useThemeTokens();
@@ -41,6 +58,7 @@ export function SessionDetail({ id }: { id: string }) {
   return (
     <ScreenContainerRaw
       title={headerTitle}
+      headerVariant="detail"
       rightSlot={
         session ? (
           <HeaderIconButton
@@ -130,7 +148,13 @@ export function SessionDetail({ id }: { id: string }) {
                 <EmptyState title={t("admin.sessionDetail.noBookings")} />
               ) : (
                 session.bookings.map((b) => (
-                  <View key={b.id} testID={`session-detail-booking-${b.id}`}>
+                  <Pressable
+                    key={b.id}
+                    testID={`session-detail-booking-${b.id}`}
+                    onPress={() => router.push(buildClientHref(b.client.id))}
+                    android_ripple={null}
+                    className="active:opacity-70"
+                  >
                     <GlassCard size="md">
                       <View
                         style={{
@@ -168,9 +192,14 @@ export function SessionDetail({ id }: { id: string }) {
                             {b.client.email}
                           </Text>
                         </View>
+                        <Feather
+                          name="chevron-right"
+                          size={16}
+                          color={tokens.faint}
+                        />
                       </View>
                     </GlassCard>
-                  </View>
+                  </Pressable>
                 ))
               )}
             </View>
