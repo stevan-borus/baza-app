@@ -654,6 +654,45 @@ export async function createPastAttendedSession(input: {
   return { sessionId: session.id, dateKey: `${yyyy}-${mm}-${dd}` };
 }
 
+/**
+ * Insert N additional CLIENT users (with attached ClientProfile) on top of
+ * whatever the rich seed already produced. Used by pagination specs that
+ * need more than the seed's six clients. Names are deterministic for
+ * stable assertions: "Pagi Client {idx}".
+ */
+export async function seedExtraClients(count: number) {
+  const created: { userId: string; profileId: string; fullName: string }[] = [];
+  for (let i = 0; i < count; i++) {
+    const idx = String(i + 1).padStart(3, "0");
+    const email = `pagi-client-${idx}@e2e.test`;
+    const user = await db().user.upsert({
+      where: { email },
+      update: {},
+      create: {
+        email,
+        fullName: `Pagi Client ${idx}`,
+        role: "CLIENT",
+        isActive: true,
+        passwordHash: "$2b$10$placeholder",
+        clientProfile: { create: {} },
+      },
+      select: {
+        id: true,
+        fullName: true,
+        clientProfile: { select: { id: true } },
+      },
+    });
+    if (user.clientProfile) {
+      created.push({
+        userId: user.id,
+        profileId: user.clientProfile.id,
+        fullName: user.fullName,
+      });
+    }
+  }
+  return created;
+}
+
 export async function disconnect() {
   if (prismaClient) {
     await prismaClient.$disconnect();

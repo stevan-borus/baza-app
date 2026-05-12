@@ -2,11 +2,17 @@
 // segmented Clients/Invites tabs. All five AppSheets (create, edit, invite, assign-package,
 // pause) are preserved verbatim with their form state and mutations unchanged.
 
-import React, { useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import React, { useDeferredValue, useMemo, useState } from "react";
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { router } from "expo-router";
 import {
+  ActivityIndicator,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -96,7 +102,13 @@ export default function AdminClients() {
   const [pauseForm, setPauseForm] = useState({ startsAt: "", endsAt: "", reason: "" });
 
   // ── Queries ───────────────────────────────────────────────────────────────
-  const clientsQuery = useQuery(clientsQueries.list());
+  // Server-side search via useDeferredValue: the filter runs in Postgres
+  // rather than over a 1000-row in-memory array, and the deferred value
+  // batches keystrokes so we don't hammer the API on every character.
+  const deferredSearch = useDeferredValue(searchQuery.trim());
+  const clientsQuery = useInfiniteQuery(
+    clientsQueries.list({ q: deferredSearch || undefined }),
+  );
   const invitesQuery = useQuery(invitesQueries.list());
 
   // ── Mutations ─────────────────────────────────────────────────────────────
@@ -144,23 +156,21 @@ export default function AdminClients() {
   });
 
   // ── Raw data ──────────────────────────────────────────────────────────────
-  const clients = clientsQuery.data?.clients ?? [];
+  const clients = useMemo(
+    () => clientsQuery.data?.pages.flatMap((p) => p.clients) ?? [],
+    [clientsQuery.data],
+  );
   const invites = invitesQuery.data?.invites ?? [];
 
-  // ── Filtered client list ──────────────────────────────────────────────────
-  const q = searchQuery.trim().toLowerCase();
-  const searchedClients = q
-    ? clients.filter(
-        (c) =>
-          c.user.fullName.toLowerCase().includes(q) ||
-          c.user.email.toLowerCase().includes(q),
-      )
-    : clients;
-
+  // ── Status filter (q is already server-side) ──────────────────────────────
+  // The package-status chip still narrows client-side — applying it as
+  // another server filter would require extending the API and most users
+  // toggle it across the current view, not "show me ALL paused" globally.
+  // When this matters we can lift it to the server.
   const filteredClients =
     filter === "all"
-      ? searchedClients
-      : searchedClients.filter((c) => c.packageStatus === filter);
+      ? clients
+      : clients.filter((c) => c.packageStatus === filter);
 
   // ── Refresh ───────────────────────────────────────────────────────────────
   async function handleRefresh() {
@@ -170,6 +180,16 @@ export default function AdminClients() {
       queryClient.invalidateQueries({ queryKey: ["invites"] }),
     ]);
     setRefreshing(false);
+  }
+
+  function handleClientsEndReached() {
+    if (
+      tab === "clients" &&
+      clientsQuery.hasNextPage &&
+      !clientsQuery.isFetchingNextPage
+    ) {
+      clientsQuery.fetchNextPage();
+    }
   }
 
   const inviteStatusKeys: Record<string, string> = {
@@ -215,6 +235,21 @@ export default function AdminClients() {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{ flexGrow: 1 }}
+        // FlatList inside a ScrollView would either re-virtualize wrong or
+        // require nestedScrollEnabled gymnastics; with cursor pagination the
+        // ScrollView's onScroll → fetchNextPage pattern (same as naplata)
+        // is enough. The page size is ~20, so even a 1000-row list mounts
+        // ~50 pages and React Native handles that comfortably.
+        onScroll={({ nativeEvent }) => {
+          const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
+          if (
+            layoutMeasurement.height + contentOffset.y >=
+            contentSize.height - 200
+          ) {
+            handleClientsEndReached();
+          }
+        }}
+        scrollEventThrottle={400}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -302,17 +337,28 @@ export default function AdminClients() {
           {tab === "clients" ? (
             <>
               {clientsQuery.isError ? <ErrorState message={t("admin.clients.error")} /> : null}
-              {clientsQuery.isLoading ? (
+              {clientsQuery.isLoading && clients.length === 0 ? (
                 <View style={{ gap: 8 }}>
                   <SkeletonCard />
                   <SkeletonCard />
                   <SkeletonCard />
                 </View>
               ) : null}
-              {!clientsQuery.isError && !clientsQuery.isLoading && filteredClients.length === 0 && filter !== "all" ? (
+              {!clientsQuery.isError &&
+              !clientsQuery.isLoading &&
+              filteredClients.length === 0 &&
+              filter !== "all" ? (
                 <EmptyState title={t("admin.clients.filterEmpty")} />
-              ) : !clientsQuery.isError && !clientsQuery.isLoading && searchedClients.length === 0 ? (
-                <EmptyState title={t("admin.clients.empty")} />
+              ) : !clientsQuery.isError &&
+                !clientsQuery.isLoading &&
+                clients.length === 0 ? (
+                <EmptyState
+                  title={
+                    deferredSearch
+                      ? t("admin.clients.filterEmpty")
+                      : t("admin.clients.empty")
+                  }
+                />
               ) : null}
 
               {/* Compact rows. P2-4: tap the card → push detail page
@@ -390,6 +436,12 @@ export default function AdminClients() {
                   </React.Fragment>
                 ))}
               </View>
+              {clientsQuery.isFetchingNextPage ? (
+                <ActivityIndicator
+                  style={{ padding: 16 }}
+                  color={tokens.accent}
+                />
+              ) : null}
             </>
           ) : (
             <>

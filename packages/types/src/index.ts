@@ -150,6 +150,11 @@ export const clientsResponseSchema = z.object({
       }),
     }),
   ),
+  // Cursor-based pagination: opaque string (clientProfile.id) of the last
+  // row on this page, or null when this is the final page. Optional in
+  // the response shape so older non-paginated callers (and the existing
+  // integration tests that assert specific badge content) still type-check.
+  nextCursor: z.nullable(z.string()).optional(),
 });
 export type ClientsResponse = z.infer<typeof clientsResponseSchema>;
 
