@@ -41,18 +41,14 @@ const classTypeAccentColor: Record<string, string> = {
 };
 
 /**
- * Stacked time block for the session card — editorial slot redesign.
- * Start time above a hairline divider, end time below. Both digits in
- * `tokens.fg` at the same weight.
+ * Stacked time block for the session card. Start time above a hairline
+ * divider, end time below. Both digits in `tokens.fg` at the same weight.
  *
- * Fraunces-SemiBold, 28px / lineHeight 30 / letterSpacing -0.4, with
+ * Fraunces-SemiBold, 22px / lineHeight 24 / letterSpacing -0.3, with
  * `fontVariant: ["tabular-nums"]` so "08:00" and "09:00" align
  * character-by-character. The block is vertically centered against the
  * middle column (no `self-start` anchor); the wrapping row has
  * `items-center` so the cross-axis alignment falls out for free.
- *
- * The badge slot is gone — capacity now lives as a hairline bar inside
- * the middle column, not as a right-aligned pill.
  */
 function SessionCardTime({ time }: { time: string }) {
   const parts = time.split(/\s*[-–]\s*/);
@@ -61,9 +57,9 @@ function SessionCardTime({ time }: { time: string }) {
       <Text
         className="font-display text-foreground"
         style={{
-          fontSize: 28,
-          lineHeight: 30,
-          letterSpacing: -0.4,
+          fontSize: 22,
+          lineHeight: 24,
+          letterSpacing: -0.3,
           fontVariant: ["tabular-nums"],
         }}
       >
@@ -77,24 +73,24 @@ function SessionCardTime({ time }: { time: string }) {
       <Text
         className="font-display text-foreground"
         style={{
-          fontSize: 28,
-          lineHeight: 30,
-          letterSpacing: -0.4,
+          fontSize: 22,
+          lineHeight: 24,
+          letterSpacing: -0.3,
           fontVariant: ["tabular-nums"],
         }}
       >
         {start}
       </Text>
       <View
-        className="bg-glass-border self-stretch my-1.5"
+        className="bg-glass-border self-stretch my-1"
         style={{ height: 1 }}
       />
       <Text
         className="font-display text-foreground"
         style={{
-          fontSize: 28,
-          lineHeight: 30,
-          letterSpacing: -0.4,
+          fontSize: 22,
+          lineHeight: 24,
+          letterSpacing: -0.3,
           fontVariant: ["tabular-nums"],
         }}
       >
@@ -105,12 +101,9 @@ function SessionCardTime({ time }: { time: string }) {
 }
 
 /**
- * Hairline capacity bar — single accent fill, no threshold colour
- * shifts. Replaces the old "X spots" badge. Filled width is
- * (bookedCount / capacity) clamped to [0, 100]. Returns `null` when
- * capacity is 0 (nothing meaningful to render).
+ * Capacity fraction — "booked / capacity" in tabular-nums.
  */
-function SessionCapacityBar({
+function SessionCapacity({
   bookedCount,
   capacity,
   sessionId,
@@ -120,19 +113,17 @@ function SessionCapacityBar({
   sessionId?: string;
 }) {
   if (capacity <= 0) return null;
-  const ratio = Math.max(0, Math.min(1, bookedCount / capacity));
-  const fillPct = Math.round(ratio * 100);
   const testID = sessionId
-    ? `session-card-capacity-bar-${sessionId}`
-    : "session-card-capacity-bar";
+    ? `session-card-capacity-${sessionId}`
+    : "session-card-capacity";
   return (
-    <View
+    <Text
       testID={testID}
-      className="flex-row bg-glass-border"
-      style={{ height: 1, width: "100%" }}
+      className="text-xs text-muted"
+      style={{ fontVariant: ["tabular-nums"] }}
     >
-      <View className="bg-accent" style={{ width: `${fillPct}%`, height: 1 }} />
-    </View>
+      {bookedCount} / {capacity}
+    </Text>
   );
 }
 
@@ -187,8 +178,8 @@ export function SessionCard({
                   {hiddenLabel}
                 </CapsLabel>
               ) : null}
-              <View className="mt-1.5">
-                <SessionCapacityBar
+              <View className="mt-1">
+                <SessionCapacity
                   bookedCount={bookedCount}
                   capacity={capacity}
                   sessionId={sessionId}

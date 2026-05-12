@@ -24,10 +24,15 @@ vi.mock("react-native", () => {
         },
         children,
       ),
-    Text: ({ children, style, className, numberOfLines: _n, ...p }: any) =>
+    Text: ({ children, style, className, numberOfLines: _n, testID, ...p }: any) =>
       RR.createElement(
         "span",
-        { ...p, "data-class": className, style: typeof style === "object" ? style : undefined },
+        {
+          ...p,
+          "data-testid": testID,
+          "data-class": className,
+          style: typeof style === "object" ? style : undefined,
+        },
         children,
       ),
     Pressable: ({ children, onPress: _o, testID, className, ...p }: any) =>
@@ -102,38 +107,37 @@ describe("SessionCard — editorial slot layout", () => {
     expect(html).toContain("Sala 1");
   });
 
-  it("renders a capacity bar with the correct filled percentage", () => {
+  it("renders the capacity as a 'booked / capacity' fraction", () => {
     const html = render({ bookedCount: 5, capacity: 10, sessionId: "s1" });
-    expect(html).toContain('data-testid="session-card-capacity-bar-s1"');
-    // 5/10 = 50%
-    expect(html).toMatch(/width:50%/);
+    expect(html).toContain('data-testid="session-card-capacity-s1"');
+    expect(html).toContain("5 / 10");
   });
 
-  it("renders a full capacity bar when bookedCount equals capacity", () => {
+  it("renders the fraction even when full", () => {
     const html = render({ bookedCount: 7, capacity: 7, sessionId: "full" });
-    expect(html).toContain('data-testid="session-card-capacity-bar-full"');
-    expect(html).toMatch(/width:100%/);
+    expect(html).toContain('data-testid="session-card-capacity-full"');
+    expect(html).toContain("7 / 7");
   });
 
-  it("renders a full capacity bar when bookedCount exceeds capacity", () => {
+  it("renders the raw fraction even when bookings exceed capacity", () => {
     const html = render({ bookedCount: 9, capacity: 7, sessionId: "over" });
-    expect(html).toMatch(/width:100%/);
+    expect(html).toContain("9 / 7");
   });
 
-  it("renders an empty capacity bar when nothing is booked", () => {
+  it("renders 0 / N when nothing is booked", () => {
     const html = render({ bookedCount: 0, capacity: 8, sessionId: "empty" });
-    expect(html).toContain('data-testid="session-card-capacity-bar-empty"');
-    expect(html).toMatch(/width:0%/);
+    expect(html).toContain('data-testid="session-card-capacity-empty"');
+    expect(html).toContain("0 / 8");
   });
 
-  it("renders no capacity bar when capacity is 0", () => {
+  it("renders nothing when capacity is 0", () => {
     const html = render({ bookedCount: 0, capacity: 0, sessionId: "noop" });
-    expect(html).not.toContain("session-card-capacity-bar-noop");
+    expect(html).not.toContain("session-card-capacity-noop");
   });
 
-  it("uses fallback capacity bar testID when no sessionId is provided", () => {
+  it("uses fallback capacity testID when no sessionId is provided", () => {
     const html = render({ bookedCount: 1, capacity: 2, sessionId: undefined });
-    expect(html).toContain('data-testid="session-card-capacity-bar"');
+    expect(html).toContain('data-testid="session-card-capacity"');
   });
 
   it("renders the hidden 'SKRIVENO' caps-overline inline (not as a right-side badge)", () => {
@@ -148,12 +152,10 @@ describe("SessionCard — editorial slot layout", () => {
     expect(skrivenoIdx).toBeGreaterThan(roomIdx);
   });
 
-  it("renders the time block with the 28pt headline style", () => {
+  it("renders the time block at 22pt", () => {
     const html = render({ time: "10:00 - 11:00" });
     expect(html).toContain("10:00");
     expect(html).toContain("11:00");
-    // 28pt headline numerals; the only span carrying fontSize:28 in this
-    // tree is the time block.
-    expect(html).toMatch(/font-size:28/);
+    expect(html).toMatch(/font-size:22/);
   });
 });
