@@ -315,9 +315,9 @@ export default function AdminClients() {
         <View
           style={{
             paddingHorizontal: 24,
-            paddingTop: 16,
-            paddingBottom: 12,
-            gap: 16,
+            paddingTop: 12,
+            paddingBottom: 8,
+            gap: 10,
           }}
         >
           <MotiView
