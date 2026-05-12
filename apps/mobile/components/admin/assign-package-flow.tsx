@@ -153,10 +153,6 @@ function ClientPickerStep({
       <ScrollView
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
-        // Cap the list height so the sheet doesn't grow to fill the screen
-        // when the studio has lots of clients. The AppSheet still caps at
-        // 90% of the window, but this keeps a comfortable, scrollable size.
-        style={{ maxHeight: 360 }}
       >
         {clientsQuery.isError ? (
           <ErrorState message={t("admin.clients.error")} />
