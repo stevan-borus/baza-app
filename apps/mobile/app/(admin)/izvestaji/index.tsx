@@ -1,23 +1,28 @@
 /**
- * Admin Reports — landing screen (P3-1).
+ * Admin Reports — landing screen (P3-1, revised in PR γ).
  *
- * Replaces the old 657-line single-page reports. This is now a 4-card hub
- * (Prihod / Iskorišćenost / Rezervacije / Paketi), each card linking to its
- * own sub-page where the full breakdown lives (P3-2 → P3-5). The period
- * pill at the top drives the headline numbers shown on each card so the
- * hub gives a one-glance overview without scrolling.
+ * 4-card hub (Prihod / Iskorišćenost / Rezervacije / Paketi), each card
+ * linking to its own sub-page where the full breakdown lives (P3-2 → P3-5).
+ * The period pill at the top drives the headline numbers shown on each
+ * card so the hub gives a one-glance overview without scrolling.
+ *
+ * Card visual: bordered square (`aspectRatio: 1`), hairline border, no fill.
+ * Caps overline label top-left, big numeral vertically anchored to the
+ * bottom, unit underneath. No icon, no chevron — the press affordance is
+ * the whole card. The earlier design used a GlassCard with an icon
+ * top-right and a chevron inside the sub-label row; carrying two
+ * redundant affordances on a tile that's already 50% of the screen width
+ * was noise.
  *
  * Headline numbers are sourced from the existing `reportsQueries.summary` +
- * `revenue` endpoints — no new server data is added in P3-1 (structure-only).
+ * `revenue` endpoints — no new server data.
  */
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
 import { router, type Href } from "expo-router";
-import Feather from "@expo/vector-icons/Feather";
 import { MotiView } from "@/components/ui/styled";
-import { GlassCard } from "@/components/ui/glass-card";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { ErrorState } from "@/components/ui/states";
 import { CapsLabel } from "@/components/ui/studio";
@@ -47,6 +52,7 @@ export default function AdminReportsLanding() {
   );
 
   const summary = summaryQuery.data?.summary;
+  const isLoading = summaryQuery.isLoading || utilizationQuery.isLoading;
 
   // Average utilization across the period — collapses the per-bucket rows
   // into one headline percentage for the landing card.
@@ -62,34 +68,30 @@ export default function AdminReportsLanding() {
       testID: "izvestaji-card-prihod",
       title: t("admin.izvestaji.sections.prihod"),
       headline: summary?.revenue,
-      sublabel: t("admin.izvestaji.headlines.prihodSub"),
-      icon: "trending-up",
+      unit: t("admin.izvestaji.cardUnits.rsd"),
       target: "/(admin)/izvestaji/prihod",
-      formatter: (n) => `${Math.round(n).toLocaleString("sr-RS")} RSD`,
+      formatter: (n) => Math.round(n).toLocaleString("sr-RS"),
     },
     {
       testID: "izvestaji-card-iskoriscenost",
       title: t("admin.izvestaji.sections.iskoriscenost"),
       headline: avgUtilization,
-      sublabel: t("admin.izvestaji.headlines.iskoriscenostSub"),
-      icon: "pie-chart",
+      unit: t("admin.izvestaji.cardUnits.percent"),
       target: "/(admin)/izvestaji/iskoriscenost",
-      formatter: (n) => `${Math.round(n * 100)}%`,
+      formatter: (n) => `${Math.round(n * 100)}`,
     },
     {
       testID: "izvestaji-card-rezervacije",
       title: t("admin.izvestaji.sections.rezervacije"),
       headline: summary?.totalSessions,
-      sublabel: t("admin.izvestaji.headlines.rezervacijeSub"),
-      icon: "calendar",
+      unit: t("admin.izvestaji.cardUnits.sessions"),
       target: "/(admin)/izvestaji/rezervacije",
     },
     {
       testID: "izvestaji-card-paketi",
       title: t("admin.izvestaji.sections.paketi"),
       headline: summary?.activeClients,
-      sublabel: t("admin.izvestaji.headlines.paketiSub"),
-      icon: "package",
+      unit: t("admin.izvestaji.cardUnits.clients"),
       target: "/(admin)/izvestaji/paketi",
     },
   ];
@@ -114,7 +116,8 @@ export default function AdminReportsLanding() {
           gap: 24,
         }}
       >
-        {/* Period pill — drives all four card headlines */}
+        {/* Period pill — 4 segments. "Nedelja" was dropped to keep the
+            chips one-line at narrow widths (see usePeriodPill header). */}
         <MotiView
           from={{ opacity: 0, translateY: 8 }}
           animate={{ opacity: 1, translateY: 0 }}
@@ -122,7 +125,6 @@ export default function AdminReportsLanding() {
         >
           <SegmentedControl
             options={[
-              { value: "week" as const, label: t("admin.manage.periodWeek") },
               { value: "month" as const, label: t("admin.manage.periodMonth") },
               { value: "quarter" as const, label: t("admin.manage.periodQuarter") },
               { value: "year" as const, label: t("admin.manage.periodYear") },
@@ -137,7 +139,7 @@ export default function AdminReportsLanding() {
           <ErrorState message={t("admin.manage.reportsError")} />
         ) : null}
 
-        {/* 2×2 grid */}
+        {/* 2×2 grid of equal squares. */}
         <View className="flex-row flex-wrap" style={{ marginHorizontal: -6 }}>
           {cards.map((card, idx) => (
             <View
@@ -149,7 +151,7 @@ export default function AdminReportsLanding() {
                 animate={{ opacity: 1, translateY: 0 }}
                 transition={{ type: "timing", duration: 350, delay: 80 + idx * 60 }}
               >
-                <LandingCard {...card} />
+                <LandingCard {...card} isLoading={isLoading} />
               </MotiView>
             </View>
           ))}
@@ -163,8 +165,7 @@ type LandingCardProps = {
   testID: string;
   title: string;
   headline: number | undefined;
-  sublabel: string;
-  icon: React.ComponentProps<typeof Feather>["name"];
+  unit: string;
   target: Href;
   formatter?: (n: number) => string;
 };
@@ -173,55 +174,63 @@ function LandingCard({
   testID,
   title,
   headline,
-  sublabel,
-  icon,
+  unit,
   target,
   formatter,
-}: LandingCardProps) {
+  isLoading,
+}: LandingCardProps & { isLoading: boolean }) {
   const tokens = useThemeTokens();
+  const hasValue = !isLoading && headline !== undefined && headline !== null;
   const value = headline ?? 0;
-  const hasValue = headline !== undefined && headline !== null;
   return (
     <Pressable
       testID={testID}
       onPress={() => router.push(target)}
       android_ripple={null}
-      className="active:opacity-70"
-      style={{ borderRadius: 18 }}
+      className="active:opacity-60"
+      style={{
+        aspectRatio: 1,
+        borderRadius: 18,
+        borderWidth: 1,
+        borderColor: tokens.glassBorder,
+        padding: 16,
+        justifyContent: "space-between",
+      }}
     >
-      <GlassCard size="md">
-        <View className="gap-3" style={{ minHeight: 132 }}>
-          <View className="flex-row items-center justify-between">
-            <CapsLabel size={10} tracking={1.4} className="text-muted">
-              {title}
-            </CapsLabel>
-            <Feather name={icon} size={14} color={tokens.faint} />
-          </View>
-          {hasValue ? (
-            <NumberRollup
-              value={value}
-              formatter={formatter ?? ((n) => String(Math.round(n)))}
-              className="text-foreground font-body-bold"
-              style={{ fontSize: 26, letterSpacing: -0.6, lineHeight: 30 }}
-              numberOfLines={1}
-              adjustsFontSizeToFit
-            />
-          ) : (
-            <Text
-              className="text-muted font-body-bold"
-              style={{ fontSize: 26, letterSpacing: -0.6, lineHeight: 30 }}
-            >
-              —
-            </Text>
-          )}
-          <View className="flex-row items-center gap-1">
-            <Text className="text-muted" style={{ fontSize: 11 }} numberOfLines={1}>
-              {sublabel}
-            </Text>
-            <Feather name="chevron-right" size={12} color={tokens.faint} />
-          </View>
-        </View>
-      </GlassCard>
+      {/* Caps overline label top-left. */}
+      <CapsLabel size={11} tracking={2.4} className="text-muted">
+        {title}
+      </CapsLabel>
+
+      {/* Numeral block, anchored to the bottom of the square. The unit
+          sits under the numeral as a quiet caps row — never as a sub-
+          label that repeats the section name. */}
+      <View className="gap-1">
+        {hasValue ? (
+          <NumberRollup
+            value={value}
+            formatter={formatter ?? ((n) => String(Math.round(n)))}
+            className="text-foreground font-display tabular-nums"
+            style={{ fontSize: 36, letterSpacing: -0.5, lineHeight: 40 }}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+          />
+        ) : (
+          <Text
+            className="text-muted font-display tabular-nums"
+            style={{ fontSize: 36, letterSpacing: -0.5, lineHeight: 40 }}
+          >
+            —
+          </Text>
+        )}
+        <Text
+          className="text-muted uppercase"
+          style={{ fontSize: 11, letterSpacing: 1.4 }}
+          numberOfLines={1}
+        >
+          {unit}
+        </Text>
+      </View>
     </Pressable>
   );
 }

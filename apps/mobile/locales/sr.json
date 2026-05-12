@@ -586,6 +586,12 @@
         "rezervacijeSub": "Rezervacije",
         "paketiSub": "Aktivni klijenti"
       },
+      "cardUnits": {
+        "rsd": "RSD",
+        "percent": "%",
+        "sessions": "termina",
+        "clients": "klijenata"
+      },
       "labels": {
         "izvestaji": "Izveštaji",
         "naplata": "Naplata",
