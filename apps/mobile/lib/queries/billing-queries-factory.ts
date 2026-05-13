@@ -11,10 +11,21 @@ const billingRecordSchema = z.object({
   id: z.string(),
   clientUserId: z.string(),
   amount: z.number(),
-  method: z.enum(["CASH", "CARD", "COMPANY", "QR", "MANUAL_ONLINE"]),
-  status: z.enum(["PENDING", "CONFIRMED", "CANCELED"]),
+  method: z.enum(["CASH", "CARD", "COMPANY", "MANUAL_ONLINE"]),
+  status: z.enum(["CONFIRMED"]),
   notes: z.nullable(z.string()).optional(),
   createdAt: z.string(),
+  // Client identity for the Naplata list card. Nullable because the GET
+  // endpoint joins in-memory (no FK) and a deleted-user payment would
+  // otherwise drop off the list.
+  client: z
+    .nullable(
+      z.object({
+        fullName: z.string(),
+        email: z.string(),
+      }),
+    )
+    .optional(),
 });
 
 const billingResponseSchema = z.object({
@@ -25,12 +36,22 @@ const billingResponseSchema = z.object({
 
 export type BillingRecord = z.infer<typeof billingRecordSchema>;
 
-async function fetchBillingPage(cursor?: string | null) {
+async function fetchBillingPage(
+  cursor?: string | null,
+  filters?: { clientUserId?: string; from?: string; to?: string },
+) {
   const endpoint = `${sharedEnv.EXPO_PUBLIC_API_URL}/api/billing`;
   const searchParams = new URLSearchParams();
   if (cursor) searchParams.set("cursor", cursor);
-  const url =
-    searchParams.size > 0 ? `${endpoint}?${searchParams.toString()}` : endpoint;
+  if (filters?.clientUserId) searchParams.set("clientUserId", filters.clientUserId);
+  if (filters?.from) searchParams.set("from", filters.from);
+  if (filters?.to) searchParams.set("to", filters.to);
+  // Don't use `searchParams.size` — RN's URLSearchParams polyfill returns
+  // `undefined` for it, so `size > 0` is always false and the query string
+  // gets dropped. `toString()` returns the empty string when no params are
+  // set, which we can check directly.
+  const qs = searchParams.toString();
+  const url = qs ? `${endpoint}?${qs}` : endpoint;
   const response = await apiFetch(url, { credentials: "include" });
   if (!response.ok)
     throw new Error(`Unable to load billing (${response.status})`);
@@ -45,10 +66,20 @@ export const billingQueries = {
       staleTime: 30_000,
     }),
 
-  listInfinite: () =>
+  listInfinite: (filters?: { clientUserId?: string; from?: string; to?: string }) =>
     infiniteQueryOptions({
-      queryKey: ["billing", "list-infinite"] as const,
-      queryFn: ({ pageParam }) => fetchBillingPage(pageParam),
+      // Spread into the key as primitives so React Query's deep-equal cache
+      // lookup compares strings, not object references — avoids the bug where
+      // the same logical filters produced a "new" cache miss every render but
+      // changing values didn't always invalidate as expected.
+      queryKey: [
+        "billing",
+        "list-infinite",
+        filters?.clientUserId ?? "",
+        filters?.from ?? "",
+        filters?.to ?? "",
+      ] as const,
+      queryFn: ({ pageParam }) => fetchBillingPage(pageParam, filters),
       initialPageParam: null as string | null,
       getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
       staleTime: 30_000,

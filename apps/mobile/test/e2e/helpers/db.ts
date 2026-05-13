@@ -316,6 +316,31 @@ export async function findFutureSeriesSession(scheduleNamePart: string) {
 }
 
 /**
+ * Cancel every live (canceledAt = null) booking on a recurring schedule's
+ * future sessions. The series PATCH/DELETE handlers refuse to operate when
+ * any future session has bookings (see app/api/sessions/recurring/[id]/+api.ts);
+ * the rich seed places one booking on each schedule so dashboards aren't
+ * empty, so series-edit specs need to clear those bookings first.
+ *
+ * Returns the number of bookings canceled (mostly for sanity).
+ */
+export async function cancelBookingsOnRecurringSchedule(
+  recurringScheduleId: string,
+) {
+  const result = await db().booking.updateMany({
+    where: {
+      canceledAt: null,
+      session: {
+        recurringScheduleId,
+        startsAt: { gte: now() },
+      },
+    },
+    data: { canceledAt: now() },
+  });
+  return result.count;
+}
+
+/**
  * Schedule a future session for a given trainer + class type, starting in
  * `hoursFromNow` hours. Useful when the rich seed's earliest session is
  * outside the late-cancel cutoff.
@@ -627,6 +652,164 @@ export async function createPastAttendedSession(input: {
   const mm = String(input.startsAt.getMonth() + 1).padStart(2, "0");
   const dd = String(input.startsAt.getDate()).padStart(2, "0");
   return { sessionId: session.id, dateKey: `${yyyy}-${mm}-${dd}` };
+}
+
+/**
+ * Insert N additional CLIENT users (with attached ClientProfile) on top of
+ * whatever the rich seed already produced. Used by pagination specs that
+ * need more than the seed's six clients. Names are deterministic for
+ * stable assertions: "Pagi Client {idx}".
+ */
+export async function seedExtraClients(count: number) {
+  const created: { userId: string; profileId: string; fullName: string }[] = [];
+  for (let i = 0; i < count; i++) {
+    const idx = String(i + 1).padStart(3, "0");
+    const email = `pagi-client-${idx}@e2e.test`;
+    const user = await db().user.upsert({
+      where: { email },
+      update: {},
+      create: {
+        email,
+        fullName: `Pagi Client ${idx}`,
+        role: "CLIENT",
+        isActive: true,
+        passwordHash: "$2b$10$placeholder",
+        clientProfile: { create: {} },
+      },
+      select: {
+        id: true,
+        fullName: true,
+        clientProfile: { select: { id: true } },
+      },
+    });
+    if (user.clientProfile) {
+      created.push({
+        userId: user.id,
+        profileId: user.clientProfile.id,
+        fullName: user.fullName,
+      });
+    }
+  }
+  return created;
+}
+
+/**
+ * Insert N additional ClientPackages on top of whatever the rich seed already
+ * produced. Reuses `seedExtraClients` to mint fresh ClientProfile parents so
+ * we don't perturb the seeded matrix, then attaches each to the first
+ * available PackageType + ClassType. Used by the active-assignments
+ * pagination spec — the rich seed only produces a handful of ClientPackages
+ * so we need to push past the default page size of 20.
+ */
+export async function seedExtraClientPackages(count: number) {
+  const profiles = await seedExtraClients(count);
+  const packageType = await db().packageType.findFirst({
+    select: { id: true, classTypeId: true, sessionCount: true, validityDays: true, lateCancelHours: true },
+  });
+  if (!packageType) throw new Error("No PackageType in seed");
+  const startsAt = now();
+  const expiresAt = new Date(
+    startsAt.getTime() + packageType.validityDays * 24 * 60 * 60 * 1000,
+  );
+  const created: { id: string; clientProfileId: string }[] = [];
+  for (const p of profiles) {
+    const pkg = await db().clientPackage.create({
+      data: {
+        clientProfileId: p.profileId,
+        packageTypeId: packageType.id,
+        classTypeId: packageType.classTypeId,
+        lateCancelHours: packageType.lateCancelHours,
+        startsAt,
+        expiresAt,
+        sessionsRemaining: packageType.sessionCount,
+      },
+      select: { id: true, clientProfileId: true },
+    });
+    created.push(pkg);
+  }
+  return created;
+}
+
+/**
+ * Insert N additional BillingRecord rows for an existing seeded client.
+ * Used by the Naplata sticky-header spec — the rich seed only produces a
+ * handful of billing rows, which doesn't reliably overflow a desktop
+ * viewport. Picks the first active CLIENT user and creates CONFIRMED
+ * records dated within the current month so they land in the default
+ * billingQuery.listInfinite filter window.
+ */
+export async function seedExtraBillingRecords(count: number) {
+  const client = await db().user.findFirst({
+    where: { role: "CLIENT", isActive: true },
+    select: { id: true },
+  });
+  if (!client) throw new Error("No CLIENT user in seed");
+  const anchor = now();
+  const created: { id: string }[] = [];
+  for (let i = 0; i < count; i++) {
+    // Stagger paidAt within the anchor's month so they sort sensibly and
+    // never spill into a different month bucket than the default view.
+    const paidAt = new Date(anchor.getTime() - i * 60 * 1000);
+    const row = await db().billingRecord.create({
+      data: {
+        clientUserId: client.id,
+        amount: 1000 + i,
+        method: "CASH",
+        status: "CONFIRMED",
+        createdAt: paidAt,
+      },
+      select: { id: true },
+    });
+    created.push(row);
+  }
+  return created;
+}
+
+/**
+ * Seed N extra clients AND book each onto the given trainer's soonest future
+ * session, establishing a link-by-booking relationship so the trainer's
+ * `/api/clients` query returns all of them. Used by the trainer-clients
+ * sticky-header spec — the rich seed only produces one linked client, which
+ * doesn't overflow the viewport. Reuses `seedExtraClients` for the user/
+ * profile records, then upserts a Booking per (session, profile).
+ */
+export async function seedExtraTrainerLinkedClients(
+  trainerEmail: string,
+  count: number,
+) {
+  const trainer = await db().user.findUnique({
+    where: { email: trainerEmail.toLowerCase() },
+    select: { id: true },
+  });
+  if (!trainer) throw new Error(`Trainer ${trainerEmail} not found`);
+  const session = await db().session.findFirst({
+    where: {
+      trainerUserId: trainer.id,
+      startsAt: { gt: now() },
+      status: "SCHEDULED",
+    },
+    orderBy: { startsAt: "asc" },
+    select: { id: true },
+  });
+  if (!session) throw new Error("No future session for trainer");
+  const profiles = await seedExtraClients(count);
+  for (const p of profiles) {
+    await db().booking.upsert({
+      where: {
+        sessionId_clientProfileId: {
+          sessionId: session.id,
+          clientProfileId: p.profileId,
+        },
+      },
+      create: {
+        sessionId: session.id,
+        clientProfileId: p.profileId,
+      },
+      update: { canceledAt: null },
+      select: { id: true },
+    });
+  }
+  return profiles;
 }
 
 export async function disconnect() {

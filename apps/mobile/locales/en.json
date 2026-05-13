@@ -51,6 +51,7 @@
     "notifications": "Notifications",
     "schedule": "Schedule",
     "clients": "Clients",
+    "catalog": "Catalog",
     "manage": "Manage",
     "packages": "Packages",
     "billing": "Billing",
@@ -284,6 +285,18 @@
     }
   },
   "admin": {
+    "errors": {
+      "scheduleConflict": {
+        "trainerBusyShort": "Trainer already booked: {{detail}}",
+        "roomBusyShort": "Room already booked: {{detail}}",
+        "trainerBusy": "Trainer {{name}} is already booked",
+        "roomBusy": "Room {{name}} is already booked",
+        "recurringHeader": "Series conflicts with {{count}} existing session(s):",
+        "recurringHeaderMore": "Showing {{shown}} of {{total}} conflicts:",
+        "fallbackRoom": "room",
+        "fallbackTrainer": "trainer"
+      }
+    },
     "dashboard": {
       "title": "Admin control",
       "loggedIn": "Logged in: {{email}}",
@@ -361,10 +374,57 @@
       "filterPaused": "Paused",
       "filterExpired": "Expired",
       "filterEmpty": "No clients match this filter.",
-      "assignPackage": {
-        "heading": {
-          "comp": "Free / comp package"
-        }
+      "compPackageHeading": "Complimentary package",
+      "newPaymentAction": "New payment",
+      "newPaymentSubmit": "Save payment",
+      "paymentAmount": "Amount (RSD)",
+      "paymentMethod": {
+        "label": "Payment method",
+        "cash": "Cash",
+        "card": "Card",
+        "invoice": "Invoice"
+      },
+      "amountRequired": "Amount is required.",
+      "amountPositive": "Amount must be greater than 0.",
+      "openActions": "Open actions",
+      "viewProfile": "View profile"
+    },
+    "clientDetail": {
+      "title": "Client",
+      "openActions": "Client actions",
+      "loadError": "Unable to load client.",
+      "currentPackage": "Current package",
+      "noActivePackage": "No active package.",
+      "packageHistory": "Package history",
+      "noPackages": "No packages yet.",
+      "packagesError": "Unable to load packages.",
+      "upcomingBookings": "Upcoming bookings",
+      "upcomingTab": "Upcoming",
+      "historyTab": "History",
+      "noUpcoming": "No upcoming bookings.",
+      "upcomingError": "Unable to load upcoming bookings.",
+      "viewHistory": "Training history",
+      "noPastBookings": "No past bookings.",
+      "canceledTag": "Canceled",
+      "comp": "Complimentary",
+      "paid": "Paid {{amount}} RSD",
+      "sessionsRemaining": "{{remaining}}/{{total}} sessions",
+      "validUntil": "Valid until {{date}}",
+      "status": {
+        "active": "Active",
+        "paused": "Paused",
+        "expiring": "Expiring soon",
+        "expired": "Expired",
+        "usedUp": "Used up",
+        "none": "No package"
+      },
+      "tabs": {
+        "pregled": "Overview",
+        "paketi": "Packages",
+        "treninzi": "Trainings"
+      },
+      "quickActions": {
+        "title": "Quick actions"
       }
     },
     "packages": {
@@ -376,7 +436,6 @@
       "viewDay": "Day",
       "viewWeek": "Week",
       "viewMonth": "Month",
-      "newSession": "+ New session",
       "error": "Unable to load schedule.",
       "sheetRecurring": "Recurring sessions",
       "sheetNew": "New session",
@@ -388,8 +447,8 @@
       "trainer": "Trainer",
       "trainerAdminSuffix": " (admin)",
       "visibleToClients": "Visible to clients",
-      "hideBlockedSession": "Cannot hide — session has active bookings. Cancel them first.",
-      "hideBlockedSeries": "Cannot hide — {{count}} active bookings. Cancel them first.",
+      "hideBlockedSession": "Can't hide: this session already has {{count}} bookings.",
+      "hideBlockedSeries": "Can't hide: the series already has {{count}} bookings.",
       "hiddenBadge": "Hidden",
       "emptyClassTypes": "No class types available",
       "emptyRooms": "No rooms available",
@@ -420,7 +479,16 @@
       "placeholderTimeOfDay": "Time (HH:MM)",
       "placeholderWeekCountOptional": "Number of weeks (optional)",
       "cancelSession": "Cancel session",
-      "updateError": "Update failed."
+      "updateError": "Update failed.",
+      "viewBookings_one": "View {{count}} booking →",
+      "viewBookings_other": "View {{count}} bookings →"
+    },
+    "sessionDetail": {
+      "title": "Session",
+      "editAction": "Edit session",
+      "loadError": "Unable to load session.",
+      "bookedClients": "Booked clients",
+      "noBookings": "No bookings yet."
     },
     "manage": {
       "title": "Manage",
@@ -449,12 +517,11 @@
       "methodCash": "Cash",
       "methodCard": "Card",
       "methodCompany": "Company",
-      "methodQr": "QR",
       "methodOnline": "Online",
-      "statusPending": "Pending",
       "statusConfirmed": "Confirmed",
-      "statusCanceled": "Canceled",
       "filterAll": "All",
+      "filterClientPlaceholder": "Filter by client",
+      "filterClientEmpty": "No clients",
       "sheetNewPayment": "New payment",
       "client": "Client",
       "placeholderAmount": "Amount (RSD)",
@@ -471,6 +538,9 @@
       "monthlyRevenue": "Monthly revenue",
       "revenueError": "Unable to load revenue.",
       "utilization": "Capacity utilization",
+      "utilizationByRoom": "By room",
+      "utilizationByClassType": "By class type",
+      "utilizationByTrainer": "By trainer",
       "utilizationError": "Unable to load utilization.",
       "bookings": "Bookings",
       "bookingsError": "Unable to load bookings.",
@@ -490,7 +560,11 @@
       "bookingsEmpty": "No bookings data.",
       "packageTypes": "Package Types",
       "activeAssignments": "Active Assignments",
-      "filterAll": "All",
+      "activeAssignmentsLinkLabel": "All active assignments",
+      "activeAssignmentsLinkHint": "Search by client, filter by status",
+      "assignmentsError": "Unable to load assignments.",
+      "searchAssignmentsPlaceholder": "Search by client name or email…",
+      "searchPlaceholder": "Search payments…",
       "filterExpiring": "Expiring Soon",
       "filterExpired": "Expired",
       "sessionsRemaining": "{{count}} sessions left",
@@ -498,9 +572,155 @@
       "periodWeek": "Week",
       "periodMonth": "Month",
       "periodQuarter": "Quarter",
+      "periodYear": "Year",
+      "periodAll": "All time",
+      "periodAllShort": "All",
       "totalRevenue": "Total revenue",
       "transactionCount": "Transactions",
-      "avgPerClient": "Avg per client"
+      "avgPerClient": "Avg per client",
+      "filteredSubtitle": "Filtered: {{count}} payments · {{amount}} RSD",
+      "packagesSection": "Packages",
+      "packagesMostUsed": "Most used",
+      "packagesRevenue": "Revenue per type",
+      "packagesCompVsPaid": "Paid vs complimentary",
+      "packagesCompLabel": "Complimentary",
+      "packagesPaidLabel": "Paid",
+      "packagesCount": "{{count}} sold",
+      "packagesReportError": "Unable to load packages report.",
+      "packagesReportEmpty": "No package data in this period."
+    },
+    "izvestaji": {
+      "placeholder": "Content coming soon.",
+      "backTo": "← Back to {{label}}",
+      "openCard": "Open",
+      "sections": {
+        "prihod": "Revenue",
+        "iskoriscenost": "Utilization",
+        "rezervacije": "Bookings",
+        "paketi": "Packages"
+      },
+      "headlines": {
+        "prihodSub": "Total revenue",
+        "iskoriscenostSub": "Capacity utilization",
+        "rezervacijeSub": "Bookings",
+        "paketiSub": "Active clients"
+      },
+      "cardUnits": {
+        "rsd": "RSD",
+        "percent": "%",
+        "sessions": "sessions",
+        "clients": "clients"
+      },
+      "labels": {
+        "izvestaji": "Reports",
+        "naplata": "Billing",
+        "thisPeriod": "this period"
+      },
+      "paketi": {
+        "title": "Packages",
+        "activeAssignmentsLink": "Active assignments",
+        "newAssignment": "New assignment",
+        "flow": {
+          "pickClient": "Pick a client",
+          "pickMode": "Assignment type",
+          "modeComp": "Gift package",
+          "modePaid": "New payment",
+          "searchPlaceholder": "Search clients…"
+        },
+        "tiles": {
+          "active": "Active packages",
+          "expiringSoon": "Expiring soon",
+          "consumptionRate": "Consumption rate",
+          "soldInPeriod": "Sold in period"
+        },
+        "mostSold": {
+          "title": "Most-sold packages"
+        },
+        "compVsPaid": {
+          "title": "Paid vs. comp",
+          "paid": "Paid",
+          "comp": "Comp"
+        },
+        "recentActivations": {
+          "title": "Recent activations",
+          "paidTag": "Paid",
+          "compTag": "Comp"
+        },
+        "noData": "No data for the selected period."
+      },
+      "prihod": {
+        "title": "Revenue",
+        "headline": "Total revenue",
+        "chart": {
+          "title": "Revenue over time"
+        },
+        "byPackageType": "By package type",
+        "byMethod": "By payment method",
+        "recentPayments": "Recent payments",
+        "noData": "No data for the selected period.",
+        "paymentsCount_one": "{{count}} payment",
+        "paymentsCount_other": "{{count}} payments"
+      },
+      "iskoriscenost": {
+        "title": "Utilization",
+        "headline": "Capacity utilization",
+        "summary": "{{booked}} of {{capacity}} seats",
+        "trend": {
+          "title": "Trend"
+        },
+        "heatmap": {
+          "title": "By day and time of day",
+          "morning": "Morning",
+          "midday": "Midday",
+          "afternoon": "Afternoon",
+          "evening": "Evening"
+        },
+        "bySala": "By room",
+        "byClassType": "By class type",
+        "byTrainer": "By trainer",
+        "noData": "No data for the selected period.",
+        "dayShort": {
+          "sun": "Sun",
+          "mon": "Mon",
+          "tue": "Tue",
+          "wed": "Wed",
+          "thu": "Thu",
+          "fri": "Fri",
+          "sat": "Sat"
+        }
+      },
+      "rezervacije": {
+        "title": "Bookings",
+        "tiles": {
+          "total": "Total bookings",
+          "showRate": "Show rate",
+          "canceled": "Cancellations",
+          "canceledSub": "{{preCutoff}} regular · {{late}} late",
+          "waitlist": "Waitlist"
+        },
+        "cancelBreakdown": {
+          "title": "Regular vs. late cancellations",
+          "preCutoff": "Pre-cutoff",
+          "late": "Late",
+          "empty": "No cancellations in this period."
+        },
+        "chart": {
+          "title": "Bookings over time"
+        },
+        "topSessions": {
+          "title": "Top sessions",
+          "bookedOfCapacity": "{{booked}}/{{capacity}} booked"
+        },
+        "noData": "No data for the selected period."
+      }
+    },
+    "katalog": {
+      "sections": {
+        "kreiraj": "Create",
+        "katalog": "Catalog"
+      },
+      "noviTermin": "New session",
+      "noviTerminSub": "One-time or recurring"
     }
   },
   "trainer": {

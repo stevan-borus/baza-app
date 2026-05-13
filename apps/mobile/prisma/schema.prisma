@@ -29,14 +29,11 @@ enum PaymentMethod {
   CASH
   CARD
   COMPANY
-  QR
   MANUAL_ONLINE
 }
 
 enum BillingStatus {
-  PENDING
   CONFIRMED
-  CANCELED
 }
 
 enum SessionStatus {
@@ -277,12 +274,13 @@ model PackageType {
   name                String
   sessionCount        Int
   validityDays        Int
-  lateCancelHours     Int      @default(12)
+  lateCancelHours     Int      @default(8)
   classTypeId         String
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
   classType           ClassType @relation(fields: [classTypeId], references: [id], onDelete: Restrict)
   clientPackages      ClientPackage[]
+  billingRecords      BillingRecord[]
 
   @@index([classTypeId])
 }
@@ -302,6 +300,7 @@ model ClientPackage {
   packageType       PackageType         @relation(fields: [packageTypeId], references: [id], onDelete: Restrict)
   classType         ClassType           @relation(fields: [classTypeId], references: [id], onDelete: Restrict)
   bookings          Booking[]
+  billingRecord     BillingRecord?
 
   @@index([classTypeId])
   @@index([clientProfileId, classTypeId])
@@ -388,12 +387,18 @@ model TrainerNote {
 }
 
 model BillingRecord {
-  id            String        @id @default(uuid())
-  clientUserId  String
-  amount        Int
-  method        PaymentMethod
-  status        BillingStatus @default(PENDING)
-  notes         String?
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  id              String         @id @default(uuid())
+  clientUserId    String
+  amount          Int
+  method          PaymentMethod
+  status          BillingStatus  @default(CONFIRMED)
+  notes           String?
+  packageTypeId   String?
+  packageType     PackageType?   @relation(fields: [packageTypeId], references: [id], onDelete: SetNull)
+  clientPackageId String?        @unique
+  clientPackage   ClientPackage? @relation(fields: [clientPackageId], references: [id], onDelete: SetNull)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  @@index([packageTypeId])
 }

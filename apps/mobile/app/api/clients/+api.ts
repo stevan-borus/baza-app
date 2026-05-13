@@ -14,21 +14,52 @@ export async function GET(request: Request) {
 
   const currentInstant = now();
 
-  // Trainers see only clients with active bookings in their sessions.
-  const clients = await prisma.clientProfile.findMany({
-    where:
-      guard.user.role === UserRole.TRAINER
-        ? {
-            bookings: {
-              some: {
-                canceledAt: null,
-                session: {
-                  trainerUserId: guard.user.id,
-                },
-              },
+  // Parse cursor + take + q from the URL. Cursor-based pagination over a
+  // stable `id` ordering — we tried orderBy fullName before but couldn't
+  // express that as a Prisma cursor and still get deterministic paging.
+  // Search ("q") matches user.fullName or user.email case-insensitively.
+  const url = new URL(request.url);
+  const cursor = url.searchParams.get("cursor") ?? undefined;
+  const rawTake = url.searchParams.get("take");
+  const parsedTake = rawTake ? parseInt(rawTake, 10) : 20;
+  const take = Number.isFinite(parsedTake)
+    ? Math.min(Math.max(parsedTake, 1), 100)
+    : 20;
+  const q = url.searchParams.get("q")?.trim() || undefined;
+
+  // The trainer scope (linked-via-active-booking) is preserved as-is; the
+  // search filter is layered on top via AND so trainers also benefit from
+  // the q-search without leaking strangers into their list.
+  const baseWhere =
+    guard.user.role === UserRole.TRAINER
+      ? {
+          bookings: {
+            some: {
+              canceledAt: null,
+              session: { trainerUserId: guard.user.id },
             },
-          }
-        : undefined,
+          },
+        }
+      : undefined;
+
+  const searchWhere = q
+    ? {
+        OR: [
+          { user: { fullName: { contains: q, mode: "insensitive" as const } } },
+          { user: { email: { contains: q, mode: "insensitive" as const } } },
+        ],
+      }
+    : undefined;
+
+  const where =
+    baseWhere && searchWhere
+      ? { AND: [baseWhere, searchWhere] }
+      : (baseWhere ?? searchWhere);
+
+  // Fetch take+1 so we can tell whether there's another page without a
+  // separate count query.
+  const clients = await prisma.clientProfile.findMany({
+    where,
     select: {
       id: true,
       notes: true,
@@ -57,8 +88,16 @@ export async function GET(request: Request) {
         take: 1,
       },
     },
-    orderBy: { user: { fullName: "asc" } },
+    take: take + 1,
+    ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+    orderBy: { id: "asc" },
   });
+
+  const hasMore = clients.length > take;
+  const pageClients = hasMore ? clients.slice(0, take) : clients;
+  const nextCursor = hasMore
+    ? pageClients[pageClients.length - 1]?.id ?? null
+    : null;
 
   const expiringThreshold = new Date(
     currentInstant.getTime() + EXPIRING_WINDOW_DAYS * 24 * 60 * 60 * 1000,
@@ -66,7 +105,7 @@ export async function GET(request: Request) {
 
   // Compute the most meaningful package status per client.
   // Priority: paused (overrides) > active > expiring > expired > none.
-  const withStatus = clients.map(({ packages, packagePauses, ...rest }) => {
+  const withStatus = pageClients.map(({ packages, packagePauses, ...rest }) => {
     if (packagePauses.length > 0) {
       return { ...rest, packageStatus: "paused" as ClientPackageStatus };
     }
@@ -91,7 +130,7 @@ export async function GET(request: Request) {
     return { ...rest, packageStatus: status };
   });
 
-  return ok({ success: true, clients: withStatus });
+  return ok({ success: true, clients: withStatus, nextCursor });
 }
 
 export async function POST(request: Request) {

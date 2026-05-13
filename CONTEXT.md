@@ -57,14 +57,18 @@ The queue on a full Session. When someone cancels, the next waitlisted Client is
 
 ### Billing
 
-**Flow 1 (atomic)**:
-Admin records a payment for a Client → a BillingRecord and a ClientPackage are created in the same transaction. The default flow.
+**Naplata** (the section): the admin-facing list of past payments, plus the entry point for **Nova uplata**.
 
-**Flow 2 (comp)**:
-Admin assigns a free / comp ClientPackage directly with no BillingRecord. Marked as a "Free / comp package" in the assign sheet.
+**Nova uplata** (Flow 1, atomic):
+The default assignment path. Admin records a payment for a Client → a BillingRecord and a ClientPackage are created in the same transaction. Reachable from (a) the Naplata header `+` (no pre-filled client) and (b) a client row's primary action (client pre-filled).
+_sr_: "Nova uplata" — _en_: "New payment".
+
+**Poklon paket** (Flow 2, comp):
+Admin assigns a free / complimentary ClientPackage directly with no BillingRecord — used for family / friends. Reachable as a secondary action on a client row, never from Naplata.
+_sr_: "Poklon paket" — _en_: "Complimentary package". _Avoid_: "komp paket" (colloquial Serbian, was the old label).
 
 **BillingRecord**:
-A row of money received. Always paired with a ClientPackage in Flow 1.
+A row of money received. Always paired with a ClientPackage in Flow 1 (Nova uplata). Carries `packageTypeId` (nullable — non-null on Flow 1, null on legacy / non-package payments) so revenue-per-PackageType reporting joins cleanly without inferring from timestamps.
 
 ### Trainer notes
 
@@ -97,7 +101,7 @@ The 6-Client shape inside the rich seed, named to make package-state coverage ob
 - `client.empty@e2e.test` — no packages at all
 
 **Anchor time**:
-A fixed instant the entire stack (seed, server, helpers, browser, integration tests) is pinned to so date-dependent tests don't drift over wall-clock time. The current anchor is `2026-05-09T10:00:00Z` (Saturday morning). Toggle via the `TEST_ANCHOR_TIME` env var — set to a parseable ISO string to override, leave unset for production / wall-clock behaviour. Server, seed, helpers and Vitest setup all read it through `apps/mobile/lib/now.ts` (`now()` / `nowMs()`); Playwright additionally pins the browser clock via `page.clock.install` in the e2e fixture. Maestro flows still use the device's wall clock — keep date-relative assertions out of Maestro.
+A fixed instant the entire stack (seed, server, helpers, browser, integration tests) is pinned to so date-dependent tests don't drift over wall-clock time. The current anchor is `2026-05-11T09:00:00Z` (Monday morning, just before the 10:00 seeded session) — picking a Monday means the seeded weekly schedule (Reformer Mon/Wed/Fri, Energy Tue/Thu) all fall inside the visible week. Toggle via the `TEST_ANCHOR_TIME` env var — set to a parseable ISO string to override, leave unset for production / wall-clock behaviour. Server, seed, helpers and Vitest setup all read it through `apps/mobile/lib/now.ts` (`now()` / `nowMs()`); Playwright additionally pins the browser clock via `page.clock.install` in the e2e fixture. Maestro flows still use the device's wall clock — keep date-relative assertions out of Maestro.
 
 ## Relationships
 

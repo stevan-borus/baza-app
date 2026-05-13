@@ -71,15 +71,9 @@ describe("reports/revenue", () => {
         createdAt: new Date("2026-07-15T17:00:00Z"),
       },
     });
-    await prisma.billingRecord.create({
-      data: {
-        clientUserId: client.id,
-        amount: 9999,
-        method: "CASH",
-        status: "PENDING",
-        createdAt: new Date("2026-07-15T20:00:00Z"),
-      },
-    });
+    // PR β removed PENDING/CANCELED from BillingStatus, so the previously-
+    // seeded "must NOT count" PENDING row is no longer constructible. The
+    // API's status=CONFIRMED filter is still in place as defense in depth.
 
     asAdmin();
     const response = await GET_REVENUE(
@@ -180,14 +174,8 @@ describe("reports/summary", () => {
         status: "CONFIRMED",
       },
     });
-    await prisma.billingRecord.create({
-      data: {
-        clientUserId: active.id,
-        amount: 9999,
-        method: "CASH",
-        status: "PENDING",
-      },
-    });
+    // PR β removed PENDING from BillingStatus; the historical "must NOT
+    // count" guard row is no longer constructible.
 
     asAdmin();
     const response = await GET_SUMMARY(

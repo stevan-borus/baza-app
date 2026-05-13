@@ -8,8 +8,8 @@ const SEED_PASSWORD = "Password123!";
  * Auth smoke (Serbian).
  *
  * The auth-form testIDs (auth-email-input, auth-password-input,
- * auth-submit-button) and tab testIDs (tab-clients, tab-index) are wired in
- * sign-in.tsx + lib/tab-layout-theme.tsx.
+ * auth-submit-button) and tab testIDs (tab-pregled for admin, tab-index for
+ * trainer/client) are wired in sign-in.tsx + lib/tab-layout-theme.tsx.
  */
 test.describe("auth smoke (Serbian)", () => {
   test.beforeAll(async () => {
@@ -22,10 +22,9 @@ test.describe("auth smoke (Serbian)", () => {
     await page.getByTestId("auth-password-input").fill(SEED_PASSWORD);
     await page.getByTestId("auth-submit-button").click();
 
-    // Admin landing route owns these client tabs (per existing testIDs in the
-    // Phase B Maestro flows: tab-clients, tab-calendar, tab-notes are in the
-    // admin landing).
-    await expect(page.getByTestId("tab-clients")).toBeVisible({ timeout: 15_000 });
+    // Phase 1 admin shell: 4 tabs (Pregled / Klijenti / Naplata / Izveštaji).
+    // The landing tab is `pregled` — assert its tab is visible.
+    await expect(page.getByTestId("tab-pregled")).toBeVisible({ timeout: 15_000 });
   });
 
   test("trainer signs in and lands on the trainer landing page", async ({ page }) => {

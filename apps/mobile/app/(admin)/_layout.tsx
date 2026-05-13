@@ -25,28 +25,28 @@ export default function AdminLayout() {
       tabBar={(props) => <FloatingTabBar {...props} isDark={isDark} />}
     >
       <Tabs.Screen
-        name="index"
+        name="pregled"
         options={{
-          title: t("tabs.dashboard"),
+          title: t("tabs.overview"),
           tabBarIcon: ({ color }) => <TabIcon name="home" color={color} />,
         }}
       />
       <Tabs.Screen
-        name="clients"
+        name="katalog"
+        options={{
+          title: t("tabs.catalog"),
+          tabBarIcon: ({ color }) => <TabIcon name="th-large" color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="klijenti"
         options={{
           title: t("tabs.clients"),
           tabBarIcon: ({ color }) => <TabIcon name="users" color={color} />,
         }}
       />
       <Tabs.Screen
-        name="packages"
-        options={{
-          title: t("tabs.packages"),
-          tabBarIcon: ({ color }) => <TabIcon name="archive" color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="billing"
+        name="naplata"
         options={{
           title: t("tabs.billing"),
           tabBarIcon: ({ color }) => (
@@ -55,15 +55,12 @@ export default function AdminLayout() {
         }}
       />
       <Tabs.Screen
-        name="reports"
+        name="izvestaji"
         options={{
           title: t("tabs.reports"),
           tabBarIcon: ({ color }) => <TabIcon name="bar-chart" color={color} />,
         }}
       />
-      {/* Hidden detail routes pushed from the dashboard. */}
-      <Tabs.Screen name="class-types" options={{ href: null }} />
-      <Tabs.Screen name="rooms" options={{ href: null }} />
     </Tabs>
   );
 }

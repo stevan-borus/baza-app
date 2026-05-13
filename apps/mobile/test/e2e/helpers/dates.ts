@@ -41,6 +41,27 @@ export function nextReformerDayKey(): string {
 }
 
 /**
+ * Tap a session card and wait for the edit sheet to appear. The tap-card
+ * action navigates to the session detail page; tap the pencil icon to push
+ * back to the dashboard with ?editSessionId= which mounts the edit sheet.
+ */
+export async function openSessionEditSheet(page: Page, cardLocator: import("@playwright/test").Locator) {
+  await cardLocator.dispatchEvent("click");
+  await page
+    .getByTestId("session-detail-edit-button")
+    .first()
+    .waitFor({ state: "visible", timeout: 10_000 });
+  await page
+    .getByTestId("session-detail-edit-button")
+    .first()
+    .dispatchEvent("click");
+  await page
+    .getByTestId("session-edit-save-button")
+    .first()
+    .waitFor({ state: "visible", timeout: 10_000 });
+}
+
+/**
  * Click prev/next chevrons on the StudioWeekStrip until the target date
  * pill is visible, then click it. The schedule's WeekStrip only renders
  * 7 days around `weekStart`; specs that pick a session date from the DB

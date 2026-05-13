@@ -8,6 +8,7 @@ import {
   linkTrainerToClient,
   resetAndSeed,
 } from "./helpers/db";
+import { navigateWeekStripTo } from "./helpers/dates";
 import { t } from "./helpers/locales";
 
 const SEED_PASSWORD = "Password123!";
@@ -78,13 +79,17 @@ test.describe("trainer (Serbian)", () => {
     await signInAsReformerTrainer(page);
     await page.getByTestId("tab-clients").click();
 
-    // No bookings have been linked to this trainer in the seed yet, so
-    // the clients list should be empty (the empty-state copy renders).
-    // The trainer's clients screen reuses admin.clients.empty as the
-    // empty-state title.
-    await expect(page.getByText(t.admin.clients.empty)).toBeVisible({
-      timeout: 10_000,
-    });
+    // The seed now creates one booking on the Reformer trainer's first
+    // upcoming session for the active reformer client (so dashboards have
+    // traffic). The trainer should therefore see exactly that one client.
+    await expect(
+      page.getByText("Active Reformer Client"),
+    ).toBeVisible({ timeout: 10_000 });
+
+    // No other clients should appear — the link-by-booking scoping means
+    // unbooked clients (e.g. activeEnergy, expired, paused, future, empty)
+    // don't show up for this trainer.
+    await expect(page.getByText("Active Energy Client")).not.toBeVisible();
   });
 
   test("42: trainer creates a note for a linked client", async ({ page }) => {
@@ -458,11 +463,11 @@ test.describe("trainer (Serbian)", () => {
 
     await signInAsReformerTrainer(page);
 
-    // Navigate to yesterday on the week strip.
-    await page
-      .locator(`[data-testid="week-strip-day-${dateKey}"]:visible`)
-      .first()
-      .dispatchEvent("click");
+    // Navigate to yesterday on the week strip. Yesterday may sit in the
+    // previous visible week (e.g. when the anchor lands on a Monday and
+    // yesterday is Sunday), so use the strip-paging helper instead of
+    // assuming the day pill is already visible.
+    await navigateWeekStripTo(page, dateKey);
 
     await expect(
       page.getByTestId(`session-card-attendance-${sessionId}`),

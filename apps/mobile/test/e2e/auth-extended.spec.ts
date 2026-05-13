@@ -35,7 +35,8 @@ test.describe("auth extended (Serbian)", () => {
     await page.getByTestId("auth-email-input").fill("admin.e2e@example.test");
     await page.getByTestId("auth-password-input").fill(SEED_PASSWORD);
     await page.getByTestId("auth-submit-button").click();
-    await expect(page.getByTestId("tab-clients")).toBeVisible({
+    // Phase 1 admin shell — landing tab is `pregled`.
+    await expect(page.getByTestId("tab-pregled")).toBeVisible({
       timeout: 15_000,
     });
 
@@ -122,11 +123,12 @@ test.describe("auth extended (Serbian)", () => {
     await page.getByTestId("auth-email-input").fill("admin.e2e@example.test");
     await page.getByTestId("auth-password-input").fill(SEED_PASSWORD);
     await page.getByTestId("auth-submit-button").click();
-    await expect(page.getByTestId("tab-clients")).toBeVisible({
+    // Phase 1 admin shell — Klijenti tab is the entry point for invites.
+    await expect(page.getByTestId("tab-klijenti")).toBeVisible({
       timeout: 15_000,
     });
 
-    await page.getByTestId("tab-clients").click();
+    await page.getByTestId("tab-klijenti").click();
 
     // Switch to "Invites" tab and open the invite-create header button.
     await page.getByTestId("admin-clients-tab-invites").click();

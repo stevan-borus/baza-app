@@ -85,20 +85,25 @@ function StatColumn({ label, value, accent = false }: StatItem) {
           ? "—"
           : value;
   return (
-    <View className="flex-1 items-center py-5 px-2 gap-1.5">
-      <Text
-        className={accent ? "text-accent" : "text-muted"}
-        numberOfLines={2}
-        style={{
-          fontFamily: "AlbertSans-SemiBold",
-          fontSize: 10,
-          letterSpacing: 1.2,
-          textTransform: "uppercase",
-          textAlign: "center",
-        }}
-      >
-        {label}
-      </Text>
+    <View
+      className="flex-1 items-center py-5 px-2 gap-1.5"
+      style={{ justifyContent: "space-between", minHeight: 96 }}
+    >
+      <View style={{ height: 28, justifyContent: "center" }}>
+        <Text
+          className={accent ? "text-accent" : "text-muted"}
+          numberOfLines={2}
+          style={{
+            fontFamily: "AlbertSans-SemiBold",
+            fontSize: 10,
+            letterSpacing: 1.2,
+            textTransform: "uppercase",
+            textAlign: "center",
+          }}
+        >
+          {label}
+        </Text>
+      </View>
       <Text
         className={accent ? "text-accent" : "text-foreground"}
         style={{

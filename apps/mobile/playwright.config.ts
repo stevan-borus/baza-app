@@ -18,7 +18,7 @@ process.env.API_ADMIN_BOOTSTRAP_TOKEN = CRON_TOKEN;
  * resolve it from this same env var so seed/server/helpers/browser all
  * agree on "current time". See CONTEXT.md → "Anchor time".
  */
-const TEST_ANCHOR_TIME = process.env.TEST_ANCHOR_TIME ?? "2026-05-09T10:00:00Z";
+const TEST_ANCHOR_TIME = process.env.TEST_ANCHOR_TIME ?? "2026-05-11T09:00:00Z";
 process.env.TEST_ANCHOR_TIME = TEST_ANCHOR_TIME;
 
 export default defineConfig({

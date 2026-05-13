@@ -1,6 +1,6 @@
 import { queryOptions, mutationOptions, keepPreviousData } from "@tanstack/react-query";
 import { z } from "zod";
-import { apiFetch } from "@/lib/api";
+import { apiFetch, throwIfNotOk } from "@/lib/api";
 import { sharedEnv } from "@/lib/env.shared";
 
 // Local availability schema — duplicates @baza/types but uses z.coerce.date()
@@ -57,7 +57,42 @@ const sessionsListResponseSchema = z.object({
   sessions: z.array(sessionSchema),
 });
 
+const sessionDetailSchema = z.object({
+  id: z.string(),
+  startsAt: z.string(),
+  endsAt: z.string(),
+  status: z.enum(["SCHEDULED", "CANCELED", "COMPLETED"]),
+  capacity: z.number(),
+  isActive: z.boolean(),
+  classTypeId: z.string(),
+  roomId: z.nullable(z.string()),
+  trainerUserId: z.nullable(z.string()),
+  recurringScheduleId: z.nullable(z.string()).optional(),
+  classType: z.object({ id: z.string(), name: z.string() }).nullable(),
+  room: z.object({ id: z.string(), name: z.string() }).nullable(),
+  trainer: z.object({ id: z.string(), fullName: z.string() }).nullable(),
+  bookedCount: z.number(),
+  seriesBookedCount: z.number(),
+  bookings: z.array(
+    z.object({
+      id: z.string(),
+      createdAt: z.string(),
+      client: z.object({
+        id: z.string(),
+        fullName: z.string(),
+        email: z.string(),
+      }),
+    }),
+  ),
+});
+
+const sessionDetailResponseSchema = z.object({
+  success: z.boolean(),
+  session: sessionDetailSchema,
+});
+
 export type Session = z.infer<typeof sessionSchema>;
+export type SessionDetail = z.infer<typeof sessionDetailSchema>;
 
 export const sessionsQueries = {
   availabilityByMonth: (month: string) =>
@@ -89,6 +124,21 @@ export const sessionsQueries = {
       staleTime: 30_000,
     }),
 
+  byId: (id: string) =>
+    queryOptions({
+      queryKey: ["sessions", "by-id", id] as const,
+      queryFn: async () => {
+        const response = await apiFetch(
+          `${sharedEnv.EXPO_PUBLIC_API_URL}/api/sessions/${encodeURIComponent(id)}`,
+          { credentials: "include" },
+        );
+        if (!response.ok) throw new Error(`Unable to load session (${response.status})`);
+        return sessionDetailResponseSchema.parse(await response.json());
+      },
+      staleTime: 30_000,
+      enabled: !!id,
+    }),
+
   create: () =>
     mutationOptions({
       mutationKey: ["sessions", "create"] as const,
@@ -107,7 +157,7 @@ export const sessionsQueries = {
           headers: { "content-type": "application/json" },
           body: JSON.stringify(payload),
         });
-        if (!response.ok) throw new Error(`Unable to create session (${response.status})`);
+        await throwIfNotOk(response, "Unable to create session");
         return response.json();
       },
     }),
@@ -134,7 +184,7 @@ export const sessionsQueries = {
           headers: { "content-type": "application/json" },
           body: JSON.stringify(payload),
         });
-        if (!response.ok) throw new Error(`Unable to update session (${response.status})`);
+        await throwIfNotOk(response, "Unable to update session");
         return response.json();
       },
     }),
@@ -162,8 +212,7 @@ export const sessionsQueries = {
             body: JSON.stringify(payload),
           },
         );
-        if (!response.ok)
-          throw new Error(`Unable to create recurring sessions (${response.status})`);
+        await throwIfNotOk(response, "Unable to create recurring sessions");
         return response.json();
       },
     }),
@@ -226,10 +275,7 @@ export const sessionsQueries = {
             body: JSON.stringify(payload),
           },
         );
-        if (!response.ok) {
-          const text = await response.text();
-          throw new Error(text || `Unable to update series (${response.status})`);
-        }
+        await throwIfNotOk(response, "Unable to update series");
         return response.json();
       },
     }),
@@ -242,10 +288,7 @@ export const sessionsQueries = {
           `${sharedEnv.EXPO_PUBLIC_API_URL}/api/sessions/recurring/${id}`,
           { method: "DELETE", credentials: "include" },
         );
-        if (!response.ok) {
-          const text = await response.text();
-          throw new Error(text || `Unable to delete series (${response.status})`);
-        }
+        await throwIfNotOk(response, "Unable to delete series");
         return response.json();
       },
     }),

@@ -20,15 +20,18 @@ env:
 
 # The new-session sheet (`AppSheet` -> gorhom `BottomSheetModal`) renders
 # its content in a layer that Maestro's iOS view-hierarchy reader cannot
-# traverse. We verify the trigger button is reachable on the dashboard;
+# traverse. We verify the trigger row is reachable on the Katalog tab;
 # the sheet's form behavior is covered by Phase A Playwright web E2E
 # (`admin.spec.ts` specs 21-30).
+- tapOn:
+    id: "tab-katalog"
+
 - extendedWaitUntil:
     visible:
-      id: "admin-new-session-button"
+      id: "katalog-novi-termin"
     timeout: 15000
 
 - tapOn:
-    id: "admin-new-session-button"
+    id: "katalog-novi-termin"
 
 - waitForAnimationToEnd

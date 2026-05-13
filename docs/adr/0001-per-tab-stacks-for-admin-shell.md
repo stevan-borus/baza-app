@@ -1,0 +1,3 @@
+# Per-tab Stacks for the admin shell
+
+The admin shell previously mixed `Tabs` of flat screens with hidden folder-tabs (`<Tabs.Screen href={null}>`) for detail pages like `sessions/[id]`. Expo Router kept auto-registering nested files as tabs, causing leaks (e.g. a stray "sessions" entry in the bar). We're committing to one model: **every bottom tab is its own `Stack`**, and detail screens (`sessions/[id]`, `clients/[id]`, …) push inside the originating tab's stack — keeping the tab bar visible and the back-stack per tab. This eliminates the `href: null` whack-a-mole and matches the React Navigation idiom.

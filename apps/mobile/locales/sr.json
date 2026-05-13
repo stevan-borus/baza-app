@@ -51,6 +51,7 @@
     "notifications": "Obaveštenja",
     "schedule": "Raspored",
     "clients": "Klijenti",
+    "catalog": "Katalog",
     "manage": "Upravljanje",
     "packages": "Paketi",
     "billing": "Naplata",
@@ -286,6 +287,18 @@
     }
   },
   "admin": {
+    "errors": {
+      "scheduleConflict": {
+        "trainerBusyShort": "Trener je već zauzet: {{detail}}",
+        "roomBusyShort": "Sala je već zauzeta: {{detail}}",
+        "trainerBusy": "Trener {{name}} je već zauzet",
+        "roomBusy": "Sala {{name}} je već zauzeta",
+        "recurringHeader": "Termin se preklapa sa {{count}} već postojećih:",
+        "recurringHeaderMore": "Prikazano {{shown}} od {{total}} preklapanja:",
+        "fallbackRoom": "sala",
+        "fallbackTrainer": "trener"
+      }
+    },
     "dashboard": {
       "title": "Admin Kontrola",
       "loggedIn": "Ulogovan: {{email}}",
@@ -364,10 +377,57 @@
       "filterPaused": "Pauzirani",
       "filterExpired": "Istekli",
       "filterEmpty": "Nema klijenata koji odgovaraju filteru.",
-      "assignPackage": {
-        "heading": {
-          "comp": "Besplatan paket / komp paket"
-        }
+      "compPackageHeading": "Poklon paket",
+      "newPaymentAction": "Nova uplata",
+      "newPaymentSubmit": "Sačuvaj uplatu",
+      "paymentAmount": "Iznos (RSD)",
+      "paymentMethod": {
+        "label": "Način plaćanja",
+        "cash": "Gotovina",
+        "card": "Kartica",
+        "invoice": "Račun"
+      },
+      "amountRequired": "Iznos je obavezan.",
+      "amountPositive": "Iznos mora biti veći od 0.",
+      "openActions": "Otvori akcije",
+      "viewProfile": "Otvori profil"
+    },
+    "clientDetail": {
+      "title": "Klijent",
+      "openActions": "Akcije za klijenta",
+      "loadError": "Nije moguće učitati klijenta.",
+      "currentPackage": "Trenutni paket",
+      "noActivePackage": "Nema aktivnog paketa.",
+      "packageHistory": "Istorija paketa",
+      "noPackages": "Još nema paketa.",
+      "packagesError": "Nije moguće učitati pakete.",
+      "upcomingBookings": "Predstojeći termini",
+      "upcomingTab": "Predstojeći",
+      "historyTab": "Istorija",
+      "noUpcoming": "Nema predstojećih termina.",
+      "upcomingError": "Nije moguće učitati predstojeće termine.",
+      "viewHistory": "Istorija treninga",
+      "noPastBookings": "Nema prošlih treninga.",
+      "canceledTag": "Otkazano",
+      "comp": "Poklon paket",
+      "paid": "Plaćeno {{amount}} RSD",
+      "sessionsRemaining": "{{remaining}}/{{total}} termina",
+      "validUntil": "Važi do {{date}}",
+      "status": {
+        "active": "Aktivan",
+        "paused": "Pauziran",
+        "expiring": "Ističe uskoro",
+        "expired": "Istekao",
+        "usedUp": "Iskorišćen",
+        "none": "Bez paketa"
+      },
+      "tabs": {
+        "pregled": "Pregled",
+        "paketi": "Paketi",
+        "treninzi": "Treninzi"
+      },
+      "quickActions": {
+        "title": "Brze akcije"
       }
     },
     "packages": {
@@ -379,7 +439,6 @@
       "viewDay": "Dan",
       "viewWeek": "Nedelja",
       "viewMonth": "Mesec",
-      "newSession": "+ Novi termin",
       "error": "Nije moguće učitati raspored.",
       "sheetRecurring": "Ponavljajući termini",
       "sheetNew": "Novi termin",
@@ -391,8 +450,8 @@
       "trainer": "Trener",
       "trainerAdminSuffix": " (admin)",
       "visibleToClients": "Vidljivo klijentima",
-      "hideBlockedSession": "Nije moguće sakriti — postoje aktivne rezervacije. Otkažite ih prvo.",
-      "hideBlockedSeries": "Nije moguće sakriti — {{count}} aktivnih rezervacija. Otkažite ih prvo.",
+      "hideBlockedSession": "Ne može da se sakrije: ovaj termin već ima {{count}} rezervacija.",
+      "hideBlockedSeries": "Ne može da se sakrije: serija već ima {{count}} rezervacija.",
       "hiddenBadge": "Skriveno",
       "emptyClassTypes": "Nema dostupnih tipova treninga",
       "emptyRooms": "Nema dostupnih sala",
@@ -422,8 +481,18 @@
       "editScopeSeries": "Cela serija",
       "placeholderTimeOfDay": "Vreme (HH:MM)",
       "placeholderWeekCountOptional": "Broj nedelja (opciono)",
+      "viewBookings_one": "Pogledaj {{count}} rezervaciju →",
+      "viewBookings_few": "Pogledaj {{count}} rezervacije →",
+      "viewBookings_other": "Pogledaj {{count}} rezervacija →",
       "cancelSession": "Otkaži termin",
       "updateError": "Ažuriranje nije uspelo."
+    },
+    "sessionDetail": {
+      "title": "Termin",
+      "editAction": "Uredi termin",
+      "loadError": "Nije moguće učitati termin.",
+      "bookedClients": "Klijenti rezervisani",
+      "noBookings": "Još nema rezervacija."
     },
     "manage": {
       "title": "Upravljanje",
@@ -452,12 +521,11 @@
       "methodCash": "Gotovina",
       "methodCard": "Kartica",
       "methodCompany": "Firma",
-      "methodQr": "QR",
       "methodOnline": "Online",
-      "statusPending": "Na čekanju",
       "statusConfirmed": "Potvrđen",
-      "statusCanceled": "Otkazan",
       "filterAll": "Sve",
+      "filterClientPlaceholder": "Filter po klijentu",
+      "filterClientEmpty": "Nema klijenata",
       "sheetNewPayment": "Nova uplata",
       "client": "Klijent",
       "placeholderAmount": "Iznos (RSD)",
@@ -474,6 +542,9 @@
       "monthlyRevenue": "Mesečni prihod",
       "revenueError": "Nije moguće učitati prihod.",
       "utilization": "Iskorišćenost kapaciteta",
+      "utilizationByRoom": "Po sali",
+      "utilizationByClassType": "Po tipu treninga",
+      "utilizationByTrainer": "Po treneru",
       "utilizationError": "Nije moguće učitati iskorišćenost.",
       "bookings": "Rezervacije",
       "bookingsError": "Nije moguće učitati rezervacije.",
@@ -493,7 +564,11 @@
       "bookingsEmpty": "Nema podataka o rezervacijama.",
       "packageTypes": "Tipovi paketa",
       "activeAssignments": "Aktivne dodele",
-      "filterAll": "Sve",
+      "activeAssignmentsLinkLabel": "Sve aktivne dodele",
+      "activeAssignmentsLinkHint": "Pretraga po klijentu, filter po statusu",
+      "assignmentsError": "Nije moguće učitati aktivne dodele.",
+      "searchAssignmentsPlaceholder": "Pretraga po imenu ili email-u klijenta…",
+      "searchPlaceholder": "Pretraži uplate…",
       "filterExpiring": "Uskoro ističe",
       "filterExpired": "Istekao",
       "sessionsRemaining": "{{count}} termina preostalo",
@@ -501,9 +576,156 @@
       "periodWeek": "Nedelja",
       "periodMonth": "Mesec",
       "periodQuarter": "Kvartal",
+      "periodYear": "Godina",
+      "periodAll": "Sve vreme",
+      "periodAllShort": "Sve",
       "totalRevenue": "Ukupan prihod",
       "transactionCount": "Transakcije",
+      "filteredSubtitle": "Filtrirano: {{count}} uplata · {{amount}} RSD",
+      "packagesSection": "Paketi",
+      "packagesMostUsed": "Najprodavaniji",
+      "packagesRevenue": "Prihod po paketu",
+      "packagesCompVsPaid": "Plaćeni nasuprot poklon",
+      "packagesCompLabel": "Poklon",
+      "packagesPaidLabel": "Plaćeni",
+      "packagesCount": "{{count}} prodato",
+      "packagesReportError": "Nije moguće učitati izveštaj o paketima.",
+      "packagesReportEmpty": "Nema podataka o paketima u ovom periodu.",
       "avgPerClient": "Prosek po klijentu"
+    },
+    "izvestaji": {
+      "placeholder": "Sadržaj uskoro.",
+      "backTo": "← Nazad u {{label}}",
+      "openCard": "Otvori",
+      "sections": {
+        "prihod": "Prihod",
+        "iskoriscenost": "Iskorišćenost",
+        "rezervacije": "Rezervacije",
+        "paketi": "Paketi"
+      },
+      "headlines": {
+        "prihodSub": "Ukupan prihod",
+        "iskoriscenostSub": "Iskorišćenost kapaciteta",
+        "rezervacijeSub": "Rezervacije",
+        "paketiSub": "Aktivni klijenti"
+      },
+      "cardUnits": {
+        "rsd": "RSD",
+        "percent": "%",
+        "sessions": "termina",
+        "clients": "klijenata"
+      },
+      "labels": {
+        "izvestaji": "Izveštaji",
+        "naplata": "Naplata",
+        "thisPeriod": "u ovom periodu"
+      },
+      "paketi": {
+        "title": "Paketi",
+        "activeAssignmentsLink": "Aktivne dodele",
+        "newAssignment": "Nova dodela",
+        "flow": {
+          "pickClient": "Izaberi klijenta",
+          "pickMode": "Tip dodele",
+          "modeComp": "Pokloni paket",
+          "modePaid": "Nova uplata",
+          "searchPlaceholder": "Traži klijenta…"
+        },
+        "tiles": {
+          "active": "Aktivni paketi",
+          "expiringSoon": "Ističe uskoro",
+          "consumptionRate": "Stopa potrošnje",
+          "soldInPeriod": "Prodato u periodu"
+        },
+        "mostSold": {
+          "title": "Najprodavaniji paketi"
+        },
+        "compVsPaid": {
+          "title": "Plaćeni vs. pokloni",
+          "paid": "Plaćeni",
+          "comp": "Pokloni"
+        },
+        "recentActivations": {
+          "title": "Nedavne aktivacije",
+          "paidTag": "Plaćen",
+          "compTag": "Poklon"
+        },
+        "noData": "Nema podataka za izabrani period."
+      },
+      "prihod": {
+        "title": "Prihod",
+        "headline": "Ukupan prihod",
+        "chart": {
+          "title": "Prihod kroz vreme"
+        },
+        "byPackageType": "Po paketu",
+        "byMethod": "Po načinu plaćanja",
+        "recentPayments": "Poslednje uplate",
+        "noData": "Nema podataka za izabrani period.",
+        "paymentsCount_one": "{{count}} uplata",
+        "paymentsCount_few": "{{count}} uplate",
+        "paymentsCount_other": "{{count}} uplata"
+      },
+      "iskoriscenost": {
+        "title": "Iskorišćenost",
+        "headline": "Iskorišćenost kapaciteta",
+        "summary": "{{booked}} od {{capacity}} termina",
+        "trend": {
+          "title": "Trend"
+        },
+        "heatmap": {
+          "title": "Po danu i delu dana",
+          "morning": "Jutro",
+          "midday": "Podne",
+          "afternoon": "Popodne",
+          "evening": "Veče"
+        },
+        "bySala": "Po sali",
+        "byClassType": "Po tipu treninga",
+        "byTrainer": "Po treneru",
+        "noData": "Nema podataka za izabrani period.",
+        "dayShort": {
+          "sun": "Ned",
+          "mon": "Pon",
+          "tue": "Uto",
+          "wed": "Sre",
+          "thu": "Čet",
+          "fri": "Pet",
+          "sat": "Sub"
+        }
+      },
+      "rezervacije": {
+        "title": "Rezervacije",
+        "tiles": {
+          "total": "Ukupno rezervacija",
+          "showRate": "Stopa pohađanja",
+          "canceled": "Otkazivanja",
+          "canceledSub": "{{preCutoff}} redovnih · {{late}} kasnih",
+          "waitlist": "Lista čekanja"
+        },
+        "cancelBreakdown": {
+          "title": "Redovna vs. kasna otkazivanja",
+          "preCutoff": "Redovna",
+          "late": "Kasna",
+          "empty": "Nema otkazivanja u ovom periodu."
+        },
+        "chart": {
+          "title": "Rezervacije kroz vreme"
+        },
+        "topSessions": {
+          "title": "Najpopularnije sesije",
+          "bookedOfCapacity": "{{booked}}/{{capacity}} zauzeto"
+        },
+        "noData": "Nema podataka za izabrani period."
+      }
+    },
+    "katalog": {
+      "sections": {
+        "kreiraj": "Kreiraj",
+        "katalog": "Katalog"
+      },
+      "noviTermin": "Novi termin",
+      "noviTerminSub": "Jednokratno ili serija"
     }
   },
   "trainer": {

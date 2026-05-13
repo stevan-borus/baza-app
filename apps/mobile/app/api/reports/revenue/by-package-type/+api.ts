@@ -1,0 +1,65 @@
+/**
+ * Revenue grouped by PackageType for the Prihod sub-page breakdown list.
+ *
+ * Only CONFIRMED BillingRecords with `packageTypeId IS NOT NULL` contribute
+ * — anonymous (no package) and pending/canceled rows are dropped. Sorted by
+ * revenue descending so the highest-grossing package surfaces first.
+ *
+ * The aggregation runs in two queries: a Prisma `groupBy` for the totals and
+ * a single `findMany` to resolve PackageType names. Splitting avoids a join
+ * Prisma can't express through groupBy and keeps the index path (createdAt,
+ * status, packageTypeId) clean.
+ */
+import { UserRole } from "@/generated/prisma";
+import { requireRole } from "@/lib/server/auth-guards";
+import { fail, ok } from "@/lib/server/http";
+import { prisma } from "@/lib/server/prisma";
+import { parseDateInput } from "@/lib/server/reports";
+
+export async function GET(request: Request) {
+  const guard = await requireRole(request, [UserRole.ADMIN]);
+  if (!guard.ok) return guard.response;
+
+  const url = new URL(request.url);
+  const from = parseDateInput(url.searchParams.get("from"));
+  const to = parseDateInput(url.searchParams.get("to"));
+  // All-time pill omits both params — drop the createdAt filter entirely.
+  // A one-sided window is still treated as a client bug → 400.
+  if ((from && !to) || (!from && to) || (from && to && from >= to)) {
+    return fail("Invalid timeframe", 400);
+  }
+  const dateFilter = from && to ? { createdAt: { gte: from, lt: to } } : {};
+
+  const grouped = await prisma.billingRecord.groupBy({
+    by: ["packageTypeId"],
+    where: {
+      status: "CONFIRMED",
+      ...dateFilter,
+      packageTypeId: { not: null },
+    },
+    _sum: { amount: true },
+    _count: { id: true },
+  });
+
+  const ids = grouped
+    .map((g) => g.packageTypeId)
+    .filter((id): id is string => typeof id === "string");
+  const packageTypes = ids.length
+    ? await prisma.packageType.findMany({
+        where: { id: { in: ids } },
+        select: { id: true, name: true },
+      })
+    : [];
+  const nameById = new Map(packageTypes.map((p) => [p.id, p.name]));
+
+  const rows = grouped
+    .map((g) => ({
+      packageTypeId: g.packageTypeId as string,
+      packageTypeName: nameById.get(g.packageTypeId as string) ?? "—",
+      revenue: g._sum.amount ?? 0,
+      paymentCount: g._count.id,
+    }))
+    .sort((a, b) => b.revenue - a.revenue);
+
+  return ok({ success: true, rows });
+}

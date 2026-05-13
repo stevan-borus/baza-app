@@ -17,8 +17,26 @@ export async function GET(request: Request) {
   });
   if (!parsedQuery.success) return fail("Invalid query params", 400, parsedQuery.error);
 
+  const clientUserId = url.searchParams.get("clientUserId") ?? undefined;
+  const fromParam = url.searchParams.get("from");
+  const toParam = url.searchParams.get("to");
+  const from = fromParam ? new Date(fromParam) : undefined;
+  const to = toParam ? new Date(toParam) : undefined;
+
+  const where: Record<string, unknown> = {};
+  if (clientUserId) where.clientUserId = clientUserId;
+  const fromValid = from && !Number.isNaN(from.getTime());
+  const toValid = to && !Number.isNaN(to.getTime());
+  if (fromValid || toValid) {
+    const range: Record<string, Date> = {};
+    if (fromValid) range.gte = from!;
+    if (toValid) range.lt = to!;
+    where.createdAt = range;
+  }
+
   // Cursor-based pagination: skip 1 after cursor to avoid duplicate.
   const payments = await prisma.billingRecord.findMany({
+    where: Object.keys(where).length > 0 ? where : undefined,
     orderBy: { createdAt: "desc" },
     ...(parsedQuery.data.cursor
       ? { cursor: { id: parsedQuery.data.cursor }, skip: 1 }
@@ -26,9 +44,35 @@ export async function GET(request: Request) {
     take: parsedQuery.data.take,
   });
 
+  // Resolve `client.fullName` for the page in one round-trip. BillingRecord
+  // has no formal FK to User in the schema (clientUserId is just a string),
+  // so we batch-fetch users for the page and join in-memory rather than
+  // adding a migration for one read path. Admins need WHO paid on every
+  // row, not just package/method/amount.
+  const clientUserIds = Array.from(
+    new Set(payments.map((p) => p.clientUserId)),
+  );
+  const users =
+    clientUserIds.length > 0
+      ? await prisma.user.findMany({
+          where: { id: { in: clientUserIds } },
+          select: { id: true, fullName: true, email: true },
+        })
+      : [];
+  const userById = new Map(users.map((u) => [u.id, u] as const));
+  const records = payments.map((p) => {
+    const u = userById.get(p.clientUserId);
+    return {
+      ...p,
+      client: u
+        ? { fullName: u.fullName, email: u.email }
+        : null,
+    };
+  });
+
   return ok({
     success: true,
-    records: payments,
+    records,
     nextCursor:
       payments.length === parsedQuery.data.take
         ? payments[payments.length - 1]?.id ?? null
@@ -100,6 +144,7 @@ export async function POST(request: Request) {
         method: parsed.data.method,
         status,
         notes: parsed.data.notes,
+        packageTypeId: parsed.data.packageTypeId ?? null,
       },
     });
 
@@ -133,6 +178,16 @@ export async function POST(request: Request) {
           expiresAt: true,
           sessionsRemaining: true,
         },
+      });
+
+      // Wire the FK from the BillingRecord to the ClientPackage it activated.
+      // Same transaction → both rows are atomic AND linked. Pre-FK rows
+      // (status CONFIRMED, clientPackageId NULL) are handled by the one-time
+      // backfill in scripts/backfill/billing-client-package-link.ts and the
+      // legacy chronological-zip fallback in lib/server/billing-package-link.
+      await tx.billingRecord.update({
+        where: { id: payment.id },
+        data: { clientPackageId: clientPackage.id },
       });
     }
 

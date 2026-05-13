@@ -2,6 +2,7 @@ import { createClientPackageInputSchema } from "@baza/types";
 import { UserRole } from "@/generated/prisma";
 import { now } from "@/lib/now";
 import { requireRole } from "@/lib/server/auth-guards";
+import { linkPackagesToBilling } from "@/lib/server/billing-package-link";
 import { fail, ok } from "@/lib/server/http";
 import { findEligibleClientPackage } from "@/lib/server/package-eligibility";
 import { prisma } from "@/lib/server/prisma";
@@ -81,20 +82,60 @@ export async function GET(request: Request) {
   }
 
   // Admins may list all client packages across the studio when no clientProfileId
-  // is supplied (used by /(admin)/packages.tsx assignment list).
+  // is supplied (used by /(admin)/izvestaji/paketi/aktivne-dodele assignment list).
   if (!clientProfileId) {
     if (guard.user.role !== UserRole.ADMIN) {
       return fail("clientProfileId query param is required", 400);
     }
+    // Cursor-based pagination over a stable id ordering. We keep
+    // `startsAt: desc` for the primary visible sort and add `id: asc` as the
+    // tiebreaker so cursors stay deterministic across pages even when many
+    // rows share the same startsAt instant (seed data does this).
+    const search = url.searchParams.get("search")?.trim();
+    const rawTake = url.searchParams.get("take");
+    const parsedTake = rawTake ? parseInt(rawTake, 10) : 20;
+    const take = Number.isFinite(parsedTake)
+      ? Math.min(Math.max(parsedTake, 1), 100)
+      : 20;
+    const cursor = url.searchParams.get("cursor") ?? undefined;
+
     const packages = await prisma.clientPackage.findMany({
-      orderBy: { startsAt: "desc" },
+      where: search
+        ? {
+            clientProfile: {
+              user: {
+                OR: [
+                  { fullName: { contains: search, mode: "insensitive" } },
+                  { email: { contains: search, mode: "insensitive" } },
+                ],
+              },
+            },
+          }
+        : undefined,
+      orderBy: [{ startsAt: "desc" }, { id: "asc" }],
+      take: take + 1,
+      ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
       include: {
         packageType: {
           select: { name: true, sessionCount: true, validityDays: true },
         },
+        clientProfile: {
+          select: {
+            user: { select: { id: true, fullName: true, email: true } },
+          },
+        },
       },
     });
-    return ok({ success: true, packages });
+    const hasMore = packages.length > take;
+    const pagePackages = hasMore ? packages.slice(0, take) : packages;
+    const nextCursor = hasMore
+      ? pagePackages[pagePackages.length - 1]?.id ?? null
+      : null;
+    const shaped = pagePackages.map((p) => ({
+      ...p,
+      client: p.clientProfile.user,
+    }));
+    return ok({ success: true, packages: shaped, nextCursor });
   }
 
   // Trainers may only view packages for clients they are linked to.
@@ -103,17 +144,57 @@ export async function GET(request: Request) {
     if (!canAccessClient) return fail("Forbidden", 403);
   }
 
-  const packages = await prisma.clientPackage.findMany({
-    where: { clientProfileId },
-    orderBy: { startsAt: "desc" },
-    include: {
-      packageType: {
-        select: { name: true, sessionCount: true, validityDays: true },
+  // Resolve the underlying User id so we can correlate to BillingRecord
+  // (which keys by clientUserId, not clientProfileId).
+  const clientProfile = await prisma.clientProfile.findUnique({
+    where: { id: clientProfileId },
+    select: { userId: true },
+  });
+  if (!clientProfile) return fail("Client profile not found", 404);
+
+  const [packages, billingRecords] = await Promise.all([
+    prisma.clientPackage.findMany({
+      where: { clientProfileId },
+      orderBy: { startsAt: "desc" },
+      include: {
+        packageType: {
+          select: { name: true, sessionCount: true, validityDays: true },
+        },
       },
-    },
+    }),
+    prisma.billingRecord.findMany({
+      where: {
+        clientUserId: clientProfile.userId,
+        status: "CONFIRMED",
+      },
+      select: {
+        id: true,
+        amount: true,
+        method: true,
+        packageTypeId: true,
+        clientPackageId: true,
+        createdAt: true,
+      },
+      orderBy: { createdAt: "asc" },
+    }),
+  ]);
+
+  // Pair each ClientPackage with the BillingRecord that funded it. The
+  // primary semantics are the explicit FK on BillingRecord.clientPackageId;
+  // any leftover legacy rows (FK still NULL pending backfill) are matched
+  // by the chronological-zip fallback inside linkPackagesToBilling.
+  const linkMap = linkPackagesToBilling(packages, billingRecords);
+  const shaped = packages.map((p) => {
+    const match = linkMap.get(p.id) ?? null;
+    return {
+      ...p,
+      billingRecord: match
+        ? { amount: match.amount, method: match.method }
+        : null,
+    };
   });
 
-  return ok({ success: true, packages });
+  return ok({ success: true, packages: shaped });
 }
 
 export async function POST(request: Request) {

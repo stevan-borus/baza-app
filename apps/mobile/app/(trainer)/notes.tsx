@@ -4,7 +4,7 @@
  * Motion: MotiView stagger on title (0ms) → chips (80ms) → list (160ms).
  */
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useMutation, useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
@@ -202,7 +202,20 @@ export default function TrainerNotes() {
 
   const notesQuery = useInfiniteQuery(trainerNotesQueries.listInfinite());
   const sessionsQuery = useQuery(sessionsQueries.list());
-  const clientsQuery = useQuery(clientsQueries.list());
+  // Trainer notes uses clients in two Selects (filter + compose) — drain
+  // pages so the dropdowns show the full set. Trainer-scoped data is
+  // typically much smaller than the admin list, so this rarely takes more
+  // than one round-trip.
+  const clientsQuery = useInfiniteQuery(clientsQueries.list({ take: 100 }));
+  useEffect(() => {
+    if (clientsQuery.hasNextPage && !clientsQuery.isFetchingNextPage) {
+      clientsQuery.fetchNextPage();
+    }
+  }, [clientsQuery.hasNextPage, clientsQuery.isFetchingNextPage, clientsQuery]);
+  const allClients = useMemo(
+    () => clientsQuery.data?.pages.flatMap((p) => p.clients) ?? [],
+    [clientsQuery.data],
+  );
 
   const createMutation = useMutation({
     ...trainerNotesQueries.create(),
@@ -258,9 +271,7 @@ export default function TrainerNotes() {
     if (notesQuery.hasNextPage && !notesQuery.isFetchingNextPage) notesQuery.fetchNextPage();
   }
 
-  const selectedClient = clientsQuery.data?.clients.find(
-    (c) => c.id === selectedClientId,
-  );
+  const selectedClient = allClients.find((c) => c.id === selectedClientId);
   const clientChipLabel = selectedClient
     ? selectedClient.user.fullName
     : t("trainer.notes.filterByClient");
@@ -406,7 +417,7 @@ export default function TrainerNotes() {
               setShowClientPicker(false);
             }}
             emptyText={t("trainer.notes.emptyClients")}
-            options={(clientsQuery.data?.clients ?? []).map((c) => ({
+            options={allClients.map((c) => ({
               value: c.id,
               label: c.user.fullName,
             }))}
@@ -453,7 +464,7 @@ export default function TrainerNotes() {
             value={form.clientProfileId}
             onChange={(v) => setForm((f) => ({ ...f, clientProfileId: v }))}
             emptyText={t("trainer.notes.emptyClients")}
-            options={(clientsQuery.data?.clients ?? []).map((c) => ({
+            options={allClients.map((c) => ({
               value: c.id,
               label: c.user.fullName,
             }))}
