@@ -37,12 +37,7 @@ Three roles, one app:
 - **Notifications**: session reminders, package-expiry warnings, waitlist
   promotions. Email via Resend, push via Expo notifications.
 
-## Status
-
-In active development for the first studio (Novi Sad). Not yet open for
-other studios.
-
-## License & trademarks
+## License
 
 Source-available under the [Business Source License 1.1](./LICENSE).
 Production use is reserved until the Change Date (2030-05-13), after
@@ -51,11 +46,7 @@ build, and study the source; you may not use it to operate a pilates
 studio, fitness studio, or any other commercial service before the
 Change Date.
 
-"BAZA", "BAZA Pilates Studio", and the BAZA logo are trademarks of
-DANICA PIPER PR PILATES STUDIO BAZA NOVI SAD — see [TRADEMARKS.md](./TRADEMARKS.md).
-
-Licensing questions, partnership inquiries, or trademark permissions:
-**bazapilates@gmail.com**
+Licensing questions or partnership inquiries: **bazapilates@gmail.com**
 
 ## Tech
 
@@ -63,10 +54,3 @@ Expo (mobile + web + server API routes) on a Turborepo monorepo with pnpm
 workspaces. Mobile is React Native + Tamagui + Expo Router + TanStack Query;
 server is Expo API routes with Prisma + Postgres + Better Auth; emails via
 Resend; deployment via EAS Hosting and EAS Build.
-
-Setup, conventions, deployment, and operations live alongside the code:
-
-- [`CONTEXT.md`](./CONTEXT.md) — domain language and relationships
-- [`AGENTS.md`](./AGENTS.md) — contributor / tooling conventions
-- [`docs/`](./docs/) — API contract, calendar spec, reports spec,
-  cron-ops, deployment runbook, ADRs
