@@ -9,6 +9,17 @@ Expo (mobile + web + server API routes) for Baza Pilates, built with Turborepo.
 - `packages/types`: shared schemas/types (Zod Mini oriented)
 - Lint/format: Oxlint + Oxfmt
 
+## License
+
+Source-available under the [Business Source License 1.1](./LICENSE).
+Production use is reserved until the Change Date (2030-05-13), after which
+the code converts to Apache License 2.0. You may read, fork, build, and
+contribute to the source; you may not use it to operate a pilates studio
+or any other commercial service before the Change Date.
+
+"BAZA", "BAZA Pilates Studio", and the BAZA logo are trademarks of
+DANICA PIPER PR PILATES STUDIO BAZA NOVI SAD — see [TRADEMARKS.md](./TRADEMARKS.md).
+
 ## Theme
 
 Main colors ported from `Desktop/baza-landing`:
