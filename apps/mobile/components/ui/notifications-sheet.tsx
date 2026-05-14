@@ -1,4 +1,4 @@
-import { createContext, useContext, useMemo, useState } from "react";
+import { createContext, useContext, useState } from "react";
 import { Text, View } from "react-native";
 import { useTranslation } from "react-i18next";
 import { AppSheet } from "./sheet";
@@ -19,10 +19,10 @@ const NotificationsSheetContext = createContext<NotificationsSheetContextValue |
  */
 export function NotificationsSheetProvider({ children }: { children: React.ReactNode }) {
   const [isOpen, setIsOpen] = useState(false);
-  const value = useMemo<NotificationsSheetContextValue>(
-    () => ({ open: () => setIsOpen(true), close: () => setIsOpen(false) }),
-    [],
-  );
+  const value: NotificationsSheetContextValue = {
+    open: () => setIsOpen(true),
+    close: () => setIsOpen(false),
+  };
   return (
     <NotificationsSheetContext.Provider value={value}>
       {children}

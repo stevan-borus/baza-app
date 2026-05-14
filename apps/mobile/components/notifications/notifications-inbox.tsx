@@ -1,4 +1,3 @@
-import { useMemo } from "react";
 import { useMutation, useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { ActivityIndicator, Pressable, Text, View } from "react-native";
@@ -94,22 +93,19 @@ export function NotificationsInbox({ context, bottomPad = 0 }: Props) {
     }
   }
 
-  const groups = useMemo(() => groupByDay(allNotifications), [allNotifications]);
+  const groups = groupByDay(allNotifications);
 
   type ListItem =
     | { kind: "header"; groupKey: NotificationGroup; labelKey: string }
     | { kind: "row"; notification: Notification };
 
-  const listData = useMemo<ListItem[]>(() => {
-    const items: ListItem[] = [];
-    for (const group of groups) {
-      items.push({ kind: "header", groupKey: group.key, labelKey: group.labelKey });
-      for (const n of group.items) {
-        items.push({ kind: "row", notification: n });
-      }
+  const listData: ListItem[] = [];
+  for (const group of groups) {
+    listData.push({ kind: "header", groupKey: group.key, labelKey: group.labelKey });
+    for (const n of group.items) {
+      listData.push({ kind: "row", notification: n });
     }
-    return items;
-  }, [groups]);
+  }
 
   const ICON_COLOR_UNREAD = tokens.accent;
   const ICON_COLOR_READ = tokens.faint;
