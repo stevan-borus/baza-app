@@ -32,9 +32,7 @@ export default function ConsentScreen() {
   const pending = status.data?.pending ?? [];
   const hasMinorWaiver = pending.some((p) => p.key === "waiver_minor");
 
-  const [accepted, setAccepted] = useState<Record<ConsentDocumentKey, boolean>>(
-    {} as Record<ConsentDocumentKey, boolean>,
-  );
+  const [accepted, setAccepted] = useState<Partial<Record<ConsentDocumentKey, boolean>>>({});
   const [guardian, setGuardian] = useState<GuardianFields>({ name: "", relation: "parent" });
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -60,7 +58,7 @@ export default function ConsentScreen() {
       await queryClient.refetchQueries({ queryKey: ["consent", "status"] });
       router.replace("/");
     } catch (err) {
-      setSubmitError(t("consent.errorRequired"));
+      setSubmitError(t("consent.errorSubmit"));
       setSubmitting(false);
     }
   }
@@ -135,7 +133,8 @@ export default function ConsentScreen() {
             onPress={handleRefuse}
             testID="consent-refuse-button"
             accessibilityLabel={t("consent.signOut")}
-            className="items-center py-3"
+            disabled={refuseMutation.isPending}
+            className={`items-center py-3${refuseMutation.isPending ? " opacity-50" : ""}`}
           >
             <Text className="text-muted text-[13px] underline">{t("consent.signOut")}</Text>
           </Pressable>

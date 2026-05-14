@@ -68,7 +68,8 @@
     "documentWaiverAdult": "Izjavu vežbača",
     "documentWaiverMinor": "Izjavu vežbača (maloletno lice)",
     "errorRequired": "Morate prihvatiti sve dokumente da biste nastavili.",
-    "errorGuardianRequired": "Molimo da popunite podatke roditelja / staratelja."
+    "errorGuardianRequired": "Molimo da popunite podatke roditelja / staratelja.",
+    "errorSubmit": "Slanje nije uspelo — pokušajte ponovo."
   },
   "tabs": {
     "overview": "Pregled",

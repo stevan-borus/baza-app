@@ -68,7 +68,8 @@
     "documentWaiverAdult": "Participant Waiver",
     "documentWaiverMinor": "Participant Waiver (minor)",
     "errorRequired": "You must accept all documents to continue.",
-    "errorGuardianRequired": "Please complete the parent / guardian details."
+    "errorGuardianRequired": "Please complete the parent / guardian details.",
+    "errorSubmit": "Could not submit — please try again."
   },
   "tabs": {
     "overview": "Overview",
