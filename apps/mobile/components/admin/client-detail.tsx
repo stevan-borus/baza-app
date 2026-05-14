@@ -38,6 +38,7 @@ import { BookingRow } from "@/components/admin/booking-row";
 import { AssignPackageSheetContent } from "@/components/admin/assign-package-sheet-content";
 import { ReturnToPill } from "@/components/admin/return-to-pill";
 import { TreninziSubTab } from "@/components/admin/treninzi-sub-tab";
+import { ClientLegalPanel } from "@/components/admin/client-legal-panel";
 import { DateTimePicker } from "@/components/ui/date-time-picker";
 import { formatDateOfBirth, parseDateOfBirth, toIsoDate } from "@/lib/date-of-birth";
 import { now } from "@/lib/now";
@@ -282,6 +283,7 @@ export function ClientDetail({ id }: { id: string }) {
                 upcomingError={upcomingQuery.isError}
                 lang={lang}
                 bottomPad={bottomPad}
+                clientUserId={id}
                 onViewAllTreninzi={() => setActiveTab("treninzi")}
               />
             ) : null}
@@ -586,6 +588,7 @@ function PregledTab({
   upcomingError,
   lang,
   bottomPad,
+  clientUserId,
   onViewAllTreninzi,
 }: {
   activePackage: ClientPackage | null;
@@ -595,6 +598,7 @@ function PregledTab({
   upcomingError: boolean;
   lang: "sr" | "en";
   bottomPad: number;
+  clientUserId: string;
   onViewAllTreninzi: () => void;
 }) {
   const { t } = useTranslation();
@@ -684,6 +688,8 @@ function PregledTab({
           </Pressable>
         ) : null}
       </View>
+
+      <ClientLegalPanel clientUserId={clientUserId} lang={lang} />
     </ScrollView>
   );
 }

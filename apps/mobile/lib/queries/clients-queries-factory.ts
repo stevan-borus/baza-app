@@ -114,4 +114,26 @@ export const clientsQueries = {
         return response.json();
       },
     }),
+
+  consentRecords: (clientUserId: string) =>
+    queryOptions({
+      queryKey: ["clients", clientUserId, "consent-records"] as const,
+      queryFn: async () => {
+        const res = await apiFetch(
+          `${sharedEnv.EXPO_PUBLIC_API_URL}/api/admin/clients/${clientUserId}/consent-records`,
+          { credentials: "include" },
+        );
+        if (!res.ok) throw new Error(`Unable to load consent records (${res.status})`);
+        return res.json() as Promise<{
+          records: Array<{
+            id: string;
+            documentKey: string;
+            version: number;
+            acceptedAt: string;
+            guardianVerifiedAt: string | null;
+          }>;
+        }>;
+      },
+      staleTime: 30_000,
+    }),
 };
