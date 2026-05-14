@@ -74,7 +74,7 @@ Expected: branch `feat/birthday-gift`; last commit is `f5d85ae feat: cancellatio
 - [ ] **Step 2: Confirm Postgres is up and migrations applied**
 
 ```bash
-pnpm --filter mobile prisma migrate status
+pnpm --filter mobile db:status
 ```
 Expected: `Database schema is up to date!` — at least 10 migrations applied (PR 1's `add_client_date_of_birth` + PR 2's `add_booking_canceled_notification_types`).
 
@@ -152,7 +152,7 @@ enum NotificationType {
 ### Step 2: Run migration
 
 ```bash
-pnpm --filter mobile prisma migrate dev --name add_birthday_gift_support
+pnpm --filter mobile db:migrate -- --name add_birthday_gift_support
 ```
 
 Expected: creates migration directory, applies it, regenerates client.
