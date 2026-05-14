@@ -15,6 +15,7 @@ import { useTranslation } from "react-i18next";
 import { Text, View } from "react-native";
 import { MotiView } from "@/components/ui/styled";
 import { AuthBackground } from "@/components/auth/auth-background";
+import { AuthLanguageToggle } from "@/components/auth/auth-language-toggle";
 import { Input, PasswordInput } from "@/components/ui/input";
 import { LinkText } from "@/components/ui/typography";
 import { StudioButton } from "@/components/ui/studio";
@@ -163,9 +164,12 @@ export default function SignInScreen() {
         <Text className="font-sans text-faint text-[11px] text-center">
           v1.0.0
         </Text>
-        <Text className="font-sans text-faint text-[11px] text-center">
-          {t("auth.termsNotice")}
-        </Text>
+        <View className="flex-row items-center gap-3">
+          <Text className="font-sans text-faint text-[11px] text-center">
+            {t("auth.termsNotice")}
+          </Text>
+          <AuthLanguageToggle />
+        </View>
       </View>
     </AuthBackground>
   );

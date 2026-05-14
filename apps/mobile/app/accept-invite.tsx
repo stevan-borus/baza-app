@@ -11,6 +11,7 @@ import { Text, View } from "react-native";
 import { z } from "zod";
 import { MotiView } from "@/components/ui/styled";
 import { AuthBackground } from "@/components/auth/auth-background";
+import { AuthLanguageToggle } from "@/components/auth/auth-language-toggle";
 import { Input, PasswordInput } from "@/components/ui/input";
 import { LinkText } from "@/components/ui/typography";
 import { StudioButton } from "@/components/ui/studio";
@@ -237,12 +238,6 @@ export default function AcceptInviteScreen() {
             </MotiView>
           ) : null}
 
-          <View className="items-center">
-            <Text className="font-sans text-faint text-[11px] text-center">
-              {t("auth.termsNotice")}
-            </Text>
-          </View>
-
           <View className="mt-1">
             <StudioButton
               testID="invite-submit-button"
@@ -255,8 +250,14 @@ export default function AcceptInviteScreen() {
         </MotiView>
       </View>
 
-      <View className="items-center pb-1">
+      <View className="items-center gap-1 pb-1">
         <Text className="font-sans text-faint text-[11px]">v1.0.0</Text>
+        <View className="flex-row items-center gap-3">
+          <Text className="font-sans text-faint text-[11px] text-center">
+            {t("auth.termsNotice")}
+          </Text>
+          <AuthLanguageToggle />
+        </View>
       </View>
     </AuthBackground>
   );
