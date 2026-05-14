@@ -34,6 +34,14 @@ export async function maybeNotifyMinorPaperNeeded(sessionId: string): Promise<vo
   });
   if (!session) return;
 
+  // Fetch active admins once — before iterating bookings.
+  // If there are no admins to notify, skip the entire loop.
+  const admins = await prisma.user.findMany({
+    where: { role: "ADMIN", isActive: true },
+    select: { id: true },
+  });
+  if (admins.length === 0) return;
+
   const today = now();
 
   for (const booking of session.bookings) {
@@ -64,19 +72,14 @@ export async function maybeNotifyMinorPaperNeeded(sessionId: string): Promise<vo
     });
     if (waiver?.guardianVerifiedAt) continue;
 
-    // Notify every active admin.
-    const admins = await prisma.user.findMany({
-      where: { role: "ADMIN", isActive: true },
-      select: { id: true },
-    });
-
+    // Notify every active admin (list fetched once above).
     await Promise.all(
       admins.map((admin) =>
         createSystemNotification(
           admin.id,
           NOTIFICATION_MESSAGE_KEYS.MINOR_PAPER_NEEDED,
           NotificationType.MINOR_PAPER_NEEDED,
-          { sessionId, userName: cp.user!.fullName, clientUserId: cp.user!.id },
+          { sessionId, userName: cp.user.fullName, clientUserId: cp.user.id },
         ),
       ),
     );
