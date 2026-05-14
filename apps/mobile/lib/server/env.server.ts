@@ -19,6 +19,9 @@ const serverSchema = z.object({
   BETTER_AUTH_SECRET: z
     .string()
     .min(16, "BETTER_AUTH_SECRET must be at least 16 chars"),
+  BAZA_CONSENT_GATE_ENABLED: z
+    .preprocess((v) => v === "true", z.boolean())
+    .default(false),
 });
 
 const source = {
@@ -35,6 +38,9 @@ const source = {
   CRON_SESSION_CONSUMPTION_INTERVAL_MS: process.env.CRON_SESSION_CONSUMPTION_INTERVAL_MS,
   BASE_URL: process.env.BASE_URL,
   BETTER_AUTH_SECRET: process.env.BETTER_AUTH_SECRET,
+  BAZA_CONSENT_GATE_ENABLED: process.env.BAZA_CONSENT_GATE_ENABLED,
 };
 
 export const serverEnv = serverSchema.parse(source);
+
+export const consentGateEnabled = serverEnv.BAZA_CONSENT_GATE_ENABLED;
