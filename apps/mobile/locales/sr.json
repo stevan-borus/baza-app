@@ -287,6 +287,12 @@
     }
   },
   "admin": {
+    "notifications": {
+      "title": "Obaveštenja",
+      "bellLabel": "Otvori obaveštenja",
+      "empty": "Nema novih obaveštenja",
+      "error": "Greška pri učitavanju obaveštenja"
+    },
     "errors": {
       "scheduleConflict": {
         "trainerBusyShort": "Trener je već zauzet: {{detail}}",
@@ -800,6 +806,9 @@
     }
   },
   "notifications": {
+    "groupToday": "Danas",
+    "groupYesterday": "Juče",
+    "groupEarlier": "Ranije",
     "bookingConfirmed": {
       "title": "Rezervacija potvrđena",
       "body": "Vaša rezervacija termina je potvrđena."

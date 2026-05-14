@@ -51,6 +51,7 @@ import {
 import { clientsQueries } from "@/lib/queries/clients-queries-factory";
 import { ScreenContainerRaw, useTabBarBottomPadding } from "@/components/ui/screen-container";
 import { HeaderIconButton } from "@/components/ui/app-header";
+import { AdminTabLeftSlot } from "@/components/admin/admin-tab-left-slot";
 
 export default function AdminBilling() {
   const { t, i18n } = useTranslation();
@@ -179,6 +180,7 @@ export default function AdminBilling() {
   return (
     <ScreenContainerRaw
       title={t("tabs.billing")}
+      leftSlot={<AdminTabLeftSlot />}
       rightSlot={
         <HeaderIconButton
           icon="plus"

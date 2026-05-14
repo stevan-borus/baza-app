@@ -285,6 +285,12 @@
     }
   },
   "admin": {
+    "notifications": {
+      "title": "Notifications",
+      "bellLabel": "Open notifications",
+      "empty": "No new notifications",
+      "error": "Could not load notifications"
+    },
     "errors": {
       "scheduleConflict": {
         "trainerBusyShort": "Trainer already booked: {{detail}}",
@@ -793,6 +799,9 @@
     }
   },
   "notifications": {
+    "groupToday": "Today",
+    "groupYesterday": "Yesterday",
+    "groupEarlier": "Earlier",
     "bookingConfirmed": {
       "title": "Booking confirmed",
       "body": "Your session booking is confirmed."

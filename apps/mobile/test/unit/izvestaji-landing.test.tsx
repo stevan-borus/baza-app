@@ -204,6 +204,9 @@ vi.mock("@/lib/queries/reports-queries-factory", () => ({
   },
 }));
 vi.mock("expo-status-bar", () => ({ StatusBar: () => null }));
+vi.mock("@/components/admin/admin-tab-left-slot", () => ({
+  AdminTabLeftSlot: () => null,
+}));
 
 import IzvestajiLanding from "@/app/(admin)/izvestaji/index";
 

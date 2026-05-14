@@ -12,6 +12,7 @@ import { startOfLocaleWeek } from "@/components/ui/week-strip";
 import { MonthView } from "@/components/ui/month-view";
 import { EmptyState, ErrorState } from "@/components/ui/states";
 import { ScreenContainerRaw, useTabBarBottomPadding } from "@/components/ui/screen-container";
+import { AdminTabLeftSlot } from "@/components/admin/admin-tab-left-slot";
 import {
   SkeletonCard,
   SkeletonList,
@@ -140,7 +141,7 @@ export default function AdminSchedule() {
 
   if (isDashboardLoading) {
     return (
-      <ScreenContainerRaw title={t("tabs.dashboard")}>
+      <ScreenContainerRaw title={t("tabs.dashboard")} leftSlot={<AdminTabLeftSlot />}>
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 16, paddingBottom: bottomPad }}
@@ -163,7 +164,7 @@ export default function AdminSchedule() {
   }
 
   return (
-    <ScreenContainerRaw title={t("tabs.dashboard")}>
+    <ScreenContainerRaw title={t("tabs.dashboard")} leftSlot={<AdminTabLeftSlot />}>
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingTop: 16, paddingBottom: bottomPad }}

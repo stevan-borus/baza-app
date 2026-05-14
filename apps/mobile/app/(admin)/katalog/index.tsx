@@ -18,6 +18,7 @@ import {
   ScreenContainerRaw,
   useTabBarBottomPadding,
 } from "@/components/ui/screen-container";
+import { AdminTabLeftSlot } from "@/components/admin/admin-tab-left-slot";
 import { GlassCard } from "@/components/ui/glass-card";
 import { CapsLabel } from "@/components/ui/studio";
 import { useThemeTokens } from "@/components/ui/tokens";
@@ -31,7 +32,7 @@ export default function KatalogLanding() {
   const [showCreate, setShowCreate] = useState(false);
 
   return (
-    <ScreenContainerRaw title={t("tabs.catalog")}>
+    <ScreenContainerRaw title={t("tabs.catalog")} leftSlot={<AdminTabLeftSlot />}>
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingTop: 16, paddingBottom: bottomPad }}
