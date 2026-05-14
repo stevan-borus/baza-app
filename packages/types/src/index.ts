@@ -14,6 +14,29 @@ import { NotificationTypeSchema } from "./generated/prisma-zod/schemas/enums/Not
 export const roleSchema = UserRoleSchema;
 export type Role = z.infer<typeof roleSchema>;
 
+/**
+ * Civil-date YYYY-MM-DD string. Server casts to Postgres DATE; UI formats
+ * for display via `formatDateOfBirth`. Empty string is treated as absent
+ * by the API routes (translated to null before persisting).
+ */
+export const dateOfBirthSchema = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, "Expected YYYY-MM-DD")
+  .refine(
+    (s) => {
+      const [y, m, d] = s.split("-").map(Number);
+      const dt = new Date(Date.UTC(y, m - 1, d));
+      return (
+        dt.getUTCFullYear() === y &&
+        dt.getUTCMonth() === m - 1 &&
+        dt.getUTCDate() === d &&
+        y >= 1900 &&
+        y <= new Date().getUTCFullYear()
+      );
+    },
+    { message: "Not a valid calendar date" },
+  );
+
 export const inviteClientInputSchema = UserInviteResultSchema.pick({
   email: true,
   fullName: true,
@@ -21,8 +44,18 @@ export const inviteClientInputSchema = UserInviteResultSchema.pick({
 }).extend({
   fullName: z.string().min(2).max(100),
   phone: z.string().min(6).max(30).optional(),
+  dateOfBirth: dateOfBirthSchema.optional(),
 });
 export type InviteClientInput = z.infer<typeof inviteClientInputSchema>;
+
+export const updateClientInputSchema = z.object({
+  fullName: z.string().min(2).max(100).optional(),
+  phone: z.string().min(6).max(30).nullable().optional(),
+  notes: z.string().max(2000).nullable().optional(),
+  isActive: z.boolean().optional(),
+  dateOfBirth: dateOfBirthSchema.nullable().optional(),
+});
+export type UpdateClientInput = z.infer<typeof updateClientInputSchema>;
 
 export const completeInviteInputSchema = z.object({
   token: z.string().min(24),
@@ -163,6 +196,7 @@ export const clientByIdResponseSchema = z.object({
   client: z.object({
     id: z.string(),
     notes: z.nullable(z.string()),
+    dateOfBirth: z.nullable(z.string()),
     packageStatus: clientPackageStatusSchema,
     user: z.object({
       id: z.string(),

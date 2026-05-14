@@ -51,11 +51,13 @@ const USERS = {
     email: "client.active.reformer@e2e.test",
     fullName: "Active Reformer Client",
     role: UserRole.CLIENT,
+    dateOfBirth: "1990-05-11", // matches anchor day — birthday fixture for PR3
   },
   activeEnergy: {
     email: "client.active.energy@e2e.test",
     fullName: "Active Energy Client",
     role: UserRole.CLIENT,
+    dateOfBirth: "1985-08-22", // non-anchor-day birthday
   },
   expired: {
     email: "client.expired@e2e.test",
@@ -160,7 +162,10 @@ async function wipe() {
   await prisma.user.deleteMany({});
 }
 
-async function seedUser(input: { email: string; fullName: string; role: UserRole }, hash: string) {
+async function seedUser(
+  input: { email: string; fullName: string; role: UserRole; dateOfBirth?: string },
+  hash: string,
+) {
   const user = await prisma.user.create({
     data: {
       email: input.email,
@@ -181,7 +186,10 @@ async function seedUser(input: { email: string; fullName: string; role: UserRole
   let clientProfileId: string | null = null;
   if (input.role === UserRole.CLIENT) {
     const profile = await prisma.clientProfile.create({
-      data: { userId: user.id },
+      data: {
+        userId: user.id,
+        dateOfBirth: input.dateOfBirth ? new Date(input.dateOfBirth) : null,
+      },
     });
     clientProfileId = profile.id;
   }

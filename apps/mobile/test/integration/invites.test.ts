@@ -240,6 +240,59 @@ describe("invites API", () => {
     );
   });
 
+  it("POST /api/invites with dateOfBirth buffers it and hands it off on complete-invite", async () => {
+    await seedAdmin();
+    const inviteRes = await POST_INVITE(
+      inviteRequest({
+        email: "dob@test.local",
+        fullName: "DOB Client",
+        phone: "+381601234567",
+        dateOfBirth: "1990-05-14",
+      }),
+    );
+    expect(inviteRes.status).toBe(200);
+
+    const invite = await prisma.userInvite.findFirst({
+      where: { email: "dob@test.local" },
+      select: { id: true, dateOfBirth: true, tokenHash: true },
+    });
+    expect(invite).not.toBeNull();
+    expect(invite!.dateOfBirth?.toISOString().slice(0, 10)).toBe("1990-05-14");
+
+    // Issue a fresh raw token tied to the same hashed token in the DB.
+    // (sendInviteEmailMock recorded the original raw token in args.)
+    const sentArgs = sendInviteEmailMock.mock.calls[0][0];
+    const rawToken = sentArgs.inviteToken;
+
+    const completeRes = await POST_COMPLETE(
+      new Request("http://test.local/api/auth/complete-invite", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ token: rawToken, password: "secret12345" }),
+      }),
+    );
+    expect(completeRes.status).toBe(200);
+
+    const profile = await prisma.clientProfile.findFirst({
+      where: { user: { email: "dob@test.local" } },
+      select: { dateOfBirth: true },
+    });
+    expect(profile).not.toBeNull();
+    expect(profile!.dateOfBirth?.toISOString().slice(0, 10)).toBe("1990-05-14");
+  });
+
+  it("POST /api/invites rejects an invalid dateOfBirth", async () => {
+    await seedAdmin();
+    const res = await POST_INVITE(
+      inviteRequest({
+        email: "bad@test.local",
+        fullName: "Bad DOB",
+        dateOfBirth: "1990-02-30",
+      }),
+    );
+    expect(res.status).toBe(400);
+  });
+
   it("POST /api/invites/:id/revoke is rejected for already-revoked invites (only PENDING is revocable)", async () => {
     const admin = await seedAdmin();
     const invite = await prisma.userInvite.create({

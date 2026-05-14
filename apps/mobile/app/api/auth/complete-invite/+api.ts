@@ -53,6 +53,7 @@ export async function POST(request: Request) {
       await tx.clientProfile.create({
         data: {
           userId: created.id,
+          dateOfBirth: invite.dateOfBirth,
         },
       });
     }
