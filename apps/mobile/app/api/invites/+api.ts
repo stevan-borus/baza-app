@@ -45,7 +45,7 @@ export async function POST(request: Request) {
     return fail("Invalid payload", 400, parsed.error);
   }
 
-  const { email, fullName, phone } = parsed.data;
+  const { email, fullName, phone, dateOfBirth } = parsed.data;
   const normalizedEmail = email.toLowerCase().trim();
 
   const existingUser = await prisma.user.findUnique({
@@ -66,6 +66,7 @@ export async function POST(request: Request) {
       email: normalizedEmail,
       fullName,
       phone,
+      dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : null,
       role: UserRole.CLIENT,
       tokenHash,
       expiresAt,
