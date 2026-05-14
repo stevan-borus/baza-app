@@ -23,6 +23,9 @@ vi.mock("@/lib/server/notifications", () => ({
 import { POST } from "@/app/api/bookings/+api";
 import { prisma } from "@/lib/server/prisma";
 import { now, nowMs } from "@/lib/now";
+import { createSystemNotification } from "@/lib/server/notifications";
+
+const createSystemNotificationMock = vi.mocked(createSystemNotification);
 
 const HOUR_MS = 60 * 60 * 1000;
 const DAY_MS = 24 * HOUR_MS;
@@ -283,5 +286,154 @@ describe("POST /api/bookings cancel", () => {
       where: { sessionId: session.id },
     });
     expect(remainingWaitlist).toBe(0);
+  });
+
+  describe("cancellation fan-out", () => {
+    beforeEach(() => {
+      createSystemNotificationMock.mockClear();
+    });
+
+    it("late cancel produces skipPush=false for the trainer", async () => {
+      const baseline = await seedBaseline();
+      const session = await createFutureSession({
+        classTypeId: baseline.reformer.id,
+        trainerUserId: baseline.trainer.id,
+        startsAtMsFromNow: 2 * HOUR_MS, // <12h cutoff = late
+      });
+      await prisma.booking.create({
+        data: {
+          sessionId: session.id,
+          clientProfileId: baseline.clientProfile.id,
+          clientPackageId: baseline.clientPackage.id,
+        },
+      });
+      asClient({ id: baseline.client.id, profileId: baseline.clientProfile.id, email: baseline.client.email });
+
+      createSystemNotificationMock.mockClear();
+      const res = await POST(buildClientCancelRequest(session.id));
+      expect(res.status).toBe(200);
+
+      // Trainer should get a push (skipPush=false).
+      // Fan-out is fire-and-forget; wait for the trainer call to land.
+      await vi.waitFor(() => {
+        const found = createSystemNotificationMock.mock.calls.find(
+          (call) => call[0] === baseline.trainer.id && call[2] === "BOOKING_CANCELED_TRAINER",
+        );
+        expect(found).toBeDefined();
+      });
+      const trainerCall = createSystemNotificationMock.mock.calls.find(
+        (call) => call[0] === baseline.trainer.id && call[2] === "BOOKING_CANCELED_TRAINER",
+      );
+      expect(trainerCall).toBeDefined();
+      expect(trainerCall![4]).toMatchObject({ skipPush: false });
+    });
+
+    it("early cancel produces skipPush=true (silent) for the trainer", async () => {
+      const baseline = await seedBaseline();
+      const session = await createFutureSession({
+        classTypeId: baseline.reformer.id,
+        trainerUserId: baseline.trainer.id,
+        startsAtMsFromNow: 48 * HOUR_MS, // far before cutoff = early
+      });
+      await prisma.booking.create({
+        data: {
+          sessionId: session.id,
+          clientProfileId: baseline.clientProfile.id,
+          clientPackageId: baseline.clientPackage.id,
+        },
+      });
+      asClient({ id: baseline.client.id, profileId: baseline.clientProfile.id, email: baseline.client.email });
+
+      createSystemNotificationMock.mockClear();
+      const res = await POST(buildClientCancelRequest(session.id));
+      expect(res.status).toBe(200);
+
+      await vi.waitFor(() => {
+        const found = createSystemNotificationMock.mock.calls.find(
+          (call) => call[0] === baseline.trainer.id && call[2] === "BOOKING_CANCELED_TRAINER",
+        );
+        expect(found).toBeDefined();
+      });
+      const trainerCall = createSystemNotificationMock.mock.calls.find(
+        (call) => call[0] === baseline.trainer.id && call[2] === "BOOKING_CANCELED_TRAINER",
+      );
+      expect(trainerCall).toBeDefined();
+      expect(trainerCall![4]).toMatchObject({ skipPush: true });
+    });
+
+    it("every active admin receives BOOKING_CANCELED_ADMIN", async () => {
+      const baseline = await seedBaseline();
+      const admin1 = await prisma.user.create({
+        data: { email: "admin1@test.local", fullName: "Admin One", role: "ADMIN" },
+      });
+      const admin2 = await prisma.user.create({
+        data: { email: "admin2@test.local", fullName: "Admin Two", role: "ADMIN" },
+      });
+      const session = await createFutureSession({
+        classTypeId: baseline.reformer.id,
+        trainerUserId: baseline.trainer.id,
+        startsAtMsFromNow: 2 * HOUR_MS,
+      });
+      await prisma.booking.create({
+        data: {
+          sessionId: session.id,
+          clientProfileId: baseline.clientProfile.id,
+          clientPackageId: baseline.clientPackage.id,
+        },
+      });
+      asClient({ id: baseline.client.id, profileId: baseline.clientProfile.id, email: baseline.client.email });
+
+      createSystemNotificationMock.mockClear();
+      await POST(buildClientCancelRequest(session.id));
+
+      await vi.waitFor(() => {
+        const adminCalls = createSystemNotificationMock.mock.calls.filter(
+          (call) => call[2] === "BOOKING_CANCELED_ADMIN",
+        );
+        expect(adminCalls).toHaveLength(2);
+      });
+      const adminCalls = createSystemNotificationMock.mock.calls.filter(
+        (call) => call[2] === "BOOKING_CANCELED_ADMIN",
+      );
+      const notifiedAdminIds = adminCalls.map((call) => call[0]).sort();
+      expect(notifiedAdminIds).toEqual([admin1.id, admin2.id].sort());
+    });
+
+    it("trainer-also-admin receives only one notification (trainer variant)", async () => {
+      const baseline = await seedBaseline();
+      // Promote the trainer to ADMIN too (rare but possible).
+      await prisma.user.update({
+        where: { id: baseline.trainer.id },
+        data: { role: "ADMIN" },
+      });
+      const session = await createFutureSession({
+        classTypeId: baseline.reformer.id,
+        trainerUserId: baseline.trainer.id,
+        startsAtMsFromNow: 2 * HOUR_MS,
+      });
+      await prisma.booking.create({
+        data: {
+          sessionId: session.id,
+          clientProfileId: baseline.clientProfile.id,
+          clientPackageId: baseline.clientPackage.id,
+        },
+      });
+      asClient({ id: baseline.client.id, profileId: baseline.clientProfile.id, email: baseline.client.email });
+
+      createSystemNotificationMock.mockClear();
+      await POST(buildClientCancelRequest(session.id));
+
+      await vi.waitFor(() => {
+        const calls = createSystemNotificationMock.mock.calls.filter(
+          (call) => call[0] === baseline.trainer.id,
+        );
+        expect(calls).toHaveLength(1);
+      });
+      const callsForTrainerUser = createSystemNotificationMock.mock.calls.filter(
+        (call) => call[0] === baseline.trainer.id,
+      );
+      expect(callsForTrainerUser).toHaveLength(1);
+      expect(callsForTrainerUser[0][2]).toBe("BOOKING_CANCELED_TRAINER");
+    });
   });
 });

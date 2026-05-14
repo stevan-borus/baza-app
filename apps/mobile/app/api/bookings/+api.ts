@@ -6,6 +6,7 @@ import { shouldApplyLateCancelPenalty } from "@/lib/server/cancellation-policy";
 import { fail, ok } from "@/lib/server/http";
 import { createSystemNotification } from "@/lib/server/notifications";
 import { NOTIFICATION_MESSAGE_KEYS } from "@baza/i18n";
+import { notifyCancellation } from "@/lib/server/notify-cancellation";
 import { findEligibleClientPackage } from "@/lib/server/package-eligibility";
 import { prisma } from "@/lib/server/prisma";
 import { tryCatch } from "@/lib/server/try-catch";
@@ -31,6 +32,8 @@ export async function POST(request: Request) {
       capacity: true,
       status: true,
       classTypeId: true,
+      trainerUserId: true,
+      classType: { select: { name: true } },
     },
   });
   if (!session || session.status !== "SCHEDULED")
@@ -137,6 +140,9 @@ export async function POST(request: Request) {
           id: true,
           lateCancelHours: true,
         },
+      },
+      clientProfile: {
+        select: { user: { select: { fullName: true } } },
       },
     },
   });
@@ -277,6 +283,21 @@ export async function POST(request: Request) {
 
     return promotedClient.userId;
   });
+
+  if (activeBooking && !activeBooking.canceledAt) {
+    // Fan-out: notify admins + trainer.
+    // Fire-and-forget: do not block the response on email/push delivery.
+    const lateCancelHours = activeBooking.clientPackage?.lateCancelHours ?? 0;
+    void notifyCancellation({
+      sessionId,
+      trainerUserId: session.trainerUserId,
+      clientFullName: activeBooking.clientProfile.user.fullName,
+      classTypeName: session.classType.name,
+      sessionStartsAt: session.startsAt,
+      canceledAt: cancellationTime,
+      lateCancelHours,
+    });
+  }
 
   if (promoted) {
     // Notify promoted client that they now hold a confirmed booking.
