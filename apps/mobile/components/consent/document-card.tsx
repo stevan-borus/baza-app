@@ -4,6 +4,7 @@ import { Pressable, Switch, Text, View } from "react-native";
 import { useTranslation } from "react-i18next";
 import { AppSheet } from "@/components/ui/sheet";
 import { GlassCard } from "@/components/ui/glass-card";
+import { useThemeTokens } from "@/components/ui/tokens";
 import { LegalDocumentViewer } from "./legal-document-viewer";
 import { legalQueries } from "@/lib/queries/legal-queries-factory";
 import type { ConsentDocumentKey } from "@baza/types";
@@ -25,6 +26,7 @@ const DOC_LABEL_KEY: Record<ConsentDocumentKey, string> = {
 
 export function DocumentCard({ documentKey, locale, accepted, onAcceptedChange }: Props) {
   const { t } = useTranslation();
+  const tokens = useThemeTokens();
   const [open, setOpen] = useState(false);
   const docQuery = useQuery({ ...legalQueries.byKey(documentKey, locale), enabled: open });
 
@@ -39,6 +41,8 @@ export function DocumentCard({ documentKey, locale, accepted, onAcceptedChange }
               onPress={() => setOpen(true)}
               testID={`document-card-read-${documentKey}`}
               hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel={t("consent.readFullDocument") + " — " + label}
             >
               <Text className="text-[12px] text-muted underline mt-0.5">
                 {t("consent.readFullDocument")}
@@ -49,6 +53,8 @@ export function DocumentCard({ documentKey, locale, accepted, onAcceptedChange }
             testID={`document-card-accept-${documentKey}`}
             value={accepted}
             onValueChange={onAcceptedChange}
+            accessibilityLabel={t("consent.iAcceptDocument", { document: label })}
+            trackColor={{ false: tokens.glassStrong, true: tokens.accent }}
           />
         </View>
       </GlassCard>
