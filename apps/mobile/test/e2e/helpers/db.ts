@@ -812,6 +812,32 @@ export async function seedExtraTrainerLinkedClients(
   return profiles;
 }
 
+/**
+ * Create a NotificationLog row for a user identified by email.
+ * The row is unread (readAt = null) so callers can test the unread-dot
+ * without extra gymnastics.
+ */
+export async function createNotificationFor(
+  userEmail: string,
+  fields: { title: string; body: string; type?: "GENERAL" | "BOOKING_CONFIRMED" | "SESSION_UPDATED" | "TRAINER_NOTE" },
+) {
+  const user = await db().user.findUnique({
+    where: { email: userEmail.toLowerCase() },
+    select: { id: true },
+  });
+  if (!user) throw new Error(`No user with email ${userEmail}`);
+  return db().notificationLog.create({
+    data: {
+      userId: user.id,
+      type: fields.type ?? "GENERAL",
+      title: fields.title,
+      body: fields.body,
+      createdAt: now(),
+    },
+    select: { id: true, title: true },
+  });
+}
+
 export async function disconnect() {
   if (prismaClient) {
     await prismaClient.$disconnect();
