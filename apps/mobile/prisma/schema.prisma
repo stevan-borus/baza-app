@@ -49,11 +49,21 @@ enum NotificationType {
   GENERAL
   BOOKING_CANCELED_ADMIN
   BOOKING_CANCELED_TRAINER
+  CONSENT_REFUSED
+  MINOR_PAPER_NEEDED
 }
 
 enum AppLocale {
   sr
   en
+}
+
+enum ConsentDocumentKey {
+  tos
+  privacy
+  eula
+  waiver_adult
+  waiver_minor
 }
 
 model User {
@@ -78,6 +88,8 @@ model User {
   notificationPreference NotificationPreference?
   pushTokens   PushToken[]
   notifications NotificationLog[]
+  consentRecords          ConsentRecord[]
+  consentRecordsVerified  ConsentRecord[]  @relation("GuardianVerifier")
   trainerNotesAuthored TrainerNote[] @relation("TrainerNoteAuthor")
   trainerSessions       Session[]            @relation("SessionTrainer")
   trainerSchedules      RecurringSchedule[]  @relation("ScheduleTrainer")
@@ -405,4 +417,26 @@ model BillingRecord {
   updatedAt       DateTime       @updatedAt
 
   @@index([packageTypeId])
+}
+
+model ConsentRecord {
+  id                   String              @id @default(uuid())
+  userId               String
+  user                 User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  documentKey          ConsentDocumentKey
+  version              Int
+  locale               AppLocale
+  accepted             Boolean
+  acceptedAt           DateTime            @default(now())
+  ipAddress            String?
+  userAgent            String?
+  appVersion           String?
+  guardianName         String?
+  guardianRelation     String?
+  guardianVerifiedAt   DateTime?
+  guardianVerifiedById String?
+  guardianVerifiedBy   User?               @relation("GuardianVerifier", fields: [guardianVerifiedById], references: [id])
+
+  @@index([userId, documentKey, version])
+  @@index([userId, acceptedAt])
 }
