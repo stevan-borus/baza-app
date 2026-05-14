@@ -19,7 +19,7 @@ export default function LegalDocumentScreen() {
   const docKey = isValidKey ? (key as ConsentDocumentKey) : null;
 
   const docQuery = useQuery({
-    ...legalQueries.byKey(docKey as ConsentDocumentKey, lang),
+    ...legalQueries.byKey(docKey ?? "tos", lang),
     enabled: !!docKey,
   });
 
