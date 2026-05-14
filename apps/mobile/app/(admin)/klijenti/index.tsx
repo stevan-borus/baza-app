@@ -43,9 +43,11 @@ import { HeaderIconButton } from "@/components/ui/app-header";
 import { AssignPackageSheetContent } from "@/components/admin/assign-package-sheet-content";
 import { FilterChip } from "@/components/ui/studio";
 import { PaginatedList } from "@/components/ui/paginated-list";
+import { DateTimePicker } from "@/components/ui/date-time-picker";
 import { clientsQueries } from "@/lib/queries/clients-queries-factory";
 import { invitesQueries, type Invite } from "@/lib/queries/invites-queries-factory";
 import { packagesQueries } from "@/lib/queries/packages-queries-factory";
+import { now } from "@/lib/now";
 import type { ClientsResponse } from "@baza/types";
 
 type ClientListItem = ClientsResponse["clients"][number];
@@ -177,7 +179,12 @@ export default function AdminClients() {
   const [refreshing, setRefreshing] = useState(false);
 
   // ── Form state ────────────────────────────────────────────────────────────
-  const [inviteForm, setInviteForm] = useState({ email: "", fullName: "", phone: "" });
+  const [inviteForm, setInviteForm] = useState<{
+    email: string;
+    fullName: string;
+    phone: string;
+    dateOfBirth: Date | null;
+  }>({ email: "", fullName: "", phone: "", dateOfBirth: null });
   const [clientForm, setClientForm] = useState({ email: "", fullName: "", phone: "" });
   const [editForm, setEditForm] = useState({ fullName: "", phone: "", notes: "", isActive: true });
   const [pauseForm, setPauseForm] = useState({ startsAt: "", endsAt: "", reason: "" });
@@ -198,7 +205,7 @@ export default function AdminClients() {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["invites"] });
       setShowInviteForm(false);
-      setInviteForm({ email: "", fullName: "", phone: "" });
+      setInviteForm({ email: "", fullName: "", phone: "", dateOfBirth: null });
     },
   });
   const revokeMutation = useMutation({
@@ -797,16 +804,30 @@ export default function AdminClients() {
               value={inviteForm.phone}
               onChangeText={(v) => setInviteForm((s) => ({ ...s, phone: v }))}
             />
+            <DateTimePicker
+              testID="invite-create-dob-input"
+              mode="date"
+              value={inviteForm.dateOfBirth}
+              onChange={(d) => setInviteForm((s) => ({ ...s, dateOfBirth: d }))}
+              placeholder={t("admin.clients.placeholderDateOfBirth")}
+              maximumDate={now()}
+              minimumDate={new Date(Date.UTC(1900, 0, 1))}
+            />
             <Button
               testID="invite-create-submit-button"
               disabled={createInviteMutation.isPending || !inviteForm.email || !inviteForm.fullName}
-              onPress={() =>
+              onPress={() => {
+                const dob = inviteForm.dateOfBirth;
+                const dateOfBirth = dob
+                  ? `${dob.getFullYear()}-${String(dob.getMonth() + 1).padStart(2, "0")}-${String(dob.getDate()).padStart(2, "0")}`
+                  : undefined;
                 createInviteMutation.mutate({
                   email: inviteForm.email,
                   fullName: inviteForm.fullName,
                   phone: inviteForm.phone || undefined,
-                })
-              }
+                  dateOfBirth,
+                });
+              }}
             >
               {t("admin.clients.sendInvite")}
             </Button>

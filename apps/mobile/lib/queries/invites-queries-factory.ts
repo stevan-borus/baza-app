@@ -36,7 +36,7 @@ export const invitesQueries = {
   create: () =>
     mutationOptions({
       mutationKey: ["invites", "create"] as const,
-      mutationFn: async (payload: { email: string; fullName: string; phone?: string }) => {
+      mutationFn: async (payload: { email: string; fullName: string; phone?: string; dateOfBirth?: string }) => {
         const response = await apiFetch(`${sharedEnv.EXPO_PUBLIC_API_URL}/api/invites`, {
           method: "POST",
           credentials: "include",
