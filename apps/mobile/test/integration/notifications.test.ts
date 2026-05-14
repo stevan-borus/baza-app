@@ -228,6 +228,26 @@ describe("notifications API", () => {
     expect(reloaded?.readAt).toBeNull();
   });
 
+  it("GET as ADMIN returns only that admin's own notifications — not other users'", async () => {
+    const admin = await makeUser({ email: "admin-iso@test.local", role: "ADMIN" });
+    const other = await makeUser({ email: "other-iso@test.local", role: "CLIENT" });
+
+    await prisma.notificationLog.create({
+      data: { userId: admin.id, type: "GENERAL", title: "admin-notif", body: "b", payload: {} },
+    });
+    await prisma.notificationLog.create({
+      data: { userId: other.id, type: "GENERAL", title: "other-notif", body: "b", payload: {} },
+    });
+
+    authAs(admin);
+    const response = await GET(
+      new Request("http://test.local/api/notifications?take=10"),
+    );
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as { notifications: { title: string }[] };
+    expect(body.notifications.map((n) => n.title)).toEqual(["admin-notif"]);
+  });
+
   it("POST as admin records a new notification for an active target user", async () => {
     const admin = await makeUser({ email: "a@test.local", role: "ADMIN" });
     const target = await makeUser({ email: "t@test.local" });
