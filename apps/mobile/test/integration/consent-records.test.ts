@@ -20,7 +20,6 @@ import { prisma } from "@/lib/server/prisma";
 import { resetDb } from "./setup-db";
 
 describe("GET /api/admin/clients/:id/consent-records", () => {
-  let adminId: string;
   let clientUserId: string;
 
   beforeEach(async () => {
@@ -37,7 +36,6 @@ describe("GET /api/admin/clients/:id/consent-records", () => {
         clientProfile: { create: { dateOfBirth: new Date(1990, 0, 1) } },
       },
     });
-    adminId = admin.id;
     clientUserId = client.id;
 
     setMockUser({

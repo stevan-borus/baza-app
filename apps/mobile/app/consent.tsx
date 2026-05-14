@@ -74,7 +74,7 @@ export default function ConsentScreen() {
       }
       await queryClient.refetchQueries({ queryKey: ["consent", "status"] });
       router.replace("/");
-    } catch (err) {
+    } catch {
       setSubmitError(t("consent.errorSubmit"));
       setSubmitting(false);
     }
