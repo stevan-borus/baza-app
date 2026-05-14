@@ -4,10 +4,10 @@
 
 import { useMutation } from "@tanstack/react-query";
 import Feather from "@expo/vector-icons/Feather";
-import { useRouter, useLocalSearchParams } from "expo-router";
+import { Link, useRouter, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import { z } from "zod";
 import { MotiView } from "@/components/ui/styled";
 import { AuthBackground } from "@/components/auth/auth-background";
@@ -252,10 +252,40 @@ export default function AcceptInviteScreen() {
 
       <View className="items-center gap-1 pb-1">
         <Text className="font-sans text-faint text-[11px]">v1.0.0</Text>
-        <View className="flex-row items-center gap-3">
-          <Text className="font-sans text-faint text-[11px] text-center">
-            {t("auth.termsNotice")}
-          </Text>
+        <View className="flex-row items-center gap-3 flex-wrap justify-center">
+          <Link href="/legal/tos" asChild>
+            <Pressable
+              hitSlop={6}
+              accessibilityRole="link"
+              accessibilityLabel={t("consent.documentTos")}
+            >
+              <Text className="font-sans text-faint text-[11px] underline">
+                {t("consent.documentTos")}
+              </Text>
+            </Pressable>
+          </Link>
+          <Link href="/legal/privacy" asChild>
+            <Pressable
+              hitSlop={6}
+              accessibilityRole="link"
+              accessibilityLabel={t("consent.documentPrivacy")}
+            >
+              <Text className="font-sans text-faint text-[11px] underline">
+                {t("consent.documentPrivacy")}
+              </Text>
+            </Pressable>
+          </Link>
+          <Link href="/legal/eula" asChild>
+            <Pressable
+              hitSlop={6}
+              accessibilityRole="link"
+              accessibilityLabel={t("consent.documentEula")}
+            >
+              <Text className="font-sans text-faint text-[11px] underline">
+                {t("consent.documentEula")}
+              </Text>
+            </Pressable>
+          </Link>
           <AuthLanguageToggle />
         </View>
       </View>
