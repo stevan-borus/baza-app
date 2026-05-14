@@ -10,6 +10,7 @@
     "android": "expo run:android --port 8090",
     "ios": "expo run:ios --port 8090",
     "web": "expo start --web --port 8090",
+    "legal:bundle": "tsx scripts/generate-legal-bundle.ts",
     "lint": "oxlint .",
     "format": "oxfmt --write .",
     "check-types": "tsc --noEmit",
