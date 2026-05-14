@@ -37,12 +37,38 @@
     "joinButton": "Pridruži se Baza",
     "inviteInvalid": "Nevažeći link pozivnice",
     "inviteInvalidDesc": "Ovaj link pozivnice je nevažeći ili je istekao.",
-    "inviteError": "Registracija nije uspela. Pozivnica je možda istekla."
+    "inviteError": "Registracija nije uspela. Pozivnica je možda istekla.",
+    "languageToggle": "Promeni jezik"
   },
   "notFound": {
     "title": "Ups!",
     "message": "Ova stranica ne postoji.",
     "goHome": "Idi na početnu!"
+  },
+  "consent": {
+    "welcomeTitle": "Dobrodošli u Baza",
+    "welcomeSubtitle": "Pre nego što počnemo, treba da prihvatite naše dokumente.",
+    "updateTitle": "Ažurirali smo naše dokumente",
+    "updateSubtitle": "Molimo Vas da pregledate i prihvatite izmene.",
+    "readFullDocument": "Pročitaj ceo dokument",
+    "iAccept": "Prihvatam",
+    "iAcceptDocument": "Pročitao/la sam i prihvatam {{document}}",
+    "guardianBlockTitle": "Saglasnost roditelja / staratelja",
+    "guardianNameLabel": "Ime i prezime roditelja / staratelja",
+    "guardianRelationLabel": "Srodstvo",
+    "guardianRelationParent": "roditelj",
+    "guardianRelationLegal": "zakonski staratelj",
+    "guardianConfirm": "Potvrđujem da sam roditelj ili zakonski staratelj i prihvatam u ime maloletnika",
+    "guardianPaperNotice": "Tražićemo Vaš potpis na pisanoj izjavi prilikom prve posete maloletnika studiju.",
+    "continue": "Nastavi",
+    "signOut": "Odjavi se",
+    "documentTos": "Uslovi korišćenja",
+    "documentPrivacy": "Politika privatnosti",
+    "documentEula": "EULA",
+    "documentWaiverAdult": "Izjavu vežbača",
+    "documentWaiverMinor": "Izjavu vežbača (maloletno lice)",
+    "errorRequired": "Morate prihvatiti sve dokumente da biste nastavili.",
+    "errorGuardianRequired": "Molimo da popunite podatke roditelja / staratelja."
   },
   "tabs": {
     "overview": "Pregled",
@@ -286,6 +312,10 @@
       "noPackageForClass": "Nemate paket za ovaj tip treninga."
     }
   },
+  "legal": {
+    "viewerTitle": "Pravni dokument",
+    "loadError": "Nije moguće učitati dokument."
+  },
   "admin": {
     "notifications": {
       "title": "Obaveštenja",
@@ -325,6 +355,14 @@
       "classCount_one": "{{count}} termin",
       "classCount_few": "{{count}} termina",
       "classCount_other": "{{count}} termina"
+    },
+    "client": {
+      "legalPanel": "Pravna dokumenta",
+      "legalPanelEmpty": "Klijent još nije prihvatio dokumente.",
+      "legalAccepted": "Prihvaćeno {{date}}",
+      "legalGuardianVerified": "Potpis roditelja prikupljen",
+      "legalGuardianPending": "Potreban potpis roditelja",
+      "guardianVerifiedToggle": "Potpis roditelja prikupljen"
     },
     "clients": {
       "title": "Klijenti",
@@ -832,6 +870,16 @@
     "packageExpiring": {
       "title": "Paket uskoro ističe",
       "body": "Vaš paket uskoro ističe. Obnovite ga da biste nastavili sa zakazivanjem."
+    }
+  },
+  "notif": {
+    "consentRefused": {
+      "title": "Korisnik nije prihvatio dokumente",
+      "body": "{{userName}} je odbio/la pravne dokumente i odjavljen/a je."
+    },
+    "minorPaperNeeded": {
+      "title": "Potreban potpis roditelja",
+      "body": "{{userName}} je odradio/la prvu sesiju — potreban je potpis roditelja na pisanoj izjavi."
     }
   }
 }

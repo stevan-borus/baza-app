@@ -37,12 +37,38 @@
     "joinButton": "Join Baza",
     "inviteInvalid": "Invalid invite link",
     "inviteInvalidDesc": "This invite link is invalid or has expired.",
-    "inviteError": "Could not complete registration. The invite may have expired."
+    "inviteError": "Could not complete registration. The invite may have expired.",
+    "languageToggle": "Change language"
   },
   "notFound": {
     "title": "Oops!",
     "message": "This screen doesn't exist.",
     "goHome": "Go to home screen!"
+  },
+  "consent": {
+    "welcomeTitle": "Welcome to Baza",
+    "welcomeSubtitle": "Before we begin, please accept our documents.",
+    "updateTitle": "We've updated our documents",
+    "updateSubtitle": "Please review and accept the changes.",
+    "readFullDocument": "Read the full document",
+    "iAccept": "I accept",
+    "iAcceptDocument": "I have read and accept the {{document}}",
+    "guardianBlockTitle": "Parent / guardian consent",
+    "guardianNameLabel": "Parent / guardian full name",
+    "guardianRelationLabel": "Relationship",
+    "guardianRelationParent": "parent",
+    "guardianRelationLegal": "legal guardian",
+    "guardianConfirm": "I confirm that I am the parent or legal guardian and accept on behalf of the minor",
+    "guardianPaperNotice": "We'll ask for your signature on a written waiver at the minor's first visit.",
+    "continue": "Continue",
+    "signOut": "Sign out",
+    "documentTos": "Terms of Service",
+    "documentPrivacy": "Privacy Policy",
+    "documentEula": "EULA",
+    "documentWaiverAdult": "Participant Waiver",
+    "documentWaiverMinor": "Participant Waiver (minor)",
+    "errorRequired": "You must accept all documents to continue.",
+    "errorGuardianRequired": "Please complete the parent / guardian details."
   },
   "tabs": {
     "overview": "Overview",
@@ -284,6 +310,10 @@
       "noPackageForClass": "You don't have a package for this class type."
     }
   },
+  "legal": {
+    "viewerTitle": "Legal document",
+    "loadError": "Could not load the document."
+  },
   "admin": {
     "notifications": {
       "title": "Notifications",
@@ -322,6 +352,14 @@
       "comingSoon": "coming soon",
       "classCount_one": "{{count}} class",
       "classCount_other": "{{count}} classes"
+    },
+    "client": {
+      "legalPanel": "Legal documents",
+      "legalPanelEmpty": "Client has not accepted documents yet.",
+      "legalAccepted": "Accepted {{date}}",
+      "legalGuardianVerified": "Parent signature collected",
+      "legalGuardianPending": "Parent signature pending",
+      "guardianVerifiedToggle": "Parent signature collected"
     },
     "clients": {
       "title": "Clients",
@@ -825,6 +863,16 @@
     "packageExpiring": {
       "title": "Package expiring soon",
       "body": "Your package will expire soon. Please renew to keep booking sessions."
+    }
+  },
+  "notif": {
+    "consentRefused": {
+      "title": "User declined the documents",
+      "body": "{{userName}} declined the legal documents and was signed out."
+    },
+    "minorPaperNeeded": {
+      "title": "Parent signature needed",
+      "body": "{{userName}} attended their first session — a parent signature on the written waiver is needed."
     }
   }
 }
