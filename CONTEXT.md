@@ -15,7 +15,7 @@ A coach who runs Sessions. Sees only their own scheduled Sessions and only Clien
 _Avoid_: Coach, instructor.
 
 **Client**:
-A studio member. Buys ClientPackages and uses them to book Sessions.
+A studio member. Buys ClientPackages and uses them to book Sessions. Has an optional `dateOfBirth` (civil date — month + day are what we act on; year is stored for future age-aware features).
 _Avoid_: User, customer, member, account holder.
 
 **User**:
