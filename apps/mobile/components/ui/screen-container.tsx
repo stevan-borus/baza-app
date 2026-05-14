@@ -14,6 +14,9 @@ const TAB_BAR_INNER_HEIGHT = 56;
 
 type HeaderProps = {
   title?: string;
+  /** Override the left slot. When omitted, the default for the variant is used:
+   *  `tab` → UserAvatar, `detail` → BackButton. */
+  leftSlot?: React.ReactNode;
   rightSlot?: React.ReactNode;
   /**
    *   - `tab` (default): UserAvatar in left slot → opens ProfileSheet.
@@ -25,10 +28,10 @@ type HeaderProps = {
 
 type Props = PropsWithChildren & ViewProps & HeaderProps;
 
-function HeaderForVariant({ title, rightSlot, headerVariant = "tab" }: HeaderProps) {
+function HeaderForVariant({ title, leftSlot, rightSlot, headerVariant = "tab" }: HeaderProps) {
   if (headerVariant === "none" || !title) return null;
-  const leftSlot = headerVariant === "detail" ? <BackButton /> : <UserAvatar />;
-  return <AppHeader title={title} leftSlot={leftSlot} rightSlot={rightSlot} />;
+  const resolvedLeftSlot = leftSlot ?? (headerVariant === "detail" ? <BackButton /> : <UserAvatar />);
+  return <AppHeader title={title} leftSlot={resolvedLeftSlot} rightSlot={rightSlot} />;
 }
 
 /** Hook computing the bottom padding needed to clear the floating tab bar. */
@@ -52,6 +55,7 @@ export function ScreenContainer({
   className,
   style,
   title,
+  leftSlot,
   rightSlot,
   headerVariant,
   ...rest
@@ -59,7 +63,7 @@ export function ScreenContainer({
   const bottomPad = useTabBarBottomPadding();
   return (
     <View className="flex-1 bg-background">
-      <HeaderForVariant title={title} rightSlot={rightSlot} headerVariant={headerVariant} />
+      <HeaderForVariant title={title} leftSlot={leftSlot} rightSlot={rightSlot} headerVariant={headerVariant} />
       <View
         className={`flex-1 px-6 pt-6 gap-6 ${className ?? ""}`}
         style={[{ paddingBottom: bottomPad, ...webConstraint }, style]}
@@ -82,13 +86,14 @@ export function ScreenContainerRaw({
   className,
   style,
   title,
+  leftSlot,
   rightSlot,
   headerVariant,
   ...rest
 }: Props) {
   return (
     <View className="flex-1 bg-background">
-      <HeaderForVariant title={title} rightSlot={rightSlot} headerVariant={headerVariant} />
+      <HeaderForVariant title={title} leftSlot={leftSlot} rightSlot={rightSlot} headerVariant={headerVariant} />
       <View
         className={`flex-1 ${className ?? ""}`}
         style={[{ ...webConstraint }, style]}

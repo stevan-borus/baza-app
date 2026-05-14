@@ -40,6 +40,7 @@ import { SegmentedControl } from "@/components/ui/tabs";
 import { useThemeTokens } from "@/components/ui/tokens";
 import { ScreenContainerRaw, useTabBarBottomPadding } from "@/components/ui/screen-container";
 import { HeaderIconButton } from "@/components/ui/app-header";
+import { AdminTabLeftSlot } from "@/components/admin/admin-tab-left-slot";
 import { AssignPackageSheetContent } from "@/components/admin/assign-package-sheet-content";
 import { FilterChip } from "@/components/ui/studio";
 import { PaginatedList } from "@/components/ui/paginated-list";
@@ -293,6 +294,7 @@ export default function AdminClients() {
   return (
     <ScreenContainerRaw
       title={t("tabs.clients")}
+      leftSlot={<AdminTabLeftSlot />}
       rightSlot={
         <HeaderIconButton
           icon="plus"
