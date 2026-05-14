@@ -4,6 +4,7 @@ import { nowMs } from "@/lib/now";
 import { requireRole } from "@/lib/server/auth-guards";
 import { fail, ok } from "@/lib/server/http";
 import { createSystemNotification } from "@/lib/server/notifications";
+import { maybeNotifyMinorPaperNeeded } from "@/lib/server/minor-paper-needed";
 import { NOTIFICATION_MESSAGE_KEYS } from "@baza/i18n";
 import { prisma } from "@/lib/server/prisma";
 import { findScheduleConflict } from "@/lib/server/schedule-conflict";
@@ -237,6 +238,13 @@ export async function PATCH(request: Request, { id }: RouteParams) {
         }),
       ),
     );
+  }
+
+  // Fire MINOR_PAPER_NEEDED when a session transitions to COMPLETED for the
+  // first time. Guard lives inside the helper — it only notifies for minors
+  // whose first session this is and whose guardian has not yet signed.
+  if (existing.status !== "COMPLETED" && session.status === "COMPLETED") {
+    await maybeNotifyMinorPaperNeeded(session.id);
   }
 
   return ok({ success: true, session });
