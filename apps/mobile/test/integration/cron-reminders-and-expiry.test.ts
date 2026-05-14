@@ -194,7 +194,7 @@ describe("cron: reminders + package-expiry", () => {
         expect.anything(),
         "GENERAL",
         expect.objectContaining({ sessionsRemaining: 4 }),
-        expect.stringMatching(/^package-expiry:/),
+        expect.objectContaining({ dedupeKey: expect.stringMatching(/^package-expiry:/) }),
       );
     });
 

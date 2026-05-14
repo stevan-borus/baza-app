@@ -69,7 +69,9 @@ export async function POST(request: Request) {
           sessionId: session.id,
           startsAt: session.startsAt.toISOString(),
         },
-        `session-reminder:${session.id}:${booking.clientProfile.userId}:${session.startsAt.toISOString().slice(0, 10)}`,
+        {
+          dedupeKey: `session-reminder:${session.id}:${booking.clientProfile.userId}:${session.startsAt.toISOString().slice(0, 10)}`,
+        },
       );
       sent += 1;
     }

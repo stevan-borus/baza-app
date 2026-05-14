@@ -197,14 +197,14 @@ describe("notifications dispatch — real module + stubbed Expo HTTP", () => {
       "SESSION_REMINDER",
       "GENERAL",
       { sessionId: "s-1" },
-      "session-reminder:s-1:user:2026-07-15",
+      { dedupeKey: "session-reminder:s-1:user:2026-07-15" },
     );
     const second = await createSystemNotification(
       user.id,
       "SESSION_REMINDER",
       "GENERAL",
       { sessionId: "s-1" },
-      "session-reminder:s-1:user:2026-07-15",
+      { dedupeKey: "session-reminder:s-1:user:2026-07-15" },
     );
 
     expect(first.id).toBe(second.id);

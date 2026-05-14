@@ -32,7 +32,7 @@ export async function createSystemNotification(
   messageKey: NotificationMessageKey,
   type: NotificationType,
   payload: Record<string, unknown>,
-  dedupeKey?: string,
+  options?: { dedupeKey?: string; skipPush?: boolean },
 ) {
   const locale = await getPreferredLocale(userId);
   const { title, body } = getNotificationMessage(messageKey, locale);
@@ -43,7 +43,8 @@ export async function createSystemNotification(
     title,
     body,
     payload: { ...payload, messageKey: messageI18nKey },
-    dedupeKey,
+    dedupeKey: options?.dedupeKey,
+    skipPush: options?.skipPush,
   });
 }
 
@@ -56,6 +57,12 @@ type NotificationPayload = {
   body: string;
   payload?: Record<string, unknown>;
   dedupeKey?: string;
+  /**
+   * When true, persist the NotificationLog but skip the Expo push dispatch.
+   * Used for low-priority alerts (e.g., routine early cancellations) where
+   * we want in-app visibility without a phone buzz.
+   */
+  skipPush?: boolean;
 };
 
 /**
@@ -183,8 +190,8 @@ export async function createAndDispatchUserNotification(input: NotificationPaylo
     },
   });
 
-  if (!preference.pushEnabled) {
-    // Keep in-app history even when push is disabled.
+  if (!preference.pushEnabled || input.skipPush) {
+    // Keep in-app history when push is disabled OR explicitly silenced.
     return log;
   }
 
