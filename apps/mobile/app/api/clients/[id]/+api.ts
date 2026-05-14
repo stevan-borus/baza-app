@@ -1,4 +1,5 @@
 import type { ClientPackageStatus } from "@baza/types";
+import { updateClientInputSchema } from "@baza/types";
 import { UserRole } from "@/generated/prisma";
 import { now } from "@/lib/now";
 import { requireRole } from "@/lib/server/auth-guards";
@@ -23,6 +24,7 @@ export async function GET(request: Request, { id }: RouteParams) {
     select: {
       id: true,
       notes: true,
+      dateOfBirth: true,
       user: {
         select: {
           id: true,
@@ -85,6 +87,9 @@ export async function GET(request: Request, { id }: RouteParams) {
     client: {
       id: clientProfile.id,
       notes: clientProfile.notes,
+      dateOfBirth: clientProfile.dateOfBirth
+        ? clientProfile.dateOfBirth.toISOString().slice(0, 10)
+        : null,
       packageStatus,
       user: clientProfile.user,
     },
@@ -96,12 +101,10 @@ export async function PATCH(request: Request, { id }: RouteParams) {
   if (!guard.ok) return guard.response;
 
   const bodyResult = await tryCatch(request.json());
-  const body = (bodyResult.error ? {} : bodyResult.data) as {
-    fullName?: string;
-    phone?: string | null;
-    notes?: string | null;
-    isActive?: boolean;
-  };
+  const raw = bodyResult.error ? null : bodyResult.data;
+  const parsed = updateClientInputSchema.safeParse(raw);
+  if (!parsed.success) return fail("Invalid payload", 400, parsed.error);
+  const body = parsed.data;
 
   const existingClient = await prisma.clientProfile.findUnique({
     where: { userId: id },
@@ -119,14 +122,22 @@ export async function PATCH(request: Request, { id }: RouteParams) {
       return fail("Forbidden", 403);
     }
 
-    // Trainers restricted to notes only; fullName/phone/isActive are admin-only.
+    // Trainers restricted to notes only; fullName/phone/isActive/dateOfBirth are admin-only.
     if (
       body.fullName !== undefined ||
       body.phone !== undefined ||
-      body.isActive !== undefined
+      body.isActive !== undefined ||
+      body.dateOfBirth !== undefined
     ) {
       return fail("Trainers can only update client notes", 403);
     }
+  }
+
+  const clientProfileUpdate: { notes?: string | null; dateOfBirth?: Date | null } = {};
+  if (body.notes !== undefined) clientProfileUpdate.notes = body.notes;
+  if (body.dateOfBirth !== undefined) {
+    clientProfileUpdate.dateOfBirth =
+      body.dateOfBirth === null ? null : new Date(body.dateOfBirth);
   }
 
   const user = await prisma.user.update({
@@ -135,7 +146,9 @@ export async function PATCH(request: Request, { id }: RouteParams) {
       fullName: body.fullName,
       phone: body.phone,
       isActive: body.isActive,
-      clientProfile: body.notes !== undefined ? { update: { notes: body.notes } } : undefined,
+      clientProfile: Object.keys(clientProfileUpdate).length
+        ? { update: clientProfileUpdate }
+        : undefined,
     },
     select: {
       id: true,
@@ -143,7 +156,9 @@ export async function PATCH(request: Request, { id }: RouteParams) {
       email: true,
       phone: true,
       isActive: true,
-      clientProfile: { select: { id: true, notes: true } },
+      clientProfile: {
+        select: { id: true, notes: true, dateOfBirth: true },
+      },
     },
   });
 
