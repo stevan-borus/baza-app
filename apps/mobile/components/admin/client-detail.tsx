@@ -38,6 +38,9 @@ import { BookingRow } from "@/components/admin/booking-row";
 import { AssignPackageSheetContent } from "@/components/admin/assign-package-sheet-content";
 import { ReturnToPill } from "@/components/admin/return-to-pill";
 import { TreninziSubTab } from "@/components/admin/treninzi-sub-tab";
+import { DateTimePicker } from "@/components/ui/date-time-picker";
+import { formatDateOfBirth, parseDateOfBirth, toIsoDate } from "@/lib/date-of-birth";
+import { now } from "@/lib/now";
 import {
   ClientDetailTabBar,
   type ClientDetailTab,
@@ -95,7 +98,13 @@ export function ClientDetail({ id }: { id: string }) {
   const [showPause, setShowPause] = useState(false);
   const [showDelete, setShowDelete] = useState(false);
 
-  const [editForm, setEditForm] = useState({ fullName: "", phone: "", notes: "", isActive: true });
+  const [editForm, setEditForm] = useState<{
+    fullName: string;
+    phone: string;
+    notes: string;
+    isActive: boolean;
+    dateOfBirth: Date | null;
+  }>({ fullName: "", phone: "", notes: "", isActive: true, dateOfBirth: null });
   const [pauseForm, setPauseForm] = useState({ startsAt: "", endsAt: "", reason: "" });
 
   const clientQuery = useQuery(clientsQueries.byId(id));
@@ -151,6 +160,7 @@ export function ClientDetail({ id }: { id: string }) {
       phone: client.user.phone ?? "",
       notes: client.notes ?? "",
       isActive: client.user.isActive,
+      dateOfBirth: parseDateOfBirth(client.dateOfBirth ?? ""),
     });
     setShowActions(false);
     setShowEdit(true);
@@ -240,6 +250,19 @@ export function ClientDetail({ id }: { id: string }) {
                       >
                         {client.user.phone}
                       </Text>
+                    ) : null}
+                    {client.dateOfBirth ? (
+                      <View className="flex-row items-center gap-2">
+                        <Text className="text-foregroundMuted" style={{ fontSize: 13 }}>
+                          {t("admin.clients.labelDateOfBirth")}:
+                        </Text>
+                        <Text className="text-foreground" style={{ fontSize: 13 }}>
+                          {formatDateOfBirth(
+                            parseDateOfBirth(client.dateOfBirth),
+                            i18n.language === "sr" ? "sr" : "en",
+                          )}
+                        </Text>
+                      </View>
                     ) : null}
                   </View>
                   <PackageStatusPill status={client.packageStatus} />
@@ -365,6 +388,31 @@ export function ClientDetail({ id }: { id: string }) {
             value={editForm.phone}
             onChangeText={(v) => setEditForm((s) => ({ ...s, phone: v }))}
           />
+          <SectionLabel>{t("admin.clients.labelDateOfBirth")}</SectionLabel>
+          <View className="flex-row items-center gap-2">
+            <View className="flex-1">
+              <DateTimePicker
+                testID="edit-client-dob-input"
+                mode="date"
+                value={editForm.dateOfBirth}
+                onChange={(d) => setEditForm((s) => ({ ...s, dateOfBirth: d }))}
+                placeholder={t("admin.clients.placeholderDateOfBirth")}
+                maximumDate={now()}
+                minimumDate={new Date(Date.UTC(1900, 0, 1))}
+              />
+            </View>
+            {editForm.dateOfBirth ? (
+              <Pressable
+                testID="edit-client-dob-clear"
+                onPress={() => setEditForm((s) => ({ ...s, dateOfBirth: null }))}
+                accessibilityRole="button"
+                accessibilityLabel={t("admin.clients.dateOfBirthEmpty")}
+                style={{ padding: 8 }}
+              >
+                <Text className="text-foreground">×</Text>
+              </Pressable>
+            ) : null}
+          </View>
           <SectionLabel>{t("admin.clients.placeholderNotes")}</SectionLabel>
           <Input
             placeholder={t("admin.clients.placeholderNotes")}
@@ -392,6 +440,9 @@ export function ClientDetail({ id }: { id: string }) {
                 phone: editForm.phone || undefined,
                 notes: editForm.notes || undefined,
                 isActive: editForm.isActive,
+                dateOfBirth: editForm.dateOfBirth
+                  ? toIsoDate(editForm.dateOfBirth)
+                  : null,
               });
             }}
           >

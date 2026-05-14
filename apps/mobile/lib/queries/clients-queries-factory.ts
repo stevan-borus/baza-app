@@ -102,6 +102,7 @@ export const clientsQueries = {
         phone?: string;
         notes?: string;
         isActive?: boolean;
+        dateOfBirth?: string | null;
       }) => {
         const response = await apiFetch(`${sharedEnv.EXPO_PUBLIC_API_URL}/api/clients/${id}`, {
           method: "PATCH",

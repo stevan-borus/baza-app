@@ -196,6 +196,7 @@ export const clientByIdResponseSchema = z.object({
   client: z.object({
     id: z.string(),
     notes: z.nullable(z.string()),
+    dateOfBirth: z.nullable(z.string()),
     packageStatus: clientPackageStatusSchema,
     user: z.object({
       id: z.string(),
