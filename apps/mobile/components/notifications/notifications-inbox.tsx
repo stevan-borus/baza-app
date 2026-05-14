@@ -1,11 +1,10 @@
-import { useMemo, useState } from "react";
-import { useMutation, useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMemo } from "react";
+import { useMutation, useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { ActivityIndicator, Pressable, Switch, Text, View } from "react-native";
+import { ActivityIndicator, Pressable, Text, View } from "react-native";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { MotiView } from "@/components/ui/styled";
 import { LegendList } from "@legendapp/list";
-import { AppSheet } from "@/components/ui/sheet";
 import { GlassCard } from "@/components/ui/glass-card";
 import { useThemeTokens } from "@/components/ui/tokens";
 import { EmptyState, ErrorState } from "@/components/ui/states";
@@ -19,7 +18,6 @@ type NotificationsInboxContext = "client" | "admin";
 type Props = {
   context: NotificationsInboxContext;
   bottomPad?: number;
-  showPreferences?: boolean;
 };
 
 type NotificationGroup = "today" | "yesterday" | "earlier";
@@ -76,25 +74,18 @@ function iconForType(type: string): string {
   return TYPE_ICON[type] ?? "info-circle";
 }
 
-export function NotificationsInbox({ context, bottomPad = 0, showPreferences = false }: Props) {
+export function NotificationsInbox({ context, bottomPad = 0 }: Props) {
   const queryClient = useQueryClient();
   const { t, i18n } = useTranslation();
   const lang = i18n.language === "en" ? "en" : "sr";
   const tokens = useThemeTokens();
-  const [showPrefs, setShowPrefs] = useState(false);
 
   const notificationsQuery = useInfiniteQuery(notificationsQueries.listInfinite());
-  const prefsQuery = useQuery(notificationsQueries.preferences());
   const allNotifications = notificationsQuery.data?.pages.flatMap((p) => p.notifications) ?? [];
 
   const markReadMutation = useMutation({
     ...notificationsQueries.markAsRead(),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["notifications"] }),
-  });
-
-  const updatePrefsMutation = useMutation({
-    ...notificationsQueries.updatePreferences(),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["notifications", "preferences"] }),
   });
 
   function handleEndReached() {
@@ -104,7 +95,6 @@ export function NotificationsInbox({ context, bottomPad = 0, showPreferences = f
   }
 
   const groups = useMemo(() => groupByDay(allNotifications), [allNotifications]);
-  const prefs = prefsQuery.data?.preferences;
 
   type ListItem =
     | { kind: "header"; groupKey: NotificationGroup; labelKey: string }
@@ -128,14 +118,6 @@ export function NotificationsInbox({ context, bottomPad = 0, showPreferences = f
 
   return (
     <View style={{ flex: 1 }}>
-      {showPreferences ? (
-        <View className="px-6 pt-2 pb-1 items-end">
-          <Pressable onPress={() => setShowPrefs(true)} hitSlop={12}>
-            <FontAwesome name="cog" size={18} color={tokens.foreground} />
-          </Pressable>
-        </View>
-      ) : null}
-
       <MotiView
         from={{ opacity: 0, translateY: -8 }}
         animate={{ opacity: 1, translateY: 0 }}
@@ -214,48 +196,6 @@ export function NotificationsInbox({ context, bottomPad = 0, showPreferences = f
           />
         )}
       </MotiView>
-
-      {showPreferences ? (
-        <AppSheet open={showPrefs} onOpenChange={setShowPrefs}>
-          <View className="flex-col gap-5">
-            <Text className="text-foreground font-body-bold" style={{ fontSize: 24, letterSpacing: -0.3 }}>
-              {t("client.notifications.settingsTitle")}
-            </Text>
-            {prefs ? (
-              <View className="flex-col">
-                <View className="flex-row justify-between items-center py-3 border-b border-glass-border">
-                  <View className="flex-row items-center gap-3">
-                    <View style={{ width: 20, alignItems: "center" }}>
-                      <FontAwesome name="bell" size={16} color={tokens.accent} />
-                    </View>
-                    <Text className="text-[15px] text-foreground">{t("client.notifications.pushEnabled")}</Text>
-                  </View>
-                  <Switch
-                    value={prefs.pushEnabled}
-                    onValueChange={(v) => updatePrefsMutation.mutate({ pushEnabled: v })}
-                    trackColor={{ false: tokens.glassStrong, true: tokens.accent }}
-                  />
-                </View>
-                <View className="flex-row justify-between items-center py-3">
-                  <View className="flex-row items-center gap-3">
-                    <View style={{ width: 20, alignItems: "center" }}>
-                      <FontAwesome name="mobile" size={20} color={tokens.accent} />
-                    </View>
-                    <Text className="text-[15px] text-foreground">{t("client.notifications.inAppEnabled")}</Text>
-                  </View>
-                  <Switch
-                    value={prefs.inAppEnabled}
-                    onValueChange={(v) => updatePrefsMutation.mutate({ inAppEnabled: v })}
-                    trackColor={{ false: tokens.glassStrong, true: tokens.accent }}
-                  />
-                </View>
-              </View>
-            ) : (
-              <EmptyState title={t("client.notifications.loadingPrefs")} />
-            )}
-          </View>
-        </AppSheet>
-      ) : null}
     </View>
   );
 }

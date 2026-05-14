@@ -47,13 +47,6 @@ vi.mock("react-native", () => {
         { ...p, "data-testid": testID, "data-class": className },
         children,
       ),
-    Switch: ({ value, testID }: any) =>
-      require("react").createElement("input", {
-        type: "checkbox",
-        checked: value,
-        "data-testid": testID,
-        onChange: () => {},
-      }),
     ActivityIndicator: ({ testID, style, ...p }: any) =>
       require("react").createElement("span", {
         ...p,
@@ -107,18 +100,6 @@ vi.mock("@/components/ui/styled", () => ({
       { "data-role": "moti-view", style },
       children,
     ),
-}));
-
-// ─── AppSheet mock ────────────────────────────────────────────────────────
-vi.mock("@/components/ui/sheet", () => ({
-  AppSheet: ({ children, open }: any) =>
-    open
-      ? require("react").createElement(
-          "div",
-          { "data-testid": "app-sheet" },
-          children,
-        )
-      : null,
 }));
 
 // ─── GlassCard mock ───────────────────────────────────────────────────────
@@ -215,24 +196,9 @@ vi.mock("@/lib/queries/notifications-queries-factory", () => ({
       initialPageParam: null,
       getNextPageParam: () => undefined,
     }),
-    preferences: () => ({
-      queryKey: ["notifications", "preferences"],
-      queryFn: async () => ({
-        success: true,
-        preferences: {
-          pushEnabled: true,
-          inAppEnabled: true,
-          preferredLocale: "en",
-        },
-      }),
-    }),
     markAsRead: () => ({
       mutationKey: ["notifications", "mark-read"],
       mutationFn: async (_id: string) => ({ success: true }),
-    }),
-    updatePreferences: () => ({
-      mutationKey: ["notifications", "preferences", "update"],
-      mutationFn: async () => ({ success: true }),
     }),
   },
 }));
@@ -249,13 +215,9 @@ let queryState = {
   isFetchingNextPage: false,
   fetchNextPage: () => {},
 };
-let prefsState = {
-  data: undefined as any,
-};
 
 vi.mock("@tanstack/react-query", () => ({
   useInfiniteQuery: (_options: any) => queryState,
-  useQuery: (_options: any) => prefsState,
   useMutation: (options: any) => ({
     mutate: options.mutationFn,
     isPending: false,
@@ -297,11 +259,6 @@ beforeEach(() => {
     hasNextPage: false,
     isFetchingNextPage: false,
     fetchNextPage: () => {},
-  };
-  prefsState = {
-    data: {
-      preferences: { pushEnabled: true, inAppEnabled: true, preferredLocale: "en" },
-    },
   };
 });
 
