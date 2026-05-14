@@ -76,7 +76,7 @@ export async function POST(request: Request) {
         sessionsRemaining: pkg.sessionsRemaining,
         effectiveExpiresAt: effectiveExpiresAt.toISOString(),
       },
-      `package-expiry:${pkg.id}:${effectiveExpiresAt.toISOString().slice(0, 10)}`,
+      { dedupeKey: `package-expiry:${pkg.id}:${effectiveExpiresAt.toISOString().slice(0, 10)}` },
     );
     sent += 1;
   }

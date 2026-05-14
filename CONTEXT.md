@@ -86,6 +86,11 @@ Sends notifications about upcoming Sessions to booked Clients.
 **`cron:package-expiry`**:
 Sends notifications when a Client's ClientPackage is N days from `expiresAt`.
 
+### Notifications
+
+**Cancellation notification**:
+Every Booking cancellation generates a NotificationLog row for **all admins** and for **the Session's assigned Trainer**. Late cancellations (per `shouldApplyLateCancelPenalty`) trigger an Expo push; early cancellations are silent in-app (NotificationLog created, no push). If a Trainer is also an Admin, they receive only the Trainer-flavored notification. The waitlist auto-promotion notification to the promoted Client is unrelated and unchanged.
+
 ### Test fixtures
 
 **Rich seed**:

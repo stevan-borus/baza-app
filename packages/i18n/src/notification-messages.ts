@@ -7,7 +7,9 @@ export type NotificationMessageKey =
   | "GENERAL"
   | "SPOT_OPENED_FROM_WAITLIST"
   | "PACKAGE_EXPIRING_SOON"
-  | "SESSION_REMINDER";
+  | "SESSION_REMINDER"
+  | "BOOKING_CANCELED_ADMIN"
+  | "BOOKING_CANCELED_TRAINER";
 
 export const NOTIFICATION_MESSAGE_KEYS = {
   BOOKING_CONFIRMED: "BOOKING_CONFIRMED",
@@ -17,6 +19,8 @@ export const NOTIFICATION_MESSAGE_KEYS = {
   SPOT_OPENED_FROM_WAITLIST: "SPOT_OPENED_FROM_WAITLIST",
   PACKAGE_EXPIRING_SOON: "PACKAGE_EXPIRING_SOON",
   SESSION_REMINDER: "SESSION_REMINDER",
+  BOOKING_CANCELED_ADMIN: "BOOKING_CANCELED_ADMIN",
+  BOOKING_CANCELED_TRAINER: "BOOKING_CANCELED_TRAINER",
 } as const satisfies Record<NotificationMessageKey, NotificationMessageKey>;
 
 const messages: Record<
@@ -50,6 +54,26 @@ const messages: Record<
   SESSION_REMINDER: {
     sr: { title: "Podsetnik", body: "Imate zakazan termin uskoro." },
     en: { title: "Session reminder", body: "You have an upcoming session." },
+  },
+  BOOKING_CANCELED_ADMIN: {
+    sr: {
+      title: "Otkazana rezervacija",
+      body: "Klijent je otkazao termin.",
+    },
+    en: {
+      title: "Booking canceled",
+      body: "A client canceled their session.",
+    },
+  },
+  BOOKING_CANCELED_TRAINER: {
+    sr: {
+      title: "Otkazana rezervacija",
+      body: "Klijent je otkazao tvoj termin.",
+    },
+    en: {
+      title: "Booking canceled",
+      body: "A client canceled your session.",
+    },
   },
 };
 
