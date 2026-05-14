@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
@@ -11,6 +11,7 @@ import {
   useRefuseConsentMutation,
 } from "@/lib/queries/consent-queries-factory";
 import { signOutWithPushCleanup } from "@/lib/sign-out";
+import { useSessionAuth } from "@/lib/session-auth";
 import { AuthLanguageToggle } from "@/components/auth/auth-language-toggle";
 import { DocumentCard } from "@/components/consent/document-card";
 import { GuardianBlock, type GuardianFields } from "@/components/consent/guardian-block";
@@ -24,6 +25,7 @@ export default function ConsentScreen() {
   const lang = i18n.language === "en" ? "en" : "sr";
   const me = useQuery(authQueries.me());
   const status = useQuery(consentQueries.status());
+  const session = useSessionAuth();
 
   const acceptMutation = useAcceptConsentMutation();
   const refuseMutation = useRefuseConsentMutation();
@@ -36,10 +38,25 @@ export default function ConsentScreen() {
   const [guardian, setGuardian] = useState<GuardianFields>({ name: "", relation: "parent" });
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  // Set to true after refuse + signout to trigger a session-aware redirect.
+  const [refused, setRefused] = useState(false);
 
   const allAccepted = pending.every((p) => accepted[p.key]);
   const guardianOk = !hasMinorWaiver || guardian.name.trim().length > 0;
   const canSubmit = allAccepted && guardianOk && !submitting;
+
+  // Navigate to /sign-in once the session has cleared after refuse.
+  // Better-auth's session signal propagates asynchronously (via a 10 ms
+  // setTimeout internally), so we wait for useSession() to confirm null
+  // before navigating rather than calling router.replace() immediately after
+  // signOutWithPushCleanup(). Without this, Stack.Protected still sees
+  // isAuthenticated=true and routes to /(client), causing ConsentGateRedirect
+  // to loop back to /consent.
+  useEffect(() => {
+    if (refused && !session.isPending && !session.data?.session) {
+      router.replace("/sign-in");
+    }
+  }, [refused, session.isPending, session.data, router]);
 
   async function handleSubmit() {
     if (!canSubmit) return;
@@ -67,7 +84,11 @@ export default function ConsentScreen() {
     await refuseMutation.mutateAsync();
     await signOutWithPushCleanup();
     queryClient.clear();
-    router.replace("/sign-in");
+    // Flag that we have refused — the useEffect above will navigate to /sign-in
+    // once useSessionAuth() confirms the session has cleared. This avoids the
+    // race where Stack.Protected still sees isAuthenticated=true and routes to
+    // /(client), causing ConsentGateRedirect to loop back to /consent.
+    setRefused(true);
   }
 
   if (status.isLoading || !me.data) {

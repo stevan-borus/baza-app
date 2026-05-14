@@ -838,6 +838,24 @@ export async function createNotificationFor(
   });
 }
 
+/**
+ * Find the most recent CONSENT_REFUSED NotificationLog for a user, so the
+ * consent-gate spec can assert that refusing produces an admin notification
+ * without opening a second browser context.
+ */
+export async function findConsentRefusedNotificationFor(userEmail: string) {
+  const user = await db().user.findUnique({
+    where: { email: userEmail.toLowerCase() },
+    select: { id: true },
+  });
+  if (!user) return null;
+  return db().notificationLog.findFirst({
+    where: { userId: user.id, type: "CONSENT_REFUSED" },
+    orderBy: { createdAt: "desc" },
+    select: { id: true, title: true, body: true, type: true, createdAt: true },
+  });
+}
+
 export async function disconnect() {
   if (prismaClient) {
     await prismaClient.$disconnect();

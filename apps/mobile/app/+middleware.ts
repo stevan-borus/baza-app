@@ -4,6 +4,13 @@ import { consentGateEnabled } from "@/lib/server/env.server";
 import { getConsentStatus } from "@/lib/legal/consent-status";
 import { getRequestUser } from "@/lib/server/auth-guards";
 
+// Division of labour:
+//   • /api/[...path] — server enforces the gate here (defense in depth for
+//     direct API access from stale clients that bypassed the UI redirect).
+//   • /(client)/[...path] etc. — these patterns do NOT match real client-tab
+//     URLs because expo-router strips route-group names from the URL. The
+//     client-side ConsentGateRedirect component (mounted in each role-group
+//     _layout) closes that gap without depending on matcher semantics.
 export const unstable_settings = {
   matcher: {
     patterns: [

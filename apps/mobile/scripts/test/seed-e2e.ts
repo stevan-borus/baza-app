@@ -24,7 +24,7 @@
 // Side-effect import: populates env defaults before any module that reads env.
 import "./seed-e2e-env";
 
-import { UserRole } from "../../generated/prisma";
+import { UserRole, type ConsentDocumentKey } from "../../generated/prisma";
 import { now, nowMs } from "../../lib/now";
 import { hashPassword } from "../../lib/server/password";
 import { prisma } from "../../lib/server/prisma";
@@ -63,21 +63,31 @@ const USERS = {
     email: "client.expired@e2e.test",
     fullName: "Expired Pack Client",
     role: UserRole.CLIENT,
+    dateOfBirth: "1988-03-14", // adult; needed so consent gate doesn't crash
   },
   paused: {
     email: "client.paused@e2e.test",
     fullName: "Paused Pack Client",
     role: UserRole.CLIENT,
+    dateOfBirth: "1992-07-20", // adult
   },
   future: {
     email: "client.future@e2e.test",
     fullName: "Future Pack Client",
     role: UserRole.CLIENT,
+    dateOfBirth: "1995-11-03", // adult
   },
   empty: {
     email: "client.empty@e2e.test",
     fullName: "Empty Pack Client",
     role: UserRole.CLIENT,
+    dateOfBirth: "1991-01-30", // adult
+  },
+  unconsented: {
+    email: "client.unconsented@e2e.test",
+    fullName: "Unconsented Client",
+    role: UserRole.CLIENT,
+    dateOfBirth: "1995-06-15", // adult — dedicated gate-test subject
   },
 } as const;
 
@@ -137,6 +147,7 @@ const ROOMS = [
  * rich seed creates.
  */
 async function wipe() {
+  await prisma.consentRecord.deleteMany({});
   await prisma.sessionConsumption.deleteMany({});
   await prisma.trainerNote.deleteMany({});
   await prisma.waitlistEntry.deleteMany({});
@@ -480,6 +491,8 @@ export async function seedE2E() {
   });
 
   await seedBookings({ clients: clientProfiles });
+
+  await seedConsentRecords({ seeded });
 }
 
 /**
@@ -599,6 +612,78 @@ async function seedBookings(opts: {
   }
 
   void reformerSession;
+}
+
+/**
+ * Seeds ConsentRecord rows for every user that should NOT be blocked by the
+ * consent gate during the E2E run.
+ *
+ * The gate is enabled globally in playwright.config.ts (BAZA_CONSENT_GATE_ENABLED=true)
+ * so that the consent-gate spec can exercise the real redirect without any
+ * per-spec process.env toggling (which only affects the Playwright node
+ * process, not the dev-server process that has already cached the value).
+ *
+ * Users that receive pre-seeded consent rows:
+ *   - admin + both trainers  (tos / privacy / eula)
+ *   - all clients EXCEPT unconsented  (tos / privacy / eula + waiver_adult)
+ *
+ * unconsented (client.unconsented@e2e.test) is intentionally left without
+ * consent records so the consent-gate spec can exercise the first-time flow.
+ * activeReformer is now consented so client.spec.ts booking/calendar flows
+ * are not interrupted by the gate redirect.
+ */
+async function seedConsentRecords(opts: {
+  seeded: Map<keyof typeof USERS, { user: { id: string }; clientProfileId: string | null }>;
+}) {
+  const acceptedAt = now();
+
+  // Keys required by ADMIN + TRAINER roles
+  const staffKeys: ConsentDocumentKey[] = ["tos", "privacy", "eula"];
+  // Keys required by an adult CLIENT (same base keys + waiver_adult)
+  const clientKeys: ConsentDocumentKey[] = ["tos", "privacy", "eula", "waiver_adult"];
+
+  // Users who get pre-seeded consent (everyone except unconsented)
+  const staffUsers: (keyof typeof USERS)[] = ["admin", "trainerReformer", "trainerEnergy"];
+  const alreadyOnboardedClients: (keyof typeof USERS)[] = [
+    "activeReformer",
+    "activeEnergy",
+    "expired",
+    "paused",
+    "future",
+    "empty",
+  ];
+
+  for (const key of staffUsers) {
+    const { user } = opts.seeded.get(key)!;
+    for (const docKey of staffKeys) {
+      await prisma.consentRecord.create({
+        data: {
+          userId: user.id,
+          documentKey: docKey,
+          version: 1,
+          accepted: true,
+          acceptedAt,
+          locale: "sr",
+        },
+      });
+    }
+  }
+
+  for (const key of alreadyOnboardedClients) {
+    const { user } = opts.seeded.get(key)!;
+    for (const docKey of clientKeys) {
+      await prisma.consentRecord.create({
+        data: {
+          userId: user.id,
+          documentKey: docKey,
+          version: 1,
+          accepted: true,
+          acceptedAt,
+          locale: "sr",
+        },
+      });
+    }
+  }
 }
 
 async function main() {
