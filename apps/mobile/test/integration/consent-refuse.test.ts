@@ -17,16 +17,14 @@ vi.mock("@/lib/server/auth-guards", async () => {
 
 import { POST } from "@/app/api/consent/refuse+api";
 import { prisma } from "@/lib/server/prisma";
+import { resetDb } from "./setup-db";
 
 describe("POST /api/consent/refuse", () => {
   let adminId: string;
   let refusingUserId: string;
 
   beforeEach(async () => {
-    await prisma.notificationLog.deleteMany();
-    await prisma.booking.deleteMany();
-    await prisma.clientProfile.deleteMany();
-    await prisma.user.deleteMany();
+    await resetDb();
 
     const admin = await prisma.user.create({
       data: { email: "admin@t.local", fullName: "Admin Adminović", role: "ADMIN" },

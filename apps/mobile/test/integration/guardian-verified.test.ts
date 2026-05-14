@@ -17,16 +17,14 @@ vi.mock("@/lib/server/auth-guards", async () => {
 
 import { POST } from "@/app/api/admin/clients/[id]/guardian-verified+api";
 import { prisma } from "@/lib/server/prisma";
+import { resetDb } from "./setup-db";
 
 describe("POST /api/admin/clients/:id/guardian-verified", () => {
   let adminId: string;
   let minorClientUserId: string;
 
   beforeEach(async () => {
-    await prisma.consentRecord.deleteMany();
-    await prisma.booking.deleteMany();
-    await prisma.clientProfile.deleteMany();
-    await prisma.user.deleteMany();
+    await resetDb();
 
     const admin = await prisma.user.create({
       data: { email: "a@t.local", fullName: "Admin", role: "ADMIN" },

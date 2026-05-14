@@ -2,6 +2,7 @@ import { prisma } from "@/lib/server/prisma";
 
 export async function resetDb() {
   // Order matters — children first because of FK constraints.
+  await prisma.consentRecord.deleteMany({});
   await prisma.sessionConsumption.deleteMany({});
   await prisma.trainerNote.deleteMany({});
   await prisma.waitlistEntry.deleteMany({});

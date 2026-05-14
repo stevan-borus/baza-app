@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { prisma } from "@/lib/server/prisma";
 import { getConsentStatus } from "@/lib/legal/consent-status";
 import { now } from "@/lib/now";
+import { resetDb } from "./setup-db";
 
 describe("getConsentStatus", () => {
   let adminId: string;
@@ -9,11 +10,7 @@ describe("getConsentStatus", () => {
   let minorClientId: string;
 
   beforeEach(async () => {
-    // Clean up in dependency order
-    await prisma.consentRecord.deleteMany();
-    await prisma.booking.deleteMany();
-    await prisma.clientProfile.deleteMany();
-    await prisma.user.deleteMany();
+    await resetDb();
 
     const admin = await prisma.user.create({
       data: { email: "a@t.local", fullName: "Admin", role: "ADMIN" },
