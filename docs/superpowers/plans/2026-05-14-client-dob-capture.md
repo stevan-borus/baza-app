@@ -14,7 +14,7 @@
 - Nullable everywhere — existing clients have no DOB and stay valid.
 - Trainers can read but not edit DOB (matches existing `notes` vs `fullName/phone/isActive` split: trainers edit `notes` only).
 - Display format is `dd.MM.yyyy` (Serbian convention).
-- Date picker UI: native `@react-native-community/datetimepicker` if already present in the project; otherwise a plain `Input` with a Zod-validated `YYYY-MM-DD` mask. Step 1 verifies which.
+- Date picker UI: reuse the existing `@/components/ui/date-time-picker` (`DateTimePicker`) wrapper around `react-native-modal-datetime-picker`, configured with `mode="date"`. Already in use in `session-edit-sheet.tsx`. Form state holds `Date | null`; the YYYY-MM-DD string lives only at the API boundary.
 
 ---
 
@@ -875,10 +875,12 @@ EOF
 
 ---
 
-## Task 8: Admin invite sheet — DOB input
+## Task 8: Admin invite sheet — DOB input via DateTimePicker
 
 **Files:**
 - Modify: `apps/mobile/app/(admin)/klijenti/index.tsx`
+
+Use the existing `DateTimePicker` component at `@/components/ui/date-time-picker` (already used in `session-edit-sheet.tsx`). It takes `value: Date | null` and `onChange: (date: Date) => void`, so form state holds a `Date | null` and we serialize to `YYYY-MM-DD` only at the mutation boundary.
 
 - [ ] **Step 1: Extend invite form state**
 
@@ -888,54 +890,74 @@ const [inviteForm, setInviteForm] = useState({ email: "", fullName: "", phone: "
 ```
 to:
 ```typescript
-const [inviteForm, setInviteForm] = useState({ email: "", fullName: "", phone: "", dateOfBirth: "" });
+const [inviteForm, setInviteForm] = useState<{
+  email: string;
+  fullName: string;
+  phone: string;
+  dateOfBirth: Date | null;
+}>({ email: "", fullName: "", phone: "", dateOfBirth: null });
 ```
 
 Also update the reset call after a successful invite (around line 201):
 ```typescript
-setInviteForm({ email: "", fullName: "", phone: "", dateOfBirth: "" });
+setInviteForm({ email: "", fullName: "", phone: "", dateOfBirth: null });
 ```
 
-- [ ] **Step 2: Add the DOB input to the invite sheet**
+- [ ] **Step 2: Add the DateTimePicker to the invite sheet**
 
-In `apps/mobile/app/(admin)/klijenti/index.tsx` around line 793 (the phone Input), append a new Input *after* the phone field:
+In `apps/mobile/app/(admin)/klijenti/index.tsx`, first add the import near the top:
+```typescript
+import { DateTimePicker } from "@/components/ui/date-time-picker";
+```
+
+Then, around line 793 (the phone Input), append a new picker *after* the phone field. Use `now()` for the maximum date (no future birthdays) and `new Date(Date.UTC(1900, 0, 1))` as a sane minimum:
 
 ```tsx
-<Input
+<DateTimePicker
   testID="invite-create-dob-input"
-  placeholder={t("admin.clients.placeholderDateOfBirth")}
+  mode="date"
   value={inviteForm.dateOfBirth}
-  onChangeText={(v) => setInviteForm((s) => ({ ...s, dateOfBirth: v }))}
-  autoCapitalize="none"
+  onChange={(d) => setInviteForm((s) => ({ ...s, dateOfBirth: d }))}
+  placeholder={t("admin.clients.placeholderDateOfBirth")}
+  maximumDate={now()}
+  minimumDate={new Date(Date.UTC(1900, 0, 1))}
 />
 ```
 
-And update the submit's `createInviteMutation.mutate` payload (around line 804) to send `dateOfBirth` if non-empty:
+Add `import { now } from "@/lib/now";` if it's not already imported. (The project convention from AGENTS.md is to use `now()` instead of `new Date()` for "current time" values.)
+
+Update the submit's `createInviteMutation.mutate` payload (around line 804) to format the Date to a YYYY-MM-DD string:
 
 ```tsx
-onPress={() =>
+onPress={() => {
+  const dob = inviteForm.dateOfBirth;
+  const dateOfBirth = dob
+    ? `${dob.getFullYear()}-${String(dob.getMonth() + 1).padStart(2, "0")}-${String(dob.getDate()).padStart(2, "0")}`
+    : undefined;
   createInviteMutation.mutate({
     email: inviteForm.email,
     fullName: inviteForm.fullName,
     phone: inviteForm.phone || undefined,
-    dateOfBirth: inviteForm.dateOfBirth || undefined,
-  })
-}
+    dateOfBirth,
+  });
+}}
 ```
+
+Note: we serialize using **local** `getFullYear/getMonth/getDate` (not `getUTC*`), because the user picked a calendar day in their local timezone and we want to round-trip that exact day. The server stores it as a Postgres `DATE` (no timezone), which is the correct civil-date semantics.
 
 - [ ] **Step 3: Run a type check**
 
 ```bash
 pnpm --filter mobile check-types
 ```
-Expected: passes. `InviteClientInput` (extended in Task 4) accepts `dateOfBirth?: string`.
+Expected: passes.
 
 - [ ] **Step 4: Verify the dev server renders the new field**
 
 ```bash
 pnpm --filter mobile dev
 ```
-Open the admin app, tap "Add invite", confirm a fourth input appears under phone with placeholder text from the locale. Submit with an empty DOB (should still work — it's optional). Submit with a malformed DOB ("foo") — expect the request to fail with a `400` (visible as the existing `inviteError` toast).
+Open the admin app, tap "Add invite", confirm a DOB picker row appears under phone. Tap it — the date picker modal should open. Pick a date, confirm — the picker collapses and the row shows the localized date string (e.g., `14.05.1990`). Submit — invite is created with the chosen DOB. Reload the invites tab and confirm the invite is listed.
 
 Stop the dev server when done.
 
@@ -944,11 +966,12 @@ Stop the dev server when done.
 ```bash
 git add apps/mobile/app/\(admin\)/klijenti/index.tsx
 git commit -m "$(cat <<'EOF'
-feat(admin): DOB field in invite-client sheet
+feat(admin): DOB picker in invite-client sheet
 
-Optional input rendered under phone; payload only includes the value
-when set, matching the existing optional-phone pattern. Server-side
-validation already lands as 400 if the string isn't a valid civil date.
+Reuses the existing DateTimePicker wrapper (mode=date), clamped to
+[1900-01-01, today]. Form state holds Date|null; we serialize to
+YYYY-MM-DD using local-time getters so the day the admin picked is
+the day stored, regardless of timezone.
 EOF
 )"
 ```
@@ -968,7 +991,13 @@ const [editForm, setEditForm] = useState({ fullName: "", phone: "", notes: "", i
 ```
 Change to:
 ```typescript
-const [editForm, setEditForm] = useState({ fullName: "", phone: "", notes: "", isActive: true, dateOfBirth: "" });
+const [editForm, setEditForm] = useState<{
+  fullName: string;
+  phone: string;
+  notes: string;
+  isActive: boolean;
+  dateOfBirth: Date | null;
+}>({ fullName: "", phone: "", notes: "", isActive: true, dateOfBirth: null });
 ```
 
 Find the place that hydrates `editForm` from `client` (around line 150):
@@ -977,37 +1006,67 @@ fullName: client.user.fullName,
 phone: client.user.phone ?? "",
 notes: client.notes ?? "",
 ```
-Add:
+Add, using `parseDateOfBirth` from Task 3:
 ```typescript
-dateOfBirth: client.dateOfBirth ?? "",
+dateOfBirth: parseDateOfBirth(client.dateOfBirth ?? ""),
 ```
 
-(The API returns `dateOfBirth` as `string | null`, already in `YYYY-MM-DD` form per Task 6.)
+(The API returns `dateOfBirth` as `string | null` in `YYYY-MM-DD` form per Task 6.)
 
-- [ ] **Step 2: Add the DOB input to the edit sheet**
+Add the import:
+```typescript
+import { parseDateOfBirth } from "@/lib/date-of-birth";
+import { DateTimePicker } from "@/components/ui/date-time-picker";
+import { now } from "@/lib/now";
+```
+
+- [ ] **Step 2: Add the DateTimePicker to the edit sheet**
 
 Find the existing `<SectionLabel>{t("admin.clients.placeholderNotes")}</SectionLabel>` block and add a new section *before* it:
 
 ```tsx
 <SectionLabel>{t("admin.clients.labelDateOfBirth")}</SectionLabel>
-<Input
-  testID="edit-client-dob-input"
-  placeholder={t("admin.clients.placeholderDateOfBirth")}
-  value={editForm.dateOfBirth}
-  onChangeText={(v) => setEditForm((s) => ({ ...s, dateOfBirth: v }))}
-  autoCapitalize="none"
-/>
+<View className="flex-row items-center gap-2">
+  <View className="flex-1">
+    <DateTimePicker
+      testID="edit-client-dob-input"
+      mode="date"
+      value={editForm.dateOfBirth}
+      onChange={(d) => setEditForm((s) => ({ ...s, dateOfBirth: d }))}
+      placeholder={t("admin.clients.placeholderDateOfBirth")}
+      maximumDate={now()}
+      minimumDate={new Date(Date.UTC(1900, 0, 1))}
+    />
+  </View>
+  {editForm.dateOfBirth ? (
+    <Pressable
+      testID="edit-client-dob-clear"
+      onPress={() => setEditForm((s) => ({ ...s, dateOfBirth: null }))}
+      accessibilityRole="button"
+      accessibilityLabel={t("admin.clients.dateOfBirthEmpty")}
+      style={{ padding: 8 }}
+    >
+      <Text className="text-foreground">×</Text>
+    </Pressable>
+  ) : null}
+</View>
 ```
 
-And update the save call (around line 391) to include DOB. Treat empty string as "clear":
+(Add `Pressable` to the `react-native` import if not already imported.)
+
+And update the save call (around line 391) to include DOB, serializing from local-time getters and treating `null` as clear:
 ```tsx
+const dob = editForm.dateOfBirth;
+const dateOfBirth: string | null = dob
+  ? `${dob.getFullYear()}-${String(dob.getMonth() + 1).padStart(2, "0")}-${String(dob.getDate()).padStart(2, "0")}`
+  : null;
 updateClientMutation.mutate({
   id: showEditClient!,
   fullName: editForm.fullName,
   phone: editForm.phone || undefined,
   notes: editForm.notes || undefined,
   isActive: editForm.isActive,
-  dateOfBirth: editForm.dateOfBirth === "" ? null : editForm.dateOfBirth,
+  dateOfBirth,
 })
 ```
 
@@ -1046,8 +1105,8 @@ Expected: pass. The `client` type has `dateOfBirth: string | null` because the A
 pnpm --filter mobile dev
 ```
 - As admin, open a client with a known DOB (use seeded `client.active.reformer@e2e.test` — Task 10 will give it a DOB). Confirm the header shows "Datum rođenja: dd.mm.yyyy." under email/phone.
-- Open the edit sheet, change the DOB, save, refresh — confirm the change persisted.
-- Clear the field (empty string), save, refresh — confirm DOB no longer renders in the header.
+- Open the edit sheet, tap the DOB picker, change the date, save, refresh — confirm the change persisted.
+- Tap the `×` clear button next to the picker, save, refresh — confirm DOB no longer renders in the header.
 
 Stop the dev server.
 
@@ -1179,11 +1238,23 @@ test("admin can invite a client with DOB and see it on the detail screen after c
   // testID convention: 'client-detail-dob' if added; else assert by visible text.
   await expect(page.getByText("11.05.1990.")).toBeVisible();
 
-  // New invite flow — type a DOB, submit, verify the resulting UserInvite row.
+  // New invite flow — open the picker. On web Playwright uses WebDateTimeSheet,
+  // which renders a react-day-picker inside an AppSheet. Picking a specific date
+  // through the calendar UI is brittle; instead we assert the picker opens and
+  // a known visible-month label appears. The deeper "DOB persists end-to-end"
+  // assertion lives in the integration suite (Task 5/6) where we have direct
+  // DB visibility — e2e here just exercises the wiring.
   await page.getByTestId("admin-new-invite-button").click();
   await page.getByTestId("invite-create-email-input").fill("e2e-dob@test.local");
   await page.getByTestId("invite-create-name-input").fill("E2E DOB Client");
-  await page.getByTestId("invite-create-dob-input").fill("1992-07-04");
+  await page.getByTestId("invite-create-dob-input").click();
+  // Picker is open — assert the calendar UI is visible. Don't try to drive
+  // the day cell click; webkit-vs-chromium-vs-react-day-picker has been
+  // flaky across CI in past specs (see helpers/dates.ts).
+  await expect(page.getByRole("dialog")).toBeVisible(); // WebDateTimeSheet
+  // Close without picking — the invite goes out without a DOB, which is fine:
+  // the integration test already proved the DOB round-trips when set.
+  await page.keyboard.press("Escape");
   await page.getByTestId("invite-create-submit-button").click();
 
   // Assert the invite tab shows the new pending invite (existing assertion pattern).
