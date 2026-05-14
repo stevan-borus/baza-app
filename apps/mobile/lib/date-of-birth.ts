@@ -22,6 +22,19 @@ export function parseDateOfBirth(input: string): Date | null {
   return d;
 }
 
+/**
+ * Serialize a Date to a civil-date YYYY-MM-DD string using **local** time.
+ * Use this at the API boundary when the Date came from a user picking a
+ * calendar day (e.g. DateTimePicker): the day they picked in their local
+ * timezone is the day we send. Use formatDateOfBirth for display.
+ */
+export function toIsoDate(d: Date): string {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 export function formatDateOfBirth(
   d: Date | null,
   locale: "sr" | "en",

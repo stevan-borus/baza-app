@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatDateOfBirth, parseDateOfBirth } from "@/lib/date-of-birth";
+import { formatDateOfBirth, parseDateOfBirth, toIsoDate } from "@/lib/date-of-birth";
 
 describe("parseDateOfBirth", () => {
   it("parses a valid YYYY-MM-DD string into a UTC-midnight Date", () => {
@@ -30,6 +30,19 @@ describe("parseDateOfBirth", () => {
     const d = parseDateOfBirth("2000-02-29");
     expect(d).not.toBeNull();
     expect(d!.toISOString()).toBe("2000-02-29T00:00:00.000Z");
+  });
+});
+
+describe("toIsoDate", () => {
+  it("serializes a local-time Date to YYYY-MM-DD using local getters", () => {
+    // Construct via local constructor — this is what DateTimePicker emits.
+    const d = new Date(1990, 4, 14); // May 14, 1990, local midnight
+    expect(toIsoDate(d)).toBe("1990-05-14");
+  });
+
+  it("pads single-digit month and day with leading zeros", () => {
+    const d = new Date(2001, 0, 5); // Jan 5
+    expect(toIsoDate(d)).toBe("2001-01-05");
   });
 });
 

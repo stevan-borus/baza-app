@@ -44,6 +44,7 @@ import { AssignPackageSheetContent } from "@/components/admin/assign-package-she
 import { FilterChip } from "@/components/ui/studio";
 import { PaginatedList } from "@/components/ui/paginated-list";
 import { DateTimePicker } from "@/components/ui/date-time-picker";
+import { toIsoDate } from "@/lib/date-of-birth";
 import { clientsQueries } from "@/lib/queries/clients-queries-factory";
 import { invitesQueries, type Invite } from "@/lib/queries/invites-queries-factory";
 import { packagesQueries } from "@/lib/queries/packages-queries-factory";
@@ -816,18 +817,14 @@ export default function AdminClients() {
             <Button
               testID="invite-create-submit-button"
               disabled={createInviteMutation.isPending || !inviteForm.email || !inviteForm.fullName}
-              onPress={() => {
-                const dob = inviteForm.dateOfBirth;
-                const dateOfBirth = dob
-                  ? `${dob.getFullYear()}-${String(dob.getMonth() + 1).padStart(2, "0")}-${String(dob.getDate()).padStart(2, "0")}`
-                  : undefined;
+              onPress={() =>
                 createInviteMutation.mutate({
                   email: inviteForm.email,
                   fullName: inviteForm.fullName,
                   phone: inviteForm.phone || undefined,
-                  dateOfBirth,
-                });
-              }}
+                  dateOfBirth: inviteForm.dateOfBirth ? toIsoDate(inviteForm.dateOfBirth) : undefined,
+                })
+              }
             >
               {t("admin.clients.sendInvite")}
             </Button>
