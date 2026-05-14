@@ -253,7 +253,7 @@ export function ClientDetail({ id }: { id: string }) {
                     ) : null}
                     {client.dateOfBirth ? (
                       <View className="flex-row items-center gap-2">
-                        <Text className="text-foregroundMuted" style={{ fontSize: 13 }}>
+                        <Text className="text-muted" style={{ fontSize: 13 }}>
                           {t("admin.clients.labelDateOfBirth")}:
                         </Text>
                         <Text className="text-foreground" style={{ fontSize: 13 }}>
