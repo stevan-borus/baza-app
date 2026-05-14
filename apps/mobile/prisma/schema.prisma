@@ -85,6 +85,7 @@ model ClientProfile {
   id                  String   @id @default(uuid())
   userId              String   @unique
   notes               String?
+  dateOfBirth         DateTime? @db.Date
   activePackageStatus String?
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
@@ -110,6 +111,7 @@ model UserInvite {
   email          String
   fullName       String
   phone          String?
+  dateOfBirth    DateTime?   @db.Date
   role           UserRole    @default(CLIENT)
   tokenHash      String      @unique
   status         InviteStatus @default(PENDING)
