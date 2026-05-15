@@ -130,6 +130,8 @@ export const consentDocumentKeySchema = z.enum([
   "eula",
   "waiver_adult",
   "waiver_minor",
+  "social_media",
+  "health_intake",
 ]);
 export type ConsentDocumentKey = z.infer<typeof consentDocumentKeySchema>;
 
@@ -143,6 +145,8 @@ export const consentStatusResponseSchema = z.object({
   success: z.literal(true),
   pending: z.array(consentStatusPendingSchema),
   guardianVerificationNeeded: z.boolean(),
+  socialMediaDecided: z.boolean(),
+  socialMediaLatestAccepted: z.boolean().nullable(),
 });
 export type ConsentStatusResponse = z.infer<typeof consentStatusResponseSchema>;
 

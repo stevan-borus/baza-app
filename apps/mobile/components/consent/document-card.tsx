@@ -16,7 +16,10 @@ type Props = {
   onAcceptedChange: (next: boolean) => void;
 };
 
-const DOC_LABEL_KEY: Record<ConsentDocumentKey, string> = {
+// Only gate documents (tos/privacy/eula/waivers) are ever rendered through
+// this card — social_media and health_intake have their own dedicated UI
+// flows, so they intentionally have no label here.
+const DOC_LABEL_KEY: Partial<Record<ConsentDocumentKey, string>> = {
   tos: "consent.documentTos",
   privacy: "consent.documentPrivacy",
   eula: "consent.documentEula",
@@ -30,7 +33,8 @@ export function DocumentCard({ documentKey, locale, accepted, onAcceptedChange }
   const [open, setOpen] = useState(false);
   const docQuery = useQuery({ ...legalQueries.byKey(documentKey, locale), enabled: open });
 
-  const label = t(DOC_LABEL_KEY[documentKey]);
+  const labelKey = DOC_LABEL_KEY[documentKey];
+  const label = labelKey ? t(labelKey) : documentKey;
   return (
     <View className="px-6">
       <GlassCard size="md">
