@@ -132,6 +132,10 @@ export const clientsQueries = {
             acceptedAt: string;
             guardianVerifiedAt: string | null;
           }>;
+          socialMedia: {
+            accepted: boolean;
+            acceptedAt: string;
+          } | null;
         }>;
       },
       staleTime: 30_000,

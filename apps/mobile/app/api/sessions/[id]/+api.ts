@@ -48,6 +48,28 @@ export async function GET(request: Request, { id }: RouteParams) {
             select: {
               id: true,
               user: { select: { id: true, fullName: true, email: true } },
+              // Latest intake row reflects the trainer-visible current state.
+              healthIntakes: {
+                orderBy: { recordedAt: "desc" },
+                take: 1,
+                select: {
+                  isPregnant: true,
+                  isPostpartum: true,
+                  hasComplaints: true,
+                  complaintsDetails: true,
+                  hasInjuries: true,
+                  injuriesDetails: true,
+                  recordedAt: true,
+                },
+              },
+              // If a withdrawal row exists with `withdrawnAt` newer than
+              // the latest intake (or no intake remains), the client has
+              // revoked consent — trainer card should reflect that.
+              healthIntakeWithdrawals: {
+                orderBy: { withdrawnAt: "desc" },
+                take: 1,
+                select: { withdrawnAt: true },
+              },
             },
           },
         },
@@ -55,6 +77,27 @@ export async function GET(request: Request, { id }: RouteParams) {
     },
   });
   if (!session) return fail("Session not found", 404);
+
+  // Photo/video consent for each booked client — read in one batched query
+  // (single SQL) rather than per-booking. `findMany` over the union of
+  // booked user IDs, then group client-side.
+  const bookedUserIds = session.bookings.map(
+    (b) => b.clientProfile.user.id,
+  );
+  const socialMediaRows = bookedUserIds.length
+    ? await prisma.consentRecord.findMany({
+        where: {
+          userId: { in: bookedUserIds },
+          documentKey: "social_media",
+        },
+        orderBy: { acceptedAt: "desc" },
+        distinct: ["userId"],
+        select: { userId: true, accepted: true },
+      })
+    : [];
+  const socialMediaByUserId = new Map(
+    socialMediaRows.map((r) => [r.userId, r.accepted]),
+  );
 
   // ADR-0002: surface bookedCount + seriesBookedCount so the edit sheet can
   // gate the "visible to clients" toggle by both rules. For a singleton
@@ -76,15 +119,47 @@ export async function GET(request: Request, { id }: RouteParams) {
     ...session,
     bookedCount,
     seriesBookedCount,
-    bookings: session.bookings.map((b) => ({
-      id: b.id,
-      createdAt: b.createdAt,
-      client: {
-        id: b.clientProfile.user.id,
-        fullName: b.clientProfile.user.fullName,
-        email: b.clientProfile.user.email,
-      },
-    })),
+    bookings: session.bookings.map((b) => {
+      const latestIntake = b.clientProfile.healthIntakes[0] ?? null;
+      const latestWithdrawal =
+        b.clientProfile.healthIntakeWithdrawals[0] ?? null;
+      // "Withdrawn" is true when there's a withdrawal newer than the latest
+      // intake (or no intake at all). Old withdrawals before a fresh intake
+      // shouldn't show as withdrawn.
+      const intakeWithdrawn =
+        !!latestWithdrawal &&
+        (!latestIntake ||
+          latestWithdrawal.withdrawnAt > latestIntake.recordedAt);
+      const consentFlags = {
+        isPregnant: !intakeWithdrawn && (latestIntake?.isPregnant ?? false),
+        isPostpartum:
+          !intakeWithdrawn && (latestIntake?.isPostpartum ?? false),
+        hasComplaints:
+          !intakeWithdrawn && (latestIntake?.hasComplaints ?? false),
+        complaintsDetails: intakeWithdrawn
+          ? null
+          : (latestIntake?.complaintsDetails ?? null),
+        hasInjuries:
+          !intakeWithdrawn && (latestIntake?.hasInjuries ?? false),
+        injuriesDetails: intakeWithdrawn
+          ? null
+          : (latestIntake?.injuriesDetails ?? null),
+        intakeRecorded: !intakeWithdrawn && latestIntake !== null,
+        intakeWithdrawn,
+        socialMediaAccepted:
+          socialMediaByUserId.get(b.clientProfile.user.id) ?? null,
+      };
+      return {
+        id: b.id,
+        createdAt: b.createdAt,
+        client: {
+          id: b.clientProfile.user.id,
+          fullName: b.clientProfile.user.fullName,
+          email: b.clientProfile.user.email,
+        },
+        consentFlags,
+      };
+    }),
   };
 
   return ok({ success: true, session: shaped });

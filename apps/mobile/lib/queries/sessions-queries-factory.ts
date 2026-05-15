@@ -82,6 +82,17 @@ const sessionDetailSchema = z.object({
         fullName: z.string(),
         email: z.string(),
       }),
+      consentFlags: z.object({
+        isPregnant: z.boolean(),
+        isPostpartum: z.boolean(),
+        hasComplaints: z.boolean(),
+        complaintsDetails: z.string().nullable(),
+        hasInjuries: z.boolean(),
+        injuriesDetails: z.string().nullable(),
+        intakeRecorded: z.boolean(),
+        intakeWithdrawn: z.boolean(),
+        socialMediaAccepted: z.boolean().nullable(),
+      }),
     }),
   ),
 });

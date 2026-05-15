@@ -198,6 +198,7 @@ export function SessionDetail({
                           color={tokens.faint}
                         />
                       </View>
+                      <BookingConsentFlags flags={b.consentFlags} />
                     </GlassCard>
                   </Pressable>
                 ))
@@ -208,5 +209,118 @@ export function SessionDetail({
       </ScrollView>
       <SessionEditSheet {...editSheet.bind()} />
     </ScreenContainerRaw>
+  );
+}
+
+type ConsentFlags = {
+  isPregnant: boolean;
+  isPostpartum: boolean;
+  hasComplaints: boolean;
+  complaintsDetails: string | null;
+  hasInjuries: boolean;
+  injuriesDetails: string | null;
+  intakeRecorded: boolean;
+  intakeWithdrawn: boolean;
+  socialMediaAccepted: boolean | null;
+};
+
+/**
+ * Per-booking consent strip rendered below the client name on each session-
+ * detail booking row. Surfaces the four health flags (with free text for
+ * complaints/injuries), the photo/video consent state, and an explicit
+ * "withdrawn consent" banner when the client revoked their health intake.
+ *
+ * Stays inline (no nav, no tooltip) — the trainer is mid-session and needs
+ * to scan all of this at a glance.
+ */
+function BookingConsentFlags({ flags }: { flags: ConsentFlags }) {
+  const { t } = useTranslation();
+  if (flags.intakeWithdrawn) {
+    return (
+      <View className="mt-2 rounded-lg border border-glass-border bg-glass px-3 py-2">
+        <Text className="text-[12px] text-muted">
+          {t("admin.sessionDetail.healthWithdrawn")}
+        </Text>
+        <SocialMediaPill accepted={flags.socialMediaAccepted} />
+      </View>
+    );
+  }
+  const hasAnyFlag =
+    flags.isPregnant ||
+    flags.isPostpartum ||
+    flags.hasComplaints ||
+    flags.hasInjuries;
+  if (!flags.intakeRecorded && flags.socialMediaAccepted === null) {
+    return null;
+  }
+  return (
+    <View className="mt-2 gap-2">
+      {hasAnyFlag ? (
+        <View className="flex-row flex-wrap gap-2">
+          {flags.isPregnant ? (
+            <FlagBadge label={t("admin.sessionDetail.flagPregnant")} />
+          ) : null}
+          {flags.isPostpartum ? (
+            <FlagBadge label={t("admin.sessionDetail.flagPostpartum")} />
+          ) : null}
+          {flags.hasComplaints ? (
+            <FlagBadge label={t("admin.sessionDetail.flagComplaints")} />
+          ) : null}
+          {flags.hasInjuries ? (
+            <FlagBadge label={t("admin.sessionDetail.flagInjuries")} />
+          ) : null}
+        </View>
+      ) : null}
+      {flags.hasComplaints && flags.complaintsDetails ? (
+        <Text className="text-[12px] text-muted">
+          <Text className="font-body-semibold text-foreground">
+            {t("admin.sessionDetail.flagComplaints")}:{" "}
+          </Text>
+          {flags.complaintsDetails}
+        </Text>
+      ) : null}
+      {flags.hasInjuries && flags.injuriesDetails ? (
+        <Text className="text-[12px] text-muted">
+          <Text className="font-body-semibold text-foreground">
+            {t("admin.sessionDetail.flagInjuries")}:{" "}
+          </Text>
+          {flags.injuriesDetails}
+        </Text>
+      ) : null}
+      <SocialMediaPill accepted={flags.socialMediaAccepted} />
+    </View>
+  );
+}
+
+function FlagBadge({ label }: { label: string }) {
+  return (
+    <View className="rounded-full border border-warning/40 bg-warning-soft px-2 py-0.5">
+      <Text className="text-[11px] text-warning font-body-semibold">
+        {label}
+      </Text>
+    </View>
+  );
+}
+
+function SocialMediaPill({ accepted }: { accepted: boolean | null }) {
+  const { t } = useTranslation();
+  if (accepted === null) return null;
+  return (
+    <View className="flex-row items-center gap-1.5">
+      <Feather
+        name={accepted ? "camera" : "camera-off"}
+        size={12}
+        color={accepted ? "#16a34a" : "#dc2626"}
+      />
+      <Text
+        className={`text-[11px] font-body-semibold ${
+          accepted ? "text-success" : "text-danger"
+        }`}
+      >
+        {accepted
+          ? t("admin.sessionDetail.photoConsentYes")
+          : t("admin.sessionDetail.photoConsentNo")}
+      </Text>
+    </View>
   );
 }

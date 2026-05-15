@@ -119,6 +119,7 @@ export type MonthlyAvailabilityQuery = z.infer<
 export const sessionUserSchema = z.object({
   id: z.string(),
   email: z.string(),
+  fullName: z.string(),
   role: UserRoleSchema,
   isActive: z.boolean(),
   clientProfile: z.object({ id: z.string() }).nullable(),

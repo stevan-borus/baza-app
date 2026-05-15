@@ -19,6 +19,7 @@ export async function getRequestUser(request: Request) {
       id: true,
       role: true,
       email: true,
+      fullName: true,
       isActive: true,
       clientProfile: { select: { id: true } },
     },
