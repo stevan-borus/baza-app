@@ -88,6 +88,10 @@ test.describe("consent gate", () => {
     // the gate just requires a recorded decision.
     await page.getByTestId("social-media-yes").click();
 
+    // Skip the health intake — this test exercises doc submission, not intake.
+    // Skipping is local-only (no API call) and unblocks the submit gate.
+    await page.getByTestId("intake-skip").click();
+
     // Submit button should now be enabled.
     const submitBtn = page.getByTestId("consent-submit-button");
     await expect(submitBtn).toBeEnabled({ timeout: 5_000 });

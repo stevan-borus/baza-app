@@ -78,6 +78,30 @@
       "saveFailed": "Slanje izbora nije uspelo — pokušajte ponovo."
     }
   },
+  "intake": {
+    "title": "Vaš životni ritam",
+    "notice": "Ovi podaci se koriste isključivo da prilagodimo trening Vašem stanju. Davanje odgovora je dobrovoljno; ako odlučite da ih ne podelite, prihvatate da trening ne možemo posebno prilagoditi. Podatke možete obrisati u svakom trenutku iz svog profila.",
+    "consentCheckbox": "Saglasan/saglasna sam da Studio obrađuje ove zdravstvene podatke u svrhu prilagođavanja treninga.",
+    "save": "Sačuvaj",
+    "skip": "Preskoči — bez prilagođavanja",
+    "yes": "Da",
+    "no": "Ne",
+    "savedBanner": "Sačuvano — možete izmeniti iz profila.",
+    "skippedBanner": "Preskočeno — možete uneti kasnije iz profila.",
+    "saveFailed": "Slanje nije uspelo — pokušajte ponovo.",
+    "q": {
+      "physicallyActive": "Da li ste fizički aktivni?",
+      "firstPilates": "Da li vam je ovo prvi trening pilatesa?",
+      "complaints": "Da li imate neke tegobe?",
+      "complaintsDetailsLabel": "Opišite ukratko",
+      "complaintsDetailsPlaceholder": "npr. bolovi u leđima",
+      "injuries": "Da li imate neke povrede?",
+      "injuriesDetailsLabel": "Opišite ukratko",
+      "injuriesDetailsPlaceholder": "npr. povreda kolena",
+      "pregnant": "Da li ste trudni?",
+      "postpartum": "Da li ste u postporođajnom periodu?"
+    }
+  },
   "tabs": {
     "overview": "Pregled",
     "dashboard": "Pregled",

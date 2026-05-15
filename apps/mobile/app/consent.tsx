@@ -16,9 +16,11 @@ import { useSessionAuth } from "@/lib/session-auth";
 import { AuthLanguageToggle } from "@/components/auth/auth-language-toggle";
 import { DocumentCard } from "@/components/consent/document-card";
 import { GuardianBlock, type GuardianFields } from "@/components/consent/guardian-block";
+import { HealthIntakeForm } from "@/components/consent/health-intake-form";
 import { SocialMediaQuestion } from "@/components/consent/social-media-question";
 import { StudioButton } from "@/components/ui/studio";
-import type { ConsentDocumentKey } from "@baza/types";
+import { useRecordHealthIntakeMutation } from "@/lib/queries/health-intake-queries-factory";
+import type { ConsentDocumentKey, HealthIntakeInput } from "@baza/types";
 
 export default function ConsentScreen() {
   const { t, i18n } = useTranslation();
@@ -51,13 +53,18 @@ export default function ConsentScreen() {
   );
   const [socialError, setSocialError] = useState<string | null>(null);
   const socialMutation = useRecordSocialMediaMutation();
+  const [intakeStatus, setIntakeStatus] = useState<"pending" | "saved" | "skipped">("pending");
+  const [intakeError, setIntakeError] = useState<string | null>(null);
+  const recordIntakeMutation = useRecordHealthIntakeMutation();
   // Set to true after refuse + signout to trigger a session-aware redirect.
   const [refused, setRefused] = useState(false);
 
   const allAccepted = pending.every((p) => accepted[p.key]);
   const guardianOk = !hasMinorWaiver || guardian.name.trim().length > 0;
   const socialAnswered = !isClient || socialChoice !== null;
-  const canSubmit = allAccepted && guardianOk && socialAnswered && !submitting;
+  const intakeAnswered = !isClient || intakeStatus !== "pending";
+  const canSubmit =
+    allAccepted && guardianOk && socialAnswered && intakeAnswered && !submitting;
 
   // Navigate to /sign-in once the session has cleared after refuse.
   // Better-auth's session signal propagates asynchronously (via a 10 ms
@@ -101,6 +108,22 @@ export default function ConsentScreen() {
       await socialMutation.mutateAsync({ accepted: next === "yes" });
     } catch {
       setSocialError(t("consent.socialMedia.saveFailed"));
+    }
+  }
+
+  async function handleIntake(
+    s: { kind: "save"; input: HealthIntakeInput } | { kind: "skip" },
+  ) {
+    setIntakeError(null);
+    if (s.kind === "skip") {
+      setIntakeStatus("skipped");
+      return;
+    }
+    try {
+      await recordIntakeMutation.mutateAsync(s.input);
+      setIntakeStatus("saved");
+    } catch {
+      setIntakeError(t("intake.saveFailed"));
     }
   }
 
@@ -165,6 +188,18 @@ export default function ConsentScreen() {
             onChange={handleSocialChoice}
             disabled={socialMutation.isPending}
           />
+        ) : null}
+        {isClient ? (
+          <HealthIntakeForm
+            onSubmit={handleIntake}
+            isSubmitting={recordIntakeMutation.isPending}
+            bannerKind={intakeStatus === "pending" ? null : intakeStatus}
+          />
+        ) : null}
+        {intakeError ? (
+          <View className="px-6">
+            <Text className="text-danger text-[13px]">{intakeError}</Text>
+          </View>
         ) : null}
         {socialError ? (
           <View className="px-6">
