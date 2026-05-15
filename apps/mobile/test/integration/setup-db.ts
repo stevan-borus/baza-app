@@ -23,6 +23,8 @@ export async function resetDb() {
   await prisma.authAccount.deleteMany({});
   await prisma.authSession.deleteMany({});
   await prisma.authVerification.deleteMany({});
+  await prisma.clientHealthIntake.deleteMany({});
+  await prisma.healthIntakeWithdrawal.deleteMany({});
   await prisma.clientProfile.deleteMany({});
   await prisma.trainerProfile.deleteMany({});
   await prisma.user.deleteMany({});

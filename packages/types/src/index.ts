@@ -177,6 +177,45 @@ export const socialMediaConsentInputSchema = z.object({
 });
 export type SocialMediaConsentInput = z.infer<typeof socialMediaConsentInputSchema>;
 
+export const healthIntakeInputSchema = z
+  .object({
+    isPhysicallyActive: z.boolean(),
+    isFirstPilates: z.boolean(),
+    hasComplaints: z.boolean(),
+    complaintsDetails: z.string().min(1).max(2000).optional(),
+    hasInjuries: z.boolean(),
+    injuriesDetails: z.string().min(1).max(2000).optional(),
+    isPregnant: z.boolean(),
+    isPostpartum: z.boolean(),
+    guardianName: z.string().min(1).max(120).optional(),
+    guardianRelation: z.enum(["roditelj", "staratelj"]).optional(),
+  })
+  .refine((d) => !d.hasComplaints || (d.complaintsDetails?.trim().length ?? 0) > 0, {
+    message: "complaintsDetails required when hasComplaints is true",
+    path: ["complaintsDetails"],
+  })
+  .refine((d) => !d.hasInjuries || (d.injuriesDetails?.trim().length ?? 0) > 0, {
+    message: "injuriesDetails required when hasInjuries is true",
+    path: ["injuriesDetails"],
+  });
+export type HealthIntakeInput = z.infer<typeof healthIntakeInputSchema>;
+
+export const healthIntakeResponseSchema = z.object({
+  id: z.string(),
+  isPhysicallyActive: z.boolean(),
+  isFirstPilates: z.boolean(),
+  hasComplaints: z.boolean(),
+  complaintsDetails: z.string().nullable(),
+  hasInjuries: z.boolean(),
+  injuriesDetails: z.string().nullable(),
+  isPregnant: z.boolean(),
+  isPostpartum: z.boolean(),
+  recordedAt: z.string(), // ISO date string when JSON-serialized
+  guardianName: z.string().nullable(),
+  guardianRelation: z.string().nullable(),
+});
+export type HealthIntakeResponse = z.infer<typeof healthIntakeResponseSchema>;
+
 export const legalDocumentResponseSchema = z.object({
   success: z.literal(true),
   key: consentDocumentKeySchema,
