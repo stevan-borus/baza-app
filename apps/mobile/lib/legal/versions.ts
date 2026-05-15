@@ -18,11 +18,16 @@ export const ACTIVE_VERSIONS: Record<ConsentDocumentKey, number> = {
   health_intake: 1,
 };
 
-/** Gate documents — must be accepted by all users (or all clients, in the case of the waiver). */
+/** Gate documents — must be accepted by all users (or all clients, in the case of the waiver).
+ *
+ * EULA is intentionally not gated: an in-house pilates studio app distributed
+ * via App Store / Play Store is already covered by the platforms' standard
+ * end-user licenses. The `eula` enum value stays in `ConsentDocumentKey`
+ * so historic records aren't invalidated. */
 export const GATE_DOCUMENT_KEYS_FOR_ROLE = {
-  ADMIN: ["tos", "privacy", "eula"] as const,
-  TRAINER: ["tos", "privacy", "eula"] as const,
-  CLIENT: ["tos", "privacy", "eula"] as const, // waiver_adult/minor added by client logic based on DOB at accept time
+  ADMIN: ["tos", "privacy"] as const,
+  TRAINER: ["tos", "privacy"] as const,
+  CLIENT: ["tos", "privacy"] as const, // waiver_adult/minor added by client logic based on DOB at accept time
 } satisfies Record<"ADMIN" | "TRAINER" | "CLIENT", readonly ConsentDocumentKey[]>;
 
 /**

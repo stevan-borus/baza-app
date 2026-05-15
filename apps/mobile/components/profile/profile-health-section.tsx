@@ -5,28 +5,37 @@ import { useQuery } from "@tanstack/react-query";
 import { authQueries } from "@/lib/queries/auth-queries-factory";
 import {
   healthIntakeQueries,
+  useRecordHealthIntakeMutation,
   useWithdrawHealthIntakeMutation,
 } from "@/lib/queries/health-intake-queries-factory";
+import {
+  EMPTY_INTAKE,
+  HealthIntakeForm,
+  type HealthIntakeState,
+  intakeToInput,
+  isIntakeValid,
+} from "@/components/consent/health-intake-form";
+import { Button } from "@/components/ui/button";
 
 export function ProfileHealthSection() {
   const { t } = useTranslation();
   const meQuery = useQuery(authQueries.me());
-  // Only clients have health-intake records; admins/trainers would see
-  // an irrelevant "no data" message, so we early-return for them.
   const isClient = meQuery.data?.user.role === "CLIENT";
 
   const intakeQuery = useQuery({
     ...healthIntakeQueries.latest(),
     enabled: isClient,
   });
+  const recordMutation = useRecordHealthIntakeMutation();
   const withdrawMutation = useWithdrawHealthIntakeMutation();
 
-  // Two-tap confirm: first tap arms the button (label flips to
-  // "Tap again to confirm"), second tap within 3s fires the mutation.
-  // The timer effect below is state-driven — NOT initial-state derivation
-  // — so it is a legitimate use of useEffect.
+  // Two-tap confirm for withdrawal: arms on first tap, disarms after 3s,
+  // fires the mutation on second tap. The effect is state-driven, not
+  // setup — see feedback_no_useeffect_for_setup.
   const [armed, setArmed] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState<HealthIntakeState>(EMPTY_INTAKE);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -40,6 +49,18 @@ export function ProfileHealthSection() {
   if (!isClient) return null;
   if (intakeQuery.isLoading) return null;
   const intake = intakeQuery.data;
+
+  async function handleSave() {
+    if (!isIntakeValid(draft, false)) return;
+    setError(null);
+    try {
+      await recordMutation.mutateAsync(intakeToInput(draft));
+      setEditing(false);
+      setDraft(EMPTY_INTAKE);
+    } catch {
+      setError(t("intake.saveFailed"));
+    }
+  }
 
   async function handleWithdraw() {
     if (!armed) {
@@ -56,15 +77,81 @@ export function ProfileHealthSection() {
     }
   }
 
+  function startEditing() {
+    setDraft(
+      intake
+        ? {
+            isPhysicallyActive: intake.isPhysicallyActive,
+            isFirstPilates: intake.isFirstPilates,
+            hasComplaints: intake.hasComplaints,
+            complaintsDetails: intake.complaintsDetails ?? "",
+            hasInjuries: intake.hasInjuries,
+            injuriesDetails: intake.injuriesDetails ?? "",
+            isPregnant: intake.isPregnant,
+            isPostpartum: intake.isPostpartum,
+            consented: false, // re-tick on each new record
+          }
+        : EMPTY_INTAKE,
+    );
+    setEditing(true);
+  }
+
   return (
     <View testID="profile-health-section" className="gap-2">
-      <Text className="text-muted text-xs uppercase" style={{ letterSpacing: 0.5 }}>
-        {t("profile.healthSection")}
-      </Text>
-      {!intake ? (
-        <Text className="text-[13px] text-muted leading-5">
-          {t("profile.healthNone")}
+      <View className="flex-row items-baseline justify-between">
+        <Text className="text-muted text-xs uppercase" style={{ letterSpacing: 0.5 }}>
+          {t("profile.healthSection")}
         </Text>
+        {!editing && intake ? (
+          <Pressable onPress={startEditing} hitSlop={8}>
+            <Text className="text-[12px] text-foreground underline">
+              {t("profile.healthEdit")}
+            </Text>
+          </Pressable>
+        ) : null}
+      </View>
+
+      {editing ? (
+        <View className="gap-3">
+          <HealthIntakeForm
+            state={draft}
+            onChange={setDraft}
+            showConsentCheckbox={false}
+          />
+          <View className="flex-row gap-2">
+            <View className="flex-1">
+              <Button
+                variant="secondary"
+                onPress={() => {
+                  setEditing(false);
+                  setError(null);
+                }}
+              >
+                {t("common.cancel")}
+              </Button>
+            </View>
+            <View className="flex-1">
+              <Button
+                onPress={handleSave}
+                disabled={
+                  !isIntakeValid(draft, false) || recordMutation.isPending
+                }
+              >
+                {t("intake.save")}
+              </Button>
+            </View>
+          </View>
+          {error ? (
+            <Text className="text-[12px] text-danger">{error}</Text>
+          ) : null}
+        </View>
+      ) : !intake ? (
+        <View className="gap-2">
+          <Text className="text-[13px] text-muted leading-5">
+            {t("profile.healthEmpty")}
+          </Text>
+          <Button onPress={startEditing}>{t("profile.healthAdd")}</Button>
+        </View>
       ) : (
         <View className="gap-2">
           <View className="flex-row flex-wrap gap-2">
@@ -91,6 +178,14 @@ export function ProfileHealthSection() {
                 testID="health-flag-injuries"
                 label={t("profile.healthFlags.injuries")}
               />
+            ) : null}
+            {!intake.isPregnant &&
+            !intake.isPostpartum &&
+            !intake.hasComplaints &&
+            !intake.hasInjuries ? (
+              <Text className="text-[12px] text-muted">
+                {t("profile.healthNoFlags")}
+              </Text>
             ) : null}
           </View>
           <Pressable

@@ -1,8 +1,9 @@
-import { Text, View } from "react-native";
+import { View } from "react-native";
 import { useTranslation } from "react-i18next";
 import { Input } from "@/components/ui/input";
 import { GlassCard } from "@/components/ui/glass-card";
 import { SegmentedControl } from "@/components/ui/segmented-control";
+import { Body, BodyTitle } from "@/components/ui/studio";
 
 export type GuardianFields = {
   name: string;
@@ -20,9 +21,9 @@ export function GuardianBlock({ value, onChange, errors }: Props) {
   return (
     <View className="px-6 gap-3">
       <GlassCard size="md">
-        <Text className="text-[15px] text-foreground font-body-semibold mb-2">
-          {t("consent.guardianBlockTitle")}
-        </Text>
+        <View className="mb-2">
+          <BodyTitle>{t("consent.guardianBlockTitle")}</BodyTitle>
+        </View>
         <Input
           testID="guardian-name-input"
           label={t("consent.guardianNameLabel")}
@@ -31,9 +32,9 @@ export function GuardianBlock({ value, onChange, errors }: Props) {
           onChangeText={(name) => onChange({ ...value, name })}
           error={errors?.name}
         />
-        <Text className="text-[12px] text-muted mt-3 mb-1">
-          {t("consent.guardianRelationLabel")}
-        </Text>
+        <View className="mt-3 mb-1">
+          <Body size={12}>{t("consent.guardianRelationLabel")}</Body>
+        </View>
         <SegmentedControl<GuardianFields["relation"]>
           value={value.relation}
           onValueChange={(relation) => onChange({ ...value, relation })}
@@ -50,9 +51,9 @@ export function GuardianBlock({ value, onChange, errors }: Props) {
             },
           ]}
         />
-        <Text className="text-[12px] text-muted mt-3">
-          {t("consent.guardianPaperNotice")}
-        </Text>
+        <View className="mt-3">
+          <Body size={12}>{t("consent.guardianPaperNotice")}</Body>
+        </View>
       </GlassCard>
     </View>
   );

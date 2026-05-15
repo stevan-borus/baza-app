@@ -4,17 +4,22 @@ import { ACTIVE_VERSIONS } from "@/lib/legal/versions";
 import { LEGAL_DOCUMENT_BUNDLE } from "@/lib/legal/generated";
 import type { ConsentDocumentKey, AppLocale } from "@/generated/prisma";
 
-const keySchema = z.enum(["tos", "privacy", "eula", "waiver_adult", "waiver_minor"]);
+const keySchema = z.enum(["tos", "privacy", "waiver_adult", "waiver_minor"]);
 const localeSchema = z.enum(["sr", "en"]);
 
 export async function GET(
   request: Request,
-  ctx: { params: { key: string } },
+  ctx?: { params?: { key?: string } },
 ) {
-  const parsedKey = keySchema.safeParse(ctx.params.key);
+  const url = new URL(request.url);
+  // Prefer the router-provided param; fall back to parsing the URL path so
+  // public requests (which may not carry a `ctx` in this Expo Router build)
+  // still resolve. The final path segment is the document key.
+  const rawKey =
+    ctx?.params?.key ?? url.pathname.split("/").filter(Boolean).pop();
+  const parsedKey = keySchema.safeParse(rawKey);
   if (!parsedKey.success) return fail("Unknown document", 404);
 
-  const url = new URL(request.url);
   const parsedLocale = localeSchema.safeParse(url.searchParams.get("locale"));
   if (!parsedLocale.success) return fail("Missing or invalid locale", 400);
 

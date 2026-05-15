@@ -38,10 +38,9 @@ describe("getConsentStatus", () => {
     minorClientId = minorUser.id;
   });
 
-  it("admin with no records: tos/privacy/eula pending as missing", async () => {
+  it("admin with no records: tos/privacy pending as missing", async () => {
     const status = await getConsentStatus(adminId);
     expect(status.pending.map((p) => p.key).sort()).toEqual([
-      "eula",
       "privacy",
       "tos",
     ]);
@@ -49,20 +48,18 @@ describe("getConsentStatus", () => {
     expect(status.guardianVerificationNeeded).toBe(false);
   });
 
-  it("adult client with no records: tos/privacy/eula/waiver_adult pending", async () => {
+  it("adult client with no records: tos/privacy/waiver_adult pending", async () => {
     const status = await getConsentStatus(adultClientId);
     expect(status.pending.map((p) => p.key).sort()).toEqual([
-      "eula",
       "privacy",
       "tos",
       "waiver_adult",
     ]);
   });
 
-  it("minor client with no records: tos/privacy/eula/waiver_minor pending", async () => {
+  it("minor client with no records: tos/privacy/waiver_minor pending", async () => {
     const status = await getConsentStatus(minorClientId);
     expect(status.pending.map((p) => p.key).sort()).toEqual([
-      "eula",
       "privacy",
       "tos",
       "waiver_minor",
@@ -70,7 +67,7 @@ describe("getConsentStatus", () => {
   });
 
   it("user with all current-version accepted records: no pending", async () => {
-    for (const key of ["tos", "privacy", "eula"] as const) {
+    for (const key of ["tos", "privacy"] as const) {
       await prisma.consentRecord.create({
         data: {
           userId: adminId,
@@ -100,15 +97,6 @@ describe("getConsentStatus", () => {
       data: {
         userId: adminId,
         documentKey: "privacy",
-        version: 1,
-        locale: "sr",
-        accepted: true,
-      },
-    });
-    await prisma.consentRecord.create({
-      data: {
-        userId: adminId,
-        documentKey: "eula",
         version: 1,
         locale: "sr",
         accepted: true,

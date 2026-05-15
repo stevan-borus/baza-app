@@ -331,7 +331,6 @@ export default function ResetPasswordScreen() {
       </View>
 
       <View className="items-center gap-1 pb-1">
-        <Text className="font-sans text-faint text-[11px]">v1.0.0</Text>
         <View className="flex-row items-center gap-3 flex-wrap justify-center">
           <Link href="/legal/tos" asChild>
             <Pressable
@@ -352,17 +351,6 @@ export default function ResetPasswordScreen() {
             >
               <Text className="font-sans text-faint text-[11px] underline">
                 {t("consent.documentPrivacy")}
-              </Text>
-            </Pressable>
-          </Link>
-          <Link href="/legal/eula" asChild>
-            <Pressable
-              hitSlop={6}
-              accessibilityRole="link"
-              accessibilityLabel={t("consent.documentEula")}
-            >
-              <Text className="font-sans text-faint text-[11px] underline">
-                {t("consent.documentEula")}
               </Text>
             </Pressable>
           </Link>

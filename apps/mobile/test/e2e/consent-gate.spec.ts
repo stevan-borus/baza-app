@@ -128,8 +128,8 @@ test.describe("consent gate", () => {
     expect(notification!.type).toBe("CONSENT_REFUSED");
   });
 
-  // ── Test 3: language toggle ─────────────────────────────────────────────────
-  test("language toggle on consent screen switches title from Serbian to English", async ({
+  // ── Test 3: language picked on sign-in propagates to /consent ───────────────
+  test("language chosen on sign-in propagates to /consent (no toggle on consent screen)", async ({
     page,
   }) => {
     await page.setViewportSize({ width: 390, height: 844 });
@@ -137,24 +137,21 @@ test.describe("consent gate", () => {
     // Re-seed so activeReformer is unconsented again.
     await resetAndSeed();
 
-    await signInAsUnconsented(page);
-
-    // Default language is SR — verify the SR welcome title is shown.
-    await expect(page.getByText(t.consent.welcomeTitle)).toBeVisible({
-      timeout: 8_000,
-    });
-
-    // Click the language toggle to switch to EN.
+    // Toggle to EN on sign-in BEFORE authenticating.
+    await page.goto("/sign-in");
     const toggle = page.getByTestId("auth-language-toggle");
     await expect(toggle).toBeVisible({ timeout: 5_000 });
     await toggle.click();
 
-    // EN welcome title should now be visible.
-    await expect(page.getByText(t_en.consent.welcomeTitle)).toBeVisible({
-      timeout: 5_000,
-    });
+    await page.getByTestId("auth-email-input").fill(CLIENT_EMAIL);
+    await page.getByTestId("auth-password-input").fill(SEED_PASSWORD);
+    await page.getByTestId("auth-submit-button").click();
 
-    // SR title should no longer be present (the i18n key changes, not just added).
+    // /consent should now render the EN welcome title — the locale picked on
+    // sign-in flows through, no separate toggle on /consent itself.
+    await expect(page.getByText(t_en.consent.welcomeTitle)).toBeVisible({
+      timeout: 8_000,
+    });
     await expect(page.getByText(t.consent.welcomeTitle)).toHaveCount(0);
   });
 });
