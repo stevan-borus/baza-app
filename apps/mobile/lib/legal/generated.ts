@@ -3,7 +3,7 @@
 
 import type { ConsentDocumentKey, AppLocale } from "@/generated/prisma";
 
-type Bundle = Record<ConsentDocumentKey, Record<number, Record<AppLocale, string>>>;
+type Bundle = Partial<Record<ConsentDocumentKey, Record<number, Record<AppLocale, string>>>>;
 
 export const LEGAL_DOCUMENT_BUNDLE: Bundle = {
   "eula": {
