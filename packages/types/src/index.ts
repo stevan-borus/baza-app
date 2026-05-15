@@ -172,6 +172,11 @@ export const consentAcceptInputSchema = z
   );
 export type ConsentAcceptInput = z.infer<typeof consentAcceptInputSchema>;
 
+export const socialMediaConsentInputSchema = z.object({
+  accepted: z.boolean(),
+});
+export type SocialMediaConsentInput = z.infer<typeof socialMediaConsentInputSchema>;
+
 export const legalDocumentResponseSchema = z.object({
   success: z.literal(true),
   key: consentDocumentKeySchema,
