@@ -12,6 +12,8 @@ export type PendingDoc = {
 export type ConsentStatus = {
   pending: PendingDoc[];
   guardianVerificationNeeded: boolean;
+  socialMediaDecided: boolean;
+  socialMediaLatestAccepted: boolean | null;
 };
 
 export async function getConsentStatus(userId: string): Promise<ConsentStatus> {
@@ -60,6 +62,14 @@ export async function getConsentStatus(userId: string): Promise<ConsentStatus> {
 
   const acceptedByKey = new Map(latestPerKey.map((r) => [r.documentKey, r.version]));
 
+  const socialMediaRecord = await prisma.consentRecord.findFirst({
+    where: { userId, documentKey: "social_media" },
+    orderBy: { acceptedAt: "desc" },
+    select: { accepted: true },
+  });
+  const socialMediaDecided = socialMediaRecord !== null;
+  const socialMediaLatestAccepted = socialMediaRecord?.accepted ?? null;
+
   const pending: PendingDoc[] = [];
   for (const key of requiredKeys) {
     const accepted = acceptedByKey.get(key);
@@ -89,7 +99,12 @@ export async function getConsentStatus(userId: string): Promise<ConsentStatus> {
     guardianVerificationNeeded = !verified;
   }
 
-  return { pending, guardianVerificationNeeded };
+  return {
+    pending,
+    guardianVerificationNeeded,
+    socialMediaDecided,
+    socialMediaLatestAccepted,
+  };
 }
 
 function computeIsMinor(dob: Date): boolean {
