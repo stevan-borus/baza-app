@@ -136,4 +136,31 @@ export const clientsQueries = {
       },
       staleTime: 30_000,
     }),
+
+  health: (clientUserId: string) =>
+    queryOptions({
+      queryKey: ["clients", clientUserId, "health"] as const,
+      queryFn: async () => {
+        const res = await apiFetch(
+          `${sharedEnv.EXPO_PUBLIC_API_URL}/api/admin/clients/${clientUserId}/health`,
+          { credentials: "include" },
+        );
+        if (!res.ok) throw new Error(`Unable to load health (${res.status})`);
+        return res.json() as Promise<{
+          success: boolean;
+          intake: {
+            id: string;
+            isPregnant: boolean;
+            isPostpartum: boolean;
+            hasComplaints: boolean;
+            complaintsDetails: string | null;
+            hasInjuries: boolean;
+            injuriesDetails: string | null;
+            recordedAt: string;
+          } | null;
+          withdrawnAt: string | null;
+        }>;
+      },
+      staleTime: 30_000,
+    }),
 };

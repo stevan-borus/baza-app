@@ -409,7 +409,17 @@
       "legalAccepted": "Accepted {{date}}",
       "legalGuardianVerified": "Parent signature collected",
       "legalGuardianPending": "Parent signature pending",
-      "guardianVerifiedToggle": "Parent signature collected"
+      "guardianVerifiedToggle": "Parent signature collected",
+      "healthSection": "Health information",
+      "healthNone": "No information recorded.",
+      "healthNoFlags": "No flagged conditions.",
+      "healthFlags": {
+        "pregnant": "Pregnancy",
+        "postpartum": "Postpartum period",
+        "complaints": "Complaints",
+        "injuries": "Injuries",
+        "withdrawn": "Consent withdrawn {{date}}"
+      }
     },
     "clients": {
       "title": "Clients",

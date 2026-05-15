@@ -412,7 +412,17 @@
       "legalAccepted": "Prihvaćeno {{date}}",
       "legalGuardianVerified": "Potpis roditelja prikupljen",
       "legalGuardianPending": "Potreban potpis roditelja",
-      "guardianVerifiedToggle": "Potpis roditelja prikupljen"
+      "guardianVerifiedToggle": "Potpis roditelja prikupljen",
+      "healthSection": "Zdravstveni podaci",
+      "healthNone": "Nema unetih podataka.",
+      "healthNoFlags": "Bez obeleženih stanja.",
+      "healthFlags": {
+        "pregnant": "Trudnoća",
+        "postpartum": "Postporođajni period",
+        "complaints": "Tegobe",
+        "injuries": "Povrede",
+        "withdrawn": "Saglasnost povučena {{date}}"
+      }
     },
     "clients": {
       "title": "Klijenti",

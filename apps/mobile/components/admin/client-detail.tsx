@@ -39,6 +39,7 @@ import { AssignPackageSheetContent } from "@/components/admin/assign-package-she
 import { ReturnToPill } from "@/components/admin/return-to-pill";
 import { TreninziSubTab } from "@/components/admin/treninzi-sub-tab";
 import { ClientLegalPanel } from "@/components/admin/client-legal-panel";
+import { ClientHealthPanel } from "@/components/admin/client-health-panel";
 import { DateTimePicker } from "@/components/ui/date-time-picker";
 import { formatDateOfBirth, parseDateOfBirth, toIsoDate } from "@/lib/date-of-birth";
 import { now } from "@/lib/now";
@@ -690,6 +691,7 @@ function PregledTab({
       </View>
 
       <ClientLegalPanel clientUserId={clientUserId} lang={lang} />
+      <ClientHealthPanel clientUserId={clientUserId} lang={lang} />
     </ScrollView>
   );
 }
