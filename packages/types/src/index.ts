@@ -102,6 +102,13 @@ export const bookingMutationResultSchema = z.object({
 });
 export type BookingMutationResult = z.infer<typeof bookingMutationResultSchema>;
 
+export const BOOKING_ERRORS = {
+  GUARDIAN_VERIFICATION_REQUIRED: "GUARDIAN_VERIFICATION_REQUIRED",
+} as const;
+
+export type BookingErrorCode =
+  (typeof BOOKING_ERRORS)[keyof typeof BOOKING_ERRORS];
+
 export const monthlyAvailabilityQuerySchema = z.object({
   month: z.string().regex(/^\d{4}-\d{2}$/),
 });

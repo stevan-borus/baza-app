@@ -1,5 +1,6 @@
-import { bookingMutationInputSchema } from "@baza/types";
+import { bookingMutationInputSchema, BOOKING_ERRORS } from "@baza/types";
 import { type Prisma, UserRole } from "@/generated/prisma";
+import { getConsentStatus } from "@/lib/legal/consent-status";
 import { now } from "@/lib/now";
 import { requireRole } from "@/lib/server/auth-guards";
 import { shouldApplyLateCancelPenalty } from "@/lib/server/cancellation-policy";
@@ -40,6 +41,13 @@ export async function POST(request: Request) {
     return fail("Session not available", 404);
 
   if (action === "BOOK") {
+    // Block bookings for unverified minors AFTER their first completed session.
+    // First booking goes through so the studio can collect the paper waiver in person.
+    const consentStatus = await getConsentStatus(guard.user.id);
+    if (consentStatus.guardianVerificationNeeded) {
+      return fail(BOOKING_ERRORS.GUARDIAN_VERIFICATION_REQUIRED, 409);
+    }
+
     const [clientPackages, packagePauses] = await Promise.all([
       prisma.clientPackage.findMany({
         where: { clientProfileId, classTypeId: session.classTypeId },

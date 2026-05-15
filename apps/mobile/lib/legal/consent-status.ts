@@ -44,12 +44,12 @@ export async function getConsentStatus(userId: string): Promise<ConsentStatus> {
   );
   let isMinor = false;
   if (user.role === "CLIENT") {
-    if (!user.clientProfile?.dateOfBirth) {
-      throw new Error(
-        `Client ${userId} is missing dateOfBirth — required for consent gate`,
-      );
+    // Legacy clients may exist without a recorded DOB; treat as adult for
+    // gate purposes (cannot be a minor without a known DOB), but still
+    // require waiver_adult so they're prompted to complete it.
+    if (user.clientProfile?.dateOfBirth) {
+      isMinor = computeIsMinor(user.clientProfile.dateOfBirth);
     }
-    isMinor = computeIsMinor(user.clientProfile.dateOfBirth);
     requiredKeys.add(isMinor ? "waiver_minor" : "waiver_adult");
   }
 
