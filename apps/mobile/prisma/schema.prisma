@@ -64,6 +64,8 @@ enum ConsentDocumentKey {
   eula
   waiver_adult
   waiver_minor
+  social_media
+  health_intake
 }
 
 model User {
@@ -90,6 +92,7 @@ model User {
   notifications NotificationLog[]
   consentRecords          ConsentRecord[]
   consentRecordsVerified  ConsentRecord[]  @relation("GuardianVerifier")
+  healthIntakesRecorded ClientHealthIntake[] @relation("HealthIntakeRecordedBy")
   trainerNotesAuthored TrainerNote[] @relation("TrainerNoteAuthor")
   trainerSessions       Session[]            @relation("SessionTrainer")
   trainerSchedules      RecurringSchedule[]  @relation("ScheduleTrainer")
@@ -110,6 +113,8 @@ model ClientProfile {
   packages            ClientPackage[]
   packagePauses       PackagePause[]
   trainerNotes        TrainerNote[]
+  healthIntakes           ClientHealthIntake[]
+  healthIntakeWithdrawals HealthIntakeWithdrawal[]
 }
 
 model TrainerProfile {
@@ -439,4 +444,34 @@ model ConsentRecord {
 
   @@index([userId, documentKey, version])
   @@index([userId, acceptedAt])
+}
+
+model ClientHealthIntake {
+  id                 String        @id @default(uuid())
+  clientProfileId    String
+  clientProfile      ClientProfile @relation(fields: [clientProfileId], references: [id], onDelete: Cascade)
+  isPhysicallyActive Boolean
+  isFirstPilates     Boolean
+  hasComplaints      Boolean
+  complaintsDetails  String?
+  hasInjuries        Boolean
+  injuriesDetails    String?
+  isPregnant         Boolean
+  isPostpartum       Boolean
+  recordedAt         DateTime      @default(now())
+  recordedByUserId   String?
+  recordedBy         User?         @relation("HealthIntakeRecordedBy", fields: [recordedByUserId], references: [id])
+  guardianName       String?
+  guardianRelation   String?
+
+  @@index([clientProfileId, recordedAt])
+}
+
+model HealthIntakeWithdrawal {
+  id              String        @id @default(uuid())
+  clientProfileId String
+  clientProfile   ClientProfile @relation(fields: [clientProfileId], references: [id], onDelete: Cascade)
+  withdrawnAt     DateTime      @default(now())
+
+  @@index([clientProfileId, withdrawnAt])
 }
