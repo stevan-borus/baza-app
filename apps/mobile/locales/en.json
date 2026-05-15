@@ -69,7 +69,14 @@
     "documentWaiverMinor": "Participant Waiver (minor)",
     "errorRequired": "You must accept all documents to continue.",
     "errorGuardianRequired": "Please complete the parent / guardian details.",
-    "errorSubmit": "Could not submit — please try again."
+    "errorSubmit": "Could not submit — please try again.",
+    "socialMedia": {
+      "question": "I allow the Studio to publish photos and videos from training sessions on social media that include me.",
+      "yes": "Yes",
+      "no": "No",
+      "helper": "You can change your choice at any time from your profile.",
+      "saveFailed": "Saving your choice failed — please try again."
+    }
   },
   "tabs": {
     "overview": "Overview",

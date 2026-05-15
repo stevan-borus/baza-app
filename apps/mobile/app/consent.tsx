@@ -9,12 +9,14 @@ import {
   consentQueries,
   useAcceptConsentMutation,
   useRefuseConsentMutation,
+  useRecordSocialMediaMutation,
 } from "@/lib/queries/consent-queries-factory";
 import { signOutWithPushCleanup } from "@/lib/sign-out";
 import { useSessionAuth } from "@/lib/session-auth";
 import { AuthLanguageToggle } from "@/components/auth/auth-language-toggle";
 import { DocumentCard } from "@/components/consent/document-card";
 import { GuardianBlock, type GuardianFields } from "@/components/consent/guardian-block";
+import { SocialMediaQuestion } from "@/components/consent/social-media-question";
 import { StudioButton } from "@/components/ui/studio";
 import type { ConsentDocumentKey } from "@baza/types";
 
@@ -33,17 +35,29 @@ export default function ConsentScreen() {
   const isReConsent = (status.data?.pending ?? []).some((p) => p.reason === "outdated");
   const pending = status.data?.pending ?? [];
   const hasMinorWaiver = pending.some((p) => p.key === "waiver_minor");
+  const role = me.data?.user.role ?? null;
+  const isClient = role === "CLIENT";
+  const socialDecided = status.data?.socialMediaDecided ?? false;
+  const socialLatest = status.data?.socialMediaLatestAccepted ?? null;
 
   const [accepted, setAccepted] = useState<Partial<Record<ConsentDocumentKey, boolean>>>({});
   const [guardian, setGuardian] = useState<GuardianFields>({ name: "", relation: "parent" });
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  // Initial value derived from server status — both Da and Ne count as decided
+  // (Ne is a valid recorded answer); null means undecided.
+  const [socialChoice, setSocialChoice] = useState<"yes" | "no" | null>(
+    socialDecided ? (socialLatest ? "yes" : "no") : null,
+  );
+  const [socialError, setSocialError] = useState<string | null>(null);
+  const socialMutation = useRecordSocialMediaMutation();
   // Set to true after refuse + signout to trigger a session-aware redirect.
   const [refused, setRefused] = useState(false);
 
   const allAccepted = pending.every((p) => accepted[p.key]);
   const guardianOk = !hasMinorWaiver || guardian.name.trim().length > 0;
-  const canSubmit = allAccepted && guardianOk && !submitting;
+  const socialAnswered = !isClient || socialChoice !== null;
+  const canSubmit = allAccepted && guardianOk && socialAnswered && !submitting;
 
   // Navigate to /sign-in once the session has cleared after refuse.
   // Better-auth's session signal propagates asynchronously (via a 10 ms
@@ -77,6 +91,16 @@ export default function ConsentScreen() {
     } catch {
       setSubmitError(t("consent.errorSubmit"));
       setSubmitting(false);
+    }
+  }
+
+  async function handleSocialChoice(next: "yes" | "no") {
+    setSocialChoice(next);
+    setSocialError(null);
+    try {
+      await socialMutation.mutateAsync({ accepted: next === "yes" });
+    } catch {
+      setSocialError(t("consent.socialMedia.saveFailed"));
     }
   }
 
@@ -133,6 +157,19 @@ export default function ConsentScreen() {
                 : undefined
             }
           />
+        ) : null}
+
+        {isClient ? (
+          <SocialMediaQuestion
+            value={socialChoice}
+            onChange={handleSocialChoice}
+            disabled={socialMutation.isPending}
+          />
+        ) : null}
+        {socialError ? (
+          <View className="px-6">
+            <Text className="text-danger text-[13px]">{socialError}</Text>
+          </View>
         ) : null}
 
         {submitError ? (

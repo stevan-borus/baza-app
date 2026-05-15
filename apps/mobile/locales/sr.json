@@ -69,7 +69,14 @@
     "documentWaiverMinor": "Izjavu vežbača (maloletno lice)",
     "errorRequired": "Morate prihvatiti sve dokumente da biste nastavili.",
     "errorGuardianRequired": "Molimo da popunite podatke roditelja / staratelja.",
-    "errorSubmit": "Slanje nije uspelo — pokušajte ponovo."
+    "errorSubmit": "Slanje nije uspelo — pokušajte ponovo.",
+    "socialMedia": {
+      "question": "Dozvoljavam Studiju da objavljuje fotografije i snimke sa treninga na društvenim mrežama, na kojima se nalazim.",
+      "yes": "Da",
+      "no": "Ne",
+      "helper": "Vaš izbor možete promeniti u svakom trenutku iz profila.",
+      "saveFailed": "Slanje izbora nije uspelo — pokušajte ponovo."
+    }
   },
   "tabs": {
     "overview": "Pregled",

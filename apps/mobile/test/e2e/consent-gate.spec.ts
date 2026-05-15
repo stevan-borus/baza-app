@@ -84,6 +84,10 @@ test.describe("consent gate", () => {
     // Accept every document.
     await acceptAllDocuments(page);
 
+    // Answer the social-media Da/Ne question — both choices unblock Continue;
+    // the gate just requires a recorded decision.
+    await page.getByTestId("social-media-yes").click();
+
     // Submit button should now be enabled.
     const submitBtn = page.getByTestId("consent-submit-button");
     await expect(submitBtn).toBeEnabled({ timeout: 5_000 });
