@@ -102,6 +102,24 @@
       "postpartum": "Da li ste u postporođajnom periodu?"
     }
   },
+  "profile": {
+    "legalSection": "Pravna dokumenta",
+    "legalAccepted": "Prihvaćeno",
+    "legalUpdateNeeded": "Potrebno ažuriranje",
+    "legalView": "Pročitaj",
+    "socialMediaToggle": "Dozvoljavam objavljivanje fotografija i snimaka na društvenim mrežama",
+    "healthSection": "Zdravstveni podaci",
+    "healthNone": "Nemate unetih zdravstvenih podataka. Možete ih uneti prilikom sledećeg prijavljivanja.",
+    "healthWithdraw": "Povuci saglasnost",
+    "healthWithdrawConfirm": "Potvrdite da želite da povučete saglasnost",
+    "healthWithdrawFailed": "Slanje nije uspelo — pokušajte ponovo.",
+    "healthFlags": {
+      "pregnant": "Trudnoća",
+      "postpartum": "Postporođajni period",
+      "complaints": "Tegobe",
+      "injuries": "Povrede"
+    }
+  },
   "tabs": {
     "overview": "Pregled",
     "dashboard": "Pregled",

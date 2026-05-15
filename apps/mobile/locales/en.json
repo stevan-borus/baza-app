@@ -102,6 +102,24 @@
       "postpartum": "Are you in the postpartum period?"
     }
   },
+  "profile": {
+    "legalSection": "Legal documents",
+    "legalAccepted": "Accepted",
+    "legalUpdateNeeded": "Update needed",
+    "legalView": "Read",
+    "socialMediaToggle": "I allow publishing photos and videos on social media",
+    "healthSection": "Health information",
+    "healthNone": "No health information on file. You can fill it in at your next sign-in.",
+    "healthWithdraw": "Withdraw consent",
+    "healthWithdrawConfirm": "Tap again to confirm withdrawal",
+    "healthWithdrawFailed": "Could not submit — please try again.",
+    "healthFlags": {
+      "pregnant": "Pregnancy",
+      "postpartum": "Postpartum period",
+      "complaints": "Complaints",
+      "injuries": "Injuries"
+    }
+  },
   "tabs": {
     "overview": "Overview",
     "dashboard": "Dashboard",
