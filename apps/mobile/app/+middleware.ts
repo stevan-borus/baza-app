@@ -35,6 +35,10 @@ const ALLOWED_API_PREFIXES = [
   "/api/auth/",
   "/api/consent/",
   "/api/legal/",
+  // /consent renders the intake form inline alongside the legal-doc gate;
+  // calling POST /api/health-intake before all required docs are accepted
+  // is part of that flow, so the gate must let it through.
+  "/api/health-intake",
 ];
 
 const middleware: MiddlewareFunction = async (request) => {

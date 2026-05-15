@@ -89,6 +89,16 @@ const USERS = {
     role: UserRole.CLIENT,
     dateOfBirth: "1995-06-15", // adult — dedicated gate-test subject
   },
+  minorBooking: {
+    email: "client.minor-booking@e2e.test",
+    fullName: "Minor Booking Test",
+    role: UserRole.CLIENT,
+    // 12-year-old at the anchor instant — used by booking-guardian-gate
+    // spec. Consent records (incl. waiver_minor) are pre-seeded so the
+    // legal gate doesn't intercept; only the booking-level guardian
+    // verification gate is under test.
+    dateOfBirth: "2014-05-15",
+  },
 } as const;
 
 const CLASS_TYPES = [
@@ -641,6 +651,13 @@ async function seedConsentRecords(opts: {
   const staffKeys: ConsentDocumentKey[] = ["tos", "privacy", "eula"];
   // Keys required by an adult CLIENT (same base keys + waiver_adult)
   const clientKeys: ConsentDocumentKey[] = ["tos", "privacy", "eula", "waiver_adult"];
+  // Minor clients carry waiver_minor instead of waiver_adult.
+  const minorClientKeys: ConsentDocumentKey[] = [
+    "tos",
+    "privacy",
+    "eula",
+    "waiver_minor",
+  ];
 
   // Users who get pre-seeded consent (everyone except unconsented)
   const staffUsers: (keyof typeof USERS)[] = ["admin", "trainerReformer", "trainerEnergy"];
@@ -652,6 +669,10 @@ async function seedConsentRecords(opts: {
     "future",
     "empty",
   ];
+  // Minor user pre-onboarded for the booking-guardian-gate spec. Seeded
+  // with waiver_minor so the legal gate doesn't intercept; the spec sets
+  // up the second-booking guardian gate via direct prisma writes.
+  const alreadyOnboardedMinors: (keyof typeof USERS)[] = ["minorBooking"];
 
   for (const key of staffUsers) {
     const { user } = opts.seeded.get(key)!;
@@ -680,6 +701,25 @@ async function seedConsentRecords(opts: {
           accepted: true,
           acceptedAt,
           locale: "sr",
+        },
+      });
+    }
+  }
+
+  for (const key of alreadyOnboardedMinors) {
+    const { user } = opts.seeded.get(key)!;
+    for (const docKey of minorClientKeys) {
+      await prisma.consentRecord.create({
+        data: {
+          userId: user.id,
+          documentKey: docKey,
+          version: 1,
+          accepted: true,
+          acceptedAt,
+          locale: "sr",
+          // Intentionally NOT setting guardianVerifiedAt — the
+          // booking-guardian-gate spec sets it itself to verify the
+          // gate transitions. The base seed leaves the minor unverified.
         },
       });
     }
