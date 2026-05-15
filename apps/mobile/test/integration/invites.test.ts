@@ -80,6 +80,7 @@ describe("invites API", () => {
         email: "newclient@test.local",
         fullName: "New Client",
         phone: "+381 60 000 0000",
+        dateOfBirth: "1990-01-01",
       }),
     );
     expect(response.status).toBe(200);
@@ -101,7 +102,11 @@ describe("invites API", () => {
       data: { email: "existing@test.local", fullName: "Existing", role: "CLIENT" },
     });
     const response = await POST_INVITE(
-      inviteRequest({ email: "existing@test.local", fullName: "Existing" }),
+      inviteRequest({
+        email: "existing@test.local",
+        fullName: "Existing",
+        dateOfBirth: "1990-01-01",
+      }),
     );
     expect(response.status).toBe(409);
     expect(await prisma.userInvite.count()).toBe(0);

@@ -44,7 +44,7 @@ export const inviteClientInputSchema = UserInviteResultSchema.pick({
 }).extend({
   fullName: z.string().min(2).max(100),
   phone: z.string().min(6).max(30).optional(),
-  dateOfBirth: dateOfBirthSchema.optional(),
+  dateOfBirth: dateOfBirthSchema,
 });
 export type InviteClientInput = z.infer<typeof inviteClientInputSchema>;
 

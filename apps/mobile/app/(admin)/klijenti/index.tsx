@@ -818,15 +818,21 @@ export default function AdminClients() {
             />
             <Button
               testID="invite-create-submit-button"
-              disabled={createInviteMutation.isPending || !inviteForm.email || !inviteForm.fullName}
-              onPress={() =>
+              disabled={
+                createInviteMutation.isPending ||
+                !inviteForm.email ||
+                !inviteForm.fullName ||
+                !inviteForm.dateOfBirth
+              }
+              onPress={() => {
+                if (!inviteForm.dateOfBirth) return;
                 createInviteMutation.mutate({
                   email: inviteForm.email,
                   fullName: inviteForm.fullName,
                   phone: inviteForm.phone || undefined,
-                  dateOfBirth: inviteForm.dateOfBirth ? toIsoDate(inviteForm.dateOfBirth) : undefined,
-                })
-              }
+                  dateOfBirth: toIsoDate(inviteForm.dateOfBirth),
+                });
+              }}
             >
               {t("admin.clients.sendInvite")}
             </Button>

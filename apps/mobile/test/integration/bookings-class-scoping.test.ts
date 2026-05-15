@@ -32,7 +32,7 @@ async function seed() {
     data: { email: "client@test.local", fullName: "Client", role: "CLIENT" },
   });
   const clientProfile = await prisma.clientProfile.create({
-    data: { userId: client.id },
+    data: { userId: client.id, dateOfBirth: new Date("1990-01-01") },
   });
   const reformer = await prisma.classType.create({
     data: { name: "Reformer pilates", maxClients: 6, durationMins: 60 },

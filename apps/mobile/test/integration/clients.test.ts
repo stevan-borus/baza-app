@@ -184,6 +184,7 @@ describe("clients API", () => {
         body: JSON.stringify({
           email: "fresh@test.local",
           fullName: "Fresh Client",
+          dateOfBirth: "1990-01-01",
         }),
       }),
     );
