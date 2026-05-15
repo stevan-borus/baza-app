@@ -2,8 +2,10 @@ import { queryOptions, useMutation, useQueryClient } from "@tanstack/react-query
 import {
   consentStatusResponseSchema,
   consentAcceptInputSchema,
+  socialMediaConsentInputSchema,
   type ConsentStatusResponse,
   type ConsentAcceptInput,
+  type SocialMediaConsentInput,
 } from "@baza/types";
 import { apiFetch } from "@/lib/api";
 import { sharedEnv } from "@/lib/env.shared";
@@ -74,6 +76,27 @@ export function useMarkGuardianVerifiedMutation() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["consent"] });
       queryClient.invalidateQueries({ queryKey: ["clients"] });
+    },
+  });
+}
+
+export function useRecordSocialMediaMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationKey: ["consent", "social-media"] as const,
+    mutationFn: async (input: SocialMediaConsentInput) => {
+      const parsed = socialMediaConsentInputSchema.parse(input);
+      const res = await apiFetch(`${BASE}/social-media`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(parsed),
+      });
+      if (!res.ok) throw new Error(`Record failed (${res.status})`);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["consent", "status"] });
     },
   });
 }
