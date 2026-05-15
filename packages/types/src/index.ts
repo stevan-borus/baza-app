@@ -202,6 +202,7 @@ export type HealthIntakeInput = z.infer<typeof healthIntakeInputSchema>;
 
 export const healthIntakeResponseSchema = z.object({
   id: z.string(),
+  clientProfileId: z.string(),
   isPhysicallyActive: z.boolean(),
   isFirstPilates: z.boolean(),
   hasComplaints: z.boolean(),
@@ -211,6 +212,7 @@ export const healthIntakeResponseSchema = z.object({
   isPregnant: z.boolean(),
   isPostpartum: z.boolean(),
   recordedAt: z.string(), // ISO date string when JSON-serialized
+  recordedByUserId: z.string().nullable(),
   guardianName: z.string().nullable(),
   guardianRelation: z.string().nullable(),
 });
