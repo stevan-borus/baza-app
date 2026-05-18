@@ -50,18 +50,26 @@ export type AssignPackageSheetContentProps = {
   mode: AssignPackageMode;
   /** Called after a successful submit. Parents invalidate queries + close. */
   onSuccess: () => void;
+  /**
+   * Deep-link pre-selection: when set (e.g. from a BIRTHDAY_ADMIN_PROMPT
+   * notification tap), the PackageType dropdown opens with this id already
+   * selected. The admin can still pick a different PackageType if needed.
+   * Uses the useState initializer pattern — no effect required.
+   */
+  initialPackageTypeId?: string;
 };
 
 export function AssignPackageSheetContent({
   client,
   mode,
   onSuccess,
+  initialPackageTypeId,
 }: AssignPackageSheetContentProps) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
 
   // Shared fields.
-  const [packageTypeId, setPackageTypeId] = useState("");
+  const [packageTypeId, setPackageTypeId] = useState(initialPackageTypeId ?? "");
   const [startsAt, setStartsAt] = useState("");
 
   // Paid-mode-only fields. Initialised regardless so the hook order is
