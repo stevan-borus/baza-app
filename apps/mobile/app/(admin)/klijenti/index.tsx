@@ -8,7 +8,7 @@
 // `ScrollView + onScroll → fetchNextPage` plumbing and the ActivityIndicator
 // footer are gone — the wrapper owns both.
 
-import React, { useDeferredValue, useMemo, useState } from "react";
+import React, { useDeferredValue, useEffect, useMemo, useState } from "react";
 import {
   useInfiniteQuery,
   useMutation,
@@ -16,7 +16,7 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import {
   Pressable,
   RefreshControl,
@@ -157,6 +157,17 @@ export default function AdminClients() {
   const { t } = useTranslation();
   const bottomPad = useTabBarBottomPadding();
 
+  // Deep-link entry from a BIRTHDAY_ADMIN_PROMPT (or any future caller) —
+  // open the AssignPackage sheet for the targeted client, with optional
+  // pre-selection of a PackageType. Consumed once at mount via lazy state
+  // initializers; URL params are cleared in a one-shot effect so re-mounts
+  // (e.g. back-navigation) don't re-trigger the sheet.
+  const linkParams = useLocalSearchParams<{
+    openAssignPackage?: string;
+    mode?: string;
+    initialPackageTypeId?: string;
+  }>();
+
   // ── Tab + search + filter state ──────────────────────────────────────────
   const [tab, setTab] = useState<"clients" | "invites">("clients");
   const [searchQuery, setSearchQuery] = useState("");
@@ -166,11 +177,34 @@ export default function AdminClients() {
   const [showInviteForm, setShowInviteForm] = useState(false);
   const [showCreateClient, setShowCreateClient] = useState(false);
   const [showEditClient, setShowEditClient] = useState<string | null>(null);
-  const [showAssignPackage, setShowAssignPackage] = useState<string | null>(null);
+  const [showAssignPackage, setShowAssignPackage] = useState<string | null>(
+    () => linkParams.openAssignPackage ?? null,
+  );
   // P2-4: when the assign sheet opens, callers pre-arm the mode here.
   // "comp" = Dodeli paket (existing flow), "paid" = Nova uplata (P2-5 wires
   // up the actual payment fields). For now the sheet body is comp-only.
-  const [showAssignPackageMode, setShowAssignPackageMode] = useState<"comp" | "paid">("comp");
+  const [showAssignPackageMode, setShowAssignPackageMode] = useState<"comp" | "paid">(
+    () => (linkParams.mode === "paid" ? "paid" : "comp"),
+  );
+  // Pre-selection for the AssignPackage PackageType picker — only used on
+  // the first sheet open after a deep-link, then cleared with the sheet.
+  const [assignPackageInitialId, setAssignPackageInitialId] = useState<string | null>(
+    () => linkParams.initialPackageTypeId ?? null,
+  );
+
+  useEffect(() => {
+    // Clear the deep-link params once we've consumed them so the screen
+    // remounting (back-navigation, tab switch) doesn't re-open the sheet.
+    if (linkParams.openAssignPackage || linkParams.initialPackageTypeId || linkParams.mode) {
+      router.setParams({
+        openAssignPackage: undefined,
+        mode: undefined,
+        initialPackageTypeId: undefined,
+      });
+    }
+    // Intentionally one-shot — we only consume params at mount.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [showPause, setShowPause] = useState<string | null>(null);
   // Actions sheet — opened by tapping a client row in the list.
   const [showActionsFor, setShowActionsFor] = useState<string | null>(null);
@@ -840,7 +874,15 @@ export default function AdminClients() {
           </View>
         </AppSheet>
 
-        <AppSheet open={!!showAssignPackage} onOpenChange={() => setShowAssignPackage(null)}>
+        <AppSheet
+          open={!!showAssignPackage}
+          onOpenChange={(open) => {
+            if (!open) {
+              setShowAssignPackage(null);
+              setAssignPackageInitialId(null);
+            }
+          }}
+        >
           {(() => {
             const client = clients.find((c) => c.id === showAssignPackage);
             if (!client) return null;
@@ -855,13 +897,18 @@ export default function AdminClients() {
                   onBack={() => {
                     const id = showAssignPackage;
                     setShowAssignPackage(null);
+                    setAssignPackageInitialId(null);
                     if (id) setShowActionsFor(id);
                   }}
                 />
                 <AssignPackageSheetContent
                   client={client}
                   mode={showAssignPackageMode}
-                  onSuccess={() => setShowAssignPackage(null)}
+                  initialPackageTypeId={assignPackageInitialId ?? undefined}
+                  onSuccess={() => {
+                    setShowAssignPackage(null);
+                    setAssignPackageInitialId(null);
+                  }}
                 />
               </View>
             );

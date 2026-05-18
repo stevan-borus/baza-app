@@ -19,6 +19,7 @@ import "react-native-reanimated";
 import "@/lib/i18n";
 import { loadStoredLocale } from "@/lib/i18n";
 import { usePushRegistration } from "@/lib/push-registration";
+import { usePushTapListener } from "@/lib/push-tap-listener";
 import { Providers } from "@/lib/providers";
 import { useSessionAuth } from "@/lib/session-auth";
 import { useColorScheme } from "@/components/useColorScheme";
@@ -126,6 +127,7 @@ function AppNavigator({ isDark }: { isDark: boolean }) {
   const isAuthenticated =
     !session.error && !!session.data?.session && !!session.role;
   usePushRegistration({ isAuthenticated });
+  usePushTapListener({ isAuthenticated });
 
   if (session.isPending) {
     return (

@@ -72,11 +72,17 @@ async function sendExpoPushNotifications(
   expoPushTokens: string[],
   title: string,
   body: string,
-  payload?: Record<string, unknown>,
+  payload: Record<string, unknown> | undefined,
+  type: NotificationType,
 ) {
   if (expoPushTokens.length === 0) {
     return { sent: false, status: "NO_ACTIVE_PUSH_TOKENS" };
   }
+
+  // `__notificationType` lets the mobile push-tap handler route without a
+  // separate API call. The double-underscore prefix avoids collision with
+  // any user-controlled payload key.
+  const data = { ...(payload ?? {}), __notificationType: type };
 
   const fetchResult = await tryCatch(
     fetch(EXPO_PUSH_URL, {
@@ -90,7 +96,7 @@ async function sendExpoPushNotifications(
           to,
           title,
           body,
-          data: payload,
+          data,
           sound: "default",
         })),
       ),
@@ -206,6 +212,7 @@ export async function createAndDispatchUserNotification(input: NotificationPaylo
         input.title,
         input.body,
         input.payload,
+        input.type,
       );
       return prisma.notificationLog.update({
         where: { id: log.id },
