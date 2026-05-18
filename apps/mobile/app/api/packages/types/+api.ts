@@ -17,6 +17,7 @@ export async function GET(request: Request) {
       sessionCount: true,
       validityDays: true,
       lateCancelHours: true,
+      isBirthdayGift: true,
       classTypeId: true,
       classType: { select: { id: true, name: true } },
       createdAt: true,

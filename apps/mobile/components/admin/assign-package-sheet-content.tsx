@@ -71,7 +71,11 @@ export function AssignPackageSheetContent({
   const [method, setMethod] = useState<PaymentMethod>("CASH");
 
   const packageTypesQuery = useQuery(packagesQueries.types());
-  const packageTypes = packageTypesQuery.data?.packageTypes ?? [];
+  const allPackageTypes = packageTypesQuery.data?.packageTypes ?? [];
+  const packageTypes =
+    mode === "paid"
+      ? allPackageTypes.filter((pt) => !pt.isBirthdayGift)
+      : allPackageTypes;
 
   const compMutation = useMutation({
     ...packagesQueries.createClientPackage(),
