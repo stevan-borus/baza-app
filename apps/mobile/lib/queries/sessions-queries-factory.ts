@@ -33,6 +33,15 @@ const availabilityResponseSchema = z.object({
       isActive: z.boolean().optional(),
       // Post-cron attendance markers — present on past sessions only.
       attendance: z.nullable(attendanceSchema).optional(),
+      // Server flag: does the current CLIENT user have an active booking on
+      // this session? Used by the BookingSheet to render the "already booked"
+      // state. Optional because admin/trainer responses don't include it.
+      isBookedByMe: z.boolean().optional(),
+      // Server flag: late-cancel-hours window from the client's package on
+      // this session — null when the user has no active booking. Used by
+      // the cancel confirmation to warn that the cancellation would
+      // consume a session.
+      lateCancelHours: z.nullable(z.number()).optional(),
     }),
   ),
 });
@@ -83,6 +92,7 @@ const sessionDetailSchema = z.object({
         email: z.string(),
       }),
       consentFlags: z.object({
+        showFirstPilatesHint: z.boolean(),
         isPregnant: z.boolean(),
         isPostpartum: z.boolean(),
         hasComplaints: z.boolean(),

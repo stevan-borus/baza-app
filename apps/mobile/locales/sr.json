@@ -1,4 +1,46 @@
 {
+  "notification": {
+    "booking_confirmed": {
+      "title": "Rezervacija potvrđena",
+      "body": "Vaša rezervacija je potvrđena."
+    },
+    "session_updated": {
+      "title": "Termin ažuriran",
+      "body": "Termin je ažuriran."
+    },
+    "trainer_note": {
+      "title": "Beleška trenera",
+      "body": "Trener je ostavio belešku."
+    },
+    "general": {
+      "title": "Obaveštenje",
+      "body": ""
+    },
+    "spot_opened_from_waitlist": {
+      "title": "Mesto slobodno",
+      "body": "Mesto se oslobodilo sa liste čekanja."
+    },
+    "package_expiring_soon": {
+      "title": "Paket ističe",
+      "body": "Vaš paket uskoro ističe."
+    },
+    "session_reminder": {
+      "title": "Podsetnik",
+      "body": "Imate zakazan termin uskoro."
+    },
+    "booking_canceled_admin": {
+      "title": "Otkazana rezervacija",
+      "body": "{{clientFullName}} je otkazao/la {{classTypeName}} ({{time}})."
+    },
+    "booking_canceled_trainer": {
+      "title": "Otkazana rezervacija",
+      "body": "{{clientFullName}} je otkazao/la {{classTypeName}} ({{time}})."
+    },
+    "minor_paper_needed": {
+      "title": "Potreban potpis roditelja",
+      "body": "Klijent je odradio/la prvu sesiju i potreban je potpis roditelja."
+    }
+  },
   "auth": {
     "signIn": "Prijava",
     "termsNotice": "Nastavkom prihvatate naše Uslove, Privatnost i EULA.",
@@ -246,8 +288,10 @@
       "confirmBook": "Potvrdite rezervaciju?",
       "confirm": "Potvrdi",
       "cancelWarning": "Da li ste sigurni da želite da otkažete?",
+      "cancelWarningLate": "Otkazujete manje od {{hours}}h pre termina — jedan termin će biti oduzet iz paketa. Da li želite da nastavite?",
       "joinWaitlist": "Pridruži se listi čekanja",
-      "leaveWaitlist": "Napusti listu čekanja"
+      "leaveWaitlist": "Napusti listu čekanja",
+      "alreadyBooked": "Već imate rezervaciju"
     },
     "calendar": {
       "title": "Kalendar",
@@ -260,6 +304,8 @@
       "bookingCanceled": "Termin je otkazan",
       "waitlistNote": "Obavestićemo vas kad se oslobodi mesto.",
       "bookingError": "Akcija zakazivanja nije uspela.",
+      "errorGuardianRequired": "Da biste zakazali sledeći termin, roditelj mora prvo potpisati saglasnost u studiju.",
+      "errorNoPackage": "Nemate aktivan paket za ovaj tip treninga.",
       "room": "Sala",
       "trainer": "Trener",
       "availableSlots": "{{count}} slobodno",
@@ -324,6 +370,7 @@
     "a11yOpenProfile": "Otvori profil",
     "a11yGoBack": "Nazad",
     "cancel": "Otkaži",
+    "close": "Zatvori",
     "confirm": "Potvrdi",
     "time": "Vreme",
     "pickDate": "Izaberi datum",
@@ -414,6 +461,8 @@
       "legalPanel": "Pravna dokumenta",
       "legalPanelEmpty": "Klijent još nije prihvatio dokumente.",
       "legalAccepted": "Prihvaćeno {{date}}",
+      "legalAcceptedShort": "Prihvaćeno · {{date}}",
+      "legalNotAccepted": "Još nije prihvaćeno",
       "legalGuardianVerified": "Potpis roditelja prikupljen",
       "legalGuardianPending": "Potreban potpis roditelja",
       "guardianVerifiedToggle": "Potpis roditelja prikupljen",
@@ -430,6 +479,9 @@
         "postpartum": "Postporođajni period",
         "complaints": "Tegobe",
         "injuries": "Povrede",
+        "physicallyActive": "Fizički aktivna",
+        "firstPilates": "Prvi put pilates",
+        "recordedAt": "Uneti {{date}}",
         "withdrawn": "Saglasnost povučena {{date}}"
       }
     },
@@ -519,6 +571,7 @@
       "noPackages": "Još nema paketa.",
       "packagesError": "Nije moguće učitati pakete.",
       "upcomingBookings": "Predstojeći termini",
+      "nextSession": "Sledeći termin",
       "upcomingTab": "Predstojeći",
       "historyTab": "Istorija",
       "noUpcoming": "Nema predstojećih termina.",
@@ -616,7 +669,8 @@
       "flagInjuries": "Povrede",
       "healthWithdrawn": "Klijent je povukao saglasnost za zdravstvene podatke.",
       "photoConsentYes": "Foto/video: Da",
-      "photoConsentNo": "Foto/video: Ne"
+      "photoConsentNo": "Foto/video: Ne",
+      "hintFirstPilates": "Prvi put pilates"
     },
     "manage": {
       "title": "Upravljanje",

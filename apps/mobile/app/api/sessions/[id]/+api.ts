@@ -53,6 +53,7 @@ export async function GET(request: Request, { id }: RouteParams) {
                 orderBy: { recordedAt: "desc" },
                 take: 1,
                 select: {
+                  isFirstPilates: true,
                   isPregnant: true,
                   isPostpartum: true,
                   hasComplaints: true,
@@ -99,6 +100,27 @@ export async function GET(request: Request, { id }: RouteParams) {
     socialMediaRows.map((r) => [r.userId, r.accepted]),
   );
 
+  // Count prior non-canceled bookings per booked client (sessions starting
+  // before this one). Used to decide whether to surface the "Prvi put pilates"
+  // hint on the trainer card — it only makes sense for clients in their first
+  // few sessions. Cutoff: < 3 prior sessions.
+  const PRIOR_SESSIONS_CUTOFF = 3;
+  const bookedClientProfileIds = session.bookings.map((b) => b.clientProfile.id);
+  const priorBookingCounts = bookedClientProfileIds.length
+    ? await prisma.booking.groupBy({
+        by: ["clientProfileId"],
+        where: {
+          clientProfileId: { in: bookedClientProfileIds },
+          canceledAt: null,
+          session: { startsAt: { lt: session.startsAt } },
+        },
+        _count: { _all: true },
+      })
+    : [];
+  const priorCountByProfileId = new Map(
+    priorBookingCounts.map((r) => [r.clientProfileId, r._count._all]),
+  );
+
   // ADR-0002: surface bookedCount + seriesBookedCount so the edit sheet can
   // gate the "visible to clients" toggle by both rules. For a singleton
   // session (no recurring linkage) they're equal — the series IS this one
@@ -130,7 +152,16 @@ export async function GET(request: Request, { id }: RouteParams) {
         !!latestWithdrawal &&
         (!latestIntake ||
           latestWithdrawal.withdrawnAt > latestIntake.recordedAt);
+      const priorCount = priorCountByProfileId.get(b.clientProfile.id) ?? 0;
+      // Only surface "first time pilates" if (a) intake says so AND
+      // (b) this is one of the client's first few sessions at the studio.
+      // After PRIOR_SESSIONS_CUTOFF the trainer knows them, so it's noise.
+      const showFirstPilatesHint =
+        !intakeWithdrawn &&
+        latestIntake?.isFirstPilates === true &&
+        priorCount < PRIOR_SESSIONS_CUTOFF;
       const consentFlags = {
+        showFirstPilatesHint,
         isPregnant: !intakeWithdrawn && (latestIntake?.isPregnant ?? false),
         isPostpartum:
           !intakeWithdrawn && (latestIntake?.isPostpartum ?? false),

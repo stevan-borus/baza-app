@@ -1,4 +1,46 @@
 {
+  "notification": {
+    "booking_confirmed": {
+      "title": "Booking confirmed",
+      "body": "Your booking has been confirmed."
+    },
+    "session_updated": {
+      "title": "Session updated",
+      "body": "The session has been updated."
+    },
+    "trainer_note": {
+      "title": "Trainer note",
+      "body": "Your trainer left a note."
+    },
+    "general": {
+      "title": "Notification",
+      "body": ""
+    },
+    "spot_opened_from_waitlist": {
+      "title": "Spot opened",
+      "body": "A spot opened from the waitlist."
+    },
+    "package_expiring_soon": {
+      "title": "Package expiring",
+      "body": "Your package is expiring soon."
+    },
+    "session_reminder": {
+      "title": "Session reminder",
+      "body": "You have an upcoming session."
+    },
+    "booking_canceled_admin": {
+      "title": "Booking canceled",
+      "body": "{{clientFullName}} canceled {{classTypeName}} ({{time}})."
+    },
+    "booking_canceled_trainer": {
+      "title": "Booking canceled",
+      "body": "{{clientFullName}} canceled {{classTypeName}} ({{time}})."
+    },
+    "minor_paper_needed": {
+      "title": "Guardian signature needed",
+      "body": "A minor client completed their first session — collect the paper signature."
+    }
+  },
   "auth": {
     "signIn": "Sign in",
     "termsNotice": "By continuing, you agree to our Terms, Privacy and EULA.",
@@ -245,8 +287,10 @@
       "confirmBook": "Confirm booking?",
       "confirm": "Confirm",
       "cancelWarning": "Are you sure you want to cancel?",
+      "cancelWarningLate": "You're canceling less than {{hours}}h before the session — one session will be deducted from your package. Continue?",
       "joinWaitlist": "Join waitlist",
-      "leaveWaitlist": "Leave waitlist"
+      "leaveWaitlist": "Leave waitlist",
+      "alreadyBooked": "You already have a booking"
     },
     "calendar": {
       "title": "Calendar",
@@ -259,6 +303,8 @@
       "bookingCanceled": "Session was canceled",
       "waitlistNote": "We'll notify you when a spot opens.",
       "bookingError": "Booking action failed.",
+      "errorGuardianRequired": "Your parent must sign the consent form at the studio before you can book another session.",
+      "errorNoPackage": "You don't have an active package for this class type.",
       "room": "Room",
       "trainer": "Trainer",
       "availableSlots": "{{count}} available",
@@ -322,6 +368,7 @@
     "a11yOpenProfile": "Open profile",
     "a11yGoBack": "Go back",
     "cancel": "Cancel",
+    "close": "Close",
     "confirm": "Confirm",
     "time": "Time",
     "pickDate": "Pick a date",
@@ -411,6 +458,8 @@
       "legalPanel": "Legal documents",
       "legalPanelEmpty": "Client has not accepted documents yet.",
       "legalAccepted": "Accepted {{date}}",
+      "legalAcceptedShort": "Accepted · {{date}}",
+      "legalNotAccepted": "Not yet accepted",
       "legalGuardianVerified": "Parent signature collected",
       "legalGuardianPending": "Parent signature pending",
       "guardianVerifiedToggle": "Parent signature collected",
@@ -427,6 +476,9 @@
         "postpartum": "Postpartum period",
         "complaints": "Complaints",
         "injuries": "Injuries",
+        "physicallyActive": "Physically active",
+        "firstPilates": "First time pilates",
+        "recordedAt": "Recorded {{date}}",
         "withdrawn": "Consent withdrawn {{date}}"
       }
     },
@@ -516,6 +568,7 @@
       "noPackages": "No packages yet.",
       "packagesError": "Unable to load packages.",
       "upcomingBookings": "Upcoming bookings",
+      "nextSession": "Next session",
       "upcomingTab": "Upcoming",
       "historyTab": "History",
       "noUpcoming": "No upcoming bookings.",
@@ -612,7 +665,8 @@
       "flagInjuries": "Injuries",
       "healthWithdrawn": "Client withdrew health-data consent.",
       "photoConsentYes": "Photo/video: Yes",
-      "photoConsentNo": "Photo/video: No"
+      "photoConsentNo": "Photo/video: No",
+      "hintFirstPilates": "First time pilates"
     },
     "manage": {
       "title": "Manage",

@@ -154,6 +154,8 @@ export const clientsQueries = {
           success: boolean;
           intake: {
             id: string;
+            isPhysicallyActive: boolean;
+            isFirstPilates: boolean;
             isPregnant: boolean;
             isPostpartum: boolean;
             hasComplaints: boolean;

@@ -82,6 +82,27 @@ export const notificationsQueries = {
       },
     }),
 
+  markManyRead: () =>
+    mutationOptions({
+      mutationKey: ["notifications", "mark-read-batch"] as const,
+      mutationFn: async (ids: string[]) => {
+        if (ids.length === 0) return { success: true, count: 0 };
+        // PATCH on the collection endpoint — a sibling `/mark-read` subpath
+        // gets shadowed by the dynamic `[id]/+api.ts` matcher.
+        const response = await apiFetch(
+          `${sharedEnv.EXPO_PUBLIC_API_URL}/api/notifications`,
+          {
+            method: "PATCH",
+            credentials: "include",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ ids }),
+          },
+        );
+        if (!response.ok) throw new Error(`Unable to mark notifications as read (${response.status})`);
+        return response.json();
+      },
+    }),
+
   preferences: () =>
     queryOptions({
       queryKey: ["notifications", "preferences"] as const,

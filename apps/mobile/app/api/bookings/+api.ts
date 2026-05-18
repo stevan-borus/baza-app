@@ -127,11 +127,10 @@ export async function POST(request: Request) {
     await prisma.waitlistEntry.deleteMany({
       where: { sessionId, clientProfileId },
     });
-    // Fire-and-forget notification; do not block response.
-    void createSystemNotification(guard.user.id, NOTIFICATION_MESSAGE_KEYS.BOOKING_CONFIRMED, "BOOKING_CONFIRMED", {
-      sessionId,
-      state: "BOOKED",
-    });
+    // No in-app notification for self-initiated bookings — the booking sheet
+    // shows an immediate inline success block, which is the right UX. We
+    // still keep BOOKING_CONFIRMED notifications for spot-opened-from-waitlist
+    // promotions (those happen asynchronously and the user needs persistence).
 
     return ok({ success: true, state: "BOOKED" });
   }

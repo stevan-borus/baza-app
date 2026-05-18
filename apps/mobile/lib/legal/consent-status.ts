@@ -25,8 +25,12 @@ export async function getConsentStatus(userId: string): Promise<ConsentStatus> {
         select: {
           id: true,
           dateOfBirth: true,
+          // Trigger the guardian gate after the minor's FIRST booking
+          // (not after their first session completes). Studio must collect
+          // the paper waiver at first visit; we don't want them booking
+          // multiple sessions in advance before the guardian shows up.
           bookings: {
-            where: { session: { status: "COMPLETED" } },
+            where: { canceledAt: null },
             select: { id: true },
             take: 1,
           },

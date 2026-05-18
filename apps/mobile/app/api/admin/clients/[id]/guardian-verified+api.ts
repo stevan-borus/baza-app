@@ -1,19 +1,22 @@
 import { UserRole } from "@/generated/prisma";
 import { requireRole } from "@/lib/server/auth-guards";
-import { fail, ok } from "@/lib/server/http";
+import { fail, ok, paramFromCtxOrUrl } from "@/lib/server/http";
 import { now } from "@/lib/now";
 import { prisma } from "@/lib/server/prisma";
 
 export async function POST(
   request: Request,
-  ctx: { params: { id: string } },
+  ctx?: { params?: { id?: string } },
 ) {
   const guard = await requireRole(request, [UserRole.ADMIN]);
   if (!guard.ok) return guard.response;
 
+  const userId = paramFromCtxOrUrl(request, ctx, "id", "guardian-verified");
+  if (!userId) return fail("Missing client id", 400);
+
   const waiver = await prisma.consentRecord.findFirst({
     where: {
-      userId: ctx.params.id,
+      userId,
       documentKey: "waiver_minor",
       accepted: true,
     },

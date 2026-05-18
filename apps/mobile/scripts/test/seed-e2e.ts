@@ -373,6 +373,20 @@ async function seedClientPackages(opts: {
   });
 
   // Empty — no clientPackage rows. Nothing to do.
+
+  // Minor (Flow 1, paid) — Reformer 12-pack so the minor can actually book
+  // sessions to exercise the guardian-verification booking gate.
+  if (opts.clients.has("minorBooking")) {
+    await createPaidPackage({
+      clientKey: "minorBooking",
+      packageType: reformer12,
+      startsAt: new Date(currentInstant.getTime() - 3 * DAY_MS),
+      expiresAt: new Date(currentInstant.getTime() + 27 * DAY_MS),
+      sessionsRemaining: 12,
+      amount: 12000,
+      method: "CARD",
+    });
+  }
 }
 
 async function seedSessions(opts: {
@@ -407,7 +421,7 @@ async function seedSessions(opts: {
       trainerUserId: opts.trainers.reformer.id,
       roomId: sala1.id,
       weekdays: [1, 3, 5],
-      weekCount: 2,
+      weekCount: 4,
       timeOfDayHours: 10,
     },
     {
@@ -416,7 +430,7 @@ async function seedSessions(opts: {
       trainerUserId: opts.trainers.energy.id,
       roomId: sala2.id,
       weekdays: [2, 4],
-      weekCount: 2,
+      weekCount: 4,
       timeOfDayHours: 18,
     },
   ];

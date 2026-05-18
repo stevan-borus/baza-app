@@ -53,6 +53,12 @@ export const updateClientInputSchema = z.object({
   phone: z.string().min(6).max(30).nullable().optional(),
   notes: z.string().max(2000).nullable().optional(),
   isActive: z.boolean().optional(),
+  // TODO(feat-birthday-gift worktree): tighten this so admins can't null out
+  // a CLIENT's DOB — `getConsentStatus` throws on missing DOB, so nulling
+  // here would silently break the consent gate for that client. Either drop
+  // `.nullable()` entirely or 409 on { dateOfBirth: null } for CLIENT users.
+  // Tracked in docs/superpowers/specs/2026-05-15-consent-deferred-followups.md
+  // item #12.
   dateOfBirth: dateOfBirthSchema.nullable().optional(),
 });
 export type UpdateClientInput = z.infer<typeof updateClientInputSchema>;
@@ -274,6 +280,8 @@ export const availabilitySessionSchema = SessionResultSchema.pick({
   availableSlots: z.number(),
   recurringScheduleId: z.nullable(z.string()).optional(),
   isActive: z.boolean().optional(),
+  isBookedByMe: z.boolean().optional(),
+  lateCancelHours: z.nullable(z.number()).optional(),
 });
 export type AvailabilitySession = z.infer<typeof availabilitySessionSchema>;
 

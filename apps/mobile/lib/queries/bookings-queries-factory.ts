@@ -69,7 +69,20 @@ export const bookingsQueries = {
           body: JSON.stringify(payload),
         });
         if (!response.ok) {
-          throw new Error(`Booking request failed (${response.status})`);
+          // Surface the server's error code (e.g. GUARDIAN_VERIFICATION_REQUIRED)
+          // so the UI can render a specific message instead of a generic toast.
+          let serverCode: string | undefined;
+          try {
+            const errBody = await response.json();
+            if (typeof errBody?.error === "string") serverCode = errBody.error;
+          } catch {
+            // Non-JSON body — fall back to status code.
+          }
+          const err = new Error(serverCode ?? `Booking request failed (${response.status})`);
+          // Attach the code as a static prop so callers can branch on it
+          // without parsing the message string.
+          (err as Error & { code?: string }).code = serverCode;
+          throw err;
         }
         const result = await response.json();
         return bookingMutationResultSchema.parse(result);
