@@ -1,9 +1,11 @@
 import { createClientPackageInputSchema } from "@baza/types";
+import { NOTIFICATION_MESSAGE_KEYS } from "@baza/i18n";
 import { UserRole } from "@/generated/prisma";
 import { now } from "@/lib/now";
 import { requireRole } from "@/lib/server/auth-guards";
 import { linkPackagesToBilling } from "@/lib/server/billing-package-link";
 import { fail, ok } from "@/lib/server/http";
+import { createSystemNotification } from "@/lib/server/notifications";
 import { findEligibleClientPackage } from "@/lib/server/package-eligibility";
 import { prisma } from "@/lib/server/prisma";
 import { trainerLinkedToClientProfile } from "@/lib/server/trainer-scope";
@@ -226,6 +228,7 @@ export async function POST(request: Request) {
       validityDays: true,
       classTypeId: true,
       lateCancelHours: true,
+      isBirthdayGift: true,
     },
   });
   if (!packageType) return fail("Package type not found", 404);
@@ -255,6 +258,25 @@ export async function POST(request: Request) {
       sessionsRemaining: true,
     },
   });
+
+  if (packageType.isBirthdayGift) {
+    const clientProfile = await prisma.clientProfile.findUnique({
+      where: { id: parsed.data.clientProfileId },
+      select: { user: { select: { id: true } } },
+    });
+    if (clientProfile) {
+      void createSystemNotification(
+        clientProfile.user.id,
+        NOTIFICATION_MESSAGE_KEYS.BIRTHDAY_CLIENT_GIFT,
+        "BIRTHDAY_CLIENT_GIFT",
+        {
+          clientPackageId: clientPackage.id,
+          classTypeId: packageType.classTypeId,
+          expiresAt: clientPackage.expiresAt.toISOString(),
+        },
+      );
+    }
+  }
 
   return ok({ success: true, clientPackage }, 201);
 }
