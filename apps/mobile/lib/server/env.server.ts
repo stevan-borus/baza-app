@@ -15,6 +15,7 @@ const serverSchema = z.object({
   CRON_REMINDERS_INTERVAL_MS: z.coerce.number().int().positive(),
   CRON_PACKAGE_EXPIRY_INTERVAL_MS: z.coerce.number().int().positive(),
   CRON_SESSION_CONSUMPTION_INTERVAL_MS: z.coerce.number().int().positive(),
+  CRON_BIRTHDAYS_INTERVAL_MS: z.coerce.number().int().positive(),
   BASE_URL: z.url().default("http://localhost:3010"),
   BETTER_AUTH_SECRET: z
     .string()
@@ -36,6 +37,7 @@ const source = {
   CRON_REMINDERS_INTERVAL_MS: process.env.CRON_REMINDERS_INTERVAL_MS,
   CRON_PACKAGE_EXPIRY_INTERVAL_MS: process.env.CRON_PACKAGE_EXPIRY_INTERVAL_MS,
   CRON_SESSION_CONSUMPTION_INTERVAL_MS: process.env.CRON_SESSION_CONSUMPTION_INTERVAL_MS,
+  CRON_BIRTHDAYS_INTERVAL_MS: process.env.CRON_BIRTHDAYS_INTERVAL_MS,
   BASE_URL: process.env.BASE_URL,
   BETTER_AUTH_SECRET: process.env.BETTER_AUTH_SECRET,
   BAZA_CONSENT_GATE_ENABLED: process.env.BAZA_CONSENT_GATE_ENABLED,
