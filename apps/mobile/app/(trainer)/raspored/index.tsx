@@ -245,7 +245,6 @@ export default function TrainerSchedule() {
                         status={
                           session.availableSlots > 0 ? "available" : "full"
                         }
-                        attendance={session.attendance ?? null}
                         onPress={() => handleEventPress(session)}
                       />
                     ))

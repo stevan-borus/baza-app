@@ -201,14 +201,36 @@ describe("POST /api/bookings — guardian verification gate", () => {
     return { userId: adult.id, profileId, packageId: pkg.id };
   }
 
-  it("allows the first booking even for an unverified minor (no completed session yet)", async () => {
+  it("allows the very first booking for an unverified minor", async () => {
     await seedMinor();
     const session = await seedBookableSession({ classTypeId, roomId, trainerUserId });
     const res = await bookingsPOST(makeBookReq(session.id));
     expect(res.status).toBe(200);
   });
 
-  it("blocks the second booking when the minor has a completed session and no guardian verification", async () => {
+  // The gate triggers on ANY active booking, not just COMPLETED ones — the
+  // studio needs to meet the minor in person before they accumulate more
+  // sessions. A scheduled future booking is enough to block the next.
+  it("blocks a second booking when the minor already has one SCHEDULED booking", async () => {
+    const { profileId, packageId } = await seedMinor();
+    // Seed a scheduled (future, not COMPLETED) first booking.
+    const firstSession = await seedBookableSession({ classTypeId, roomId, trainerUserId });
+    await prisma.booking.create({
+      data: {
+        sessionId: firstSession.id,
+        clientProfileId: profileId,
+        clientPackageId: packageId,
+      },
+    });
+
+    const next = await seedBookableSession({ classTypeId, roomId, trainerUserId });
+    const res = await bookingsPOST(makeBookReq(next.id));
+    expect(res.status).toBe(409);
+    const body = (await res.json()) as { error: string };
+    expect(body.error).toBe("GUARDIAN_VERIFICATION_REQUIRED");
+  });
+
+  it("blocks a second booking when the minor has a COMPLETED session (legacy case)", async () => {
     const { profileId, packageId } = await seedMinor();
     await seedCompletedSession({
       clientProfileId: profileId,
@@ -223,6 +245,25 @@ describe("POST /api/bookings — guardian verification gate", () => {
     expect(res.status).toBe(409);
     const body = (await res.json()) as { error: string };
     expect(body.error).toBe("GUARDIAN_VERIFICATION_REQUIRED");
+  });
+
+  // Canceled bookings shouldn't count — the studio never actually saw the
+  // minor, so the gate stays open until they really show up.
+  it("does NOT block a second booking when the only prior booking was canceled", async () => {
+    const { profileId, packageId } = await seedMinor();
+    const firstSession = await seedBookableSession({ classTypeId, roomId, trainerUserId });
+    await prisma.booking.create({
+      data: {
+        sessionId: firstSession.id,
+        clientProfileId: profileId,
+        clientPackageId: packageId,
+        canceledAt: new Date(nowMs() - HOUR_MS),
+      },
+    });
+
+    const next = await seedBookableSession({ classTypeId, roomId, trainerUserId });
+    const res = await bookingsPOST(makeBookReq(next.id));
+    expect(res.status).toBe(200);
   });
 
   it("admin-set guardianVerifiedAt unblocks subsequent bookings", async () => {
