@@ -6,7 +6,7 @@ import {
   FloatingTabBar,
   getAppTabScreenOptions,
 } from "@/lib/tab-layout-theme";
-import { NotificationsSheetProvider } from "@/components/ui/notifications-sheet";
+import { ConsentGateRedirect } from "@/components/consent/consent-gate-redirect";
 
 function TabIcon(props: {
   name: React.ComponentProps<typeof FontAwesome>["name"];
@@ -21,7 +21,7 @@ export default function AdminLayout() {
   const isDark = colorScheme === "dark";
 
   return (
-    <NotificationsSheetProvider>
+    <ConsentGateRedirect>
       <Tabs
         screenOptions={{ ...getAppTabScreenOptions(isDark), headerShown: false }}
         tabBar={(props) => <FloatingTabBar {...props} isDark={isDark} />}
@@ -64,6 +64,6 @@ export default function AdminLayout() {
           }}
         />
       </Tabs>
-    </NotificationsSheetProvider>
+    </ConsentGateRedirect>
   );
 }

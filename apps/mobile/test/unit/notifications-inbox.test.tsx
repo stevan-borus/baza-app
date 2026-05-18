@@ -170,6 +170,16 @@ vi.mock("react-i18next", () => ({
   }),
 }));
 
+// ─── expo-router mock ─────────────────────────────────────────────────────
+// The component uses `useFocusEffect` to auto-mark-on-mount. Importing it
+// pulls in JSX-laden `Stack.tsx` from node_modules which vitest can't
+// transform. Stub it to a no-op for tests.
+vi.mock("expo-router", () => ({
+  useFocusEffect: (_cb: () => unknown) => {
+    // No-op for static-render tests; behavior is exercised in integration.
+  },
+}));
+
 // ─── Anchor-time helper ───────────────────────────────────────────────────
 import { now } from "@/lib/now";
 
@@ -199,6 +209,10 @@ vi.mock("@/lib/queries/notifications-queries-factory", () => ({
     markAsRead: () => ({
       mutationKey: ["notifications", "mark-read"],
       mutationFn: async (_id: string) => ({ success: true }),
+    }),
+    markManyRead: () => ({
+      mutationKey: ["notifications", "mark-read-batch"],
+      mutationFn: async (_ids: string[]) => ({ success: true, count: 0 }),
     }),
   },
 }));

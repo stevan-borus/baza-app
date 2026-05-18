@@ -142,7 +142,7 @@ export async function POST(request: Request) {
   const parsed = inviteClientInputSchema.safeParse(body);
   if (!parsed.success) return fail("Invalid payload", 400, parsed.error);
 
-  const { email, fullName, phone } = parsed.data;
+  const { email, fullName, phone, dateOfBirth } = parsed.data;
   const normalizedEmail = email.toLowerCase().trim();
   // Creates user and linked clientProfile; admin-only.
   const user = await prisma.user.create({
@@ -153,7 +153,7 @@ export async function POST(request: Request) {
       role: "CLIENT",
       isActive: true,
       clientProfile: {
-        create: {},
+        create: { dateOfBirth: new Date(dateOfBirth) },
       },
     },
     select: {

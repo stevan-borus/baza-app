@@ -49,7 +49,11 @@ vi.mock("@/lib/server/notifications", async () => {
   };
 });
 
-import { GET, POST } from "@/app/api/notifications/+api";
+import {
+  GET,
+  POST,
+  PATCH as PATCH_COLLECTION,
+} from "@/app/api/notifications/+api";
 import { PATCH } from "@/app/api/notifications/[id]/+api";
 import { prisma } from "@/lib/server/prisma";
 import { now, nowMs } from "@/lib/now";
@@ -298,5 +302,97 @@ describe("notifications API", () => {
       where: { userId: inactive.id },
     });
     expect(persisted).toBeNull();
+  });
+
+  // ─── PATCH /api/notifications (collection) — batch mark-as-read ─────
+  //
+  // Endpoint had to land on the collection root because Expo Router treats
+  // `notifications/[id]/+api.ts` as a catch-all that shadows any sibling
+  // subpath (e.g. `notifications/mark-read`). PATCH on the collection is the
+  // batch handler; PATCH on `/[id]` is the single-row handler.
+
+  function patchBatch(body: { ids: string[] }) {
+    return PATCH_COLLECTION(
+      new Request("http://test.local/api/notifications", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(body),
+      }),
+    );
+  }
+
+  it("batch PATCH marks multiple of the caller's notifications as read", async () => {
+    const me = await makeUser({ email: "batch1@test.local" });
+    const a = await prisma.notificationLog.create({
+      data: { userId: me.id, type: "GENERAL", title: "a", body: "a", payload: {} },
+    });
+    const b = await prisma.notificationLog.create({
+      data: { userId: me.id, type: "GENERAL", title: "b", body: "b", payload: {} },
+    });
+    const c = await prisma.notificationLog.create({
+      data: { userId: me.id, type: "GENERAL", title: "c", body: "c", payload: {} },
+    });
+    authAs(me);
+
+    const res = await patchBatch({ ids: [a.id, b.id, c.id] });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { count: number };
+    expect(body.count).toBe(3);
+
+    const reloaded = await prisma.notificationLog.findMany({
+      where: { id: { in: [a.id, b.id, c.id] } },
+    });
+    expect(reloaded.every((n) => n.readAt !== null)).toBe(true);
+  });
+
+  it("batch PATCH only flips rows the caller owns — other users' IDs are ignored", async () => {
+    const me = await makeUser({ email: "batch2@test.local" });
+    const other = await makeUser({ email: "batch-other@test.local" });
+    const mine = await prisma.notificationLog.create({
+      data: { userId: me.id, type: "GENERAL", title: "x", body: "x", payload: {} },
+    });
+    const theirs = await prisma.notificationLog.create({
+      data: { userId: other.id, type: "GENERAL", title: "y", body: "y", payload: {} },
+    });
+    authAs(me);
+
+    const res = await patchBatch({ ids: [mine.id, theirs.id] });
+    const body = (await res.json()) as { count: number };
+    expect(body.count).toBe(1);
+
+    const mineReloaded = await prisma.notificationLog.findUnique({ where: { id: mine.id } });
+    const theirsReloaded = await prisma.notificationLog.findUnique({ where: { id: theirs.id } });
+    expect(mineReloaded?.readAt).not.toBeNull();
+    expect(theirsReloaded?.readAt).toBeNull();
+  });
+
+  it("batch PATCH does not re-touch already-read rows", async () => {
+    const me = await makeUser({ email: "batch3@test.local" });
+    const original = await prisma.notificationLog.create({
+      data: {
+        userId: me.id,
+        type: "GENERAL",
+        title: "x",
+        body: "x",
+        payload: {},
+        readAt: now(),
+      },
+    });
+    authAs(me);
+    const before = (await prisma.notificationLog.findUnique({ where: { id: original.id } }))!.readAt!;
+
+    const res = await patchBatch({ ids: [original.id] });
+    const body = (await res.json()) as { count: number };
+    expect(body.count).toBe(0);
+
+    const after = (await prisma.notificationLog.findUnique({ where: { id: original.id } }))!.readAt!;
+    expect(after.getTime()).toBe(before.getTime());
+  });
+
+  it("batch PATCH rejects an empty ids array", async () => {
+    const me = await makeUser({ email: "batch4@test.local" });
+    authAs(me);
+    const res = await patchBatch({ ids: [] });
+    expect(res.status).toBe(400);
   });
 });

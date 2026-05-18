@@ -32,10 +32,9 @@ test.describe("DateTimePicker web smoke", () => {
       timeout: 15_000,
     });
 
-    // Open the New Session sheet from the schedule.
-    await page
-      .getByRole("button", { name: /Novi termin|New session/i })
-      .click();
+    // "Novi termin" hero row lives on the katalog tab (admin nav rewire in #28).
+    await page.getByTestId("tab-katalog").click();
+    await page.getByTestId("katalog-novi-termin").dispatchEvent("click");
 
     await page
       .getByTestId("session-create-startsAt")

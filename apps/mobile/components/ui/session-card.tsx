@@ -1,17 +1,10 @@
 import React from "react";
 import { Pressable, Text, View } from "react-native";
-import { useTranslation } from "react-i18next";
 import { GlassCard } from "./glass-card";
 import { Badge } from "./badge";
 import { CapsLabel } from "./studio/typography";
 
 type SessionStatus = "booked" | "waitlisted" | "full" | "available";
-
-type SessionAttendance = {
-  consumedCount: number;
-  canceledCount: number;
-  totalBookings: number;
-};
 
 type SessionCardProps = {
   time: string;
@@ -32,7 +25,6 @@ type SessionCardProps = {
   onPress?: () => void;
   testID?: string;
   sessionId?: string;
-  attendance?: SessionAttendance | null;
 };
 
 const classTypeAccentColor: Record<string, string> = {
@@ -140,9 +132,7 @@ export function SessionCard({
   onPress,
   testID,
   sessionId,
-  attendance,
 }: SessionCardProps) {
-  const { t } = useTranslation();
   const accentBorder = classType && classTypeAccentColor[classType] ? "left" : undefined;
   const accentBorderColor =
     classType && classTypeAccentColor[classType]
@@ -184,46 +174,6 @@ export function SessionCard({
                 <CapsLabel size={11} tracking={2.4} className="text-muted mt-1">
                   {hiddenLabel}
                 </CapsLabel>
-              ) : null}
-              {attendance ? (
-                <View
-                  testID={
-                    sessionId
-                      ? `session-card-attendance-${sessionId}`
-                      : "session-card-attendance"
-                  }
-                  className="flex-row items-center gap-2 mt-1"
-                >
-                  <Text
-                    testID={
-                      sessionId
-                        ? `session-card-attended-${sessionId}`
-                        : "session-card-attended"
-                    }
-                    className="text-xs text-accent font-body-semibold"
-                  >
-                    {t("trainer.schedule.attendance.consumed", {
-                      count: attendance.consumedCount,
-                    })}
-                  </Text>
-                  {attendance.canceledCount > 0 ? (
-                    <>
-                      <Text className="text-xs text-muted">·</Text>
-                      <Text
-                        testID={
-                          sessionId
-                            ? `session-card-canceled-${sessionId}`
-                            : "session-card-canceled"
-                        }
-                        className="text-xs text-muted"
-                      >
-                        {t("trainer.schedule.attendance.canceled", {
-                          count: attendance.canceledCount,
-                        })}
-                      </Text>
-                    </>
-                  ) : null}
-                </View>
               ) : null}
             </View>
           </View>

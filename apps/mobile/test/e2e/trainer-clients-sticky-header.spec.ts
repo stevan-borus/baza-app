@@ -81,10 +81,19 @@ test.describe.serial("trainer clients sticky header", () => {
       }
     });
 
-    // Allow one rAF for the scroll to settle.
-    await page.waitForTimeout(150);
-
-    const afterBox = await search.boundingBox();
+    // Wait for the search input's Y to stabilize. 150ms is enough on a quiet
+    // server, but under sustained suite load the post-scroll reflow can take
+    // longer; poll boundingBox until two consecutive reads agree, capped at 1s.
+    let afterBox = await search.boundingBox();
+    for (let i = 0; i < 20; i++) {
+      await page.waitForTimeout(50);
+      const next = await search.boundingBox();
+      if (next && afterBox && Math.abs(next.y - afterBox.y) < 0.5) {
+        afterBox = next;
+        break;
+      }
+      afterBox = next;
+    }
     expect(afterBox).not.toBeNull();
     // 2px slack covers sub-pixel layout rounding on RN-Web.
     expect(Math.abs(afterBox!.y - beforeBox!.y)).toBeLessThan(2);

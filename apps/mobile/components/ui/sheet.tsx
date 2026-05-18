@@ -32,6 +32,13 @@ type AppSheetProps = {
    * standard padding, which works for every "fits-or-grows" sheet form.
    */
   rawContent?: boolean;
+  /**
+   * Fixed snap points (e.g. `["90%"]`). When provided, dynamic sizing is
+   * disabled and the sheet opens to the given height. Use for content with
+   * unbounded length (legal docs, long lists) where peek-then-grow feels
+   * broken. Default: dynamic sizing.
+   */
+  snapPoints?: readonly (string | number)[];
 };
 
 /**
@@ -54,6 +61,7 @@ export function AppSheet({
   onOpenChange,
   children,
   rawContent = false,
+  snapPoints,
 }: AppSheetProps) {
   const ref = useRef<BottomSheetModal>(null);
   const tokens = useThemeTokens();
@@ -86,8 +94,9 @@ export function AppSheet({
   return (
     <BottomSheetModal
       ref={ref}
-      enableDynamicSizing
+      enableDynamicSizing={!snapPoints}
       maxDynamicContentSize={maxHeight}
+      snapPoints={snapPoints as (string | number)[] | undefined}
       enablePanDownToClose
       keyboardBehavior="interactive"
       keyboardBlurBehavior="restore"

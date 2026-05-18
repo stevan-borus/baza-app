@@ -34,11 +34,11 @@ const STATUS_BADGE: Record<
   "active" | "expiring" | "expired" | "paused" | "none",
   { tone: "success" | "warning" | "neutral"; key: string }
 > = {
-  active: { tone: "success", key: "admin.clients.filterActive" },
-  expiring: { tone: "warning", key: "admin.clients.filterExpiring" },
-  expired: { tone: "warning", key: "admin.clients.filterExpired" },
-  paused: { tone: "neutral", key: "admin.clients.filterPaused" },
-  none: { tone: "neutral", key: "admin.clients.filterAll" },
+  active: { tone: "success", key: "admin.clientDetail.status.active" },
+  expiring: { tone: "warning", key: "admin.clientDetail.status.expiring" },
+  expired: { tone: "warning", key: "admin.clientDetail.status.expired" },
+  paused: { tone: "neutral", key: "admin.clientDetail.status.paused" },
+  none: { tone: "neutral", key: "admin.clientDetail.status.none" },
 };
 
 export default function TrainerClientProfile() {
@@ -141,16 +141,11 @@ function ProfileBody({
           </View>
         </View>
 
-        <View className="flex-row gap-2 mt-4 flex-wrap">
-          {client.packageStatus !== "none" ? (
+        {client.packageStatus !== "none" ? (
+          <View className="flex-row gap-2 mt-4 flex-wrap">
             <Badge status={badge.tone}>{t(badge.key)}</Badge>
-          ) : null}
-          <Badge status={client.user.isActive ? "success" : "neutral"}>
-            {client.user.isActive
-              ? t("trainer.clients.statusActive")
-              : t("trainer.clients.statusInactive")}
-          </Badge>
-        </View>
+          </View>
+        ) : null}
       </GlassCard>
 
       {/* Notes */}

@@ -24,7 +24,7 @@
 // Side-effect import: populates env defaults before any module that reads env.
 import "./seed-e2e-env";
 
-import { UserRole } from "../../generated/prisma";
+import { UserRole, type ConsentDocumentKey } from "../../generated/prisma";
 import { now, nowMs } from "../../lib/now";
 import { hashPassword } from "../../lib/server/password";
 import { prisma } from "../../lib/server/prisma";
@@ -63,21 +63,41 @@ const USERS = {
     email: "client.expired@e2e.test",
     fullName: "Expired Pack Client",
     role: UserRole.CLIENT,
+    dateOfBirth: "1988-03-14", // adult; needed so consent gate doesn't crash
   },
   paused: {
     email: "client.paused@e2e.test",
     fullName: "Paused Pack Client",
     role: UserRole.CLIENT,
+    dateOfBirth: "1992-07-20", // adult
   },
   future: {
     email: "client.future@e2e.test",
     fullName: "Future Pack Client",
     role: UserRole.CLIENT,
+    dateOfBirth: "1995-11-03", // adult
   },
   empty: {
     email: "client.empty@e2e.test",
     fullName: "Empty Pack Client",
     role: UserRole.CLIENT,
+    dateOfBirth: "1991-01-30", // adult
+  },
+  unconsented: {
+    email: "client.unconsented@e2e.test",
+    fullName: "Unconsented Client",
+    role: UserRole.CLIENT,
+    dateOfBirth: "1995-06-15", // adult — dedicated gate-test subject
+  },
+  minorBooking: {
+    email: "client.minor-booking@e2e.test",
+    fullName: "Minor Booking Test",
+    role: UserRole.CLIENT,
+    // 12-year-old at the anchor instant — used by booking-guardian-gate
+    // spec. Consent records (incl. waiver_minor) are pre-seeded so the
+    // legal gate doesn't intercept; only the booking-level guardian
+    // verification gate is under test.
+    dateOfBirth: "2014-05-15",
   },
 } as const;
 
@@ -137,6 +157,7 @@ const ROOMS = [
  * rich seed creates.
  */
 async function wipe() {
+  await prisma.consentRecord.deleteMany({});
   await prisma.sessionConsumption.deleteMany({});
   await prisma.trainerNote.deleteMany({});
   await prisma.waitlistEntry.deleteMany({});
@@ -352,6 +373,20 @@ async function seedClientPackages(opts: {
   });
 
   // Empty — no clientPackage rows. Nothing to do.
+
+  // Minor (Flow 1, paid) — Reformer 12-pack so the minor can actually book
+  // sessions to exercise the guardian-verification booking gate.
+  if (opts.clients.has("minorBooking")) {
+    await createPaidPackage({
+      clientKey: "minorBooking",
+      packageType: reformer12,
+      startsAt: new Date(currentInstant.getTime() - 3 * DAY_MS),
+      expiresAt: new Date(currentInstant.getTime() + 27 * DAY_MS),
+      sessionsRemaining: 12,
+      amount: 12000,
+      method: "CARD",
+    });
+  }
 }
 
 async function seedSessions(opts: {
@@ -386,7 +421,7 @@ async function seedSessions(opts: {
       trainerUserId: opts.trainers.reformer.id,
       roomId: sala1.id,
       weekdays: [1, 3, 5],
-      weekCount: 2,
+      weekCount: 4,
       timeOfDayHours: 10,
     },
     {
@@ -395,7 +430,7 @@ async function seedSessions(opts: {
       trainerUserId: opts.trainers.energy.id,
       roomId: sala2.id,
       weekdays: [2, 4],
-      weekCount: 2,
+      weekCount: 4,
       timeOfDayHours: 18,
     },
   ];
@@ -480,6 +515,8 @@ export async function seedE2E() {
   });
 
   await seedBookings({ clients: clientProfiles });
+
+  await seedConsentRecords({ seeded });
 }
 
 /**
@@ -599,6 +636,108 @@ async function seedBookings(opts: {
   }
 
   void reformerSession;
+}
+
+/**
+ * Seeds ConsentRecord rows for every user that should NOT be blocked by the
+ * consent gate during the E2E run.
+ *
+ * The gate is enabled globally in playwright.config.ts (BAZA_CONSENT_GATE_ENABLED=true)
+ * so that the consent-gate spec can exercise the real redirect without any
+ * per-spec process.env toggling (which only affects the Playwright node
+ * process, not the dev-server process that has already cached the value).
+ *
+ * Users that receive pre-seeded consent rows:
+ *   - admin + both trainers  (tos / privacy / eula)
+ *   - all clients EXCEPT unconsented  (tos / privacy / eula + waiver_adult)
+ *
+ * unconsented (client.unconsented@e2e.test) is intentionally left without
+ * consent records so the consent-gate spec can exercise the first-time flow.
+ * activeReformer is now consented so client.spec.ts booking/calendar flows
+ * are not interrupted by the gate redirect.
+ */
+async function seedConsentRecords(opts: {
+  seeded: Map<keyof typeof USERS, { user: { id: string }; clientProfileId: string | null }>;
+}) {
+  const acceptedAt = now();
+
+  // Keys required by ADMIN + TRAINER roles
+  const staffKeys: ConsentDocumentKey[] = ["tos", "privacy", "eula"];
+  // Keys required by an adult CLIENT (same base keys + waiver_adult)
+  const clientKeys: ConsentDocumentKey[] = ["tos", "privacy", "eula", "waiver_adult"];
+  // Minor clients carry waiver_minor instead of waiver_adult.
+  const minorClientKeys: ConsentDocumentKey[] = [
+    "tos",
+    "privacy",
+    "eula",
+    "waiver_minor",
+  ];
+
+  // Users who get pre-seeded consent (everyone except unconsented)
+  const staffUsers: (keyof typeof USERS)[] = ["admin", "trainerReformer", "trainerEnergy"];
+  const alreadyOnboardedClients: (keyof typeof USERS)[] = [
+    "activeReformer",
+    "activeEnergy",
+    "expired",
+    "paused",
+    "future",
+    "empty",
+  ];
+  // Minor user pre-onboarded for the booking-guardian-gate spec. Seeded
+  // with waiver_minor so the legal gate doesn't intercept; the spec sets
+  // up the second-booking guardian gate via direct prisma writes.
+  const alreadyOnboardedMinors: (keyof typeof USERS)[] = ["minorBooking"];
+
+  for (const key of staffUsers) {
+    const { user } = opts.seeded.get(key)!;
+    for (const docKey of staffKeys) {
+      await prisma.consentRecord.create({
+        data: {
+          userId: user.id,
+          documentKey: docKey,
+          version: 1,
+          accepted: true,
+          acceptedAt,
+          locale: "sr",
+        },
+      });
+    }
+  }
+
+  for (const key of alreadyOnboardedClients) {
+    const { user } = opts.seeded.get(key)!;
+    for (const docKey of clientKeys) {
+      await prisma.consentRecord.create({
+        data: {
+          userId: user.id,
+          documentKey: docKey,
+          version: 1,
+          accepted: true,
+          acceptedAt,
+          locale: "sr",
+        },
+      });
+    }
+  }
+
+  for (const key of alreadyOnboardedMinors) {
+    const { user } = opts.seeded.get(key)!;
+    for (const docKey of minorClientKeys) {
+      await prisma.consentRecord.create({
+        data: {
+          userId: user.id,
+          documentKey: docKey,
+          version: 1,
+          accepted: true,
+          acceptedAt,
+          locale: "sr",
+          // Intentionally NOT setting guardianVerifiedAt — the
+          // booking-guardian-gate spec sets it itself to verify the
+          // gate transitions. The base seed leaves the minor unverified.
+        },
+      });
+    }
+  }
 }
 
 async function main() {

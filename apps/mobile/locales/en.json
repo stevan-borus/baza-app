@@ -1,4 +1,46 @@
 {
+  "notification": {
+    "booking_confirmed": {
+      "title": "Booking confirmed",
+      "body": "Your booking has been confirmed."
+    },
+    "session_updated": {
+      "title": "Session updated",
+      "body": "The session has been updated."
+    },
+    "trainer_note": {
+      "title": "Trainer note",
+      "body": "Your trainer left a note."
+    },
+    "general": {
+      "title": "Notification",
+      "body": ""
+    },
+    "spot_opened_from_waitlist": {
+      "title": "Spot opened",
+      "body": "A spot opened from the waitlist."
+    },
+    "package_expiring_soon": {
+      "title": "Package expiring",
+      "body": "Your package is expiring soon."
+    },
+    "session_reminder": {
+      "title": "Session reminder",
+      "body": "You have an upcoming session."
+    },
+    "booking_canceled_admin": {
+      "title": "Booking canceled",
+      "body": "{{clientFullName}} canceled {{classTypeName}} ({{time}})."
+    },
+    "booking_canceled_trainer": {
+      "title": "Booking canceled",
+      "body": "{{clientFullName}} canceled {{classTypeName}} ({{time}})."
+    },
+    "minor_paper_needed": {
+      "title": "Guardian signature needed",
+      "body": "A minor client completed their first session — collect the paper signature."
+    }
+  },
   "auth": {
     "signIn": "Sign in",
     "termsNotice": "By continuing, you agree to our Terms, Privacy and EULA.",
@@ -37,12 +79,92 @@
     "joinButton": "Join Baza",
     "inviteInvalid": "Invalid invite link",
     "inviteInvalidDesc": "This invite link is invalid or has expired.",
-    "inviteError": "Could not complete registration. The invite may have expired."
+    "inviteError": "Could not complete registration. The invite may have expired.",
+    "languageToggle": "Change language"
   },
   "notFound": {
     "title": "Oops!",
     "message": "This screen doesn't exist.",
     "goHome": "Go to home screen!"
+  },
+  "consent": {
+    "welcomeTitle": "Welcome to Baza Pilates Studio",
+    "welcomeSubtitle": "Before we begin, please accept our documents.",
+    "updateTitle": "We've updated our documents",
+    "updateSubtitle": "Please review and accept the changes.",
+    "readFullDocument": "Read the full document",
+    "iAccept": "I accept",
+    "iAcceptDocument": "I have read and accept the {{document}}",
+    "guardianBlockTitle": "Parent / guardian consent",
+    "guardianNameLabel": "Parent / guardian full name",
+    "guardianRelationLabel": "Relationship",
+    "guardianRelationParent": "parent",
+    "guardianRelationLegal": "legal guardian",
+    "guardianConfirm": "I confirm that I am the parent or legal guardian and accept on behalf of the minor",
+    "guardianPaperNotice": "We'll ask for your signature on a written waiver at the minor's first visit.",
+    "continue": "Continue",
+    "signOut": "Sign out",
+    "documentTos": "Terms of Service",
+    "documentPrivacy": "Privacy Policy",
+    "documentEula": "EULA",
+    "documentWaiverAdult": "Participant Waiver",
+    "documentWaiverMinor": "Participant Waiver (minor)",
+    "errorRequired": "You must accept all documents to continue.",
+    "errorGuardianRequired": "Please complete the parent / guardian details.",
+    "errorSubmit": "Could not submit — please try again.",
+    "socialMedia": {
+      "question": "I allow the Studio to publish photos and videos from training sessions on social media that include me.",
+      "yes": "Yes",
+      "no": "No",
+      "helper": "You can change your choice at any time from your profile.",
+      "saveFailed": "Saving your choice failed — please try again."
+    }
+  },
+  "intake": {
+    "title": "Your daily rhythm",
+    "notice": "We use this information only to tailor training to your condition. Answering is voluntary; if you choose not to share, you accept that we cannot specifically adapt your training. You can delete these answers at any time from your profile.",
+    "consentCheckbox": "I agree that the Studio may process this health information for the purpose of adapting my training.",
+    "save": "Save",
+    "skip": "Skip",
+    "share": "Add details",
+    "yes": "Yes",
+    "no": "No",
+    "savedBanner": "Saved — you can change this from your profile.",
+    "skippedBanner": "Skipped — you can fill this in later from your profile.",
+    "saveFailed": "Saving failed — please try again.",
+    "q": {
+      "physicallyActive": "Are you physically active?",
+      "firstPilates": "Is this your first Pilates training?",
+      "complaints": "Do you have any complaints?",
+      "complaintsDetailsLabel": "Briefly describe",
+      "complaintsDetailsPlaceholder": "Briefly describe (e.g. back pain)",
+      "injuries": "Do you have any injuries?",
+      "injuriesDetailsLabel": "Briefly describe",
+      "injuriesDetailsPlaceholder": "Briefly describe (e.g. knee injury)",
+      "pregnant": "Are you pregnant?",
+      "postpartum": "Are you in the postpartum period?"
+    }
+  },
+  "profile": {
+    "legalSection": "Legal documents",
+    "legalAccepted": "Accepted",
+    "legalUpdateNeeded": "Update needed",
+    "legalView": "Read",
+    "socialMediaToggle": "I allow publishing photos and videos on social media",
+    "healthSection": "Health information",
+    "healthEmpty": "No health information on file. Your trainer can adapt training better when you share it.",
+    "healthAdd": "Add details",
+    "healthEdit": "Edit",
+    "healthNoFlags": "No flagged conditions.",
+    "healthWithdraw": "Withdraw consent",
+    "healthWithdrawConfirm": "Tap again to confirm withdrawal",
+    "healthWithdrawFailed": "Could not submit — please try again.",
+    "healthFlags": {
+      "pregnant": "Pregnancy",
+      "postpartum": "Postpartum period",
+      "complaints": "Complaints",
+      "injuries": "Injuries"
+    }
   },
   "tabs": {
     "overview": "Overview",
@@ -165,8 +287,10 @@
       "confirmBook": "Confirm booking?",
       "confirm": "Confirm",
       "cancelWarning": "Are you sure you want to cancel?",
+      "cancelWarningLate": "You're canceling less than {{hours}}h before the session — one session will be deducted from your package. Continue?",
       "joinWaitlist": "Join waitlist",
-      "leaveWaitlist": "Leave waitlist"
+      "leaveWaitlist": "Leave waitlist",
+      "alreadyBooked": "You already have a booking"
     },
     "calendar": {
       "title": "Calendar",
@@ -179,6 +303,8 @@
       "bookingCanceled": "Session was canceled",
       "waitlistNote": "We'll notify you when a spot opens.",
       "bookingError": "Booking action failed.",
+      "errorGuardianRequired": "Your parent must sign the consent form at the studio before you can book another session.",
+      "errorNoPackage": "You don't have an active package for this class type.",
       "room": "Room",
       "trainer": "Trainer",
       "availableSlots": "{{count}} available",
@@ -242,6 +368,7 @@
     "a11yOpenProfile": "Open profile",
     "a11yGoBack": "Go back",
     "cancel": "Cancel",
+    "close": "Close",
     "confirm": "Confirm",
     "time": "Time",
     "pickDate": "Pick a date",
@@ -284,6 +411,10 @@
       "noPackageForClass": "You don't have a package for this class type."
     }
   },
+  "legal": {
+    "viewerTitle": "Legal document",
+    "loadError": "Could not load the document."
+  },
   "admin": {
     "notifications": {
       "title": "Notifications",
@@ -322,6 +453,34 @@
       "comingSoon": "coming soon",
       "classCount_one": "{{count}} class",
       "classCount_other": "{{count}} classes"
+    },
+    "client": {
+      "legalPanel": "Legal documents",
+      "legalPanelEmpty": "Client has not accepted documents yet.",
+      "legalAccepted": "Accepted {{date}}",
+      "legalAcceptedShort": "Accepted · {{date}}",
+      "legalNotAccepted": "Not yet accepted",
+      "legalGuardianVerified": "Parent signature collected",
+      "legalGuardianPending": "Parent signature pending",
+      "guardianVerifiedToggle": "Parent signature collected",
+      "socialMediaPanel": "Photo/video consent",
+      "socialMediaYes": "Yes",
+      "socialMediaNo": "No",
+      "socialMediaUnknown": "Not asked",
+      "socialMediaSince": "Last changed: {{date}}",
+      "healthSection": "Health information",
+      "healthNone": "No information recorded.",
+      "healthNoFlags": "No flagged conditions.",
+      "healthFlags": {
+        "pregnant": "Pregnancy",
+        "postpartum": "Postpartum period",
+        "complaints": "Complaints",
+        "injuries": "Injuries",
+        "physicallyActive": "Physically active",
+        "firstPilates": "First time pilates",
+        "recordedAt": "Recorded {{date}}",
+        "withdrawn": "Consent withdrawn {{date}}"
+      }
     },
     "clients": {
       "title": "Clients",
@@ -409,6 +568,7 @@
       "noPackages": "No packages yet.",
       "packagesError": "Unable to load packages.",
       "upcomingBookings": "Upcoming bookings",
+      "nextSession": "Next session",
       "upcomingTab": "Upcoming",
       "historyTab": "History",
       "noUpcoming": "No upcoming bookings.",
@@ -498,7 +658,15 @@
       "editAction": "Edit session",
       "loadError": "Unable to load session.",
       "bookedClients": "Booked clients",
-      "noBookings": "No bookings yet."
+      "noBookings": "No bookings yet.",
+      "flagPregnant": "Pregnancy",
+      "flagPostpartum": "Postpartum",
+      "flagComplaints": "Complaints",
+      "flagInjuries": "Injuries",
+      "healthWithdrawn": "Client withdrew health-data consent.",
+      "photoConsentYes": "Photo/video: Yes",
+      "photoConsentNo": "Photo/video: No",
+      "hintFirstPilates": "First time pilates"
     },
     "manage": {
       "title": "Manage",
@@ -825,6 +993,16 @@
     "packageExpiring": {
       "title": "Package expiring soon",
       "body": "Your package will expire soon. Please renew to keep booking sessions."
+    }
+  },
+  "notif": {
+    "consentRefused": {
+      "title": "User declined the documents",
+      "body": "{{userName}} declined the legal documents and was signed out."
+    },
+    "minorPaperNeeded": {
+      "title": "Parent signature needed",
+      "body": "{{userName}} attended their first session — a parent signature on the written waiver is needed."
     }
   }
 }

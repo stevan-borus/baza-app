@@ -44,7 +44,7 @@ export const inviteClientInputSchema = UserInviteResultSchema.pick({
 }).extend({
   fullName: z.string().min(2).max(100),
   phone: z.string().min(6).max(30).optional(),
-  dateOfBirth: dateOfBirthSchema.optional(),
+  dateOfBirth: dateOfBirthSchema,
 });
 export type InviteClientInput = z.infer<typeof inviteClientInputSchema>;
 
@@ -53,6 +53,12 @@ export const updateClientInputSchema = z.object({
   phone: z.string().min(6).max(30).nullable().optional(),
   notes: z.string().max(2000).nullable().optional(),
   isActive: z.boolean().optional(),
+  // TODO(feat-birthday-gift worktree): tighten this so admins can't null out
+  // a CLIENT's DOB — `getConsentStatus` throws on missing DOB, so nulling
+  // here would silently break the consent gate for that client. Either drop
+  // `.nullable()` entirely or 409 on { dateOfBirth: null } for CLIENT users.
+  // Tracked in docs/superpowers/specs/2026-05-15-consent-deferred-followups.md
+  // item #12.
   dateOfBirth: dateOfBirthSchema.nullable().optional(),
 });
 export type UpdateClientInput = z.infer<typeof updateClientInputSchema>;
@@ -102,6 +108,13 @@ export const bookingMutationResultSchema = z.object({
 });
 export type BookingMutationResult = z.infer<typeof bookingMutationResultSchema>;
 
+export const BOOKING_ERRORS = {
+  GUARDIAN_VERIFICATION_REQUIRED: "GUARDIAN_VERIFICATION_REQUIRED",
+} as const;
+
+export type BookingErrorCode =
+  (typeof BOOKING_ERRORS)[keyof typeof BOOKING_ERRORS];
+
 export const monthlyAvailabilityQuerySchema = z.object({
   month: z.string().regex(/^\d{4}-\d{2}$/),
 });
@@ -112,6 +125,7 @@ export type MonthlyAvailabilityQuery = z.infer<
 export const sessionUserSchema = z.object({
   id: z.string(),
   email: z.string(),
+  fullName: z.string(),
   role: UserRoleSchema,
   isActive: z.boolean(),
   clientProfile: z.object({ id: z.string() }).nullable(),
@@ -123,6 +137,123 @@ export const authMeResponseSchema = z.object({
   user: sessionUserSchema,
 });
 export type AuthMeResponse = z.infer<typeof authMeResponseSchema>;
+
+export const consentDocumentKeySchema = z.enum([
+  "tos",
+  "privacy",
+  "eula",
+  "waiver_adult",
+  "waiver_minor",
+  "social_media",
+  "health_intake",
+]);
+export type ConsentDocumentKey = z.infer<typeof consentDocumentKeySchema>;
+
+export const consentStatusPendingSchema = z.object({
+  key: consentDocumentKeySchema,
+  currentVersion: z.number().int().positive(),
+  reason: z.enum(["missing", "outdated"]),
+});
+
+export const consentStatusResponseSchema = z.object({
+  success: z.literal(true),
+  pending: z.array(consentStatusPendingSchema),
+  guardianVerificationNeeded: z.boolean(),
+  socialMediaDecided: z.boolean(),
+  socialMediaLatestAccepted: z.boolean().nullable(),
+});
+export type ConsentStatusResponse = z.infer<typeof consentStatusResponseSchema>;
+
+export const consentAcceptInputSchema = z
+  .object({
+    documentKey: consentDocumentKeySchema,
+    version: z.number().int().positive(),
+    locale: z.enum(["sr", "en"]),
+    guardianName: z.string().min(1).max(120).optional(),
+    guardianRelation: z.enum(["parent", "legal_guardian"]).optional(),
+  })
+  .refine(
+    (v) =>
+      v.documentKey !== "waiver_minor" ||
+      (typeof v.guardianName === "string" &&
+        v.guardianName.length > 0 &&
+        v.guardianRelation !== undefined),
+    {
+      message:
+        "guardianName and guardianRelation are required for waiver_minor",
+      path: ["guardianName"],
+    },
+  );
+export type ConsentAcceptInput = z.infer<typeof consentAcceptInputSchema>;
+
+export const socialMediaConsentInputSchema = z.object({
+  accepted: z.boolean(),
+});
+export type SocialMediaConsentInput = z.infer<typeof socialMediaConsentInputSchema>;
+
+export const healthIntakeInputSchema = z
+  .object({
+    isPhysicallyActive: z.boolean(),
+    isFirstPilates: z.boolean(),
+    hasComplaints: z.boolean(),
+    complaintsDetails: z.string().min(1).max(2000).optional(),
+    hasInjuries: z.boolean(),
+    injuriesDetails: z.string().min(1).max(2000).optional(),
+    isPregnant: z.boolean(),
+    isPostpartum: z.boolean(),
+    guardianName: z.string().min(1).max(120).optional(),
+    guardianRelation: z.enum(["roditelj", "staratelj"]).optional(),
+  })
+  .refine((d) => !d.hasComplaints || (d.complaintsDetails?.trim().length ?? 0) > 0, {
+    message: "complaintsDetails required when hasComplaints is true",
+    path: ["complaintsDetails"],
+  })
+  .refine((d) => !d.hasInjuries || (d.injuriesDetails?.trim().length ?? 0) > 0, {
+    message: "injuriesDetails required when hasInjuries is true",
+    path: ["injuriesDetails"],
+  });
+export type HealthIntakeInput = z.infer<typeof healthIntakeInputSchema>;
+
+export const healthIntakeResponseSchema = z.object({
+  id: z.string(),
+  clientProfileId: z.string(),
+  isPhysicallyActive: z.boolean(),
+  isFirstPilates: z.boolean(),
+  hasComplaints: z.boolean(),
+  complaintsDetails: z.string().nullable(),
+  hasInjuries: z.boolean(),
+  injuriesDetails: z.string().nullable(),
+  isPregnant: z.boolean(),
+  isPostpartum: z.boolean(),
+  recordedAt: z.string(), // ISO date string when JSON-serialized
+  recordedByUserId: z.string().nullable(),
+  guardianName: z.string().nullable(),
+  guardianRelation: z.string().nullable(),
+});
+export type HealthIntakeResponse = z.infer<typeof healthIntakeResponseSchema>;
+
+export const legalDocumentResponseSchema = z.object({
+  success: z.literal(true),
+  key: consentDocumentKeySchema,
+  version: z.number().int().positive(),
+  locale: z.enum(["sr", "en"]),
+  body: z.string(),
+});
+export type LegalDocumentResponse = z.infer<typeof legalDocumentResponseSchema>;
+
+export const legalDocumentsListResponseSchema = z.object({
+  success: z.literal(true),
+  documents: z.array(
+    z.object({
+      key: consentDocumentKeySchema,
+      version: z.number().int().positive(),
+      locale: z.enum(["sr", "en"]),
+    }),
+  ),
+});
+export type LegalDocumentsListResponse = z.infer<
+  typeof legalDocumentsListResponseSchema
+>;
 
 export const signInResponseSchema = z.object({
   token: z.optional(z.string()),
@@ -149,6 +280,8 @@ export const availabilitySessionSchema = SessionResultSchema.pick({
   availableSlots: z.number(),
   recurringScheduleId: z.nullable(z.string()).optional(),
   isActive: z.boolean().optional(),
+  isBookedByMe: z.boolean().optional(),
+  lateCancelHours: z.nullable(z.number()).optional(),
 });
 export type AvailabilitySession = z.infer<typeof availabilitySessionSchema>;
 

@@ -13,7 +13,6 @@ import { MotiView } from "@/components/ui/styled";
 import dayjs from "dayjs";
 import * as Haptics from "expo-haptics";
 import { useTranslation } from "react-i18next";
-import { GlassCard } from "@/components/ui/glass-card";
 import { startOfLocaleWeek } from "@/components/ui/week-strip";
 import { StudioWeekStrip, CapsLabel } from "@/components/ui/studio";
 import { MonthView } from "@/components/ui/month-view";
@@ -68,11 +67,19 @@ export default function ClientCalendar() {
         queryKey: ["sessions", "availability", month],
       });
       await queryClient.invalidateQueries({ queryKey: ["packages"] });
-      setSelectedSession(null);
+      // Sheet stays open so the in-sheet success block can show.
+      // It closes when the user taps Zatvori (BookingSheet's handleClose).
     },
   });
 
   const sessions = availabilityQuery.data?.sessions ?? [];
+
+  // After mutation invalidation, sessions list re-fetches with updated
+  // bookedCount / isBookedByMe. Re-hydrate the open sheet's session from the
+  // fresh array so the post-success state reflects current data (1/6 etc.).
+  const freshSelectedSession = selectedSession
+    ? (sessions.find((s) => s.id === selectedSession.id) ?? selectedSession)
+    : null;
   const daySessions = sessions.filter(
     (s) => dayjs(s.startsAt).format("YYYY-MM-DD") === selectedDate,
   );
@@ -214,40 +221,6 @@ export default function ClientCalendar() {
             </View>
           ) : null}
 
-          {bookingMutation.isError ? (
-            <View className="px-6 pb-3">
-              <ErrorState
-                testID="booking-error"
-                message={t("client.calendar.bookingError")}
-              />
-            </View>
-          ) : null}
-
-          {bookingMutation.isSuccess && bookingResultState ? (
-            <MotiView
-              from={{ opacity: 0, translateY: -6 }}
-              animate={{ opacity: 1, translateY: 0 }}
-              transition={{ type: "timing", duration: 250 }}
-            >
-              <View className="px-6 pb-3">
-                <GlassCard size="sm">
-                  <Text
-                    testID="booking-confirmation-banner"
-                    className="font-body-semibold text-accent"
-                  >
-                    {bookingResultState === "BOOKED"
-                      ? t("client.calendar.bookingBooked")
-                      : bookingResultState === "WAITLISTED"
-                        ? t("client.calendar.bookingWaitlisted")
-                        : bookingResultState === "CANCELED"
-                          ? t("client.calendar.bookingCanceled")
-                          : bookingResultState}
-                  </Text>
-                </GlassCard>
-              </View>
-            </MotiView>
-          ) : null}
-
           <View className="px-5 pb-2 flex-row items-baseline justify-between">
             <CapsLabel size={12} tracking={2.4}>
               {displayDate.locale(lang).format("dddd, D MMMM").toUpperCase()}
@@ -295,8 +268,13 @@ export default function ClientCalendar() {
       ) : null}
 
       <BookingSheet
-        session={selectedSession}
-        onClose={() => setSelectedSession(null)}
+        session={freshSelectedSession}
+        onClose={() => {
+          setSelectedSession(null);
+          // Clear stale success/error state so re-opening the sheet for
+          // another session starts fresh (no leftover "booked!" confirmation).
+          bookingMutation.reset();
+        }}
         onBook={(id) =>
           bookingMutation.mutate({ sessionId: id, action: "BOOK" })
         }
@@ -304,6 +282,25 @@ export default function ClientCalendar() {
           bookingMutation.mutate({ sessionId: id, action: "CANCEL" })
         }
         pending={bookingMutation.isPending}
+        successState={
+          bookingMutation.isSuccess
+            ? (bookingResultState === "BOOKED" ||
+              bookingResultState === "BOOKED_ALREADY"
+                ? "BOOKED"
+                : bookingResultState === "WAITLISTED"
+                  ? "WAITLISTED"
+                  : bookingResultState === "CANCELED"
+                    ? "CANCELED"
+                    : null)
+            : null
+        }
+        errorCode={
+          bookingMutation.isError
+            ? ((bookingMutation.error as Error & { code?: string })?.code ??
+                bookingMutation.error?.message ??
+                "UNKNOWN")
+            : null
+        }
       />
     </ScreenContainerRaw>
   );

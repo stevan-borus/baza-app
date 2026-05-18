@@ -8,6 +8,7 @@ import {
   getAppTabScreenOptions,
 } from "@/lib/tab-layout-theme";
 import { notificationsQueries } from "@/lib/queries/notifications-queries-factory";
+import { ConsentGateRedirect } from "@/components/consent/consent-gate-redirect";
 
 function TabIcon(props: {
   name: React.ComponentProps<typeof FontAwesome>["name"];
@@ -28,39 +29,41 @@ export default function ClientLayout() {
     notifsQuery.data?.notifications.filter((n) => !n.readAt).length ?? 0;
 
   return (
-    <Tabs
-      screenOptions={{ ...getAppTabScreenOptions(isDark), headerShown: false }}
-      tabBar={(props) => <FloatingTabBar {...props} isDark={isDark} />}
-    >
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: t("tabs.overview"),
-          tabBarIcon: ({ color }) => <TabIcon name="home" color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="calendar"
-        options={{
-          title: t("tabs.calendar"),
-          tabBarIcon: ({ color }) => <TabIcon name="calendar" color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="notifications"
-        options={{
-          title: t("tabs.notifications"),
-          tabBarIcon: ({ color }) => <TabIcon name="bell" color={color} />,
-          tabBarBadge: unreadCount > 0 ? unreadCount : undefined,
-        }}
-      />
-      <Tabs.Screen
-        name="profile"
-        options={{
-          title: t("tabs.profile"),
-          tabBarIcon: ({ color }) => <TabIcon name="user" color={color} />,
-        }}
-      />
-    </Tabs>
+    <ConsentGateRedirect>
+      <Tabs
+        screenOptions={{ ...getAppTabScreenOptions(isDark), headerShown: false }}
+        tabBar={(props) => <FloatingTabBar {...props} isDark={isDark} />}
+      >
+        <Tabs.Screen
+          name="index"
+          options={{
+            title: t("tabs.overview"),
+            tabBarIcon: ({ color }) => <TabIcon name="home" color={color} />,
+          }}
+        />
+        <Tabs.Screen
+          name="calendar"
+          options={{
+            title: t("tabs.calendar"),
+            tabBarIcon: ({ color }) => <TabIcon name="calendar" color={color} />,
+          }}
+        />
+        <Tabs.Screen
+          name="notifications"
+          options={{
+            title: t("tabs.notifications"),
+            tabBarIcon: ({ color }) => <TabIcon name="bell" color={color} />,
+            tabBarBadge: unreadCount > 0 ? unreadCount : undefined,
+          }}
+        />
+        <Tabs.Screen
+          name="profile"
+          options={{
+            title: t("tabs.profile"),
+            tabBarIcon: ({ color }) => <TabIcon name="user" color={color} />,
+          }}
+        />
+      </Tabs>
+    </ConsentGateRedirect>
   );
 }

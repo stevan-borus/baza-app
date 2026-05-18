@@ -38,6 +38,8 @@ import { BookingRow } from "@/components/admin/booking-row";
 import { AssignPackageSheetContent } from "@/components/admin/assign-package-sheet-content";
 import { ReturnToPill } from "@/components/admin/return-to-pill";
 import { TreninziSubTab } from "@/components/admin/treninzi-sub-tab";
+import { ClientLegalPanel } from "@/components/admin/client-legal-panel";
+import { ClientHealthPanel } from "@/components/admin/client-health-panel";
 import { DateTimePicker } from "@/components/ui/date-time-picker";
 import { formatDateOfBirth, parseDateOfBirth, toIsoDate } from "@/lib/date-of-birth";
 import { now } from "@/lib/now";
@@ -277,12 +279,11 @@ export function ClientDetail({ id }: { id: string }) {
               <PregledTab
                 activePackage={activePackage}
                 packagesLoading={packagesQuery.isLoading}
-                upcomingBookings={upcomingBookings.slice(0, 3)}
-                upcomingLoading={upcomingQuery.isLoading}
-                upcomingError={upcomingQuery.isError}
+                upcomingBookings={upcomingBookings.slice(0, 1)}
                 lang={lang}
                 bottomPad={bottomPad}
-                onViewAllTreninzi={() => setActiveTab("treninzi")}
+                clientUserId={id}
+                clientFullName={client.user.fullName}
               />
             ) : null}
 
@@ -582,20 +583,18 @@ function PregledTab({
   activePackage,
   packagesLoading,
   upcomingBookings,
-  upcomingLoading,
-  upcomingError,
   lang,
   bottomPad,
-  onViewAllTreninzi,
+  clientUserId,
+  clientFullName,
 }: {
   activePackage: ClientPackage | null;
   packagesLoading: boolean;
   upcomingBookings: ClientBooking[];
-  upcomingLoading: boolean;
-  upcomingError: boolean;
   lang: "sr" | "en";
   bottomPad: number;
-  onViewAllTreninzi: () => void;
+  clientUserId: string;
+  clientFullName: string;
 }) {
   const { t } = useTranslation();
   return (
@@ -613,77 +612,46 @@ function PregledTab({
         {packagesLoading ? (
           <SkeletonCard />
         ) : activePackage ? (
-          <GlassCard size="md">
-            <View className="flex-row items-start gap-3">
-              <View className="flex-1 gap-1">
-                <Text
-                  className="text-foreground font-body-semibold"
-                  style={{ fontSize: 15 }}
-                  numberOfLines={1}
-                >
-                  {activePackage.packageType?.name ?? "—"}
-                </Text>
-                <Text className="text-muted" style={{ fontSize: 13 }}>
-                  {t("admin.clientDetail.sessionsRemaining", {
-                    remaining: activePackage.sessionsRemaining,
-                    total: activePackage.packageType?.sessionCount ?? "—",
-                  })}
-                </Text>
-                <Text className="text-muted" style={{ fontSize: 13 }}>
-                  {t("admin.clientDetail.validUntil", {
-                    date: dayjs(activePackage.expiresAt).locale(lang).format("D.M.YYYY."),
-                  })}
-                </Text>
-              </View>
-              <Badge status="success">
-                {t("admin.clientDetail.status.active")}
-              </Badge>
-            </View>
-          </GlassCard>
+          <View className="bg-surface rounded-lg p-4 gap-1">
+            <Text
+              className="text-foreground font-body-semibold"
+              style={{ fontSize: 15 }}
+              numberOfLines={1}
+            >
+              {activePackage.packageType?.name ?? "—"}
+            </Text>
+            <Text className="text-muted" style={{ fontSize: 13 }}>
+              {t("admin.clientDetail.sessionsRemaining", {
+                remaining: activePackage.sessionsRemaining,
+                total: activePackage.packageType?.sessionCount ?? "—",
+              })}
+            </Text>
+            <Text className="text-muted" style={{ fontSize: 13 }}>
+              {t("admin.clientDetail.validUntil", {
+                date: dayjs(activePackage.expiresAt).locale(lang).format("D.M.YYYY."),
+              })}
+            </Text>
+          </View>
         ) : (
           <EmptyState title={t("admin.clientDetail.noActivePackage")} />
         )}
       </View>
 
-      <View className="gap-2">
-        <SectionLabel>{t("admin.clientDetail.upcomingBookings")}</SectionLabel>
-        {upcomingLoading ? (
-          <SkeletonCard />
-        ) : upcomingError ? (
-          <ErrorState message={t("admin.clientDetail.upcomingError")} />
-        ) : upcomingBookings.length === 0 ? (
-          <EmptyState title={t("admin.clientDetail.noUpcoming")} />
-        ) : (
+      {upcomingBookings.length > 0 ? (
+        <View className="gap-2">
+          <SectionLabel>{t("admin.clientDetail.nextSession")}</SectionLabel>
           <View className="bg-surface rounded-lg overflow-hidden">
-            {upcomingBookings.map((b, idx) => (
-              <React.Fragment key={b.id}>
-                {idx > 0 ? (
-                  <View
-                    className="bg-glass-border"
-                    style={{ height: 1, marginLeft: 16 }}
-                  />
-                ) : null}
-                <BookingRow booking={b} />
-              </React.Fragment>
-            ))}
+            <BookingRow booking={upcomingBookings[0]!} />
           </View>
-        )}
-        {upcomingBookings.length > 0 ? (
-          <Pressable
-            testID="client-detail-pregled-see-all-treninzi"
-            onPress={onViewAllTreninzi}
-            android_ripple={null}
-            className="self-start active:opacity-70 py-1.5"
-          >
-            <Text
-              className="text-accent font-body-medium"
-              style={{ fontSize: 13 }}
-            >
-              {t("admin.clientDetail.viewHistory")}
-            </Text>
-          </Pressable>
-        ) : null}
-      </View>
+        </View>
+      ) : null}
+
+      <ClientLegalPanel
+        clientUserId={clientUserId}
+        clientFullName={clientFullName}
+        lang={lang}
+      />
+      <ClientHealthPanel clientUserId={clientUserId} lang={lang} />
     </ScrollView>
   );
 }

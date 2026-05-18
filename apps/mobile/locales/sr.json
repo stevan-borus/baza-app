@@ -1,4 +1,46 @@
 {
+  "notification": {
+    "booking_confirmed": {
+      "title": "Rezervacija potvrđena",
+      "body": "Vaša rezervacija je potvrđena."
+    },
+    "session_updated": {
+      "title": "Termin ažuriran",
+      "body": "Termin je ažuriran."
+    },
+    "trainer_note": {
+      "title": "Beleška trenera",
+      "body": "Trener je ostavio belešku."
+    },
+    "general": {
+      "title": "Obaveštenje",
+      "body": ""
+    },
+    "spot_opened_from_waitlist": {
+      "title": "Mesto slobodno",
+      "body": "Mesto se oslobodilo sa liste čekanja."
+    },
+    "package_expiring_soon": {
+      "title": "Paket ističe",
+      "body": "Vaš paket uskoro ističe."
+    },
+    "session_reminder": {
+      "title": "Podsetnik",
+      "body": "Imate zakazan termin uskoro."
+    },
+    "booking_canceled_admin": {
+      "title": "Otkazana rezervacija",
+      "body": "{{clientFullName}} je otkazao/la {{classTypeName}} ({{time}})."
+    },
+    "booking_canceled_trainer": {
+      "title": "Otkazana rezervacija",
+      "body": "{{clientFullName}} je otkazao/la {{classTypeName}} ({{time}})."
+    },
+    "minor_paper_needed": {
+      "title": "Potreban potpis roditelja",
+      "body": "Klijent je odradio/la prvu sesiju i potreban je potpis roditelja."
+    }
+  },
   "auth": {
     "signIn": "Prijava",
     "termsNotice": "Nastavkom prihvatate naše Uslove, Privatnost i EULA.",
@@ -37,12 +79,92 @@
     "joinButton": "Pridruži se Baza",
     "inviteInvalid": "Nevažeći link pozivnice",
     "inviteInvalidDesc": "Ovaj link pozivnice je nevažeći ili je istekao.",
-    "inviteError": "Registracija nije uspela. Pozivnica je možda istekla."
+    "inviteError": "Registracija nije uspela. Pozivnica je možda istekla.",
+    "languageToggle": "Promeni jezik"
   },
   "notFound": {
     "title": "Ups!",
     "message": "Ova stranica ne postoji.",
     "goHome": "Idi na početnu!"
+  },
+  "consent": {
+    "welcomeTitle": "Dobrodošli u Baza Pilates Studio",
+    "welcomeSubtitle": "Pre nego što počnemo, treba da prihvatite naše dokumente.",
+    "updateTitle": "Ažurirali smo naše dokumente",
+    "updateSubtitle": "Molimo Vas da pregledate i prihvatite izmene.",
+    "readFullDocument": "Pročitaj ceo dokument",
+    "iAccept": "Prihvatam",
+    "iAcceptDocument": "Pročitao/la sam i prihvatam {{document}}",
+    "guardianBlockTitle": "Saglasnost roditelja / staratelja",
+    "guardianNameLabel": "Ime i prezime roditelja / staratelja",
+    "guardianRelationLabel": "Srodstvo",
+    "guardianRelationParent": "roditelj",
+    "guardianRelationLegal": "zakonski staratelj",
+    "guardianConfirm": "Potvrđujem da sam roditelj ili zakonski staratelj i prihvatam u ime maloletnika",
+    "guardianPaperNotice": "Tražićemo Vaš potpis na pisanoj izjavi prilikom prve posete maloletnika studiju.",
+    "continue": "Nastavi",
+    "signOut": "Odjavi se",
+    "documentTos": "Uslovi korišćenja",
+    "documentPrivacy": "Politika privatnosti",
+    "documentEula": "EULA",
+    "documentWaiverAdult": "Izjavu vežbača",
+    "documentWaiverMinor": "Izjavu vežbača (maloletno lice)",
+    "errorRequired": "Morate prihvatiti sve dokumente da biste nastavili.",
+    "errorGuardianRequired": "Molimo da popunite podatke roditelja / staratelja.",
+    "errorSubmit": "Slanje nije uspelo — pokušajte ponovo.",
+    "socialMedia": {
+      "question": "Dozvoljavam Studiju da objavljuje fotografije i snimke sa treninga na društvenim mrežama, na kojima se nalazim.",
+      "yes": "Da",
+      "no": "Ne",
+      "helper": "Vaš izbor možete promeniti u svakom trenutku iz profila.",
+      "saveFailed": "Slanje izbora nije uspelo — pokušajte ponovo."
+    }
+  },
+  "intake": {
+    "title": "Vaš životni ritam",
+    "notice": "Ovi podaci se koriste isključivo da prilagodimo trening Vašem stanju. Davanje odgovora je dobrovoljno; ako odlučite da ih ne podelite, prihvatate da trening ne možemo posebno prilagoditi. Podatke možete obrisati u svakom trenutku iz svog profila.",
+    "consentCheckbox": "Saglasan/saglasna sam da Studio obrađuje ove zdravstvene podatke u svrhu prilagođavanja treninga.",
+    "save": "Sačuvaj",
+    "skip": "Preskoči",
+    "share": "Unesi podatke",
+    "yes": "Da",
+    "no": "Ne",
+    "savedBanner": "Sačuvano — možete izmeniti iz profila.",
+    "skippedBanner": "Preskočeno — možete uneti kasnije iz profila.",
+    "saveFailed": "Slanje nije uspelo — pokušajte ponovo.",
+    "q": {
+      "physicallyActive": "Da li ste fizički aktivni?",
+      "firstPilates": "Da li vam je ovo prvi trening pilatesa?",
+      "complaints": "Da li imate neke tegobe?",
+      "complaintsDetailsLabel": "Opišite ukratko",
+      "complaintsDetailsPlaceholder": "Opišite ukratko (npr. bolovi u leđima)",
+      "injuries": "Da li imate neke povrede?",
+      "injuriesDetailsLabel": "Opišite ukratko",
+      "injuriesDetailsPlaceholder": "Opišite ukratko (npr. povreda kolena)",
+      "pregnant": "Da li ste trudni?",
+      "postpartum": "Da li ste u postporođajnom periodu?"
+    }
+  },
+  "profile": {
+    "legalSection": "Pravna dokumenta",
+    "legalAccepted": "Prihvaćeno",
+    "legalUpdateNeeded": "Potrebno ažuriranje",
+    "legalView": "Pročitaj",
+    "socialMediaToggle": "Dozvoljavam objavljivanje fotografija i snimaka na društvenim mrežama",
+    "healthSection": "Zdravstveni podaci",
+    "healthEmpty": "Nemate unete zdravstvene podatke. Trener može bolje da prilagodi trening kada ih unesete.",
+    "healthAdd": "Unesi podatke",
+    "healthEdit": "Izmeni",
+    "healthNoFlags": "Bez obeleženih stanja.",
+    "healthWithdraw": "Povuci saglasnost",
+    "healthWithdrawConfirm": "Potvrdite da želite da povučete saglasnost",
+    "healthWithdrawFailed": "Slanje nije uspelo — pokušajte ponovo.",
+    "healthFlags": {
+      "pregnant": "Trudnoća",
+      "postpartum": "Postporođajni period",
+      "complaints": "Tegobe",
+      "injuries": "Povrede"
+    }
   },
   "tabs": {
     "overview": "Pregled",
@@ -166,8 +288,10 @@
       "confirmBook": "Potvrdite rezervaciju?",
       "confirm": "Potvrdi",
       "cancelWarning": "Da li ste sigurni da želite da otkažete?",
+      "cancelWarningLate": "Otkazujete manje od {{hours}}h pre termina — jedan termin će biti oduzet iz paketa. Da li želite da nastavite?",
       "joinWaitlist": "Pridruži se listi čekanja",
-      "leaveWaitlist": "Napusti listu čekanja"
+      "leaveWaitlist": "Napusti listu čekanja",
+      "alreadyBooked": "Već imate rezervaciju"
     },
     "calendar": {
       "title": "Kalendar",
@@ -180,6 +304,8 @@
       "bookingCanceled": "Termin je otkazan",
       "waitlistNote": "Obavestićemo vas kad se oslobodi mesto.",
       "bookingError": "Akcija zakazivanja nije uspela.",
+      "errorGuardianRequired": "Da biste zakazali sledeći termin, roditelj mora prvo potpisati saglasnost u studiju.",
+      "errorNoPackage": "Nemate aktivan paket za ovaj tip treninga.",
       "room": "Sala",
       "trainer": "Trener",
       "availableSlots": "{{count}} slobodno",
@@ -244,6 +370,7 @@
     "a11yOpenProfile": "Otvori profil",
     "a11yGoBack": "Nazad",
     "cancel": "Otkaži",
+    "close": "Zatvori",
     "confirm": "Potvrdi",
     "time": "Vreme",
     "pickDate": "Izaberi datum",
@@ -286,6 +413,10 @@
       "noPackageForClass": "Nemate paket za ovaj tip treninga."
     }
   },
+  "legal": {
+    "viewerTitle": "Pravni dokument",
+    "loadError": "Nije moguće učitati dokument."
+  },
   "admin": {
     "notifications": {
       "title": "Obaveštenja",
@@ -325,6 +456,34 @@
       "classCount_one": "{{count}} termin",
       "classCount_few": "{{count}} termina",
       "classCount_other": "{{count}} termina"
+    },
+    "client": {
+      "legalPanel": "Pravna dokumenta",
+      "legalPanelEmpty": "Klijent još nije prihvatio dokumente.",
+      "legalAccepted": "Prihvaćeno {{date}}",
+      "legalAcceptedShort": "Prihvaćeno · {{date}}",
+      "legalNotAccepted": "Još nije prihvaćeno",
+      "legalGuardianVerified": "Potpis roditelja prikupljen",
+      "legalGuardianPending": "Potreban potpis roditelja",
+      "guardianVerifiedToggle": "Potpis roditelja prikupljen",
+      "socialMediaPanel": "Saglasnost za foto/video",
+      "socialMediaYes": "Da",
+      "socialMediaNo": "Ne",
+      "socialMediaUnknown": "Nije pitano",
+      "socialMediaSince": "Poslednja promena: {{date}}",
+      "healthSection": "Zdravstveni podaci",
+      "healthNone": "Nema unetih podataka.",
+      "healthNoFlags": "Bez obeleženih stanja.",
+      "healthFlags": {
+        "pregnant": "Trudnoća",
+        "postpartum": "Postporođajni period",
+        "complaints": "Tegobe",
+        "injuries": "Povrede",
+        "physicallyActive": "Fizički aktivna",
+        "firstPilates": "Prvi put pilates",
+        "recordedAt": "Uneti {{date}}",
+        "withdrawn": "Saglasnost povučena {{date}}"
+      }
     },
     "clients": {
       "title": "Klijenti",
@@ -412,6 +571,7 @@
       "noPackages": "Još nema paketa.",
       "packagesError": "Nije moguće učitati pakete.",
       "upcomingBookings": "Predstojeći termini",
+      "nextSession": "Sledeći termin",
       "upcomingTab": "Predstojeći",
       "historyTab": "Istorija",
       "noUpcoming": "Nema predstojećih termina.",
@@ -502,7 +662,15 @@
       "editAction": "Uredi termin",
       "loadError": "Nije moguće učitati termin.",
       "bookedClients": "Klijenti rezervisani",
-      "noBookings": "Još nema rezervacija."
+      "noBookings": "Još nema rezervacija.",
+      "flagPregnant": "Trudnoća",
+      "flagPostpartum": "Postporođajni period",
+      "flagComplaints": "Tegobe",
+      "flagInjuries": "Povrede",
+      "healthWithdrawn": "Klijent je povukao saglasnost za zdravstvene podatke.",
+      "photoConsentYes": "Foto/video: Da",
+      "photoConsentNo": "Foto/video: Ne",
+      "hintFirstPilates": "Prvi put pilates"
     },
     "manage": {
       "title": "Upravljanje",
@@ -832,6 +1000,16 @@
     "packageExpiring": {
       "title": "Paket uskoro ističe",
       "body": "Vaš paket uskoro ističe. Obnovite ga da biste nastavili sa zakazivanjem."
+    }
+  },
+  "notif": {
+    "consentRefused": {
+      "title": "Korisnik nije prihvatio dokumente",
+      "body": "{{userName}} je odbio/la pravne dokumente i odjavljen/a je."
+    },
+    "minorPaperNeeded": {
+      "title": "Potreban potpis roditelja",
+      "body": "{{userName}} je odradio/la prvu sesiju — potreban je potpis roditelja na pisanoj izjavi."
     }
   }
 }

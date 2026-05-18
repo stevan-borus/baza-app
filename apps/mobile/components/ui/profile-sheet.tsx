@@ -13,6 +13,8 @@ import { authQueries } from "@/lib/queries/auth-queries-factory";
 import { type Locale } from "@/lib/i18n";
 import { notificationsQueries } from "@/lib/queries/notifications-queries-factory";
 import { signOutWithPushCleanup } from "@/lib/sign-out";
+import { ProfileLegalSection } from "@/components/profile/profile-legal-section";
+import { ProfileHealthSection } from "@/components/profile/profile-health-section";
 import { AppSheet } from "./sheet";
 import { useThemeTokens } from "./tokens";
 
@@ -175,6 +177,9 @@ function ProfileSheetContent({ open, onOpenChange }: Props) {
             }}
           />
         </View>
+
+        <ProfileLegalSection />
+        <ProfileHealthSection />
 
         <Pressable
           testID="profile-sign-out-button"

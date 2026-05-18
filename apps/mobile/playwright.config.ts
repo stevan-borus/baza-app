@@ -44,7 +44,15 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: `CI=1 EXPO_PUBLIC_API_URL=${BASE_URL} BASE_URL=${BASE_URL} APP_WEB_URL=${BASE_URL} API_ADMIN_BOOTSTRAP_TOKEN=${CRON_TOKEN} TEST_ANCHOR_TIME=${TEST_ANCHOR_TIME} NODE_OPTIONS="--max-old-space-size=8192" expo start --web --port ${PORT}`,
+    // BAZA_CONSENT_GATE_ENABLED=true: the consent gate is enabled for the
+    // entire E2E run. The flag is read by the dev server at module-load time
+    // (env.server.ts:46), so it cannot be toggled per-spec from inside the
+    // Playwright process. The seed seeds ConsentRecord rows for every user
+    // that should NOT see the gate (admin, trainers, already-onboarded clients)
+    // so those flows keep their pre-existing login → tab behaviour. The one
+    // intentionally unconsented user is client.unconsented@e2e.test,
+    // which the consent-gate spec uses for the first-time flow.
+    command: `CI=1 EXPO_PUBLIC_API_URL=${BASE_URL} BASE_URL=${BASE_URL} APP_WEB_URL=${BASE_URL} API_ADMIN_BOOTSTRAP_TOKEN=${CRON_TOKEN} TEST_ANCHOR_TIME=${TEST_ANCHOR_TIME} BAZA_CONSENT_GATE_ENABLED=true NODE_OPTIONS="--max-old-space-size=8192" expo start --web --port ${PORT}`,
     url: `${BASE_URL}/api/health`,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,

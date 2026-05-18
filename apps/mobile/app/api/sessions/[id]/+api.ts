@@ -4,6 +4,7 @@ import { nowMs } from "@/lib/now";
 import { requireRole } from "@/lib/server/auth-guards";
 import { fail, ok } from "@/lib/server/http";
 import { createSystemNotification } from "@/lib/server/notifications";
+import { maybeNotifyMinorPaperNeeded } from "@/lib/server/minor-paper-needed";
 import { NOTIFICATION_MESSAGE_KEYS } from "@baza/i18n";
 import { prisma } from "@/lib/server/prisma";
 import { findScheduleConflict } from "@/lib/server/schedule-conflict";
@@ -47,6 +48,29 @@ export async function GET(request: Request, { id }: RouteParams) {
             select: {
               id: true,
               user: { select: { id: true, fullName: true, email: true } },
+              // Latest intake row reflects the trainer-visible current state.
+              healthIntakes: {
+                orderBy: { recordedAt: "desc" },
+                take: 1,
+                select: {
+                  isFirstPilates: true,
+                  isPregnant: true,
+                  isPostpartum: true,
+                  hasComplaints: true,
+                  complaintsDetails: true,
+                  hasInjuries: true,
+                  injuriesDetails: true,
+                  recordedAt: true,
+                },
+              },
+              // If a withdrawal row exists with `withdrawnAt` newer than
+              // the latest intake (or no intake remains), the client has
+              // revoked consent — trainer card should reflect that.
+              healthIntakeWithdrawals: {
+                orderBy: { withdrawnAt: "desc" },
+                take: 1,
+                select: { withdrawnAt: true },
+              },
             },
           },
         },
@@ -54,6 +78,48 @@ export async function GET(request: Request, { id }: RouteParams) {
     },
   });
   if (!session) return fail("Session not found", 404);
+
+  // Photo/video consent for each booked client — read in one batched query
+  // (single SQL) rather than per-booking. `findMany` over the union of
+  // booked user IDs, then group client-side.
+  const bookedUserIds = session.bookings.map(
+    (b) => b.clientProfile.user.id,
+  );
+  const socialMediaRows = bookedUserIds.length
+    ? await prisma.consentRecord.findMany({
+        where: {
+          userId: { in: bookedUserIds },
+          documentKey: "social_media",
+        },
+        orderBy: { acceptedAt: "desc" },
+        distinct: ["userId"],
+        select: { userId: true, accepted: true },
+      })
+    : [];
+  const socialMediaByUserId = new Map(
+    socialMediaRows.map((r) => [r.userId, r.accepted]),
+  );
+
+  // Count prior non-canceled bookings per booked client (sessions starting
+  // before this one). Used to decide whether to surface the "Prvi put pilates"
+  // hint on the trainer card — it only makes sense for clients in their first
+  // few sessions. Cutoff: < 3 prior sessions.
+  const PRIOR_SESSIONS_CUTOFF = 3;
+  const bookedClientProfileIds = session.bookings.map((b) => b.clientProfile.id);
+  const priorBookingCounts = bookedClientProfileIds.length
+    ? await prisma.booking.groupBy({
+        by: ["clientProfileId"],
+        where: {
+          clientProfileId: { in: bookedClientProfileIds },
+          canceledAt: null,
+          session: { startsAt: { lt: session.startsAt } },
+        },
+        _count: { _all: true },
+      })
+    : [];
+  const priorCountByProfileId = new Map(
+    priorBookingCounts.map((r) => [r.clientProfileId, r._count._all]),
+  );
 
   // ADR-0002: surface bookedCount + seriesBookedCount so the edit sheet can
   // gate the "visible to clients" toggle by both rules. For a singleton
@@ -75,15 +141,56 @@ export async function GET(request: Request, { id }: RouteParams) {
     ...session,
     bookedCount,
     seriesBookedCount,
-    bookings: session.bookings.map((b) => ({
-      id: b.id,
-      createdAt: b.createdAt,
-      client: {
-        id: b.clientProfile.user.id,
-        fullName: b.clientProfile.user.fullName,
-        email: b.clientProfile.user.email,
-      },
-    })),
+    bookings: session.bookings.map((b) => {
+      const latestIntake = b.clientProfile.healthIntakes[0] ?? null;
+      const latestWithdrawal =
+        b.clientProfile.healthIntakeWithdrawals[0] ?? null;
+      // "Withdrawn" is true when there's a withdrawal newer than the latest
+      // intake (or no intake at all). Old withdrawals before a fresh intake
+      // shouldn't show as withdrawn.
+      const intakeWithdrawn =
+        !!latestWithdrawal &&
+        (!latestIntake ||
+          latestWithdrawal.withdrawnAt > latestIntake.recordedAt);
+      const priorCount = priorCountByProfileId.get(b.clientProfile.id) ?? 0;
+      // Only surface "first time pilates" if (a) intake says so AND
+      // (b) this is one of the client's first few sessions at the studio.
+      // After PRIOR_SESSIONS_CUTOFF the trainer knows them, so it's noise.
+      const showFirstPilatesHint =
+        !intakeWithdrawn &&
+        latestIntake?.isFirstPilates === true &&
+        priorCount < PRIOR_SESSIONS_CUTOFF;
+      const consentFlags = {
+        showFirstPilatesHint,
+        isPregnant: !intakeWithdrawn && (latestIntake?.isPregnant ?? false),
+        isPostpartum:
+          !intakeWithdrawn && (latestIntake?.isPostpartum ?? false),
+        hasComplaints:
+          !intakeWithdrawn && (latestIntake?.hasComplaints ?? false),
+        complaintsDetails: intakeWithdrawn
+          ? null
+          : (latestIntake?.complaintsDetails ?? null),
+        hasInjuries:
+          !intakeWithdrawn && (latestIntake?.hasInjuries ?? false),
+        injuriesDetails: intakeWithdrawn
+          ? null
+          : (latestIntake?.injuriesDetails ?? null),
+        intakeRecorded: !intakeWithdrawn && latestIntake !== null,
+        intakeWithdrawn,
+        socialMediaAccepted:
+          socialMediaByUserId.get(b.clientProfile.user.id) ?? null,
+      };
+      return {
+        id: b.id,
+        createdAt: b.createdAt,
+        client: {
+          id: b.clientProfile.user.id,
+          fullName: b.clientProfile.user.fullName,
+          email: b.clientProfile.user.email,
+        },
+        consentFlags,
+      };
+    }),
   };
 
   return ok({ success: true, session: shaped });
@@ -237,6 +344,13 @@ export async function PATCH(request: Request, { id }: RouteParams) {
         }),
       ),
     );
+  }
+
+  // Fire MINOR_PAPER_NEEDED when a session transitions to COMPLETED for the
+  // first time. Guard lives inside the helper — it only notifies for minors
+  // whose first session this is and whose guardian has not yet signed.
+  if (existing.status !== "COMPLETED" && session.status === "COMPLETED") {
+    await maybeNotifyMinorPaperNeeded(session.id);
   }
 
   return ok({ success: true, session });

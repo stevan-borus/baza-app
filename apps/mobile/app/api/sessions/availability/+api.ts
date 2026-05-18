@@ -122,6 +122,11 @@ export async function GET(request: Request) {
   }
 
   let visibleSessions = sessions;
+  let myBookedSessionIds = new Set<string>();
+  // Per-session late-cancel-hours pulled from the booking's package. Used
+  // by the BookingSheet's cancel confirmation to warn the client when the
+  // cancellation would consume a session.
+  const myBookingLateCancelHours = new Map<string, number>();
   if (guard.user.role === UserRole.CLIENT) {
     const clientProfileId = guard.user.clientProfile?.id;
     if (!clientProfileId) {
@@ -129,6 +134,26 @@ export async function GET(request: Request) {
       // rather than 404 so the "buy a package" UX state shows.
       visibleSessions = [];
     } else {
+      // Mark sessions the current client has an active booking on, so the
+      // calendar/booking sheet can render the right state ("already booked").
+      const myBookings = await prisma.booking.findMany({
+        where: {
+          clientProfileId,
+          canceledAt: null,
+          sessionId: { in: sessions.map((s) => s.id) },
+        },
+        select: {
+          sessionId: true,
+          clientPackage: { select: { lateCancelHours: true } },
+        },
+      });
+      myBookedSessionIds = new Set(myBookings.map((b) => b.sessionId));
+      for (const b of myBookings) {
+        if (b.clientPackage?.lateCancelHours != null) {
+          myBookingLateCancelHours.set(b.sessionId, b.clientPackage.lateCancelHours);
+        }
+      }
+
       const [clientPackages, packagePauses] = await Promise.all([
         prisma.clientPackage.findMany({
           where: { clientProfileId },
@@ -186,6 +211,8 @@ export async function GET(request: Request) {
         recurringScheduleId: session.recurringScheduleId,
         isActive: visibleToClients,
         attendance: attendanceBySessionId.get(session.id) ?? null,
+        isBookedByMe: myBookedSessionIds.has(session.id),
+        lateCancelHours: myBookingLateCancelHours.get(session.id) ?? null,
       };
     }),
   });

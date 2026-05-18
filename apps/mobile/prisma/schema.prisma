@@ -49,11 +49,23 @@ enum NotificationType {
   GENERAL
   BOOKING_CANCELED_ADMIN
   BOOKING_CANCELED_TRAINER
+  CONSENT_REFUSED
+  MINOR_PAPER_NEEDED
 }
 
 enum AppLocale {
   sr
   en
+}
+
+enum ConsentDocumentKey {
+  tos
+  privacy
+  eula
+  waiver_adult
+  waiver_minor
+  social_media
+  health_intake
 }
 
 model User {
@@ -78,6 +90,9 @@ model User {
   notificationPreference NotificationPreference?
   pushTokens   PushToken[]
   notifications NotificationLog[]
+  consentRecords          ConsentRecord[]
+  consentRecordsVerified  ConsentRecord[]  @relation("GuardianVerifier")
+  healthIntakesRecorded ClientHealthIntake[] @relation("HealthIntakeRecordedBy")
   trainerNotesAuthored TrainerNote[] @relation("TrainerNoteAuthor")
   trainerSessions       Session[]            @relation("SessionTrainer")
   trainerSchedules      RecurringSchedule[]  @relation("ScheduleTrainer")
@@ -98,6 +113,8 @@ model ClientProfile {
   packages            ClientPackage[]
   packagePauses       PackagePause[]
   trainerNotes        TrainerNote[]
+  healthIntakes           ClientHealthIntake[]
+  healthIntakeWithdrawals HealthIntakeWithdrawal[]
 }
 
 model TrainerProfile {
@@ -405,4 +422,56 @@ model BillingRecord {
   updatedAt       DateTime       @updatedAt
 
   @@index([packageTypeId])
+}
+
+model ConsentRecord {
+  id                   String              @id @default(uuid())
+  userId               String
+  user                 User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  documentKey          ConsentDocumentKey
+  version              Int
+  locale               AppLocale
+  accepted             Boolean
+  acceptedAt           DateTime            @default(now())
+  ipAddress            String?
+  userAgent            String?
+  appVersion           String?
+  guardianName         String?
+  guardianRelation     String?
+  guardianVerifiedAt   DateTime?
+  guardianVerifiedById String?
+  guardianVerifiedBy   User?               @relation("GuardianVerifier", fields: [guardianVerifiedById], references: [id])
+
+  @@index([userId, documentKey, version])
+  @@index([userId, acceptedAt])
+}
+
+model ClientHealthIntake {
+  id                 String        @id @default(uuid())
+  clientProfileId    String
+  clientProfile      ClientProfile @relation(fields: [clientProfileId], references: [id], onDelete: Cascade)
+  isPhysicallyActive Boolean
+  isFirstPilates     Boolean
+  hasComplaints      Boolean
+  complaintsDetails  String?
+  hasInjuries        Boolean
+  injuriesDetails    String?
+  isPregnant         Boolean
+  isPostpartum       Boolean
+  recordedAt         DateTime      @default(now())
+  recordedByUserId   String?
+  recordedBy         User?         @relation("HealthIntakeRecordedBy", fields: [recordedByUserId], references: [id])
+  guardianName       String?
+  guardianRelation   String?
+
+  @@index([clientProfileId, recordedAt])
+}
+
+model HealthIntakeWithdrawal {
+  id              String        @id @default(uuid())
+  clientProfileId String
+  clientProfile   ClientProfile @relation(fields: [clientProfileId], references: [id], onDelete: Cascade)
+  withdrawnAt     DateTime      @default(now())
+
+  @@index([clientProfileId, withdrawnAt])
 }

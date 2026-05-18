@@ -9,7 +9,8 @@ export type NotificationMessageKey =
   | "PACKAGE_EXPIRING_SOON"
   | "SESSION_REMINDER"
   | "BOOKING_CANCELED_ADMIN"
-  | "BOOKING_CANCELED_TRAINER";
+  | "BOOKING_CANCELED_TRAINER"
+  | "MINOR_PAPER_NEEDED";
 
 export const NOTIFICATION_MESSAGE_KEYS = {
   BOOKING_CONFIRMED: "BOOKING_CONFIRMED",
@@ -21,6 +22,7 @@ export const NOTIFICATION_MESSAGE_KEYS = {
   SESSION_REMINDER: "SESSION_REMINDER",
   BOOKING_CANCELED_ADMIN: "BOOKING_CANCELED_ADMIN",
   BOOKING_CANCELED_TRAINER: "BOOKING_CANCELED_TRAINER",
+  MINOR_PAPER_NEEDED: "MINOR_PAPER_NEEDED",
 } as const satisfies Record<NotificationMessageKey, NotificationMessageKey>;
 
 const messages: Record<
@@ -73,6 +75,16 @@ const messages: Record<
     en: {
       title: "Booking canceled",
       body: "A client canceled your session.",
+    },
+  },
+  MINOR_PAPER_NEEDED: {
+    sr: {
+      title: "Potreban potpis roditelja",
+      body: "Klijent je odradio/la prvu sesiju i potreban je potpis roditelja.",
+    },
+    en: {
+      title: "Guardian signature needed",
+      body: "A minor client completed their first session — collect the paper signature.",
     },
   },
 };
