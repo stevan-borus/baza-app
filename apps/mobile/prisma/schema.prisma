@@ -51,6 +51,8 @@ enum NotificationType {
   BOOKING_CANCELED_TRAINER
   CONSENT_REFUSED
   MINOR_PAPER_NEEDED
+  BIRTHDAY_ADMIN_PROMPT
+  BIRTHDAY_CLIENT_GIFT
 }
 
 enum AppLocale {
@@ -296,6 +298,7 @@ model PackageType {
   sessionCount        Int
   validityDays        Int
   lateCancelHours     Int      @default(8)
+  isBirthdayGift      Boolean  @default(false)
   classTypeId         String
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
