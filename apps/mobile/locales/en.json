@@ -765,7 +765,9 @@
       "packagesPaidLabel": "Paid",
       "packagesCount": "{{count}} sold",
       "packagesReportError": "Unable to load packages report.",
-      "packagesReportEmpty": "No package data in this period."
+      "packagesReportEmpty": "No package data in this period.",
+      "isBirthdayGiftLabel": "Birthday gift",
+      "birthdayGiftBadge": "Birthday gift"
     },
     "izvestaji": {
       "placeholder": "Content coming soon.",

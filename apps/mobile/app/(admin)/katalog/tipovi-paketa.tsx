@@ -2,11 +2,11 @@
 // GlassCard rows, FilterChip bar, avatar-style session-count icon, MotiView stagger,
 // and create-package AppSheet preserved verbatim.
 
-import React, { useState, useMemo } from "react";
+import React, { useState } from "react";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
+import { Pressable, RefreshControl, ScrollView, Switch, Text, View } from "react-native";
 import { MotiView } from "@/components/ui/styled";
 import dayjs from "dayjs";
 import { AppSheet } from "@/components/ui/sheet";
@@ -83,6 +83,7 @@ export default function AdminPackages() {
     validityDays: "",
     lateCancelHours: "8",
     classTypeId: "",
+    isBirthdayGift: false,
   });
   const [editForm, setEditForm] = useState({
     name: "",
@@ -90,6 +91,7 @@ export default function AdminPackages() {
     validityDays: "",
     lateCancelHours: "8",
     classTypeId: "",
+    isBirthdayGift: false,
   });
 
   async function handleRefresh() {
@@ -116,6 +118,7 @@ export default function AdminPackages() {
         validityDays: "",
         lateCancelHours: "8",
         classTypeId: "",
+        isBirthdayGift: false,
       });
     },
   });
@@ -144,6 +147,7 @@ export default function AdminPackages() {
     validityDays: number;
     lateCancelHours: number;
     classTypeId: string;
+    isBirthdayGift?: boolean;
   }) {
     setEditForm({
       name: pt.name,
@@ -151,6 +155,7 @@ export default function AdminPackages() {
       validityDays: String(pt.validityDays),
       lateCancelHours: String(pt.lateCancelHours),
       classTypeId: pt.classTypeId,
+      isBirthdayGift: pt.isBirthdayGift ?? false,
     });
     setEditingId(pt.id);
   }
@@ -233,13 +238,20 @@ export default function AdminPackages() {
                   >
                     <SessionCountIcon count={pt.sessionCount} />
                     <View className="flex-1 gap-0.5">
-                      <Text
-                        className="text-foreground font-body-semibold"
-                        style={{ fontSize: 15 }}
-                        numberOfLines={1}
-                      >
-                        {pt.name}
-                      </Text>
+                      <View className="flex-row items-center gap-2">
+                        <Text
+                          className="text-foreground font-body-semibold"
+                          style={{ fontSize: 15 }}
+                          numberOfLines={1}
+                        >
+                          {pt.name}
+                        </Text>
+                        {pt.isBirthdayGift ? (
+                          <Badge status="success">
+                            🎂 {t("admin.manage.birthdayGiftBadge")}
+                          </Badge>
+                        ) : null}
+                      </View>
                       <Text
                         className="text-muted"
                         style={{ fontSize: 12 }}
@@ -362,6 +374,22 @@ export default function AdminPackages() {
                 setForm((s) => ({ ...s, lateCancelHours: v }))
               }
             />
+            <View className="flex-row items-center justify-between py-2">
+              <Text className="text-foreground" style={{ fontSize: 15 }}>
+                {t("admin.manage.isBirthdayGiftLabel")}
+              </Text>
+              <Switch
+                value={form.isBirthdayGift}
+                onValueChange={(v) =>
+                  setForm((s) => ({
+                    ...s,
+                    isBirthdayGift: v,
+                    sessionCount: v ? "1" : s.sessionCount,
+                  }))
+                }
+                trackColor={{ false: tokens.glassStrong, true: tokens.accent }}
+              />
+            </View>
             <Button
               testID="package-create-submit"
               disabled={
@@ -378,6 +406,7 @@ export default function AdminPackages() {
                   validityDays: parseInt(form.validityDays, 10),
                   lateCancelHours: parseInt(form.lateCancelHours, 10) || 8,
                   classTypeId: form.classTypeId,
+                  isBirthdayGift: form.isBirthdayGift,
                 })
               }
             >
@@ -447,6 +476,22 @@ export default function AdminPackages() {
                 setEditForm((s) => ({ ...s, lateCancelHours: v }))
               }
             />
+            <View className="flex-row items-center justify-between py-2">
+              <Text className="text-foreground" style={{ fontSize: 15 }}>
+                {t("admin.manage.isBirthdayGiftLabel")}
+              </Text>
+              <Switch
+                value={editForm.isBirthdayGift}
+                onValueChange={(v) =>
+                  setEditForm((s) => ({
+                    ...s,
+                    isBirthdayGift: v,
+                    sessionCount: v ? "1" : s.sessionCount,
+                  }))
+                }
+                trackColor={{ false: tokens.glassStrong, true: tokens.accent }}
+              />
+            </View>
             <Button
               testID="package-edit-save-button"
               disabled={
@@ -465,6 +510,7 @@ export default function AdminPackages() {
                   validityDays: parseInt(editForm.validityDays, 10),
                   lateCancelHours: parseInt(editForm.lateCancelHours, 10) || 8,
                   classTypeId: editForm.classTypeId,
+                  isBirthdayGift: editForm.isBirthdayGift,
                 });
               }}
             >

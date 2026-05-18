@@ -20,6 +20,7 @@ const packageTypeSchema = z.object({
   lateCancelHours: z.number(),
   classTypeId: z.string(),
   classType: embeddedClassTypeSchema.optional(),
+  isBirthdayGift: z.boolean().optional(),
 });
 
 const packageTypesResponseSchema = z.object({
@@ -148,6 +149,7 @@ export const packagesQueries = {
         validityDays: number;
         lateCancelHours?: number;
         classTypeId: string;
+        isBirthdayGift?: boolean;
       }) => {
         const response = await apiFetch(`${sharedEnv.EXPO_PUBLIC_API_URL}/api/packages/types`, {
           method: "POST",
@@ -173,6 +175,7 @@ export const packagesQueries = {
         validityDays?: number;
         lateCancelHours?: number;
         classTypeId?: string;
+        isBirthdayGift?: boolean;
       }) => {
         const response = await apiFetch(
           `${sharedEnv.EXPO_PUBLIC_API_URL}/api/packages/types/${id}`,
