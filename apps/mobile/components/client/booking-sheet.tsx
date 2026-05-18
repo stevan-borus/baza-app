@@ -21,7 +21,7 @@ import { Button } from "@/components/ui/button";
 import { MetricRow } from "@/components/ui/metric-row";
 import type { AvailabilitySession } from "@baza/types";
 
-type BookingStep = "idle" | "confirmBook" | "confirmCancel";
+type BookingStep = "idle" | "confirmBook" | "confirmCancel" | "success" | "error";
 
 type Props = {
   session: AvailabilitySession | null;
@@ -29,6 +29,10 @@ type Props = {
   onBook: (id: string) => void;
   onCancel: (id: string) => void;
   pending: boolean;
+  /** Set after a successful mutation so the sheet replaces its buttons with a confirmation block. */
+  successState: "BOOKED" | "WAITLISTED" | "CANCELED" | null;
+  /** Server error code (e.g. GUARDIAN_VERIFICATION_REQUIRED) when the mutation fails. */
+  errorCode: string | null;
 };
 
 const classTypeColor: Record<string, string> = {
@@ -43,23 +47,36 @@ export function BookingSheet({
   onBook,
   onCancel,
   pending,
+  successState,
+  errorCode,
 }: Props) {
   const { t, i18n } = useTranslation();
   const lang = i18n.language === "en" ? "en" : "sr";
   const [step, setStep] = useState<BookingStep>("idle");
 
-  React.useEffect(() => {
-    if (!session) setStep("idle");
-  }, [session]);
+  function handleClose() {
+    setStep("idle");
+    onClose();
+  }
 
   const isFull = !!session && session.availableSlots <= 0;
   const hasWaitlist = !!session && session.waitlistCount > 0;
+  const isBookedByMe = !!session?.isBookedByMe;
+  // Success / error state is owned by the parent (driven by the mutation
+  // result), not by local UI state — so it doesn't need a useEffect to sync.
+  // When either is present, the buttons area is replaced with the
+  // corresponding block regardless of the local `step`.
+  const effectiveStep: BookingStep = errorCode
+    ? "error"
+    : successState
+      ? "success"
+      : step;
   const durationMin = session
     ? dayjs(session.endsAt).diff(dayjs(session.startsAt), "minute")
     : 0;
 
   return (
-    <AppSheet open={!!session} onOpenChange={(v) => !v && onClose()}>
+    <AppSheet open={!!session} onOpenChange={(v) => !v && handleClose()}>
       {session ? (
         <View className="flex-col gap-4">
           <MotiView
@@ -180,45 +197,49 @@ export function BookingSheet({
             animate={{ opacity: 1, translateY: 0 }}
             transition={{ type: "timing", duration: 250, delay: 160 }}
           >
-            {step === "idle" ? (
-              <View className="flex-row gap-3">
-                {!isFull ? (
+            {effectiveStep === "idle" ? (
+              isBookedByMe ? (
+                <View className="flex-col gap-3">
+                  <View className="flex-row items-center justify-center gap-2">
+                    <FontAwesome name="check-circle" size={16} color="#2e5b42" />
+                    <Text className="font-body-semibold text-accent text-[14px]">
+                      {t("client.dayView.alreadyBooked")}
+                    </Text>
+                  </View>
                   <Button
-                    testID="booking-book-button"
-                    className="flex-1"
+                    testID="booking-cancel-button"
+                    variant="danger"
                     onPress={() => {
                       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                      setStep("confirmBook");
+                      setStep("confirmCancel");
                     }}
                     disabled={pending}
                   >
-                    {t("client.calendar.book")}
+                    {t("client.calendar.cancel")}
                   </Button>
-                ) : (
-                  <Button
-                    testID="booking-waitlist-button"
-                    className="flex-1"
-                    variant="secondary"
-                    onPress={() => onBook(session.id)}
-                    disabled={pending}
-                  >
-                    {t("client.dayView.joinWaitlist")}
-                  </Button>
-                )}
+                </View>
+              ) : isFull ? (
                 <Button
-                  testID="booking-cancel-button"
-                  className="flex-1"
-                  variant="danger"
+                  testID="booking-waitlist-button"
+                  variant="secondary"
+                  onPress={() => onBook(session.id)}
+                  disabled={pending}
+                >
+                  {t("client.dayView.joinWaitlist")}
+                </Button>
+              ) : (
+                <Button
+                  testID="booking-book-button"
                   onPress={() => {
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                    setStep("confirmCancel");
+                    setStep("confirmBook");
                   }}
                   disabled={pending}
                 >
-                  {t("client.calendar.cancel")}
+                  {t("client.calendar.book")}
                 </Button>
-              </View>
-            ) : step === "confirmBook" ? (
+              )
+            ) : effectiveStep === "confirmBook" ? (
               <View className="flex-col gap-3">
                 <Text
                   className="text-foreground font-body-semibold text-[15px]"
@@ -248,36 +269,92 @@ export function BookingSheet({
                   </Button>
                 </View>
               </View>
-            ) : (
-              <View className="flex-col gap-3">
+            ) : effectiveStep === "confirmCancel" ? (
+              (() => {
+                // Cancellation is allowed any time. If it lands inside the
+                // late-cancel window, one session from the package is
+                // deducted — warn explicitly so the client makes an informed
+                // decision before tapping Potvrdi.
+                const hours = session.lateCancelHours;
+                const isLate =
+                  hours != null &&
+                  dayjs(session.startsAt).diff(dayjs(), "hour", true) < hours;
+                return (
+                  <View className="flex-col gap-3">
+                    <Text
+                      className="text-foreground font-body-semibold text-[15px]"
+                      style={{ textAlign: "center" }}
+                    >
+                      {isLate
+                        ? t("client.dayView.cancelWarningLate", { hours })
+                        : t("client.dayView.cancelWarning")}
+                    </Text>
+                    <View className="flex-row gap-3">
+                      <Button
+                        testID="booking-confirm-cancel-button"
+                        className="flex-1"
+                        variant="danger"
+                        onPress={() => {
+                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+                          onCancel(session.id);
+                        }}
+                        disabled={pending}
+                      >
+                        {t("client.dayView.confirm")}
+                      </Button>
+                      <Button
+                        testID="booking-confirm-cancel-back-button"
+                        className="flex-1"
+                        variant="secondary"
+                        onPress={() => setStep("idle")}
+                      >
+                        {t("client.calendar.cancel")}
+                      </Button>
+                    </View>
+                  </View>
+                );
+              })()
+            ) : effectiveStep === "success" ? (
+              <View className="flex-row items-center justify-center gap-2 py-3">
+                <FontAwesome
+                  name={successState === "CANCELED" ? "info-circle" : "check-circle"}
+                  size={18}
+                  color={successState === "CANCELED" ? "#a17d3a" : "#2e5b42"}
+                />
                 <Text
-                  className="text-foreground font-body-semibold text-[15px]"
-                  style={{ textAlign: "center" }}
+                  testID="booking-success-message"
+                  className="font-body-semibold text-[15px]"
+                  style={{
+                    color: successState === "CANCELED" ? "#a17d3a" : "#2e5b42",
+                  }}
                 >
-                  {t("client.dayView.cancelWarning")}
+                  {successState === "BOOKED"
+                    ? t("client.calendar.bookingBooked")
+                    : successState === "WAITLISTED"
+                      ? t("client.calendar.bookingWaitlisted")
+                      : successState === "CANCELED"
+                        ? t("client.calendar.bookingCanceled")
+                        : ""}
                 </Text>
-                <View className="flex-row gap-3">
-                  <Button
-                    testID="booking-confirm-cancel-button"
-                    className="flex-1"
-                    variant="danger"
-                    onPress={() => {
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-                      onCancel(session.id);
-                    }}
-                    disabled={pending}
-                  >
-                    {t("client.dayView.confirm")}
-                  </Button>
-                  <Button
-                    testID="booking-confirm-cancel-back-button"
-                    className="flex-1"
-                    variant="secondary"
-                    onPress={() => setStep("idle")}
-                  >
-                    {t("client.calendar.cancel")}
-                  </Button>
-                </View>
+              </View>
+            ) : (
+              <View className="flex-row items-start gap-2 px-3 py-3 rounded-xl border border-danger/40 bg-danger-soft">
+                <FontAwesome
+                  name="exclamation-circle"
+                  size={18}
+                  color="#dc2626"
+                  style={{ marginTop: 1 }}
+                />
+                <Text
+                  testID="booking-error-message"
+                  className="flex-1 text-[14px] text-danger font-body-semibold"
+                >
+                  {errorCode === "GUARDIAN_VERIFICATION_REQUIRED"
+                    ? t("client.calendar.errorGuardianRequired")
+                    : errorCode === "no_package_for_class"
+                      ? t("client.calendar.errorNoPackage")
+                      : t("client.calendar.bookingError")}
+                </Text>
               </View>
             )}
           </MotiView>

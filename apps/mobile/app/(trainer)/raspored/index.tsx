@@ -11,10 +11,9 @@ import { useQuery } from "@tanstack/react-query";
 import dayjs from "dayjs";
 import { useTranslation } from "react-i18next";
 import { ScrollView, Text, View } from "react-native";
+import { router, type Href } from "expo-router";
 import { MotiView } from "@/components/ui/styled";
-import { AppSheet } from "@/components/ui/sheet";
-import { Badge, Card } from "@/components/ui/card";
-import { ListRow, EmptyState, ErrorState } from "@/components/ui/states";
+import { EmptyState, ErrorState } from "@/components/ui/states";
 import { startOfLocaleWeek } from "@/components/ui/week-strip";
 import { MonthView } from "@/components/ui/month-view";
 import { SegmentedControl } from "@/components/ui/segmented-control";
@@ -23,6 +22,7 @@ import {
   ScreenContainerRaw,
   useTabBarBottomPadding,
 } from "@/components/ui/screen-container";
+import { TrainerScheduleLeftSlot } from "@/components/trainer/trainer-tab-left-slot";
 import { CapsLabel, StudioWeekStrip } from "@/components/ui/studio";
 import { authQueries } from "@/lib/queries/auth-queries-factory";
 import { sessionsQueries } from "@/lib/queries/sessions-queries-factory";
@@ -42,17 +42,6 @@ export default function TrainerSchedule() {
   const [weekStart, setWeekStart] = useState(() => startOfLocaleWeek(dayjs()));
   const [monthDate, setMonthDate] = useState(() => dayjs().startOf("month"));
   const [scheduleTab, setScheduleTab] = useState<ScheduleTab>("day");
-  const [selectedSession, setSelectedSession] = useState<{
-    sessionId: string;
-    classTypeName: string;
-    roomName: string | null;
-    bookedCount: number;
-    capacity: number;
-    availableSlots: number;
-    startsAt: Date;
-    endsAt: Date;
-  } | null>(null);
-
   const displayDate = dayjs(selectedDate);
 
   const meQuery = useQuery(authQueries.me());
@@ -129,27 +118,14 @@ export default function TrainerSchedule() {
   }
 
   function handleEventPress(session: typeof sessions[0]) {
-    setSelectedSession({
-      sessionId: session.id,
-      classTypeName: session.classTypeName,
-      roomName: session.roomName,
-      bookedCount: session.bookedCount,
-      capacity: session.capacity,
-      availableSlots: session.availableSlots,
-      startsAt: session.startsAt instanceof Date
-        ? session.startsAt
-        : new Date(session.startsAt),
-      endsAt: session.endsAt instanceof Date
-        ? session.endsAt
-        : new Date(session.endsAt),
-    });
+    router.push(`/(trainer)/sessions/${session.id}` as Href);
   }
 
   const trainerName = meQuery.data?.user?.email ?? "";
   const greetingName = trainerName.split("@")[0] ?? trainerName;
 
   return (
-    <ScreenContainerRaw title={t("tabs.schedule")}>
+    <ScreenContainerRaw title={t("tabs.schedule")} leftSlot={<TrainerScheduleLeftSlot />}>
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingTop: 16, paddingBottom: bottomPad }}
@@ -291,35 +267,6 @@ export default function TrainerSchedule() {
           )}
         </MotiView>
       </ScrollView>
-
-      {/* ── Session detail sheet (trainer is read-only) ── */}
-      <AppSheet
-        open={!!selectedSession}
-        onOpenChange={() => setSelectedSession(null)}
-      >
-        {selectedSession ? (
-          <View className="flex-col gap-4 pb-5">
-            <Text
-              className="text-foreground font-body-bold"
-              style={{ fontSize: 22, letterSpacing: -0.3 }}
-            >
-              {selectedSession.classTypeName}
-            </Text>
-            <Card>
-              <View className="flex-col gap-3">
-                <ListRow
-                  title={`${dayjs(selectedSession.startsAt).format("DD.MM.YYYY HH:mm")} – ${dayjs(selectedSession.endsAt).format("HH:mm")}`}
-                  subtitle={`${t("trainer.schedule.room")}: ${selectedSession.roomName ?? "—"} · ${t("trainer.schedule.available")}: ${selectedSession.availableSlots}`}
-                />
-                <Badge status="neutral">
-                  {selectedSession.bookedCount}/{selectedSession.capacity}{" "}
-                  {t("trainer.schedule.booked")}
-                </Badge>
-              </View>
-            </Card>
-          </View>
-        ) : null}
-      </AppSheet>
     </ScreenContainerRaw>
   );
 }

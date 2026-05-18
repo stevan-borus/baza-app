@@ -1,3 +1,5 @@
+import { useCallback, useMemo, useRef } from "react";
+import { useFocusEffect } from "expo-router";
 import { useMutation, useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { ActivityIndicator, Pressable, Text, View } from "react-native";
@@ -12,7 +14,7 @@ import { SectionLabel } from "@/components/ui/typography";
 import { notificationsQueries, type Notification } from "@/lib/queries/notifications-queries-factory";
 import dayjs from "dayjs";
 
-type NotificationsInboxContext = "client" | "admin";
+type NotificationsInboxContext = "client" | "admin" | "trainer";
 
 type Props = {
   context: NotificationsInboxContext;
@@ -24,12 +26,15 @@ type NotificationGroup = "today" | "yesterday" | "earlier";
 const TYPE_ICON: Record<string, string> = {
   BOOKING_CONFIRMED: "calendar-check-o",
   BOOKING_CANCELED: "times-circle",
+  BOOKING_CANCELED_ADMIN: "times-circle",
+  BOOKING_CANCELED_TRAINER: "times-circle",
   SESSION_CANCELED: "times-circle",
   SESSION_UPDATED: "refresh",
   TRAINER_NOTE: "sticky-note-o",
   SESSION_REMINDER: "bell",
   PACKAGE_EXPIRING: "gift",
   SPOT_FROM_WAITLIST: "star",
+  MINOR_PAPER_NEEDED: "edit",
   GENERAL: "info-circle",
 };
 
@@ -37,6 +42,18 @@ type GroupedNotifications = {
   key: NotificationGroup;
   labelKey: string;
   items: Notification[];
+};
+
+type ListItem =
+  | { kind: "header"; groupKey: NotificationGroup; labelKey: string }
+  | { kind: "row"; notification: Notification };
+
+// Stable viewabilityConfig reference — recreating this object on each render
+// would cause LegendList (like RN FlatList) to throw "Changing onViewableItemsChanged
+// on the fly is not supported" warnings and may drop events.
+const VIEWABILITY_CONFIG = {
+  itemVisiblePercentThreshold: 50,
+  minimumViewTime: 300,
 };
 
 function groupByDay(notifications: Notification[]): GroupedNotifications[] {
@@ -73,6 +90,40 @@ function iconForType(type: string): string {
   return TYPE_ICON[type] ?? "info-circle";
 }
 
+/**
+ * Extract a flat `Record<string, string>` of interpolation values from the
+ * notification payload so `t(messageKey.body, payload)` can render
+ * "Marko Marković je otkazao Reformer pilates (10:00)" rather than the
+ * raw literal with `{{clientFullName}}` placeholders.
+ *
+ * Whitelist only safe scalar fields — we don't want random server payload
+ * keys to land inside translation strings.
+ */
+function payloadInterpolation(
+  payload: Notification["payload"],
+  lang: "sr" | "en",
+): Record<string, string> {
+  if (!payload || typeof payload !== "object") return {};
+  const out: Record<string, string> = {};
+  const safe = (k: string) => {
+    const v = (payload as Record<string, unknown>)[k];
+    if (typeof v === "string") out[k] = v;
+    else if (typeof v === "number" || typeof v === "boolean") out[k] = String(v);
+  };
+  safe("clientFullName");
+  safe("classTypeName");
+  safe("trainerFullName");
+  // sessionStartsAt is ISO; render as HH:mm (or HH:mm D.M. if not today).
+  const startsAt = (payload as Record<string, unknown>).sessionStartsAt;
+  if (typeof startsAt === "string") {
+    const d = dayjs(startsAt).locale(lang);
+    out.time = dayjs().isSame(d, "day")
+      ? d.format("HH:mm")
+      : d.format(lang === "en" ? "HH:mm MMM D" : "HH:mm D.M.");
+  }
+  return out;
+}
+
 export function NotificationsInbox({ context, bottomPad = 0 }: Props) {
   const queryClient = useQueryClient();
   const { t, i18n } = useTranslation();
@@ -80,12 +131,62 @@ export function NotificationsInbox({ context, bottomPad = 0 }: Props) {
   const tokens = useThemeTokens();
 
   const notificationsQuery = useInfiniteQuery(notificationsQueries.listInfinite());
-  const allNotifications = notificationsQuery.data?.pages.flatMap((p) => p.notifications) ?? [];
+  const allNotifications = useMemo(
+    () => notificationsQuery.data?.pages.flatMap((p) => p.notifications) ?? [],
+    [notificationsQuery.data?.pages],
+  );
 
-  const markReadMutation = useMutation({
-    ...notificationsQueries.markAsRead(),
+  const markManyReadMutation = useMutation({
+    ...notificationsQueries.markManyRead(),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["notifications"] }),
   });
+
+  // Debounce mark-read calls — viewability events fire rapidly during scroll;
+  // batching them into a single request every ~500ms avoids hammering the API.
+  const pendingIdsRef = useRef<Set<string>>(new Set());
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const flushMarkRead = useCallback(() => {
+    const ids = Array.from(pendingIdsRef.current);
+    pendingIdsRef.current.clear();
+    debounceRef.current = null;
+    if (ids.length > 0) markManyReadMutation.mutate(ids);
+  }, [markManyReadMutation]);
+
+  const onViewableItemsChanged = useCallback(
+    ({ viewableItems }: { viewableItems: Array<{ item: ListItem }> }) => {
+      for (const v of viewableItems) {
+        if (v.item.kind === "row" && !v.item.notification.readAt) {
+          pendingIdsRef.current.add(v.item.notification.id);
+        }
+      }
+      if (pendingIdsRef.current.size === 0) return;
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      debounceRef.current = setTimeout(flushMarkRead, 500);
+    },
+    [flushMarkRead],
+  );
+
+  // When the inbox screen comes into focus, mark every currently-loaded
+  // unread row as read after a brief delay. Covers the case where the user
+  // opens the page, sees their rows on screen, and never scrolls (so
+  // `onViewableItemsChanged` never fires). Standard Mail / Slack / Linear
+  // inbox pattern. Server filters by userId so IDs are safe to pass.
+  //
+  // We snapshot via ref so the callback inside useFocusEffect doesn't
+  // re-subscribe on every notifications refetch.
+  const allNotificationsRef = useRef(allNotifications);
+  allNotificationsRef.current = allNotifications;
+  useFocusEffect(
+    useCallback(() => {
+      const timeout = setTimeout(() => {
+        const unreadIds = allNotificationsRef.current
+          .filter((n) => !n.readAt)
+          .map((n) => n.id);
+        if (unreadIds.length > 0) markManyReadMutation.mutate(unreadIds);
+      }, 600);
+      return () => clearTimeout(timeout);
+    }, [markManyReadMutation]),
+  );
 
   function handleEndReached() {
     if (notificationsQuery.hasNextPage && !notificationsQuery.isFetchingNextPage) {
@@ -94,10 +195,6 @@ export function NotificationsInbox({ context, bottomPad = 0 }: Props) {
   }
 
   const groups = groupByDay(allNotifications);
-
-  type ListItem =
-    | { kind: "header"; groupKey: NotificationGroup; labelKey: string }
-    | { kind: "row"; notification: Notification };
 
   const listData: ListItem[] = [];
   for (const group of groups) {
@@ -109,8 +206,14 @@ export function NotificationsInbox({ context, bottomPad = 0 }: Props) {
 
   const ICON_COLOR_UNREAD = tokens.accent;
   const ICON_COLOR_READ = tokens.faint;
-  const emptyKey = context === "admin" ? "admin.notifications.empty" : "client.notifications.empty";
-  const errorKey = context === "admin" ? "admin.notifications.error" : "client.notifications.error";
+  const emptyKey =
+    context === "client"
+      ? "client.notifications.empty"
+      : "admin.notifications.empty";
+  const errorKey =
+    context === "client"
+      ? "client.notifications.error"
+      : "admin.notifications.error";
 
   return (
     <View style={{ flex: 1 }}>
@@ -147,44 +250,45 @@ export function NotificationsInbox({ context, bottomPad = 0 }: Props) {
                 n.payload && typeof n.payload === "object" && "messageKey" in n.payload && typeof n.payload.messageKey === "string"
                   ? n.payload.messageKey
                   : null;
-              const displayTitle = messageKey ? t(`${messageKey}.title`) : n.title;
-              const displayBody = messageKey ? t(`${messageKey}.body`) : n.body;
+              const interp = payloadInterpolation(n.payload, lang);
+              const displayTitle = messageKey ? t(`${messageKey}.title`, interp) : n.title;
+              const displayBody = messageKey ? t(`${messageKey}.body`, interp) : n.body;
               return (
-                <Pressable
+                <View
                   testID={`notification-row-${n.id}-${isUnread ? "unread" : "read"}`}
-                  onPress={() => { if (isUnread) markReadMutation.mutate(n.id); }}
+                  className="px-6 py-1"
                 >
-                  <View className="px-6 py-1">
-                    <GlassCard size="md" accentBorder={isUnread ? "left" : undefined}>
-                      <View className="flex-row gap-3 items-start">
-                        <View className="mt-0.5">
-                          <FontAwesome
-                            name={iconForType(n.type) as never}
-                            size={18}
-                            color={isUnread ? ICON_COLOR_UNREAD : ICON_COLOR_READ}
-                          />
-                        </View>
-                        <View className="flex-1 gap-1">
-                          <View className="flex-row justify-between items-center">
-                            <Text
-                              className="text-[14px] text-foreground flex-1 mr-2"
-                              style={{ fontWeight: isUnread ? "700" : "500" }}
-                              numberOfLines={1}
-                            >
-                              {displayTitle}
-                            </Text>
-                            <Text className="text-[11px] text-muted">{formatRelativeTime(n.createdAt, lang)}</Text>
-                          </View>
-                          <Text className="text-[13px] text-muted" numberOfLines={2}>{displayBody}</Text>
-                        </View>
+                  <GlassCard size="md" accentBorder={isUnread ? "left" : undefined}>
+                    <View className="flex-row gap-3 items-start">
+                      <View className="mt-0.5">
+                        <FontAwesome
+                          name={iconForType(n.type) as never}
+                          size={18}
+                          color={isUnread ? ICON_COLOR_UNREAD : ICON_COLOR_READ}
+                        />
                       </View>
-                    </GlassCard>
-                  </View>
-                </Pressable>
+                      <View className="flex-1 gap-1">
+                        <View className="flex-row justify-between items-center">
+                          <Text
+                            className="text-[14px] text-foreground flex-1 mr-2"
+                            style={{ fontWeight: isUnread ? "700" : "500" }}
+                            numberOfLines={1}
+                          >
+                            {displayTitle}
+                          </Text>
+                          <Text className="text-[11px] text-muted">{formatRelativeTime(n.createdAt, lang)}</Text>
+                        </View>
+                        <Text className="text-[13px] text-muted" numberOfLines={2}>{displayBody}</Text>
+                      </View>
+                    </View>
+                  </GlassCard>
+                </View>
               );
             }}
             onEndReached={handleEndReached}
             onEndReachedThreshold={0.5}
+            onViewableItemsChanged={onViewableItemsChanged}
+            viewabilityConfig={VIEWABILITY_CONFIG}
             ListFooterComponent={
               notificationsQuery.isFetchingNextPage ? <ActivityIndicator style={{ padding: 16 }} /> : null
             }
@@ -195,3 +299,4 @@ export function NotificationsInbox({ context, bottomPad = 0 }: Props) {
     </View>
   );
 }
+

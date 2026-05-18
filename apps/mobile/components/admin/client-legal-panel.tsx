@@ -1,100 +1,139 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { Switch, Text, View } from "react-native";
+import { Pressable, Switch, Text, View } from "react-native";
 import dayjs from "dayjs";
-import { GlassCard } from "@/components/ui/glass-card";
+import type { ConsentDocumentKey } from "@baza/types";
 import { SectionLabel } from "@/components/ui/typography";
 import { useThemeTokens } from "@/components/ui/tokens";
 import { useMarkGuardianVerifiedMutation } from "@/lib/queries/consent-queries-factory";
 import { clientsQueries } from "@/lib/queries/clients-queries-factory";
+import { DocumentSheet } from "@/components/consent/document-sheet";
 
 type Props = {
   clientUserId: string;
+  clientFullName: string;
   lang: "sr" | "en";
 };
 
-export function ClientLegalPanel({ clientUserId, lang }: Props) {
+const ROW_KEYS = ["tos", "privacy", "waiver_adult", "waiver_minor"] as const satisfies readonly ConsentDocumentKey[];
+
+const LABEL_KEY: Partial<Record<ConsentDocumentKey, string>> = {
+  tos: "consent.documentTos",
+  privacy: "consent.documentPrivacy",
+  waiver_adult: "consent.documentWaiverAdult",
+  waiver_minor: "consent.documentWaiverMinor",
+};
+
+export function ClientLegalPanel({ clientUserId, clientFullName, lang }: Props) {
   const { t } = useTranslation();
   const tokens = useThemeTokens();
   const recordsQuery = useQuery(clientsQueries.consentRecords(clientUserId));
   const records = recordsQuery.data?.records ?? [];
   const socialMedia = recordsQuery.data?.socialMedia ?? null;
 
-  const minorWaiver = records.find((r) => r.documentKey === "waiver_minor");
+  const acceptedByKey = new Map(records.map((r) => [r.documentKey, r] as const));
+  const minorWaiver = acceptedByKey.get("waiver_minor");
+  const hasMinor = !!minorWaiver;
+
+  // Show waiver_minor only when there's actually a minor record; otherwise
+  // we surface waiver_adult. The two are mutually exclusive per client.
+  const visibleKeys: ConsentDocumentKey[] = ["tos", "privacy", hasMinor ? "waiver_minor" : "waiver_adult"];
+
   const guardianMutation = useMarkGuardianVerifiedMutation();
+  // Optimistic toggle: marking the paper signature as collected is a one-way
+  // action (server only sets, never clears). Flip the local state on tap so
+  // the Switch animates instantly; reconcile from the refetched server value
+  // once the mutation resolves.
+  const serverVerified = !!minorWaiver?.guardianVerifiedAt;
+  const [optimisticVerified, setOptimisticVerified] = useState(false);
+  const guardianVerified = serverVerified || optimisticVerified;
+
+  const [openDoc, setOpenDoc] = useState<ConsentDocumentKey | null>(null);
 
   return (
     <View className="gap-2">
       <SectionLabel>{t("admin.client.legalPanel")}</SectionLabel>
-      {records.length === 0 ? (
-        <Text className="text-muted">{t("admin.client.legalPanelEmpty")}</Text>
-      ) : (
-        <GlassCard size="md">
-          {records.map((r) => (
-            <View key={r.id} className="py-1 flex-row justify-between">
-              <Text className="text-foreground">{r.documentKey} v{r.version}</Text>
-              <Text className="text-muted text-[12px]">
-                {t("admin.client.legalAccepted", {
-                  date: dayjs(r.acceptedAt).locale(lang).format("D.M.YYYY."),
-                })}
-              </Text>
-            </View>
-          ))}
-        </GlassCard>
-      )}
-
-      {/*
-       * Social-media consent — read-only signal for admins about to publish
-       * photos. We surface the Da/Ne distinctly from "no record" because
-       * legacy users who pre-date the consent gate have no row at all,
-       * which is not the same as "they said no".
-       */}
-      <GlassCard size="md">
-        <View className="py-1 flex-row items-center justify-between">
-          <Text className="flex-1 text-foreground">
-            {t("admin.client.socialMediaPanel")}
-          </Text>
-          <Text
-            className={`text-[13px] font-body-semibold ${
-              socialMedia === null
-                ? "text-muted"
-                : socialMedia.accepted
-                  ? "text-success"
-                  : "text-danger"
-            }`}
-            testID={`social-media-status-${clientUserId}`}
+      {visibleKeys.map((key) => {
+        const accepted = acceptedByKey.get(key);
+        const labelKey = LABEL_KEY[key];
+        const label = labelKey ? t(labelKey) : key;
+        return (
+          <Pressable
+            key={key}
+            testID={`admin-legal-row-${key}`}
+            onPress={() => setOpenDoc(key)}
+            className="flex-row items-center justify-between rounded-xl border border-glass-border bg-glass p-3"
           >
-            {socialMedia === null
-              ? t("admin.client.socialMediaUnknown")
+            <Text className="flex-1 text-[14px] text-foreground">{label}</Text>
+            <Text
+              className={`text-[12px] ${accepted ? "text-success" : "text-muted"}`}
+            >
+              {accepted
+                ? t("admin.client.legalAcceptedShort", {
+                    date: dayjs(accepted.acceptedAt).locale(lang).format("D.M.YYYY."),
+                  })
+                : t("admin.client.legalNotAccepted")}
+            </Text>
+          </Pressable>
+        );
+      })}
+
+      <View
+        testID={`social-media-row-${clientUserId}`}
+        className="mt-1 flex-row items-center justify-between rounded-xl border border-glass-border bg-glass p-3"
+      >
+        <Text className="flex-1 text-[14px] text-foreground">
+          {t("admin.client.socialMediaPanel")}
+        </Text>
+        <Text
+          className={`text-[12px] font-body-semibold ${
+            socialMedia === null
+              ? "text-muted"
               : socialMedia.accepted
-                ? t("admin.client.socialMediaYes")
-                : t("admin.client.socialMediaNo")}
-          </Text>
-        </View>
-        {socialMedia ? (
-          <Text className="text-muted text-[12px] mt-1">
-            {t("admin.client.socialMediaSince", {
-              date: dayjs(socialMedia.acceptedAt).locale(lang).format("D.M.YYYY."),
-            })}
-          </Text>
-        ) : null}
-      </GlassCard>
+                ? "text-success"
+                : "text-danger"
+          }`}
+          testID={`social-media-status-${clientUserId}`}
+        >
+          {socialMedia === null
+            ? t("admin.client.socialMediaUnknown")
+            : socialMedia.accepted
+              ? t("admin.client.socialMediaYes")
+              : t("admin.client.socialMediaNo")}
+        </Text>
+      </View>
 
       {minorWaiver ? (
-        <GlassCard size="md">
-          <View className="flex-row items-center justify-between">
-            <Text className="text-foreground">{t("admin.client.guardianVerifiedToggle")}</Text>
-            <Switch
-              testID={`guardian-verified-${clientUserId}`}
-              value={!!minorWaiver.guardianVerifiedAt}
-              onValueChange={() => guardianMutation.mutate(clientUserId)}
-              disabled={!!minorWaiver.guardianVerifiedAt || guardianMutation.isPending}
-              accessibilityLabel={t("admin.client.guardianVerifiedToggle")}
-              trackColor={{ false: tokens.glassStrong, true: tokens.accent }}
-            />
-          </View>
-        </GlassCard>
+        <View
+          testID={`guardian-verified-row-${clientUserId}`}
+          className="flex-row items-center justify-between rounded-xl border border-glass-border bg-glass p-3"
+        >
+          <Text className="flex-1 text-[14px] text-foreground">
+            {t("admin.client.guardianVerifiedToggle")}
+          </Text>
+          <Switch
+            testID={`guardian-verified-${clientUserId}`}
+            value={guardianVerified}
+            onValueChange={() => {
+              if (guardianVerified) return;
+              setOptimisticVerified(true);
+              guardianMutation.mutate(clientUserId);
+            }}
+            disabled={guardianVerified || guardianMutation.isPending}
+            accessibilityLabel={t("admin.client.guardianVerifiedToggle")}
+            trackColor={{ false: tokens.glassStrong, true: tokens.accent }}
+          />
+        </View>
       ) : null}
+
+      <DocumentSheet
+        open={openDoc !== null}
+        onOpenChange={(v) => !v && setOpenDoc(null)}
+        documentKey={openDoc}
+        locale={lang}
+        substitutions={{ fullName: clientFullName }}
+      />
     </View>
   );
 }

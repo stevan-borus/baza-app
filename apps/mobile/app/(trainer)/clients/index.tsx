@@ -85,11 +85,11 @@ const STATUS_BADGE: Record<
   Client["packageStatus"],
   { tone: "success" | "warning" | "neutral"; key: string }
 > = {
-  active: { tone: "success", key: "admin.clients.filterActive" },
-  expiring: { tone: "warning", key: "admin.clients.filterExpiring" },
-  expired: { tone: "warning", key: "admin.clients.filterExpired" },
-  paused: { tone: "neutral", key: "admin.clients.filterPaused" },
-  none: { tone: "neutral", key: "admin.clients.filterAll" },
+  active: { tone: "success", key: "admin.clientDetail.status.active" },
+  expiring: { tone: "warning", key: "admin.clientDetail.status.expiring" },
+  expired: { tone: "warning", key: "admin.clientDetail.status.expired" },
+  paused: { tone: "neutral", key: "admin.clientDetail.status.paused" },
+  none: { tone: "neutral", key: "admin.clientDetail.status.none" },
 };
 
 function ClientRow({ client }: { client: Client }) {

@@ -213,6 +213,7 @@ export function SessionDetail({
 }
 
 type ConsentFlags = {
+  showFirstPilatesHint: boolean;
   isPregnant: boolean;
   isPostpartum: boolean;
   hasComplaints: boolean;
@@ -250,7 +251,11 @@ function BookingConsentFlags({ flags }: { flags: ConsentFlags }) {
     flags.isPostpartum ||
     flags.hasComplaints ||
     flags.hasInjuries;
-  if (!flags.intakeRecorded && flags.socialMediaAccepted === null) {
+  if (
+    !flags.intakeRecorded &&
+    flags.socialMediaAccepted === null &&
+    !flags.showFirstPilatesHint
+  ) {
     return null;
   }
   return (
@@ -285,6 +290,11 @@ function BookingConsentFlags({ flags }: { flags: ConsentFlags }) {
             {t("admin.sessionDetail.flagInjuries")}:{" "}
           </Text>
           {flags.injuriesDetails}
+        </Text>
+      ) : null}
+      {flags.showFirstPilatesHint ? (
+        <Text className="text-[11px] text-muted">
+          {t("admin.sessionDetail.hintFirstPilates")}
         </Text>
       ) : null}
       <SocialMediaPill accepted={flags.socialMediaAccepted} />

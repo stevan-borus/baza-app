@@ -6,7 +6,6 @@ import {
   FloatingTabBar,
   getAppTabScreenOptions,
 } from "@/lib/tab-layout-theme";
-import { NotificationsSheetProvider } from "@/components/ui/notifications-sheet";
 import { ConsentGateRedirect } from "@/components/consent/consent-gate-redirect";
 
 function TabIcon(props: {
@@ -23,50 +22,48 @@ export default function AdminLayout() {
 
   return (
     <ConsentGateRedirect>
-      <NotificationsSheetProvider>
-        <Tabs
-          screenOptions={{ ...getAppTabScreenOptions(isDark), headerShown: false }}
-          tabBar={(props) => <FloatingTabBar {...props} isDark={isDark} />}
-        >
-          <Tabs.Screen
-            name="pregled"
-            options={{
-              title: t("tabs.overview"),
-              tabBarIcon: ({ color }) => <TabIcon name="home" color={color} />,
-            }}
-          />
-          <Tabs.Screen
-            name="katalog"
-            options={{
-              title: t("tabs.catalog"),
-              tabBarIcon: ({ color }) => <TabIcon name="th-large" color={color} />,
-            }}
-          />
-          <Tabs.Screen
-            name="klijenti"
-            options={{
-              title: t("tabs.clients"),
-              tabBarIcon: ({ color }) => <TabIcon name="users" color={color} />,
-            }}
-          />
-          <Tabs.Screen
-            name="naplata"
-            options={{
-              title: t("tabs.billing"),
-              tabBarIcon: ({ color }) => (
-                <TabIcon name="credit-card" color={color} />
-              ),
-            }}
-          />
-          <Tabs.Screen
-            name="izvestaji"
-            options={{
-              title: t("tabs.reports"),
-              tabBarIcon: ({ color }) => <TabIcon name="bar-chart" color={color} />,
-            }}
-          />
-        </Tabs>
-      </NotificationsSheetProvider>
+      <Tabs
+        screenOptions={{ ...getAppTabScreenOptions(isDark), headerShown: false }}
+        tabBar={(props) => <FloatingTabBar {...props} isDark={isDark} />}
+      >
+        <Tabs.Screen
+          name="pregled"
+          options={{
+            title: t("tabs.overview"),
+            tabBarIcon: ({ color }) => <TabIcon name="home" color={color} />,
+          }}
+        />
+        <Tabs.Screen
+          name="katalog"
+          options={{
+            title: t("tabs.catalog"),
+            tabBarIcon: ({ color }) => <TabIcon name="th-large" color={color} />,
+          }}
+        />
+        <Tabs.Screen
+          name="klijenti"
+          options={{
+            title: t("tabs.clients"),
+            tabBarIcon: ({ color }) => <TabIcon name="users" color={color} />,
+          }}
+        />
+        <Tabs.Screen
+          name="naplata"
+          options={{
+            title: t("tabs.billing"),
+            tabBarIcon: ({ color }) => (
+              <TabIcon name="credit-card" color={color} />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="izvestaji"
+          options={{
+            title: t("tabs.reports"),
+            tabBarIcon: ({ color }) => <TabIcon name="bar-chart" color={color} />,
+          }}
+        />
+      </Tabs>
     </ConsentGateRedirect>
   );
 }

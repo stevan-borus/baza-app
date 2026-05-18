@@ -27,7 +27,7 @@ export default function TrainerLayout() {
         tabBar={(props) => <FloatingTabBar {...props} isDark={isDark} />}
       >
         <Tabs.Screen
-          name="index"
+          name="raspored"
           options={{
             title: t("tabs.schedule"),
             tabBarIcon: ({ color }) => <TabIcon name="calendar" color={color} />,
@@ -46,6 +46,10 @@ export default function TrainerLayout() {
             title: t("tabs.notes"),
             tabBarIcon: ({ color }) => <TabIcon name="pencil" color={color} />,
           }}
+        />
+        <Tabs.Screen
+          name="sessions"
+          options={{ href: null }}
         />
         {/* Profile data + theme/language switcher live entirely in the
             ProfileSheet (header avatar tap). No dedicated tab/route. */}

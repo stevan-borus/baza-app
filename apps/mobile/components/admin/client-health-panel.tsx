@@ -65,6 +65,26 @@ export function ClientHealthPanel({ clientUserId, lang }: Props) {
                 {t("admin.client.healthNoFlags")}
               </Text>
             ) : null}
+
+            <View className="mt-1 gap-1">
+              <LifestyleRow
+                label={t("admin.client.healthFlags.physicallyActive")}
+                value={intake.isPhysicallyActive}
+                tYes={t("admin.client.socialMediaYes")}
+                tNo={t("admin.client.socialMediaNo")}
+              />
+              <LifestyleRow
+                label={t("admin.client.healthFlags.firstPilates")}
+                value={intake.isFirstPilates}
+                tYes={t("admin.client.socialMediaYes")}
+                tNo={t("admin.client.socialMediaNo")}
+              />
+              <Text className="mt-1 text-[11px] text-muted">
+                {t("admin.client.healthFlags.recordedAt", {
+                  date: dayjs(intake.recordedAt).locale(lang).format("D.M.YYYY."),
+                })}
+              </Text>
+            </View>
           </View>
         </GlassCard>
       )}
@@ -81,6 +101,27 @@ function Flag({ label, detail }: { label: string; detail?: string | null }) {
       {detail ? (
         <Text className="mt-1 text-[12px] text-muted">{detail}</Text>
       ) : null}
+    </View>
+  );
+}
+
+function LifestyleRow({
+  label,
+  value,
+  tYes,
+  tNo,
+}: {
+  label: string;
+  value: boolean;
+  tYes: string;
+  tNo: string;
+}) {
+  return (
+    <View className="flex-row items-center justify-between">
+      <Text className="flex-1 text-[13px] text-muted">{label}</Text>
+      <Text className="text-[13px] font-body-semibold text-foreground">
+        {value ? tYes : tNo}
+      </Text>
     </View>
   );
 }
