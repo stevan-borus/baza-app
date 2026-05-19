@@ -52,7 +52,7 @@ export default defineConfig({
     // so those flows keep their pre-existing login → tab behaviour. The one
     // intentionally unconsented user is client.unconsented@e2e.test,
     // which the consent-gate spec uses for the first-time flow.
-    command: `CI=1 EXPO_PUBLIC_API_URL=${BASE_URL} BASE_URL=${BASE_URL} APP_WEB_URL=${BASE_URL} API_ADMIN_BOOTSTRAP_TOKEN=${CRON_TOKEN} TEST_ANCHOR_TIME=${TEST_ANCHOR_TIME} BAZA_CONSENT_GATE_ENABLED=true NODE_OPTIONS="--max-old-space-size=8192" expo start --web --port ${PORT}`,
+    command: `CI=1 EXPO_PUBLIC_API_URL=${BASE_URL} BASE_URL=${BASE_URL} APP_WEB_URL=${BASE_URL} API_ADMIN_BOOTSTRAP_TOKEN=${CRON_TOKEN} TEST_ANCHOR_TIME=${TEST_ANCHOR_TIME} BAZA_CONSENT_GATE_ENABLED=true CRON_BIRTHDAYS_INTERVAL_MS=3600000 NODE_OPTIONS="--max-old-space-size=8192" expo start --web --port ${PORT}`,
     url: `${BASE_URL}/api/health`,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
