@@ -17,6 +17,7 @@ const seedEnvDefaults: Record<string, string> = {
   CRON_REMINDERS_INTERVAL_MS: "60000",
   CRON_PACKAGE_EXPIRY_INTERVAL_MS: "60000",
   CRON_SESSION_CONSUMPTION_INTERVAL_MS: "60000",
+  CRON_BIRTHDAYS_INTERVAL_MS: "3600000",
   BETTER_AUTH_SECRET: "test-better-auth-secret-min-16-chars",
   BASE_URL: "http://localhost:3010",
   TEST_ANCHOR_TIME: "2026-05-09T10:00:00Z",

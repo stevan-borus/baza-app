@@ -856,6 +856,57 @@ export async function findConsentRefusedNotificationFor(userEmail: string) {
   });
 }
 
+/**
+ * Create a Birthday Gift PackageType for the given ClassType name. Used by
+ * the birthday-gift deep-link spec — the rich seed doesn't include one by
+ * default since birthday-gift catalog entries are admin-curated per studio.
+ *
+ * Returns { id, classTypeId } so the spec can assert which option chip the
+ * deep-link should pre-select in the AssignPackage sheet.
+ */
+export async function seedBirthdayGiftPackageType(opts: {
+  classTypeName: string;
+  name?: string;
+}) {
+  const classType = await db().classType.findFirst({
+    where: { name: opts.classTypeName },
+    select: { id: true },
+  });
+  if (!classType) {
+    throw new Error(`No ClassType with name "${opts.classTypeName}" — seed not applied?`);
+  }
+  const pt = await db().packageType.create({
+    data: {
+      name: opts.name ?? `${opts.classTypeName} — Rođendanski poklon`,
+      sessionCount: 1,
+      validityDays: 30,
+      lateCancelHours: 12,
+      classTypeId: classType.id,
+      isBirthdayGift: true,
+    },
+    select: { id: true, classTypeId: true, name: true },
+  });
+  return pt;
+}
+
+/**
+ * Returns the most recent BIRTHDAY_ADMIN_PROMPT NotificationLog for an admin,
+ * so the deep-link spec can assert the cron actually produced one before
+ * driving the inbox tap.
+ */
+export async function findBirthdayAdminPromptFor(userEmail: string) {
+  const user = await db().user.findUnique({
+    where: { email: userEmail.toLowerCase() },
+    select: { id: true },
+  });
+  if (!user) return null;
+  return db().notificationLog.findFirst({
+    where: { userId: user.id, type: "BIRTHDAY_ADMIN_PROMPT" },
+    orderBy: { createdAt: "desc" },
+    select: { id: true, payload: true, type: true, createdAt: true },
+  });
+}
+
 export async function disconnect() {
   if (prismaClient) {
     await prismaClient.$disconnect();

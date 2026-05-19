@@ -10,7 +10,9 @@ export type NotificationMessageKey =
   | "SESSION_REMINDER"
   | "BOOKING_CANCELED_ADMIN"
   | "BOOKING_CANCELED_TRAINER"
-  | "MINOR_PAPER_NEEDED";
+  | "MINOR_PAPER_NEEDED"
+  | "BIRTHDAY_ADMIN_PROMPT"
+  | "BIRTHDAY_CLIENT_GIFT";
 
 export const NOTIFICATION_MESSAGE_KEYS = {
   BOOKING_CONFIRMED: "BOOKING_CONFIRMED",
@@ -23,6 +25,8 @@ export const NOTIFICATION_MESSAGE_KEYS = {
   BOOKING_CANCELED_ADMIN: "BOOKING_CANCELED_ADMIN",
   BOOKING_CANCELED_TRAINER: "BOOKING_CANCELED_TRAINER",
   MINOR_PAPER_NEEDED: "MINOR_PAPER_NEEDED",
+  BIRTHDAY_ADMIN_PROMPT: "BIRTHDAY_ADMIN_PROMPT",
+  BIRTHDAY_CLIENT_GIFT: "BIRTHDAY_CLIENT_GIFT",
 } as const satisfies Record<NotificationMessageKey, NotificationMessageKey>;
 
 const messages: Record<
@@ -85,6 +89,26 @@ const messages: Record<
     en: {
       title: "Guardian signature needed",
       body: "A minor client completed their first session — collect the paper signature.",
+    },
+  },
+  BIRTHDAY_ADMIN_PROMPT: {
+    sr: {
+      title: "🎂 Rođendan klijenta",
+      body: "Klijent slavi danas — pokloni mu sesiju.",
+    },
+    en: {
+      title: "🎂 Client birthday",
+      body: "A client is celebrating today — gift them a session.",
+    },
+  },
+  BIRTHDAY_CLIENT_GIFT: {
+    sr: {
+      title: "🎉 Srećan rođendan!",
+      body: "Poklanjamo ti besplatnu sesiju.",
+    },
+    en: {
+      title: "🎉 Happy birthday!",
+      body: "We're gifting you a free session.",
     },
   },
 };

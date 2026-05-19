@@ -94,6 +94,11 @@ export function startCronScheduler() {
       endpointPath: "/api/cron/sessions/consumption",
       intervalMs: env.CRON_SESSION_CONSUMPTION_INTERVAL_MS,
     },
+    {
+      name: "birthdays",
+      endpointPath: "/api/cron/notifications/birthdays",
+      intervalMs: env.CRON_BIRTHDAYS_INTERVAL_MS,
+    },
   ];
 
   for (const job of jobs) {

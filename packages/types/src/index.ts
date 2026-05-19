@@ -519,7 +519,14 @@ export const packageTypeInputSchema = PackageTypeInputSchema.pick({
   validityDays: z.number().int().positive(),
   lateCancelHours: z.number().int().nonnegative().default(12),
   classTypeId: z.uuid(),
-});
+  isBirthdayGift: z.boolean().optional().default(false),
+}).refine(
+  (data) => !data.isBirthdayGift || data.sessionCount === 1,
+  {
+    message: "Birthday gift PackageTypes must have sessionCount = 1",
+    path: ["sessionCount"],
+  },
+);
 export type PackageTypeInput = z.infer<typeof packageTypeInputSchema>;
 
 export const updatePackageTypeInputSchema = z.object({
@@ -528,7 +535,15 @@ export const updatePackageTypeInputSchema = z.object({
   validityDays: z.number().int().positive().optional(),
   lateCancelHours: z.number().int().nonnegative().optional(),
   classTypeId: z.uuid().optional(),
-});
+  isBirthdayGift: z.boolean().optional(),
+}).refine(
+  (data) =>
+    !data.isBirthdayGift || data.sessionCount === undefined || data.sessionCount === 1,
+  {
+    message: "Birthday gift PackageTypes must have sessionCount = 1",
+    path: ["sessionCount"],
+  },
+);
 export type UpdatePackageTypeInput = z.infer<typeof updatePackageTypeInputSchema>;
 
 export const createClientPackageInputSchema = ClientPackageInputSchema.pick({

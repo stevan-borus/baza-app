@@ -12,6 +12,7 @@ import { EmptyState, ErrorState } from "@/components/ui/states";
 import { SkeletonList } from "@/components/ui/skeleton";
 import { SectionLabel } from "@/components/ui/typography";
 import { notificationsQueries, type Notification } from "@/lib/queries/notifications-queries-factory";
+import { useNotificationTapHandler } from "@/lib/notification-tap";
 import dayjs from "dayjs";
 
 type NotificationsInboxContext = "client" | "admin" | "trainer";
@@ -129,6 +130,7 @@ export function NotificationsInbox({ context, bottomPad = 0 }: Props) {
   const { t, i18n } = useTranslation();
   const lang = i18n.language === "en" ? "en" : "sr";
   const tokens = useThemeTokens();
+  const handleNotificationTap = useNotificationTapHandler();
 
   const notificationsQuery = useInfiniteQuery(notificationsQueries.listInfinite());
   const allNotifications = useMemo(
@@ -254,9 +256,15 @@ export function NotificationsInbox({ context, bottomPad = 0 }: Props) {
               const displayTitle = messageKey ? t(`${messageKey}.title`, interp) : n.title;
               const displayBody = messageKey ? t(`${messageKey}.body`, interp) : n.body;
               return (
-                <View
+                <Pressable
                   testID={`notification-row-${n.id}-${isUnread ? "unread" : "read"}`}
-                  className="px-6 py-1"
+                  className="px-6 py-1 active:opacity-70"
+                  onPress={() => {
+                    if (isUnread) markManyReadMutation.mutate([n.id]);
+                    handleNotificationTap({ type: n.type, payload: n.payload });
+                  }}
+                  accessibilityRole="button"
+                  accessibilityLabel={displayTitle}
                 >
                   <GlassCard size="md" accentBorder={isUnread ? "left" : undefined}>
                     <View className="flex-row gap-3 items-start">
@@ -282,7 +290,7 @@ export function NotificationsInbox({ context, bottomPad = 0 }: Props) {
                       </View>
                     </View>
                   </GlassCard>
-                </View>
+                </Pressable>
               );
             }}
             onEndReached={handleEndReached}

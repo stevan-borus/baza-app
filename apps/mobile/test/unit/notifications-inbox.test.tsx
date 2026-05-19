@@ -178,6 +178,15 @@ vi.mock("expo-router", () => ({
   useFocusEffect: (_cb: () => unknown) => {
     // No-op for static-render tests; behavior is exercised in integration.
   },
+  router: { push: () => {} },
+}));
+
+// ─── notification-tap mock ────────────────────────────────────────────────
+// The component now imports `useNotificationTapHandler` which transitively
+// pulls in expo-modules-core via react-query/expo-router. Stub it to a no-op
+// for these static-render tests — tap-routing has its own unit tests.
+vi.mock("@/lib/notification-tap", () => ({
+  useNotificationTapHandler: () => () => false,
 }));
 
 // ─── Anchor-time helper ───────────────────────────────────────────────────
