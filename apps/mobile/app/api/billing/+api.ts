@@ -182,9 +182,9 @@ export async function POST(request: Request) {
 
       // Wire the FK from the BillingRecord to the ClientPackage it activated.
       // Same transaction → both rows are atomic AND linked. Pre-FK rows
-      // (status CONFIRMED, clientPackageId NULL) are handled by the one-time
-      // backfill in scripts/backfill/billing-client-package-link.ts and the
-      // legacy chronological-zip fallback in lib/server/billing-package-link.
+      // (status CONFIRMED, clientPackageId NULL) are handled by the
+      // 20260519151739_backfill_billing_client_package_link migration and
+      // the legacy chronological-zip fallback in lib/server/billing-package-link.
       await tx.billingRecord.update({
         where: { id: payment.id },
         data: { clientPackageId: clientPackage.id },
