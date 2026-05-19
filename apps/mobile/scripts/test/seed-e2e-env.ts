@@ -8,7 +8,7 @@
  * see. See CONTEXT.md → "Anchor time".
  */
 const seedEnvDefaults: Record<string, string> = {
-  DATABASE_URL: "postgresql://postgres:postgres@localhost:5434/baza_app?schema=public",
+  DATABASE_URL: "postgresql://postgres:postgres@localhost:5434/baza_app_test?schema=public",
   RESEND_API_KEY: "test-resend-api-key",
   RESEND_FROM_EMAIL: "Test <test@example.com>",
   EXPO_ACCESS_TOKEN: "test-expo-access-token",

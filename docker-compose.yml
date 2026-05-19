@@ -11,6 +11,11 @@ services:
       - "5434:5432"
     volumes:
       - baza_postgres_data:/var/lib/postgresql/data
+      # Runs once on first boot (when the data volume is empty). Creates the
+      # baza_app_test database alongside baza_app so test prep can never
+      # pollute the dev DB. Existing contributors: see `pnpm --filter mobile
+      # test:db:bootstrap` for an idempotent one-shot equivalent.
+      - ./scripts/postgres-init:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d baza_app"]
       interval: 2s

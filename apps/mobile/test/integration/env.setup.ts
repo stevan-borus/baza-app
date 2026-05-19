@@ -6,7 +6,7 @@ function setIfBlank(key: string, value: string) {
   if (!process.env[key]) process.env[key] = value;
 }
 
-setIfBlank("DATABASE_URL", "postgresql://postgres:postgres@localhost:5434/baza_app?schema=public");
+setIfBlank("DATABASE_URL", "postgresql://postgres:postgres@localhost:5434/baza_app_test?schema=public");
 setIfBlank("RESEND_API_KEY", "test-resend-api-key");
 setIfBlank("RESEND_FROM_EMAIL", "Test <test@example.com>");
 setIfBlank("EXPO_ACCESS_TOKEN", "test-expo-access-token");

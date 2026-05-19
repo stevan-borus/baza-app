@@ -21,6 +21,19 @@ process.env.API_ADMIN_BOOTSTRAP_TOKEN = CRON_TOKEN;
 const TEST_ANCHOR_TIME = process.env.TEST_ANCHOR_TIME ?? "2026-05-11T09:00:00Z";
 process.env.TEST_ANCHOR_TIME = TEST_ANCHOR_TIME;
 
+/**
+ * Test database — physically separate from the dev DB (`baza_app`). The Expo
+ * dev server auto-loads `apps/mobile/.env`, which points at dev. We must
+ * override `DATABASE_URL` in the webServer command (Node respects later env
+ * vars over dotenv defaults), otherwise specs would write to the dev DB
+ * while `test:e2e:prepare` reset `baza_app_test`. Helpers and seed scripts
+ * already default to this same URL — see `apps/mobile/scripts/test/`
+ * and `test/e2e/helpers/db.ts`.
+ */
+const TEST_DATABASE_URL =
+  process.env.TEST_DATABASE_URL ??
+  "postgresql://postgres:postgres@localhost:5434/baza_app_test?schema=public";
+
 export default defineConfig({
   testDir: "./test/e2e",
   testMatch: "**/*.spec.ts",
@@ -52,7 +65,7 @@ export default defineConfig({
     // so those flows keep their pre-existing login → tab behaviour. The one
     // intentionally unconsented user is client.unconsented@e2e.test,
     // which the consent-gate spec uses for the first-time flow.
-    command: `CI=1 EXPO_PUBLIC_API_URL=${BASE_URL} BASE_URL=${BASE_URL} APP_WEB_URL=${BASE_URL} API_ADMIN_BOOTSTRAP_TOKEN=${CRON_TOKEN} TEST_ANCHOR_TIME=${TEST_ANCHOR_TIME} BAZA_CONSENT_GATE_ENABLED=true CRON_BIRTHDAYS_INTERVAL_MS=3600000 NODE_OPTIONS="--max-old-space-size=8192" expo start --web --port ${PORT}`,
+    command: `CI=1 EXPO_PUBLIC_API_URL=${BASE_URL} BASE_URL=${BASE_URL} APP_WEB_URL=${BASE_URL} DATABASE_URL=${TEST_DATABASE_URL} API_ADMIN_BOOTSTRAP_TOKEN=${CRON_TOKEN} TEST_ANCHOR_TIME=${TEST_ANCHOR_TIME} BAZA_CONSENT_GATE_ENABLED=true CRON_BIRTHDAYS_INTERVAL_MS=3600000 NODE_OPTIONS="--max-old-space-size=8192" expo start --web --port ${PORT}`,
     url: `${BASE_URL}/api/health`,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
