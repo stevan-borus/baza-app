@@ -19,7 +19,7 @@ import { now, nowMs } from "../../../lib/now";
 const APP_DIR = path.resolve(__dirname, "../../..");
 const DATABASE_URL =
   process.env.DATABASE_URL ??
-  "postgresql://postgres:postgres@localhost:5434/baza_app?schema=public";
+  "postgresql://postgres:postgres@localhost:5434/baza_app_test?schema=public";
 
 let prismaClient: PrismaClient | null = null;
 let prismaPool: Pool | null = null;

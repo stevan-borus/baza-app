@@ -6,10 +6,22 @@ if (!databaseUrl) {
   throw new Error("DATABASE_URL is required for patch-test-db");
 }
 
+const parsedUrl = new URL(databaseUrl);
+const dbName = parsedUrl.pathname.replace(/^\//, "");
+// Guardrail: this script adds DB-side defaults that are NOT in any Prisma
+// migration, so `migrate dev` will report drift on whatever DB it touches.
+// Restrict it to *_test databases so dev never re-acquires that drift again.
+// (Pre-PR this script ran against `baza_app` and silently polluted dev DBs.)
+if (!dbName.endsWith("_test") && process.env.FORCE_PATCH !== "1") {
+  throw new Error(
+    `patch-test-db refuses to run against "${dbName}". Database name must end in "_test" ` +
+      `(set FORCE_PATCH=1 to override — only use if you understand the drift consequences).`,
+  );
+}
+
 const pool = new Pool({ connectionString: databaseUrl });
 
-const schemaName =
-  new URL(databaseUrl).searchParams.get("schema")?.trim() || "public";
+const schemaName = parsedUrl.searchParams.get("schema")?.trim() || "public";
 
 const sql = `
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
