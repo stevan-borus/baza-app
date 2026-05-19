@@ -34,16 +34,19 @@ export async function POST(request: Request) {
       Prisma.sql`(EXTRACT(MONTH FROM cp."dateOfBirth") = ${month} AND EXTRACT(DAY FROM cp."dateOfBirth") = ${day})`,
   );
 
+  // Use the call form (prisma.$queryRaw(Prisma.sql`...`)) — the tagged-template
+  // form does not splice nested Sql fragments from Prisma.join, which causes
+  // them to be serialized into bind parameters and Postgres throws 22P02.
   const matchedClients = await prisma.$queryRaw<
     Array<{ clientProfileId: string; userId: string; fullName: string }>
-  >`
+  >(Prisma.sql`
     SELECT cp.id as "clientProfileId", u.id as "userId", u."fullName"
     FROM "ClientProfile" cp
     JOIN "User" u ON u.id = cp."userId"
     WHERE u."isActive" = true
       AND cp."dateOfBirth" IS NOT NULL
       AND (${Prisma.join(conditions, " OR ")})
-  `;
+  `);
 
   if (dryRun) {
     return ok({
