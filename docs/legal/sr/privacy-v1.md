@@ -144,7 +144,7 @@ Imate pravo preuzeti i tražiti prenos Vaših ličnih podataka. Molimo Vas da pi
 Imate pravo da povučete Vašu saglasnost za obradu ličnih podataka kao i da tražite da se trajno brišu Vaši lični podaci koje smo obrađivali na osnovu Vaše saglasnosti. Molimo Vas da pitanje i zahteve, u pisanom obliku i potpisane pošaljete na adresu Futoška 33, 21000 Novi Sad. Na Vaš zahtev ćemo odgovoriti odmah, a najkasnije u roku od mesec dana, osim ako izuzetna složenost pojedinog slučaja ne zahteva produženje navedenog roka.
 
 10.7. **Prigovor protiv obrade ili postupanja s Vašim ličnim podacima:**
-Imate pravo prigovora na obradu Vaših ličnih podataka kao i uopšteno na naš način postupanja s Vašim ličnim podacima. Vaš zahtev nam pošaljite putem e-pošte na adresu Futoška 33, 21000 Novi Sad, gde u naslovu poruke navodite Prigovor protiv obrade i u samoj poruci objašnjavate razlog prigovora i Vaš zahtev.
+Imate pravo prigovora na obradu Vaših ličnih podataka kao i uopšteno na naš način postupanja s Vašim ličnim podacima. Vaš zahtev nam pošaljite putem e-pošte na adresu bazapilates@gmail.com, gde u naslovu poruke navodite Prigovor protiv obrade i u samoj poruci objašnjavate razlog prigovora i Vaš zahtev.
 
 10.8. **Pravo na pritužbu Povereniku za informacije od javnog značaja i zaštitu podataka o ličnosti:**
 U svakom trenutku imate pravo na pritužbu pred nadležnim organom za zaštitu ličnih podataka — Povereniku za informacije od javnog značaja i zaštitu podataka o ličnosti (https://www.poverenik.rs/).

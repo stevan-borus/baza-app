@@ -146,7 +146,7 @@ You have the right to receive and request the transfer of your personal data. Pl
 You have the right to withdraw your consent for the processing of personal data, as well as to request the permanent deletion of your personal data which we have processed on the basis of your consent. Please send questions and requests, in writing and signed, to the address Futoška 33, 21000 Novi Sad. We will respond to your request immediately, and no later than within one month, unless the exceptional complexity of a particular case requires an extension of the said period.
 
 10.7. **Objection to the processing or handling of your personal data:**
-You have the right to object to the processing of your personal data, as well as generally to the way we handle your personal data. Please send your request by e-mail to the address Futoška 33, 21000 Novi Sad, with "Objection against processing" in the subject of the message and stating the reason for the objection and your request in the message itself.
+You have the right to object to the processing of your personal data, as well as generally to the way we handle your personal data. Please send your request by e-mail to bazapilates@gmail.com, with "Objection against processing" in the subject of the message and stating the reason for the objection and your request in the message itself.
 
 10.8. **Right to complain to the Commissioner for Information of Public Importance and Personal Data Protection:**
 At any time you have the right to lodge a complaint with the competent authority for personal data protection — the Commissioner for Information of Public Importance and Personal Data Protection (https://www.poverenik.rs/).
