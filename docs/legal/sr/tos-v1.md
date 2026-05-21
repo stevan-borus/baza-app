@@ -49,6 +49,8 @@ Uslov za korišćenje mobilne aplikacije je otvaranje korisničkog naloga kao i 
 
 Korisnički nalog postaje aktivan nakon izvršenog plaćanja izabranog paketa treninga. Korisnik će primiti email potvrdu o aktivaciji naloga. Tek nakon izvršene aktivacije korisničkog naloga Korisnik će moći da započne sa korišćenjem mobilne aplikacije. Od momenta izvršene aktivacije naloga počinju da se računaju rokovi važnosti izabranog paketa odnosno članarine.
 
+**Maloletna lica.** Maloletna lica mlađa od 18 godina mogu otvoriti korisnički nalog i koristiti usluge Baze isključivo uz prethodnu saglasnost roditelja ili zakonskog staratelja. Detaljniji uslovi pohađanja treninga od strane maloletnih lica uređeni su posebnom Izjavom vežbača za maloletna lica, koju u aplikaciji prihvata roditelj ili staratelj. Baza zadržava pravo da od roditelja ili staratelja zatraži dodatnu potvrdu identiteta i saglasnosti. [LEGAL REVIEW]
+
 Korisnici mogu zakazivati treninge putem aplikacije u skladu sa dostupnim terminima. Otkazivanje treninga mora se izvršiti najkasnije 8 sati pre početka treninga. U suprotnom, trening se smatra iskorišćenim. Paket treninga važi mesec dana, nadoknade na vreme otkazanih termina biće realizovane u tom periodu. U slučaju bolesti, najavljenih putovanja i drugih najavljenih odsustava, moguće je produženje trajanja paketa.
 
 Studio Baza zadržava pravo izmene rasporeda ili otkazivanja treninga u izuzetnim okolnostima.

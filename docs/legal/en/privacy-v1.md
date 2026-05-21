@@ -15,6 +15,8 @@
 
 1.4. For any questions or requests regarding the processing or protection of your personal data, please contact us at bazapilates@gmail.com.
 
+1.5. To the extent it applies to the processing of data of users from the European Union, the General Data Protection Regulation (Regulation (EU) 2016/679 — "GDPR") also applies to such processing. [LEGAL REVIEW]
+
 ## 2. What is covered by the Privacy Policy?
 
 2.1. The Privacy Policy covers the ways we process your personal data when you interact with us, e.g. when you:
@@ -114,14 +116,24 @@ The stated data is processed solely in order to adapt training to the user's ind
 
 ## 8. For how long do we keep your personal data?
 
-8.1. We keep your personal data for the entire duration of the contract we have concluded with you. After termination of the contract, we delete your data after an additional period of 11 years from the termination of the contract (the 10-year limitation period, plus one year for deletion).
+8.1. Retention periods differ by category of data. The following table sets out the applicable periods [LEGAL REVIEW — to confirm]:
 
-8.2. Personal data we process on the basis of your consent we keep for as long as we have your consent. In the event consent is withdrawn, we delete the data as soon as possible.
+| Category of data | Retention period |
+|---|---|
+| Invoices, payment records and other financial documentation | 11 years from termination of the contract (10-year limitation period + 1 year for deletion, in line with the Accounting Act) |
+| Basic account data (first and last name, e-mail, telephone) | For the entire duration of the contract; after termination of the contract or deactivation of the account, an additional 12 months for follow-up contact and resolution of any disputes |
+| Trainer notes about the client (internal notes relevant to training) | While the account is active; deleted no later than 30 days after deactivation of the account |
+| Health data (Art. 3.6) | For as long as we have your explicit consent; in the event of withdrawal of consent, deleted as soon as reasonably possible |
+| Consent metadata (date, time, IP address, document version) | 5 years from withdrawal of consent or deactivation of the account, for the purpose of being able to evidence the consent given |
+| Session tokens and push tokens | While the session is active or while the user uses the application on the relevant device; expire and are invalidated in line with standard practice |
+
+8.2. Personal data we process on the basis of your consent we keep for as long as we have your consent. In the event of withdrawal of consent, we delete the data as soon as possible, except where we are legally required to retain the data (e.g. financial documentation under item 8.1).
 
 8.3. We define the above retention periods for your personal data guided by the following criteria:
 
 - the period during which we need your personal data in order to be able to provide our services to you;
-- whether there is a statutory, contractual or similar obligation to retain your personal data.
+- whether there is a statutory, contractual or similar obligation to retain your personal data;
+- the storage-limitation principle under Article 5 of the Law on the Protection of Personal Data.
 
 ## 9. Which regulations apply?
 

@@ -13,6 +13,8 @@
 
 1.4. U slučaju bilo kakvih pitanja ili zahteva u vezi postupanja ili zaštite Vaših ličnih podataka, obratite nam se na e-adresu bazapilates@gmail.com.
 
+1.5. U meri u kojoj se primenjuje na obradu podataka korisnika iz Evropske unije, na obradu se primenjuje i Opšta uredba o zaštiti podataka (Uredba (EU) 2016/679 — „GDPR"). [LEGAL REVIEW]
+
 ## 2. Šta je sve obuhvaćeno Pravilima privatnosti?
 
 2.1. Pravila Privatnosti obuhvataju načine obrade Vaših ličnih podataka kada stupate u interakciju s nama, npr. kada:
@@ -112,14 +114,24 @@ Navedeni podaci obrađuju se isključivo radi prilagođavanja treninga individua
 
 ## 8. U kom periodu čuvamo Vaše lične podatke?
 
-8.1. Vaše lične podatke čuvamo sve vreme važenja ugovora koji imamo sklopljen sa Vama. Po prestanku ugovora, Vaše podatke brišemo u dodatnom periodu od 11 godina od prestanka ugovora (period zastarelosti od 10 godina, uvećan za 1 godišnji period za brisanje).
+8.1. Razdoblja čuvanja se razlikuju prema kategoriji podataka. Sledeća tabela prikazuje primenjene rokove [LEGAL REVIEW — potvrditi]:
 
-8.2. Lične podatke koje obrađujemo na osnovu Vaše saglasnosti, čuvamo sve dok imamo Vašu saglasnost. U slučaju povlačenja saglasnosti, iste brišemo u najkraćem roku.
+| Kategorija podataka | Period čuvanja |
+|---|---|
+| Računi, dokumentacija o uplatama i druga finansijska dokumentacija | 11 godina od prestanka ugovora (10 godina zastarelosti + 1 godina za brisanje, u skladu sa Zakonom o računovodstvu) |
+| Osnovni podaci o nalogu (ime i prezime, e-mail, broj telefona) | Sve vreme važenja ugovora; nakon prestanka ugovora ili deaktivacije naloga, dodatnih 12 meseci za potrebe naknadnog kontakta i rešavanja eventualnih sporova |
+| Beleške instruktora o klijentu (interne beleške relevantne za trening) | Dok je nalog aktivan; brišu se najkasnije 30 dana nakon deaktivacije naloga |
+| Zdravstveni podaci (čl. 3.6) | Dok imamo Vašu izričitu saglasnost; u slučaju povlačenja saglasnosti, brišu se u najkraćem mogućem roku |
+| Metapodaci o pristanku (datum, vreme, IP adresa, verzija dokumenta) | 5 godina od povlačenja pristanka ili deaktivacije naloga, radi mogućnosti dokazivanja datog pristanka |
+| Sesijski tokeni i push tokeni | Dok je sesija aktivna, odnosno dok korisnik koristi aplikaciju na konkretnom uređaju; ističu i poništavaju se prema standardnoj praksi |
+
+8.2. Lične podatke koje obrađujemo na osnovu Vaše saglasnosti, čuvamo sve dok imamo Vašu saglasnost. U slučaju povlačenja saglasnosti, iste brišemo u najkraćem roku, izuzev kada smo zakonom obavezni da podatke i dalje čuvamo (npr. finansijska dokumentacija iz tačke 8.1).
 
 8.3. Gore navedena razdoblja čuvanja Vaših ličnih podataka, definišemo vodeći se sledećim kriterijumima:
 
 - period u kojem su nam potrebni Vaši lični podaci kako bismo Vam mogli pružati naše usluge;
-- postoji li zakonska, ugovorna ili slična obaveza čuvanja Vaših ličnih podataka.
+- postoji li zakonska, ugovorna ili slična obaveza čuvanja Vaših ličnih podataka;
+- načelo ograničenja čuvanja iz čl. 5. Zakona o zaštiti podataka o ličnosti.
 
 ## 9. Koji propisi se primenjuju?
 
