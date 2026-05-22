@@ -118,13 +118,13 @@ function ClientRow({
         </Text>
       </View>
       {client.packageStatus === "active" ? (
-        <Badge status="success">{t("admin.clients.filterActive")}</Badge>
+        <Badge status="success">{t("admin.clientDetail.status.active")}</Badge>
       ) : client.packageStatus === "expiring" ? (
-        <Badge status="warning">{t("admin.clients.filterExpiring")}</Badge>
+        <Badge status="warning">{t("admin.clientDetail.status.expiring")}</Badge>
       ) : client.packageStatus === "paused" ? (
-        <Badge status="neutral">{t("admin.clients.filterPaused")}</Badge>
+        <Badge status="neutral">{t("admin.clientDetail.status.paused")}</Badge>
       ) : client.packageStatus === "expired" ? (
-        <Badge status="danger">{t("admin.clients.filterExpired")}</Badge>
+        <Badge status="danger">{t("admin.clientDetail.status.expired")}</Badge>
       ) : null}
       <Pressable
         testID={`client-pencil-${client.user.id}`}
@@ -159,9 +159,10 @@ export default function AdminClients() {
 
   // Deep-link entry from a BIRTHDAY_ADMIN_PROMPT (or any future caller) —
   // open the AssignPackage sheet for the targeted client, with optional
-  // pre-selection of a PackageType. Consumed once at mount via lazy state
-  // initializers; URL params are cleared in a one-shot effect so re-mounts
-  // (e.g. back-navigation) don't re-trigger the sheet.
+  // pre-selection of a PackageType. The screen is a tab and stays mounted
+  // across navigations, so a second notification tap re-feeds new params
+  // here — see the effect below that translates params → sheet state and
+  // then clears them, so back-navigation doesn't re-open the sheet.
   const linkParams = useLocalSearchParams<{
     openAssignPackage?: string;
     mode?: string;
@@ -177,34 +178,42 @@ export default function AdminClients() {
   const [showInviteForm, setShowInviteForm] = useState(false);
   const [showCreateClient, setShowCreateClient] = useState(false);
   const [showEditClient, setShowEditClient] = useState<string | null>(null);
-  const [showAssignPackage, setShowAssignPackage] = useState<string | null>(
-    () => linkParams.openAssignPackage ?? null,
-  );
+  const [showAssignPackage, setShowAssignPackage] = useState<string | null>(null);
   // P2-4: when the assign sheet opens, callers pre-arm the mode here.
   // "comp" = Dodeli paket (existing flow), "paid" = Nova uplata (P2-5 wires
   // up the actual payment fields). For now the sheet body is comp-only.
-  const [showAssignPackageMode, setShowAssignPackageMode] = useState<"comp" | "paid">(
-    () => (linkParams.mode === "paid" ? "paid" : "comp"),
-  );
+  const [showAssignPackageMode, setShowAssignPackageMode] = useState<"comp" | "paid">("comp");
   // Pre-selection for the AssignPackage PackageType picker — only used on
   // the first sheet open after a deep-link, then cleared with the sheet.
-  const [assignPackageInitialId, setAssignPackageInitialId] = useState<string | null>(
-    () => linkParams.initialPackageTypeId ?? null,
-  );
+  const [assignPackageInitialId, setAssignPackageInitialId] = useState<string | null>(null);
 
+  // Translate deep-link params → sheet state, then clear params. Runs on
+  // every change in linkParams, not just mount, so a *second* notification
+  // tap (screen already mounted) still opens the sheet. Clearing params
+  // immediately means back-navigation doesn't reopen the sheet on its own.
   useEffect(() => {
-    // Clear the deep-link params once we've consumed them so the screen
-    // remounting (back-navigation, tab switch) doesn't re-open the sheet.
-    if (linkParams.openAssignPackage || linkParams.initialPackageTypeId || linkParams.mode) {
-      router.setParams({
-        openAssignPackage: undefined,
-        mode: undefined,
-        initialPackageTypeId: undefined,
-      });
+    if (
+      !linkParams.openAssignPackage &&
+      !linkParams.initialPackageTypeId &&
+      !linkParams.mode
+    ) {
+      return;
     }
-    // Intentionally one-shot — we only consume params at mount.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    if (linkParams.openAssignPackage) {
+      setShowAssignPackage(linkParams.openAssignPackage);
+    }
+    setShowAssignPackageMode(linkParams.mode === "paid" ? "paid" : "comp");
+    setAssignPackageInitialId(linkParams.initialPackageTypeId ?? null);
+    router.setParams({
+      openAssignPackage: undefined,
+      mode: undefined,
+      initialPackageTypeId: undefined,
+    });
+  }, [
+    linkParams.openAssignPackage,
+    linkParams.mode,
+    linkParams.initialPackageTypeId,
+  ]);
   const [showPause, setShowPause] = useState<string | null>(null);
   // Actions sheet — opened by tapping a client row in the list.
   const [showActionsFor, setShowActionsFor] = useState<string | null>(null);
@@ -875,7 +884,14 @@ export default function AdminClients() {
         </AppSheet>
 
         <AppSheet
-          open={!!showAssignPackage}
+          // Keep the sheet closed until the targeted client is in the loaded
+          // page set — opening with a `null` render-prop result leaves the
+          // bottom-sheet's dynamic sizing stuck at ~0 (the "peeking strip"
+          // bug seen when arriving via deep-link before clients had loaded).
+          open={
+            !!showAssignPackage &&
+            !!clients.find((c) => c.id === showAssignPackage)
+          }
           onOpenChange={(open) => {
             if (!open) {
               setShowAssignPackage(null);

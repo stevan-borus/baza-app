@@ -224,6 +224,7 @@ export async function POST(request: Request) {
     where: { id: parsed.data.packageTypeId },
     select: {
       id: true,
+      name: true,
       sessionCount: true,
       validityDays: true,
       classTypeId: true,
@@ -272,6 +273,7 @@ export async function POST(request: Request) {
         {
           clientPackageId: clientPackage.id,
           classTypeId: packageType.classTypeId,
+          packageTypeName: packageType.name,
           expiresAt: clientPackage.expiresAt.toISOString(),
         },
       );

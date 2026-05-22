@@ -1,6 +1,6 @@
 import { queryOptions, mutationOptions } from "@tanstack/react-query";
 import { z } from "zod";
-import { apiFetch } from "@/lib/api";
+import { apiFetch, throwIfNotOk } from "@/lib/api";
 import { sharedEnv } from "@/lib/env.shared";
 
 const roomSchema = z.object({
@@ -65,10 +65,7 @@ export const roomsQueries = {
             body: JSON.stringify(payload),
           },
         );
-        if (!response.ok) {
-          const text = await response.text();
-          throw new Error(text || `Unable to update room (${response.status})`);
-        }
+        await throwIfNotOk(response, "Unable to update room");
         return response.json();
       },
     }),
@@ -81,10 +78,7 @@ export const roomsQueries = {
           `${sharedEnv.EXPO_PUBLIC_API_URL}/api/rooms/${id}`,
           { method: "DELETE", credentials: "include" },
         );
-        if (!response.ok) {
-          const text = await response.text();
-          throw new Error(text || `Unable to delete room (${response.status})`);
-        }
+        await throwIfNotOk(response, "Unable to delete room");
         return response.json();
       },
     }),

@@ -4,7 +4,7 @@ import {
   infiniteQueryOptions,
 } from "@tanstack/react-query";
 import { z } from "zod";
-import { apiFetch } from "@/lib/api";
+import { apiFetch, throwIfNotOk } from "@/lib/api";
 import { sharedEnv } from "@/lib/env.shared";
 
 const embeddedClassTypeSchema = z.object({
@@ -157,7 +157,7 @@ export const packagesQueries = {
           headers: { "content-type": "application/json" },
           body: JSON.stringify(payload),
         });
-        if (!response.ok) throw new Error(`Unable to create package type (${response.status})`);
+        await throwIfNotOk(response, "Unable to create package type");
         return response.json();
       },
     }),
@@ -186,10 +186,7 @@ export const packagesQueries = {
             body: JSON.stringify(payload),
           },
         );
-        if (!response.ok) {
-          const text = await response.text();
-          throw new Error(text || `Unable to update package type (${response.status})`);
-        }
+        await throwIfNotOk(response, "Unable to update package type");
         return response.json();
       },
     }),
@@ -202,10 +199,7 @@ export const packagesQueries = {
           `${sharedEnv.EXPO_PUBLIC_API_URL}/api/packages/types/${id}`,
           { method: "DELETE", credentials: "include" },
         );
-        if (!response.ok) {
-          const text = await response.text();
-          throw new Error(text || `Unable to delete package type (${response.status})`);
-        }
+        await throwIfNotOk(response, "Unable to delete package type");
         return response.json();
       },
     }),

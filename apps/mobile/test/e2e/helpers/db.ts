@@ -890,6 +890,89 @@ export async function seedBirthdayGiftPackageType(opts: {
 }
 
 /**
+ * Sets a client's date-of-birth to today's MM-DD (using the anchor instant
+ * if pinned, real now otherwise). The cron matches by civil MM-DD, so this
+ * guarantees the client will appear in matchedClients on the next cron run
+ * regardless of what the seed wrote into dateOfBirth.
+ *
+ * Returns the assigned DOB so the spec can assert against it.
+ */
+export async function setClientBirthdayToToday(userEmail: string) {
+  const user = await db().user.findUnique({
+    where: { email: userEmail.toLowerCase() },
+    select: { id: true, clientProfile: { select: { id: true } } },
+  });
+  if (!user?.clientProfile) {
+    throw new Error(`No ClientProfile for ${userEmail}`);
+  }
+  const today = now();
+  // Pick a year old enough to be unambiguously adult so consent gate doesn't
+  // interfere; the month + day is what the cron matches on.
+  const dob = new Date(Date.UTC(1990, today.getUTCMonth(), today.getUTCDate()));
+  await db().clientProfile.update({
+    where: { id: user.clientProfile.id },
+    data: { dateOfBirth: dob },
+  });
+  return dob;
+}
+
+/**
+ * Clears all PackageType.isBirthdayGift flags. Helpful when a previous test
+ * left a gift PackageType in place and the next test wants to start clean
+ * (e.g., asserting the deep-link doesn't preselect anything).
+ */
+export async function clearBirthdayGiftPackageTypes() {
+  await db().packageType.updateMany({
+    where: { isBirthdayGift: true },
+    data: { isBirthdayGift: false },
+  });
+}
+
+/**
+ * Returns the most recent ClientPackage row for a given client (by email)
+ * that was granted from a birthday-gift PackageType. Used by the grant-flow
+ * spec to assert sessionsRemaining + expiresAt invariants.
+ */
+export async function findLatestBirthdayGiftPackageFor(userEmail: string) {
+  const user = await db().user.findUnique({
+    where: { email: userEmail.toLowerCase() },
+    select: { clientProfile: { select: { id: true } } },
+  });
+  if (!user?.clientProfile) return null;
+  return db().clientPackage.findFirst({
+    where: {
+      clientProfileId: user.clientProfile.id,
+      packageType: { isBirthdayGift: true },
+    },
+    orderBy: { createdAt: "desc" },
+    select: {
+      id: true,
+      sessionsRemaining: true,
+      startsAt: true,
+      expiresAt: true,
+      packageType: { select: { name: true, validityDays: true, isBirthdayGift: true } },
+    },
+  });
+}
+
+/**
+ * Returns the most recent BIRTHDAY_CLIENT_GIFT NotificationLog for a client.
+ * Used by the grant-flow spec to assert the body got the package name baked in.
+ */
+export async function findBirthdayClientGiftFor(userEmail: string) {
+  const user = await db().user.findUnique({
+    where: { email: userEmail.toLowerCase() },
+    select: { id: true },
+  });
+  if (!user) return null;
+  return db().notificationLog.findFirst({
+    where: { userId: user.id, type: "BIRTHDAY_CLIENT_GIFT" },
+    orderBy: { createdAt: "desc" },
+    select: { id: true, title: true, body: true, payload: true, createdAt: true },
+  });
+}
+
+/**
  * Returns the most recent BIRTHDAY_ADMIN_PROMPT NotificationLog for an admin,
  * so the deep-link spec can assert the cron actually produced one before
  * driving the inbox tap.

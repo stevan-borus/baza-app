@@ -1,6 +1,6 @@
 import { queryOptions, mutationOptions, infiniteQueryOptions } from "@tanstack/react-query";
 import { z } from "zod";
-import { apiFetch } from "@/lib/api";
+import { apiFetch, throwIfNotOk } from "@/lib/api";
 import { sharedEnv } from "@/lib/env.shared";
 
 const trainerNoteSchema = z.object({
@@ -98,10 +98,7 @@ export const trainerNotesQueries = {
             body: JSON.stringify({ note }),
           },
         );
-        if (!response.ok) {
-          const text = await response.text();
-          throw new Error(text || `Unable to update note (${response.status})`);
-        }
+        await throwIfNotOk(response, "Unable to update note");
         return response.json();
       },
     }),
@@ -114,10 +111,7 @@ export const trainerNotesQueries = {
           `${sharedEnv.EXPO_PUBLIC_API_URL}/api/trainer-notes/${id}`,
           { method: "DELETE", credentials: "include" },
         );
-        if (!response.ok) {
-          const text = await response.text();
-          throw new Error(text || `Unable to delete note (${response.status})`);
-        }
+        await throwIfNotOk(response, "Unable to delete note");
         return response.json();
       },
     }),
