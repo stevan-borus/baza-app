@@ -152,6 +152,7 @@ export async function POST(request: Request) {
   void createSystemNotification(profile.userId, NOTIFICATION_MESSAGE_KEYS.TRAINER_NOTE, "TRAINER_NOTE", {
     noteId: note.id,
     sessionId: note.sessionId,
+    trainerFullName: guard.user.fullName ?? "",
   });
 
   return ok({ success: true, note }, 201);

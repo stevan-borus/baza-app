@@ -3,16 +3,15 @@ import { useFocusEffect } from "expo-router";
 import { useMutation, useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { ActivityIndicator, Pressable, Text, View } from "react-native";
-import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { MotiView } from "@/components/ui/styled";
 import { LegendList } from "@legendapp/list";
 import { GlassCard } from "@/components/ui/glass-card";
-import { useThemeTokens } from "@/components/ui/tokens";
 import { EmptyState, ErrorState } from "@/components/ui/states";
 import { SkeletonList } from "@/components/ui/skeleton";
 import { SectionLabel } from "@/components/ui/typography";
 import { notificationsQueries, type Notification } from "@/lib/queries/notifications-queries-factory";
 import { useNotificationTapHandler } from "@/lib/notification-tap";
+import { clearAppBadge } from "@/lib/badge";
 import dayjs from "dayjs";
 
 type NotificationsInboxContext = "client" | "admin" | "trainer";
@@ -23,21 +22,6 @@ type Props = {
 };
 
 type NotificationGroup = "today" | "yesterday" | "earlier";
-
-const TYPE_ICON: Record<string, string> = {
-  BOOKING_CONFIRMED: "calendar-check-o",
-  BOOKING_CANCELED: "times-circle",
-  BOOKING_CANCELED_ADMIN: "times-circle",
-  BOOKING_CANCELED_TRAINER: "times-circle",
-  SESSION_CANCELED: "times-circle",
-  SESSION_UPDATED: "refresh",
-  TRAINER_NOTE: "sticky-note-o",
-  SESSION_REMINDER: "bell",
-  PACKAGE_EXPIRING: "gift",
-  SPOT_FROM_WAITLIST: "star",
-  MINOR_PAPER_NEEDED: "edit",
-  GENERAL: "info-circle",
-};
 
 type GroupedNotifications = {
   key: NotificationGroup;
@@ -87,8 +71,31 @@ function formatRelativeTime(createdAt: string, lang: "sr" | "en"): string {
   return d.format(lang === "en" ? "MMM D" : "D. MMM");
 }
 
-function iconForType(type: string): string {
-  return TYPE_ICON[type] ?? "info-circle";
+/**
+ * Returns the person name a notification is about, if any. Used to swap
+ * the type icon for a personal avatar (initials, eventually photo).
+ *
+ * Whitelist only — random server payload keys shouldn't be probed.
+ */
+function personNameFromPayload(payload: Notification["payload"]): string | null {
+  if (!payload || typeof payload !== "object") return null;
+  const p = payload as Record<string, unknown>;
+  const candidates = ["clientFullName", "trainerFullName", "userName"] as const;
+  for (const key of candidates) {
+    const value = p[key];
+    if (typeof value === "string" && value.length > 0) return value;
+  }
+  return null;
+}
+
+function initialsFromName(name: string): string {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((w) => w[0] ?? "")
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
 }
 
 /**
@@ -114,6 +121,7 @@ function payloadInterpolation(
   safe("clientFullName");
   safe("classTypeName");
   safe("trainerFullName");
+  safe("userName");
   // sessionStartsAt is ISO; render as HH:mm (or HH:mm D.M. if not today).
   const startsAt = (payload as Record<string, unknown>).sessionStartsAt;
   if (typeof startsAt === "string") {
@@ -129,7 +137,6 @@ export function NotificationsInbox({ context, bottomPad = 0 }: Props) {
   const queryClient = useQueryClient();
   const { t, i18n } = useTranslation();
   const lang = i18n.language === "en" ? "en" : "sr";
-  const tokens = useThemeTokens();
   const handleNotificationTap = useNotificationTapHandler();
 
   const notificationsQuery = useInfiniteQuery(notificationsQueries.listInfinite());
@@ -180,6 +187,10 @@ export function NotificationsInbox({ context, bottomPad = 0 }: Props) {
   allNotificationsRef.current = allNotifications;
   useFocusEffect(
     useCallback(() => {
+      // Opening the inbox is the user acknowledging the badge — clear the
+      // OS-level app icon badge immediately, even if their unread rows
+      // haven't yet been written to the server.
+      void clearAppBadge();
       const timeout = setTimeout(() => {
         const unreadIds = allNotificationsRef.current
           .filter((n) => !n.readAt)
@@ -206,8 +217,6 @@ export function NotificationsInbox({ context, bottomPad = 0 }: Props) {
     }
   }
 
-  const ICON_COLOR_UNREAD = tokens.accent;
-  const ICON_COLOR_READ = tokens.faint;
   const emptyKey =
     context === "client"
       ? "client.notifications.empty"
@@ -253,8 +262,23 @@ export function NotificationsInbox({ context, bottomPad = 0 }: Props) {
                   ? n.payload.messageKey
                   : null;
               const interp = payloadInterpolation(n.payload, lang);
-              const displayTitle = messageKey ? t(`${messageKey}.title`, interp) : n.title;
-              const displayBody = messageKey ? t(`${messageKey}.body`, interp) : n.body;
+              // i18next returns the key unchanged when no translation exists —
+              // detect that and fall back to the server-stored (already
+              // localized) title/body. Avoids leaking literal keys like
+              // "notification.birthday_admin_prompt.title" into the UI.
+              const titleKey = messageKey ? `${messageKey}.title` : null;
+              const bodyKey = messageKey ? `${messageKey}.body` : null;
+              const translatedTitle = titleKey ? t(titleKey, interp) : null;
+              const translatedBody = bodyKey ? t(bodyKey, interp) : null;
+              const displayTitle =
+                translatedTitle && translatedTitle !== titleKey
+                  ? translatedTitle
+                  : n.title;
+              const displayBody =
+                translatedBody && translatedBody !== bodyKey
+                  ? translatedBody
+                  : n.body;
+              const personName = personNameFromPayload(n.payload);
               return (
                 <Pressable
                   testID={`notification-row-${n.id}-${isUnread ? "unread" : "read"}`}
@@ -268,13 +292,19 @@ export function NotificationsInbox({ context, bottomPad = 0 }: Props) {
                 >
                   <GlassCard size="md" accentBorder={isUnread ? "left" : undefined}>
                     <View className="flex-row gap-3 items-start">
-                      <View className="mt-0.5">
-                        <FontAwesome
-                          name={iconForType(n.type) as never}
-                          size={18}
-                          color={isUnread ? ICON_COLOR_UNREAD : ICON_COLOR_READ}
-                        />
-                      </View>
+                      {personName ? (
+                        <View
+                          testID={`notification-avatar-${n.id}`}
+                          className="items-center justify-center w-9 h-9 rounded-full bg-accent-soft"
+                        >
+                          <Text
+                            className="text-accent font-body-bold"
+                            style={{ fontSize: 12 }}
+                          >
+                            {initialsFromName(personName)}
+                          </Text>
+                        </View>
+                      ) : null}
                       <View className="flex-1 gap-1">
                         <View className="flex-row justify-between items-center">
                           <Text
