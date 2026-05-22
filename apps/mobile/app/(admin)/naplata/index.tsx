@@ -410,14 +410,16 @@ export default function AdminBilling() {
               }))
             }
             emptyText={t("admin.manage.packagesEmpty")}
-            options={(packageTypesQuery.data?.packageTypes ?? []).map((pt) => ({
-              value: pt.id,
-              label: pt.name,
-              hint: t("admin.manage.sessionsDays", {
-                count: pt.sessionCount,
-                days: pt.validityDays,
-              }),
-            }))}
+            options={(packageTypesQuery.data?.packageTypes ?? [])
+              .filter((pt) => !pt.isBirthdayGift)
+              .map((pt) => ({
+                value: pt.id,
+                label: pt.name,
+                hint: t("admin.manage.sessionsDays", {
+                  count: pt.sessionCount,
+                  days: pt.validityDays,
+                }),
+              }))}
           />
           <Input
             placeholder={t("admin.manage.placeholderNotes")}

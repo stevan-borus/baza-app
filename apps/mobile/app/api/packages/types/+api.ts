@@ -53,6 +53,7 @@ export async function POST(request: Request) {
       validityDays: parsed.data.validityDays,
       lateCancelHours: parsed.data.lateCancelHours,
       classTypeId: parsed.data.classTypeId,
+      isBirthdayGift: parsed.data.isBirthdayGift ?? false,
     },
     select: {
       id: true,
@@ -61,6 +62,7 @@ export async function POST(request: Request) {
       validityDays: true,
       lateCancelHours: true,
       classTypeId: true,
+      isBirthdayGift: true,
       classType: { select: { id: true, name: true } },
       createdAt: true,
     },
