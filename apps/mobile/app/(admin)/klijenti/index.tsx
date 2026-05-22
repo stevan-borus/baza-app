@@ -118,13 +118,13 @@ function ClientRow({
         </Text>
       </View>
       {client.packageStatus === "active" ? (
-        <Badge status="success">{t("admin.clients.filterActive")}</Badge>
+        <Badge status="success">{t("admin.clientDetail.status.active")}</Badge>
       ) : client.packageStatus === "expiring" ? (
-        <Badge status="warning">{t("admin.clients.filterExpiring")}</Badge>
+        <Badge status="warning">{t("admin.clientDetail.status.expiring")}</Badge>
       ) : client.packageStatus === "paused" ? (
-        <Badge status="neutral">{t("admin.clients.filterPaused")}</Badge>
+        <Badge status="neutral">{t("admin.clientDetail.status.paused")}</Badge>
       ) : client.packageStatus === "expired" ? (
-        <Badge status="danger">{t("admin.clients.filterExpired")}</Badge>
+        <Badge status="danger">{t("admin.clientDetail.status.expired")}</Badge>
       ) : null}
       <Pressable
         testID={`client-pencil-${client.user.id}`}
