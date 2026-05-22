@@ -1,6 +1,6 @@
 import { queryOptions, mutationOptions } from "@tanstack/react-query";
 import { z } from "zod";
-import { apiFetch } from "@/lib/api";
+import { apiFetch, throwIfNotOk } from "@/lib/api";
 import { sharedEnv } from "@/lib/env.shared";
 
 const classTypeSchema = z.object({
@@ -71,10 +71,7 @@ export const trainingsQueries = {
             body: JSON.stringify(payload),
           },
         );
-        if (!response.ok) {
-          const text = await response.text();
-          throw new Error(text || `Unable to update class type (${response.status})`);
-        }
+        await throwIfNotOk(response, "Unable to update class type");
         return response.json();
       },
     }),
@@ -87,10 +84,7 @@ export const trainingsQueries = {
           `${sharedEnv.EXPO_PUBLIC_API_URL}/api/trainings/class-types/${id}`,
           { method: "DELETE", credentials: "include" },
         );
-        if (!response.ok) {
-          const text = await response.text();
-          throw new Error(text || `Unable to delete class type (${response.status})`);
-        }
+        await throwIfNotOk(response, "Unable to delete class type");
         return response.json();
       },
     }),
