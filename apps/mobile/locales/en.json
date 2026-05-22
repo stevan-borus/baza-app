@@ -121,16 +121,10 @@
     }
   },
   "intake": {
-    "title": "Your daily rhythm",
-    "notice": "We use this information only to tailor training to your condition. Answering is voluntary; if you choose not to share, you accept that we cannot specifically adapt your training. You can delete these answers at any time from your profile.",
     "consentCheckbox": "I agree that the Studio may process this health information for the purpose of adapting my training.",
     "save": "Save",
-    "skip": "Skip",
-    "share": "Add details",
     "yes": "Yes",
     "no": "No",
-    "savedBanner": "Saved — you can change this from your profile.",
-    "skippedBanner": "Skipped — you can fill this in later from your profile.",
     "saveFailed": "Saving failed — please try again.",
     "q": {
       "physicallyActive": "Are you physically active?",

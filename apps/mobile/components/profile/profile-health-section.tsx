@@ -132,6 +132,7 @@ export function ProfileHealthSection() {
             </View>
             <View className="flex-1">
               <Button
+                testID="profile-health-save"
                 onPress={handleSave}
                 disabled={
                   !isIntakeValid(draft, false) || recordMutation.isPending
@@ -150,7 +151,9 @@ export function ProfileHealthSection() {
           <Text className="text-[13px] text-muted leading-5">
             {t("profile.healthEmpty")}
           </Text>
-          <Button onPress={startEditing}>{t("profile.healthAdd")}</Button>
+          <Button testID="profile-health-add" onPress={startEditing}>
+            {t("profile.healthAdd")}
+          </Button>
         </View>
       ) : (
         <View className="gap-2">

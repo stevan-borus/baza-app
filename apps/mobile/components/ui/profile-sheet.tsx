@@ -14,7 +14,6 @@ import { type Locale } from "@/lib/i18n";
 import { notificationsQueries } from "@/lib/queries/notifications-queries-factory";
 import { signOutWithPushCleanup } from "@/lib/sign-out";
 import { ProfileLegalSection } from "@/components/profile/profile-legal-section";
-import { ProfileHealthSection } from "@/components/profile/profile-health-section";
 import { AppSheet } from "./sheet";
 import { useThemeTokens } from "./tokens";
 
@@ -179,7 +178,22 @@ function ProfileSheetContent({ open, onOpenChange }: Props) {
         </View>
 
         <ProfileLegalSection />
-        <ProfileHealthSection />
+
+        {meQuery.data?.user.role === "CLIENT" ? (
+          <Pressable
+            testID="profile-health-open"
+            onPress={() => {
+              onOpenChange(false);
+              router.push("/(client)/profile/health");
+            }}
+            className="flex-row items-center justify-between rounded-xl border border-glass-border bg-glass p-3"
+          >
+            <Text className="flex-1 text-[14px] text-foreground">
+              {t("profile.healthSection")}
+            </Text>
+            <Feather name="chevron-right" size={16} color={tokens.muted} />
+          </Pressable>
+        ) : null}
 
         <Pressable
           testID="profile-sign-out-button"

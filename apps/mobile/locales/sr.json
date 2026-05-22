@@ -121,16 +121,10 @@
     }
   },
   "intake": {
-    "title": "Vaš životni ritam",
-    "notice": "Ovi podaci se koriste isključivo da prilagodimo trening Vašem stanju. Davanje odgovora je dobrovoljno; ako odlučite da ih ne podelite, prihvatate da trening ne možemo posebno prilagoditi. Podatke možete obrisati u svakom trenutku iz svog profila.",
     "consentCheckbox": "Saglasan/saglasna sam da Studio obrađuje ove zdravstvene podatke u svrhu prilagođavanja treninga.",
     "save": "Sačuvaj",
-    "skip": "Preskoči",
-    "share": "Unesi podatke",
     "yes": "Da",
     "no": "Ne",
-    "savedBanner": "Sačuvano — možete izmeniti iz profila.",
-    "skippedBanner": "Preskočeno — možete uneti kasnije iz profila.",
     "saveFailed": "Slanje nije uspelo — pokušajte ponovo.",
     "q": {
       "physicallyActive": "Da li ste fizički aktivni?",
