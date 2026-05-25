@@ -163,9 +163,22 @@ vi.mock("@/components/ui/typography", () => ({
 }));
 
 // ─── i18n mock ────────────────────────────────────────────────────────────
+const FAKE_TRANSLATIONS: Record<string, string> = {
+  "notif.consentRefused.title": "Korisnik nije prihvatio dokumente",
+  "notif.consentRefused.body":
+    "{{userName}} je odbio/la pravne dokumente i odjavljen/a je.",
+};
+
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
-    t: (k: string) => k,
+    t: (k: string, vars?: Record<string, unknown>) => {
+      const template = FAKE_TRANSLATIONS[k] ?? k;
+      if (!vars) return template;
+      return Object.entries(vars).reduce(
+        (acc, [name, val]) => acc.replaceAll(`{{${name}}}`, String(val)),
+        template,
+      );
+    },
     i18n: { language: "en" },
   }),
 }));
@@ -346,6 +359,123 @@ describe("NotificationsInbox — notifications list", () => {
     };
     const html = renderInbox({ context: "client" });
     expect(html).toContain('data-testid="notification-row-n3-read"');
+  });
+});
+
+describe("NotificationsInbox — avatar leading", () => {
+  it("renders an initials avatar when the notification payload has a person name", () => {
+    const nowIso = now().toISOString();
+    queryState.data = {
+      pages: [
+        {
+          notifications: [
+            makeNotification({
+              id: "bday-avatar-1",
+              type: "BIRTHDAY_ADMIN_PROMPT",
+              title: "🎂 Rođendan klijenta",
+              body: "Marko Marković slavi danas — pokloni mu/joj sesiju.",
+              payload: {
+                messageKey: "notification.birthday_admin_prompt",
+                clientFullName: "Marko Marković",
+              },
+              createdAt: nowIso,
+            }),
+          ],
+          nextCursor: null,
+        },
+      ],
+    };
+    const html = renderInbox({ context: "admin" });
+    expect(html).toContain('data-testid="notification-avatar-bday-avatar-1"');
+    // Initials derived from "Marko Marković" → "MM"
+    expect(html).toContain(">MM<");
+  });
+
+  it("renders no leading icon at all for notifications without a person", () => {
+    const nowIso = now().toISOString();
+    queryState.data = {
+      pages: [
+        {
+          notifications: [
+            makeNotification({
+              id: "reminder-1",
+              type: "SESSION_REMINDER",
+              title: "Podsetnik",
+              body: "Imate termin sutra.",
+              payload: { sessionId: "abc" },
+              createdAt: nowIso,
+            }),
+          ],
+          nextCursor: null,
+        },
+      ],
+    };
+    const html = renderInbox({ context: "client" });
+    expect(html).not.toContain('data-testid="notification-avatar-reminder-1"');
+    // No type icon anywhere — the user explicitly asked for icon-free rows
+    // when no person avatar is available.
+    expect(html).not.toContain("data-icon=");
+  });
+});
+
+describe("NotificationsInbox — payload interpolation", () => {
+  it("falls back to the stored title/body when the messageKey has no i18n entry", () => {
+    const nowIso = now().toISOString();
+    queryState.data = {
+      pages: [
+        {
+          notifications: [
+            makeNotification({
+              id: "birthday-1",
+              type: "BIRTHDAY_ADMIN_PROMPT",
+              title: "🎂 Rođendan klijenta",
+              body: "Klijent slavi danas — pokloni mu sesiju.",
+              payload: {
+                // No locale entry exists for this key in the test
+                // FAKE_TRANSLATIONS map — production has the same gap
+                // for notification.birthday_admin_prompt.
+                messageKey: "notification.birthday_admin_prompt",
+                clientFullName: "Active Reformer Client",
+              },
+              createdAt: nowIso,
+            }),
+          ],
+          nextCursor: null,
+        },
+      ],
+    };
+    const html = renderInbox({ context: "admin" });
+    expect(html).toContain("🎂 Rođendan klijenta");
+    expect(html).toContain("Klijent slavi danas");
+    // No literal i18n key should leak into the UI.
+    expect(html).not.toContain("notification.birthday_admin_prompt");
+  });
+
+  it("substitutes {{userName}} into the consent-refused notification body", () => {
+    const nowIso = now().toISOString();
+    queryState.data = {
+      pages: [
+        {
+          notifications: [
+            makeNotification({
+              id: "consent-1",
+              type: "CONSENT_REFUSED",
+              title: "ignored — messageKey takes over",
+              body: "ignored — messageKey takes over",
+              payload: {
+                messageKey: "notif.consentRefused",
+                userName: "Marko Marković",
+              },
+              createdAt: nowIso,
+            }),
+          ],
+          nextCursor: null,
+        },
+      ],
+    };
+    const html = renderInbox({ context: "admin" });
+    expect(html).toContain("Marko Marković");
+    expect(html).not.toContain("{{userName}}");
   });
 });
 

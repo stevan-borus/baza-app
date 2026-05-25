@@ -51,81 +51,85 @@ export function ClientLegalPanel({ clientUserId, clientFullName, lang }: Props) 
 
   const [openDoc, setOpenDoc] = useState<ConsentDocumentKey | null>(null);
 
+  const rowClass = "flex-row items-center justify-between h-12";
+
   return (
     <View className="gap-2">
       <SectionLabel>{t("admin.client.legalPanel")}</SectionLabel>
-      {visibleKeys.map((key) => {
-        const accepted = acceptedByKey.get(key);
-        const labelKey = LABEL_KEY[key];
-        const label = labelKey ? t(labelKey) : key;
-        return (
-          <Pressable
-            key={key}
-            testID={`admin-legal-row-${key}`}
-            onPress={() => setOpenDoc(key)}
-            className="flex-row items-center justify-between rounded-xl border border-glass-border bg-glass p-3"
-          >
-            <Text className="flex-1 text-[14px] text-foreground">{label}</Text>
-            <Text
-              className={`text-[12px] ${accepted ? "text-success" : "text-muted"}`}
+      <View>
+        {visibleKeys.map((key, idx) => {
+          const accepted = acceptedByKey.get(key);
+          const labelKey = LABEL_KEY[key];
+          const label = labelKey ? t(labelKey) : key;
+          return (
+            <Pressable
+              key={key}
+              testID={`admin-legal-row-${key}`}
+              onPress={() => setOpenDoc(key)}
+              className={`${rowClass} ${idx === 0 ? "" : "border-t border-glass-border"} active:opacity-60`}
             >
-              {accepted
-                ? t("admin.client.legalAcceptedShort", {
-                    date: dayjs(accepted.acceptedAt).locale(lang).format("D.M.YYYY."),
-                  })
-                : t("admin.client.legalNotAccepted")}
-            </Text>
-          </Pressable>
-        );
-      })}
+              <Text className="flex-1 text-[14px] text-foreground">{label}</Text>
+              <Text
+                className={`text-[12px] ${accepted ? "text-success" : "text-muted"}`}
+              >
+                {accepted
+                  ? t("admin.client.legalAcceptedShort", {
+                      date: dayjs(accepted.acceptedAt).locale(lang).format("D.M.YYYY."),
+                    })
+                  : t("admin.client.legalNotAccepted")}
+              </Text>
+            </Pressable>
+          );
+        })}
 
-      <View
-        testID={`social-media-row-${clientUserId}`}
-        className="mt-1 flex-row items-center justify-between rounded-xl border border-glass-border bg-glass p-3"
-      >
-        <Text className="flex-1 text-[14px] text-foreground">
-          {t("admin.client.socialMediaPanel")}
-        </Text>
-        <Text
-          className={`text-[12px] font-body-semibold ${
-            socialMedia === null
-              ? "text-muted"
-              : socialMedia.accepted
-                ? "text-success"
-                : "text-danger"
-          }`}
-          testID={`social-media-status-${clientUserId}`}
-        >
-          {socialMedia === null
-            ? t("admin.client.socialMediaUnknown")
-            : socialMedia.accepted
-              ? t("admin.client.socialMediaYes")
-              : t("admin.client.socialMediaNo")}
-        </Text>
-      </View>
-
-      {minorWaiver ? (
         <View
-          testID={`guardian-verified-row-${clientUserId}`}
-          className="flex-row items-center justify-between rounded-xl border border-glass-border bg-glass p-3"
+          testID={`social-media-row-${clientUserId}`}
+          className={`${rowClass} border-t border-glass-border`}
         >
           <Text className="flex-1 text-[14px] text-foreground">
-            {t("admin.client.guardianVerifiedToggle")}
+            {t("admin.client.socialMediaPanel")}
           </Text>
-          <Switch
-            testID={`guardian-verified-${clientUserId}`}
-            value={guardianVerified}
-            onValueChange={() => {
-              if (guardianVerified) return;
-              setOptimisticVerified(true);
-              guardianMutation.mutate(clientUserId);
-            }}
-            disabled={guardianVerified || guardianMutation.isPending}
-            accessibilityLabel={t("admin.client.guardianVerifiedToggle")}
-            trackColor={{ false: tokens.glassStrong, true: tokens.accent }}
-          />
+          <Text
+            className={`text-[12px] font-body-semibold ${
+              socialMedia === null
+                ? "text-muted"
+                : socialMedia.accepted
+                  ? "text-success"
+                  : "text-danger"
+            }`}
+            testID={`social-media-status-${clientUserId}`}
+          >
+            {socialMedia === null
+              ? t("admin.client.socialMediaUnknown")
+              : socialMedia.accepted
+                ? t("admin.client.socialMediaYes")
+                : t("admin.client.socialMediaNo")}
+          </Text>
         </View>
-      ) : null}
+
+        {minorWaiver ? (
+          <View
+            testID={`guardian-verified-row-${clientUserId}`}
+            className={`${rowClass} border-t border-glass-border`}
+          >
+            <Text className="flex-1 text-[14px] text-foreground">
+              {t("admin.client.guardianVerifiedToggle")}
+            </Text>
+            <Switch
+              testID={`guardian-verified-${clientUserId}`}
+              value={guardianVerified}
+              onValueChange={() => {
+                if (guardianVerified) return;
+                setOptimisticVerified(true);
+                guardianMutation.mutate(clientUserId);
+              }}
+              disabled={guardianVerified || guardianMutation.isPending}
+              accessibilityLabel={t("admin.client.guardianVerifiedToggle")}
+              trackColor={{ false: tokens.glassStrong, true: tokens.accent }}
+            />
+          </View>
+        ) : null}
+      </View>
 
       <DocumentSheet
         open={openDoc !== null}

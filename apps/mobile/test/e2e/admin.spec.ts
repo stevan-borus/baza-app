@@ -1031,9 +1031,19 @@ test.describe("admin (Serbian)", () => {
       .first()
       .dispatchEvent("click");
 
+    // Open the DateTimePicker (mode="date") and select today's day cell.
+    await page.getByTestId("assign-package-start-picker").dispatchEvent("click");
+    await expect(
+      page.locator('[data-testid="date-time-picker-calendar"]'),
+    ).toBeVisible({ timeout: 10_000 });
+    const today = String(new Date().getDate());
     await page
-      .getByPlaceholder(t.admin.clients.placeholderStart)
-      .fill("2026-06-01");
+      .locator('[data-testid="date-time-picker-calendar"] button.rdp-day_button', {
+        hasText: new RegExp(`^${today}$`),
+      })
+      .first()
+      .dispatchEvent("click");
+    await page.getByTestId("date-time-picker-confirm").dispatchEvent("click");
 
     await page.getByTestId("assign-package-submit").dispatchEvent("click");
 

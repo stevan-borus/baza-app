@@ -91,6 +91,32 @@ describe("packages/types CRUD", () => {
     expect(persisted?.name).toBe("Reformer 12-pack");
   });
 
+  it("POST persists isBirthdayGift=true and returns it in the response", async () => {
+    const { admin, reformer } = await seedAdminAndClassType();
+    asAdmin(admin);
+
+    const response = await POST(
+      jsonRequest({
+        name: "Birthday gift",
+        sessionCount: 1,
+        validityDays: 30,
+        lateCancelHours: 12,
+        classTypeId: reformer.id,
+        isBirthdayGift: true,
+      }),
+    );
+    expect(response.status).toBe(201);
+    const body = (await response.json()) as {
+      packageType: { id: string; isBirthdayGift: boolean };
+    };
+    expect(body.packageType.isBirthdayGift).toBe(true);
+
+    const persisted = await prisma.packageType.findUnique({
+      where: { id: body.packageType.id },
+    });
+    expect(persisted?.isBirthdayGift).toBe(true);
+  });
+
   it("POST returns 404 when classTypeId references a non-existent ClassType", async () => {
     const { admin } = await seedAdminAndClassType();
     asAdmin(admin);

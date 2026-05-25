@@ -21,6 +21,7 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { ErrorState } from "@/components/ui/states";
 import { SectionLabel } from "@/components/ui/typography";
+import { DateTimePicker } from "@/components/ui/date-time-picker";
 import { packagesQueries } from "@/lib/queries/packages-queries-factory";
 import { billingQueries } from "@/lib/queries/billing-queries-factory";
 
@@ -70,7 +71,7 @@ export function AssignPackageSheetContent({
 
   // Shared fields.
   const [packageTypeId, setPackageTypeId] = useState(initialPackageTypeId ?? "");
-  const [startsAt, setStartsAt] = useState("");
+  const [startsAt, setStartsAt] = useState<Date | null>(null);
 
   // Paid-mode-only fields. Initialised regardless so the hook order is
   // stable across mode flips (the parent always remounts on sheet open, but
@@ -121,11 +122,13 @@ export function AssignPackageSheetContent({
       : paidMutation.isPending || !packageTypeId || !startsAt || !amountValid;
 
   function handleSubmit() {
+    if (!startsAt) return;
+    const startsAtIso = startsAt.toISOString();
     if (mode === "comp") {
       compMutation.mutate({
         clientProfileId: client.id,
         packageTypeId,
-        startsAt,
+        startsAt: startsAtIso,
       });
       return;
     }
@@ -158,12 +161,9 @@ export function AssignPackageSheetContent({
         className="text-muted"
         style={{ fontSize: 13 }}
       >
-        {mode === "comp"
-          ? t("admin.clients.compPackageHeading")
-          : `${client.user.fullName} · ${client.user.email}`}
+        {`${client.user.fullName} · ${client.user.email}`}
       </Text>
 
-      <SectionLabel>{t("admin.clients.packageType")}</SectionLabel>
       {packageTypes.map((pt) => (
         <Button
           key={pt.id}
@@ -176,10 +176,12 @@ export function AssignPackageSheetContent({
         </Button>
       ))}
 
-      <Input
-        placeholder={t("admin.clients.placeholderStart")}
+      <DateTimePicker
+        testID="assign-package-start-picker"
+        mode="date"
         value={startsAt}
-        onChangeText={setStartsAt}
+        onChange={setStartsAt}
+        placeholder={t("admin.clients.placeholderStart")}
       />
 
       {mode === "paid" ? (

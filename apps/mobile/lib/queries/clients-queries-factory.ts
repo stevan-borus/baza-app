@@ -154,14 +154,18 @@ export const clientsQueries = {
           success: boolean;
           intake: {
             id: string;
-            isPhysicallyActive: boolean;
-            isFirstPilates: boolean;
-            isPregnant: boolean;
-            isPostpartum: boolean;
-            hasComplaints: boolean;
-            complaintsDetails: string | null;
-            hasInjuries: boolean;
-            injuriesDetails: string | null;
+            conditions: string[];
+            conditionsOther: string | null;
+            underMedicalTreatment: boolean;
+            medicalTreatmentDetails: string | null;
+            pilatesExperience: string[];
+            pilatesExperienceDuration: string | null;
+            activityLevel: string;
+            exerciseFrequency: string;
+            goals: string[];
+            goalsOther: string | null;
+            discomfortDuring: string[];
+            additionalNotes: string | null;
             recordedAt: string;
           } | null;
           withdrawnAt: string | null;

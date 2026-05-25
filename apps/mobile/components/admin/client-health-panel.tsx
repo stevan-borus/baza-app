@@ -2,7 +2,6 @@ import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Text, View } from "react-native";
 import dayjs from "dayjs";
-import { GlassCard } from "@/components/ui/glass-card";
 import { SectionLabel } from "@/components/ui/typography";
 import { clientsQueries } from "@/lib/queries/clients-queries-factory";
 
@@ -25,103 +24,156 @@ export function ClientHealthPanel({ clientUserId, lang }: Props) {
     <View testID="client-health-panel" className="gap-2">
       <SectionLabel>{t("admin.client.healthSection")}</SectionLabel>
       {withdrawnAt ? (
-        <GlassCard size="md">
-          <Text className="text-muted">
-            {t("admin.client.healthFlags.withdrawn", {
-              date: dayjs(withdrawnAt).locale(lang).format("D.M.YYYY."),
-            })}
-          </Text>
-        </GlassCard>
+        <Text className="text-muted text-[13px]">
+          {t("admin.client.healthFlags.withdrawn", {
+            date: dayjs(withdrawnAt).locale(lang).format("D.M.YYYY."),
+          })}
+        </Text>
       ) : !intake ? (
-        <GlassCard size="md">
-          <Text className="text-muted">{t("admin.client.healthNone")}</Text>
-        </GlassCard>
+        <Text className="text-muted text-[13px]">{t("admin.client.healthNone")}</Text>
       ) : (
-        <GlassCard size="md">
-          <View className="gap-2">
-            {intake.isPregnant ? (
-              <Flag label={t("admin.client.healthFlags.pregnant")} />
-            ) : null}
-            {intake.isPostpartum ? (
-              <Flag label={t("admin.client.healthFlags.postpartum")} />
-            ) : null}
-            {intake.hasComplaints ? (
-              <Flag
-                label={t("admin.client.healthFlags.complaints")}
-                detail={intake.complaintsDetails}
+        <View className="gap-4">
+          <ConditionChips
+            codes={intake.conditions}
+            other={intake.conditionsOther}
+            t={t}
+            emptyLabel={t("admin.client.healthNoFlags")}
+          />
+
+          <View>
+            {intake.underMedicalTreatment ? (
+              <Block
+                isFirst
+                label={t("intake.q.underMedicalTreatment")}
+                value={t("intake.yes")}
+                detail={intake.medicalTreatmentDetails}
               />
-            ) : null}
-            {intake.hasInjuries ? (
-              <Flag
-                label={t("admin.client.healthFlags.injuries")}
-                detail={intake.injuriesDetails}
-              />
-            ) : null}
-            {!intake.isPregnant &&
-            !intake.isPostpartum &&
-            !intake.hasComplaints &&
-            !intake.hasInjuries ? (
-              <Text className="text-muted">
-                {t("admin.client.healthNoFlags")}
-              </Text>
             ) : null}
 
-            <View className="mt-1 gap-1">
-              <LifestyleRow
-                label={t("admin.client.healthFlags.physicallyActive")}
-                value={intake.isPhysicallyActive}
-                tYes={t("admin.client.socialMediaYes")}
-                tNo={t("admin.client.socialMediaNo")}
+            <Block
+              isFirst={!intake.underMedicalTreatment}
+              label={t("intake.q.pilatesExperience")}
+              value={intake.pilatesExperience
+                .map((c) => t(`intake.pilatesExperience.${c}`))
+                .join(", ")}
+              detail={intake.pilatesExperienceDuration}
+            />
+
+            <Block
+              label={t("intake.q.activityLevel")}
+              value={t(`intake.activityLevel.${intake.activityLevel}`, {
+                defaultValue: intake.activityLevel,
+              })}
+            />
+
+            <Block
+              label={t("intake.q.exerciseFrequency")}
+              value={t(`intake.exerciseFrequency.${intake.exerciseFrequency}`, {
+                defaultValue: intake.exerciseFrequency,
+              })}
+            />
+
+            {intake.goals.length > 0 || intake.goalsOther ? (
+              <Block
+                label={t("intake.q.goals")}
+                value={[
+                  ...intake.goals.map((c) =>
+                    t(`intake.goals.${c}`, { defaultValue: c }),
+                  ),
+                  ...(intake.goalsOther ? [intake.goalsOther] : []),
+                ].join(", ")}
               />
-              <LifestyleRow
-                label={t("admin.client.healthFlags.firstPilates")}
-                value={intake.isFirstPilates}
-                tYes={t("admin.client.socialMediaYes")}
-                tNo={t("admin.client.socialMediaNo")}
+            ) : null}
+
+            {intake.discomfortDuring.length > 0 ? (
+              <Block
+                label={t("intake.q.discomfortDuring")}
+                value={intake.discomfortDuring
+                  .map((c) =>
+                    t(`intake.discomfortDuring.${c}`, { defaultValue: c }),
+                  )
+                  .join(", ")}
               />
-              <Text className="mt-1 text-[11px] text-muted">
-                {t("admin.client.healthFlags.recordedAt", {
-                  date: dayjs(intake.recordedAt).locale(lang).format("D.M.YYYY."),
-                })}
-              </Text>
-            </View>
+            ) : null}
+
+            {intake.additionalNotes ? (
+              <Block
+                label={t("intake.q.additionalNotes")}
+                value={intake.additionalNotes}
+              />
+            ) : null}
           </View>
-        </GlassCard>
+
+          <Text className="text-[11px] text-muted">
+            {t("admin.client.healthFlags.recordedAt", {
+              date: dayjs(intake.recordedAt).locale(lang).format("D.M.YYYY."),
+            })}
+          </Text>
+        </View>
       )}
     </View>
   );
 }
 
-function Flag({ label, detail }: { label: string; detail?: string | null }) {
+function ConditionChips({
+  codes,
+  other,
+  t,
+  emptyLabel,
+}: {
+  codes: string[];
+  other: string | null;
+  t: (key: string, opts?: Record<string, unknown>) => string;
+  emptyLabel: string;
+}) {
+  if (codes.length === 0 && !other) {
+    return <Text className="text-muted">{emptyLabel}</Text>;
+  }
   return (
-    <View className="rounded-xl border border-warning/40 bg-warning-soft p-3">
-      <Text className="text-[14px] text-foreground font-body-semibold">
-        {label}
-      </Text>
-      {detail ? (
-        <Text className="mt-1 text-[12px] text-muted">{detail}</Text>
+    <View className="flex-row flex-wrap gap-2">
+      {codes.map((code) => (
+        <View
+          key={code}
+          className="rounded-full border border-warning/40 bg-warning-soft px-3 py-1"
+        >
+          <Text className="text-[12px] text-warning font-body-semibold">
+            {t(`intake.conditions.${code}`, { defaultValue: code })}
+          </Text>
+        </View>
+      ))}
+      {other ? (
+        <View className="rounded-full border border-warning/40 bg-warning-soft px-3 py-1">
+          <Text className="text-[12px] text-warning font-body-semibold">
+            {other}
+          </Text>
+        </View>
       ) : null}
     </View>
   );
 }
 
-function LifestyleRow({
+function Block({
   label,
   value,
-  tYes,
-  tNo,
+  detail,
+  isFirst,
 }: {
   label: string;
-  value: boolean;
-  tYes: string;
-  tNo: string;
+  value: string;
+  detail?: string | null;
+  isFirst?: boolean;
 }) {
   return (
-    <View className="flex-row items-center justify-between">
-      <Text className="flex-1 text-[13px] text-muted">{label}</Text>
-      <Text className="text-[13px] font-body-semibold text-foreground">
-        {value ? tYes : tNo}
+    <View
+      className={`py-3 ${isFirst ? "" : "border-t border-glass-border"}`}
+    >
+      <Text className="text-[11px] text-muted uppercase" style={{ letterSpacing: 0.5 }}>
+        {label}
       </Text>
+      <Text className="mt-0.5 text-[14px] text-foreground">{value}</Text>
+      {detail ? (
+        <Text className="mt-0.5 text-[12px] text-muted">{detail}</Text>
+      ) : null}
     </View>
   );
 }

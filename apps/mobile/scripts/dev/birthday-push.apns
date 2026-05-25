@@ -1,0 +1,20 @@
+{
+  "Simulator Target Bundle": "com.steva.borus.baza-pilates",
+  "aps": {
+    "alert": {
+      "title": "🎂 Rođendan klijenta",
+      "body": "Active Reformer Client slavi danas — pokloni mu/joj sesiju."
+    },
+    "sound": "default"
+  },
+  "experienceId": "@steva.borus/baza-pilates",
+  "scopeKey": "@steva.borus/baza-pilates",
+  "body": {
+    "__notificationType": "BIRTHDAY_ADMIN_PROMPT",
+    "clientProfileId": "d30f6102-7564-4367-a05d-ca849eecf583",
+    "clientUserId": "09392b87-e0b3-4f22-8525-c80f1d096b2f",
+    "clientFullName": "Active Reformer Client",
+    "suggestedClassTypeId": "6ca7ee8d-850c-4494-a330-3e07b17e351f",
+    "today": "2026-05-22"
+  }
+}

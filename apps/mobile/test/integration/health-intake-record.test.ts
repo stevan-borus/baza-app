@@ -20,12 +20,13 @@ import { prisma } from "@/lib/server/prisma";
 import { resetDb } from "./setup-db";
 
 const validBody = {
-  isPhysicallyActive: true,
-  isFirstPilates: true,
-  hasComplaints: false,
-  hasInjuries: false,
-  isPregnant: false,
-  isPostpartum: false,
+  conditions: [],
+  underMedicalTreatment: false,
+  pilatesExperience: ["none"],
+  activityLevel: "moderate",
+  exerciseFrequency: "2-3",
+  goals: [],
+  discomfortDuring: [],
 };
 
 describe("/api/health-intake — record + read", () => {
@@ -69,7 +70,8 @@ describe("/api/health-intake — record + read", () => {
     const intake = await prisma.clientHealthIntake.findFirstOrThrow({
       where: { clientProfileId },
     });
-    expect(intake.isPhysicallyActive).toBe(true);
+    expect(intake.activityLevel).toBe("moderate");
+    expect(intake.pilatesExperience).toEqual(["none"]);
 
     const consent = await prisma.consentRecord.findFirstOrThrow({
       where: { userId, documentKey: "health_intake" },
@@ -78,24 +80,29 @@ describe("/api/health-intake — record + read", () => {
     expect(consent.version).toBe(1);
   });
 
-  it("POST rejects with 400 when hasComplaints=true but complaintsDetails missing", async () => {
-    const res = await POST(makeReq("POST", { ...validBody, hasComplaints: true }));
+  it("POST rejects with 400 when underMedicalTreatment=true but details missing", async () => {
+    const res = await POST(
+      makeReq("POST", { ...validBody, underMedicalTreatment: true }),
+    );
     expect(res.status).toBe(400);
   });
 
-  it("POST rejects with 400 when hasInjuries=true but injuriesDetails missing", async () => {
-    const res = await POST(makeReq("POST", { ...validBody, hasInjuries: true }));
-    expect(res.status).toBe(400);
-  });
-
-  it("POST accepts when complaintsDetails populated for hasComplaints=true", async () => {
-    const res = await POST(makeReq("POST", { ...validBody, hasComplaints: true, complaintsDetails: "bolovi u leđima" }));
+  it("POST accepts when medicalTreatmentDetails populated", async () => {
+    const res = await POST(
+      makeReq("POST", {
+        ...validBody,
+        underMedicalTreatment: true,
+        medicalTreatmentDetails: "blood pressure medication",
+      }),
+    );
     expect(res.status).toBe(200);
   });
 
   it("POST appends — newer row wins on GET", async () => {
     await POST(makeReq("POST", validBody));
-    await POST(makeReq("POST", { ...validBody, isPregnant: true }));
+    await POST(
+      makeReq("POST", { ...validBody, conditions: ["pregnancy_postpartum"] }),
+    );
 
     const rows = await prisma.clientHealthIntake.findMany({
       where: { clientProfileId },
@@ -105,7 +112,7 @@ describe("/api/health-intake — record + read", () => {
 
     const getRes = await GET(makeReq("GET"));
     const body = await getRes.json();
-    expect(body.isPregnant).toBe(true);
+    expect(body.conditions).toContain("pregnancy_postpartum");
   });
 
   it("GET returns 404 before any intake is recorded", async () => {

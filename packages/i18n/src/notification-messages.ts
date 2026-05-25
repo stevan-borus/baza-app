@@ -42,8 +42,8 @@ const messages: Record<
     en: { title: "Session updated", body: "The session has been updated." },
   },
   TRAINER_NOTE: {
-    sr: { title: "Beleška trenera", body: "Trener je ostavio belešku." },
-    en: { title: "Trainer note", body: "Your trainer left a note." },
+    sr: { title: "Beleška trenera", body: "{{trainerFullName}} je ostavio/la belešku." },
+    en: { title: "Trainer note", body: "{{trainerFullName}} left you a note." },
   },
   GENERAL: {
     sr: { title: "Obaveštenje", body: "" },
@@ -64,21 +64,21 @@ const messages: Record<
   BOOKING_CANCELED_ADMIN: {
     sr: {
       title: "Otkazana rezervacija",
-      body: "Klijent je otkazao termin.",
+      body: "{{clientFullName}} je otkazao/la {{classTypeName}}.",
     },
     en: {
       title: "Booking canceled",
-      body: "A client canceled their session.",
+      body: "{{clientFullName}} canceled {{classTypeName}}.",
     },
   },
   BOOKING_CANCELED_TRAINER: {
     sr: {
       title: "Otkazana rezervacija",
-      body: "Klijent je otkazao tvoj termin.",
+      body: "{{clientFullName}} je otkazao/la tvoj termin ({{classTypeName}}).",
     },
     en: {
       title: "Booking canceled",
-      body: "A client canceled your session.",
+      body: "{{clientFullName}} canceled your session ({{classTypeName}}).",
     },
   },
   MINOR_PAPER_NEEDED: {
@@ -94,21 +94,21 @@ const messages: Record<
   BIRTHDAY_ADMIN_PROMPT: {
     sr: {
       title: "🎂 Rođendan klijenta",
-      body: "Klijent slavi danas — pokloni mu sesiju.",
+      body: "{{clientFullName}} slavi danas — pokloni mu/joj sesiju.",
     },
     en: {
       title: "🎂 Client birthday",
-      body: "A client is celebrating today — gift them a session.",
+      body: "{{clientFullName}} is celebrating today — gift them a session.",
     },
   },
   BIRTHDAY_CLIENT_GIFT: {
     sr: {
       title: "🎉 Srećan rođendan!",
-      body: "Poklanjamo ti besplatnu sesiju.",
+      body: "Poklanjamo ti besplatnu sesiju iz paketa \"{{packageTypeName}}\".",
     },
     en: {
       title: "🎉 Happy birthday!",
-      body: "We're gifting you a free session.",
+      body: "We're gifting you a free \"{{packageTypeName}}\" session.",
     },
   },
 };
@@ -120,9 +120,22 @@ export const NOTIFICATION_MESSAGE_I18N_KEYS: Record<
   Object.keys(messages).map((key) => [key, `notification.${key.toLowerCase()}`]),
 ) as Record<NotificationMessageKey, string>;
 
+function interpolate(template: string, vars?: Record<string, string | number | undefined>): string {
+  if (!vars) return template;
+  return template.replace(/\{\{(\w+)\}\}/g, (match, name) => {
+    const value = vars[name];
+    return value === undefined || value === null ? match : String(value);
+  });
+}
+
 export function getNotificationMessage(
   key: NotificationMessageKey,
   locale: NotificationLocale = "sr",
+  vars?: Record<string, string | number | undefined>,
 ): { title: string; body: string } {
-  return messages[key]?.[locale] ?? messages[key]?.sr ?? { title: "", body: "" };
+  const template = messages[key]?.[locale] ?? messages[key]?.sr ?? { title: "", body: "" };
+  return {
+    title: interpolate(template.title, vars),
+    body: interpolate(template.body, vars),
+  };
 }

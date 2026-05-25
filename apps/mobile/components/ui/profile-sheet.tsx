@@ -14,7 +14,6 @@ import { type Locale } from "@/lib/i18n";
 import { notificationsQueries } from "@/lib/queries/notifications-queries-factory";
 import { signOutWithPushCleanup } from "@/lib/sign-out";
 import { ProfileLegalSection } from "@/components/profile/profile-legal-section";
-import { ProfileHealthSection } from "@/components/profile/profile-health-section";
 import { AppSheet } from "./sheet";
 import { useThemeTokens } from "./tokens";
 
@@ -178,8 +177,9 @@ function ProfileSheetContent({ open, onOpenChange }: Props) {
           />
         </View>
 
-        <ProfileLegalSection />
-        <ProfileHealthSection />
+        {meQuery.data?.user.role !== "CLIENT" ? (
+          <ProfileLegalSection />
+        ) : null}
 
         <Pressable
           testID="profile-sign-out-button"

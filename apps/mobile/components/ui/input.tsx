@@ -1,4 +1,4 @@
-import React, { useContext, useState } from "react";
+import React, { useContext, useRef, useState } from "react";
 import {
   Platform,
   TextInput,
@@ -58,6 +58,7 @@ export function Input({
 }: InputProps) {
   const tokens = useThemeTokens();
   const [focused, setFocused] = useState(false);
+  const inputRef = useRef<TextInput>(null);
   const active = focused || (typeof value === "string" && value.length > 0);
   const iconName = leftIcon ?? icon;
   const hasLabel = !!label;
@@ -125,8 +126,9 @@ export function Input({
           </View>
         ) : null}
 
-        <View
-          className={`flex-1 relative ${isMultiline ? "" : "h-full justify-center"}`}
+        <Pressable
+          onPress={() => inputRef.current?.focus()}
+          className={`flex-1 relative ${isMultiline ? "self-stretch" : "h-full justify-center"}`}
         >
           {hasLabel ? (
             <MotiView
@@ -144,6 +146,7 @@ export function Input({
           ) : null}
 
           <TextInputComponent
+            ref={inputRef}
             value={value}
             onFocus={(e) => {
               setFocused(true);
@@ -166,7 +169,7 @@ export function Input({
             }
             {...rest}
           />
-        </View>
+        </Pressable>
 
         {rightSlot ? (
           <View

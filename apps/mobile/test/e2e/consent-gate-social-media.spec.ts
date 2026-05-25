@@ -8,6 +8,10 @@
  * social-media-yes; this spec isolates the gate state itself (assertions
  * on toBeDisabled / toBeEnabled) and verifies that Ne is also a valid
  * recorded decision.
+ *
+ * Health intake has been removed from /consent — clients add it later from
+ * the profile sheet. So the social-media question is the ONLY remaining
+ * non-legal blocker on this screen.
  */
 import { test, expect } from "./helpers/fixtures";
 import { disconnect, resetAndSeed } from "./helpers/db";
@@ -34,13 +38,15 @@ test.describe("consent gate — social-media", () => {
     });
 
     // Accept every gate document so the only outstanding blocker is the
-    // social-media question (and the intake, which we explicitly skip).
-    for (const key of ["tos", "privacy", "eula", "waiver_adult"] as const) {
+    // social-media question. (eula is not in the client gate — see
+    // GATE_DOCUMENT_KEYS_FOR_ROLE in lib/legal/versions.ts.)
+    for (const key of ["tos", "privacy", "waiver_adult"] as const) {
       await page.getByTestId(`document-card-accept-${key}`).click();
     }
 
-    // Skip the intake so we isolate the social-media gate.
-    await page.getByTestId("intake-skip").click();
+    // Intake no longer lives on /consent — assert the form is absent so a
+    // regression that reintroduces it would surface here.
+    await expect(page.getByTestId("health-intake-form")).toHaveCount(0);
 
     // Social-media still unanswered → submit disabled.
     // The StudioButton is a RN-Web <div> exposing aria-disabled rather than

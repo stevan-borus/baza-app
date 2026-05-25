@@ -26,7 +26,17 @@ import { FilterChip } from "@/components/ui/studio";
 import { useRouter } from "expo-router";
 import { packagesQueries } from "@/lib/queries/packages-queries-factory";
 import { trainingsQueries } from "@/lib/queries/trainings-queries-factory";
+import { fieldErrorsFromApiError } from "@/lib/api-errors";
 import Feather from "@expo/vector-icons/Feather";
+
+function FieldError({ message }: { message?: string }) {
+  if (!message) return null;
+  return (
+    <Text className="text-danger" style={{ fontSize: 12, marginTop: -8 }}>
+      {message}
+    </Text>
+  );
+}
 
 // ─── SessionCountIcon ─────────────────────────────────────────────────────────
 // Circular badge used on package-type rows to display session count.
@@ -139,6 +149,9 @@ export default function AdminPackages() {
       setEditingId(null);
     },
   });
+
+  const createFieldErrors = fieldErrorsFromApiError(createMutation.error);
+  const editFieldErrors = fieldErrorsFromApiError(updateTypeMutation.error);
 
   function openEdit(pt: {
     id: string;
@@ -339,6 +352,7 @@ export default function AdminPackages() {
               value={form.name}
               onChangeText={(v) => setForm((s) => ({ ...s, name: v }))}
             />
+            <FieldError message={createFieldErrors.name} />
             <Select
               testID="package-class-type-select"
               optionTestIDPrefix="package-class-type-option"
@@ -351,6 +365,7 @@ export default function AdminPackages() {
                 label: ct.name,
               }))}
             />
+            <FieldError message={createFieldErrors.classTypeId} />
             <Input
               testID="package-session-count-input"
               placeholder={t("admin.manage.placeholderSessionCount")}
@@ -358,6 +373,7 @@ export default function AdminPackages() {
               value={form.sessionCount}
               onChangeText={(v) => setForm((s) => ({ ...s, sessionCount: v }))}
             />
+            <FieldError message={createFieldErrors.sessionCount} />
             <Input
               testID="package-validity-days-input"
               placeholder={t("admin.manage.placeholderValidityDays")}
@@ -365,6 +381,7 @@ export default function AdminPackages() {
               value={form.validityDays}
               onChangeText={(v) => setForm((s) => ({ ...s, validityDays: v }))}
             />
+            <FieldError message={createFieldErrors.validityDays} />
             <Input
               testID="package-late-cancel-input"
               placeholder={t("admin.manage.placeholderLateCancel")}
@@ -374,6 +391,7 @@ export default function AdminPackages() {
                 setForm((s) => ({ ...s, lateCancelHours: v }))
               }
             />
+            <FieldError message={createFieldErrors.lateCancelHours} />
             <View className="flex-row items-center justify-between py-2">
               <Text className="text-foreground" style={{ fontSize: 15 }}>
                 {t("admin.manage.isBirthdayGiftLabel")}
@@ -397,7 +415,8 @@ export default function AdminPackages() {
                 !form.name ||
                 !form.sessionCount ||
                 !form.validityDays ||
-                !form.classTypeId
+                !form.classTypeId ||
+                (form.isBirthdayGift && form.sessionCount !== "1")
               }
               onPress={() =>
                 createMutation.mutate({
@@ -412,8 +431,13 @@ export default function AdminPackages() {
             >
               {t("admin.manage.create")}
             </Button>
-            {createMutation.isError ? (
-              <ErrorState message={t("admin.manage.createPackageError")} />
+            {createMutation.isError && Object.keys(createFieldErrors).length === 0 ? (
+              <ErrorState
+                message={
+                  (createMutation.error as Error)?.message ??
+                  t("admin.manage.createPackageError")
+                }
+              />
             ) : null}
           </View>
         </AppSheet>
@@ -435,6 +459,7 @@ export default function AdminPackages() {
               value={editForm.name}
               onChangeText={(v) => setEditForm((s) => ({ ...s, name: v }))}
             />
+            <FieldError message={editFieldErrors.name} />
             <Select
               testID="package-edit-class-type-select"
               optionTestIDPrefix="package-edit-class-type-option"
@@ -449,6 +474,7 @@ export default function AdminPackages() {
                 label: ct.name,
               }))}
             />
+            <FieldError message={editFieldErrors.classTypeId} />
             <Input
               testID="package-edit-session-count-input"
               placeholder={t("admin.manage.placeholderSessionCount")}
@@ -458,6 +484,7 @@ export default function AdminPackages() {
                 setEditForm((s) => ({ ...s, sessionCount: v }))
               }
             />
+            <FieldError message={editFieldErrors.sessionCount} />
             <Input
               testID="package-edit-validity-days-input"
               placeholder={t("admin.manage.placeholderValidityDays")}
@@ -467,6 +494,7 @@ export default function AdminPackages() {
                 setEditForm((s) => ({ ...s, validityDays: v }))
               }
             />
+            <FieldError message={editFieldErrors.validityDays} />
             <Input
               testID="package-edit-late-cancel-input"
               placeholder={t("admin.manage.placeholderLateCancel")}
@@ -476,6 +504,7 @@ export default function AdminPackages() {
                 setEditForm((s) => ({ ...s, lateCancelHours: v }))
               }
             />
+            <FieldError message={editFieldErrors.lateCancelHours} />
             <View className="flex-row items-center justify-between py-2">
               <Text className="text-foreground" style={{ fontSize: 15 }}>
                 {t("admin.manage.isBirthdayGiftLabel")}
@@ -499,7 +528,8 @@ export default function AdminPackages() {
                 !editForm.name ||
                 !editForm.sessionCount ||
                 !editForm.validityDays ||
-                !editForm.classTypeId
+                !editForm.classTypeId ||
+                (editForm.isBirthdayGift && editForm.sessionCount !== "1")
               }
               onPress={() => {
                 if (!editingId) return;
@@ -524,7 +554,7 @@ export default function AdminPackages() {
             >
               {t("admin.manage.deletePackage")}
             </Button>
-            {updateTypeMutation.isError ? (
+            {updateTypeMutation.isError && Object.keys(editFieldErrors).length === 0 ? (
               <ErrorState
                 message={
                   (updateTypeMutation.error as Error)?.message ??

@@ -35,7 +35,15 @@ export async function createSystemNotification(
   options?: { dedupeKey?: string; skipPush?: boolean },
 ) {
   const locale = await getPreferredLocale(userId);
-  const { title, body } = getNotificationMessage(messageKey, locale);
+  // Pass the payload as interpolation vars so server-rendered notification
+  // copy can mention the client by name (e.g. BIRTHDAY_ADMIN_PROMPT). Only
+  // scalar payload values are usable; nested objects are dropped silently
+  // by the interpolator (regex matches `\w+` keys only).
+  const interpVars: Record<string, string | number | undefined> = {};
+  for (const [k, v] of Object.entries(payload)) {
+    if (typeof v === "string" || typeof v === "number") interpVars[k] = v;
+  }
+  const { title, body } = getNotificationMessage(messageKey, locale, interpVars);
   const messageI18nKey = NOTIFICATION_MESSAGE_I18N_KEYS[messageKey];
   return createAndDispatchUserNotification({
     userId,
@@ -74,6 +82,7 @@ async function sendExpoPushNotifications(
   body: string,
   payload: Record<string, unknown> | undefined,
   type: NotificationType,
+  badge: number,
 ) {
   if (expoPushTokens.length === 0) {
     return { sent: false, status: "NO_ACTIVE_PUSH_TOKENS" };
@@ -98,6 +107,7 @@ async function sendExpoPushNotifications(
           body,
           data,
           sound: "default",
+          badge,
         })),
       ),
     }),
@@ -203,16 +213,24 @@ export async function createAndDispatchUserNotification(input: NotificationPaylo
 
   const dispatchResult = await tryCatch(
     (async () => {
-      const tokens = await prisma.pushToken.findMany({
-        where: { userId: input.userId, isActive: true },
-        select: { expoPushToken: true },
-      });
+      const [tokens, unreadCount] = await Promise.all([
+        prisma.pushToken.findMany({
+          where: { userId: input.userId, isActive: true },
+          select: { expoPushToken: true },
+        }),
+        // Includes the row just created above (readAt is null), so this
+        // gives the iOS-correct "post-delivery" badge.
+        prisma.notificationLog.count({
+          where: { userId: input.userId, readAt: null },
+        }),
+      ]);
       const result = await sendExpoPushNotifications(
         tokens.map((token: { expoPushToken: string }) => token.expoPushToken),
         input.title,
         input.body,
         input.payload,
         input.type,
+        unreadCount,
       );
       return prisma.notificationLog.update({
         where: { id: log.id },

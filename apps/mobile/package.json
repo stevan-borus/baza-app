@@ -4,7 +4,7 @@
   "private": true,
   "main": "expo-router/entry",
   "scripts": {
-    "dev": "expo start --dev-client --port 8090",
+    "dev": "(xcrun simctl launch booted com.steva.borus.baza-pilates || true) && expo start --dev-client --port 8090",
     "start": "expo start --dev-client --port 8090",
     "dev:go": "expo start --port 8090",
     "android": "expo run:android --port 8090",
@@ -28,6 +28,7 @@
     "dev:db:unpatch": "tsx scripts/dev/unpatch-dev-db.ts",
     "test:db:bootstrap": "tsx scripts/test/bootstrap-test-db.ts",
     "test:db:prepare": "DATABASE_URL=postgresql://postgres:postgres@localhost:5434/baza_app_test?schema=public prisma migrate reset --force",
+    "dev:db:reseed": "DATABASE_URL=postgresql://postgres:postgres@localhost:5434/baza_app?schema=public prisma migrate reset --force && DATABASE_URL=postgresql://postgres:postgres@localhost:5434/baza_app?schema=public TEST_ANCHOR_TIME='' tsx scripts/test/seed-e2e.ts",
     "test:db:patch": "DATABASE_URL=postgresql://postgres:postgres@localhost:5434/baza_app_test?schema=public tsx scripts/test/patch-test-db.ts",
     "test:db:seed-e2e": "DATABASE_URL=postgresql://postgres:postgres@localhost:5434/baza_app_test?schema=public tsx scripts/test/seed-e2e.ts",
     "test:e2e": "playwright test",

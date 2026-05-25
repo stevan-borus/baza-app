@@ -39,6 +39,7 @@ import { getDateLocale } from "@/lib/i18n";
 import { authQueries } from "@/lib/queries/auth-queries-factory";
 import { packagesQueries, type ClientPackage } from "@/lib/queries/packages-queries-factory";
 import { trainerNotesQueries } from "@/lib/queries/trainer-notes-queries-factory";
+import { ProfilePersonalDataSections } from "@/components/profile/profile-personal-data-sections";
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -347,7 +348,7 @@ export default function ClientProfile() {
         <MotiView
           from={{ opacity: 0, translateY: 8 }}
           animate={{ opacity: 1, translateY: 0 }}
-          transition={{ type: "timing", duration: 400, delay: 280 }}
+          transition={{ type: "timing", duration: 400, delay: 260 }}
         >
           <SectionRow title={t("client.profileTab.trainingHistory")} />
           <View className="mx-4 border-t border-glass-border">
@@ -377,6 +378,15 @@ export default function ClientProfile() {
               </View>
             </Pressable>
           </View>
+        </MotiView>
+
+        {/* ── FOTOGRAFIJE / ZDRAVSTVENI PODACI / PRAVNA DOKUMENTA ── */}
+        <MotiView
+          from={{ opacity: 0, translateY: 8 }}
+          animate={{ opacity: 1, translateY: 0 }}
+          transition={{ type: "timing", duration: 400, delay: 340 }}
+        >
+          <ProfilePersonalDataSections />
         </MotiView>
       </ScrollView>
     </ScreenContainerRaw>

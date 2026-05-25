@@ -27,6 +27,7 @@ type ExpoPushMessage = {
   body: string;
   data?: Record<string, unknown>;
   sound?: string;
+  badge?: number;
 };
 
 type CapturedRequest = {
@@ -145,6 +146,65 @@ describe("notifications dispatch — real module + stubbed Expo HTTP", () => {
     });
     expect(log.pushSent).toBe(true);
     expect(log.pushStatus).toBe("DELIVERED");
+  });
+
+  it("includes the recipient's unread notification count as the badge field", async () => {
+    const user = await makeUser("badge@test.local");
+    await registerToken(user.id);
+
+    // Two pre-existing unread rows so the new push should arrive with
+    // badge=3 (those 2 plus the one being dispatched).
+    await prisma.notificationLog.create({
+      data: {
+        userId: user.id,
+        type: "GENERAL",
+        title: "old 1",
+        body: "",
+      },
+    });
+    await prisma.notificationLog.create({
+      data: {
+        userId: user.id,
+        type: "GENERAL",
+        title: "old 2",
+        body: "",
+      },
+    });
+
+    await createAndDispatchUserNotification({
+      userId: user.id,
+      type: "GENERAL",
+      title: "new",
+      body: "",
+    });
+
+    expect(captured).toHaveLength(1);
+    expect(captured[0].body[0].badge).toBe(3);
+  });
+
+  it("badge ignores notifications that are already read", async () => {
+    const user = await makeUser("badge-read@test.local");
+    await registerToken(user.id);
+
+    await prisma.notificationLog.create({
+      data: {
+        userId: user.id,
+        type: "GENERAL",
+        title: "already read",
+        body: "",
+        readAt: new Date(),
+      },
+    });
+
+    await createAndDispatchUserNotification({
+      userId: user.id,
+      type: "GENERAL",
+      title: "new",
+      body: "",
+    });
+
+    // 0 read rows + 1 new = badge of 1.
+    expect(captured[0].body[0].badge).toBe(1);
   });
 
   it("includes only active push tokens — deactivated devices are skipped", async () => {

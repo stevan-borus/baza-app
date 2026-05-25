@@ -17,8 +17,9 @@
  * gate. unconsented is intentionally left without consent records — the
  * dedicated gate test subject for the first-time flow.
  *
- * Document keys for an adult unconsented client: tos, privacy, eula, waiver_adult.
- * (waiver_minor only appears when client dateOfBirth < 18 years ago.)
+ * Document keys for an adult unconsented client: tos, privacy, waiver_adult.
+ * (waiver_minor only appears when client dateOfBirth < 18 years ago. EULA
+ * is intentionally NOT in the gate — see lib/legal/versions.ts.)
  */
 import { test, expect, type Page } from "./helpers/fixtures";
 import {
@@ -50,10 +51,10 @@ async function signInAsUnconsented(page: Page) {
 
 /**
  * Accept all pending documents on the /consent screen by toggling each Switch.
- * For an adult client the keys are: tos, privacy, eula, waiver_adult.
+ * For an adult client the keys are: tos, privacy, waiver_adult.
  */
 async function acceptAllDocuments(page: Page) {
-  const keys = ["tos", "privacy", "eula", "waiver_adult"] as const;
+  const keys = ["tos", "privacy", "waiver_adult"] as const;
   for (const key of keys) {
     const toggle = page.getByTestId(`document-card-accept-${key}`);
     await expect(toggle).toBeVisible({ timeout: 8_000 });
@@ -88,9 +89,10 @@ test.describe("consent gate", () => {
     // the gate just requires a recorded decision.
     await page.getByTestId("social-media-yes").click();
 
-    // Skip the health intake — this test exercises doc submission, not intake.
-    // Skipping is local-only (no API call) and unblocks the submit gate.
-    await page.getByTestId("intake-skip").click();
+    // The /consent screen no longer asks for health intake — it must not
+    // render the intake form at all. Clients add health info later, from
+    // the profile sheet's Health info row. See profile/health.tsx.
+    await expect(page.getByTestId("health-intake-form")).toHaveCount(0);
 
     // Submit button should now be enabled.
     const submitBtn = page.getByTestId("consent-submit-button");
