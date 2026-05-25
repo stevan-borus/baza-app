@@ -13,21 +13,13 @@ import {
 } from "@/lib/queries/consent-queries-factory";
 import { signOutWithPushCleanup } from "@/lib/sign-out";
 import { useSessionAuth } from "@/lib/session-auth";
-import {
-  EMPTY_INTAKE,
-  HealthIntakeForm,
-  type HealthIntakeState,
-  intakeToInput,
-  isIntakeValid,
-} from "@/components/consent/health-intake-form";
 import { SocialMediaQuestion } from "@/components/consent/social-media-question";
 import { GuardianBlock, type GuardianFields } from "@/components/consent/guardian-block";
 import { DocumentSheet } from "@/components/consent/document-sheet";
 import { Button } from "@/components/ui/button";
 import { GlassCard } from "@/components/ui/glass-card";
 import { useThemeTokens } from "@/components/ui/tokens";
-import { Body, BodyTitle } from "@/components/ui/studio";
-import { useRecordHealthIntakeMutation } from "@/lib/queries/health-intake-queries-factory";
+import { Body } from "@/components/ui/studio";
 import type { ConsentDocumentKey } from "@baza/types";
 
 const DOC_LABEL_KEY: Partial<Record<ConsentDocumentKey, string>> = {
@@ -52,7 +44,6 @@ export default function ConsentScreen() {
   const acceptMutation = useAcceptConsentMutation();
   const refuseMutation = useRefuseConsentMutation();
   const socialMutation = useRecordSocialMediaMutation();
-  const recordIntakeMutation = useRecordHealthIntakeMutation();
 
   const pending = status.data?.pending ?? [];
   const isReConsent = pending.some((p) => p.reason === "outdated");
@@ -69,18 +60,14 @@ export default function ConsentScreen() {
   const [socialChoice, setSocialChoice] = useState<"yes" | "no" | null>(
     socialDecided ? (socialLatest ? "yes" : "no") : null,
   );
-  const [intake, setIntake] = useState<HealthIntakeState>(EMPTY_INTAKE);
-  const [intakeMode, setIntakeMode] = useState<"share" | "skip">("share");
   const [openDoc, setOpenDoc] = useState<ConsentDocumentKey | null>(null);
   const [refused, setRefused] = useState(false);
 
   const allAccepted = pending.every((p) => accepted[p.key]);
   const guardianOk = !hasMinorWaiver || guardian.name.trim().length > 0;
   const socialAnswered = !isClient || socialChoice !== null;
-  const intakeReady =
-    !isClient || intakeMode === "skip" || isIntakeValid(intake);
   const canSubmit =
-    allAccepted && guardianOk && socialAnswered && intakeReady && !submitting;
+    allAccepted && guardianOk && socialAnswered && !submitting;
 
   // Navigate to /sign-in once the session has cleared after refuse. The
   // session signal propagates asynchronously, so wait for confirmation
@@ -106,9 +93,6 @@ export default function ConsentScreen() {
     setSubmitting(true);
     setSubmitError(null);
     try {
-      if (isClient && intakeMode === "share") {
-        await recordIntakeMutation.mutateAsync(intakeToInput(intake));
-      }
       for (const p of pending) {
         await acceptMutation.mutateAsync({
           documentKey: p.key,
@@ -137,12 +121,14 @@ export default function ConsentScreen() {
     return <View className="flex-1 bg-background" />;
   }
 
+  const FOOTER_HEIGHT = 64;
+
   return (
     <View className="flex-1 bg-background">
       <ScrollView
         contentContainerStyle={{
           paddingTop: insets.top + 24,
-          paddingBottom: insets.bottom + 40,
+          paddingBottom: insets.bottom + FOOTER_HEIGHT + 32,
           gap: 24,
         }}
       >
@@ -238,61 +224,49 @@ export default function ConsentScreen() {
           </View>
         ) : null}
 
-        {/* Health intake — clients only */}
-        {isClient ? (
-          <View className="px-6 gap-3">
-            <View className="flex-row items-baseline justify-between">
-              <BodyTitle>{t("intake.title")}</BodyTitle>
-              <Pressable
-                testID="intake-toggle-skip"
-                onPress={() =>
-                  setIntakeMode((m) => (m === "share" ? "skip" : "share"))
-                }
-                hitSlop={8}
-              >
-                <Body size={13} className="underline">
-                  {intakeMode === "share"
-                    ? t("intake.skip")
-                    : t("intake.share")}
-                </Body>
-              </Pressable>
-            </View>
-            <Body size={13}>{t("intake.notice")}</Body>
-            {intakeMode === "share" ? (
-              <HealthIntakeForm state={intake} onChange={setIntake} />
-            ) : (
-              <View className="rounded-xl border border-glass-border bg-glass p-3">
-                <Body size={13}>{t("intake.skippedBanner")}</Body>
-              </View>
-            )}
-          </View>
-        ) : null}
-
         {submitError ? (
           <View className="px-6">
             <Text className="text-danger text-[13px]">{submitError}</Text>
           </View>
         ) : null}
 
-        {/* Bottom actions */}
-        <View className="px-6 gap-2">
-          <Button
-            testID="consent-submit-button"
-            onPress={handleSubmit}
-            disabled={!canSubmit || submitting}
-          >
-            {t("consent.continue")}
-          </Button>
-          <Button
-            variant="ghost"
-            testID="consent-refuse-button"
-            onPress={handleRefuse}
-            disabled={refuseMutation.isPending}
-          >
-            {t("consent.signOut")}
-          </Button>
-        </View>
       </ScrollView>
+
+      {/* Pinned footer: CTA + sign-out */}
+      <View
+        pointerEvents="box-none"
+        style={{
+          position: "absolute",
+          left: 0,
+          right: 0,
+          bottom: 0,
+          paddingHorizontal: 24,
+          paddingTop: 12,
+          paddingBottom: insets.bottom + 12,
+          backgroundColor: tokens.background,
+          borderTopWidth: 1,
+          borderTopColor: tokens.glassBorder,
+        }}
+      >
+        <Button
+          testID="consent-submit-button"
+          onPress={handleSubmit}
+          disabled={!canSubmit || submitting}
+        >
+          {t("consent.continue")}
+        </Button>
+        <Pressable
+          testID="consent-refuse-button"
+          onPress={handleRefuse}
+          disabled={refuseMutation.isPending}
+          hitSlop={8}
+          className="items-center justify-center mt-3 h-9"
+        >
+          <Body size={14} className="text-muted underline">
+            {t("consent.signOut")}
+          </Body>
+        </Pressable>
+      </View>
 
       <DocumentSheet
         open={openDoc !== null}

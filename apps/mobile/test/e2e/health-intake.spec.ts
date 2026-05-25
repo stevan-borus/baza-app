@@ -1,25 +1,29 @@
 /**
- * E2E: health-intake save path on /consent.
+ * E2E: health-intake save path from the profile tab.
  *
- * Proves that filling the six yes/no questions and ticking the Art.17
- * consent checkbox enables the Save button; tapping Save then collapses
- * the form into a banner and unblocks the consent-screen Continue button.
+ * Flow:
+ *   1. Sign in as a client who already cleared the consent gate.
+ *   2. Land on home, switch to the profile tab.
+ *   3. Tap the Zdravstveni podaci row → pushes /(client)/profile/health.
+ *   4. Form is always rendered inline (always-editable layout).
+ *   5. Fill the required fields, tap "Sačuvaj izmene".
+ *   6. Sticky save button disappears (no longer dirty); the form stays
+ *      mounted but is now in sync with the saved record, and the
+ *      "Povuci saglasnost" link is revealed at the bottom of the scroll.
  *
- * Complements consent-gate.spec.ts (happy path uses intake-skip) and
- * consent-gate-social-media.spec.ts (isolates the social-media gate).
- *
- * RN-Web caveat: the Save Pressable and Continue StudioButton both
- * render as <div> with aria-disabled="true" while disabled and strip
- * the attribute entirely when enabled — toBeDisabled()/toBeEnabled()
- * don't apply, so we assert via toHaveAttribute + toHaveCount(0).
+ * RN-Web caveat: the Button component renders as <div> with aria-disabled
+ * while disabled and strips the attribute when enabled, so we use
+ * toHaveAttribute / toHaveCount(0) instead of toBeDisabled / toBeEnabled.
  */
 import { test, expect } from "./helpers/fixtures";
 import { disconnect, resetAndSeed } from "./helpers/db";
 
 const SEED_PASSWORD = "Password123!";
-const CLIENT_EMAIL = "client.unconsented@e2e.test";
+// activeReformer is already past the consent gate (seeded ConsentRecord rows)
+// AND has no HealthIntake row, so the inline form is rendered immediately.
+const CLIENT_EMAIL = "client.active.reformer@e2e.test";
 
-test.describe("consent gate — health intake save path", () => {
+test.describe("health intake — profile flow", () => {
   test.beforeAll(async () => {
     await resetAndSeed();
   });
@@ -27,7 +31,7 @@ test.describe("consent gate — health intake save path", () => {
     await disconnect();
   });
 
-  test("fill six questions + Art.17 + save → submit enabled", async ({
+  test("client navigates to /health → fills the long-form intake → form collapses to chips", async ({
     page,
   }) => {
     await page.setViewportSize({ width: 390, height: 844 });
@@ -35,38 +39,33 @@ test.describe("consent gate — health intake save path", () => {
     await page.getByTestId("auth-email-input").fill(CLIENT_EMAIL);
     await page.getByTestId("auth-password-input").fill(SEED_PASSWORD);
     await page.getByTestId("auth-submit-button").click();
-    await expect(page.getByTestId("consent-submit-button")).toBeVisible({
-      timeout: 15_000,
+
+    // Lands on the client home tab (already consented).
+    await expect(page.getByTestId("tab-index")).toBeVisible({ timeout: 20_000 });
+
+    // Switch to the profile tab and tap the Zdravstveni podaci row.
+    await page.getByTestId("tab-profile").click();
+    const healthRow = page.getByTestId("profile-health-row");
+    await expect(healthRow).toBeVisible({ timeout: 10_000 });
+    await healthRow.click();
+
+    // Form is rendered inline (no extra "Add" button now).
+    await expect(page.getByTestId("health-intake-form")).toBeVisible({
+      timeout: 10_000,
     });
 
-    // Accept gate documents + social-media so the only outstanding blocker is
-    // the intake.
-    for (const key of ["tos", "privacy", "eula", "waiver_adult"] as const) {
-      await page.getByTestId(`document-card-accept-${key}`).click();
-    }
-    await page.getByTestId("social-media-no").click();
+    // Minimum required fields: at least one pilates experience, an activity
+    // level, an exercise frequency, and an answer to "under medical treatment".
+    await page.getByTestId("pilatesExperience-none").click();
+    await page.getByTestId("underMedicalTreatment-no").click();
+    await page.getByTestId("activityLevel-moderate").click();
+    await page.getByTestId("exerciseFrequency-2-3").click();
 
-    // Fill all six intake questions (no follow-up free-text branches).
-    await page.getByTestId("q-physicallyActive-yes").click();
-    await page.getByTestId("q-firstPilates-yes").click();
-    await page.getByTestId("q-complaints-no").click();
-    await page.getByTestId("q-injuries-no").click();
-    await page.getByTestId("q-pregnant-no").click();
-    await page.getByTestId("q-postpartum-no").click();
-
-    // Without Art.17 ticked, Save stays disabled.
-    const save = page.getByTestId("intake-save");
-    await expect(save).toHaveAttribute("aria-disabled", "true");
-
-    // Tick Art.17 consent — Save now enabled (attribute stripped).
-    await page.getByTestId("intake-consent").click();
+    const save = page.getByTestId("profile-health-save");
     await expect(
-      page.locator('[data-testid="intake-save"][aria-disabled="true"]'),
+      page.locator('[data-testid="profile-health-save"][aria-disabled="true"]'),
     ).toHaveCount(0, { timeout: 5_000 });
 
-    // Wait for the POST /api/health-intake response so the mutation has
-    // settled before we check React state — without this the next assertion
-    // can race the in-flight request.
     const intakePost = page.waitForResponse(
       (r) =>
         r.url().includes("/api/health-intake") && r.request().method() === "POST",
@@ -74,26 +73,18 @@ test.describe("consent gate — health intake save path", () => {
     await save.click();
     const intakeResp = await intakePost;
     if (intakeResp.status() !== 200) {
-      // Surface the response body so future failures are debuggable rather
-      // than just showing "409 vs 200".
       const body = await intakeResp.text();
       throw new Error(
         `POST /api/health-intake returned ${intakeResp.status()}: ${body}`,
       );
     }
 
-    // Form collapses into the saved banner — assert via the testID on the
-    // form root: once intakeStatus flips to "saved" the YesNoRow children
-    // disappear, so the q-physicallyActive radio group is gone.
-    await expect(page.getByTestId("q-physicallyActive")).toHaveCount(0, {
+    // Save button hides (no longer dirty) and the withdraw link becomes
+    // visible at the bottom of the scrolled form.
+    await expect(page.getByTestId("profile-health-save")).toHaveCount(0, {
       timeout: 10_000,
     });
-
-    // Continue button on the outer consent screen should now be enabled.
-    await expect(
-      page.locator(
-        '[data-testid="consent-submit-button"][aria-disabled="true"]',
-      ),
-    ).toHaveCount(0, { timeout: 5_000 });
+    await expect(page.getByTestId("health-intake-form")).toBeVisible();
+    await expect(page.getByTestId("profile-health-withdraw")).toBeVisible();
   });
 });

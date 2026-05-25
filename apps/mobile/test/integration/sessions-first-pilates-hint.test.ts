@@ -71,16 +71,18 @@ async function fixtures() {
       sessionsRemaining: 12,
     },
   });
-  // Intake says "first time" — without it, the hint can never fire.
+  // Intake says "first time" (pilatesExperience contains "none") — without
+  // it the hint can never fire.
   await prisma.clientHealthIntake.create({
     data: {
       clientProfileId: clientProfile.id,
-      isPhysicallyActive: true,
-      isFirstPilates: true,
-      hasComplaints: false,
-      hasInjuries: false,
-      isPregnant: false,
-      isPostpartum: false,
+      conditions: [],
+      underMedicalTreatment: false,
+      pilatesExperience: ["none"],
+      activityLevel: "moderate",
+      exerciseFrequency: "2-3",
+      goals: [],
+      discomfortDuring: [],
     },
   });
   return { admin, trainer, reformer, room, clientProfile, pkg };
