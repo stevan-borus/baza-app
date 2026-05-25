@@ -1,9 +1,9 @@
 # Participant Waiver
 
 **Version:** 1
-**Effective date:** [LEGAL REVIEW: fill in date]
+**Effective date:** 25 May 2026
 
-> [LEGAL REVIEW] Draft waiver. The Studio's limitation-of-liability clause is subject to mandatory rules under the Serbian Law on Obligations — review with counsel before production use. In case of any discrepancy between the Serbian and English versions, the Serbian version prevails.
+> Translation note: In case of any discrepancy between the Serbian and English versions, the Serbian version prevails.
 
 I, **{{fullName}}**, declare the following:
 
