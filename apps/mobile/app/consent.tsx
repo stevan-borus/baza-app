@@ -121,12 +121,14 @@ export default function ConsentScreen() {
     return <View className="flex-1 bg-background" />;
   }
 
+  const FOOTER_HEIGHT = 64;
+
   return (
     <View className="flex-1 bg-background">
       <ScrollView
         contentContainerStyle={{
           paddingTop: insets.top + 24,
-          paddingBottom: insets.bottom + 40,
+          paddingBottom: insets.bottom + FOOTER_HEIGHT + 32,
           gap: 24,
         }}
       >
@@ -228,25 +230,43 @@ export default function ConsentScreen() {
           </View>
         ) : null}
 
-        {/* Bottom actions */}
-        <View className="px-6 gap-2">
-          <Button
-            testID="consent-submit-button"
-            onPress={handleSubmit}
-            disabled={!canSubmit || submitting}
-          >
-            {t("consent.continue")}
-          </Button>
-          <Button
-            variant="ghost"
-            testID="consent-refuse-button"
-            onPress={handleRefuse}
-            disabled={refuseMutation.isPending}
-          >
-            {t("consent.signOut")}
-          </Button>
-        </View>
       </ScrollView>
+
+      {/* Pinned footer: CTA + sign-out */}
+      <View
+        pointerEvents="box-none"
+        style={{
+          position: "absolute",
+          left: 0,
+          right: 0,
+          bottom: 0,
+          paddingHorizontal: 24,
+          paddingTop: 12,
+          paddingBottom: insets.bottom + 12,
+          backgroundColor: tokens.background,
+          borderTopWidth: 1,
+          borderTopColor: tokens.glassBorder,
+        }}
+      >
+        <Button
+          testID="consent-submit-button"
+          onPress={handleSubmit}
+          disabled={!canSubmit || submitting}
+        >
+          {t("consent.continue")}
+        </Button>
+        <Pressable
+          testID="consent-refuse-button"
+          onPress={handleRefuse}
+          disabled={refuseMutation.isPending}
+          hitSlop={8}
+          className="items-center justify-center mt-3 h-9"
+        >
+          <Body size={14} className="text-muted underline">
+            {t("consent.signOut")}
+          </Body>
+        </Pressable>
+      </View>
 
       <DocumentSheet
         open={openDoc !== null}

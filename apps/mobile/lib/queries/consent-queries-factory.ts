@@ -82,6 +82,7 @@ export function useMarkGuardianVerifiedMutation() {
 
 export function useRecordSocialMediaMutation() {
   const queryClient = useQueryClient();
+  const statusKey = consentQueries.status().queryKey;
   return useMutation({
     mutationKey: ["consent", "social-media"] as const,
     mutationFn: async (input: SocialMediaConsentInput) => {
@@ -95,8 +96,24 @@ export function useRecordSocialMediaMutation() {
       if (!res.ok) throw new Error(`Record failed (${res.status})`);
       return res.json();
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["consent", "status"] });
+    onMutate: async (input) => {
+      await queryClient.cancelQueries({ queryKey: statusKey });
+      const previous = queryClient.getQueryData<ConsentStatusResponse>(statusKey);
+      if (previous) {
+        queryClient.setQueryData<ConsentStatusResponse>(statusKey, {
+          ...previous,
+          socialMediaLatestAccepted: input.accepted,
+        });
+      }
+      return { previous };
+    },
+    onError: (_err, _input, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(statusKey, context.previous);
+      }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: statusKey });
     },
   });
 }

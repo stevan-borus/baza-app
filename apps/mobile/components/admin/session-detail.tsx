@@ -214,12 +214,9 @@ export function SessionDetail({
 
 type ConsentFlags = {
   showFirstPilatesHint: boolean;
-  isPregnant: boolean;
-  isPostpartum: boolean;
-  hasComplaints: boolean;
-  complaintsDetails: string | null;
-  hasInjuries: boolean;
-  injuriesDetails: string | null;
+  conditions: string[];
+  conditionsOther: string | null;
+  additionalNotes: string | null;
   intakeRecorded: boolean;
   intakeWithdrawn: boolean;
   socialMediaAccepted: boolean | null;
@@ -227,12 +224,9 @@ type ConsentFlags = {
 
 /**
  * Per-booking consent strip rendered below the client name on each session-
- * detail booking row. Surfaces the four health flags (with free text for
- * complaints/injuries), the photo/video consent state, and an explicit
- * "withdrawn consent" banner when the client revoked their health intake.
- *
- * Stays inline (no nav, no tooltip) — the trainer is mid-session and needs
- * to scan all of this at a glance.
+ * detail booking row. Surfaces health conditions (as chips), free-text notes,
+ * photo/video consent state, and an explicit "withdrawn consent" banner when
+ * the client revoked their health intake.
  */
 function BookingConsentFlags({ flags }: { flags: ConsentFlags }) {
   const { t } = useTranslation();
@@ -246,11 +240,7 @@ function BookingConsentFlags({ flags }: { flags: ConsentFlags }) {
       </View>
     );
   }
-  const hasAnyFlag =
-    flags.isPregnant ||
-    flags.isPostpartum ||
-    flags.hasComplaints ||
-    flags.hasInjuries;
+  const hasConditions = flags.conditions.length > 0 || !!flags.conditionsOther;
   if (
     !flags.intakeRecorded &&
     flags.socialMediaAccepted === null &&
@@ -260,36 +250,25 @@ function BookingConsentFlags({ flags }: { flags: ConsentFlags }) {
   }
   return (
     <View className="mt-2 gap-2">
-      {hasAnyFlag ? (
+      {hasConditions ? (
         <View className="flex-row flex-wrap gap-2">
-          {flags.isPregnant ? (
-            <FlagBadge label={t("admin.sessionDetail.flagPregnant")} />
-          ) : null}
-          {flags.isPostpartum ? (
-            <FlagBadge label={t("admin.sessionDetail.flagPostpartum")} />
-          ) : null}
-          {flags.hasComplaints ? (
-            <FlagBadge label={t("admin.sessionDetail.flagComplaints")} />
-          ) : null}
-          {flags.hasInjuries ? (
-            <FlagBadge label={t("admin.sessionDetail.flagInjuries")} />
+          {flags.conditions.map((code) => (
+            <FlagBadge
+              key={code}
+              label={t(`intake.conditions.${code}`, { defaultValue: code })}
+            />
+          ))}
+          {flags.conditionsOther ? (
+            <FlagBadge label={flags.conditionsOther} />
           ) : null}
         </View>
       ) : null}
-      {flags.hasComplaints && flags.complaintsDetails ? (
+      {flags.additionalNotes ? (
         <Text className="text-[12px] text-muted">
           <Text className="font-body-semibold text-foreground">
-            {t("admin.sessionDetail.flagComplaints")}:{" "}
+            {t("admin.sessionDetail.notesLabel")}:{" "}
           </Text>
-          {flags.complaintsDetails}
-        </Text>
-      ) : null}
-      {flags.hasInjuries && flags.injuriesDetails ? (
-        <Text className="text-[12px] text-muted">
-          <Text className="font-body-semibold text-foreground">
-            {t("admin.sessionDetail.flagInjuries")}:{" "}
-          </Text>
-          {flags.injuriesDetails}
+          {flags.additionalNotes}
         </Text>
       ) : null}
       {flags.showFirstPilatesHint ? (

@@ -177,22 +177,8 @@ function ProfileSheetContent({ open, onOpenChange }: Props) {
           />
         </View>
 
-        <ProfileLegalSection />
-
-        {meQuery.data?.user.role === "CLIENT" ? (
-          <Pressable
-            testID="profile-health-open"
-            onPress={() => {
-              onOpenChange(false);
-              router.push("/(client)/profile/health");
-            }}
-            className="flex-row items-center justify-between rounded-xl border border-glass-border bg-glass p-3"
-          >
-            <Text className="flex-1 text-[14px] text-foreground">
-              {t("profile.healthSection")}
-            </Text>
-            <Feather name="chevron-right" size={16} color={tokens.muted} />
-          </Pressable>
+        {meQuery.data?.user.role !== "CLIENT" ? (
+          <ProfileLegalSection />
         ) : null}
 
         <Pressable

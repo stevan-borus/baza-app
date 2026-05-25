@@ -450,22 +450,36 @@ model ConsentRecord {
 }
 
 model ClientHealthIntake {
-  id                 String        @id @default(uuid())
-  clientProfileId    String
-  clientProfile      ClientProfile @relation(fields: [clientProfileId], references: [id], onDelete: Cascade)
-  isPhysicallyActive Boolean
-  isFirstPilates     Boolean
-  hasComplaints      Boolean
-  complaintsDetails  String?
-  hasInjuries        Boolean
-  injuriesDetails    String?
-  isPregnant         Boolean
-  isPostpartum       Boolean
-  recordedAt         DateTime      @default(now())
-  recordedByUserId   String?
-  recordedBy         User?         @relation("HealthIntakeRecordedBy", fields: [recordedByUserId], references: [id])
-  guardianName       String?
-  guardianRelation   String?
+  id                        String        @id @default(uuid())
+  clientProfileId           String
+  clientProfile             ClientProfile @relation(fields: [clientProfileId], references: [id], onDelete: Cascade)
+  // Health history (Q1): multi-select of named conditions + free-text catch-all.
+  // Codes are stable identifiers; see HEALTH_CONDITION_CODES in @baza/types.
+  conditions                String[]
+  conditionsOther           String?
+  // Q2: medical treatment / medication.
+  underMedicalTreatment     Boolean
+  medicalTreatmentDetails   String?
+  // Q3: prior Pilates experience (multi-select including "none").
+  pilatesExperience         String[]
+  pilatesExperienceDuration String?
+  // Q4: daily activity level (single-select enum code).
+  activityLevel             String
+  // Q5: weekly exercise frequency (single-select bucket).
+  exerciseFrequency         String
+  // Q6: training goals (multi-select + free-text other).
+  goals                     String[]
+  goalsOther                String?
+  // Q7: body-awareness — movements that trigger discomfort.
+  discomfortDuring          String[]
+  // Q8: free-text catch-all.
+  additionalNotes           String?
+  // Audit metadata + guardian (kept for minor-waiver flow).
+  recordedAt                DateTime      @default(now())
+  recordedByUserId          String?
+  recordedBy                User?         @relation("HealthIntakeRecordedBy", fields: [recordedByUserId], references: [id])
+  guardianName              String?
+  guardianRelation          String?
 
   @@index([clientProfileId, recordedAt])
 }

@@ -53,13 +53,10 @@ export async function GET(request: Request, { id }: RouteParams) {
                 orderBy: { recordedAt: "desc" },
                 take: 1,
                 select: {
-                  isFirstPilates: true,
-                  isPregnant: true,
-                  isPostpartum: true,
-                  hasComplaints: true,
-                  complaintsDetails: true,
-                  hasInjuries: true,
-                  injuriesDetails: true,
+                  conditions: true,
+                  conditionsOther: true,
+                  pilatesExperience: true,
+                  additionalNotes: true,
                   recordedAt: true,
                 },
               },
@@ -156,25 +153,21 @@ export async function GET(request: Request, { id }: RouteParams) {
       // Only surface "first time pilates" if (a) intake says so AND
       // (b) this is one of the client's first few sessions at the studio.
       // After PRIOR_SESSIONS_CUTOFF the trainer knows them, so it's noise.
+      const intakeConditions =
+        !intakeWithdrawn && latestIntake ? latestIntake.conditions : [];
       const showFirstPilatesHint =
         !intakeWithdrawn &&
-        latestIntake?.isFirstPilates === true &&
+        latestIntake?.pilatesExperience.includes("none") === true &&
         priorCount < PRIOR_SESSIONS_CUTOFF;
       const consentFlags = {
         showFirstPilatesHint,
-        isPregnant: !intakeWithdrawn && (latestIntake?.isPregnant ?? false),
-        isPostpartum:
-          !intakeWithdrawn && (latestIntake?.isPostpartum ?? false),
-        hasComplaints:
-          !intakeWithdrawn && (latestIntake?.hasComplaints ?? false),
-        complaintsDetails: intakeWithdrawn
+        conditions: intakeConditions,
+        conditionsOther: intakeWithdrawn
           ? null
-          : (latestIntake?.complaintsDetails ?? null),
-        hasInjuries:
-          !intakeWithdrawn && (latestIntake?.hasInjuries ?? false),
-        injuriesDetails: intakeWithdrawn
+          : (latestIntake?.conditionsOther ?? null),
+        additionalNotes: intakeWithdrawn
           ? null
-          : (latestIntake?.injuriesDetails ?? null),
+          : (latestIntake?.additionalNotes ?? null),
         intakeRecorded: !intakeWithdrawn && latestIntake !== null,
         intakeWithdrawn,
         socialMediaAccepted:

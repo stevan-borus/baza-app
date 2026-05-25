@@ -20,12 +20,13 @@ import { prisma } from "@/lib/server/prisma";
 import { resetDb } from "./setup-db";
 
 const validBody = {
-  isPhysicallyActive: true,
-  isFirstPilates: true,
-  hasComplaints: false,
-  hasInjuries: false,
-  isPregnant: false,
-  isPostpartum: false,
+  conditions: [],
+  underMedicalTreatment: false,
+  pilatesExperience: ["none"],
+  activityLevel: "moderate",
+  exerciseFrequency: "2-3",
+  goals: [],
+  discomfortDuring: [],
 };
 
 describe("DELETE /api/health-intake — withdraw", () => {

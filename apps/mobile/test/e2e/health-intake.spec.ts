@@ -1,16 +1,13 @@
 /**
- * E2E: health-intake save path from the profile sheet.
+ * E2E: health-intake save path from the profile tab.
  *
- * The intake used to live on /consent. It moved to a dedicated screen at
- * /(client)/profile/health that the client opens by tapping the avatar
- * and then the "Health info" row. This spec proves the full path:
- *
+ * Flow:
  *   1. Sign in as a client who already cleared the consent gate.
- *   2. Open the profile sheet from the AppHeader avatar.
- *   3. Tap the "Health info" row — sheet closes, profile/health screen opens.
- *   4. Tap "Add details" → form renders.
- *   5. Fill the six yes/no questions, tap Save.
- *   6. Form collapses into the chips view (intake recorded).
+ *   2. Land on home, switch to the profile tab.
+ *   3. Tap the Zdravstveni podaci row → pushes /(client)/profile/health.
+ *   4. Empty state renders the form inline (no extra tap).
+ *   5. Fill the required fields, tap Save.
+ *   6. Form collapses into chips view.
  *
  * RN-Web caveat: the Button component renders as <div> with aria-disabled
  * while disabled and strips the attribute when enabled, so we use
@@ -21,8 +18,7 @@ import { disconnect, resetAndSeed } from "./helpers/db";
 
 const SEED_PASSWORD = "Password123!";
 // activeReformer is already past the consent gate (seeded ConsentRecord rows)
-// AND has no HealthIntake row, so the "Add details" empty state is the
-// expected first render of the profile/health screen.
+// AND has no HealthIntake row, so the inline form is rendered immediately.
 const CLIENT_EMAIL = "client.active.reformer@e2e.test";
 
 test.describe("health intake — profile flow", () => {
@@ -33,7 +29,7 @@ test.describe("health intake — profile flow", () => {
     await disconnect();
   });
 
-  test("client opens profile sheet → Health info → fills intake → form collapses to chips", async ({
+  test("client navigates to /health → fills the long-form intake → form collapses to chips", async ({
     page,
   }) => {
     await page.setViewportSize({ width: 390, height: 844 });
@@ -45,36 +41,29 @@ test.describe("health intake — profile flow", () => {
     // Lands on the client home tab (already consented).
     await expect(page.getByTestId("tab-index")).toBeVisible({ timeout: 20_000 });
 
-    // Open the profile sheet via the avatar in the AppHeader.
-    await page.getByTestId("open-profile-sheet").click();
-
-    // Tap the Health info row — closes sheet, pushes /(client)/profile/health.
-    const healthRow = page.getByTestId("profile-health-open");
-    await expect(healthRow).toBeVisible({ timeout: 5_000 });
+    // Switch to the profile tab and tap the Zdravstveni podaci row.
+    await page.getByTestId("tab-profile").click();
+    const healthRow = page.getByTestId("profile-health-row");
+    await expect(healthRow).toBeVisible({ timeout: 10_000 });
     await healthRow.click();
 
-    // Empty-state Add button is shown on the health screen.
-    const addBtn = page.getByTestId("profile-health-add");
-    await expect(addBtn).toBeVisible({ timeout: 10_000 });
-    await addBtn.click();
+    // Form is rendered inline (no extra "Add" button now).
+    await expect(page.getByTestId("health-intake-form")).toBeVisible({
+      timeout: 10_000,
+    });
 
-    // Fill all six intake questions (no follow-up free-text branches).
-    await page.getByTestId("q-physicallyActive-yes").click();
-    await page.getByTestId("q-firstPilates-yes").click();
-    await page.getByTestId("q-complaints-no").click();
-    await page.getByTestId("q-injuries-no").click();
-    await page.getByTestId("q-pregnant-no").click();
-    await page.getByTestId("q-postpartum-no").click();
+    // Minimum required fields: at least one pilates experience, an activity
+    // level, an exercise frequency, and an answer to "under medical treatment".
+    await page.getByTestId("pilatesExperience-none").click();
+    await page.getByTestId("underMedicalTreatment-no").click();
+    await page.getByTestId("activityLevel-moderate").click();
+    await page.getByTestId("exerciseFrequency-2-3").click();
 
-    // Save is enabled (no Art.17 checkbox here — Save itself is the
-    // affirmative action in the profile flow; see HealthIntakeForm props).
     const save = page.getByTestId("profile-health-save");
     await expect(
       page.locator('[data-testid="profile-health-save"][aria-disabled="true"]'),
     ).toHaveCount(0, { timeout: 5_000 });
 
-    // Wait for the POST so React state has settled before we assert the
-    // collapsed view (without this the next check can race the request).
     const intakePost = page.waitForResponse(
       (r) =>
         r.url().includes("/api/health-intake") && r.request().method() === "POST",
@@ -88,8 +77,8 @@ test.describe("health intake — profile flow", () => {
       );
     }
 
-    // Form collapses → YesNoRow children are gone, chips are rendered.
-    await expect(page.getByTestId("q-physicallyActive")).toHaveCount(0, {
+    // Form collapses → the form node is gone, withdraw button is visible.
+    await expect(page.getByTestId("health-intake-form")).toHaveCount(0, {
       timeout: 10_000,
     });
     await expect(page.getByTestId("profile-health-withdraw")).toBeVisible();
