@@ -1,7 +1,7 @@
 # Pravila o privatnosti
 
 **Verzija:** 1
-**Datum stupanja na snagu:** [LEGAL REVIEW: dopuniti datum]
+**Datum stupanja na snagu:** 25.05.2026.
 
 ## 1. O Pravilima Privatnosti
 
@@ -13,7 +13,7 @@
 
 1.4. U slučaju bilo kakvih pitanja ili zahteva u vezi postupanja ili zaštite Vaših ličnih podataka, obratite nam se na e-adresu bazapilates@gmail.com.
 
-1.5. U meri u kojoj se primenjuje na obradu podataka korisnika iz Evropske unije, na obradu se primenjuje i Opšta uredba o zaštiti podataka (Uredba (EU) 2016/679 — „GDPR"). [LEGAL REVIEW]
+1.5. U meri u kojoj se primenjuje na obradu podataka korisnika iz Evropske unije, na obradu se primenjuje i Opšta uredba o zaštiti podataka (Uredba (EU) 2016/679 — „GDPR").
 
 ## 2. Šta je sve obuhvaćeno Pravilima privatnosti?
 
@@ -99,7 +99,7 @@ Navedeni podaci obrađuju se isključivo radi prilagođavanja treninga individua
 
 6.2. U svrhu pružanja i održavanja Aplikacije, lični podaci mogu biti obrađivani i od strane pouzdanih tehničkih i poslovnih partnera (npr. pružaoci cloud infrastrukture, IT podrške ili drugih tehničkih usluga) koji mogu imati sedište ili servere u EU/EEA ili drugim državama. U slučaju prenosa podataka van EU/EEA, takav prenos će se vršiti isključivo uz primenu odgovarajućih zaštitnih mera u skladu sa važećim propisima o zaštiti podataka o ličnosti, kao što su standardne ugovorne klauzule ili drugi priznati mehanizmi zaštite. Preduzimamo razumne tehničke, organizacione i pravne mere kako bismo obezbedili adekvatan nivo zaštite ličnih podataka bez obzira na lokaciju njihove obrade.
 
-6.3. Uslov iz prethodna dva člana ispunjen je imajući u vidu da je Odlukom Vlade Republike Srbije od 01.08.2019. godine ___država___ utvrđena na listi država, delova njihovih teritorija ili jednog ili više sektora određenih delatnosti u tim državama i međunarodnih organizacija u kojima se smatra da je obezbeđen primereni nivo zaštite podataka o ličnosti.
+6.3. Države članice Evropske unije i Evropskog ekonomskog prostora utvrđene su Odlukom Vlade Republike Srbije od 01.08.2019. godine na listi država u kojima se smatra da je obezbeđen primereni nivo zaštite podataka o ličnosti, pa je prenos podataka u te države dozvoljen bez dodatnih mera. Za eventualne prenose u druge države primenjuju se zaštitne mere iz tačke 6.2.
 
 ## 7. Kako štitimo Vaše lične podatke?
 
@@ -114,7 +114,7 @@ Navedeni podaci obrađuju se isključivo radi prilagođavanja treninga individua
 
 ## 8. U kom periodu čuvamo Vaše lične podatke?
 
-8.1. Razdoblja čuvanja se razlikuju prema kategoriji podataka. Sledeća tabela prikazuje primenjene rokove [LEGAL REVIEW — potvrditi]:
+8.1. Razdoblja čuvanja se razlikuju prema kategoriji podataka. Sledeća tabela prikazuje primenjene rokove:
 
 | Kategorija podataka | Period čuvanja |
 |---|---|

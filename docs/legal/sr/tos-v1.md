@@ -1,7 +1,7 @@
 # Uslovi korišćenja
 
 **Verzija:** 1
-**Datum stupanja na snagu:** [LEGAL REVIEW: dopuniti datum]
+**Datum stupanja na snagu:** 25.05.2026.
 
 Poštovani korisnici, molimo vas da pre korišćenja naših usluga, pažljivo pročitate sledeće uslove. Svaka poseta našoj aplikaciji, znači da ste ove uslove pročitali i da se slažete sa njima u celosti. Ukoliko su oni za vas neprihvatljivi, molimo vas da ne koristite ovu aplikaciju.
 
@@ -49,7 +49,7 @@ Uslov za korišćenje mobilne aplikacije je otvaranje korisničkog naloga kao i 
 
 Korisnički nalog postaje aktivan nakon izvršenog plaćanja izabranog paketa treninga. Korisnik će primiti email potvrdu o aktivaciji naloga. Tek nakon izvršene aktivacije korisničkog naloga Korisnik će moći da započne sa korišćenjem mobilne aplikacije. Od momenta izvršene aktivacije naloga počinju da se računaju rokovi važnosti izabranog paketa odnosno članarine.
 
-**Maloletna lica.** Maloletna lica mlađa od 18 godina mogu otvoriti korisnički nalog i koristiti usluge Baze isključivo uz prethodnu saglasnost roditelja ili zakonskog staratelja. Detaljniji uslovi pohađanja treninga od strane maloletnih lica uređeni su posebnom Izjavom vežbača za maloletna lica, koju u aplikaciji prihvata roditelj ili staratelj. Baza zadržava pravo da od roditelja ili staratelja zatraži dodatnu potvrdu identiteta i saglasnosti. [LEGAL REVIEW]
+**Maloletna lica.** Maloletna lica mlađa od 18 godina mogu otvoriti korisnički nalog i koristiti usluge Baze isključivo uz prethodnu saglasnost roditelja ili zakonskog staratelja. Detaljniji uslovi pohađanja treninga od strane maloletnih lica uređeni su posebnom Izjavom vežbača za maloletna lica, koju u aplikaciji prihvata roditelj ili staratelj. Baza zadržava pravo da od roditelja ili staratelja zatraži dodatnu potvrdu identiteta i saglasnosti.
 
 Korisnici mogu zakazivati treninge putem aplikacije u skladu sa dostupnim terminima. Otkazivanje treninga mora se izvršiti najkasnije 8 sati pre početka treninga. U suprotnom, trening se smatra iskorišćenim. Paket treninga važi mesec dana, nadoknade na vreme otkazanih termina biće realizovane u tom periodu. U slučaju bolesti, najavljenih putovanja i drugih najavljenih odsustava, moguće je produženje trajanja paketa.
 

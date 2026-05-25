@@ -1,7 +1,7 @@
 # Privacy Policy
 
 **Version:** 1
-**Effective date:** [LEGAL REVIEW: fill in date]
+**Effective date:** 25 May 2026
 
 > Translation note: In case of any discrepancy between the Serbian and English versions, the Serbian version prevails.
 
@@ -15,7 +15,7 @@
 
 1.4. For any questions or requests regarding the processing or protection of your personal data, please contact us at bazapilates@gmail.com.
 
-1.5. To the extent it applies to the processing of data of users from the European Union, the General Data Protection Regulation (Regulation (EU) 2016/679 — "GDPR") also applies to such processing. [LEGAL REVIEW]
+1.5. To the extent it applies to the processing of data of users from the European Union, the General Data Protection Regulation (Regulation (EU) 2016/679 — "GDPR") also applies to such processing.
 
 ## 2. What is covered by the Privacy Policy?
 
@@ -101,7 +101,7 @@ The stated data is processed solely in order to adapt training to the user's ind
 
 6.2. For the purpose of providing and maintaining the Application, personal data may also be processed by trusted technical and business partners (e.g. cloud infrastructure providers, IT support or other technical service providers) which may have their seat or servers in the EU/EEA or other countries. In the case of transfer of data outside the EU/EEA, such transfer will be carried out solely with the application of appropriate safeguards in accordance with applicable personal data protection regulations, such as standard contractual clauses or other recognised protection mechanisms. We take reasonable technical, organisational and legal measures to ensure an adequate level of protection of personal data regardless of where it is processed.
 
-6.3. The condition from the two preceding articles is met given that, by Decision of the Government of the Republic of Serbia of 01.08.2019, ___country___ was determined to be on the list of countries, parts of their territories or one or more sectors of certain activities in those countries and international organisations in which an adequate level of personal data protection is deemed to be ensured.
+6.3. The Member States of the European Union and the European Economic Area are included, by the Decision of the Government of the Republic of Serbia of 01.08.2019, on the list of countries in which an adequate level of personal data protection is deemed to be ensured, so transfers to those countries are permitted without additional measures. Any transfers to other countries are subject to the safeguards described in section 6.2.
 
 ## 7. How do we protect your personal data?
 
@@ -116,7 +116,7 @@ The stated data is processed solely in order to adapt training to the user's ind
 
 ## 8. For how long do we keep your personal data?
 
-8.1. Retention periods differ by category of data. The following table sets out the applicable periods [LEGAL REVIEW — to confirm]:
+8.1. Retention periods differ by category of data. The following table sets out the applicable periods:
 
 | Category of data | Retention period |
 |---|---|

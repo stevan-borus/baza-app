@@ -1,9 +1,7 @@
 # Izjava vežbača
 
 **Verzija:** 1
-**Datum stupanja na snagu:** [LEGAL REVIEW: dopuniti datum]
-
-> [LEGAL REVIEW] Nacrt izjave vežbača. Klauzula o ograničenju odgovornosti studija je predmet ograničenja iz Zakona o obligacionim odnosima Republike Srbije — obavezno proveriti sa pravnikom pre objavljivanja u produkciji.
+**Datum stupanja na snagu:** 25.05.2026.
 
 Ja, **{{fullName}}**, izjavljujem sledeće:
 

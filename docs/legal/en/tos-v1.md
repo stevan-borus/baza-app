@@ -1,7 +1,7 @@
 # Terms of Use
 
 **Version:** 1
-**Effective date:** [LEGAL REVIEW: fill in date]
+**Effective date:** 25 May 2026
 
 > Translation note: In case of any discrepancy between the Serbian and English versions, the Serbian version prevails.
 
@@ -51,7 +51,7 @@ A precondition for using the mobile application is opening a user account and ac
 
 The user account becomes active after payment of the chosen training package has been made. The User will receive an email confirmation of account activation. Only after the user account has been activated can the User begin using the mobile application. From the moment of account activation, the validity periods of the chosen package or membership start to run.
 
-**Minors.** Persons under the age of 18 may open a user account and use Baza's services exclusively with the prior consent of a parent or legal guardian. The detailed conditions for the attendance of training by minors are governed by a separate Waiver for Minors, which is accepted in the application by the parent or guardian. Baza reserves the right to request additional verification of the identity and consent of the parent or guardian. [LEGAL REVIEW]
+**Minors.** Persons under the age of 18 may open a user account and use Baza's services exclusively with the prior consent of a parent or legal guardian. The detailed conditions for the attendance of training by minors are governed by a separate Waiver for Minors, which is accepted in the application by the parent or guardian. Baza reserves the right to request additional verification of the identity and consent of the parent or guardian.
 
 Users may book training sessions via the application in accordance with available time slots. Cancellation of a training session must be made no later than 8 hours before the start of the training. Otherwise, the training is deemed used. The training package is valid for one month; make-ups for sessions cancelled in time will be carried out within that period. In the case of illness, announced travel and other announced absences, an extension of the package duration is possible.
 

@@ -1,9 +1,9 @@
 # Participant Waiver — minor
 
 **Version:** 1
-**Effective date:** [LEGAL REVIEW: fill in date]
+**Effective date:** 25 May 2026
 
-> [LEGAL REVIEW] Verify provisions of the Serbian Family Code on representation of minors and the possibility of electronic consent. The Studio additionally requires a paper signature by the parent/guardian on the first visit. In case of discrepancy between Serbian and English, Serbian prevails.
+> Translation note: In case of any discrepancy between the Serbian and English versions, the Serbian version prevails.
 
 I, **{{guardianName}}**, as the **{{guardianRelation}}** (parent / legal guardian) of the minor **{{fullName}}**, give consent for the minor to participate in pilates training at Baza Pilates Studio, and declare the following:
 

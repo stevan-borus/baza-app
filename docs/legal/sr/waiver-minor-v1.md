@@ -1,9 +1,7 @@
 # Izjava vežbača — maloletno lice
 
 **Verzija:** 1
-**Datum stupanja na snagu:** [LEGAL REVIEW: dopuniti datum]
-
-> [LEGAL REVIEW] Posebno proveriti odredbe Porodičnog zakona o zastupanju maloletnika i mogućnost elektronskog davanja saglasnosti. Studio dodatno traži potpis roditelja/staratelja na prvoj poseti.
+**Datum stupanja na snagu:** 25.05.2026.
 
 Ja, **{{guardianName}}**, kao **{{guardianRelation}}** (roditelj / zakonski staratelj) maloletnog lica **{{fullName}}**, dajem saglasnost da maloletnik učestvuje na treninzima pilatesa u Baza Pilates Studiju, i izjavljujem sledeće:
 
