@@ -9,7 +9,7 @@ I, **{{guardianName}}**, as the **{{guardianRelation}}** (parent / legal guardia
 
 ## 1. Parent / guardian consent
 
-I agree that the minor for whom I am a parent or legal guardian may use the Studio's services and the Baza mobile app, in accordance with the Terms of Service, the EULA and the Privacy Policy, which I have read and accepted on the minor's behalf.
+I agree that the minor for whom I am a parent or legal guardian may use the Studio's services and the Baza mobile app, in accordance with the Terms of Service and the Privacy Policy, which I have read and accepted on the minor's behalf.
 
 ## 2. Voluntary participation and awareness of risk
 

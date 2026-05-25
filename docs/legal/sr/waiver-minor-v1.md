@@ -7,7 +7,7 @@ Ja, **{{guardianName}}**, kao **{{guardianRelation}}** (roditelj / zakonski star
 
 ## 1. Saglasnost roditelja/staratelja
 
-Saglasan/saglasna sam da maloletnik za koga sam roditelj ili zakonski staratelj koristi usluge Studija i mobilnu aplikaciju Baza, u skladu sa Uslovima korišćenja, EULA i Politikom privatnosti, koje sam pročitao/la i prihvatio/la u ime maloletnika.
+Saglasan/saglasna sam da maloletnik za koga sam roditelj ili zakonski staratelj koristi usluge Studija i mobilnu aplikaciju Baza, u skladu sa Uslovima korišćenja i Politikom privatnosti, koje sam pročitao/la i prihvatio/la u ime maloletnika.
 
 ## 2. Dobrovoljno učešće i svest o riziku
 

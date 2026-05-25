@@ -11,7 +11,7 @@ BAZA pilates studio svoje cenjene klijentkinje i klijente koji koriste BAZA mobi
 
 - da se ovim uslovima korišćenja regulišu međusobni odnosi između Vas (u daljem tekstu „Korisnik") i „DANICA PIPER PR PILATES STUDIO BAZA NOVI SAD", preduzetnik u delatnosti fitnes klubova sa registrovanim sedištem na adresi Futoška 33, Novi Sad, Srbija, MB: 68350247, PIB: 115417505, Tel: 060/045 13 16, koji je registrovan pred Agencijom za privredne registre od 4.12.2025. godine u svemu u skladu sa propisima Republike Srbije (u daljem tekstu „Baza");
 - da ovi Uslovi korišćenja (u daljem tekstu: „Uslovi") regulišu oblike i načine korišćenja Baza mobilne aplikacije;
-- da je mobilna aplikacija Baze dostupna putem Apple store-a, Google play prodavnice i HUAWEI AppGallery-je i koja je u isključivoj svojini Baze;
+- da je mobilna aplikacija Baze dostupna putem Apple App Store-a i Google Play prodavnice i da je u isključivoj svojini Baze;
 - Korišćenje aplikacije omogućava zakazivanje i otkazivanje treninga, praćenje stanja članarine/paketa treninga, uvid u raspored treninga, upravljanje korisničkim profilom;
 - Da korišćenje mobilne aplikacije od strane Korisnika podrazumeva da je Korisnik u potpunosti upoznat sa Uslovima i da je saglasan sa njima, kao i sa Politikom privatnosti;
 - Da u smislu Uslova, Korisnik je svaka osoba koja na bilo koji način, kako neposredno, tako i posredno, koristi ili je koristila usluge mobilne aplikacije Baze i/ili usluge Baze;
@@ -45,13 +45,13 @@ Baza, putem mobilne aplikacije, omogućava pristup sportskim i rekreativnim akti
 
 Smatra se da je Korisnik prihvatio ponudu, kada je putem mobilne aplikacije odabrao polja kojima je potvrdio da se slaže sa Uslovima korišćenja i Politikom privatnosti.
 
-Uslov za korišćenje mobilne aplikacije je otvaranje korisničkog naloga kao i aktivacija korisničkog naloga. Otvaranje korisničkog naloga vrši se popunjavanjem postojeće forme za otvaranje naloga, tako što se u formu unose podaci o Korisniku koji su u obavezi da pruže tačne podatke — lične informacije. Lične informacije su informacije koje tačno određuju pojedinog korisnika. Lične informacije kao što su ime i prezime, e-mail adresa, broj telefona, neophodne su prilikom korišćenja mobilne aplikacije. U slučaju da Korisnik ne želi ili ne može da unese informacije koje se za otvaranje naloga smatraju obaveznim, Korisnik neće moći da otvori korisnički nalog i neće mu biti omogućeno korišćenje mobilne aplikacije.
+Uslov za korišćenje mobilne aplikacije je postojanje korisničkog naloga koji kreira Baza na osnovu pozivnice koju Studio šalje Korisniku na e-mail adresu. Kreiranje naloga vrši se klikom na link iz pozivnice i postavljanjem lozinke. Korisnik je dužan da pruži tačne lične podatke (ime i prezime, e-mail adresa, broj telefona, datum rođenja). U slučaju da Korisnik ne želi ili ne može da pruži obavezne podatke, neće mu biti omogućeno korišćenje mobilne aplikacije.
 
-Korisnički nalog postaje aktivan nakon izvršenog plaćanja izabranog paketa treninga. Korisnik će primiti email potvrdu o aktivaciji naloga. Tek nakon izvršene aktivacije korisničkog naloga Korisnik će moći da započne sa korišćenjem mobilne aplikacije. Od momenta izvršene aktivacije naloga počinju da se računaju rokovi važnosti izabranog paketa odnosno članarine.
+Nakon kreiranja naloga Korisnik može pristupiti aplikaciji. Mogućnost zakazivanja treninga uslovljena je posedovanjem aktivnog paketa treninga koji Studio dodeljuje Korisniku nakon izvršenog plaćanja paketa (gotovinski ili bezgotovinski, u Studiju). Od momenta dodele paketa počinju da se računaju rokovi važnosti izabranog paketa odnosno članarine.
 
 **Maloletna lica.** Maloletna lica mlađa od 18 godina mogu otvoriti korisnički nalog i koristiti usluge Baze isključivo uz prethodnu saglasnost roditelja ili zakonskog staratelja. Detaljniji uslovi pohađanja treninga od strane maloletnih lica uređeni su posebnom Izjavom vežbača za maloletna lica, koju u aplikaciji prihvata roditelj ili staratelj. Baza zadržava pravo da od roditelja ili staratelja zatraži dodatnu potvrdu identiteta i saglasnosti.
 
-Korisnici mogu zakazivati treninge putem aplikacije u skladu sa dostupnim terminima. Otkazivanje treninga mora se izvršiti najkasnije 8 sati pre početka treninga. U suprotnom, trening se smatra iskorišćenim. Paket treninga važi mesec dana, nadoknade na vreme otkazanih termina biće realizovane u tom periodu. U slučaju bolesti, najavljenih putovanja i drugih najavljenih odsustava, moguće je produženje trajanja paketa.
+Korisnici mogu zakazivati treninge putem aplikacije u skladu sa dostupnim terminima. Otkazivanje treninga mora se izvršiti u roku koji je naznačen uz konkretan paket Korisnika u aplikaciji (po pravilu najkasnije 8 sati pre početka treninga). U suprotnom, trening se smatra iskorišćenim. Paket treninga važi u skladu sa rokom važnosti naznačenim za taj paket; nadoknade na vreme otkazanih termina biće realizovane u okviru tog perioda. U slučaju bolesti, najavljenih putovanja i drugih najavljenih odsustava, moguće je produženje trajanja paketa po dogovoru sa Studijom.
 
 Studio Baza zadržava pravo izmene rasporeda ili otkazivanja treninga u izuzetnim okolnostima.
 
@@ -63,11 +63,9 @@ Korisnik je saglasan da pravo na reklamaciju neiskorišćenih termina ima samo u
 
 Korisnik potvrđuje da je zdravstveno sposoban za fizičku aktivnost, trenira na sopstvenu odgovornost i da će obavestiti instruktora o eventualnim zdravstvenim problemima. Baza ne snosi odgovornost za povrede nastale nepravilnim izvođenjem vežbi ili nepridržavanjem instrukcija.
 
-## Cene
+## Cene i plaćanje
 
-Sve cene paketa su u dinarima sa uračunatim PDV-om. Pri rezervaciji termina važe cene istaknute u mobilnoj aplikaciji u trenutku rezervisanja.
-
-U slučaju da nakon izvršene rezervacije bude utvrđeno da je greškom u aplikaciji u odnosu na navedeni paket označena pogrešna cena, Baza će nastojati da korisnika u što kraćem roku obavesti o uočenoj grešci i tačnom iznosu cene koja je za poručeni paket važila u trenutku rezervacije. U tom slučaju korisnik ima pravo da rezervisani paket plati prema ispravnoj ceni ili da odustane od rezervacije.
+Cene paketa treninga utvrđuju se i plaćaju u Studiju (gotovinski ili bezgotovinski) i izražene su u dinarima sa uračunatim PDV-om. Mobilna aplikacija u ovoj fazi ne sprovodi naplatu — služi za pregled stanja paketa, broja preostalih termina i rasporeda treninga.
 
 ## Reklamacije i povraćaj novca
 

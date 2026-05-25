@@ -13,7 +13,7 @@ BAZA pilates studio hereby notifies its esteemed clients who use the BAZA mobile
 
 - that these Terms of Use regulate the mutual relations between you (hereinafter "User") and "DANICA PIPER PR PILATES STUDIO BAZA NOVI SAD", a sole proprietor in the fitness club industry with registered seat at Futoška 33, Novi Sad, Serbia, registration number 68350247, tax ID 115417505, tel: 060/045 13 16, registered with the Business Registers Agency as of 4 December 2025, in all respects in accordance with the regulations of the Republic of Serbia (hereinafter "Baza");
 - that these Terms of Use (hereinafter the "Terms") regulate the forms and ways of using the Baza mobile application;
-- that the Baza mobile application is available via the Apple Store, Google Play Store and HUAWEI AppGallery, and is the exclusive property of Baza;
+- that the Baza mobile application is available via the Apple App Store and the Google Play Store, and is the exclusive property of Baza;
 - The use of the application enables booking and cancelling training sessions, tracking the status of membership/training packages, viewing the training schedule, and managing the user profile;
 - That use of the mobile application by the User implies that the User is fully familiar with the Terms and agrees with them, as well as with the Privacy Policy;
 - That, for the purposes of the Terms, "User" means any person who, in any way, directly or indirectly, uses or has used the services of the Baza mobile application and/or the services of Baza;
@@ -47,13 +47,13 @@ Baza, via the mobile application, enables access to sports and recreational acti
 
 The User is deemed to have accepted the offer when, via the mobile application, they have selected the fields confirming that they agree with the Terms of Use and the Privacy Policy.
 
-A precondition for using the mobile application is opening a user account and activating the user account. Opening a user account is done by filling in the existing account-opening form, by entering data about the User who is obliged to provide accurate data — personal information. Personal information is information that accurately identifies an individual user. Personal information such as first and last name, e-mail address, telephone number is required when using the mobile application. If the User does not wish or is not able to enter the information considered mandatory for opening an account, the User will not be able to open a user account and will not be able to use the mobile application.
+A precondition for using the mobile application is having a user account, which Baza creates on the basis of an invitation that the Studio sends to the User's e-mail address. The account is created by clicking the link in the invitation and setting a password. The User is obliged to provide accurate personal data (first and last name, e-mail address, telephone number, date of birth). If the User does not wish or is not able to provide the mandatory data, they will not be able to use the mobile application.
 
-The user account becomes active after payment of the chosen training package has been made. The User will receive an email confirmation of account activation. Only after the user account has been activated can the User begin using the mobile application. From the moment of account activation, the validity periods of the chosen package or membership start to run.
+Once the account is created, the User may access the application. The ability to book training sessions is subject to the User having an active training package, which the Studio assigns to the User after payment for the package has been made (in cash or by non-cash means, at the Studio). From the moment the package is assigned, the validity period of the chosen package or membership starts to run.
 
 **Minors.** Persons under the age of 18 may open a user account and use Baza's services exclusively with the prior consent of a parent or legal guardian. The detailed conditions for the attendance of training by minors are governed by a separate Waiver for Minors, which is accepted in the application by the parent or guardian. Baza reserves the right to request additional verification of the identity and consent of the parent or guardian.
 
-Users may book training sessions via the application in accordance with available time slots. Cancellation of a training session must be made no later than 8 hours before the start of the training. Otherwise, the training is deemed used. The training package is valid for one month; make-ups for sessions cancelled in time will be carried out within that period. In the case of illness, announced travel and other announced absences, an extension of the package duration is possible.
+Users may book training sessions via the application in accordance with available time slots. Cancellation of a training session must be made within the deadline indicated for the User's specific package in the application (as a rule, no later than 8 hours before the start of the training). Otherwise, the training is deemed used. The training package is valid for the validity period indicated for that package; make-ups for sessions cancelled in time will be carried out within that period. In the case of illness, announced travel and other announced absences, an extension of the package duration is possible by agreement with the Studio.
 
 Studio Baza reserves the right to change the schedule or cancel training sessions in exceptional circumstances.
 
@@ -65,11 +65,9 @@ The User agrees that the right to complain about unused sessions exists only in 
 
 The User confirms that they are medically fit for physical activity, train at their own responsibility and will inform the instructor of any health issues. Baza does not bear responsibility for injuries arising from incorrect performance of exercises or failure to follow instructions.
 
-## Prices
+## Prices and payment
 
-All package prices are stated in dinars including VAT. When booking a time slot, the prices displayed in the mobile application at the time of booking apply.
-
-In the event that, after a reservation is made, it is determined that, due to an error in the application, an incorrect price was indicated for the stated package, Baza will endeavour to inform the user as soon as possible of the noticed error and of the correct price that applied to the booked package at the time of reservation. In that case, the user has the right to pay for the booked package at the correct price or to cancel the booking.
+Training-package prices are set and paid at the Studio (in cash or by non-cash means) and are stated in dinars including VAT. At this stage the mobile application does not process payments — it serves for viewing the package status, the number of remaining sessions, and the training schedule.
 
 ## Complaints and refunds
 
