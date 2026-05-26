@@ -8,13 +8,7 @@
  * /pregled/rezervisi get redirected to their home tab.
  */
 import React, { useState, useEffect } from "react";
-import {
-  Pressable,
-  ScrollView,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
+import { Pressable, ScrollView, Text, View } from "react-native";
 import { useTranslation } from "react-i18next";
 import { useQuery, useInfiniteQuery } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter, type Href } from "expo-router";
@@ -29,9 +23,11 @@ import { startOfLocaleWeek } from "@/components/ui/week-strip";
 import { ScreenContainerRaw, useTabBarBottomPadding } from "@/components/ui/screen-container";
 import { EmptyState } from "@/components/ui/states";
 import { Input } from "@/components/ui/input";
+import { FilterChip } from "@/components/ui/studio/filter-chip";
 import { authQueries } from "@/lib/queries/auth-queries-factory";
 import { expandPattern, type PatternInput, type RhythmWeek } from "@/lib/reservation-pattern";
 import { sessionsQueries } from "@/lib/queries/sessions-queries-factory";
+import { BottomSheetFlatList, BottomSheetTextInput } from "@gorhom/bottom-sheet";
 import { clientsQueries } from "@/lib/queries/clients-queries-factory";
 import { packagesQueries } from "@/lib/queries/packages-queries-factory";
 import { bookingsQueries } from "@/lib/queries/bookings-queries-factory";
@@ -303,7 +299,7 @@ export function ReservationMode() {
         />
       )}
 
-      <AppSheet open={showClientPicker} onOpenChange={setShowClientPicker}>
+      <AppSheet open={showClientPicker} onOpenChange={setShowClientPicker} rawContent>
         <ClientPickerSheet
           onPick={(profile) => {
             setClientProfileId(profile.id);
@@ -436,48 +432,16 @@ function ClassTypeFilter({
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={{ paddingHorizontal: 20, gap: 8 }}
       >
-        <Chip
+        <FilterChip
           active={value === ""}
           label={t("admin.reservations.classFilterAll", { defaultValue: "Svi" })}
           onPress={() => onChange("")}
         />
         {names.map((n) => (
-          <Chip key={n} active={value === n} label={n} onPress={() => onChange(n)} />
+          <FilterChip key={n} active={value === n} label={n} onPress={() => onChange(n)} />
         ))}
       </ScrollView>
     </View>
-  );
-}
-
-function Chip({
-  label,
-  active,
-  onPress,
-}: {
-  label: string;
-  active: boolean;
-  onPress: () => void;
-}) {
-  return (
-    <Pressable
-      onPress={onPress}
-      className={
-        active
-          ? "rounded-full bg-foreground px-3.5 py-1.5"
-          : "rounded-full border border-glass-border bg-glass-surface px-3.5 py-1.5"
-      }
-    >
-      <Text
-        className={
-          active
-            ? "text-bg font-body-semibold"
-            : "text-foreground font-body-medium"
-        }
-        style={{ fontSize: 12, letterSpacing: 0.2 }}
-      >
-        {label}
-      </Text>
-    </Pressable>
   );
 }
 
@@ -602,12 +566,14 @@ function ModeToggle({
               onPress={() => onChange(opt.value)}
               className={
                 active
-                  ? "flex-1 rounded-xl bg-accent py-2 items-center"
+                  ? "flex-1 rounded-xl bg-foreground py-2 items-center"
                   : "flex-1 rounded-xl py-2 items-center"
               }
             >
               <Text
-                className={active ? "text-bg font-body-semibold" : "text-foreground"}
+                className={
+                  active ? "text-background font-body-semibold" : "text-muted font-body-medium"
+                }
               >
                 {opt.label}
               </Text>
@@ -706,44 +672,54 @@ function ClientPickerSheet({
   const clientsQ = useInfiniteQuery(clientsQueries.list({ q }));
   const rows = (clientsQ.data?.pages ?? []).flatMap((p) => p.clients ?? []);
 
+  // rawContent mode — we own padding. Search bar is sticky at the top via
+  // ListHeaderComponent; the FlatList scrolls inside the sheet's own gesture
+  // context (no nested ScrollView that competes with pan-down-to-close).
   return (
-    <View className="flex-col gap-3">
-      <Input
-        placeholder={t("admin.clients.searchPlaceholder", { defaultValue: "Pretraga..." })}
-        value={q}
-        onChangeText={setQ}
-      />
-      <ScrollView style={{ maxHeight: 380 }}>
-        {rows.map((c, i) => (
-          <Pressable
-            key={c.id}
-            onPress={() =>
-              onPick({
-                id: c.id,
-                fullName: c.user.fullName,
-                userId: c.user.id,
-              })
-            }
-            className="flex-row items-center gap-3 py-3"
-            style={
-              i < rows.length - 1
-                ? { borderBottomWidth: 1, borderBottomColor: "rgba(0,0,0,0.06)" }
-                : undefined
-            }
-          >
-            <InitialsAvatar name={c.user.fullName} size={36} />
-            <View className="flex-1">
-              <Text className="text-foreground font-body-medium" numberOfLines={1}>
-                {c.user.fullName}
-              </Text>
-              <Text className="text-muted text-xs" numberOfLines={1}>
-                {c.user.email}
-              </Text>
-            </View>
-          </Pressable>
-        ))}
-      </ScrollView>
-    </View>
+    <BottomSheetFlatList
+      data={rows}
+      keyExtractor={(c) => c.id}
+      keyboardShouldPersistTaps="handled"
+      contentContainerStyle={{
+        paddingHorizontal: 24,
+        paddingTop: 8,
+        paddingBottom: 40,
+      }}
+      ListHeaderComponent={
+        <View className="pb-3">
+          <Input
+            placeholder={t("admin.clients.searchPlaceholder", { defaultValue: "Pretraga..." })}
+            value={q}
+            onChangeText={setQ}
+          />
+        </View>
+      }
+      ItemSeparatorComponent={() => (
+        <View style={{ height: 1, backgroundColor: "rgba(0,0,0,0.06)" }} />
+      )}
+      renderItem={({ item: c }) => (
+        <Pressable
+          onPress={() =>
+            onPick({
+              id: c.id,
+              fullName: c.user.fullName,
+              userId: c.user.id,
+            })
+          }
+          className="flex-row items-center gap-3 py-3"
+        >
+          <InitialsAvatar name={c.user.fullName} size={36} />
+          <View className="flex-1">
+            <Text className="text-foreground font-body-medium" numberOfLines={1}>
+              {c.user.fullName}
+            </Text>
+            <Text className="text-muted text-xs" numberOfLines={1}>
+              {c.user.email}
+            </Text>
+          </View>
+        </Pressable>
+      )}
+    />
   );
 }
 
@@ -762,12 +738,15 @@ function PatternSheet({
   const [rhythm, setRhythm] = useState<"weekly" | "biweekly">("weekly");
   const [weekA, setWeekA] = useState<RhythmWeek>({ weekdays: [], timeOfDayMins: 7 * 60 });
   const [weekB, setWeekB] = useState<RhythmWeek>({ weekdays: [], timeOfDayMins: 17 * 60 });
-  const [weeks, setWeeks] = useState("12");
+  // Raw string state for the weeks input — only parsed on apply, so deleting
+  // the value doesn't snap to "0" while the user is editing.
+  const [weeksStr, setWeeksStr] = useState("12");
 
   function handleApply() {
     if (weekA.weekdays.length === 0) return;
     if (rhythm === "biweekly" && weekB.weekdays.length === 0) return;
-    const weekCount = Math.max(1, Math.min(52, Number(weeks) || 1));
+    const parsed = Number(weeksStr);
+    const weekCount = Number.isFinite(parsed) && parsed > 0 ? Math.min(52, parsed) : 1;
     onApply({
       rhythm,
       weekA,
@@ -783,14 +762,14 @@ function PatternSheet({
 
   return (
     <View className="flex-col gap-5">
-      {/* Rhythm toggle — small pills, not full segmented control */}
+      {/* Rhythm toggle — reuse the studio FilterChip aesthetic */}
       <View className="flex-row gap-2">
-        <RhythmPill
+        <FilterChip
           label={t("admin.reservations.pattern.weekly", { defaultValue: "Svake nedelje" })}
           active={rhythm === "weekly"}
           onPress={() => setRhythm("weekly")}
         />
-        <RhythmPill
+        <FilterChip
           label={t("admin.reservations.pattern.biweekly", { defaultValue: "Naizmenično" })}
           active={rhythm === "biweekly"}
           onPress={() => setRhythm("biweekly")}
@@ -805,24 +784,20 @@ function PatternSheet({
           weekLabel={null}
         />
       ) : (
-        <View className="flex-row gap-4">
-          <View className="flex-1">
-            <WeekEditor
-              labels={labels}
-              value={weekA}
-              onChange={setWeekA}
-              weekLabel={t("admin.reservations.pattern.weekA", { defaultValue: "Nedelja A" })}
-            />
-          </View>
-          <View style={{ width: 1, backgroundColor: "rgba(0,0,0,0.08)" }} />
-          <View className="flex-1">
-            <WeekEditor
-              labels={labels}
-              value={weekB}
-              onChange={setWeekB}
-              weekLabel={t("admin.reservations.pattern.weekB", { defaultValue: "Nedelja B" })}
-            />
-          </View>
+        <View className="flex-col gap-5">
+          <WeekEditor
+            labels={labels}
+            value={weekA}
+            onChange={setWeekA}
+            weekLabel={t("admin.reservations.pattern.weekA", { defaultValue: "Nedelja A" })}
+          />
+          <View style={{ height: 1, backgroundColor: "rgba(0,0,0,0.08)" }} />
+          <WeekEditor
+            labels={labels}
+            value={weekB}
+            onChange={setWeekB}
+            weekLabel={t("admin.reservations.pattern.weekB", { defaultValue: "Nedelja B" })}
+          />
         </View>
       )}
 
@@ -830,12 +805,18 @@ function PatternSheet({
         <CapsLabel size={9} tracking={1.6} className="text-muted">
           {t("admin.reservations.pattern.weeks", { defaultValue: "Broj nedelja" })}
         </CapsLabel>
-        <TextInput
-          value={weeks}
-          onChangeText={setWeeks}
+        <BottomSheetTextInput
+          value={weeksStr}
+          onChangeText={setWeeksStr}
           keyboardType="numeric"
-          className="text-foreground font-display"
-          style={{ fontSize: 28, lineHeight: 32, paddingVertical: 4 }}
+          maxLength={2}
+          style={{
+            fontSize: 28,
+            lineHeight: 32,
+            paddingVertical: 4,
+            color: "#111",
+            fontFamily: "Fraunces",
+          }}
         />
         <View style={{ height: 1, backgroundColor: "rgba(0,0,0,0.12)" }} />
       </View>
@@ -846,36 +827,6 @@ function PatternSheet({
         </Text>
       </Button>
     </View>
-  );
-}
-
-function RhythmPill({
-  label,
-  active,
-  onPress,
-}: {
-  label: string;
-  active: boolean;
-  onPress: () => void;
-}) {
-  return (
-    <Pressable
-      onPress={onPress}
-      className={
-        active
-          ? "rounded-full bg-foreground px-3.5 py-1.5"
-          : "rounded-full border border-glass-border bg-glass-surface px-3.5 py-1.5"
-      }
-    >
-      <Text
-        className={
-          active ? "text-bg font-body-semibold" : "text-foreground font-body-medium"
-        }
-        style={{ fontSize: 12, letterSpacing: 0.2 }}
-      >
-        {label}
-      </Text>
-    </Pressable>
   );
 }
 
@@ -891,25 +842,31 @@ function WeekEditor({
   weekLabel: string | null;
 }) {
   const { t } = useTranslation();
-  const hh = String(Math.floor(value.timeOfDayMins / 60)).padStart(2, "0");
-  const mm = String(value.timeOfDayMins % 60).padStart(2, "0");
+  const [hourStr, setHourStr] = useState(
+    String(Math.floor(value.timeOfDayMins / 60)).padStart(2, "0"),
+  );
+  const [minStr, setMinStr] = useState(
+    String(value.timeOfDayMins % 60).padStart(2, "0"),
+  );
+
+  // Commit hour/minute back to the parent only on blur (or when the field
+  // holds a parseable number). While the user is editing — including the
+  // intermediate "" state during a delete — we keep the raw string and
+  // don't overwrite it with a parsed value.
+  function commitTime(nextHourStr: string, nextMinStr: string) {
+    const h = nextHourStr === "" ? Math.floor(value.timeOfDayMins / 60) : Math.max(0, Math.min(23, Number(nextHourStr) || 0));
+    const m = nextMinStr === "" ? value.timeOfDayMins % 60 : Math.max(0, Math.min(59, Number(nextMinStr) || 0));
+    const next = h * 60 + m;
+    if (next !== value.timeOfDayMins) {
+      onChange({ ...value, timeOfDayMins: next });
+    }
+  }
 
   function toggleDay(d: number) {
     const next = value.weekdays.includes(d)
       ? value.weekdays.filter((x) => x !== d)
       : [...value.weekdays, d].sort((a, b) => a - b);
     onChange({ ...value, weekdays: next });
-  }
-  function setHour(raw: string) {
-    const n = Math.max(0, Math.min(23, Number(raw) || 0));
-    onChange({ ...value, timeOfDayMins: n * 60 + (value.timeOfDayMins % 60) });
-  }
-  function setMin(raw: string) {
-    const n = Math.max(0, Math.min(59, Number(raw) || 0));
-    onChange({
-      ...value,
-      timeOfDayMins: Math.floor(value.timeOfDayMins / 60) * 60 + n,
-    });
   }
 
   return (
@@ -920,7 +877,7 @@ function WeekEditor({
         </CapsLabel>
       ) : null}
 
-      {/* Weekday glyphs — square chips on a hairline rail */}
+      {/* Weekday glyphs — square cells, foreground-fill on selected */}
       <View className="flex-row gap-1.5">
         {labels.map((l, i) => {
           const active = value.weekdays.includes(i);
@@ -933,15 +890,15 @@ function WeekEditor({
                   ? "flex-1 items-center justify-center bg-foreground"
                   : "flex-1 items-center justify-center border border-glass-border bg-glass-surface"
               }
-              style={{ height: 40, borderRadius: 10 }}
+              style={{ height: 44, borderRadius: 12 }}
             >
               <Text
                 className={
                   active
-                    ? "text-bg font-body-semibold"
+                    ? "text-background font-body-semibold"
                     : "text-foreground font-body-medium"
                 }
-                style={{ fontSize: 12 }}
+                style={{ fontSize: 13 }}
               >
                 {l}
               </Text>
@@ -950,19 +907,33 @@ function WeekEditor({
         })}
       </View>
 
-      {/* Time — large Fraunces numerals on a hairline underline */}
+      {/* Time — large Fraunces numerals on a hairline underline. Raw-string
+          state so deleting a digit doesn't snap the field back to "0". */}
       <View>
         <CapsLabel size={9} tracking={1.6} className="text-muted">
           {t("admin.reservations.pattern.time", { defaultValue: "Vreme" })}
         </CapsLabel>
         <View className="flex-row items-baseline gap-1.5">
-          <TextInput
-            value={hh}
-            onChangeText={setHour}
+          <BottomSheetTextInput
+            value={hourStr}
+            onChangeText={(v) => {
+              setHourStr(v);
+              commitTime(v, minStr);
+            }}
+            onBlur={() => {
+              const padded = hourStr === "" ? "00" : String(Number(hourStr) || 0).padStart(2, "0");
+              setHourStr(padded);
+            }}
             keyboardType="numeric"
             maxLength={2}
-            className="text-foreground font-display"
-            style={{ fontSize: 32, lineHeight: 36, width: 48, textAlign: "center" }}
+            style={{
+              fontSize: 32,
+              lineHeight: 36,
+              width: 56,
+              textAlign: "center",
+              color: "#111",
+              fontFamily: "Fraunces",
+            }}
           />
           <Text
             className="text-muted font-display"
@@ -970,13 +941,26 @@ function WeekEditor({
           >
             :
           </Text>
-          <TextInput
-            value={mm}
-            onChangeText={setMin}
+          <BottomSheetTextInput
+            value={minStr}
+            onChangeText={(v) => {
+              setMinStr(v);
+              commitTime(hourStr, v);
+            }}
+            onBlur={() => {
+              const padded = minStr === "" ? "00" : String(Number(minStr) || 0).padStart(2, "0");
+              setMinStr(padded);
+            }}
             keyboardType="numeric"
             maxLength={2}
-            className="text-foreground font-display"
-            style={{ fontSize: 32, lineHeight: 36, width: 48, textAlign: "center" }}
+            style={{
+              fontSize: 32,
+              lineHeight: 36,
+              width: 56,
+              textAlign: "center",
+              color: "#111",
+              fontFamily: "Fraunces",
+            }}
           />
         </View>
         <View style={{ height: 1, backgroundColor: "rgba(0,0,0,0.12)" }} />
