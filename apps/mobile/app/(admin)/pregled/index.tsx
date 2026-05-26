@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { ScrollView, Text, View } from "react-native";
-import { useRouter } from "expo-router";
+import { useRouter, type Href } from "expo-router";
 import dayjs from "dayjs";
 import { MotiView } from "@/components/ui/styled";
 import { NumberRollup } from "@/components/ui/number-rollup";
@@ -238,7 +238,7 @@ export default function AdminSchedule() {
           transition={{ type: "timing", duration: 350, delay: 280 }}
         >
           {/* Segmented control */}
-          <View className="px-6 pb-4">
+          <View className="px-6 pb-3">
             <SegmentedControl<ScheduleTab>
               options={[
                 { value: "day", label: t("admin.schedule.viewDay") },
@@ -247,6 +247,19 @@ export default function AdminSchedule() {
               value={scheduleTab}
               onChange={setScheduleTab}
             />
+          </View>
+
+          {/* Reservation mode entry — admin-only quick action */}
+          <View className="px-6 pb-4">
+            <Text
+              onPress={() => router.push("/(admin)/pregled/rezervisi" as Href)}
+              className="text-accent font-body-medium text-right"
+              style={{ fontSize: 13 }}
+            >
+              {t("admin.reservations.openModeLink", {
+                defaultValue: "Rezerviši za klijenta →",
+              })}
+            </Text>
           </View>
 
           {scheduleTab === "day" ? (

@@ -16,10 +16,19 @@ vi.mock("@/lib/server/auth-guards", async () => {
   };
 });
 
-const createSystemNotificationMock = vi.fn(async () => undefined);
+type NotifyArgs = [
+  userId: string,
+  messageKey: string,
+  type: string,
+  payload: Record<string, unknown>,
+  options?: { dedupeKey?: string; skipPush?: boolean },
+];
+const createSystemNotificationMock = vi.fn(async (..._args: NotifyArgs) => {
+  return undefined as unknown;
+});
 vi.mock("@/lib/server/notifications", () => ({
-  createSystemNotification: (...args: unknown[]) =>
-    createSystemNotificationMock(...(args as [])),
+  createSystemNotification: (...args: NotifyArgs) =>
+    createSystemNotificationMock(...args),
 }));
 
 import { POST } from "@/app/api/admin/reservations/cancel-bulk/+api";
