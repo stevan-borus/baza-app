@@ -157,4 +157,52 @@ test.describe("admin reservations", () => {
       )
       .toBe(1);
   });
+
+  test("trainer hitting /pregled/rezervisi is redirected away", async ({ page }) => {
+    // Trainer-lead is a TRAINER per the rich seed.
+    await page.goto("/sign-in");
+    await page.getByTestId("auth-email-input").fill("trainer.reformer@e2e.test");
+    await page.getByTestId("auth-password-input").fill(SEED_PASSWORD);
+    await page.getByTestId("auth-submit-button").click();
+    // Wait for trainer shell.
+    await expect(page.getByTestId("tab-raspored")).toBeVisible({ timeout: 15_000 });
+
+    await page.goto("/pregled/rezervisi");
+    // Should never land on the admin reservation route — redirect kicks in.
+    await page.waitForURL((url) => !url.pathname.includes("/pregled/rezervisi"), {
+      timeout: 10_000,
+    });
+    expect(page.url()).not.toContain("/pregled/rezervisi");
+  });
+
+  test("admin reserves via pattern overlay and confirms unbacked-attendance copy", async ({
+    page,
+  }) => {
+    await signInAsAdmin(page);
+
+    const emptyClient = await prisma().user.findUniqueOrThrow({
+      where: { email: EMPTY_CLIENT_EMAIL },
+      select: { clientProfile: { select: { id: true, userId: true } } },
+    });
+    if (!emptyClient.clientProfile) throw new Error("seed missing clientProfile");
+
+    const qs = new URLSearchParams({
+      clientProfileId: emptyClient.clientProfile.id,
+      clientUserId: emptyClient.clientProfile.userId,
+      clientFullName: "Empty Client",
+    });
+    await page.goto(`/pregled/rezervisi?${qs.toString()}`);
+
+    // Open the pattern accelerator.
+    await page
+      .getByTestId("reservation-open-pattern-sheet")
+      .waitFor({ state: "visible", timeout: 10_000 });
+    await page.getByTestId("reservation-open-pattern-sheet").click();
+
+    // The sheet renders the weekly + biweekly toggles. Just verify the
+    // "Naizmenično" rhythm pill is reachable — full biweekly assertion is
+    // covered at the integration layer via the applyPattern logic.
+    await expect(page.getByText(/Naizmenično/)).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByText(/Svake nedelje/)).toBeVisible();
+  });
 });

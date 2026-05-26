@@ -54,11 +54,16 @@ A Booking created by an Admin on behalf of a Client to hold a seat. Identical to
 
 The ClassType scoping rule (a Reformer ClientPackage cannot back an Energy Booking) is **not enforced** as a hard rule on Admin reservations — but the admin UI shows a **soft warning** at confirmation time when the Client owns no package for the target ClassType, and the **Pattern reservation** confirmation surfaces a per-ClassType breakdown (e.g. "152 selected: 100 Reformer / 52 Energy — Marija has Reformer only, 52 will be unbacked"). The warning is informational; the admin can proceed.
 
-Creation lives on **one screen**: the admin schedule (existing `pregled` calendar) in reservation mode, with a persistent client-selection banner and a selection toolbar. Two entry points reach it: (1) the Client profile's "Reserve sessions" action (client pre-bound), (2) the admin schedule's reservation toggle (admin picks client via the banner). Under the hood, every reservation is the same gesture: a set of selected `sessionId`s submitted to a single endpoint (`POST /admin/reservations`).
+Creation lives on **one screen**: the admin schedule (existing `pregled` calendar) in reservation mode, with a persistent client-selection banner and a selection toolbar. The **only** entry point is the Client profile's "Reserve sessions" action — the screen is never reachable with no client picked, so the banner is always bound. The route is **admin-only**; trainers and clients hitting it are redirected. Under the hood, every reservation is the same gesture: a set of selected `sessionId`s submitted to a single endpoint (`POST /admin/reservations`).
 
 Selection is built from two interchangeable inputs that both feed the *same* selection set:
-- **Tap selection** — Admin taps individual Session cards in the calendar to toggle them.
-- **Pattern overlay** — A power-tool sheet ("Apply pattern…") taking weekday(s) + time-of-day + date range; on apply, matching existing Sessions in the window light up as selected and join the same set. Admin can then deselect specific cards (e.g. the Client's travel weeks) or tap-add more (e.g. a one-off Tuesday 5pm). Sessions that don't exist yet (because the recurring schedule hasn't been materialised that far) are silently skipped — the admin re-runs after extending the schedule.
+- **Tap selection** — Admin taps individual Session cards in the calendar to toggle them. Past Sessions are selectable too (admins routinely backfill).
+- **Pattern overlay** — A power-tool sheet ("Apply pattern…") with two rhythms:
+  - **Weekly**: pick weekday(s) + time-of-day + N-week range. Applies the same set every week.
+  - **Biweekly**: pick a "Week A" set + a "Week B" set, each with its own weekdays and time. Alternates A/B/A/B across the range. Week A is anchored to the week the range begins in — there is no week-offset toggle; admins reframe by shifting the start date.
+  Sessions that don't exist yet (recurring schedule hasn't been materialised that far) are silently skipped; the admin re-runs after extending. The biweekly rhythm exists for the realistic alternating-shift case (e.g. Marija comes Mon/Wed/Fri 7am one week, Tue/Thu 6pm the next). 3+ week rotations are out of scope — admin falls back to tap-select.
+
+The day list is filterable by **ClassType** chips (All / Reformer / Energy / Moms&Minis / Golden age) so admins picking a specific kind don't have to scan past other class types.
 
 Capacity conflicts are visible **in the calendar during selection**, not summarised after. Full Sessions render with a distinct unavailable treatment in reservation mode and are unselectable; when the pattern overlay matches a full Session, the card highlights in a conflict color rather than the normal selection color. The Client is never auto-waitlisted by a reservation gesture — admin decides per-Session whether to manually waitlist.
 
