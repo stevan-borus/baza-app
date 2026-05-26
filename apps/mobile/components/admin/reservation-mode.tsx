@@ -21,7 +21,7 @@ import {
 } from "react-native";
 import { useTranslation } from "react-i18next";
 import { useQuery, useInfiniteQuery } from "@tanstack/react-query";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useLocalSearchParams } from "expo-router";
 import dayjs from "dayjs";
 import Feather from "@expo/vector-icons/Feather";
 import { AppSheet } from "@/components/ui/sheet";
@@ -36,7 +36,11 @@ import { Input } from "@/components/ui/input";
 import { sessionsQueries } from "@/lib/queries/sessions-queries-factory";
 import { clientsQueries } from "@/lib/queries/clients-queries-factory";
 import { packagesQueries } from "@/lib/queries/packages-queries-factory";
-import { useCreateReservationsMutation } from "@/lib/queries/reservations-queries-factory";
+import { bookingsQueries } from "@/lib/queries/bookings-queries-factory";
+import {
+  useCreateReservationsMutation,
+  useCancelReservationsBulkMutation,
+} from "@/lib/queries/reservations-queries-factory";
 
 type AvailabilitySession = {
   id: string;
@@ -61,14 +65,17 @@ const WEEKDAY_LABELS_SR = ["P", "U", "S", "Č", "P", "S", "N"]; // Mon..Sun
 const WEEKDAY_LABELS_EN = ["M", "T", "W", "T", "F", "S", "S"];
 
 export function ReservationMode() {
-  const router = useRouter();
   const { t, i18n } = useTranslation();
   const lang = i18n.language === "en" ? "en" : "sr";
   const bottomPad = useTabBarBottomPadding(80);
   const params = useLocalSearchParams<ReservationModeParams>();
 
+  const [mode, setMode] = useState<"reserve" | "cancel">("reserve");
   const [clientProfileId, setClientProfileId] = useState<string | null>(
     params.clientProfileId ?? null,
+  );
+  const [clientUserId, setClientUserId] = useState<string | null>(
+    params.clientUserId ?? null,
   );
   const [clientFullName, setClientFullName] = useState<string | null>(
     params.clientFullName ?? null,
@@ -79,9 +86,14 @@ export function ReservationMode() {
   const [selectedSessionIds, setSelectedSessionIds] = useState<Set<string>>(
     new Set(),
   );
+  // In cancel mode, the selection set is bookingIds (not sessionIds).
+  const [selectedBookingIds, setSelectedBookingIds] = useState<Set<string>>(
+    new Set(),
+  );
   const [showClientPicker, setShowClientPicker] = useState(false);
   const [showPatternSheet, setShowPatternSheet] = useState(false);
   const [showConfirmSheet, setShowConfirmSheet] = useState(false);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
 
   const availabilityQuery = useQuery(sessionsQueries.availabilityByMonth(month));
   const sessions = (availabilityQuery.data?.sessions ?? []) as AvailabilitySession[];
@@ -152,7 +164,18 @@ export function ReservationMode() {
         onPress={() => setShowClientPicker(true)}
         onClear={() => {
           setClientProfileId(null);
+          setClientUserId(null);
           setClientFullName(null);
+          setSelectedSessionIds(new Set());
+          setSelectedBookingIds(new Set());
+        }}
+      />
+      <ModeToggle
+        mode={mode}
+        onChange={(m) => {
+          setMode(m);
+          setSelectedSessionIds(new Set());
+          setSelectedBookingIds(new Set());
         }}
       />
 
@@ -160,69 +183,99 @@ export function ReservationMode() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingTop: 8, paddingBottom: bottomPad + 80 }}
       >
-        <View className="pb-4">
-          <StudioWeekStrip
-            weekStart={weekStart}
-            selected={dayjs(selectedDate)}
-            onSelect={(d) => {
-              setSelectedDate(d.format("YYYY-MM-DD"));
-              const newMonth = d.format("YYYY-MM");
-              if (newMonth !== month) setMonth(newMonth);
-            }}
-            sessionsByDay={sessionsByDay}
-            onPrevWeek={handlePrevWeek}
-            onNextWeek={handleNextWeek}
-            rangeLabel={`${weekStart.locale(lang).format("D. MMM")} — ${weekStart
-              .add(6, "day")
-              .locale(lang)
-              .format("D. MMM")}`}
+        {mode === "reserve" ? (
+          <>
+            <View className="pb-4">
+              <StudioWeekStrip
+                weekStart={weekStart}
+                selected={dayjs(selectedDate)}
+                onSelect={(d) => {
+                  setSelectedDate(d.format("YYYY-MM-DD"));
+                  const newMonth = d.format("YYYY-MM");
+                  if (newMonth !== month) setMonth(newMonth);
+                }}
+                sessionsByDay={sessionsByDay}
+                onPrevWeek={handlePrevWeek}
+                onNextWeek={handleNextWeek}
+                rangeLabel={`${weekStart.locale(lang).format("D. MMM")} — ${weekStart
+                  .add(6, "day")
+                  .locale(lang)
+                  .format("D. MMM")}`}
+              />
+            </View>
+
+            <View className="px-5 pb-3">
+              <Button
+                variant="secondary"
+                onPress={() => setShowPatternSheet(true)}
+                disabled={!clientProfileId}
+              >
+                <View className="flex-row items-center gap-2">
+                  <Feather name="repeat" size={16} />
+                  <Text className="font-body-medium">
+                    {t("admin.reservations.applyPattern", { defaultValue: "Primeni obrazac" })}
+                  </Text>
+                </View>
+              </Button>
+            </View>
+
+            <View className="px-5">
+              {daySessions.length === 0 ? (
+                <EmptyState title={t("client.dayView.noSessions")} />
+              ) : (
+                <View className="flex-col gap-3">
+                  {daySessions.map((s) => (
+                    <SelectableSessionCard
+                      key={s.id}
+                      session={s}
+                      selected={selectedSessionIds.has(s.id)}
+                      onPress={() => toggleSession(s)}
+                    />
+                  ))}
+                </View>
+              )}
+            </View>
+          </>
+        ) : (
+          <CancelList
+            clientUserId={clientUserId}
+            selectedBookingIds={selectedBookingIds}
+            onToggle={(bookingId) =>
+              setSelectedBookingIds((prev) => {
+                const next = new Set(prev);
+                if (next.has(bookingId)) next.delete(bookingId);
+                else next.add(bookingId);
+                return next;
+              })
+            }
           />
-        </View>
-
-        <View className="px-5 pb-3">
-          <Button
-            variant="secondary"
-            onPress={() => setShowPatternSheet(true)}
-            disabled={!clientProfileId}
-          >
-            <View className="flex-row items-center gap-2">
-              <Feather name="repeat" size={16} />
-              <Text className="font-body-medium">
-                {t("admin.reservations.applyPattern", { defaultValue: "Primeni obrazac" })}
-              </Text>
-            </View>
-          </Button>
-        </View>
-
-        <View className="px-5">
-          {daySessions.length === 0 ? (
-            <EmptyState title={t("client.dayView.noSessions")} />
-          ) : (
-            <View className="flex-col gap-3">
-              {daySessions.map((s) => (
-                <SelectableSessionCard
-                  key={s.id}
-                  session={s}
-                  selected={selectedSessionIds.has(s.id)}
-                  onPress={() => toggleSession(s)}
-                />
-              ))}
-            </View>
-          )}
-        </View>
+        )}
       </ScrollView>
 
-      <SelectionToolbar
-        count={selectedSessionIds.size}
-        disabled={!clientProfileId || selectedSessionIds.size === 0}
-        onConfirm={() => setShowConfirmSheet(true)}
-        onClear={() => setSelectedSessionIds(new Set())}
-      />
+      {mode === "reserve" ? (
+        <SelectionToolbar
+          count={selectedSessionIds.size}
+          disabled={!clientProfileId || selectedSessionIds.size === 0}
+          onConfirm={() => setShowConfirmSheet(true)}
+          onClear={() => setSelectedSessionIds(new Set())}
+          ctaLabel={t("admin.reservations.confirm", { defaultValue: "Rezerviši" })}
+        />
+      ) : (
+        <SelectionToolbar
+          count={selectedBookingIds.size}
+          disabled={!clientProfileId || selectedBookingIds.size === 0}
+          onConfirm={() => setShowCancelConfirm(true)}
+          onClear={() => setSelectedBookingIds(new Set())}
+          ctaLabel={t("admin.reservations.cancelCta", { defaultValue: "Otkaži" })}
+          ctaDanger
+        />
+      )}
 
       <AppSheet open={showClientPicker} onOpenChange={setShowClientPicker}>
         <ClientPickerSheet
           onPick={(profile) => {
             setClientProfileId(profile.id);
+            setClientUserId(profile.userId);
             setClientFullName(profile.fullName);
             setShowClientPicker(false);
           }}
@@ -237,16 +290,26 @@ export function ReservationMode() {
         {clientProfileId ? (
           <ConfirmSheet
             clientProfileId={clientProfileId}
-            clientUserId={params.clientUserId ?? null}
+            clientUserId={clientUserId}
             selectedSessions={sessions.filter((s) => selectedSessionIds.has(s.id))}
             onDone={() => {
               setSelectedSessionIds(new Set());
               setShowConfirmSheet(false);
-              router.back();
             }}
             onCancel={() => setShowConfirmSheet(false)}
           />
         ) : null}
+      </AppSheet>
+
+      <AppSheet open={showCancelConfirm} onOpenChange={setShowCancelConfirm}>
+        <CancelConfirmSheet
+          bookingIds={[...selectedBookingIds]}
+          onDone={() => {
+            setSelectedBookingIds(new Set());
+            setShowCancelConfirm(false);
+          }}
+          onCancel={() => setShowCancelConfirm(false)}
+        />
       </AppSheet>
     </ScreenContainerRaw>
   );
@@ -329,11 +392,15 @@ function SelectionToolbar({
   disabled,
   onConfirm,
   onClear,
+  ctaLabel,
+  ctaDanger,
 }: {
   count: number;
   disabled: boolean;
   onConfirm: () => void;
   onClear: () => void;
+  ctaLabel: string;
+  ctaDanger?: boolean;
 }) {
   const { t } = useTranslation();
   return (
@@ -356,11 +423,183 @@ function SelectionToolbar({
           </Text>
         </Pressable>
       ) : null}
-      <Button onPress={onConfirm} disabled={disabled}>
-        <Text className="font-body-semibold text-bg">
-          {t("admin.reservations.confirm", { defaultValue: "Rezerviši" })}
-        </Text>
+      <Button onPress={onConfirm} disabled={disabled} variant={ctaDanger ? "danger" : undefined}>
+        <Text className="font-body-semibold text-bg">{ctaLabel}</Text>
       </Button>
+    </View>
+  );
+}
+
+function ModeToggle({
+  mode,
+  onChange,
+}: {
+  mode: "reserve" | "cancel";
+  onChange: (m: "reserve" | "cancel") => void;
+}) {
+  const { t } = useTranslation();
+  const options: Array<{ value: "reserve" | "cancel"; label: string }> = [
+    {
+      value: "reserve",
+      label: t("admin.reservations.modeReserve", { defaultValue: "Rezerviši" }),
+    },
+    {
+      value: "cancel",
+      label: t("admin.reservations.modeCancel", { defaultValue: "Otkaži" }),
+    },
+  ];
+  return (
+    <View className="px-5 pb-2">
+      <View className="flex-row rounded-2xl border border-glass-border bg-glass-surface p-1">
+        {options.map((opt) => {
+          const active = opt.value === mode;
+          return (
+            <Pressable
+              key={opt.value}
+              testID={`reservation-mode-${opt.value}`}
+              onPress={() => onChange(opt.value)}
+              className={
+                active
+                  ? "flex-1 rounded-xl bg-accent py-2 items-center"
+                  : "flex-1 rounded-xl py-2 items-center"
+              }
+            >
+              <Text
+                className={active ? "text-bg font-body-semibold" : "text-foreground"}
+              >
+                {opt.label}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
+function CancelList({
+  clientUserId,
+  selectedBookingIds,
+  onToggle,
+}: {
+  clientUserId: string | null;
+  selectedBookingIds: Set<string>;
+  onToggle: (bookingId: string) => void;
+}) {
+  const { t } = useTranslation();
+  const bookingsQ = useInfiniteQuery({
+    ...bookingsQueries.byClient({
+      clientUserId: clientUserId ?? "",
+      period: "upcoming",
+    }),
+    enabled: !!clientUserId,
+  });
+
+  if (!clientUserId) {
+    return (
+      <View className="px-5 pt-6">
+        <EmptyState
+          title={t("admin.reservations.cancel.pickClientFirst", {
+            defaultValue: "Izaberi klijenta da bi prikazao rezervacije",
+          })}
+        />
+      </View>
+    );
+  }
+  const rows = (bookingsQ.data?.pages ?? [])
+    .flatMap((p) => p.bookings ?? [])
+    .filter((b) => b.status === "CONFIRMED");
+
+  if (rows.length === 0) {
+    return (
+      <View className="px-5 pt-6">
+        <EmptyState
+          title={t("admin.reservations.cancel.empty", {
+            defaultValue: "Nema budućih rezervacija",
+          })}
+        />
+      </View>
+    );
+  }
+
+  return (
+    <View className="px-5 flex-col gap-3 pt-2">
+      {rows.map((b) => {
+        const selected = selectedBookingIds.has(b.id);
+        return (
+          <Pressable
+            key={b.id}
+            testID={`cancel-booking-${b.id}`}
+            onPress={() => onToggle(b.id)}
+          >
+            <View
+              className={
+                selected
+                  ? "rounded-2xl border-2 border-danger p-3"
+                  : "rounded-2xl border border-glass-border p-3"
+              }
+            >
+              <Text className="text-foreground font-body-semibold">
+                {b.session.classType.name}
+              </Text>
+              <Text className="text-muted text-xs">
+                {dayjs(b.session.startsAt).format("ddd D MMM • HH:mm")}
+                {b.session.trainer ? ` • ${b.session.trainer.fullName}` : null}
+              </Text>
+            </View>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
+function CancelConfirmSheet({
+  bookingIds,
+  onDone,
+  onCancel,
+}: {
+  bookingIds: string[];
+  onDone: () => void;
+  onCancel: () => void;
+}) {
+  const { t } = useTranslation();
+  const cancelMut = useCancelReservationsBulkMutation();
+  return (
+    <View className="flex-col gap-4">
+      <SectionLabel>
+        {t("admin.reservations.cancelConfirmTitle", {
+          defaultValue: "Otkaži {{count}} rezervacija",
+          count: bookingIds.length,
+        })}
+      </SectionLabel>
+      <View className="rounded-2xl border border-glass-border p-3">
+        <Text className="text-muted text-xs">
+          {t("admin.reservations.cancelConfirmBody", {
+            defaultValue:
+              "Otkazivanja u poslednjih nekoliko sati pre termina (zavisi od paketa) skinuće jednu sesiju kao kaznu.",
+          })}
+        </Text>
+      </View>
+      <View className="flex-row gap-3">
+        <Button variant="secondary" className="flex-1" onPress={onCancel}>
+          <Text className="font-body-medium">
+            {t("admin.clients.cancel", { defaultValue: "Otkaži" })}
+          </Text>
+        </Button>
+        <Button
+          variant="danger"
+          className="flex-1"
+          disabled={cancelMut.isPending}
+          onPress={() => {
+            cancelMut.mutate({ bookingIds }, { onSuccess: onDone });
+          }}
+        >
+          <Text className="text-bg font-body-semibold">
+            {t("admin.reservations.cancelConfirmCta", { defaultValue: "Potvrdi otkazivanje" })}
+          </Text>
+        </Button>
+      </View>
     </View>
   );
 }
