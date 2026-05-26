@@ -124,12 +124,44 @@ export function ReservationMode() {
     }),
     enabled: !!clientUserId,
   });
+  const activeBookings = (clientBookingsQ.data?.pages ?? [])
+    .flatMap((p) => p.bookings ?? [])
+    .filter((b) => b.status === "CONFIRMED");
   const alreadyBookedSessionIds = new Set<string>(
-    (clientBookingsQ.data?.pages ?? [])
-      .flatMap((p) => p.bookings ?? [])
-      .filter((b) => b.status === "CONFIRMED")
-      .map((b) => b.session.id),
+    activeBookings.map((b) => b.session.id),
   );
+  // Dot density on the cancel-mode week strip reflects the bound client's
+  // own bookings, not the studio's overall sessions — admins want to
+  // navigate weeks based on "where does this client have stuff", not
+  // "how busy is the studio".
+  const bookingsByDay = activeBookings.reduce<Record<string, number>>(
+    (acc, b) => {
+      const k = dayjs(b.session.startsAt).format("YYYY-MM-DD");
+      acc[k] = (acc[k] ?? 0) + 1;
+      return acc;
+    },
+    {},
+  );
+  // Bookings filtered by the active ClassType chip and grouped by date.
+  const filteredBookings = classTypeFilter
+    ? activeBookings.filter((b) => b.session.classType.name === classTypeFilter)
+    : activeBookings;
+  const dayBookings = filteredBookings
+    .filter(
+      (b) => dayjs(b.session.startsAt).format("YYYY-MM-DD") === selectedDate,
+    )
+    .sort(
+      (a, b) => +new Date(a.session.startsAt) - +new Date(b.session.startsAt),
+    );
+  // ClassType names visible to the cancel-mode filter: distinct values
+  // observed on this client's bookings (no point showing a chip for a
+  // class type the client has zero bookings in).
+  const bookingClassTypeNames: string[] = [];
+  for (const b of activeBookings) {
+    const n = b.session.classType.name;
+    if (!bookingClassTypeNames.includes(n)) bookingClassTypeNames.push(n);
+  }
+  bookingClassTypeNames.sort();
 
   // Distinct ClassTypes for the filter chips, in observed order so the UI
   // stays stable across refetches.
@@ -154,6 +186,15 @@ export function ReservationMode() {
     acc[k] = (acc[k] ?? 0) + 1;
     return acc;
   }, {});
+
+  function toggleBooking(bookingId: string) {
+    setSelectedBookingIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(bookingId)) next.delete(bookingId);
+      else next.add(bookingId);
+      return next;
+    });
+  }
 
   function toggleSession(s: AvailabilitySession) {
     // Past + full + already-booked sessions are visible (so the schedule
@@ -297,18 +338,67 @@ export function ReservationMode() {
             </View>
           </>
         ) : (
-          <CancelList
-            clientUserId={clientUserId}
-            selectedBookingIds={selectedBookingIds}
-            onToggle={(bookingId) =>
-              setSelectedBookingIds((prev) => {
-                const next = new Set(prev);
-                if (next.has(bookingId)) next.delete(bookingId);
-                else next.add(bookingId);
-                return next;
-              })
-            }
-          />
+          <>
+            <View className="pb-3">
+              <StudioWeekStrip
+                weekStart={weekStart}
+                selected={dayjs(selectedDate)}
+                onSelect={(d) => {
+                  setSelectedDate(d.format("YYYY-MM-DD"));
+                  const newMonth = d.format("YYYY-MM");
+                  if (newMonth !== month) setMonth(newMonth);
+                }}
+                sessionsByDay={bookingsByDay}
+                onPrevWeek={handlePrevWeek}
+                onNextWeek={handleNextWeek}
+                rangeLabel={`${weekStart.locale(lang).format("D. MMM")} — ${weekStart
+                  .add(6, "day")
+                  .locale(lang)
+                  .format("D. MMM")}`}
+              />
+            </View>
+
+            {bookingClassTypeNames.length > 1 ? (
+              <ClassTypeFilter
+                names={bookingClassTypeNames}
+                value={classTypeFilter}
+                onChange={setClassTypeFilter}
+              />
+            ) : null}
+
+            <View className="px-5 pt-2 pb-3">
+              <CapsLabel size={11} tracking={2.4} className="text-muted">
+                {dayjs(selectedDate).locale(lang).format("dddd, D MMMM").toUpperCase()}
+              </CapsLabel>
+            </View>
+
+            <View className="px-5">
+              {!clientProfileId ? (
+                <EmptyState
+                  title={t("admin.reservations.cancel.pickClientFirst", {
+                    defaultValue: "Izaberi klijenta da bi prikazao rezervacije",
+                  })}
+                />
+              ) : dayBookings.length === 0 ? (
+                <EmptyState
+                  title={t("admin.reservations.cancel.noBookingsForDay", {
+                    defaultValue: "Nema rezervacija ovog dana",
+                  })}
+                />
+              ) : (
+                <View className="flex-col gap-3">
+                  {dayBookings.map((b) => (
+                    <CancellableBookingCard
+                      key={b.id}
+                      booking={b}
+                      selected={selectedBookingIds.has(b.id)}
+                      onPress={() => toggleBooking(b.id)}
+                    />
+                  ))}
+                </View>
+              )}
+            </View>
+          </>
         )}
       </ScrollView>
 
@@ -610,80 +700,48 @@ function ModeToggle({
   );
 }
 
-function CancelList({
-  clientUserId,
-  selectedBookingIds,
-  onToggle,
+function CancellableBookingCard({
+  booking,
+  selected,
+  onPress,
 }: {
-  clientUserId: string | null;
-  selectedBookingIds: Set<string>;
-  onToggle: (bookingId: string) => void;
+  booking: {
+    id: string;
+    session: {
+      id: string;
+      startsAt: string;
+      endsAt: string;
+      classType: { id: string; name: string };
+      room: { id: string; name: string } | null;
+      trainer: { id: string; fullName: string } | null;
+    };
+  };
+  selected: boolean;
+  onPress: () => void;
 }) {
-  const { t } = useTranslation();
-  const bookingsQ = useInfiniteQuery({
-    ...bookingsQueries.byClient({
-      clientUserId: clientUserId ?? "",
-      period: "upcoming",
-    }),
-    enabled: !!clientUserId,
-  });
-
-  if (!clientUserId) {
-    return (
-      <View className="px-5 pt-6">
-        <EmptyState
-          title={t("admin.reservations.cancel.pickClientFirst", {
-            defaultValue: "Izaberi klijenta da bi prikazao rezervacije",
-          })}
-        />
-      </View>
-    );
-  }
-  const rows = (bookingsQ.data?.pages ?? [])
-    .flatMap((p) => p.bookings ?? [])
-    .filter((b) => b.status === "CONFIRMED");
-
-  if (rows.length === 0) {
-    return (
-      <View className="px-5 pt-6">
-        <EmptyState
-          title={t("admin.reservations.cancel.empty", {
-            defaultValue: "Nema budućih rezervacija",
-          })}
-        />
-      </View>
-    );
-  }
-
   return (
-    <View className="px-5 flex-col gap-3 pt-2">
-      {rows.map((b) => {
-        const selected = selectedBookingIds.has(b.id);
-        return (
-          <Pressable
-            key={b.id}
-            testID={`cancel-booking-${b.id}`}
-            onPress={() => onToggle(b.id)}
-          >
-            <View
-              className={
-                selected
-                  ? "rounded-2xl border-2 border-danger p-3"
-                  : "rounded-2xl border border-glass-border p-3"
-              }
-            >
-              <Text className="text-foreground font-body-semibold">
-                {b.session.classType.name}
-              </Text>
-              <Text className="text-muted text-xs">
-                {dayjs(b.session.startsAt).format("ddd D MMM • HH:mm")}
-                {b.session.trainer ? ` • ${b.session.trainer.fullName}` : null}
-              </Text>
-            </View>
-          </Pressable>
-        );
-      })}
-    </View>
+    <Pressable testID={`cancel-booking-${booking.id}`} onPress={onPress}>
+      <View pointerEvents="none">
+        <SessionCard
+          time={`${dayjs(booking.session.startsAt).format("HH:mm")} - ${dayjs(booking.session.endsAt).format("HH:mm")}`}
+          className={booking.session.classType.name}
+          trainerName={booking.session.trainer?.fullName ?? undefined}
+          room={booking.session.room?.name ?? undefined}
+          // Capacity isn't surfaced on the booking payload — pass 0/0 so
+          // the badge renders empty rather than misleading.
+          bookedCount={0}
+          capacity={0}
+          status="available"
+        />
+      </View>
+      {selected ? (
+        <View
+          pointerEvents="none"
+          className="absolute inset-0 border-2 border-danger"
+          style={{ borderRadius: CARD_RADIUS }}
+        />
+      ) : null}
+    </Pressable>
   );
 }
 
