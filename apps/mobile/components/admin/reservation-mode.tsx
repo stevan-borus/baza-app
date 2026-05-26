@@ -364,8 +364,14 @@ function SelectableSessionCard({
 }) {
   const isFull = session.availableSlots <= 0;
   return (
-    <Pressable onPress={onPress} disabled={isFull} style={{ opacity: isFull ? 0.4 : 1 }}>
+    <Pressable
+      testID={`reservation-session-${session.id}`}
+      onPress={onPress}
+      disabled={isFull}
+      style={{ opacity: isFull ? 0.4 : 1 }}
+    >
       <View
+        pointerEvents="none"
         className={
           selected
             ? "rounded-2xl border-2 border-accent"
@@ -373,7 +379,6 @@ function SelectableSessionCard({
         }
       >
         <SessionCard
-          testID={`reservation-session-${session.id}`}
           time={`${dayjs(session.startsAt).format("HH:mm")} - ${dayjs(session.endsAt).format("HH:mm")}`}
           className={session.classTypeName}
           trainerName={session.trainerName ?? undefined}
@@ -423,7 +428,12 @@ function SelectionToolbar({
           </Text>
         </Pressable>
       ) : null}
-      <Button onPress={onConfirm} disabled={disabled} variant={ctaDanger ? "danger" : undefined}>
+      <Button
+        testID="reservation-toolbar-cta"
+        onPress={onConfirm}
+        disabled={disabled}
+        variant={ctaDanger ? "danger" : undefined}
+      >
         <Text className="font-body-semibold text-bg">{ctaLabel}</Text>
       </Button>
     </View>
@@ -588,6 +598,7 @@ function CancelConfirmSheet({
           </Text>
         </Button>
         <Button
+          testID="reservation-cancel-confirm-sheet-cta"
           variant="danger"
           className="flex-1"
           disabled={cancelMut.isPending}
@@ -842,6 +853,7 @@ function ConfirmSheet({
           </Text>
         </Button>
         <Button
+          testID="reservation-confirm-sheet-cta"
           className="flex-1"
           disabled={create.isPending}
           onPress={() => {
