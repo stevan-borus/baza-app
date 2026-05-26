@@ -451,6 +451,7 @@ function ScheduleRow({
     roomName: string | null;
     availableSlots: number;
     capacity: number;
+    isBookedByMe?: boolean;
   };
   onPress: () => void;
 }) {
@@ -459,6 +460,7 @@ function ScheduleRow({
   const start = dayjs(session.startsAt);
   const end = dayjs(session.endsAt);
   const full = session.availableSlots === 0;
+  const bookedByMe = !!session.isBookedByMe;
   const photo = photoForSessionId(session.id);
 
   return (
@@ -527,17 +529,25 @@ function ScheduleRow({
           </Text>
         </View>
 
-        {/* Action chevron-style label */}
+        {/* Action chevron-style label. When the client already holds an
+            active booking on this session, show a positive "REZERVISANO"
+            label in the accent color instead of an action verb — the hero
+            card above already exposes the cancel CTA, so the row's only
+            job here is to confirm state. */}
         <Text
           style={{
             fontFamily: "AlbertSans-SemiBold",
             fontSize: 11,
-            color: tokens.foreground,
+            color: bookedByMe ? tokens.accent : tokens.foreground,
             letterSpacing: 1.4,
             textTransform: "uppercase",
           }}
         >
-          {full ? t("client.home.join") : t("client.home.book")}
+          {bookedByMe
+            ? t("client.home.booked")
+            : full
+              ? t("client.home.join")
+              : t("client.home.book")}
         </Text>
       </View>
     </Pressable>
