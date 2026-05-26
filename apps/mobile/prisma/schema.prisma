@@ -53,6 +53,9 @@ enum NotificationType {
   MINOR_PAPER_NEEDED
   BIRTHDAY_ADMIN_PROMPT
   BIRTHDAY_CLIENT_GIFT
+  RESERVATION_UNBACKED_ATTENDANCE
+  BULK_RESERVATION_CANCEL_ADMIN
+  BULK_RESERVATION_CANCEL_TRAINER
 }
 
 enum AppLocale {
@@ -98,6 +101,7 @@ model User {
   trainerNotesAuthored TrainerNote[] @relation("TrainerNoteAuthor")
   trainerSessions       Session[]            @relation("SessionTrainer")
   trainerSchedules      RecurringSchedule[]  @relation("ScheduleTrainer")
+  bookingsCreated       Booking[]            @relation("BookingCreatedBy")
 }
 
 model ClientProfile {
@@ -271,13 +275,16 @@ model Booking {
   sessionId       String
   clientProfileId String
   clientPackageId String?
+  createdByUserId String?
   createdAt       DateTime      @default(now())
   canceledAt      DateTime?
   session         Session       @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   clientProfile   ClientProfile @relation(fields: [clientProfileId], references: [id], onDelete: Cascade)
   clientPackage   ClientPackage? @relation(fields: [clientPackageId], references: [id], onDelete: SetNull)
+  createdBy       User?         @relation("BookingCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
 
   @@unique([sessionId, clientProfileId])
+  @@index([createdByUserId])
 }
 
 model WaitlistEntry {
