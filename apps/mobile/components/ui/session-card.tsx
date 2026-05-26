@@ -158,45 +158,22 @@ export function SessionCard({
       ? classTypeAccentColor[classType]
       : "#2e5b42";
 
-  // Tinted surface for the "success" tone — flat success-soft fill instead
-  // of the glass blur. The blur effect doesn't read well on top of a
-  // chromatic tint and the success state is a deliberate "this is claimed"
-  // marker, not a glass surface.
-  const CardSurface = ({ children }: { children: React.ReactNode }) => {
-    if (tone === "success") {
-      return (
-        <View
-          style={{
-            backgroundColor: tokens.successSoft,
-            borderRadius: 20,
-            borderWidth: 1,
-            borderColor: tokens.glassBorder,
-            paddingVertical: 12,
-            paddingHorizontal: 16,
-            ...(accentBorder === "left"
-              ? { borderLeftWidth: 3, borderLeftColor: accentBorderColor }
-              : {}),
-          }}
-        >
-          {children}
-        </View>
-      );
-    }
-    return (
-      <GlassCard
-        accentBorder={accentBorder}
-        accentBorderColor={accentBorderColor}
-        style={{ paddingVertical: 12 }}
-      >
-        {children}
-      </GlassCard>
-    );
-  };
+  // Tinted surface for the "success" tone — overrides GlassCard's
+  // backgroundColor via the style prop so every other dimension
+  // (padding, border-radius, border-width, accent border) matches the
+  // default treatment exactly.
+  const toneStyle =
+    tone === "success" ? { backgroundColor: tokens.successSoft } : null;
 
   return (
     <Pressable testID={testID} onPress={onPress} className="active:opacity-80">
       <View style={{ opacity: hidden ? 0.5 : 1 }}>
-        <CardSurface>
+        <GlassCard
+          accentBorder={accentBorder}
+          accentBorderColor={accentBorderColor}
+          noBlur={tone === "success"}
+          style={[{ paddingVertical: 12 }, toneStyle]}
+        >
           <View className="flex-row items-center gap-3">
             <SessionCardTime time={time} />
             <View className="flex-1 gap-0.5">
@@ -230,7 +207,7 @@ export function SessionCard({
               ) : null}
             </View>
           </View>
-        </CardSurface>
+        </GlassCard>
       </View>
     </Pressable>
   );

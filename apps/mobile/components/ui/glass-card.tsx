@@ -13,6 +13,12 @@ export type GlassCardProps = ViewProps & {
   accentBorderColor?: string;
   interactive?: boolean;
   size?: CardSize;
+  /**
+   * Skip the iOS BlurView overlay. Use this when the card sits on a
+   * chromatic tint (via `style.backgroundColor`) where the blur would
+   * wash out the color. Defaults to `false`.
+   */
+  noBlur?: boolean;
   children?: React.ReactNode;
 };
 
@@ -35,6 +41,7 @@ export function GlassCard({
   accentBorderColor = "#2e5b42",
   interactive: _interactive,
   size = "lg",
+  noBlur = false,
   ...props
 }: GlassCardProps) {
   const tokens = useThemeTokens();
@@ -79,7 +86,7 @@ export function GlassCard({
       ]}
       {...props}
     >
-      {isIOS && (
+      {isIOS && !noBlur && (
         <BlurView
           intensity={40}
           tint={resolvedTheme === "dark" ? "dark" : "light"}
