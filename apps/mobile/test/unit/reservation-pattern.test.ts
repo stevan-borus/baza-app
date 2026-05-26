@@ -4,13 +4,30 @@
  * The biweekly case is the load-bearing one: Week A on even week-offsets
  * from rangeStart, Week B on odd, no week-offset toggle. Anchor matters —
  * we always pin tests to a known Monday.
+ *
+ * expandPattern also drops sessions that are in the past relative to
+ * `lib/now.ts:nowMs()`, which honours TEST_ANCHOR_TIME per-call. We set
+ * the env var in a beforeAll so the helper resolves "now" to ANCHOR —
+ * otherwise every test session would be filtered as past on wall-clock.
  */
-import { describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import dayjs from "dayjs";
 import { expandPattern, type SessionForPattern } from "@/lib/reservation-pattern";
 
 // Anchor on a Monday so weekday math is unambiguous.
 const ANCHOR = dayjs("2026-05-11T00:00:00"); // Monday
+
+const prevAnchor = process.env.TEST_ANCHOR_TIME;
+beforeAll(() => {
+  process.env.TEST_ANCHOR_TIME = ANCHOR.toISOString();
+});
+afterAll(() => {
+  if (prevAnchor === undefined) {
+    delete process.env.TEST_ANCHOR_TIME;
+  } else {
+    process.env.TEST_ANCHOR_TIME = prevAnchor;
+  }
+});
 
 function session(id: string, daysFromAnchor: number, hour: number, minute = 0): SessionForPattern {
   return {
@@ -121,5 +138,35 @@ describe("expandPattern — biweekly rhythm", () => {
       rangeStart: ANCHOR,
     });
     expect([...result].sort()).toEqual(["w0-mon", "w2-mon", "w4-mon"]);
+  });
+});
+
+describe("expandPattern — past-session filter", () => {
+  it("drops sessions whose startsAt is before nowMs()", () => {
+    // "Now" is pinned to ANCHOR (Mon 2026-05-11 00:00 local). A session at
+    // 2026-05-10 (the day before) is in the past even though its weekday
+    // and time both match — it must be filtered out.
+    const sessions: SessionForPattern[] = [
+      // Past session — same weekday + time but before "now"
+      {
+        id: "past-mon",
+        startsAt: ANCHOR.subtract(7, "day")
+          .hour(7)
+          .minute(0)
+          .second(0)
+          .millisecond(0)
+          .toDate(),
+      },
+      // Future session — should match
+      session("future-mon", 7, 7),
+    ];
+    const result = expandPattern(sessions, {
+      rhythm: "weekly",
+      weekA: { weekdays: [0], timeOfDayMins: 7 * 60 },
+      weekB: { weekdays: [], timeOfDayMins: 0 },
+      weeks: 4,
+      rangeStart: ANCHOR.subtract(14, "day"), // wide range so past would match
+    });
+    expect([...result]).toEqual(["future-mon"]);
   });
 });

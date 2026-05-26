@@ -25,10 +25,11 @@ import { EmptyState } from "@/components/ui/states";
 import { Input } from "@/components/ui/input";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { FilterChip } from "@/components/ui/studio/filter-chip";
+import { nowMs } from "@/lib/now";
 import { authQueries } from "@/lib/queries/auth-queries-factory";
 import { expandPattern, type PatternInput, type RhythmWeek } from "@/lib/reservation-pattern";
 import { sessionsQueries } from "@/lib/queries/sessions-queries-factory";
-import { BottomSheetFlatList, BottomSheetTextInput } from "@gorhom/bottom-sheet";
+import { BottomSheetFlatList } from "@gorhom/bottom-sheet";
 import { clientsQueries } from "@/lib/queries/clients-queries-factory";
 import { packagesQueries } from "@/lib/queries/packages-queries-factory";
 import { bookingsQueries } from "@/lib/queries/bookings-queries-factory";
@@ -136,8 +137,12 @@ export function ReservationMode() {
   }, {});
 
   function toggleSession(s: AvailabilitySession) {
-    // Past sessions and currently-full sessions are still selectable in
-    // admin mode — the backfill / over-capacity decision is the admin's.
+    // Past + full sessions are visible (so the schedule looks complete and
+    // the admin can read off historical capacity) but not selectable —
+    // SelectableSessionCard renders them with `disabled` so this guard is
+    // belt-and-braces.
+    if (new Date(s.startsAt).getTime() < nowMs()) return;
+    if (s.availableSlots <= 0) return;
     setSelectedSessionIds((prev) => {
       const next = new Set(prev);
       if (next.has(s.id)) next.delete(s.id);
@@ -456,13 +461,17 @@ function SelectableSessionCard({
   onPress: () => void;
 }) {
   const isFull = session.availableSlots <= 0;
-  // Border traces the GlassCard's own radius (size=md → 20). We DON'T wrap
-  // the card in an outer bordered View; instead we overlay an absolutely
-  // positioned border so the visual edge can't drift from the card edge.
+  // Past sessions are visible (so the admin can see history) but disabled
+  // — booking a past session has no real meaning. Full sessions are also
+  // unselectable; the "0/6" / "full" badge already explains why.
+  const isPast = new Date(session.startsAt).getTime() < nowMs();
+  const disabled = isPast || isFull;
   return (
     <Pressable
       testID={`reservation-session-${session.id}`}
       onPress={onPress}
+      disabled={disabled}
+      style={disabled ? { opacity: 0.45 } : undefined}
     >
       <View pointerEvents="none">
         <SessionCard
@@ -783,24 +792,16 @@ function PatternSheet({
         </View>
       )}
 
-      <View>
+      <View className="gap-1.5">
         <CapsLabel size={9} tracking={1.6} className="text-muted">
           {t("admin.reservations.pattern.weeks", { defaultValue: "Broj nedelja" })}
         </CapsLabel>
-        <BottomSheetTextInput
+        <Input
           value={weeksStr}
           onChangeText={setWeeksStr}
           keyboardType="numeric"
           maxLength={2}
-          style={{
-            fontSize: 18,
-            lineHeight: 22,
-            paddingVertical: 6,
-            color: "#111",
-            fontFamily: "AlbertSans-Medium",
-          }}
         />
-        <View style={{ height: 1, backgroundColor: "rgba(0,0,0,0.12)" }} />
       </View>
 
       <Button onPress={handleApply} disabled={!canApply}>
@@ -887,63 +888,60 @@ function WeekEditor({
         })}
       </View>
 
-      {/* Time — large Fraunces numerals on a hairline underline. Raw-string
-          state so deleting a digit doesn't snap the field back to "0". */}
-      <View>
+      {/* Time — two Input fields in a row with a hairline colon between them.
+          Raw-string state so deleting a digit doesn't snap the field back
+          to "0". Inputs commit a parsed value as the user types, then pad
+          on blur. */}
+      <View className="gap-1.5">
         <CapsLabel size={9} tracking={1.6} className="text-muted">
           {t("admin.reservations.pattern.time", { defaultValue: "Vreme" })}
         </CapsLabel>
-        <View className="flex-row items-baseline gap-1.5">
-          <BottomSheetTextInput
-            value={hourStr}
-            onChangeText={(v) => {
-              setHourStr(v);
-              commitTime(v, minStr);
-            }}
-            onBlur={() => {
-              const padded = hourStr === "" ? "00" : String(Number(hourStr) || 0).padStart(2, "0");
-              setHourStr(padded);
-            }}
-            keyboardType="numeric"
-            maxLength={2}
-            style={{
-              fontSize: 22,
-              lineHeight: 26,
-              width: 56,
-              textAlign: "center",
-              color: "#111",
-              fontFamily: "AlbertSans-Medium",
-            }}
-          />
+        <View className="flex-row items-center gap-2">
+          <View style={{ width: 72 }}>
+            <Input
+              value={hourStr}
+              onChangeText={(v) => {
+                setHourStr(v);
+                commitTime(v, minStr);
+              }}
+              onBlur={() => {
+                const padded =
+                  hourStr === ""
+                    ? "00"
+                    : String(Number(hourStr) || 0).padStart(2, "0");
+                setHourStr(padded);
+              }}
+              keyboardType="numeric"
+              maxLength={2}
+              textAlign="center"
+            />
+          </View>
           <Text
             className="text-muted font-body-medium"
             style={{ fontSize: 22, lineHeight: 26 }}
           >
             :
           </Text>
-          <BottomSheetTextInput
-            value={minStr}
-            onChangeText={(v) => {
-              setMinStr(v);
-              commitTime(hourStr, v);
-            }}
-            onBlur={() => {
-              const padded = minStr === "" ? "00" : String(Number(minStr) || 0).padStart(2, "0");
-              setMinStr(padded);
-            }}
-            keyboardType="numeric"
-            maxLength={2}
-            style={{
-              fontSize: 22,
-              lineHeight: 26,
-              width: 56,
-              textAlign: "center",
-              color: "#111",
-              fontFamily: "AlbertSans-Medium",
-            }}
-          />
+          <View style={{ width: 72 }}>
+            <Input
+              value={minStr}
+              onChangeText={(v) => {
+                setMinStr(v);
+                commitTime(hourStr, v);
+              }}
+              onBlur={() => {
+                const padded =
+                  minStr === ""
+                    ? "00"
+                    : String(Number(minStr) || 0).padStart(2, "0");
+                setMinStr(padded);
+              }}
+              keyboardType="numeric"
+              maxLength={2}
+              textAlign="center"
+            />
+          </View>
         </View>
-        <View style={{ height: 1, backgroundColor: "rgba(0,0,0,0.12)" }} />
       </View>
     </View>
   );

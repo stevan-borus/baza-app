@@ -12,6 +12,7 @@
  * shifting the start date.
  */
 import dayjs from "dayjs";
+import { nowMs } from "@/lib/now";
 
 export type RhythmWeek = {
   weekdays: number[]; // 0=Mon .. 6=Sun
@@ -41,7 +42,14 @@ export function expandPattern(
   const out = new Set<string>();
   const start = input.rangeStart.startOf("day");
   const end = start.add(input.weeks, "week").endOf("day");
+  // Sessions whose startsAt is already in the past are never matched —
+  // booking a past session has no real meaning and the UI's per-card
+  // `disabled` state already prevents manual selection. The pattern
+  // expansion has to mirror that or admins would see "10 matched" but
+  // only 7 actually selectable cards.
+  const nowInstant = nowMs();
   for (const s of sessions) {
+    if (s.startsAt.getTime() < nowInstant) continue;
     const d = dayjs(s.startsAt);
     if (d.isBefore(start, "day") || d.isAfter(end, "day")) continue;
     const dow = (d.day() + 6) % 7; // convert Sun=0 → Mon=0
