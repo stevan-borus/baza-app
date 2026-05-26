@@ -23,6 +23,7 @@ import { startOfLocaleWeek } from "@/components/ui/week-strip";
 import { ScreenContainerRaw, useTabBarBottomPadding } from "@/components/ui/screen-container";
 import { EmptyState } from "@/components/ui/states";
 import { Input } from "@/components/ui/input";
+import { SegmentedControl } from "@/components/ui/segmented-control";
 import { FilterChip } from "@/components/ui/studio/filter-chip";
 import { authQueries } from "@/lib/queries/auth-queries-factory";
 import { expandPattern, type PatternInput, type RhythmWeek } from "@/lib/reservation-pattern";
@@ -511,7 +512,7 @@ function SelectionToolbar({
           {t("admin.reservations.selected", { defaultValue: "Izabrano" })}
         </CapsLabel>
         <Text
-          className="text-foreground font-display"
+          className="text-foreground font-body-bold"
           style={{ fontSize: 22, lineHeight: 24 }}
         >
           {count}
@@ -528,9 +529,9 @@ function SelectionToolbar({
         testID="reservation-toolbar-cta"
         onPress={onConfirm}
         disabled={disabled}
-        variant={ctaDanger ? "danger" : undefined}
+        variant={ctaDanger ? "danger" : "primary"}
       >
-        <Text className="font-body-semibold text-bg">{ctaLabel}</Text>
+        {ctaLabel}
       </Button>
     </View>
   );
@@ -544,43 +545,24 @@ function ModeToggle({
   onChange: (m: "reserve" | "cancel") => void;
 }) {
   const { t } = useTranslation();
-  const options: Array<{ value: "reserve" | "cancel"; label: string }> = [
-    {
-      value: "reserve",
-      label: t("admin.reservations.modeReserve", { defaultValue: "Rezerviši" }),
-    },
-    {
-      value: "cancel",
-      label: t("admin.reservations.modeCancel", { defaultValue: "Otkaži" }),
-    },
-  ];
   return (
     <View className="px-5 pb-2">
-      <View className="flex-row rounded-2xl border border-glass-border bg-glass-surface p-1">
-        {options.map((opt) => {
-          const active = opt.value === mode;
-          return (
-            <Pressable
-              key={opt.value}
-              testID={`reservation-mode-${opt.value}`}
-              onPress={() => onChange(opt.value)}
-              className={
-                active
-                  ? "flex-1 rounded-xl bg-foreground py-2 items-center"
-                  : "flex-1 rounded-xl py-2 items-center"
-              }
-            >
-              <Text
-                className={
-                  active ? "text-background font-body-semibold" : "text-muted font-body-medium"
-                }
-              >
-                {opt.label}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </View>
+      <SegmentedControl<"reserve" | "cancel">
+        value={mode}
+        segments={[
+          {
+            value: "reserve",
+            label: t("admin.reservations.modeReserve", { defaultValue: "Rezerviši" }),
+            testID: "reservation-mode-reserve",
+          },
+          {
+            value: "cancel",
+            label: t("admin.reservations.modeCancel", { defaultValue: "Otkaži" }),
+            testID: "reservation-mode-cancel",
+          },
+        ]}
+        onValueChange={onChange}
+      />
     </View>
   );
 }
@@ -811,20 +793,18 @@ function PatternSheet({
           keyboardType="numeric"
           maxLength={2}
           style={{
-            fontSize: 28,
-            lineHeight: 32,
-            paddingVertical: 4,
+            fontSize: 18,
+            lineHeight: 22,
+            paddingVertical: 6,
             color: "#111",
-            fontFamily: "Fraunces",
+            fontFamily: "AlbertSans-Medium",
           }}
         />
         <View style={{ height: 1, backgroundColor: "rgba(0,0,0,0.12)" }} />
       </View>
 
       <Button onPress={handleApply} disabled={!canApply}>
-        <Text className="text-bg font-body-semibold">
-          {t("admin.reservations.pattern.apply", { defaultValue: "Primeni" })}
-        </Text>
+        {t("admin.reservations.pattern.apply", { defaultValue: "Primeni" })}
       </Button>
     </View>
   );
@@ -927,17 +907,17 @@ function WeekEditor({
             keyboardType="numeric"
             maxLength={2}
             style={{
-              fontSize: 32,
-              lineHeight: 36,
+              fontSize: 22,
+              lineHeight: 26,
               width: 56,
               textAlign: "center",
               color: "#111",
-              fontFamily: "Fraunces",
+              fontFamily: "AlbertSans-Medium",
             }}
           />
           <Text
-            className="text-muted font-display"
-            style={{ fontSize: 28, lineHeight: 32 }}
+            className="text-muted font-body-medium"
+            style={{ fontSize: 22, lineHeight: 26 }}
           >
             :
           </Text>
@@ -954,12 +934,12 @@ function WeekEditor({
             keyboardType="numeric"
             maxLength={2}
             style={{
-              fontSize: 32,
-              lineHeight: 36,
+              fontSize: 22,
+              lineHeight: 26,
               width: 56,
               textAlign: "center",
               color: "#111",
-              fontFamily: "Fraunces",
+              fontFamily: "AlbertSans-Medium",
             }}
           />
         </View>
@@ -1044,9 +1024,7 @@ function ConfirmSheet({
 
       <View className="flex-row gap-3 pt-5">
         <Button variant="secondary" className="flex-1" onPress={onCancel}>
-          <Text className="font-body-medium">
-            {t("admin.clients.cancel", { defaultValue: "Otkaži" })}
-          </Text>
+          {t("admin.clients.cancel", { defaultValue: "Otkaži" })}
         </Button>
         <Button
           testID="reservation-confirm-sheet-cta"
@@ -1062,9 +1040,7 @@ function ConfirmSheet({
             );
           }}
         >
-          <Text className="text-bg font-body-semibold">
-            {t("admin.reservations.confirm", { defaultValue: "Rezerviši" })}
-          </Text>
+          {t("admin.reservations.confirm", { defaultValue: "Rezerviši" })}
         </Button>
       </View>
     </View>
@@ -1137,9 +1113,7 @@ function CancelConfirmSheet({
 
       <View className="flex-row gap-3 pt-5">
         <Button variant="secondary" className="flex-1" onPress={onCancel}>
-          <Text className="font-body-medium">
-            {t("admin.clients.cancel", { defaultValue: "Otkaži" })}
-          </Text>
+          {t("admin.clients.cancel", { defaultValue: "Otkaži" })}
         </Button>
         <Button
           testID="reservation-cancel-confirm-sheet-cta"
@@ -1150,9 +1124,7 @@ function CancelConfirmSheet({
             cancelMut.mutate({ bookingIds }, { onSuccess: onDone });
           }}
         >
-          <Text className="text-bg font-body-semibold">
-            {t("admin.reservations.cancelConfirmCta", { defaultValue: "Potvrdi" })}
-          </Text>
+          {t("admin.reservations.cancelConfirmCta", { defaultValue: "Potvrdi" })}
         </Button>
       </View>
     </View>
