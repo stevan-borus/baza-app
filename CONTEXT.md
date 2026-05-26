@@ -47,7 +47,22 @@ A scheduled class — `(classType, room, trainer, startsAt, endsAt, capacity)`. 
 A set of Sessions generated from a weekday pattern (e.g. Mon/Wed/Fri × 4 weeks). Each occurrence is an editable Session; edits can target one occurrence or the whole series.
 
 **Booking**:
-A Client claiming a slot in a Session. Decrements the matched ClientPackage's `sessionsRemaining` (or doesn't, depending on cancellation timing — see below).
+A Client claiming a slot in a Session. Decrements the matched ClientPackage's `sessionsRemaining` (or doesn't, depending on cancellation timing — see below). Can be created by the Client (via `POST /bookings`, gated by `no_package_for_class`) or by an **Admin** (via the admin booking path, which **skips** the package-eligibility check — see **Admin reservation**).
+
+**Admin reservation**:
+A Booking created by an Admin on behalf of a Client to hold a seat. Identical to a self-booked Booking in every downstream system (capacity, waitlist, late-cancel, calendar visibility, client cancel rights) — the *only* differences: (1) the admin path skips the booking-time package check, so `clientPackageId` may be `null` at creation; (2) the Booking carries an audit pointer to the creating Admin. Admins can reserve arbitrarily far into the future. The cron at session-end late-binds a package if one is eligible; if not, it records `NO_PACKAGE` and notifies admins (push + in-app) that the Client attended an unbacked session. Used to lock in long-term Clients whose weekly Session mix varies.
+
+The ClassType scoping rule (a Reformer ClientPackage cannot back an Energy Booking) is **not enforced** as a hard rule on Admin reservations — but the admin UI shows a **soft warning** at confirmation time when the Client owns no package for the target ClassType, and the **Pattern reservation** confirmation surfaces a per-ClassType breakdown (e.g. "152 selected: 100 Reformer / 52 Energy — Marija has Reformer only, 52 will be unbacked"). The warning is informational; the admin can proceed.
+
+Creation lives on **one screen**: the admin schedule (existing `pregled` calendar) in reservation mode, with a persistent client-selection banner and a selection toolbar. Two entry points reach it: (1) the Client profile's "Reserve sessions" action (client pre-bound), (2) the admin schedule's reservation toggle (admin picks client via the banner). Under the hood, every reservation is the same gesture: a set of selected `sessionId`s submitted to a single endpoint (`POST /admin/reservations`).
+
+Selection is built from two interchangeable inputs that both feed the *same* selection set:
+- **Tap selection** — Admin taps individual Session cards in the calendar to toggle them.
+- **Pattern overlay** — A power-tool sheet ("Apply pattern…") taking weekday(s) + time-of-day + date range; on apply, matching existing Sessions in the window light up as selected and join the same set. Admin can then deselect specific cards (e.g. the Client's travel weeks) or tap-add more (e.g. a one-off Tuesday 5pm). Sessions that don't exist yet (because the recurring schedule hasn't been materialised that far) are silently skipped — the admin re-runs after extending the schedule.
+
+Capacity conflicts are visible **in the calendar during selection**, not summarised after. Full Sessions render with a distinct unavailable treatment in reservation mode and are unselectable; when the pattern overlay matches a full Session, the card highlights in a conflict color rather than the normal selection color. The Client is never auto-waitlisted by a reservation gesture — admin decides per-Session whether to manually waitlist.
+
+_Avoid_: "Hold", "block", "standing booking". The word is **reservation** when admin-initiated, **booking** in all other contexts; storage is one `Booking` table.
 
 **Late-cancel cutoff**:
 The point before which a cancellation is "free" (no consumption) and after which it forfeits the session. Resolved per ClientPackage from its snapshotted `lateCancelHours`.
@@ -89,7 +104,13 @@ Sends notifications when a Client's ClientPackage is N days from `expiresAt`.
 ### Notifications
 
 **Cancellation notification**:
-Every Booking cancellation generates a NotificationLog row for **all admins** and for **the Session's assigned Trainer**. Late cancellations (per `shouldApplyLateCancelPenalty`) trigger an Expo push; early cancellations are silent in-app (NotificationLog created, no push). If a Trainer is also an Admin, they receive only the Trainer-flavored notification. The waitlist auto-promotion notification to the promoted Client is unrelated and unchanged.
+Every single-Booking cancellation generates a NotificationLog row for **all admins** and for **the Session's assigned Trainer**. Late cancellations (per `shouldApplyLateCancelPenalty`) trigger an Expo push; early cancellations are silent in-app (NotificationLog created, no push). If a Trainer is also an Admin, they receive only the Trainer-flavored notification. The waitlist auto-promotion notification to the promoted Client is unrelated and unchanged. For **Bulk reservation cancel** the fan-out collapses (see that entry).
+
+**Bulk reservation cancel**:
+An admin gesture that cancels N Bookings for one Client in a single transaction (e.g. cancelling all the Mon/Wed/Fri 7am reservations during a Client's travel weeks). One dedicated endpoint, atomic. Per-Booking, the late-cancel penalty applies exactly as it would for a Client-initiated cancel — admin gets no override; for the typical unbacked **Admin reservation** there's no `clientPackageId` to forfeit, so it's consequence-free in that common case. Waitlist promotion runs per Session as usual. Notification fan-out collapses to **one notification per recipient per bulk action** (one per other admin, one per affected trainer, none to the initiating admin) instead of one-per-cancelled-Booking; the promoted-client `BOOKING_CONFIRMED` push coalesces per `userId` if the same Client is promoted from multiple Sessions in the same bulk action.
+
+**Unbacked-attendance notification**:
+When `cron:sessions` processes a completed Booking and resolves no eligible ClientPackage (`NO_PACKAGE` outcome), all admins receive both a push and an in-app NotificationLog naming the Client + Session. Used to surface long-term Clients with **Admin reservation** bookings who are attending without paying for a covering package — the admin then decides whether to sell a package, comp one, or cancel the remaining reservations.
 
 ### Test fixtures
 
