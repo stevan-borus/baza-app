@@ -15,7 +15,6 @@ import { useLocalSearchParams, useRouter, type Href } from "expo-router";
 import dayjs from "dayjs";
 import Feather from "@expo/vector-icons/Feather";
 import { AppSheet } from "@/components/ui/sheet";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CapsLabel } from "@/components/ui/studio/typography";
 import { SessionCard } from "@/components/ui/session-card";
@@ -489,7 +488,6 @@ function SelectableSessionCard({
   alreadyBooked: boolean;
   onPress: () => void;
 }) {
-  const { t } = useTranslation();
   const isFull = session.availableSlots <= 0;
   // Past sessions are visible but disabled — booking a past session has no
   // real meaning. Full sessions: the "0/6" badge already explains why.
@@ -497,12 +495,16 @@ function SelectableSessionCard({
   // re-reserving would just hit the server's skippedAlreadyBooked path.
   const isPast = new Date(session.startsAt).getTime() < nowMs();
   const disabled = isPast || isFull || alreadyBooked;
+  // Past and full sessions are dimmed; already-booked sessions get a
+  // tinted-green surface (no opacity drop) so they read as "claimed" rather
+  // than "unavailable". All three states are disabled for tap.
+  const dimOpacity = isPast || isFull ? { opacity: 0.45 } : undefined;
   return (
     <Pressable
       testID={`reservation-session-${session.id}`}
       onPress={onPress}
       disabled={disabled}
-      style={disabled ? { opacity: 0.45 } : undefined}
+      style={dimOpacity}
     >
       <View pointerEvents="none">
         <SessionCard
@@ -513,15 +515,7 @@ function SelectableSessionCard({
           bookedCount={session.bookedCount}
           capacity={session.capacity}
           status={isFull ? "full" : "available"}
-          metaBadge={
-            alreadyBooked ? (
-              <Badge status="success">
-                {t("admin.reservations.alreadyBooked", {
-                  defaultValue: "Već rezervisano",
-                })}
-              </Badge>
-            ) : undefined
-          }
+          tone={alreadyBooked ? "success" : "default"}
         />
       </View>
       {selected ? (
