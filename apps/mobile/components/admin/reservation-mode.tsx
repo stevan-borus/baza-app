@@ -5,7 +5,7 @@
  * `selectedSessionIds` set. Past sessions are selectable (admins backfill).
  *
  * The route is gated to ADMIN — trainers and clients hitting
- * /pregled/rezervisi get redirected to their home tab.
+ * /klijenti/rezervisi get redirected to their home tab.
  */
 import React, { useState, useEffect } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
@@ -15,6 +15,7 @@ import { useLocalSearchParams, useRouter, type Href } from "expo-router";
 import dayjs from "dayjs";
 import Feather from "@expo/vector-icons/Feather";
 import { AppSheet } from "@/components/ui/sheet";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CapsLabel } from "@/components/ui/studio/typography";
 import { SessionCard } from "@/components/ui/session-card";
@@ -112,6 +113,25 @@ export function ReservationMode() {
   const availabilityQuery = useQuery(sessionsQueries.availabilityByMonth(month));
   const allSessions = (availabilityQuery.data?.sessions ?? []) as AvailabilitySession[];
 
+  // Set of sessionIds the bound client already has an active booking on —
+  // used to render those cards as disabled "Već rezervisano" and to skip
+  // them in pattern expansion (so the count never disagrees with the
+  // selectable cards). The server-side `skippedAlreadyBooked` check stays
+  // as defence-in-depth for race conditions.
+  const clientBookingsQ = useInfiniteQuery({
+    ...bookingsQueries.byClient({
+      clientUserId: clientUserId ?? "",
+      period: "upcoming",
+    }),
+    enabled: !!clientUserId,
+  });
+  const alreadyBookedSessionIds = new Set<string>(
+    (clientBookingsQ.data?.pages ?? [])
+      .flatMap((p) => p.bookings ?? [])
+      .filter((b) => b.status === "CONFIRMED")
+      .map((b) => b.session.id),
+  );
+
   // Distinct ClassTypes for the filter chips, in observed order so the UI
   // stays stable across refetches.
   const classTypeNames: string[] = [];
@@ -137,12 +157,13 @@ export function ReservationMode() {
   }, {});
 
   function toggleSession(s: AvailabilitySession) {
-    // Past + full sessions are visible (so the schedule looks complete and
-    // the admin can read off historical capacity) but not selectable —
-    // SelectableSessionCard renders them with `disabled` so this guard is
-    // belt-and-braces.
+    // Past + full + already-booked sessions are visible (so the schedule
+    // looks complete and the admin can see the client's existing slots)
+    // but not selectable — SelectableSessionCard renders them disabled so
+    // this guard is belt-and-braces.
     if (new Date(s.startsAt).getTime() < nowMs()) return;
     if (s.availableSlots <= 0) return;
+    if (alreadyBookedSessionIds.has(s.id)) return;
     setSelectedSessionIds((prev) => {
       const next = new Set(prev);
       if (next.has(s.id)) next.delete(s.id);
@@ -168,7 +189,12 @@ export function ReservationMode() {
     const matched = expandPattern(allSessions, input);
     setSelectedSessionIds((prev) => {
       const next = new Set(prev);
-      for (const id of matched) next.add(id);
+      for (const id of matched) {
+        // Don't reapply over an existing booking — the server would skip it
+        // and the admin would see a misleading "N matched" count.
+        if (alreadyBookedSessionIds.has(id)) continue;
+        next.add(id);
+      }
       return next;
     });
     setShowPatternSheet(false);
@@ -263,6 +289,7 @@ export function ReservationMode() {
                       key={s.id}
                       session={s}
                       selected={selectedSessionIds.has(s.id)}
+                      alreadyBooked={alreadyBookedSessionIds.has(s.id)}
                       onPress={() => toggleSession(s)}
                     />
                   ))}
@@ -454,18 +481,22 @@ function ClassTypeFilter({
 function SelectableSessionCard({
   session,
   selected,
+  alreadyBooked,
   onPress,
 }: {
   session: AvailabilitySession;
   selected: boolean;
+  alreadyBooked: boolean;
   onPress: () => void;
 }) {
+  const { t } = useTranslation();
   const isFull = session.availableSlots <= 0;
-  // Past sessions are visible (so the admin can see history) but disabled
-  // — booking a past session has no real meaning. Full sessions are also
-  // unselectable; the "0/6" / "full" badge already explains why.
+  // Past sessions are visible but disabled — booking a past session has no
+  // real meaning. Full sessions: the "0/6" badge already explains why.
+  // Already-booked: the client owns an active booking on this session, so
+  // re-reserving would just hit the server's skippedAlreadyBooked path.
   const isPast = new Date(session.startsAt).getTime() < nowMs();
-  const disabled = isPast || isFull;
+  const disabled = isPast || isFull || alreadyBooked;
   return (
     <Pressable
       testID={`reservation-session-${session.id}`}
@@ -490,6 +521,17 @@ function SelectableSessionCard({
           className="absolute inset-0 border-2 border-accent"
           style={{ borderRadius: CARD_RADIUS }}
         />
+      ) : null}
+      {alreadyBooked ? (
+        <View
+          pointerEvents="none"
+          className="absolute"
+          style={{ top: 10, right: 12 }}
+        >
+          <Badge status="success">
+            {t("admin.reservations.alreadyBooked", { defaultValue: "Već rezervisano" })}
+          </Badge>
+        </View>
       ) : null}
     </Pressable>
   );

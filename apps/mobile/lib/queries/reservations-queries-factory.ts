@@ -59,9 +59,14 @@ export function useCreateReservationsMutation() {
     mutationKey: ["reservations", "create"] as const,
     mutationFn: createReservationsRequest,
     onSuccess: () => {
-      // Server availability + per-client lists may now reflect the new bookings.
+      // Server availability + per-client lists + per-client bookings list
+      // may now reflect the new bookings. The bookings invalidation is
+      // load-bearing for reservation mode itself — the already-booked badge
+      // reads from the bookings query, so without this the screen would
+      // still show the just-reserved cards as selectable on a refetch.
       qc.invalidateQueries({ queryKey: ["sessions"] });
       qc.invalidateQueries({ queryKey: ["clients"] });
+      qc.invalidateQueries({ queryKey: ["bookings"] });
     },
   });
 }

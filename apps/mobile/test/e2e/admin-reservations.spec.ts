@@ -74,7 +74,7 @@ test.describe("admin reservations", () => {
       clientUserId: emptyClient.clientProfile.userId,
       clientFullName: "Empty Client",
     });
-    await page.goto(`/pregled/rezervisi?${qs.toString()}`);
+    await page.goto(`/klijenti/rezervisi?${qs.toString()}`);
 
     // Wait for the week strip then pick a day that has sessions. The
     // anchor is Mon 2026-05-11 09:00 (just before the seeded 10:00 Reformer
@@ -158,7 +158,7 @@ test.describe("admin reservations", () => {
       .toBe(1);
   });
 
-  test("trainer hitting /pregled/rezervisi is redirected away", async ({ page }) => {
+  test("trainer hitting /klijenti/rezervisi is redirected away", async ({ page }) => {
     // Trainer-lead is a TRAINER per the rich seed.
     await page.goto("/sign-in");
     await page.getByTestId("auth-email-input").fill("trainer.reformer@e2e.test");
@@ -167,12 +167,12 @@ test.describe("admin reservations", () => {
     // Wait for trainer shell.
     await expect(page.getByTestId("tab-raspored")).toBeVisible({ timeout: 15_000 });
 
-    await page.goto("/pregled/rezervisi");
+    await page.goto("/klijenti/rezervisi");
     // Should never land on the admin reservation route — redirect kicks in.
-    await page.waitForURL((url) => !url.pathname.includes("/pregled/rezervisi"), {
+    await page.waitForURL((url) => !url.pathname.includes("/klijenti/rezervisi"), {
       timeout: 10_000,
     });
-    expect(page.url()).not.toContain("/pregled/rezervisi");
+    expect(page.url()).not.toContain("/klijenti/rezervisi");
   });
 
   test("admin reserves via pattern overlay and confirms unbacked-attendance copy", async ({
@@ -191,7 +191,7 @@ test.describe("admin reservations", () => {
       clientUserId: emptyClient.clientProfile.userId,
       clientFullName: "Empty Client",
     });
-    await page.goto(`/pregled/rezervisi?${qs.toString()}`);
+    await page.goto(`/klijenti/rezervisi?${qs.toString()}`);
 
     // Open the pattern accelerator.
     await page

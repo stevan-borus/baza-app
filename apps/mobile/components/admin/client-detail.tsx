@@ -195,7 +195,7 @@ export function ClientDetail({ id }: { id: string }) {
       clientUserId: client.user.id,
       clientFullName: client.user.fullName,
     });
-    router.push(`/(admin)/pregled/rezervisi?${qs.toString()}` as Href);
+    router.push(`/(admin)/klijenti/rezervisi?${qs.toString()}` as Href);
   }
 
   return (
