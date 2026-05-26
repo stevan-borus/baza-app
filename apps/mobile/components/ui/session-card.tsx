@@ -22,6 +22,14 @@ type SessionCardProps = {
   status: SessionStatus;
   hidden?: boolean;
   hiddenLabel?: string;
+  /**
+   * Optional badge rendered inline in the meta column, under the
+   * trainer / room lines. Used by callers (e.g. admin reservation mode)
+   * to mark per-context state — "already booked by this client",
+   * "promoted from waitlist" etc — without colliding with the capacity
+   * badge in the top-right of the card.
+   */
+  metaBadge?: React.ReactNode;
   onPress?: () => void;
   testID?: string;
   sessionId?: string;
@@ -129,6 +137,7 @@ export function SessionCard({
   classType,
   hidden,
   hiddenLabel,
+  metaBadge,
   onPress,
   testID,
   sessionId,
@@ -174,6 +183,9 @@ export function SessionCard({
                 <CapsLabel size={11} tracking={2.4} className="text-muted mt-1">
                   {hiddenLabel}
                 </CapsLabel>
+              ) : null}
+              {metaBadge ? (
+                <View className="flex-row mt-1.5">{metaBadge}</View>
               ) : null}
             </View>
           </View>

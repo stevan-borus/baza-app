@@ -513,6 +513,15 @@ function SelectableSessionCard({
           bookedCount={session.bookedCount}
           capacity={session.capacity}
           status={isFull ? "full" : "available"}
+          metaBadge={
+            alreadyBooked ? (
+              <Badge status="success">
+                {t("admin.reservations.alreadyBooked", {
+                  defaultValue: "Već rezervisano",
+                })}
+              </Badge>
+            ) : undefined
+          }
         />
       </View>
       {selected ? (
@@ -521,17 +530,6 @@ function SelectableSessionCard({
           className="absolute inset-0 border-2 border-accent"
           style={{ borderRadius: CARD_RADIUS }}
         />
-      ) : null}
-      {alreadyBooked ? (
-        <View
-          pointerEvents="none"
-          className="absolute"
-          style={{ top: 10, right: 12 }}
-        >
-          <Badge status="success">
-            {t("admin.reservations.alreadyBooked", { defaultValue: "Već rezervisano" })}
-          </Badge>
-        </View>
       ) : null}
     </Pressable>
   );
