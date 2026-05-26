@@ -1,6 +1,9 @@
+import { NOTIFICATION_MESSAGE_KEYS } from "@baza/i18n";
+import { UserRole } from "@/generated/prisma";
 import { now } from "@/lib/now";
 import { requireCronAuth } from "@/lib/server/cron-auth";
 import { ok } from "@/lib/server/http";
+import { createSystemNotification } from "@/lib/server/notifications";
 import { findEligibleClientPackage } from "@/lib/server/package-eligibility";
 import { prisma } from "@/lib/server/prisma";
 import { tryCatch } from "@/lib/server/try-catch";
@@ -52,7 +55,11 @@ export async function POST(request: Request) {
         select: {
           startsAt: true,
           classTypeId: true,
+          classType: { select: { name: true } },
         },
+      },
+      clientProfile: {
+        select: { user: { select: { fullName: true } } },
       },
     },
   });
@@ -61,6 +68,12 @@ export async function POST(request: Request) {
   let alreadyConsumed = 0;
   let noEligiblePackage = 0;
   let failed = 0;
+  const unbackedForNotification: Array<{
+    sessionId: string;
+    clientFullName: string;
+    classTypeName: string;
+    sessionStartsAt: Date;
+  }> = [];
 
   for (const booking of candidateBookings) {
     if (dryRun) {
@@ -171,10 +184,41 @@ export async function POST(request: Request) {
     const outcome = txResult.data as ConsumptionOutcome;
     if (outcome === "NO_PACKAGE") {
       noEligiblePackage += 1;
+      unbackedForNotification.push({
+        sessionId: booking.sessionId,
+        clientFullName: booking.clientProfile.user.fullName,
+        classTypeName: booking.session.classType.name,
+        sessionStartsAt: booking.session.startsAt,
+      });
       continue;
     }
 
     consumed += 1;
+  }
+
+  if (!dryRun && unbackedForNotification.length > 0) {
+    const admins = await prisma.user.findMany({
+      where: { role: UserRole.ADMIN, isActive: true },
+      select: { id: true },
+    });
+    void (async () => {
+      for (const item of unbackedForNotification) {
+        for (const admin of admins) {
+          await createSystemNotification(
+            admin.id,
+            NOTIFICATION_MESSAGE_KEYS.RESERVATION_UNBACKED_ATTENDANCE,
+            "RESERVATION_UNBACKED_ATTENDANCE",
+            {
+              sessionId: item.sessionId,
+              clientFullName: item.clientFullName,
+              classTypeName: item.classTypeName,
+              sessionStartsAt: item.sessionStartsAt.toISOString(),
+            },
+            { dedupeKey: `unbacked:${item.sessionId}:${admin.id}` },
+          );
+        }
+      }
+    })();
   }
 
   return ok({

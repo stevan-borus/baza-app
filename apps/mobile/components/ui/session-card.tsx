@@ -3,6 +3,7 @@ import { Pressable, Text, View } from "react-native";
 import { GlassCard } from "./glass-card";
 import { Badge } from "./badge";
 import { CapsLabel } from "./studio/typography";
+import { useThemeTokens } from "./tokens";
 
 type SessionStatus = "booked" | "waitlisted" | "full" | "available";
 
@@ -22,6 +23,21 @@ type SessionCardProps = {
   status: SessionStatus;
   hidden?: boolean;
   hiddenLabel?: string;
+  /**
+   * Optional badge rendered inline in the meta column, under the
+   * trainer / room lines. Used by callers (e.g. admin reservation mode)
+   * to mark per-context state — "already booked by this client",
+   * "promoted from waitlist" etc — without colliding with the capacity
+   * badge in the top-right of the card.
+   */
+  metaBadge?: React.ReactNode;
+  /**
+   * Surface tone. "default" uses the glass treatment; "success" tints the
+   * whole card with `successSoft` so callers can mark a session as
+   * already-claimed by the current context (e.g. admin reservation mode
+   * showing "this client is already booked here").
+   */
+  tone?: "default" | "success";
   onPress?: () => void;
   testID?: string;
   sessionId?: string;
@@ -129,15 +145,25 @@ export function SessionCard({
   classType,
   hidden,
   hiddenLabel,
+  metaBadge,
+  tone = "default",
   onPress,
   testID,
   sessionId,
 }: SessionCardProps) {
+  const tokens = useThemeTokens();
   const accentBorder = classType && classTypeAccentColor[classType] ? "left" : undefined;
   const accentBorderColor =
     classType && classTypeAccentColor[classType]
       ? classTypeAccentColor[classType]
       : "#2e5b42";
+
+  // Tinted surface for the "success" tone — overrides GlassCard's
+  // backgroundColor via the style prop so every other dimension
+  // (padding, border-radius, border-width, accent border) matches the
+  // default treatment exactly.
+  const toneStyle =
+    tone === "success" ? { backgroundColor: tokens.successSoft } : null;
 
   return (
     <Pressable testID={testID} onPress={onPress} className="active:opacity-80">
@@ -145,7 +171,8 @@ export function SessionCard({
         <GlassCard
           accentBorder={accentBorder}
           accentBorderColor={accentBorderColor}
-          style={{ paddingVertical: 12 }}
+          noBlur={tone === "success"}
+          style={[{ paddingVertical: 12 }, toneStyle]}
         >
           <View className="flex-row items-center gap-3">
             <SessionCardTime time={time} />
@@ -174,6 +201,9 @@ export function SessionCard({
                 <CapsLabel size={11} tracking={2.4} className="text-muted mt-1">
                   {hiddenLabel}
                 </CapsLabel>
+              ) : null}
+              {metaBadge ? (
+                <View className="flex-row mt-1.5">{metaBadge}</View>
               ) : null}
             </View>
           </View>

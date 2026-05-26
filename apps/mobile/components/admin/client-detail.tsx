@@ -17,6 +17,7 @@ import React, { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient, useInfiniteQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Pressable, ScrollView, Switch, Text, View } from "react-native";
+import { useRouter, type Href } from "expo-router";
 import dayjs from "dayjs";
 import Feather from "@expo/vector-icons/Feather";
 import { AppSheet } from "@/components/ui/sheet";
@@ -83,6 +84,7 @@ function pickActivePackage(packages: ClientPackage[]): ClientPackage | null {
 export function ClientDetail({ id }: { id: string }) {
   const queryClient = useQueryClient();
   const tokens = useThemeTokens();
+  const router = useRouter();
   const { t, i18n } = useTranslation();
   const lang = i18n.language === "en" ? "en" : "sr";
   const bottomPad = useTabBarBottomPadding();
@@ -184,6 +186,16 @@ export function ClientDetail({ id }: { id: string }) {
   function openDelete() {
     setShowActions(false);
     setShowDelete(true);
+  }
+  function openReserve() {
+    if (!client) return;
+    setShowActions(false);
+    const qs = new URLSearchParams({
+      clientProfileId: client.id,
+      clientUserId: client.user.id,
+      clientFullName: client.user.fullName,
+    });
+    router.push(`/(admin)/klijenti/rezervisi?${qs.toString()}` as Href);
   }
 
   return (
@@ -356,6 +368,12 @@ export function ClientDetail({ id }: { id: string }) {
               icon="pause"
               label={t("admin.clients.pause")}
               onPress={openPause}
+            />
+            <ActionRow
+              testID="client-action-reserve"
+              icon="calendar"
+              label={t("admin.clients.reserveSessions", { defaultValue: "Rezerviši sesije" })}
+              onPress={openReserve}
             />
             <ActionRow
               testID="client-action-delete"

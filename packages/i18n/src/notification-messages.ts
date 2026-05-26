@@ -12,7 +12,10 @@ export type NotificationMessageKey =
   | "BOOKING_CANCELED_TRAINER"
   | "MINOR_PAPER_NEEDED"
   | "BIRTHDAY_ADMIN_PROMPT"
-  | "BIRTHDAY_CLIENT_GIFT";
+  | "BIRTHDAY_CLIENT_GIFT"
+  | "RESERVATION_UNBACKED_ATTENDANCE"
+  | "BULK_RESERVATION_CANCEL_ADMIN"
+  | "BULK_RESERVATION_CANCEL_TRAINER";
 
 export const NOTIFICATION_MESSAGE_KEYS = {
   BOOKING_CONFIRMED: "BOOKING_CONFIRMED",
@@ -27,6 +30,9 @@ export const NOTIFICATION_MESSAGE_KEYS = {
   MINOR_PAPER_NEEDED: "MINOR_PAPER_NEEDED",
   BIRTHDAY_ADMIN_PROMPT: "BIRTHDAY_ADMIN_PROMPT",
   BIRTHDAY_CLIENT_GIFT: "BIRTHDAY_CLIENT_GIFT",
+  RESERVATION_UNBACKED_ATTENDANCE: "RESERVATION_UNBACKED_ATTENDANCE",
+  BULK_RESERVATION_CANCEL_ADMIN: "BULK_RESERVATION_CANCEL_ADMIN",
+  BULK_RESERVATION_CANCEL_TRAINER: "BULK_RESERVATION_CANCEL_TRAINER",
 } as const satisfies Record<NotificationMessageKey, NotificationMessageKey>;
 
 const messages: Record<
@@ -109,6 +115,36 @@ const messages: Record<
     en: {
       title: "🎉 Happy birthday!",
       body: "We're gifting you a free \"{{packageTypeName}}\" session.",
+    },
+  },
+  RESERVATION_UNBACKED_ATTENDANCE: {
+    sr: {
+      title: "Klijent bez paketa",
+      body: "{{clientFullName}} je odradio/la {{classTypeName}} — nije skinuta sesija iz paketa.",
+    },
+    en: {
+      title: "Unbacked attendance",
+      body: "{{clientFullName}} attended {{classTypeName}} — no package was decremented.",
+    },
+  },
+  BULK_RESERVATION_CANCEL_ADMIN: {
+    sr: {
+      title: "Otkazane rezervacije",
+      body: "Otkazano je {{count}} rezervacija za {{clientFullName}}.",
+    },
+    en: {
+      title: "Reservations canceled",
+      body: "{{count}} reservations canceled for {{clientFullName}}.",
+    },
+  },
+  BULK_RESERVATION_CANCEL_TRAINER: {
+    sr: {
+      title: "Otkazane rezervacije",
+      body: "{{count}} tvojih termina otkazano za {{clientFullName}}.",
+    },
+    en: {
+      title: "Reservations canceled",
+      body: "{{count}} of your sessions canceled for {{clientFullName}}.",
     },
   },
 };
