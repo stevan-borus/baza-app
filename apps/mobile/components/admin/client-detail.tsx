@@ -24,6 +24,7 @@ import { AppSheet } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState, ErrorState } from "@/components/ui/states";
+import { ConfirmSheet } from "@/components/ui/confirm-sheet";
 import { SkeletonCard } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { SectionLabel } from "@/components/ui/typography";
@@ -964,43 +965,21 @@ function BeleskeTab({
       {/* Tap-to-delete confirmation. The only thing an admin does to a
           note from this surface is remove it — tap on row → confirm.
           The trainer who wrote the note is not notified of deletion. */}
-      <AppSheet
+      <ConfirmSheet
+        testID="beleske-confirm-delete"
         open={pendingDelete !== null}
         onOpenChange={(v) => !v && setPendingDelete(null)}
-      >
-        {pendingDelete ? (
-          <View className="flex-col gap-4">
-            <Text
-              className="text-foreground font-body-bold"
-              style={{ fontSize: 18, letterSpacing: -0.2 }}
-            >
-              {t("admin.clientDetail.beleske.confirmDelete")}
-            </Text>
-            <Text
-              className="text-muted"
-              style={{ fontSize: 14, lineHeight: 20 }}
-            >
-              {t("admin.clientDetail.beleske.confirmDeleteBody")}
-            </Text>
-            <Button
-              testID="beleske-confirm-delete"
-              variant="danger"
-              onPress={() => {
-                deleteMutation.mutate(pendingDelete.id);
-                setPendingDelete(null);
-              }}
-            >
-              {t("admin.clientDetail.beleske.confirm")}
-            </Button>
-            <Button
-              variant="secondary"
-              onPress={() => setPendingDelete(null)}
-            >
-              {t("admin.clientDetail.beleske.cancel")}
-            </Button>
-          </View>
-        ) : null}
-      </AppSheet>
+        title={t("admin.clientDetail.beleske.confirmDelete")}
+        message={t("admin.clientDetail.beleske.confirmDeleteBody")}
+        confirmLabel={t("admin.clientDetail.beleske.confirm")}
+        loading={deleteMutation.isPending}
+        onConfirm={() => {
+          if (!pendingDelete) return;
+          deleteMutation.mutate(pendingDelete.id, {
+            onSuccess: () => setPendingDelete(null),
+          });
+        }}
+      />
     </View>
   );
 }

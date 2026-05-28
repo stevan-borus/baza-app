@@ -646,7 +646,6 @@
         "confirmDelete": "Obrisati ovu belešku?",
         "confirmDeleteBody": "Ova radnja trajno briše belešku. Treneru koji je napisao neće biti poslata obaveštenja.",
         "confirm": "Obriši",
-        "cancel": "Otkaži",
         "unknownTrainer": "Trener"
       },
       "quickActions": {

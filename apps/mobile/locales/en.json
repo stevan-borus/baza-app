@@ -647,7 +647,6 @@
         "confirmDelete": "Delete this note?",
         "confirmDeleteBody": "This permanently removes the note. The trainer who wrote it will not be notified.",
         "confirm": "Delete",
-        "cancel": "Cancel",
         "unknownTrainer": "Trainer"
       }
     },
