@@ -259,11 +259,6 @@
       "packageName": "Package",
       "sessionsUntil": "Sessions: {{count}} | Until: {{date}}"
     },
-    "history": {
-      "title": "Training history",
-      "error": "Unable to load history.",
-      "noNotes": "No training notes."
-    },
     "signOut": "Sign out",
     "home": {
       "greeting": "Hello, {{name}}",
@@ -277,8 +272,6 @@
       "readyForNext": "Ready for your next class?",
       "browseSchedule": "Browse schedule",
       "sessionsLeft": "{{used}}/{{total}} sessions used",
-      "recentNotes": "Recent notes",
-      "fromYourTrainer": "From your trainer",
       "yourPackage": "Your package",
       "manage": "Manage",
       "thisWeek": "This week",
@@ -300,7 +293,6 @@
       "join": "Join",
       "booked": "Booked",
       "package": "Package",
-      "trainer": "Trainer",
       "onAccount": "On account",
       "sessionsRemaining": "Sessions left",
       "expiresOn": "Expires {{date}}",
@@ -321,20 +313,20 @@
       "sessions": "{{remaining}}/{{total}} sessions",
       "expires": "Expires {{date}}",
       "trainingHistory": "Training history",
+      "viewHistory": "View past sessions",
       "preferences": "Preferences",
       "language": "Language",
       "notificationSettings": "Notification settings",
       "account": "Account",
       "paused": "Paused",
       "expired": "Expired",
-      "totalNotes": "Total sessions",
-      "thisMonth": "This month",
-      "activePkgs": "Active packs",
       "viewProfile": "View profile",
       "changePhoto": "Change profile photo",
-      "memberSince": "Member since {{year}}",
-      "notesCount_one": "{{count}} entry",
-      "notesCount_other": "{{count}} entries"
+      "memberSince": "Member since {{year}}"
+    },
+    "history": {
+      "empty": "No past sessions yet.",
+      "error": "Unable to load history."
     },
     "dayView": {
       "noSessions": "No sessions on this day",
@@ -649,10 +641,19 @@
       "tabs": {
         "pregled": "Overview",
         "paketi": "Packages",
-        "treninzi": "Trainings"
+        "treninzi": "Trainings",
+        "beleske": "Notes"
       },
       "quickActions": {
         "title": "Quick actions"
+      },
+      "beleske": {
+        "empty": "No notes for this client.",
+        "error": "Unable to load notes.",
+        "confirmDelete": "Delete this note?",
+        "confirmDeleteBody": "This permanently removes the note. The trainer who wrote it will not be notified.",
+        "confirm": "Delete",
+        "unknownTrainer": "Trainer"
       }
     },
     "packages": {

@@ -86,6 +86,16 @@ function asTrainer(id: string) {
   });
 }
 
+function asClient(opts: { id: string; clientProfileId: string }) {
+  setMockUser({
+    id: opts.id,
+    role: "CLIENT",
+    email: "client-self@test.local",
+    isActive: true,
+    clientProfile: { id: opts.clientProfileId },
+  });
+}
+
 function buildRequest(clientUserId: string, qs: string = "") {
   return new Request(
     `http://test.local/api/clients/${clientUserId}/bookings${qs ? `?${qs}` : ""}`,
@@ -344,5 +354,58 @@ describe("GET /api/clients/[id]/bookings", () => {
     expect(page2.bookings).toHaveLength(1);
     expect(page2.bookings[0].session.id).toBe(sessions[2].id);
     expect(page2.nextCursor).toBeNull();
+  });
+
+  it("client can read their OWN past bookings", async () => {
+    // Self-access pattern: a client hitting /api/clients/:id/bookings
+    // for their own userId gets their data back. This is the only way
+    // clients can see their training history after we removed the
+    // notes-driven 'Istorija treninga' from the profile (PR #41) — past
+    // sessions stay, the notes don't.
+    const classType = await makeReformer();
+    const trainer = await makeTrainer({
+      email: "trainer-self@test.local",
+      fullName: "Trainer Self",
+    });
+    const { user: client, profile } = await makeClient({
+      email: "client-self-history@test.local",
+      fullName: "Self Client",
+    });
+    const pastSession = await makeSession({
+      classTypeId: classType.id,
+      trainerUserId: trainer.id,
+      startsAt: new Date(nowMs() - 3 * DAY_MS),
+    });
+    await prisma.booking.create({
+      data: { sessionId: pastSession.id, clientProfileId: profile.id },
+    });
+
+    asClient({ id: client.id, clientProfileId: profile.id });
+    const res = await GET(buildRequest(client.id, "period=past"), {
+      id: client.id,
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.bookings).toHaveLength(1);
+    expect(body.bookings[0].session.id).toBe(pastSession.id);
+  });
+
+  it("client cannot read SOMEONE ELSE's bookings (403)", async () => {
+    // Guard against the obvious IDOR: a client cannot pass another
+    // client's userId in the path and read their data.
+    const { user: me, profile: myProfile } = await makeClient({
+      email: "client-me@test.local",
+      fullName: "Me Client",
+    });
+    const { user: stranger } = await makeClient({
+      email: "client-stranger@test.local",
+      fullName: "Stranger Client",
+    });
+
+    asClient({ id: me.id, clientProfileId: myProfile.id });
+    const res = await GET(buildRequest(stranger.id, "period=past"), {
+      id: stranger.id,
+    });
+    expect(res.status).toBe(403);
   });
 });

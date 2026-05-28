@@ -28,10 +28,6 @@ import {
   packagesQueries,
   type ClientPackage,
 } from "@/lib/queries/packages-queries-factory";
-import {
-  trainerNotesQueries,
-  type TrainerNote,
-} from "@/lib/queries/trainer-notes-queries-factory";
 import { sessionsQueries } from "@/lib/queries/sessions-queries-factory";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { AppHeader } from "@/components/ui/app-header";
@@ -691,92 +687,6 @@ function PackageCard({
 }
 
 // ────────────────────────────────────────────────────────────────────────
-// Note row — quiet, list-style with avatar
-
-function NoteRow({
-  note,
-  lang,
-  isLast,
-}: {
-  note: TrainerNote;
-  lang: string;
-  isLast: boolean;
-}) {
-  const { t } = useTranslation();
-  const tokens = useThemeTokens();
-  const initial = (note.trainer?.fullName ?? "T").charAt(0).toUpperCase();
-  return (
-    <View>
-      <View
-        style={{
-          flexDirection: "row",
-          gap: 12,
-          paddingVertical: 16,
-          paddingHorizontal: 20,
-        }}
-      >
-        <View
-          style={{
-            width: 36,
-            height: 36,
-            borderRadius: 18,
-            backgroundColor: tokens.foreground,
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <Text
-            style={{
-              fontFamily: "AlbertSans-SemiBold",
-              fontSize: 13,
-              color: tokens.background,
-            }}
-          >
-            {initial}
-          </Text>
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text
-            style={{
-              fontFamily: "AlbertSans-SemiBold",
-              fontSize: 11,
-              color: tokens.faint,
-              letterSpacing: 1.2,
-              textTransform: "uppercase",
-              marginBottom: 4,
-            }}
-          >
-            {note.trainer?.fullName ?? t("client.home.trainer")} ·{" "}
-            {dayjs(note.createdAt).locale(lang).format("D MMM")}
-          </Text>
-          <Text
-            style={{
-              fontFamily: "AlbertSans-Regular",
-              fontSize: 14,
-              color: tokens.foreground,
-              lineHeight: 20,
-            }}
-            numberOfLines={3}
-          >
-            {note.note}
-          </Text>
-        </View>
-      </View>
-      {!isLast ? (
-        <View
-          style={{
-            height: 1,
-            backgroundColor: tokens.glassBorder,
-            marginLeft: 68,
-            marginRight: 20,
-          }}
-        />
-      ) : null}
-    </View>
-  );
-}
-
-// ────────────────────────────────────────────────────────────────────────
 // Screen
 
 export default function HomeStudio() {
@@ -794,7 +704,6 @@ export default function HomeStudio() {
 
   const meQuery = useQuery(authQueries.me());
   const packagesQuery = useQuery(packagesQueries.clientPackages());
-  const notesQuery = useQuery(trainerNotesQueries.list());
   const month = currentMonthKey();
   const availabilityQuery = useQuery(
     sessionsQueries.availabilityByMonth(month),
@@ -805,7 +714,6 @@ export default function HomeStudio() {
     (p: ClientPackage) =>
       p.sessionsRemaining > 0 && new Date(p.expiresAt) > new Date(),
   );
-  const notes = notesQuery.data?.notes ?? [];
   const sessions = availabilityQuery.data?.sessions ?? [];
 
   const userName = meQuery.data?.user.email?.split("@")[0] ?? "";
@@ -837,7 +745,6 @@ export default function HomeStudio() {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: ["auth"] }),
       queryClient.invalidateQueries({ queryKey: ["packages"] }),
-      queryClient.invalidateQueries({ queryKey: ["trainerNotes"] }),
       queryClient.invalidateQueries({ queryKey: ["sessions"] }),
     ]);
     setRefreshing(false);
@@ -1095,31 +1002,6 @@ export default function HomeStudio() {
               lang={lang}
               onPress={() => router.push("/(client)/profile")}
             />
-          </View>
-        ) : null}
-
-        {/* Trainer notes */}
-        {notes.length > 0 ? (
-          <View>
-            <SectionRow title={t("client.home.fromYourTrainer")} />
-            <View
-              style={{
-                marginHorizontal: 16,
-                backgroundColor: tokens.surface,
-                borderRadius: 8,
-                overflow: "hidden",
-              }}
-            >
-              {notes.slice(0, 3).map((note: TrainerNote, i, arr) => (
-                <View key={note.id} style={{ marginHorizontal: -4 }}>
-                  <NoteRow
-                    note={note}
-                    lang={lang}
-                    isLast={i === arr.length - 1}
-                  />
-                </View>
-              ))}
-            </View>
           </View>
         ) : null}
       </ScrollView>

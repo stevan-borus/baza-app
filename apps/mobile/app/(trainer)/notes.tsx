@@ -4,14 +4,14 @@
  * Motion: MotiView stagger on title (0ms) → chips (80ms) → list (160ms).
  */
 
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useRef } from "react";
 import { useMutation, useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import Feather from "@expo/vector-icons/Feather";
 import { MotiView } from "@/components/ui/styled";
-import { LegendList } from "@legendapp/list";
+import { LegendList, type LegendListRef } from "@legendapp/list";
 import { AppSheet } from "@/components/ui/sheet";
 import { ConfirmSheet } from "@/components/ui/confirm-sheet";
 import { Button } from "@/components/ui/button";
@@ -407,6 +407,7 @@ export default function TrainerNotes() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const bottomPad = useTabBarBottomPadding();
+  const listRef = useRef<LegendListRef>(null);
   const [showCreate, setShowCreate] = useState(false);
   const [showClientPicker, setShowClientPicker] = useState(false);
   const [showSessionPicker, setShowSessionPicker] = useState(false);
@@ -474,9 +475,18 @@ export default function TrainerNotes() {
   const createMutation = useMutation({
     ...trainerNotesQueries.create(),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["trainer-notes"] });
       setShowCreate(false);
       setForm({ sessionId: "", clientProfileId: "", clientLabel: "", note: "" });
+      // Wait for the refetched page to land in cache (refetch, not just
+      // invalidate — invalidate resolves on cache-mark, not on data
+      // arrival). Then defer to the next frame so React has committed
+      // the new listData before we ask LegendList to scroll. Without
+      // both steps the scroll fires while listData still holds the
+      // pre-mutation array and ends up a no-op (offset 0 == current).
+      await queryClient.refetchQueries({ queryKey: ["trainer-notes"] });
+      requestAnimationFrame(() => {
+        listRef.current?.scrollToOffset({ offset: 0, animated: true });
+      });
     },
   });
 
@@ -701,6 +711,7 @@ export default function TrainerNotes() {
         style={{ flex: 1 }}
       >
         <LegendList
+          ref={listRef}
           data={listData}
           keyExtractor={(item: ListItem) => item.id}
           refreshControl={

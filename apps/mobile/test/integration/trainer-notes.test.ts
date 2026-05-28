@@ -16,8 +16,11 @@ vi.mock("@/lib/server/auth-guards", async () => {
   };
 });
 
+const createSystemNotificationMock =
+  vi.fn<(...args: unknown[]) => Promise<void>>(async () => undefined);
 vi.mock("@/lib/server/notifications", () => ({
-  createSystemNotification: vi.fn(async () => undefined),
+  createSystemNotification: (...args: unknown[]) =>
+    createSystemNotificationMock(...args),
 }));
 
 import { GET, POST } from "@/app/api/trainer-notes/+api";
@@ -102,6 +105,7 @@ function postBody(body: unknown) {
 describe("trainer-notes", () => {
   beforeEach(async () => {
     await resetDb();
+    createSystemNotificationMock.mockClear();
   });
   afterAll(async () => {
     await resetDb();
@@ -289,11 +293,14 @@ describe("trainer-notes", () => {
     expect(body.notes.map((n) => n.note)).toEqual(["mine"]);
   });
 
-  it("GET as client returns only their own notes (across all trainers)", async () => {
+  it("GET as client is forbidden — clients never see TrainerNotes", async () => {
+    // TrainerNotes are internal observations a trainer writes for their own
+    // and the studio's reference. The audience is the authoring Trainer
+    // and all Admins; clients are not in the audience. Even a client
+    // querying for "their own" notes gets 403 — the endpoint is not
+    // exposed to the CLIENT role at all.
     const { trainer, client, clientProfile, reformer } = await seed();
     const session = await makeSession(trainer.id, reformer.id);
-
-    // Note for our client
     await prisma.trainerNote.create({
       data: {
         sessionId: session.id,
@@ -302,28 +309,31 @@ describe("trainer-notes", () => {
         note: "for me",
       },
     });
-    // Note for an unrelated client
-    const stranger = await prisma.user.create({
-      data: { email: "x@test.local", fullName: "X", role: "CLIENT" },
-    });
-    const strangerProfile = await prisma.clientProfile.create({
-      data: { userId: stranger.id },
-    });
-    await prisma.trainerNote.create({
-      data: {
-        sessionId: session.id,
-        clientProfileId: strangerProfile.id,
-        trainerUserId: trainer.id,
-        note: "not for me",
-      },
-    });
 
     asClient({ id: client.id, email: client.email, profileId: clientProfile.id });
     const response = await GET(
       new Request("http://test.local/api/trainer-notes?take=10"),
     );
-    const body = (await response.json()) as { notes: { note: string }[] };
-    expect(body.notes.map((n) => n.note)).toEqual(["for me"]);
+    expect(response.status).toBe(403);
+  });
+
+  it("POST does not create a client-targeted notification (clients never see TrainerNotes, so pinging them is user-hostile)", async () => {
+    const { trainer, clientProfile, reformer } = await seed();
+    const session = await makeSession(trainer.id, reformer.id);
+    await prisma.booking.create({
+      data: { sessionId: session.id, clientProfileId: clientProfile.id },
+    });
+    asTrainer(trainer);
+
+    const response = await POST(
+      postBody({
+        sessionId: session.id,
+        clientProfileId: clientProfile.id,
+        note: "Stop notifying clients about notes they can't read.",
+      }),
+    );
+    expect(response.status).toBe(201);
+    expect(createSystemNotificationMock).not.toHaveBeenCalled();
   });
 
   it("GET as admin returns notes from every trainer", async () => {

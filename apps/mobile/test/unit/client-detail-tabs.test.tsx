@@ -77,11 +77,12 @@ function render(active: ClientDetailTab, onChange = vi.fn()) {
 }
 
 describe("ClientDetailTabBar", () => {
-  it("renders all three tabs with i18n labels", () => {
+  it("renders all four tabs with i18n labels", () => {
     const html = render("pregled");
     expect(html).toContain("admin.clientDetail.tabs.pregled");
     expect(html).toContain("admin.clientDetail.tabs.paketi");
     expect(html).toContain("admin.clientDetail.tabs.treninzi");
+    expect(html).toContain("admin.clientDetail.tabs.beleske");
   });
 
   it("exposes stable testIDs for each tab", () => {
@@ -89,6 +90,7 @@ describe("ClientDetailTabBar", () => {
     expect(html).toContain('data-testid="client-detail-tab-pregled"');
     expect(html).toContain('data-testid="client-detail-tab-paketi"');
     expect(html).toContain('data-testid="client-detail-tab-treninzi"');
+    expect(html).toContain('data-testid="client-detail-tab-beleske"');
   });
 
   it("invokes onChange with the next tab value when a tab is pressed", () => {
@@ -98,5 +100,7 @@ describe("ClientDetailTabBar", () => {
     expect(onChange).toHaveBeenCalledWith("paketi");
     pressables["client-detail-tab-treninzi"]?.onPress?.();
     expect(onChange).toHaveBeenCalledWith("treninzi");
+    pressables["client-detail-tab-beleske"]?.onPress?.();
+    expect(onChange).toHaveBeenCalledWith("beleske");
   });
 });

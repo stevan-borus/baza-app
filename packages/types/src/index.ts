@@ -128,6 +128,7 @@ export const sessionUserSchema = z.object({
   fullName: z.string(),
   role: UserRoleSchema,
   isActive: z.boolean(),
+  createdAt: z.coerce.date(),
   clientProfile: z.object({ id: z.string() }).nullable(),
 });
 export type SessionUser = z.infer<typeof sessionUserSchema>;
