@@ -643,8 +643,6 @@
       "beleske": {
         "empty": "Nema beleški za ovog klijenta.",
         "error": "Nije moguće učitati beleške.",
-        "delete": "Obriši belešku",
-        "copy": "Kopiraj tekst",
         "confirmDelete": "Obrisati ovu belešku?",
         "confirmDeleteBody": "Ova radnja trajno briše belešku. Treneru koji je napisao neće biti poslata obaveštenja.",
         "confirm": "Obriši",

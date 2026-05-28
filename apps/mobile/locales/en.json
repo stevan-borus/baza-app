@@ -644,8 +644,6 @@
       "beleske": {
         "empty": "No notes for this client.",
         "error": "Unable to load notes.",
-        "delete": "Delete note",
-        "copy": "Copy text",
         "confirmDelete": "Delete this note?",
         "confirmDeleteBody": "This permanently removes the note. The trainer who wrote it will not be notified.",
         "confirm": "Delete",

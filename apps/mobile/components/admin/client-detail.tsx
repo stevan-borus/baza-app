@@ -39,7 +39,6 @@ import {
   trainerNotesQueries,
   type TrainerNote,
 } from "@/lib/queries/trainer-notes-queries-factory";
-import * as Clipboard from "expo-clipboard";
 import { BookingRow } from "@/components/admin/booking-row";
 import { AssignPackageSheetContent } from "@/components/admin/assign-package-sheet-content";
 import { ReturnToPill } from "@/components/admin/return-to-pill";
@@ -898,7 +897,6 @@ function BeleskeTab({
 }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
-  const [longPressed, setLongPressed] = useState<TrainerNote | null>(null);
   const [pendingDelete, setPendingDelete] = useState<TrainerNote | null>(null);
 
   const notesQuery = useInfiniteQuery(
@@ -928,7 +926,7 @@ function BeleskeTab({
         renderItem={({ item }) => (
           <Pressable
             testID={`beleske-row-${item.id}`}
-            onLongPress={() => setLongPressed(item)}
+            onPress={() => setPendingDelete(item)}
             android_ripple={null}
             className="bg-surface rounded-lg overflow-hidden active:opacity-80"
             style={{ marginBottom: 8, padding: 14 }}
@@ -963,39 +961,9 @@ function BeleskeTab({
         }
       />
 
-      {/* Long-press action sheet — Copy text + Delete (with confirm). */}
-      <AppSheet
-        open={longPressed !== null}
-        onOpenChange={(v) => !v && setLongPressed(null)}
-      >
-        {longPressed ? (
-          <View className="flex-col gap-2">
-            <ActionRow
-              testID="beleske-action-copy"
-              icon="copy"
-              label={t("admin.clientDetail.beleske.copy")}
-              onPress={() => {
-                void Clipboard.setStringAsync(longPressed.note);
-                setLongPressed(null);
-              }}
-            />
-            <ActionRow
-              testID="beleske-action-delete"
-              icon="trash-2"
-              label={t("admin.clientDetail.beleske.delete")}
-              destructive
-              onPress={() => {
-                setPendingDelete(longPressed);
-                setLongPressed(null);
-              }}
-            />
-          </View>
-        ) : null}
-      </AppSheet>
-
-      {/* Delete confirmation — two-step so a stray long-press doesn't
-          permanently remove a trainer's words. The trainer who wrote
-          the note is not notified of the deletion. */}
+      {/* Tap-to-delete confirmation. The only thing an admin does to a
+          note from this surface is remove it — tap on row → confirm.
+          The trainer who wrote the note is not notified of deletion. */}
       <AppSheet
         open={pendingDelete !== null}
         onOpenChange={(v) => !v && setPendingDelete(null)}
@@ -1014,26 +982,22 @@ function BeleskeTab({
             >
               {t("admin.clientDetail.beleske.confirmDeleteBody")}
             </Text>
-            <View className="flex-row gap-3">
-              <Button
-                variant="ghost"
-                className="flex-1"
-                onPress={() => setPendingDelete(null)}
-              >
-                {t("admin.clientDetail.beleske.cancel")}
-              </Button>
-              <Button
-                testID="beleske-confirm-delete"
-                variant="danger"
-                className="flex-1"
-                onPress={() => {
-                  deleteMutation.mutate(pendingDelete.id);
-                  setPendingDelete(null);
-                }}
-              >
-                {t("admin.clientDetail.beleske.confirm")}
-              </Button>
-            </View>
+            <Button
+              testID="beleske-confirm-delete"
+              variant="danger"
+              onPress={() => {
+                deleteMutation.mutate(pendingDelete.id);
+                setPendingDelete(null);
+              }}
+            >
+              {t("admin.clientDetail.beleske.confirm")}
+            </Button>
+            <Button
+              variant="secondary"
+              onPress={() => setPendingDelete(null)}
+            >
+              {t("admin.clientDetail.beleske.cancel")}
+            </Button>
           </View>
         ) : null}
       </AppSheet>
