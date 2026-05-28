@@ -118,7 +118,7 @@ export default function TrainerSchedule() {
   }
 
   function handleEventPress(session: typeof sessions[0]) {
-    router.push(`/(trainer)/sessions/${session.id}` as Href);
+    router.push(`/(trainer)/raspored/sessions/${session.id}` as Href);
   }
 
   const trainerName = meQuery.data?.user?.email ?? "";
