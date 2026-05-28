@@ -72,9 +72,11 @@ export async function setLocale(locale: Locale): Promise<void> {
 
 /**
  * BCP 47 locale for date/number formatting (e.g. toLocaleDateString).
+ * Serbian uses the Latin script tag — `sr-RS` resolves to Cyrillic by default
+ * on ICU, which doesn't match the rest of the UI.
  */
 export function getDateLocale(): string {
-  return i18n.language === "en" ? "en-US" : "sr-RS";
+  return i18n.language === "en" ? "en-US" : "sr-Latn-RS";
 }
 
 export { STORAGE_KEY };
