@@ -2,14 +2,12 @@ import { trainerNoteInputSchema, trainerNotesQuerySchema } from "@baza/types";
 import { UserRole } from "@/generated/prisma";
 import { requireRole } from "@/lib/server/auth-guards";
 import { fail, ok } from "@/lib/server/http";
-import { createSystemNotification } from "@/lib/server/notifications";
-import { NOTIFICATION_MESSAGE_KEYS } from "@baza/i18n";
 import { prisma } from "@/lib/server/prisma";
 import { trainerOwnsSession } from "@/lib/server/trainer-scope";
 import { tryCatch } from "@/lib/server/try-catch";
 
 export async function GET(request: Request) {
-  const guard = await requireRole(request, [UserRole.ADMIN, UserRole.TRAINER, UserRole.CLIENT]);
+  const guard = await requireRole(request, [UserRole.ADMIN, UserRole.TRAINER]);
   if (!guard.ok) return guard.response;
 
   const url = new URL(request.url);
@@ -36,20 +34,22 @@ export async function GET(request: Request) {
       ? { clientProfileId: parsed.data.clientProfileId }
       : {};
 
-  // Scope: clients see only their notes; trainers by session/client; admins see all.
+  // Scope: trainers see only their own notes (optionally filtered by
+  // session/client); admins see every note about every client. Clients
+  // are not a valid caller — the role guard above rejects them with 403.
+  // TrainerNotes are internal observations addressed to the studio and
+  // the authoring trainer; the client is not in the audience.
   const where =
-    guard.user.role === UserRole.CLIENT
-      ? { clientProfileId: guard.user.clientProfile?.id ?? "__missing__" }
-      : guard.user.role === UserRole.TRAINER
-        ? {
-            trainerUserId: guard.user.id,
-            ...sessionFilter,
-            ...clientFilter,
-          }
-        : {
-            ...sessionFilter,
-            ...clientFilter,
-          };
+    guard.user.role === UserRole.TRAINER
+      ? {
+          trainerUserId: guard.user.id,
+          ...sessionFilter,
+          ...clientFilter,
+        }
+      : {
+          ...sessionFilter,
+          ...clientFilter,
+        };
 
   const notes = await prisma.trainerNote.findMany({
     where,
@@ -110,7 +110,7 @@ export async function POST(request: Request) {
   // active-booking rule so session-bound notes remain meaningful.
   const profile = await prisma.clientProfile.findUnique({
     where: { id: parsed.data.clientProfileId },
-    select: { id: true, userId: true },
+    select: { id: true },
   });
   if (!profile) return fail("Client profile not found", 404);
 
@@ -181,12 +181,9 @@ export async function POST(request: Request) {
     },
   });
 
-  // Fire-and-forget; client is notified of new note.
-  void createSystemNotification(profile.userId, NOTIFICATION_MESSAGE_KEYS.TRAINER_NOTE, "TRAINER_NOTE", {
-    noteId: note.id,
-    sessionId: note.sessionId,
-    trainerFullName: guard.user.fullName ?? "",
-  });
+  // No notification — clients don't see TrainerNotes, so telling them
+  // a note was left is user-hostile (and admins want pull-not-push for
+  // passive context; trainer-note activity isn't a work queue).
 
   return ok({ success: true, note }, 201);
 }
