@@ -5,7 +5,7 @@ import { sharedEnv } from "@/lib/env.shared";
 
 const trainerNoteSchema = z.object({
   id: z.string(),
-  sessionId: z.string(),
+  sessionId: z.nullable(z.string()),
   clientProfileId: z.string(),
   note: z.string(),
   createdAt: z.string(),
@@ -34,13 +34,30 @@ const trainerNotesResponseSchema = z.object({
 export type TrainerNote = z.infer<typeof trainerNoteSchema>;
 type TrainerNotesResponse = z.infer<typeof trainerNotesResponseSchema>;
 
+type NotesListParams = {
+  sessionId?: string;
+  clientProfileId?: string;
+  /** Multi-select filter; sent server-side as a comma-separated `sessionIds` param. */
+  sessionIds?: readonly string[];
+  /** Multi-select filter; sent server-side as a comma-separated `clientProfileIds` param. */
+  clientProfileIds?: readonly string[];
+  take?: number;
+};
+
 async function fetchNotesPage(
-  params?: { sessionId?: string; clientProfileId?: string },
+  params?: NotesListParams,
   cursor?: string | null,
 ): Promise<TrainerNotesResponse> {
   const qs = new URLSearchParams();
   if (params?.sessionId) qs.set("sessionId", params.sessionId);
   if (params?.clientProfileId) qs.set("clientProfileId", params.clientProfileId);
+  if (params?.sessionIds && params.sessionIds.length > 0) {
+    qs.set("sessionIds", params.sessionIds.join(","));
+  }
+  if (params?.clientProfileIds && params.clientProfileIds.length > 0) {
+    qs.set("clientProfileIds", params.clientProfileIds.join(","));
+  }
+  if (params?.take) qs.set("take", String(params.take));
   if (cursor) qs.set("cursor", cursor);
   const query = qs.toString();
   const url = `${sharedEnv.EXPO_PUBLIC_API_URL}/api/trainer-notes${query ? `?${query}` : ""}`;
@@ -49,17 +66,31 @@ async function fetchNotesPage(
   return trainerNotesResponseSchema.parse(await response.json());
 }
 
+// Keep array params in queryKey order-stable so identical sets hit the same
+// cache entry regardless of insertion order. Sets in React state don't have
+// a stable iteration order across renders, so we sort here.
+function stableKey(p?: NotesListParams) {
+  if (!p) return undefined;
+  return {
+    sessionId: p.sessionId,
+    clientProfileId: p.clientProfileId,
+    sessionIds: p.sessionIds ? [...p.sessionIds].sort() : undefined,
+    clientProfileIds: p.clientProfileIds ? [...p.clientProfileIds].sort() : undefined,
+    take: p.take,
+  };
+}
+
 export const trainerNotesQueries = {
-  list: (params?: { sessionId?: string; clientProfileId?: string }) =>
+  list: (params?: NotesListParams) =>
     queryOptions({
-      queryKey: ["trainer-notes", "list", params] as const,
+      queryKey: ["trainer-notes", "list", stableKey(params)] as const,
       queryFn: () => fetchNotesPage(params),
       staleTime: 30_000,
     }),
 
-  listInfinite: (params?: { sessionId?: string; clientProfileId?: string }) =>
+  listInfinite: (params?: NotesListParams) =>
     infiniteQueryOptions({
-      queryKey: ["trainer-notes", "list-infinite", params] as const,
+      queryKey: ["trainer-notes", "list-infinite", stableKey(params)] as const,
       queryFn: ({ pageParam }) => fetchNotesPage(params, pageParam),
       initialPageParam: null as string | null,
       getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
@@ -70,7 +101,7 @@ export const trainerNotesQueries = {
     mutationOptions({
       mutationKey: ["trainer-notes", "create"] as const,
       mutationFn: async (payload: {
-        sessionId: string;
+        sessionId?: string;
         clientProfileId: string;
         note: string;
       }) => {

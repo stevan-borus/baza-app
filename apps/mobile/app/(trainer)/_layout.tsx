@@ -47,10 +47,6 @@ export default function TrainerLayout() {
             tabBarIcon: ({ color }) => <TabIcon name="pencil" color={color} />,
           }}
         />
-        <Tabs.Screen
-          name="sessions"
-          options={{ href: null }}
-        />
         {/* Profile data + theme/language switcher live entirely in the
             ProfileSheet (header avatar tap). No dedicated tab/route. */}
       </Tabs>

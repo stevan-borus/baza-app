@@ -5,21 +5,29 @@
  * which the server scopes by trainer→client linkage (active booking). When the
  * trainer is not linked, the API returns 403 and we render an explicit error
  * card — never the client's data.
+ *
+ * The "Beleške" section shows TrainerNote records (timestamped log entries
+ * created from the Notes tab) — NOT the legacy `ClientProfile.notes`
+ * single-string field. Trainers expect to see what they actually wrote.
  */
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { useLocalSearchParams } from "expo-router";
 import { ScrollView, Text, View } from "react-native";
-import { Badge } from "@/components/ui/badge";
 import { GlassCard } from "@/components/ui/glass-card";
 import { ScreenContainer } from "@/components/ui/screen-container";
 import { SkeletonList } from "@/components/ui/skeleton";
 import { EmptyState, ErrorState } from "@/components/ui/states";
 import { useThemeTokens } from "@/components/ui/tokens";
+import { getDateLocale } from "@/lib/i18n";
 import {
   ClientForbiddenError,
   clientsQueries,
 } from "@/lib/queries/clients-queries-factory";
+import {
+  trainerNotesQueries,
+  type TrainerNote,
+} from "@/lib/queries/trainer-notes-queries-factory";
 
 function getInitials(fullName: string): string {
   return fullName
@@ -30,18 +38,13 @@ function getInitials(fullName: string): string {
     .join("");
 }
 
-const STATUS_BADGE: Record<
-  "active" | "expiring" | "expired" | "paused" | "none",
-  { tone: "success" | "warning" | "neutral"; key: string }
-> = {
-  active: { tone: "success", key: "admin.clientDetail.status.active" },
-  expiring: { tone: "warning", key: "admin.clientDetail.status.expiring" },
-  expired: { tone: "warning", key: "admin.clientDetail.status.expired" },
-  paused: { tone: "neutral", key: "admin.clientDetail.status.paused" },
-  none: { tone: "neutral", key: "admin.clientDetail.status.none" },
-};
-
-export default function TrainerClientProfile() {
+/**
+ * The screen body, exported so other routes (e.g. the sessions-stack
+ * variant at `/(trainer)/raspored/sessions/clients/[id]`) can render the same
+ * profile without duplicating fetch/UI code. Back behavior is governed
+ * by which stack the route lives in, not by this component.
+ */
+export function TrainerClientProfile() {
   const { t } = useTranslation();
   useThemeTokens();
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -87,8 +90,6 @@ function ProfileBody({
 }: {
   client: {
     id: string;
-    notes: string | null;
-    packageStatus: "active" | "expiring" | "expired" | "paused" | "none";
     user: {
       id: string;
       fullName: string;
@@ -100,7 +101,20 @@ function ProfileBody({
 }) {
   const { t } = useTranslation();
   const initials = getInitials(client.user.fullName);
-  const badge = STATUS_BADGE[client.packageStatus];
+  const dateLocale = getDateLocale();
+
+  // TrainerNote records for this client. Server scopes by role: a TRAINER
+  // sees only their own notes; the screen itself is already gated by the
+  // trainer-client linkage check on the parent query, so an empty list
+  // means "no notes from this trainer yet for this client".
+  //
+  // take=100 (max) — a single trainer's history with one client is
+  // realistically dozens, rarely hundreds; one page covers it without
+  // wiring infinite scroll on a screen that's already a ScrollView.
+  const notesQuery = useQuery(
+    trainerNotesQueries.list({ clientProfileId: client.id, take: 100 }),
+  );
+  const notes = notesQuery.data?.notes ?? [];
 
   return (
     <View className="gap-4">
@@ -140,27 +154,58 @@ function ProfileBody({
             ) : null}
           </View>
         </View>
-
-        {client.packageStatus !== "none" ? (
-          <View className="flex-row gap-2 mt-4 flex-wrap">
-            <Badge status={badge.tone}>{t(badge.key)}</Badge>
-          </View>
-        ) : null}
       </GlassCard>
 
-      {/* Notes */}
-      <GlassCard>
-        <Text className="font-body-semibold text-foreground text-base mb-2">
+      {/* Trainer notes — timestamped records for this client */}
+      <View className="gap-2">
+        <Text className="font-body-semibold text-foreground text-base">
           {t("trainer.clients.notesLabel")}
         </Text>
-        {client.notes ? (
-          <Text className="text-sm text-muted leading-5">{client.notes}</Text>
+        {notesQuery.isLoading ? (
+          <SkeletonList count={2} />
+        ) : notes.length === 0 ? (
+          <GlassCard>
+            <Text className="text-sm text-faint">
+              {t("trainer.clients.notesEmpty")}
+            </Text>
+          </GlassCard>
         ) : (
-          <Text className="text-sm text-faint">
-            {t("trainer.clients.notesEmpty")}
-          </Text>
+          notes.map((n) => (
+            <TrainerNoteRow key={n.id} note={n} dateLocale={dateLocale} />
+          ))
         )}
-      </GlassCard>
+      </View>
     </View>
   );
 }
+
+function TrainerNoteRow({
+  note,
+  dateLocale,
+}: {
+  note: TrainerNote;
+  dateLocale: string;
+}) {
+  const dateStr = new Date(note.createdAt).toLocaleDateString(dateLocale, {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  });
+  return (
+    <GlassCard size="md" accentBorder="left">
+      <View style={{ gap: 6 }}>
+        <Text
+          className="text-foreground"
+          style={{ fontSize: 14, lineHeight: 20, opacity: 0.9 }}
+        >
+          {note.note}
+        </Text>
+        <Text className="text-muted" style={{ fontSize: 11 }}>
+          {dateStr}
+        </Text>
+      </View>
+    </GlassCard>
+  );
+}
+
+export default TrainerClientProfile;

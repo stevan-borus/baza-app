@@ -997,10 +997,14 @@
       "empty": "Nema beleški za prikaz.",
       "sheetTitle": "Nova beleška",
       "session": "Termin",
+      "sessionOptional": "Termin (opciono)",
+      "linkSessionOptional": "Poveži sa terminom (opciono)",
+      "pickClientCta": "Izaberi klijenta",
       "client": "Klijent",
       "placeholder": "Beleška...",
       "emptySessions": "Nema dostupnih termina",
       "emptyClients": "Nema dostupnih klijenata",
+      "noBookedClients": "Nema prijavljenih klijenata na ovaj termin.",
       "saveError": "Čuvanje beleške nije uspelo.",
       "filterAll": "Sve",
       "filterThisWeek": "Ova nedelja",
@@ -1009,7 +1013,26 @@
       "pickClientTitle": "Filtriraj po klijentu",
       "pickSessionTitle": "Filtriraj po terminu",
       "editSheetTitle": "Izmeni belešku",
-      "unknownClient": "Nepoznat klijent"
+      "unknownClient": "Nepoznat klijent",
+      "oneClientSelected": "1 izabran",
+      "oneSessionSelected": "1 izabran",
+      "countSelected": "{{count}} izabrano",
+      "clearAll": "Obriši",
+      "clearAllVerbose": "Obriši sve",
+      "done": "Gotovo",
+      "clientWord": {
+        "one": "klijent",
+        "few": "klijenta",
+        "many": "klijenata"
+      },
+      "sessionWord": {
+        "one": "termin",
+        "few": "termina",
+        "many": "termina"
+      }
+    },
+    "sessionPicker": {
+      "emptyDay": "Nema termina ovog dana"
     },
     "clients": {
       "title": "Moji klijenti",

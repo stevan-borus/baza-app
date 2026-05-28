@@ -1,18 +1,9 @@
 /**
- * Trainer Clients screen — searchable roster with compact stat strip.
+ * Trainer Clients screen — searchable roster.
  *
- * Layout: header → search input → "active · this month · expiring" stat strip
- * → glass-card list, one row per client, tappable to expand notes.
- * The empty hero card from the previous design is gone — it conveyed nothing
- * useful. The stat strip now sits inline with the search and shows real
- * counts derived from packageStatus.
- *
- * Migration note: the client list is rendered through `<PaginatedList>` and
- * the search input + stat strip live in a fixed View ABOVE the list so they
- * stay pinned while rows scroll underneath. The previous build kept those in
- * `ListHeaderComponent`, which scrolls away with the rows. The hand-rolled
- * ActivityIndicator footer, skeleton/empty/error fallbacks, and onEndReached
- * plumbing are gone — the wrapper owns all of them.
+ * Trainers see name + email + tap-to-open. Package-economics (active/expiring
+ * counts and the per-row status badge) lives on the admin screens — trainers
+ * don't manage renewals.
  */
 
 import { useDeferredValue, useMemo, useState } from "react";
@@ -27,7 +18,6 @@ import {
 } from "react-native";
 import { MotiView } from "@/components/ui/styled";
 import { GlassCard } from "@/components/ui/glass-card";
-import { Badge } from "@/components/ui/badge";
 import { EmptyState, ErrorState } from "@/components/ui/states";
 import { Input } from "@/components/ui/input";
 import {
@@ -48,55 +38,17 @@ function getInitials(fullName: string): string {
     .join("");
 }
 
-// ─── stat pill ──────────────────────────────────────────────────────────────
-
-function StatPill({ value, label }: { value: number; label: string }) {
-  return (
-    <View
-      className="flex-1 bg-glass border border-glass-border rounded-2xl px-3 py-2.5"
-    >
-      <Text
-        className="text-foreground font-body-bold"
-        style={{ fontSize: 18, letterSpacing: -0.4 }}
-      >
-        {value}
-      </Text>
-      <Text
-        className="text-muted text-[11px] mt-0.5"
-        style={{ letterSpacing: 0.3, textTransform: "uppercase" }}
-        numberOfLines={1}
-      >
-        {label}
-      </Text>
-    </View>
-  );
-}
-
 // ─── client row ─────────────────────────────────────────────────────────────
 
 type Client = {
   id: string;
   notes?: string | null;
-  packageStatus: "active" | "expiring" | "expired" | "paused" | "none";
   user: { id: string; fullName: string; email: string };
 };
 
-const STATUS_BADGE: Record<
-  Client["packageStatus"],
-  { tone: "success" | "warning" | "neutral"; key: string }
-> = {
-  active: { tone: "success", key: "admin.clientDetail.status.active" },
-  expiring: { tone: "warning", key: "admin.clientDetail.status.expiring" },
-  expired: { tone: "warning", key: "admin.clientDetail.status.expired" },
-  paused: { tone: "neutral", key: "admin.clientDetail.status.paused" },
-  none: { tone: "neutral", key: "admin.clientDetail.status.none" },
-};
-
 function ClientRow({ client }: { client: Client }) {
-  const { t } = useTranslation();
   const router = useRouter();
   const initials = getInitials(client.user.fullName);
-  const badge = STATUS_BADGE[client.packageStatus];
 
   return (
     <Pressable
@@ -135,10 +87,6 @@ function ClientRow({ client }: { client: Client }) {
               {client.user.email}
             </Text>
           </View>
-
-          {client.packageStatus !== "none" ? (
-            <Badge status={badge.tone}>{t(badge.key)}</Badge>
-          ) : null}
         </View>
       </GlassCard>
     </Pressable>
@@ -178,43 +126,16 @@ export default function TrainerClients() {
     setRefreshing(false);
   }
 
-  // The stat strip used to count from the unpaginated list. With cursor
-  // pagination we'd only see counts for the rows we've fetched, which is
-  // misleading. Keep the visual but compute from what we have; once a
-  // dedicated stats endpoint exists we can wire that in. The "total" count
-  // is intentionally `clients.length` (what's loaded), not a server total —
-  // adding a count query for this one stat is not worth a separate round
-  // trip on every paged fetch.
-  const stats = useMemo(() => {
-    let active = 0;
-    let expiring = 0;
-    let expired = 0;
-    for (const c of clients) {
-      if (c.packageStatus === "active") active++;
-      else if (c.packageStatus === "expiring") expiring++;
-      else if (c.packageStatus === "expired") expired++;
-    }
-    return { active, expiring, expired };
-  }, [clients]);
-
   return (
     <ScreenContainerRaw title={t("tabs.clients")}>
       <View style={{ flex: 1 }}>
-        {/* ── Sticky header ──────────────────────────────────────────────────
-            Lives OUTSIDE the list so the search input and stat strip stay
-            pinned while rows scroll underneath. Previously these sat inside
-            FlatList's ListHeaderComponent and scrolled away with the rows.
-            The MotiView entry animations are preserved — they only run once
-            on mount, not on every list scroll. */}
         <View
           style={{
             paddingTop: 16,
             paddingHorizontal: 24,
             paddingBottom: 12,
-            gap: 16,
           }}
         >
-          {/* Search */}
           <MotiView
             from={{ opacity: 0, translateY: -6 }}
             animate={{ opacity: 1, translateY: 0 }}
@@ -229,28 +150,6 @@ export default function TrainerClients() {
               autoCapitalize="none"
               autoCorrect={false}
             />
-          </MotiView>
-
-          {/* Stat strip — total / active / expiring */}
-          <MotiView
-            from={{ opacity: 0, translateY: -4 }}
-            animate={{ opacity: 1, translateY: 0 }}
-            transition={{ type: "timing", duration: 300, delay: 140 }}
-          >
-            <View className="flex-row gap-2">
-              <StatPill
-                value={clients.length}
-                label={t("trainer.clients.statTotal")}
-              />
-              <StatPill
-                value={stats.active}
-                label={t("admin.clients.filterActive")}
-              />
-              <StatPill
-                value={stats.expiring}
-                label={t("admin.clients.filterExpiring")}
-              />
-            </View>
           </MotiView>
         </View>
 

@@ -402,16 +402,20 @@ model NotificationLog {
 }
 
 model TrainerNote {
-  id              String        @id @default(uuid())
-  sessionId       String
+  id              String         @id @default(uuid())
+  // Optional: a note may be attached to a specific session ("observed in
+  // 10:00 Reformer") or be a free-form client note ("recurring lower-back
+  // complaint"). When set, the server still enforces the trainer-owns-
+  // session + client-is-booked rules — see POST handler.
+  sessionId       String?
   clientProfileId String
   trainerUserId   String
   note            String
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-  session         Session       @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  clientProfile   ClientProfile @relation(fields: [clientProfileId], references: [id], onDelete: Cascade)
-  trainer         User          @relation("TrainerNoteAuthor", fields: [trainerUserId], references: [id], onDelete: Cascade)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  session         Session?       @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  clientProfile   ClientProfile  @relation(fields: [clientProfileId], references: [id], onDelete: Cascade)
+  trainer         User           @relation("TrainerNoteAuthor", fields: [trainerUserId], references: [id], onDelete: Cascade)
 
   @@index([sessionId, createdAt])
   @@index([clientProfileId, createdAt])
