@@ -130,6 +130,68 @@ describe("trainer-notes", () => {
     expect(persisted?.trainerUserId).toBe(trainer.id);
   });
 
+  it("POST creates a session-less note when the trainer is linked to the client via any non-canceled booking", async () => {
+    const { trainer, clientProfile, reformer } = await seed();
+    // Establish the trainer-client link via a booking on some session the
+    // trainer owns — the note itself attaches no session, but the IDOR
+    // guard requires *some* training relationship to exist.
+    const linkingSession = await makeSession(trainer.id, reformer.id);
+    await prisma.booking.create({
+      data: { sessionId: linkingSession.id, clientProfileId: clientProfile.id },
+    });
+    asTrainer(trainer);
+
+    const response = await POST(
+      postBody({
+        clientProfileId: clientProfile.id,
+        note: "Recurring lower-back complaint — keep an eye on roll-ups.",
+      }),
+    );
+    expect(response.status).toBe(201);
+    const persisted = await prisma.trainerNote.findFirst({
+      where: { clientProfileId: clientProfile.id, sessionId: null },
+    });
+    expect(persisted?.trainerUserId).toBe(trainer.id);
+  });
+
+  it("POST is rejected with 403 when the trainer has no booking link to the client (session-less)", async () => {
+    const { trainer, clientProfile } = await seed();
+    // No bookings, no sessions for this trainer — they should NOT be able
+    // to write a note against an arbitrary client. Guards against IDOR.
+    asTrainer(trainer);
+
+    const response = await POST(
+      postBody({
+        clientProfileId: clientProfile.id,
+        note: "IDOR attempt",
+      }),
+    );
+    expect(response.status).toBe(403);
+    expect(await prisma.trainerNote.count()).toBe(0);
+  });
+
+  it("POST as ADMIN can write a session-less note for any client (no trainer-link check)", async () => {
+    const { clientProfile } = await seed();
+    const admin = await prisma.user.create({
+      data: { email: "admin@test.local", fullName: "Admin", role: "ADMIN" },
+    });
+    setMockUser({
+      id: admin.id,
+      role: "ADMIN",
+      email: admin.email,
+      isActive: true,
+      clientProfile: null,
+    });
+
+    const response = await POST(
+      postBody({
+        clientProfileId: clientProfile.id,
+        note: "Admin general note.",
+      }),
+    );
+    expect(response.status).toBe(201);
+  });
+
   it("POST is rejected with 403 when the trainer does not own the session", async () => {
     const { trainer, otherTrainer, clientProfile, reformer } = await seed();
     const session = await makeSession(otherTrainer.id, reformer.id);
@@ -152,6 +214,12 @@ describe("trainer-notes", () => {
   it("POST returns 409 when the client has no active booking on the session", async () => {
     const { trainer, clientProfile, reformer } = await seed();
     const session = await makeSession(trainer.id, reformer.id);
+    // Trainer-link satisfied via a separate booking — isolates the
+    // per-session active-booking check from the broader IDOR guard.
+    const linkingSession = await makeSession(trainer.id, reformer.id);
+    await prisma.booking.create({
+      data: { sessionId: linkingSession.id, clientProfileId: clientProfile.id },
+    });
     asTrainer(trainer);
 
     const response = await POST(
@@ -165,7 +233,7 @@ describe("trainer-notes", () => {
     expect(await prisma.trainerNote.count()).toBe(0);
   });
 
-  it("POST returns 409 when the client's only booking is canceled", async () => {
+  it("POST returns 409 when the client's only booking on the session is canceled", async () => {
     const { trainer, clientProfile, reformer } = await seed();
     const session = await makeSession(trainer.id, reformer.id);
     await prisma.booking.create({
@@ -174,6 +242,11 @@ describe("trainer-notes", () => {
         clientProfileId: clientProfile.id,
         canceledAt: now(),
       },
+    });
+    // Trainer-link satisfied via a separate (active) booking.
+    const linkingSession = await makeSession(trainer.id, reformer.id);
+    await prisma.booking.create({
+      data: { sessionId: linkingSession.id, clientProfileId: clientProfile.id },
     });
     asTrainer(trainer);
 

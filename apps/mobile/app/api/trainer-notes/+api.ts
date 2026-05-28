@@ -16,10 +16,25 @@ export async function GET(request: Request) {
   const parsed = trainerNotesQuerySchema.safeParse({
     sessionId: url.searchParams.get("sessionId") ?? undefined,
     clientProfileId: url.searchParams.get("clientProfileId") ?? undefined,
+    sessionIds: url.searchParams.get("sessionIds") ?? undefined,
+    clientProfileIds: url.searchParams.get("clientProfileIds") ?? undefined,
     cursor: url.searchParams.get("cursor") ?? undefined,
     take: url.searchParams.get("take") ?? undefined,
   });
   if (!parsed.success) return fail("Invalid query params", 400, parsed.error);
+
+  // Plural forms take precedence over singular when both are present.
+  // Singular still works for any callers that haven't migrated yet.
+  const sessionFilter = parsed.data.sessionIds
+    ? { sessionId: { in: parsed.data.sessionIds } }
+    : parsed.data.sessionId
+      ? { sessionId: parsed.data.sessionId }
+      : {};
+  const clientFilter = parsed.data.clientProfileIds
+    ? { clientProfileId: { in: parsed.data.clientProfileIds } }
+    : parsed.data.clientProfileId
+      ? { clientProfileId: parsed.data.clientProfileId }
+      : {};
 
   // Scope: clients see only their notes; trainers by session/client; admins see all.
   const where =
@@ -28,12 +43,12 @@ export async function GET(request: Request) {
       : guard.user.role === UserRole.TRAINER
         ? {
             trainerUserId: guard.user.id,
-            ...(parsed.data.sessionId ? { sessionId: parsed.data.sessionId } : {}),
-            ...(parsed.data.clientProfileId ? { clientProfileId: parsed.data.clientProfileId } : {}),
+            ...sessionFilter,
+            ...clientFilter,
           }
         : {
-            ...(parsed.data.sessionId ? { sessionId: parsed.data.sessionId } : {}),
-            ...(parsed.data.clientProfileId ? { clientProfileId: parsed.data.clientProfileId } : {}),
+            ...sessionFilter,
+            ...clientFilter,
           };
 
   const notes = await prisma.trainerNote.findMany({
@@ -90,50 +105,68 @@ export async function POST(request: Request) {
   const parsed = trainerNoteInputSchema.safeParse(body);
   if (!parsed.success) return fail("Invalid payload", 400, parsed.error);
 
-  const [session, profile] = await Promise.all([
-    prisma.session.findUnique({
-      where: { id: parsed.data.sessionId },
-      select: { id: true },
-    }),
-    prisma.clientProfile.findUnique({
-      where: { id: parsed.data.clientProfileId },
-      select: {
-        id: true,
-        userId: true,
-      },
-    }),
-  ]);
-
-  if (!session) return fail("Session not found", 404);
+  // Session is optional — a note can be free-form client context with no
+  // class attached. When set, we still enforce trainer-ownership and the
+  // active-booking rule so session-bound notes remain meaningful.
+  const profile = await prisma.clientProfile.findUnique({
+    where: { id: parsed.data.clientProfileId },
+    select: { id: true, userId: true },
+  });
   if (!profile) return fail("Client profile not found", 404);
-  // Trainers may only add notes for sessions they are assigned to.
+
+  // Trainer-link guard. A trainer may only write notes for clients they
+  // have actually trained — i.e. who have at least one non-canceled
+  // booking on one of this trainer's sessions. Without this check, a
+  // session-less note would let any trainer write against any client
+  // (an IDOR). Admins are exempt; they can write notes against anyone.
   if (guard.user.role === UserRole.TRAINER) {
-    const ownsSession = await trainerOwnsSession(guard.user.id, parsed.data.sessionId);
-    if (!ownsSession) {
-      return fail("Trainers can only add notes for their own sessions", 403);
+    const link = await prisma.booking.findFirst({
+      where: {
+        clientProfileId: parsed.data.clientProfileId,
+        canceledAt: null,
+        session: { trainerUserId: guard.user.id },
+      },
+      select: { id: true },
+    });
+    if (!link) {
+      return fail("You can only add notes for your own clients", 403);
     }
   }
 
-  const activeBooking = await prisma.booking.findUnique({
-    where: {
-      sessionId_clientProfileId: {
-        sessionId: parsed.data.sessionId,
-        clientProfileId: parsed.data.clientProfileId,
+  if (parsed.data.sessionId) {
+    const session = await prisma.session.findUnique({
+      where: { id: parsed.data.sessionId },
+      select: { id: true },
+    });
+    if (!session) return fail("Session not found", 404);
+
+    if (guard.user.role === UserRole.TRAINER) {
+      const ownsSession = await trainerOwnsSession(
+        guard.user.id,
+        parsed.data.sessionId,
+      );
+      if (!ownsSession) {
+        return fail("Trainers can only add notes for their own sessions", 403);
+      }
+    }
+
+    const activeBooking = await prisma.booking.findUnique({
+      where: {
+        sessionId_clientProfileId: {
+          sessionId: parsed.data.sessionId,
+          clientProfileId: parsed.data.clientProfileId,
+        },
       },
-    },
-    select: {
-      id: true,
-      canceledAt: true,
-    },
-  });
-  // Notes are only allowed for clients with an active (non-canceled) booking.
-  if (!activeBooking || activeBooking.canceledAt) {
-    return fail("Client must be actively booked for this session", 409);
+      select: { id: true, canceledAt: true },
+    });
+    if (!activeBooking || activeBooking.canceledAt) {
+      return fail("Client must be actively booked for this session", 409);
+    }
   }
 
   const note = await prisma.trainerNote.create({
     data: {
-      sessionId: parsed.data.sessionId,
+      sessionId: parsed.data.sessionId ?? null,
       clientProfileId: parsed.data.clientProfileId,
       trainerUserId: guard.user.id,
       note: parsed.data.note.trim(),
