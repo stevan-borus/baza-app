@@ -11,11 +11,13 @@
  *   ├─ Hero: large centered avatar (camera badge), name, email,
  *   │   "MEMBER SINCE" caps tag
  *   ├─ MOJI PAKETI: surface cards stacked
+ *   ├─ ISTORIJA TRENINGA: hairline link row → past-bookings list
  *   └─ FOTOGRAFIJE / ZDRAVSTVENI PODACI / PRAVNA DOKUMENTA
  *
  * Settings + Sign out live in the ProfileSheet (header avatar tap).
  */
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
   Image,
@@ -60,6 +62,7 @@ function getPackageProgress(pkg: ClientPackage): number {
 export default function ClientProfile() {
   const { t, i18n } = useTranslation();
   const lang = i18n.language === "en" ? "en" : "sr";
+  const router = useRouter();
   const queryClient = useQueryClient();
   const tokens = useThemeTokens();
   const dateLocale = getDateLocale();
@@ -288,6 +291,31 @@ export default function ClientProfile() {
                 </View>
               );
             })}
+          </View>
+        </MotiView>
+
+        {/* ── ISTORIJA TRENINGA — hairline list row, no card chrome ── */}
+        <MotiView
+          from={{ opacity: 0, translateY: 8 }}
+          animate={{ opacity: 1, translateY: 0 }}
+          transition={{ type: "timing", duration: 400, delay: 260 }}
+        >
+          <SectionRow title={t("client.profileTab.trainingHistory")} />
+          <View className="mx-4 border-t border-glass-border">
+            <Pressable
+              testID="client-profile-history-row"
+              onPress={() => router.push("/(client)/profile/history")}
+              android_ripple={null}
+              className="flex-row items-center justify-between py-4 active:opacity-60"
+            >
+              <Text
+                className="font-body-medium text-foreground"
+                style={{ fontSize: 15, letterSpacing: -0.1 }}
+              >
+                {t("client.profileTab.viewHistory")}
+              </Text>
+              <Feather name="chevron-right" size={16} color={tokens.faint} />
+            </Pressable>
           </View>
         </MotiView>
 

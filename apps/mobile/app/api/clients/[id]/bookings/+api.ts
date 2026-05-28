@@ -21,8 +21,19 @@ const MAX_LIMIT = 50;
  * status so the UI doesn't have to know about that.
  */
 export async function GET(request: Request, { id }: RouteParams) {
-  const guard = await requireRole(request, [UserRole.ADMIN, UserRole.TRAINER]);
+  const guard = await requireRole(request, [
+    UserRole.ADMIN,
+    UserRole.TRAINER,
+    UserRole.CLIENT,
+  ]);
   if (!guard.ok) return guard.response;
+
+  // Self-access only for clients: a CLIENT may read /clients/<their userId>
+  // but not anyone else's. Guards against the obvious IDOR where a logged-in
+  // client passes another userId in the path.
+  if (guard.user.role === UserRole.CLIENT && guard.user.id !== id) {
+    return fail("Forbidden", 403);
+  }
 
   const url = new URL(request.url);
   const period = url.searchParams.get("period");

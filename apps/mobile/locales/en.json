@@ -312,6 +312,8 @@
       "myPackages": "My packages",
       "sessions": "{{remaining}}/{{total}} sessions",
       "expires": "Expires {{date}}",
+      "trainingHistory": "Training history",
+      "viewHistory": "View past sessions",
       "preferences": "Preferences",
       "language": "Language",
       "notificationSettings": "Notification settings",
@@ -321,6 +323,10 @@
       "viewProfile": "View profile",
       "changePhoto": "Change profile photo",
       "memberSince": "Member since {{year}}"
+    },
+    "history": {
+      "empty": "No past sessions yet.",
+      "error": "Unable to load history."
     },
     "dayView": {
       "noSessions": "No sessions on this day",

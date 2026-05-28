@@ -312,6 +312,8 @@
       "myPackages": "Moji paketi",
       "sessions": "{{remaining}}/{{total}} termina",
       "expires": "Ističe {{date}}",
+      "trainingHistory": "Istorija treninga",
+      "viewHistory": "Pogledaj prošle termine",
       "preferences": "Podešavanja",
       "language": "Jezik",
       "notificationSettings": "Podešavanja obaveštenja",
@@ -321,6 +323,10 @@
       "viewProfile": "Otvori profil",
       "changePhoto": "Promeni profilnu sliku",
       "memberSince": "Član od {{year}}."
+    },
+    "history": {
+      "empty": "Još nema završenih treninga.",
+      "error": "Nije moguće učitati istoriju."
     },
     "dayView": {
       "noSessions": "Nema termina ovog dana",
