@@ -16,9 +16,9 @@ import React from "react";
 import { Pressable, Text, View } from "react-native";
 import { useTranslation } from "react-i18next";
 
-export type ClientDetailTab = "pregled" | "paketi" | "treninzi";
+export type ClientDetailTab = "pregled" | "paketi" | "treninzi" | "beleske";
 
-const TABS: ClientDetailTab[] = ["pregled", "paketi", "treninzi"];
+const TABS: ClientDetailTab[] = ["pregled", "paketi", "treninzi", "beleske"];
 
 export function ClientDetailTabBar({
   active,

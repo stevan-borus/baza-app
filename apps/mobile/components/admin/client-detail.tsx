@@ -35,6 +35,11 @@ import { PaginatedList } from "@/components/ui/paginated-list";
 import { clientsQueries } from "@/lib/queries/clients-queries-factory";
 import { packagesQueries, type ClientPackage } from "@/lib/queries/packages-queries-factory";
 import { bookingsQueries, type ClientBooking } from "@/lib/queries/bookings-queries-factory";
+import {
+  trainerNotesQueries,
+  type TrainerNote,
+} from "@/lib/queries/trainer-notes-queries-factory";
+import * as Clipboard from "expo-clipboard";
 import { BookingRow } from "@/components/admin/booking-row";
 import { AssignPackageSheetContent } from "@/components/admin/assign-package-sheet-content";
 import { ReturnToPill } from "@/components/admin/return-to-pill";
@@ -313,6 +318,14 @@ export function ClientDetail({ id }: { id: string }) {
                 upcomingQuery={upcomingQuery}
                 upcomingBookings={upcomingBookings}
                 clientUserId={id}
+                bottomPad={bottomPad}
+              />
+            ) : null}
+
+            {activeTab === "beleske" ? (
+              <BeleskeTab
+                clientProfileId={client.id}
+                lang={lang}
                 bottomPad={bottomPad}
               />
             ) : null}
@@ -870,6 +883,160 @@ function TreninziTab({
           />
         }
       />
+    </View>
+  );
+}
+
+function BeleskeTab({
+  clientProfileId,
+  lang,
+  bottomPad,
+}: {
+  clientProfileId: string;
+  lang: "sr" | "en";
+  bottomPad: number;
+}) {
+  const { t } = useTranslation();
+  const queryClient = useQueryClient();
+  const [longPressed, setLongPressed] = useState<TrainerNote | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<TrainerNote | null>(null);
+
+  const notesQuery = useInfiniteQuery(
+    trainerNotesQueries.listInfinite({ clientProfileIds: [clientProfileId] }),
+  );
+  const notes = useMemo<TrainerNote[]>(
+    () => (notesQuery.data?.pages ?? []).flatMap((p) => p.notes),
+    [notesQuery.data?.pages],
+  );
+
+  const deleteMutation = useMutation({
+    ...trainerNotesQueries.delete(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["trainer-notes"] });
+    },
+  });
+
+  return (
+    <View
+      testID="client-detail-tab-content-beleske"
+      style={{ flex: 1, paddingHorizontal: 20 }}
+    >
+      <PaginatedList<TrainerNote>
+        query={notesQuery}
+        data={notes}
+        keyExtractor={(n) => n.id}
+        renderItem={({ item }) => (
+          <Pressable
+            testID={`beleske-row-${item.id}`}
+            onLongPress={() => setLongPressed(item)}
+            android_ripple={null}
+            className="bg-surface rounded-lg overflow-hidden active:opacity-80"
+            style={{ marginBottom: 8, padding: 14 }}
+          >
+            <Text
+              className="text-faint font-body-semibold"
+              style={{
+                fontSize: 11,
+                letterSpacing: 1.2,
+                textTransform: "uppercase",
+                marginBottom: 6,
+              }}
+              numberOfLines={1}
+            >
+              {item.trainer?.fullName ?? t("admin.clientDetail.beleske.unknownTrainer")} ·{" "}
+              {dayjs(item.createdAt).locale(lang).format("D.M.YYYY.")}
+            </Text>
+            <Text
+              className="text-foreground"
+              style={{ fontSize: 14, lineHeight: 20 }}
+            >
+              {item.note}
+            </Text>
+          </Pressable>
+        )}
+        contentContainerStyle={{ paddingBottom: bottomPad }}
+        errorState={
+          <ErrorState message={t("admin.clientDetail.beleske.error")} />
+        }
+        emptyState={
+          <EmptyState title={t("admin.clientDetail.beleske.empty")} />
+        }
+      />
+
+      {/* Long-press action sheet — Copy text + Delete (with confirm). */}
+      <AppSheet
+        open={longPressed !== null}
+        onOpenChange={(v) => !v && setLongPressed(null)}
+      >
+        {longPressed ? (
+          <View className="flex-col gap-2">
+            <ActionRow
+              testID="beleske-action-copy"
+              icon="copy"
+              label={t("admin.clientDetail.beleske.copy")}
+              onPress={() => {
+                void Clipboard.setStringAsync(longPressed.note);
+                setLongPressed(null);
+              }}
+            />
+            <ActionRow
+              testID="beleske-action-delete"
+              icon="trash-2"
+              label={t("admin.clientDetail.beleske.delete")}
+              destructive
+              onPress={() => {
+                setPendingDelete(longPressed);
+                setLongPressed(null);
+              }}
+            />
+          </View>
+        ) : null}
+      </AppSheet>
+
+      {/* Delete confirmation — two-step so a stray long-press doesn't
+          permanently remove a trainer's words. The trainer who wrote
+          the note is not notified of the deletion. */}
+      <AppSheet
+        open={pendingDelete !== null}
+        onOpenChange={(v) => !v && setPendingDelete(null)}
+      >
+        {pendingDelete ? (
+          <View className="flex-col gap-4">
+            <Text
+              className="text-foreground font-body-bold"
+              style={{ fontSize: 18, letterSpacing: -0.2 }}
+            >
+              {t("admin.clientDetail.beleske.confirmDelete")}
+            </Text>
+            <Text
+              className="text-muted"
+              style={{ fontSize: 14, lineHeight: 20 }}
+            >
+              {t("admin.clientDetail.beleske.confirmDeleteBody")}
+            </Text>
+            <View className="flex-row gap-3">
+              <Button
+                variant="ghost"
+                className="flex-1"
+                onPress={() => setPendingDelete(null)}
+              >
+                {t("admin.clientDetail.beleske.cancel")}
+              </Button>
+              <Button
+                testID="beleske-confirm-delete"
+                variant="danger"
+                className="flex-1"
+                onPress={() => {
+                  deleteMutation.mutate(pendingDelete.id);
+                  setPendingDelete(null);
+                }}
+              >
+                {t("admin.clientDetail.beleske.confirm")}
+              </Button>
+            </View>
+          </View>
+        ) : null}
+      </AppSheet>
     </View>
   );
 }
