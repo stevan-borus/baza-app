@@ -86,6 +86,7 @@ const sessionDetailSchema = z.object({
     z.object({
       id: z.string(),
       createdAt: z.string(),
+      clientProfileId: z.string(),
       client: z.object({
         id: z.string(),
         fullName: z.string(),

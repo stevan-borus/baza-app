@@ -990,10 +990,14 @@
       "empty": "No notes to display.",
       "sheetTitle": "New note",
       "session": "Session",
+      "sessionOptional": "Session (optional)",
+      "linkSessionOptional": "Link to a session (optional)",
+      "pickClientCta": "Pick a client",
       "client": "Client",
       "placeholder": "Note...",
       "emptySessions": "No sessions available",
       "emptyClients": "No clients available",
+      "noBookedClients": "No clients booked into this session.",
       "saveError": "Saving note failed.",
       "filterAll": "All",
       "filterThisWeek": "This week",
@@ -1002,7 +1006,26 @@
       "pickClientTitle": "Filter by client",
       "pickSessionTitle": "Filter by session",
       "editSheetTitle": "Edit note",
-      "unknownClient": "Unknown client"
+      "unknownClient": "Unknown client",
+      "oneClientSelected": "1 selected",
+      "oneSessionSelected": "1 selected",
+      "countSelected": "{{count}} selected",
+      "clearAll": "Clear",
+      "clearAllVerbose": "Clear all",
+      "done": "Done",
+      "clientWord": {
+        "one": "client",
+        "few": "clients",
+        "many": "clients"
+      },
+      "sessionWord": {
+        "one": "session",
+        "few": "sessions",
+        "many": "sessions"
+      }
+    },
+    "sessionPicker": {
+      "emptyDay": "No sessions this day"
     },
     "clients": {
       "title": "My Clients",

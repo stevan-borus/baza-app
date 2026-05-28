@@ -176,6 +176,7 @@ export async function GET(request: Request, { id }: RouteParams) {
       return {
         id: b.id,
         createdAt: b.createdAt,
+        clientProfileId: b.clientProfile.id,
         client: {
           id: b.clientProfile.user.id,
           fullName: b.clientProfile.user.fullName,
