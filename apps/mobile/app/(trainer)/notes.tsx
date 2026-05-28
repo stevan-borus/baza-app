@@ -475,14 +475,18 @@ export default function TrainerNotes() {
   const createMutation = useMutation({
     ...trainerNotesQueries.create(),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["trainer-notes"] });
       setShowCreate(false);
       setForm({ sessionId: "", clientProfileId: "", clientLabel: "", note: "" });
-      // New notes land at the top of the list (server sorts newest-first).
-      // If the trainer was scrolled down before composing, snap them up so
-      // the note they just wrote is visible — otherwise the create looks
-      // like a no-op from the trainer's perspective.
-      listRef.current?.scrollToOffset({ offset: 0, animated: true });
+      // Wait for the refetched page to land in cache (refetch, not just
+      // invalidate — invalidate resolves on cache-mark, not on data
+      // arrival). Then defer to the next frame so React has committed
+      // the new listData before we ask LegendList to scroll. Without
+      // both steps the scroll fires while listData still holds the
+      // pre-mutation array and ends up a no-op (offset 0 == current).
+      await queryClient.refetchQueries({ queryKey: ["trainer-notes"] });
+      requestAnimationFrame(() => {
+        listRef.current?.scrollToOffset({ offset: 0, animated: true });
+      });
     },
   });
 
