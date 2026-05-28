@@ -92,8 +92,9 @@ A row of money received. Always paired with a ClientPackage in Flow 1 (Nova upla
 
 ### Trainer notes
 
-**Note**:
-Free-text observation a Trainer writes about a Client, attached to a specific Session. Visible only to the writing Trainer and Admins.
+**TrainerNote**:
+Free-text observation a Trainer writes about a Client. Optionally attached to a specific Session — session-less TrainerNotes hold general client context (e.g. an injury history note that isn't tied to one class). The authoring Trainer can read, edit, and delete their own TrainerNotes. Admins can read every TrainerNote about every Client. Clients **never** see TrainerNotes — if a future product need calls for client-visible observations, that is a new concept and a new domain term, not a flag on this one.
+_Avoid_: "Note" alone (overloads with the `pause.reason` field, commit notes, and the `editForm.notes` admin form input); "comment"; "client log".
 
 ### Cron
 
