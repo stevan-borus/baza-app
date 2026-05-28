@@ -259,11 +259,6 @@
       "packageName": "Paket",
       "sessionsUntil": "Termini: {{count}} | Do: {{date}}"
     },
-    "history": {
-      "title": "Istorija treninga",
-      "error": "Nije moguće učitati istoriju.",
-      "noNotes": "Nema zabeleški o treninzima."
-    },
     "signOut": "Odjavi se",
     "home": {
       "greeting": "Zdravo, {{name}}",
@@ -277,8 +272,6 @@
       "readyForNext": "Spremna za sledeći trening?",
       "browseSchedule": "Pogledaj raspored",
       "sessionsLeft": "{{used}}/{{total}} termina iskorišćeno",
-      "recentNotes": "Poslednje beleške",
-      "fromYourTrainer": "Od trenera",
       "yourPackage": "Tvoj paket",
       "manage": "Upravljaj",
       "thisWeek": "Ova nedelja",
@@ -300,7 +293,6 @@
       "join": "Pridruži se",
       "booked": "Rezervisano",
       "package": "Paket",
-      "trainer": "Trener",
       "onAccount": "Na nalogu",
       "sessionsRemaining": "Preostalo termina",
       "expiresOn": "Ističe {{date}}",
@@ -320,22 +312,15 @@
       "myPackages": "Moji paketi",
       "sessions": "{{remaining}}/{{total}} termina",
       "expires": "Ističe {{date}}",
-      "trainingHistory": "Istorija treninga",
       "preferences": "Podešavanja",
       "language": "Jezik",
       "notificationSettings": "Podešavanja obaveštenja",
       "account": "Nalog",
       "paused": "Pauziran",
       "expired": "Istekao",
-      "totalNotes": "Ukupno termina",
-      "thisMonth": "Ovaj mesec",
-      "activePkgs": "Aktivni paketi",
       "viewProfile": "Otvori profil",
       "changePhoto": "Promeni profilnu sliku",
-      "memberSince": "Član od {{year}}.",
-      "notesCount_one": "{{count}} unos",
-      "notesCount_few": "{{count}} unosa",
-      "notesCount_other": "{{count}} unosa"
+      "memberSince": "Član od {{year}}."
     },
     "dayView": {
       "noSessions": "Nema termina ovog dana",
@@ -652,7 +637,19 @@
       "tabs": {
         "pregled": "Pregled",
         "paketi": "Paketi",
-        "treninzi": "Treninzi"
+        "treninzi": "Treninzi",
+        "beleske": "Beleške"
+      },
+      "beleske": {
+        "empty": "Nema beleški za ovog klijenta.",
+        "error": "Nije moguće učitati beleške.",
+        "delete": "Obriši belešku",
+        "copy": "Kopiraj tekst",
+        "confirmDelete": "Obrisati ovu belešku?",
+        "confirmDeleteBody": "Ova radnja trajno briše belešku. Treneru koji je napisao neće biti poslata obaveštenja.",
+        "confirm": "Obriši",
+        "cancel": "Otkaži",
+        "unknownTrainer": "Trener"
       },
       "quickActions": {
         "title": "Brze akcije"

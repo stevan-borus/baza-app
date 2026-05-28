@@ -10,14 +10,12 @@
  *   ScrollView
  *   ├─ Hero: large centered avatar (camera badge), name, email,
  *   │   "MEMBER SINCE" caps tag
- *   ├─ Editorial stat strip: hairline-separated columns
  *   ├─ MOJI PAKETI: surface cards stacked
- *   └─ ISTORIJA TRENINGA: hairline list row (no card chrome)
+ *   └─ FOTOGRAFIJE / ZDRAVSTVENI PODACI / PRAVNA DOKUMENTA
  *
  * Settings + Sign out live in the ProfileSheet (header avatar tap).
  */
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
   Image,
@@ -38,7 +36,6 @@ import { useThemeTokens } from "@/components/ui/tokens";
 import { getDateLocale } from "@/lib/i18n";
 import { authQueries } from "@/lib/queries/auth-queries-factory";
 import { packagesQueries, type ClientPackage } from "@/lib/queries/packages-queries-factory";
-import { trainerNotesQueries } from "@/lib/queries/trainer-notes-queries-factory";
 import { ProfilePersonalDataSections } from "@/components/profile/profile-personal-data-sections";
 
 // ─── helpers ────────────────────────────────────────────────────────────────
@@ -63,7 +60,6 @@ function getPackageProgress(pkg: ClientPackage): number {
 export default function ClientProfile() {
   const { t, i18n } = useTranslation();
   const lang = i18n.language === "en" ? "en" : "sr";
-  const router = useRouter();
   const queryClient = useQueryClient();
   const tokens = useThemeTokens();
   const dateLocale = getDateLocale();
@@ -73,41 +69,25 @@ export default function ClientProfile() {
 
   const meQuery = useQuery(authQueries.me());
   const packagesQuery = useQuery(packagesQueries.clientPackages());
-  const notesQuery = useQuery(trainerNotesQueries.list());
 
   const packages = packagesQuery.data?.packages ?? [];
-  const notes = notesQuery.data?.notes ?? [];
   const userEmail = meQuery.data?.user.email ?? "";
   const userName = userEmail.split("@")[0];
   const initials = userEmail ? getInitials(userEmail) : "?";
 
-  const totalNotes = notes.length;
-  const now = new Date();
-  const thisMonthBookings = notes.filter((n) => {
-    const d = new Date(n.createdAt);
-    return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
-  }).length;
-  const activePackages = packages.filter(
-    (p) => p.sessionsRemaining > 0 && new Date(p.expiresAt) >= now,
-  ).length;
-
-  // "Member since" — derive from the oldest known note (proxy for first
-  // session). Falls back to current year when there's no signal yet.
-  const memberSinceYear = (() => {
-    if (notes.length === 0) return new Date().getFullYear();
-    const earliest = notes.reduce((min, n) => {
-      const t = new Date(n.createdAt).getTime();
-      return t < min ? t : min;
-    }, Number.POSITIVE_INFINITY);
-    return new Date(earliest).getFullYear();
-  })();
+  // "Member since" — the User row's createdAt. The previous derivation
+  // proxied this from the oldest trainer note, which silently fell back
+  // to "current year" for any client without notes; once we stopped
+  // surfacing notes to clients this proxy had to go anyway.
+  const memberSinceYear = meQuery.data?.user.createdAt
+    ? new Date(meQuery.data.user.createdAt).getFullYear()
+    : new Date().getFullYear();
 
   async function handleRefresh() {
     setRefreshing(true);
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: ["auth"] }),
       queryClient.invalidateQueries({ queryKey: ["packages"] }),
-      queryClient.invalidateQueries({ queryKey: ["trainerNotes"] }),
     ]);
     setRefreshing(false);
   }
@@ -220,40 +200,6 @@ export default function ClientProfile() {
           </View>
         </MotiView>
 
-        {/* ── Editorial stat strip ─────────────────────────────────────── */}
-        <MotiView
-          from={{ opacity: 0, translateY: 8 }}
-          animate={{ opacity: 1, translateY: 0 }}
-          transition={{ type: "timing", duration: 400, delay: 120 }}
-        >
-          <View className="mx-4 flex-row">
-            <StatColumn
-              label={t("client.profileTab.totalNotes")}
-              value={totalNotes}
-              loading={notesQuery.isLoading}
-            />
-            <View
-              className="bg-glass-border"
-              style={{ width: 1, marginVertical: 10 }}
-            />
-            <StatColumn
-              label={t("client.profileTab.thisMonth")}
-              value={thisMonthBookings}
-              loading={notesQuery.isLoading}
-            />
-            <View
-              className="bg-glass-border"
-              style={{ width: 1, marginVertical: 10 }}
-            />
-            <StatColumn
-              label={t("client.profileTab.activePkgs")}
-              value={activePackages}
-              loading={packagesQuery.isLoading}
-              accent
-            />
-          </View>
-        </MotiView>
-
         {/* ── MOJI PAKETI ──────────────────────────────────────────────── */}
         <MotiView
           from={{ opacity: 0, translateY: 8 }}
@@ -286,7 +232,8 @@ export default function ClientProfile() {
               const total = pkg.packageType?.sessionCount ?? 0;
               const progress = getPackageProgress(pkg);
               const expires = new Date(pkg.expiresAt);
-              const expired = pkg.sessionsRemaining <= 0 || expires < now;
+              const expired =
+                pkg.sessionsRemaining <= 0 || expires < new Date();
               return (
                 <View key={pkg.id} className="bg-surface rounded-lg p-4 gap-3">
                   <View className="flex-row items-start justify-between">
@@ -344,42 +291,6 @@ export default function ClientProfile() {
           </View>
         </MotiView>
 
-        {/* ── ISTORIJA TRENINGA — hairline list row, no card chrome ── */}
-        <MotiView
-          from={{ opacity: 0, translateY: 8 }}
-          animate={{ opacity: 1, translateY: 0 }}
-          transition={{ type: "timing", duration: 400, delay: 260 }}
-        >
-          <SectionRow title={t("client.profileTab.trainingHistory")} />
-          <View className="mx-4 border-t border-glass-border">
-            <Pressable
-              onPress={() => router.push("/(client)/profile/history")}
-              android_ripple={null}
-              className="flex-row items-center justify-between py-4 active:opacity-60"
-            >
-              <View className="flex-1 pr-3">
-                <Text
-                  className="font-body-medium text-foreground"
-                  style={{ fontSize: 15, letterSpacing: -0.1 }}
-                >
-                  {totalNotes === 0
-                    ? t("client.history.noNotes")
-                    : t("client.profileTab.notesCount", {
-                        count: totalNotes,
-                        defaultValue: `${totalNotes} entries`,
-                      })}
-                </Text>
-              </View>
-              <View className="flex-row items-center gap-2">
-                <Text className="text-faint text-[13px]">
-                  {totalNotes > 0 ? totalNotes : "—"}
-                </Text>
-                <Feather name="chevron-right" size={16} color={tokens.faint} />
-              </View>
-            </Pressable>
-          </View>
-        </MotiView>
-
         {/* ── FOTOGRAFIJE / ZDRAVSTVENI PODACI / PRAVNA DOKUMENTA ── */}
         <MotiView
           from={{ opacity: 0, translateY: 8 }}
@@ -390,49 +301,5 @@ export default function ClientProfile() {
         </MotiView>
       </ScrollView>
     </ScreenContainerRaw>
-  );
-}
-
-// ─── stat column ─────────────────────────────────────────────────────────────
-
-function StatColumn({
-  label,
-  value,
-  loading,
-  accent = false,
-}: {
-  label: string;
-  value: number;
-  loading: boolean;
-  accent?: boolean;
-}) {
-  // Empty data renders an em-dash instead of an aggressive zero — keeps
-  // the strip elegant when the user is brand new.
-  const display = loading ? "…" : value === 0 ? "—" : String(value);
-  return (
-    <View className="flex-1 items-center py-4 px-2 gap-1.5">
-      <Text
-        style={{
-          fontFamily: "AlbertSans-SemiBold",
-          fontSize: 9,
-          letterSpacing: 1.4,
-          textTransform: "uppercase",
-        }}
-        className={accent ? "text-accent" : "text-muted"}
-      >
-        {label}
-      </Text>
-      <Text
-        style={{
-          fontFamily: "AlbertSans-Bold",
-          fontSize: 26,
-          letterSpacing: -0.6,
-          lineHeight: 30,
-        }}
-        className={accent ? "text-accent" : "text-foreground"}
-      >
-        {display}
-      </Text>
-    </View>
   );
 }
