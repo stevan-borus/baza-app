@@ -2,7 +2,6 @@ import { test, expect, type Page } from "./helpers/fixtures";
 import { now } from "../../lib/now";
 import {
   countTrainerNotesFor,
-  createPastAttendedSession,
   disconnect,
   getUserIdByEmail,
   linkTrainerToClient,
@@ -49,7 +48,8 @@ test.describe("trainer (Serbian)", () => {
       .fill(REFORMER_TRAINER_EMAIL);
     await page.getByTestId("auth-password-input").fill(SEED_PASSWORD);
     await page.getByTestId("auth-submit-button").click();
-    await expect(page.getByTestId("tab-index")).toBeVisible({
+    // The trainer landing tab is "raspored" (schedule), not "index".
+    await expect(page.getByTestId("tab-raspored")).toBeVisible({
       timeout: 15_000,
     });
   }
@@ -94,7 +94,10 @@ test.describe("trainer (Serbian)", () => {
 
   test("42: trainer creates a note for a linked client", async ({ page }) => {
     // Link reformer trainer ↔ active reformer client via a future booking.
-    const { sessionId } = await linkTrainerToClient(
+    // `dateKey` is the session's day — the compose picker is a week-strip
+    // view that only renders the *selected* day's sessions, so the spec must
+    // page to that day before the option exists.
+    const { sessionId, dateKey } = await linkTrainerToClient(
       REFORMER_TRAINER_EMAIL,
       ACTIVE_REFORMER_CLIENT_EMAIL,
     );
@@ -105,14 +108,21 @@ test.describe("trainer (Serbian)", () => {
       .getByRole("button", { name: t.trainer.notes.newNote })
       .click();
 
-    await page.getByTestId("note-session-select").dispatchEvent("click");
+    // Open the session picker sub-sheet, navigate to the session's day,
+    // then pick it. Scope to the picker — the raspored screen behind the
+    // sheet has its own week strip with the same day testIDs.
+    await page.getByTestId("note-session-trigger").dispatchEvent("click");
+    await navigateWeekStripTo(page, dateKey, "note-session-picker");
     await page
       .getByTestId(`note-session-option-${sessionId}`)
       .dispatchEvent("click");
 
-    // The clients list inside the picker shows linked clients only.
-    await page.getByTestId("note-client-select").dispatchEvent("click");
-    // Click the first option in the open dropdown.
+    // Picking a session scopes the client list to that session's roster.
+    await page.getByTestId("note-client-trigger").dispatchEvent("click");
+    // Click the first option in the open picker.
+    await expect(
+      page.locator('[data-testid^="note-client-option-"]').first(),
+    ).toBeVisible({ timeout: 10_000 });
     await page
       .locator('[data-testid^="note-client-option-"]')
       .first()
@@ -159,7 +169,7 @@ test.describe("trainer (Serbian)", () => {
 
   test("44: trainer deletes a note", async ({ page }) => {
     // Make sure at least one note exists for the linked client.
-    await linkTrainerToClient(
+    const { sessionId, dateKey } = await linkTrainerToClient(
       REFORMER_TRAINER_EMAIL,
       ACTIVE_REFORMER_CLIENT_EMAIL,
     );
@@ -175,12 +185,15 @@ test.describe("trainer (Serbian)", () => {
       await page
         .getByRole("button", { name: t.trainer.notes.newNote })
         .click();
-      await page.getByTestId("note-session-select").dispatchEvent("click");
+      await page.getByTestId("note-session-trigger").dispatchEvent("click");
+      await navigateWeekStripTo(page, dateKey, "note-session-picker");
       await page
-        .locator('[data-testid^="note-session-option-"]')
-        .first()
+        .getByTestId(`note-session-option-${sessionId}`)
         .dispatchEvent("click");
-      await page.getByTestId("note-client-select").dispatchEvent("click");
+      await page.getByTestId("note-client-trigger").dispatchEvent("click");
+      await expect(
+        page.locator('[data-testid^="note-client-option-"]').first(),
+      ).toBeVisible({ timeout: 10_000 });
       await page
         .locator('[data-testid^="note-client-option-"]')
         .first()
@@ -288,23 +301,19 @@ test.describe("trainer (Serbian)", () => {
     await signInAsReformerTrainer(page);
     await page.getByTestId("tab-notes").click();
 
-    // Tap the "By client" chip → opens the picker sheet with a Select.
+    // Tap the "By client" chip → opens the client filter sheet.
     await page
       .getByText(t.trainer.notes.filterByClient)
       .first()
       .dispatchEvent("click");
 
-    // The picker sheet has a Select that lists linked clients; expand it.
+    // The sheet's ClientPicker renders the linked clients as a searchable
+    // checkbox list directly (no Select to expand) — wait for the title, then
+    // assert the linked client row is shown.
     await page
       .getByText(t.trainer.notes.pickClientTitle)
       .first()
       .waitFor({ timeout: 5_000 });
-    // The Select trigger doesn't have a testID inside this picker sheet —
-    // tap the Select placeholder text to expand.
-    await page
-      .getByText(t.trainer.notes.client, { exact: true })
-      .first()
-      .dispatchEvent("click");
 
     await expect(
       page.getByText("Active Reformer Client", { exact: true }).first(),
@@ -315,7 +324,7 @@ test.describe("trainer (Serbian)", () => {
     page,
   }) => {
     // Ensure a note exists for the linked client + their session.
-    const { sessionId } = await linkTrainerToClient(
+    const { sessionId, dateKey } = await linkTrainerToClient(
       REFORMER_TRAINER_EMAIL,
       ACTIVE_REFORMER_CLIENT_EMAIL,
     );
@@ -327,12 +336,12 @@ test.describe("trainer (Serbian)", () => {
       await page
         .getByRole("button", { name: t.trainer.notes.newNote })
         .click();
-      await page.getByTestId("note-session-select").dispatchEvent("click");
+      await page.getByTestId("note-session-trigger").dispatchEvent("click");
+      await navigateWeekStripTo(page, dateKey, "note-session-picker");
       await page
-        .locator('[data-testid^="note-session-option-"]')
-        .first()
+        .getByTestId(`note-session-option-${sessionId}`)
         .dispatchEvent("click");
-      await page.getByTestId("note-client-select").dispatchEvent("click");
+      await page.getByTestId("note-client-trigger").dispatchEvent("click");
       // Wait for the client options to actually render (the trainer's
       // /api/clients query is fetched on the screen mount; the linkage we
       // just wrote needs a beat to surface).
@@ -362,11 +371,13 @@ test.describe("trainer (Serbian)", () => {
       .getByTestId("note-filter-by-session")
       .getByText(t.trainer.notes.filterBySession)
       .dispatchEvent("click");
-    // Wait for the picker sheet to mount, then pick the session.
+    // Wait for the picker sheet to mount. The filter picker is the same
+    // week-strip SessionPicker, so page to the session's day before the
+    // option exists, then pick it.
     await expect(page.getByTestId("session-filter-picker")).toBeVisible({
       timeout: 5_000,
     });
-    await page.getByTestId("session-filter-picker").dispatchEvent("click");
+    await navigateWeekStripTo(page, dateKey, "session-filter-picker");
     await page
       .getByTestId(`session-filter-option-${sessionId}`)
       .dispatchEvent("click");
@@ -382,7 +393,7 @@ test.describe("trainer (Serbian)", () => {
   }) => {
     // Self-sufficient: re-link so the trainer's clients query returns at
     // least one option even when the spec runs alone.
-    await linkTrainerToClient(
+    const { sessionId, dateKey } = await linkTrainerToClient(
       REFORMER_TRAINER_EMAIL,
       ACTIVE_REFORMER_CLIENT_EMAIL,
     );
@@ -394,16 +405,18 @@ test.describe("trainer (Serbian)", () => {
       .getByRole("button", { name: t.trainer.notes.newNote })
       .click();
 
-    await page.getByTestId("note-session-select").dispatchEvent("click");
-    // Pick the first available session option.
+    await page.getByTestId("note-session-trigger").dispatchEvent("click");
+    await navigateWeekStripTo(page, dateKey, "note-session-picker");
     await page
-      .locator('[data-testid^="note-session-option-"]')
-      .first()
+      .getByTestId(`note-session-option-${sessionId}`)
       .dispatchEvent("click");
-    await page.getByTestId("note-client-select").dispatchEvent("click");
+    await page.getByTestId("note-client-trigger").dispatchEvent("click");
     // Multiple "Active Reformer Client" texts may render (the picker option
     // and any existing note row showing the client name); click the option
-    // inside the open Select dropdown specifically.
+    // inside the open picker specifically.
+    await expect(
+      page.locator('[data-testid^="note-client-option-"]').first(),
+    ).toBeVisible({ timeout: 10_000 });
     await page
       .locator('[data-testid^="note-client-option-"]')
       .first()
@@ -443,42 +456,11 @@ test.describe("trainer (Serbian)", () => {
     ).toBeVisible({ timeout: 5_000 });
   });
 
-  test("51: trainer schedule shows post-cron attendance markers", async ({
-    page,
-  }) => {
-    // Create a past session yesterday with one consumed booking + one
-    // canceled booking, so the trainer's schedule should render the
-    // attendance line under the SessionCard.
-    const yesterday = now();
-    yesterday.setDate(yesterday.getDate() - 1);
-    yesterday.setHours(10, 0, 0, 0);
-
-    const { sessionId, dateKey } = await createPastAttendedSession({
-      trainerEmail: REFORMER_TRAINER_EMAIL,
-      classTypeName: "Reformer pilates",
-      consumedClientEmail: ACTIVE_REFORMER_CLIENT_EMAIL,
-      canceledClientEmail: "client.active.energy@e2e.test",
-      startsAt: yesterday,
-    });
-
-    await signInAsReformerTrainer(page);
-
-    // Navigate to yesterday on the week strip. Yesterday may sit in the
-    // previous visible week (e.g. when the anchor lands on a Monday and
-    // yesterday is Sunday), so use the strip-paging helper instead of
-    // assuming the day pill is already visible.
-    await navigateWeekStripTo(page, dateKey);
-
-    await expect(
-      page.getByTestId(`session-card-attendance-${sessionId}`),
-    ).toBeVisible({ timeout: 10_000 });
-    await expect(
-      page.getByTestId(`session-card-attended-${sessionId}`),
-    ).toBeVisible();
-    await expect(
-      page.getByTestId(`session-card-canceled-${sessionId}`),
-    ).toBeVisible();
-  });
+  // Test 51 ("post-cron attendance markers") was removed: the SessionCard
+  // attendance UI it asserted was dropped in the #32 trainer-schedule rewrite
+  // and the product is no longer surfacing those markers. The orphaned backend
+  // (availability `attendance` payload), i18n keys, and the
+  // `createPastAttendedSession` helper were removed alongside it.
 
   // Suppress the unused-import lint for the energy trainer constant.
   void ENERGY_TRAINER_EMAIL;

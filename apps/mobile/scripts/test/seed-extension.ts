@@ -6,16 +6,10 @@
  *
  * Usage:
  *   tsx scripts/test/seed-extension.ts link-trainer <trainerEmail> <clientEmail>
- *   tsx scripts/test/seed-extension.ts past-attended-session
  *
  * Exits non-zero on failure so the runner can surface the error.
  */
-import { nowMs } from "../../lib/now";
-import {
-  createPastAttendedSession,
-  disconnect,
-  linkTrainerToClient,
-} from "../../test/e2e/helpers/db";
+import { disconnect, linkTrainerToClient } from "../../test/e2e/helpers/db";
 
 async function main() {
   const [, , command, ...args] = process.argv;
@@ -28,21 +22,6 @@ async function main() {
         );
       }
       const result = await linkTrainerToClient(trainerEmail, clientEmail);
-      console.log(JSON.stringify(result));
-      break;
-    }
-    case "past-attended-session": {
-      // 25h ago — comfortably past the late-cancel cutoff (the seed uses
-      // 12h windows for Reformer) so the cron-driven attendance markers
-      // resolve to consumed/canceled cleanly.
-      const startsAt = new Date(nowMs() - 25 * 60 * 60 * 1000);
-      const result = await createPastAttendedSession({
-        trainerEmail: "trainer.reformer@e2e.test",
-        classTypeName: "Reformer pilates",
-        consumedClientEmail: "client.active.reformer@e2e.test",
-        canceledClientEmail: "client.active.energy@e2e.test",
-        startsAt,
-      });
       console.log(JSON.stringify(result));
       break;
     }

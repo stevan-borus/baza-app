@@ -986,15 +986,7 @@
       "sessions": "Termini",
       "clients": "Klijenti",
       "hours": "Sati",
-      "sessionsLabel": "termina",
-      "attendance": {
-        "consumed_one": "{{count}} dolazak",
-        "consumed_few": "{{count}} dolaska",
-        "consumed_other": "{{count}} dolazaka",
-        "canceled_one": "{{count}} otkazan",
-        "canceled_few": "{{count}} otkazana",
-        "canceled_other": "{{count}} otkazanih"
-      }
+      "sessionsLabel": "termina"
     },
     "notes": {
       "title": "Beleške",

@@ -95,10 +95,12 @@ test.describe("birthday gift deep-link", () => {
     await expect(page.getByTestId("tab-pregled")).toBeVisible({ timeout: 15_000 });
 
     await page.getByTestId("tab-pregled").click();
-    await expect(
-      page.getByTestId("notifications-bell-button").first(),
-    ).toBeVisible({ timeout: 5_000 });
-    await page.getByTestId("notifications-bell-button").first().dispatchEvent("click");
+    // The bell lives only on the Pregled header; inactive tab screens stay
+    // mounted with a hidden copy, so target the *visible* one (`.first()` can
+    // resolve to a hidden bell). `:visible` matches the admin.spec.ts idiom.
+    const bell = page.locator('[data-testid="notifications-bell-button"]:visible').first();
+    await expect(bell).toBeVisible({ timeout: 5_000 });
+    await bell.dispatchEvent("click");
 
     // 4. Inbox shows our notification row. Match the unread variant — the
     //    bell pushes a fresh route, the row is unread until tapped.

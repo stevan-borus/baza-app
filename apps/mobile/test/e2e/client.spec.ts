@@ -153,7 +153,7 @@ test.describe("client (Serbian)", () => {
       .dispatchEvent("click");
 
     await expect(
-      page.getByTestId("booking-confirmation-banner"),
+      page.getByTestId("booking-success-message"),
     ).toBeVisible({ timeout: 10_000 });
 
     // sessionsRemaining is decremented by the consumption cron after the
@@ -250,7 +250,31 @@ test.describe("client (Serbian)", () => {
       )
       .not.toBeNull();
 
-    // Re-open the booking and cancel it (within the cutoff window).
+    // Confirm the in-sheet success state, then CLOSE the sheet. The success
+    // block is owned by the booking mutation and overrides the action buttons
+    // (effectiveStep = successState ?? step), so it must be cleared before the
+    // cancel button can render. Closing fires the sheet's onClose →
+    // bookingMutation.reset() — the same thing a real user does by dismissing
+    // the sheet after booking. Escape dismisses the gorhom AppSheet.
+    await expect(page.getByTestId("booking-success-message")).toBeVisible({
+      timeout: 10_000,
+    });
+    // Close the sheet before reopening to cancel. The success block is owned
+    // by the booking mutation and overrides the action buttons until the sheet
+    // closes (onClose → bookingMutation.reset()) — same as a real user
+    // dismissing it after booking. gorhom's backdrop only closes on a real
+    // pointer press (synthetic click / dispatchEvent / Escape don't fire its
+    // gesture handler), and the sheet covers the backdrop's centre, so click
+    // the backdrop where it's the topmost element: the top of the viewport,
+    // above the sheet.
+    await page.mouse.click(page.viewportSize()!.width / 2, 40);
+    await expect(
+      page.getByTestId("booking-success-message"),
+    ).not.toBeVisible({ timeout: 10_000 });
+
+    // Re-open the booking and cancel it (within the cutoff window). The sheet
+    // now shows the "already booked" state (isBookedByMe is true after the
+    // refetch), so the cancel button is available.
     await page
       .getByTestId(`session-block-${session.id}`)
       .dispatchEvent("click");

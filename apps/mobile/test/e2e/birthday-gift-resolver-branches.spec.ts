@@ -94,10 +94,12 @@ test.describe("birthday gift — resolver branches", () => {
     await page.reload();
     await expect(page.getByTestId("tab-pregled")).toBeVisible({ timeout: 15_000 });
     await page.getByTestId("tab-pregled").click();
-    await expect(
-      page.getByTestId("notifications-bell-button").first(),
-    ).toBeVisible({ timeout: 5_000 });
-    await page.getByTestId("notifications-bell-button").first().dispatchEvent("click");
+    // The bell lives only on the Pregled header; inactive tab screens stay
+    // mounted with a hidden copy, so target the *visible* one (`.first()` can
+    // resolve to a hidden bell). `:visible` matches the admin.spec.ts idiom.
+    const bell = page.locator('[data-testid="notifications-bell-button"]:visible').first();
+    await expect(bell).toBeVisible({ timeout: 5_000 });
+    await bell.dispatchEvent("click");
 
     // The inbox lists rows for all unread prompts. Match the one mentioning
     // "Empty Pack Client" so we tap the right row.
@@ -119,7 +121,14 @@ test.describe("birthday gift — resolver branches", () => {
     //    returned null for this client.
     const submit = page.getByTestId("assign-package-submit");
     await expect(submit).toBeVisible({ timeout: 8_000 });
-    await expect(submit).toBeDisabled();
+    // The Button is a RN-Web <div role="button">: a disabled state surfaces as
+    // `aria-disabled="true"` (+ opacity-40 / pointerEvents:none), NOT the HTML
+    // `disabled` attribute, so Playwright's `toBeDisabled()` mis-reports it as
+    // enabled. Assert the attribute the app actually sets. The submit is
+    // disabled here because the resolver preselected no PackageType for the
+    // empty client (`!packageTypeId` → submitDisabled), which is the behavior
+    // under test.
+    await expect(submit).toHaveAttribute("aria-disabled", "true");
 
     // 6. Tapping any gift PackageType option enables the submit (after the
     //    date is picked too). We don't drive the full submit here — the

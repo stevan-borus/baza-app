@@ -199,7 +199,8 @@ test.describe("cron + reports + EN smoke (Serbian + English)", () => {
       .fill(REFORMER_TRAINER_EMAIL);
     await page.getByTestId("auth-password-input").fill(SEED_PASSWORD);
     await page.getByTestId("auth-submit-button").click();
-    await expect(page.getByTestId("tab-index")).toBeVisible({
+    // Trainer landing tab is "raspored" (schedule), not "index".
+    await expect(page.getByTestId("tab-raspored")).toBeVisible({
       timeout: 15_000,
     });
   });
@@ -230,7 +231,7 @@ test.describe("cron + reports + EN smoke (Serbian + English)", () => {
       .dispatchEvent("click");
 
     await expect(
-      page.getByTestId("booking-confirmation-banner"),
+      page.getByTestId("booking-success-message"),
     ).toBeVisible({ timeout: 10_000 });
   });
 });

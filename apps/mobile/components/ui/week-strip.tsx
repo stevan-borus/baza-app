@@ -97,6 +97,7 @@ export function WeekStrip({
             className="active:opacity-60"
             accessibilityRole="button"
             accessibilityLabel="Previous week"
+            testID="week-strip-prev"
           >
             <FontAwesome
               name="chevron-left"
@@ -117,6 +118,7 @@ export function WeekStrip({
             className="active:opacity-60"
             accessibilityRole="button"
             accessibilityLabel="Next week"
+            testID="week-strip-next"
           >
             <FontAwesome
               name="chevron-right"
@@ -138,6 +140,7 @@ export function WeekStrip({
           return (
             <Pressable
               key={dateKey}
+              testID={`week-strip-day-${dateKey}`}
               onPress={() => onSelectDate(dateKey)}
               className="flex-1 active:opacity-70"
               style={{ alignItems: "center" }}

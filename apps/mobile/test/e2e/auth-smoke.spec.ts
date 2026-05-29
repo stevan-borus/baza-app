@@ -8,8 +8,9 @@ const SEED_PASSWORD = "Password123!";
  * Auth smoke (Serbian).
  *
  * The auth-form testIDs (auth-email-input, auth-password-input,
- * auth-submit-button) and tab testIDs (tab-pregled for admin, tab-index for
- * trainer/client) are wired in sign-in.tsx + lib/tab-layout-theme.tsx.
+ * auth-submit-button) and tab testIDs (tab-pregled for admin, tab-raspored
+ * for trainer, tab-index for client) are wired in sign-in.tsx +
+ * lib/tab-layout-theme.tsx.
  */
 test.describe("auth smoke (Serbian)", () => {
   test.beforeAll(async () => {
@@ -33,7 +34,8 @@ test.describe("auth smoke (Serbian)", () => {
     await page.getByTestId("auth-password-input").fill(SEED_PASSWORD);
     await page.getByTestId("auth-submit-button").click();
 
-    await expect(page.getByTestId("tab-index")).toBeVisible({ timeout: 15_000 });
+    // Trainer landing tab is "raspored" (schedule), not "index".
+    await expect(page.getByTestId("tab-raspored")).toBeVisible({ timeout: 15_000 });
   });
 
   test("client signs in and lands on the client home", async ({ page }) => {

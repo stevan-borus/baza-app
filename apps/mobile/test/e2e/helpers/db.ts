@@ -147,7 +147,7 @@ export async function linkTrainerToClient(
       status: "SCHEDULED",
     },
     orderBy: { startsAt: "asc" },
-    select: { id: true },
+    select: { id: true, startsAt: true },
   });
   if (!session) throw new Error("No future session for trainer");
   const booking = await db().booking.upsert({
@@ -164,7 +164,15 @@ export async function linkTrainerToClient(
     update: { canceledAt: null },
     select: { id: true },
   });
-  return { bookingId: booking.id, sessionId: session.id };
+  // dateKey is the local-TZ Y-M-D of the session — the compose picker's
+  // SessionPicker groups sessions by `dayjs(startsAt).format("YYYY-MM-DD")`
+  // in the *browser's* timezone, and the spec navigates the week strip to
+  // this day. The Playwright config sets no `timezoneId`, so the browser
+  // uses the host TZ — the same TZ this Node helper resolves below, so the
+  // two keys agree. (Day grouping is what matters, not the pinned clock.)
+  const d = session.startsAt;
+  const dateKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  return { bookingId: booking.id, sessionId: session.id, dateKey };
 }
 
 type CreatePastSessionInput = {
@@ -566,92 +574,6 @@ export async function findLatestResetTokenFor(userEmail: string) {
     where: { userId: user.id },
     orderBy: { createdAt: "desc" },
   });
-}
-
-/**
- * Build a past session with one consumed booking + one canceled booking, so
- * the trainer schedule has post-cron attendance markers to render. Returns
- * the session id and the YYYY-MM-DD key for the day the spec should
- * navigate to.
- */
-export async function createPastAttendedSession(input: {
-  trainerEmail: string;
-  classTypeName: string;
-  consumedClientEmail: string;
-  canceledClientEmail: string;
-  startsAt: Date;
-}) {
-  const [trainer, classType, consumedUser, canceledUser, room] =
-    await Promise.all([
-      db().user.findUnique({
-        where: { email: input.trainerEmail.toLowerCase() },
-        select: { id: true },
-      }),
-      db().classType.findFirst({
-        where: { name: input.classTypeName },
-        select: { id: true },
-      }),
-      db().user.findUnique({
-        where: { email: input.consumedClientEmail.toLowerCase() },
-        select: { clientProfile: { select: { id: true } } },
-      }),
-      db().user.findUnique({
-        where: { email: input.canceledClientEmail.toLowerCase() },
-        select: { clientProfile: { select: { id: true } } },
-      }),
-      db().studioRoom.findFirst({ select: { id: true } }),
-    ]);
-  if (
-    !trainer ||
-    !classType ||
-    !consumedUser?.clientProfile ||
-    !canceledUser?.clientProfile ||
-    !room
-  ) {
-    throw new Error("Missing seed entities for past attended session");
-  }
-
-  const endsAt = new Date(input.startsAt.getTime() + 60 * 60 * 1000);
-  const session = await db().session.create({
-    data: {
-      classTypeId: classType.id,
-      trainerUserId: trainer.id,
-      roomId: room.id,
-      startsAt: input.startsAt,
-      endsAt,
-      capacity: 6,
-      status: "SCHEDULED",
-    },
-    select: { id: true },
-  });
-
-  // Consumed booking: active, has SessionConsumption row.
-  await db().booking.create({
-    data: {
-      sessionId: session.id,
-      clientProfileId: consumedUser.clientProfile.id,
-    },
-  });
-  await db().sessionConsumption.create({
-    data: {
-      sessionId: session.id,
-      clientProfileId: consumedUser.clientProfile.id,
-    },
-  });
-
-  // Canceled booking: canceledAt set, no SessionConsumption row.
-  await db().booking.create({
-    data: {
-      sessionId: session.id,
-      clientProfileId: canceledUser.clientProfile.id,
-      canceledAt: new Date(input.startsAt.getTime() - 30 * 60 * 1000),
-    },
-  });
-
-  const yyyy = input.startsAt.getFullYear();
-  const mm = String(input.startsAt.getMonth() + 1).padStart(2, "0");
-  const dd = String(input.startsAt.getDate()).padStart(2, "0");
-  return { sessionId: session.id, dateKey: `${yyyy}-${mm}-${dd}` };
 }
 
 /**
