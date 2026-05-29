@@ -323,87 +323,79 @@ export function TrainerNoteComposeSheet({
         </View>
       </AppSheet>
 
-      {/* ── Compose client picker sub-sheet (free-pick only) ── */}
+      {/* ── Compose client picker sub-sheet (free-pick only) ──
+          rawContent + snapPoint so the picker's BottomSheetFlatList sizes and
+          scrolls correctly (the default dynamic-sized sheet can't measure a
+          nested fixed-height list). */}
       {clientFixed ? null : (
         <AppSheet
           open={showComposeClientPicker}
           onOpenChange={setShowComposeClientPicker}
+          rawContent
+          snapPoints={["85%"]}
         >
-          <View className="flex-col gap-4 pb-5">
-            <View className="flex-row items-center justify-between">
-              <Text
-                className="text-foreground font-body-bold"
-                style={{ fontSize: 18, letterSpacing: -0.3 }}
-              >
-                {t("trainer.notes.pickClientCta")}
-              </Text>
-              <Pressable
-                onPress={() => setShowComposeClientPicker(false)}
-                hitSlop={8}
-                accessibilityRole="button"
-                accessibilityLabel={t("common.close")}
-                className="active:opacity-60"
-              >
-                <Feather name="x" size={20} color="#888" />
-              </Pressable>
-            </View>
-            {form.sessionId ? (
-              <ClientPicker
-                mode="scoped"
-                testID="note-client-picker-scoped"
-                optionTestIDPrefix="note-client-option"
-                clients={scopedComposeClients}
-                selectedId={form.clientProfileId || null}
-                onSelect={(id) => {
-                  // Toggle: same row clears, different row picks.
-                  if (id === form.clientProfileId) {
-                    setForm((f) => ({
-                      ...f,
-                      clientProfileId: "",
-                      clientLabel: "",
-                    }));
-                  } else {
-                    const picked = scopedComposeClients.find((c) => c.id === id);
-                    setForm((f) => ({
-                      ...f,
-                      clientProfileId: id,
-                      clientLabel: picked?.user.fullName ?? "",
-                    }));
-                    setShowComposeClientPicker(false);
-                  }
-                }}
-                emptyText={t("trainer.notes.noBookedClients")}
-              />
-            ) : (
-              <ClientPicker
-                testID="note-client-picker"
-                optionTestIDPrefix="note-client-option"
-                selectedId={form.clientProfileId || null}
-                onSelect={(id) => {
-                  if (id === form.clientProfileId) {
-                    setForm((f) => ({
-                      ...f,
-                      clientProfileId: "",
-                      clientLabel: "",
-                    }));
-                    return;
-                  }
-                  const cached = queryClient.getQueryData<{
-                    pages: { clients: { id: string; user: { fullName: string } }[] }[];
-                  }>(["clients", "list", { q: "", take: 20 }]);
-                  const found = cached?.pages
-                    .flatMap((p) => p.clients)
-                    .find((c) => c.id === id);
+          {form.sessionId ? (
+            <ClientPicker
+              mode="scoped"
+              testID="note-client-picker-scoped"
+              optionTestIDPrefix="note-client-option"
+              clients={scopedComposeClients}
+              selectedId={form.clientProfileId || null}
+              bottomSheet
+              header={
+                <PickerSheetHeader
+                  title={t("trainer.notes.pickClientCta")}
+                  onClose={() => setShowComposeClientPicker(false)}
+                />
+              }
+              onSelect={(id) => {
+                // Toggle: same row clears, different row picks.
+                if (id === form.clientProfileId) {
+                  setForm((f) => ({ ...f, clientProfileId: "", clientLabel: "" }));
+                } else {
+                  const picked = scopedComposeClients.find((c) => c.id === id);
                   setForm((f) => ({
                     ...f,
                     clientProfileId: id,
-                    clientLabel: found?.user.fullName ?? "",
+                    clientLabel: picked?.user.fullName ?? "",
                   }));
                   setShowComposeClientPicker(false);
-                }}
-              />
-            )}
-          </View>
+                }
+              }}
+              emptyText={t("trainer.notes.noBookedClients")}
+            />
+          ) : (
+            <ClientPicker
+              testID="note-client-picker"
+              optionTestIDPrefix="note-client-option"
+              selectedId={form.clientProfileId || null}
+              bottomSheet
+              header={
+                <PickerSheetHeader
+                  title={t("trainer.notes.pickClientCta")}
+                  onClose={() => setShowComposeClientPicker(false)}
+                />
+              }
+              onSelect={(id) => {
+                if (id === form.clientProfileId) {
+                  setForm((f) => ({ ...f, clientProfileId: "", clientLabel: "" }));
+                  return;
+                }
+                const cached = queryClient.getQueryData<{
+                  pages: { clients: { id: string; user: { fullName: string } }[] }[];
+                }>(["clients", "list", { q: "", take: 20 }]);
+                const found = cached?.pages
+                  .flatMap((p) => p.clients)
+                  .find((c) => c.id === id);
+                setForm((f) => ({
+                  ...f,
+                  clientProfileId: id,
+                  clientLabel: found?.user.fullName ?? "",
+                }));
+                setShowComposeClientPicker(false);
+              }}
+            />
+          )}
         </AppSheet>
       )}
 
@@ -411,51 +403,68 @@ export function TrainerNoteComposeSheet({
       <AppSheet
         open={showComposeSessionPicker}
         onOpenChange={setShowComposeSessionPicker}
+        rawContent
+        snapPoints={["85%"]}
       >
-        <View className="flex-col gap-4 pb-5">
-          <View className="flex-row items-center justify-between">
-            <Text
-              className="text-foreground font-body-bold"
-              style={{ fontSize: 18, letterSpacing: -0.3 }}
-            >
-              {t("trainer.notes.linkSessionOptional")}
-            </Text>
-            <Pressable
-              onPress={() => setShowComposeSessionPicker(false)}
-              hitSlop={8}
-              accessibilityRole="button"
-              accessibilityLabel={t("common.close")}
-              className="active:opacity-60"
-            >
-              <Feather name="x" size={20} color="#888" />
-            </Pressable>
-          </View>
-          <SessionPicker
-            testID="note-session-picker"
-            optionTestIDPrefix="note-session-option"
-            sessions={sessionsQuery.data?.sessions ?? []}
-            selectedId={form.sessionId || null}
-            onSelect={(id) => {
-              // Toggle: tapping same session clears it; different switches
-              // and may invalidate the client (scoped roster changes).
-              if (id === form.sessionId) {
-                clearSessionAndMaybeClient();
-                return;
-              }
-              setForm((f) => ({
-                ...f,
-                sessionId: id,
-                // Switching session invalidates a free-pick client (the
-                // scoped roster changes). A fixed client is never cleared.
-                clientProfileId: clientFixed ? f.clientProfileId : "",
-                clientLabel: clientFixed ? f.clientLabel : "",
-              }));
-              setShowComposeSessionPicker(false);
-            }}
-            scheduledOnly
-          />
-        </View>
+        <SessionPicker
+          testID="note-session-picker"
+          optionTestIDPrefix="note-session-option"
+          sessions={sessionsQuery.data?.sessions ?? []}
+          selectedId={form.sessionId || null}
+          bottomSheet
+          header={
+            <PickerSheetHeader
+              title={t("trainer.notes.linkSessionOptional")}
+              onClose={() => setShowComposeSessionPicker(false)}
+            />
+          }
+          onSelect={(id) => {
+            // Toggle: tapping same session clears it; different switches
+            // and may invalidate the client (scoped roster changes).
+            if (id === form.sessionId) {
+              clearSessionAndMaybeClient();
+              return;
+            }
+            setForm((f) => ({
+              ...f,
+              sessionId: id,
+              // Switching session invalidates a free-pick client (the
+              // scoped roster changes). A fixed client is never cleared.
+              clientProfileId: clientFixed ? f.clientProfileId : "",
+              clientLabel: clientFixed ? f.clientLabel : "",
+            }));
+            setShowComposeSessionPicker(false);
+          }}
+          scheduledOnly
+        />
       </AppSheet>
     </>
+  );
+}
+
+/**
+ * Title + close-× header for a picker sub-sheet, rendered inside the picker's
+ * pinned (non-scrolling) header zone.
+ */
+function PickerSheetHeader({ title, onClose }: { title: string; onClose: () => void }) {
+  const { t } = useTranslation();
+  return (
+    <View className="flex-row items-center justify-between">
+      <Text
+        className="text-foreground font-body-bold"
+        style={{ fontSize: 18, letterSpacing: -0.3 }}
+      >
+        {title}
+      </Text>
+      <Pressable
+        onPress={onClose}
+        hitSlop={8}
+        accessibilityRole="button"
+        accessibilityLabel={t("common.close")}
+        className="active:opacity-60"
+      >
+        <Feather name="x" size={20} color="#888" />
+      </Pressable>
+    </View>
   );
 }

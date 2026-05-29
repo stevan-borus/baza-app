@@ -516,22 +516,32 @@ export function NotesFeed({
         />
       </MotiView>
 
-      {/* ── Client filter sheet (multi-select) ── */}
-      <AppSheet open={showClientPicker} onOpenChange={setShowClientPicker}>
-        <View className="flex-col gap-4 pb-5">
-          <FilterSheetHeader
-            title={t("trainer.notes.pickClientTitle")}
-            count={selectedClientIds.size}
-            onClear={clearClientFilter}
-            onDone={() => setShowClientPicker(false)}
-          />
-          <ClientPicker
-            testID="client-filter-picker"
-            optionTestIDPrefix="client-filter-option"
-            selectedIds={selectedClientIds}
-            onToggle={toggleClientId}
-          />
-        </View>
+      {/* ── Client filter sheet (multi-select) ──
+          rawContent + fixed snapPoint: the picker's BottomSheetFlatList is the
+          sheet's own scroll, so a long client list scrolls cleanly. Matches the
+          reservation-mode pattern; the default dynamic-sized AppSheet can't
+          measure a nested fixed-height list (sheet opens to a sliver / gap). */}
+      <AppSheet
+        open={showClientPicker}
+        onOpenChange={setShowClientPicker}
+        rawContent
+        snapPoints={["85%"]}
+      >
+        <ClientPicker
+          testID="client-filter-picker"
+          optionTestIDPrefix="client-filter-option"
+          selectedIds={selectedClientIds}
+          onToggle={toggleClientId}
+          bottomSheet
+          header={
+            <FilterSheetHeader
+              title={t("trainer.notes.pickClientTitle")}
+              count={selectedClientIds.size}
+              onClear={clearClientFilter}
+              onDone={() => setShowClientPicker(false)}
+            />
+          }
+        />
       </AppSheet>
 
       {/* ── Compose sheet (shared) ── */}
@@ -547,22 +557,28 @@ export function NotesFeed({
       />
 
       {/* ── Session filter sheet (multi-select) ── */}
-      <AppSheet open={showSessionPicker} onOpenChange={setShowSessionPicker}>
-        <View className="flex-col gap-4 pb-5">
-          <FilterSheetHeader
-            title={t("trainer.notes.pickSessionTitle")}
-            count={selectedSessionIds.size}
-            onClear={clearSessionFilter}
-            onDone={() => setShowSessionPicker(false)}
-          />
-          <SessionPicker
-            testID="session-filter-picker"
-            optionTestIDPrefix="session-filter-option"
-            sessions={sessionsQuery.data?.sessions ?? []}
-            selectedIds={selectedSessionIds}
-            onToggle={toggleSessionId}
-          />
-        </View>
+      <AppSheet
+        open={showSessionPicker}
+        onOpenChange={setShowSessionPicker}
+        rawContent
+        snapPoints={["85%"]}
+      >
+        <SessionPicker
+          testID="session-filter-picker"
+          optionTestIDPrefix="session-filter-option"
+          sessions={sessionsQuery.data?.sessions ?? []}
+          selectedIds={selectedSessionIds}
+          onToggle={toggleSessionId}
+          bottomSheet
+          header={
+            <FilterSheetHeader
+              title={t("trainer.notes.pickSessionTitle")}
+              count={selectedSessionIds.size}
+              onClear={clearSessionFilter}
+              onDone={() => setShowSessionPicker(false)}
+            />
+          }
+        />
       </AppSheet>
 
       {/* ── Edit note sheet ──
