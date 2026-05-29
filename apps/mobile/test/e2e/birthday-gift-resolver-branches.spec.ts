@@ -94,10 +94,12 @@ test.describe("birthday gift — resolver branches", () => {
     await page.reload();
     await expect(page.getByTestId("tab-pregled")).toBeVisible({ timeout: 15_000 });
     await page.getByTestId("tab-pregled").click();
-    await expect(
-      page.getByTestId("notifications-bell-button").first(),
-    ).toBeVisible({ timeout: 5_000 });
-    await page.getByTestId("notifications-bell-button").first().dispatchEvent("click");
+    // The bell lives only on the Pregled header; inactive tab screens stay
+    // mounted with a hidden copy, so target the *visible* one (`.first()` can
+    // resolve to a hidden bell). `:visible` matches the admin.spec.ts idiom.
+    const bell = page.locator('[data-testid="notifications-bell-button"]:visible').first();
+    await expect(bell).toBeVisible({ timeout: 5_000 });
+    await bell.dispatchEvent("click");
 
     // The inbox lists rows for all unread prompts. Match the one mentioning
     // "Empty Pack Client" so we tap the right row.

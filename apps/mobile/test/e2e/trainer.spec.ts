@@ -49,7 +49,8 @@ test.describe("trainer (Serbian)", () => {
       .fill(REFORMER_TRAINER_EMAIL);
     await page.getByTestId("auth-password-input").fill(SEED_PASSWORD);
     await page.getByTestId("auth-submit-button").click();
-    await expect(page.getByTestId("tab-index")).toBeVisible({
+    // The trainer landing tab is "raspored" (schedule), not "index".
+    await expect(page.getByTestId("tab-raspored")).toBeVisible({
       timeout: 15_000,
     });
   }
@@ -288,23 +289,19 @@ test.describe("trainer (Serbian)", () => {
     await signInAsReformerTrainer(page);
     await page.getByTestId("tab-notes").click();
 
-    // Tap the "By client" chip → opens the picker sheet with a Select.
+    // Tap the "By client" chip → opens the client filter sheet.
     await page
       .getByText(t.trainer.notes.filterByClient)
       .first()
       .dispatchEvent("click");
 
-    // The picker sheet has a Select that lists linked clients; expand it.
+    // The sheet's ClientPicker renders the linked clients as a searchable
+    // checkbox list directly (no Select to expand) — wait for the title, then
+    // assert the linked client row is shown.
     await page
       .getByText(t.trainer.notes.pickClientTitle)
       .first()
       .waitFor({ timeout: 5_000 });
-    // The Select trigger doesn't have a testID inside this picker sheet —
-    // tap the Select placeholder text to expand.
-    await page
-      .getByText(t.trainer.notes.client, { exact: true })
-      .first()
-      .dispatchEvent("click");
 
     await expect(
       page.getByText("Active Reformer Client", { exact: true }).first(),

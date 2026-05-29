@@ -36,9 +36,9 @@ test.describe("admin notifications bell", () => {
     await disconnect();
   });
 
-  // ── Test 1: bell opens sheet from any tab, showing the seeded notification ──
+  // ── Test 1: the Pregled bell opens notifications, showing the seeded one ──
 
-  test("bell on pregled and klijenti tabs opens notifications sheet with seeded notification", async ({
+  test("the Pregled bell opens notifications with the seeded notification", async ({
     page,
   }) => {
     // Viewport matches the 480px web constraint (use phone dims to be safe).
@@ -55,36 +55,19 @@ test.describe("admin notifications bell", () => {
     await page.reload();
     await expect(page.getByTestId("tab-pregled")).toBeVisible({ timeout: 15_000 });
 
-    // ── pregled tab ──
+    // The bell lives only on the Pregled (dashboard) header — other admin tabs
+    // use the avatar-only left slot. Target the *visible* bell (inactive tab
+    // screens stay mounted with a hidden copy, so `.first()` can resolve to a
+    // hidden one); `:visible` mirrors the idiom used across admin.spec.ts.
     await page.getByTestId("tab-pregled").click();
-    // Multiple bell buttons may be in the DOM (inactive tab screens are kept
-    // mounted). Use .first() to avoid strict-mode violations.
-    await expect(page.getByTestId("notifications-bell-button").first()).toBeVisible({
-      timeout: 5_000,
-    });
+    const bell = page.locator('[data-testid="notifications-bell-button"]:visible').first();
+    await expect(bell).toBeVisible({ timeout: 5_000 });
     // dispatchEvent bypasses pointer-events checks — same pattern as other
-    // gorhom sheet triggers in admin.spec.ts.
-    await page.getByTestId("notifications-bell-button").first().dispatchEvent("click");
-    // The notifications sheet opens; wait for a notification row with
-    // data-testid^="notification-row-" — this is more reliable than
-    // getByText because `numberOfLines={1}` truncates visually but the
-    // testID is set unconditionally.
-    await expect(
-      page.locator('[data-testid^="notification-row-"]').first(),
-    ).toBeVisible({ timeout: 8_000 });
-
-    // Close the sheet — press Escape to trigger the dismiss.
-    await page.keyboard.press("Escape");
-
-    // ── klijenti tab ──
-    // dispatchEvent bypasses pointer-events checks — the gorhom backdrop from
-    // the dismissed notifications sheet can briefly linger on web (same issue
-    // documented in admin.spec.ts where dispatchEvent is used throughout).
-    await page.getByTestId("tab-klijenti").dispatchEvent("click");
-    await expect(page.getByTestId("notifications-bell-button").first()).toBeVisible({
-      timeout: 5_000,
-    });
-    await page.getByTestId("notifications-bell-button").first().dispatchEvent("click");
+    // header triggers in admin.spec.ts.
+    await bell.dispatchEvent("click");
+    // The notifications page opens; wait for a notification row. The testID is
+    // set unconditionally, unlike the visually-truncated (`numberOfLines={1}`)
+    // title text.
     await expect(
       page.locator('[data-testid^="notification-row-"]').first(),
     ).toBeVisible({ timeout: 8_000 });
