@@ -12,9 +12,10 @@
  * covers every realistic case. The day with no sessions shows quiet faint
  * text below the strip rather than a heavy empty-state hero.
  */
-import { useMemo, useState } from "react";
+import { type ReactNode, useMemo, useState } from "react";
 import dayjs from "dayjs";
 import { Pressable, ScrollView, Text, View } from "react-native";
+import { BottomSheetFlatList } from "@gorhom/bottom-sheet";
 import Feather from "@expo/vector-icons/Feather";
 import { useTranslation } from "react-i18next";
 import { GlassCard } from "./glass-card";
@@ -36,6 +37,15 @@ type CommonProps = {
   scheduledOnly?: boolean;
   testID?: string;
   optionTestIDPrefix?: string;
+  /**
+   * When true, renders via `BottomSheetFlatList` (no inner maxHeight) so the
+   * day's sessions scroll in the sheet's own gesture context. Use ONLY inside
+   * an `AppSheet` with `rawContent` + a fixed `snapPoint`. See ClientPicker's
+   * `bottomSheet` note for why the default nested-scroll path mis-sizes.
+   */
+  bottomSheet?: boolean;
+  /** Content rendered above the week strip (title) when `bottomSheet`. */
+  header?: ReactNode;
 };
 
 type SingleProps = CommonProps & {
@@ -53,7 +63,8 @@ type MultiProps = CommonProps & {
 };
 
 export function SessionPicker(props: SingleProps | MultiProps) {
-  const { sessions, scheduledOnly = false, testID, optionTestIDPrefix } = props;
+  const { sessions, scheduledOnly = false, testID, optionTestIDPrefix, bottomSheet, header } =
+    props;
   const { t } = useTranslation();
   const tokens = useThemeTokens();
   const dateLocale = getDateLocale();
@@ -175,16 +186,42 @@ export function SessionPicker(props: SingleProps | MultiProps) {
     );
   }
 
+  const weekStrip = (
+    <WeekStrip
+      selectedDate={selectedDate}
+      onSelectDate={setSelectedDate}
+      weekStart={weekStart}
+      onPrevWeek={() => setWeekStart((w) => w.subtract(7, "day"))}
+      onNextWeek={() => setWeekStart((w) => w.add(7, "day"))}
+      activity={activityByDate}
+    />
+  );
+
+  // Inside a rawContent sheet: title + week strip pinned above a flexed
+  // BottomSheetFlatList of the day's sessions, so only the rows scroll and the
+  // week strip stays put. The list is the sheet's own scroll gesture context.
+  if (bottomSheet) {
+    return (
+      <View testID={testID} style={{ flex: 1 }}>
+        <View style={{ gap: 16, paddingHorizontal: 24, paddingTop: 8, paddingBottom: 16 }}>
+          {header}
+          {weekStrip}
+        </View>
+        <BottomSheetFlatList
+          data={sessionsForSelectedDay}
+          keyExtractor={(s) => s.id}
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 40 }}
+          renderItem={({ item }) => <SessionRow s={item} />}
+          ListEmptyComponent={<EmptyState title={t("trainer.sessionPicker.emptyDay")} />}
+        />
+      </View>
+    );
+  }
+
   return (
     <View testID={testID} style={{ gap: 16 }}>
-      <WeekStrip
-        selectedDate={selectedDate}
-        onSelectDate={setSelectedDate}
-        weekStart={weekStart}
-        onPrevWeek={() => setWeekStart((w) => w.subtract(7, "day"))}
-        onNextWeek={() => setWeekStart((w) => w.add(7, "day"))}
-        activity={activityByDate}
-      />
+      {weekStrip}
       <ScrollView
         style={{ maxHeight: 260 }}
         keyboardShouldPersistTaps="handled"

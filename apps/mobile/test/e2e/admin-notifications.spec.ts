@@ -1,13 +1,12 @@
 /**
- * E2E: admin notifications bell + sheet.
+ * E2E: admin notifications bell.
  *
- * Test 1 — bell on every admin tab opens the sheet showing the admin's
- *   notification.
+ * Test 1 — the bell in the admin header opens the notifications surface
+ *   showing the admin's notification.
  * Test 2 — unread dot appears only when at least one notification is unread.
  *
- * Both tests exercise the NotificationsSheetProvider that wraps the whole
- * admin tab tree in app/(admin)/_layout.tsx. If either fails the provider
- * or the leftSlot wiring for a specific screen is likely incomplete.
+ * Both tests exercise the bell + its leftSlot wiring in the admin header. If
+ * either fails, the bell wiring for a specific screen is likely incomplete.
  */
 import { test, expect, type Page } from "./helpers/fixtures";
 import {
