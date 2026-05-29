@@ -46,36 +46,7 @@ import { canEditNote, type NotesAudience } from "@/components/shared/notes-edit-
 
 export type { NotesAudience };
 
-// ─── types ───────────────────────────────────────────────────────────────────
-
-/**
- * Time filter — applies independently from the client filter.
- * - "all": all notes
- * - "thisWeek": only notes created since the most recent Monday 00:00
- */
-type TimeFilter = "all" | "thisWeek";
-
 // ─── helpers ─────────────────────────────────────────────────────────────────
-
-function startOfWeek(): Date {
-  const now = new Date();
-  const day = now.getDay(); // 0=Sun
-  const diff = now.getDate() - day + (day === 0 ? -6 : 1); // Monday-based
-  const monday = new Date(now);
-  monday.setDate(diff);
-  monday.setHours(0, 0, 0, 0);
-  return monday;
-}
-
-function applyTimeFilter(notes: TrainerNote[], timeFilter: TimeFilter): TrainerNote[] {
-  // Client/session filters are pushed to the server via query params, so this
-  // just handles the time predicate (derived from the current clock).
-  if (timeFilter === "thisWeek") {
-    const weekStart = startOfWeek().getTime();
-    return notes.filter((n) => new Date(n.createdAt).getTime() >= weekStart);
-  }
-  return notes;
-}
 
 /**
  * Serbian count plurals: 1 → singular, 2-4 → paucal, 5+ → plural.
@@ -279,10 +250,13 @@ function NoteRow({
 export function NotesFeed({
   audience,
   leftSlot,
+  headerVariant = "tab",
 }: {
   audience: NotesAudience;
   /** Optional header left slot — admin tabs pass the UserAvatar here. */
   leftSlot?: React.ReactNode;
+  /** "tab" for a tab destination, "detail" for a pushed screen (back button). */
+  headerVariant?: "tab" | "detail";
 }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
@@ -293,7 +267,6 @@ export function NotesFeed({
   const [showClientPicker, setShowClientPicker] = useState(false);
   const [showSessionPicker, setShowSessionPicker] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [timeFilter, setTimeFilter] = useState<TimeFilter>("all");
   const [selectedClientIds, setSelectedClientIds] = useState<ReadonlySet<string>>(
     () => new Set(),
   );
@@ -347,11 +320,10 @@ export function NotesFeed({
   const canEditEditing = canEditNote(audience, editingNote, myUserId);
 
   const allNotes = notesQuery.data?.pages.flatMap((p) => p.notes) ?? [];
-  const filteredNotes = applyTimeFilter(allNotes, timeFilter);
 
   type ListItem = { kind: "row"; note: TrainerNote; id: string };
 
-  const listData: ListItem[] = filteredNotes.map((n) => ({
+  const listData: ListItem[] = allNotes.map((n) => ({
     kind: "row" as const,
     note: n,
     id: n.id,
@@ -450,6 +422,7 @@ export function NotesFeed({
   return (
     <ScreenContainerRaw
       title={title}
+      headerVariant={headerVariant}
       leftSlot={leftSlot}
       rightSlot={
         <HeaderIconButton
@@ -473,16 +446,6 @@ export function NotesFeed({
           contentContainerStyle={{ paddingHorizontal: 20, gap: 8, flexDirection: "row" }}
           style={{ flexGrow: 0 }}
         >
-          <FilterChip
-            label={t("trainer.notes.filterAll")}
-            active={timeFilter === "all"}
-            onPress={() => setTimeFilter("all")}
-          />
-          <FilterChip
-            label={t("trainer.notes.filterThisWeek")}
-            active={timeFilter === "thisWeek"}
-            onPress={() => setTimeFilter("thisWeek")}
-          />
           <FilterChip
             label={clientChipLabel}
             active={selectedClientIds.size > 0}
