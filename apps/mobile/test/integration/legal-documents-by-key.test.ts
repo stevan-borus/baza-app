@@ -21,7 +21,7 @@ describe("GET /api/legal/documents/:key", () => {
     const res = await GET(request("tos", "en"), { params: { key: "tos" } });
     const body = await res.json();
     expect(body.locale).toBe("en");
-    expect(body.body).toContain("Terms of Service");
+    expect(body.body).toContain("Terms of Use");
   });
 
   it("404 for unknown key", async () => {
