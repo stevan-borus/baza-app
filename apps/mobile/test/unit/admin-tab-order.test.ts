@@ -28,6 +28,9 @@ describe("admin tab order", () => {
   });
 
   it("puts Katalog in the second position", () => {
+    // The admin notes feed (Beleške) is NOT a tab — six on the bottom bar
+    // was too tight on smaller phones, so it's nested under Klijenti and
+    // reached from that screen's header instead.
     expect(names).toEqual([
       "pregled",
       "katalog",

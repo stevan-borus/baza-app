@@ -466,6 +466,12 @@
     "loadError": "Could not load the document."
   },
   "admin": {
+    "notes": {
+      "title": "Notes",
+      "newNote": "New note",
+      "viewSheetTitle": "Note",
+      "authoredBy": "Written by {{name}}"
+    },
     "notifications": {
       "title": "Notifications",
       "bellLabel": "Open notifications",

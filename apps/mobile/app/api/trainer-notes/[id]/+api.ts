@@ -19,12 +19,11 @@ export async function PATCH(request: Request, { id }: RouteParams) {
     },
   });
   if (!note) return fail("Trainer note not found", 404);
-  // Trainers can only modify their own notes; admins can modify any.
-  if (
-    guard.user.role === UserRole.TRAINER &&
-    note.trainerUserId !== guard.user.id
-  ) {
-    return fail("Trainers can only modify their own notes", 403);
+  // Editing is authorship-bound for every role: even an admin must not
+  // rewrite another person's note. (DELETE below stays admin-any —
+  // removing a note that shouldn't exist is moderation, not authorship.)
+  if (note.trainerUserId !== guard.user.id) {
+    return fail("You can only edit your own notes", 403);
   }
 
   const bodyResult = await tryCatch(request.json());

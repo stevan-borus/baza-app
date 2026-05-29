@@ -52,7 +52,12 @@ export function AppHeader({
       <View style={{ height: insets.top }} />
 
       {/* Header bar — matches the home tab: 14pt top/bottom padding around
-          the 32pt logo, no fixed bar height. */}
+          the 32pt logo, no fixed bar height.
+
+          The logo must stay screen-centered regardless of slot contents. The
+          two side slots each take equal flex (flex: 1), so the logo — the
+          fixed-width middle item — always lands at the true center even when
+          one slot is wider (e.g. a two-icon right slot vs. a one-icon left). */}
       <View
         style={{
           paddingHorizontal: 20,
@@ -60,13 +65,10 @@ export function AppHeader({
           paddingBottom: 14,
           flexDirection: "row",
           alignItems: "center",
-          justifyContent: "space-between",
         }}
       >
-        {/* Left slot — fixed 36pt so logo stays centered */}
-        <View
-          style={{ width: 36, alignItems: "flex-start", justifyContent: "center" }}
-        >
+        {/* Left slot — equal flex, content aligned to the start edge */}
+        <View style={{ flex: 1, alignItems: "flex-start", justifyContent: "center" }}>
           {leftSlot}
         </View>
 
@@ -77,13 +79,9 @@ export function AppHeader({
           resizeMode="contain"
         />
 
-        {/* Right slot — minWidth 36pt mirrors the left slot but expands for
-            consumers that need to render multiple controls. The logo stays
-            centered by justifyContent: "space-between" on the row, not by
-            matched slot widths, so this asymmetry doesn't decenter it. */}
-        <View
-          style={{ minWidth: 36, alignItems: "flex-end", justifyContent: "center" }}
-        >
+        {/* Right slot — equal flex mirrors the left, content aligned to the end
+            edge. Equal flex on both sides is what keeps the logo centered. */}
+        <View style={{ flex: 1, alignItems: "flex-end", justifyContent: "center" }}>
           {rightSlot}
         </View>
       </View>

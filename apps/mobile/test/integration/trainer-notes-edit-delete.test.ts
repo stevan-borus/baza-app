@@ -159,7 +159,10 @@ describe("trainer-notes PATCH + DELETE", () => {
     expect(await prisma.trainerNote.findUnique({ where: { id: note.id } })).not.toBeNull();
   });
 
-  it("admin can edit and delete any trainer's note", async () => {
+  it("admin can delete any trainer's note (moderation) but cannot edit another's words", async () => {
+    // Edit is authorship-bound for every role — even an admin must not
+    // rewrite a trainer's note. Delete stays admin-any: removing a note
+    // that shouldn't exist is moderation, not authorship.
     const { note } = await seedNoteByTrainer({
       trainerEmail: "owner5@test.local",
     });
@@ -173,10 +176,10 @@ describe("trainer-notes PATCH + DELETE", () => {
       }),
       { id: note.id },
     );
-    expect(editResponse.status).toBe(200);
+    expect(editResponse.status).toBe(403);
     expect(
       (await prisma.trainerNote.findUnique({ where: { id: note.id } }))?.note,
-    ).toBe("Admin edit");
+    ).toBe("Original note");
 
     const deleteResponse = await DELETE(
       new Request(`http://test.local/api/trainer-notes/${note.id}`, {
@@ -186,5 +189,46 @@ describe("trainer-notes PATCH + DELETE", () => {
     );
     expect(deleteResponse.status).toBe(200);
     expect(await prisma.trainerNote.findUnique({ where: { id: note.id } })).toBeNull();
+  });
+
+  it("admin can edit a note they authored themselves", async () => {
+    // The author of a note can always edit it, regardless of role. An
+    // admin who wrote the note (trainerUserId === their own id) can edit.
+    const admin = await prisma.user.create({
+      data: { email: "self-admin@test.local", fullName: "Admin", role: "ADMIN" },
+    });
+    const client = await prisma.user.create({
+      data: { email: "c-self@test.local", fullName: "C", role: "CLIENT" },
+    });
+    const profile = await prisma.clientProfile.create({
+      data: { userId: client.id },
+    });
+    const note = await prisma.trainerNote.create({
+      data: {
+        clientProfileId: profile.id,
+        trainerUserId: admin.id,
+        note: "Admin's own note",
+      },
+    });
+    setMockUser({
+      id: admin.id,
+      role: "ADMIN",
+      email: admin.email,
+      isActive: true,
+      clientProfile: null,
+    });
+
+    const response = await PATCH(
+      new Request(`http://test.local/api/trainer-notes/${note.id}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ note: "Edited own note" }),
+      }),
+      { id: note.id },
+    );
+    expect(response.status).toBe(200);
+    expect(
+      (await prisma.trainerNote.findUnique({ where: { id: note.id } }))?.note,
+    ).toBe("Edited own note");
   });
 });
