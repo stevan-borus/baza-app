@@ -276,7 +276,14 @@ function NoteRow({
 
 // ─── NotesFeed ───────────────────────────────────────────────────────────────
 
-export function NotesFeed({ audience }: { audience: NotesAudience }) {
+export function NotesFeed({
+  audience,
+  leftSlot,
+}: {
+  audience: NotesAudience;
+  /** Optional header left slot — admin tabs pass the UserAvatar here. */
+  leftSlot?: React.ReactNode;
+}) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const bottomPad = useTabBarBottomPadding();
@@ -340,17 +347,15 @@ export function NotesFeed({ audience }: { audience: NotesAudience }) {
   const canEditEditing = canEditNote(audience, editingNote, myUserId);
 
   const allNotes = notesQuery.data?.pages.flatMap((p) => p.notes) ?? [];
-  const filteredNotes = useMemo(
-    () => applyTimeFilter(allNotes, timeFilter),
-    [allNotes, timeFilter],
-  );
+  const filteredNotes = applyTimeFilter(allNotes, timeFilter);
 
   type ListItem = { kind: "row"; note: TrainerNote; id: string };
 
-  const listData = useMemo<ListItem[]>(
-    () => filteredNotes.map((n) => ({ kind: "row" as const, note: n, id: n.id })),
-    [filteredNotes],
-  );
+  const listData: ListItem[] = filteredNotes.map((n) => ({
+    kind: "row" as const,
+    note: n,
+    id: n.id,
+  }));
 
   async function handleRefresh() {
     setRefreshing(true);
@@ -445,6 +450,7 @@ export function NotesFeed({ audience }: { audience: NotesAudience }) {
   return (
     <ScreenContainerRaw
       title={title}
+      leftSlot={leftSlot}
       rightSlot={
         <HeaderIconButton
           icon="plus"

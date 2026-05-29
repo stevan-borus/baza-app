@@ -63,6 +63,13 @@ export default function AdminLayout() {
             tabBarIcon: ({ color }) => <TabIcon name="bar-chart" color={color} />,
           }}
         />
+        <Tabs.Screen
+          name="beleske"
+          options={{
+            title: t("tabs.notes"),
+            tabBarIcon: ({ color }) => <TabIcon name="sticky-note-o" color={color} />,
+          }}
+        />
       </Tabs>
     </ConsentGateRedirect>
   );

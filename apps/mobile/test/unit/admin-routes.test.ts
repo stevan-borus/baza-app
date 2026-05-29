@@ -31,6 +31,8 @@ const required = [
   "katalog/tipovi-treninga.tsx",
   "katalog/sale.tsx",
   "katalog/tipovi-paketa.tsx",
+  "beleske/_layout.tsx",
+  "beleske/index.tsx",
 ];
 
 const forbidden = [

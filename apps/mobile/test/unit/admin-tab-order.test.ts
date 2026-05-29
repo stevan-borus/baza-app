@@ -23,17 +23,21 @@ describe("admin tab order", () => {
   const source = readFileSync(adminLayoutPath, "utf8");
   const names = tabsScreenNames(source);
 
-  it("declares exactly five tabs", () => {
-    expect(names).toHaveLength(5);
+  it("declares exactly six tabs", () => {
+    expect(names).toHaveLength(6);
   });
 
-  it("puts Katalog in the second position", () => {
+  it("puts Katalog second and Beleške last", () => {
+    // Beleške is the admin's notes feed (write parity with trainers). It sits
+    // last as the newest, experimental tab — the bottom bar is now tight at
+    // six, which is intentional and under evaluation.
     expect(names).toEqual([
       "pregled",
       "katalog",
       "klijenti",
       "naplata",
       "izvestaji",
+      "beleske",
     ]);
   });
 

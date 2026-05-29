@@ -467,6 +467,12 @@
     "loadError": "Nije moguće učitati dokument."
   },
   "admin": {
+    "notes": {
+      "title": "Beleške",
+      "newNote": "Nova beleška",
+      "viewSheetTitle": "Beleška",
+      "authoredBy": "Napisao/la {{name}}"
+    },
     "notifications": {
       "title": "Obaveštenja",
       "bellLabel": "Otvori obaveštenja",
