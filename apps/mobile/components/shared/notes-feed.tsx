@@ -491,7 +491,12 @@ export function NotesFeed({
               colors={["#2e5b42"]}
             />
           }
-          contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: bottomPad }}
+          contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: bottomPad }}
+          // Top gap lives in a header spacer, NOT contentContainerStyle.paddingTop:
+          // LegendList offsets its initial scroll position by container paddingTop
+          // on a fresh mount, leaving the first row clipped ~16px until you scroll.
+          // A ListHeaderComponent is counted as content, so the offset is correct.
+          ListHeaderComponent={<View style={{ height: 16 }} />}
           renderItem={({ item }: { item: ListItem }) => (
             <NoteRow
               item={item.note}
