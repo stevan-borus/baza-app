@@ -153,7 +153,7 @@ test.describe("client (Serbian)", () => {
       .dispatchEvent("click");
 
     await expect(
-      page.getByTestId("booking-confirmation-banner"),
+      page.getByTestId("booking-success-message"),
     ).toBeVisible({ timeout: 10_000 });
 
     // sessionsRemaining is decremented by the consumption cron after the

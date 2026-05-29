@@ -62,21 +62,34 @@ export async function openSessionEditSheet(page: Page, cardLocator: import("@pla
 }
 
 /**
- * Click prev/next chevrons on the StudioWeekStrip until the target date
- * pill is visible, then click it. The schedule's WeekStrip only renders
- * 7 days around `weekStart`; specs that pick a session date from the DB
- * may need to page the strip to find it. Bounded at 6 chevron clicks to
- * avoid runaway loops on a totally wrong date.
+ * Click prev/next chevrons on a WeekStrip until the target date pill is
+ * visible, then click it. The strip only renders 7 days around `weekStart`;
+ * specs that pick a session date from the DB may need to page the strip to
+ * find it. Bounded at 6 chevron clicks to avoid runaway loops on a totally
+ * wrong date.
+ *
+ * `scope` is the testID of the container to search within. Pass it whenever
+ * more than one WeekStrip can be on screen at once — the notes pickers open
+ * in a bottom sheet *over* the still-mounted raspored screen, so the global
+ * `week-strip-day-*` selector matches two strips (the picker's and the
+ * schedule's behind it). Without a scope, `.first()` would page/click the
+ * wrong (background) strip and the picker's selected day would never change.
+ * Omit it on full-screen surfaces (raspored) where only one strip exists.
  */
-export async function navigateWeekStripTo(page: Page, dateKey: string) {
+export async function navigateWeekStripTo(
+  page: Page,
+  dateKey: string,
+  scope?: string,
+) {
+  const root = scope ? page.getByTestId(scope) : page;
   // Wait for the week strip to render at all so subsequent count() checks
   // aren't false negatives caused by an unmounted screen.
-  await page
+  await root
     .locator('[data-testid^="week-strip-day-"]:visible')
     .first()
     .waitFor({ state: "visible", timeout: 10_000 });
 
-  const dayLocator = page.locator(
+  const dayLocator = root.locator(
     `[data-testid="week-strip-day-${dateKey}"]:visible`,
   );
 
@@ -84,7 +97,7 @@ export async function navigateWeekStripTo(page: Page, dateKey: string) {
     const target = new Date(`${dateKey}T00:00:00`);
     const chevron = target > now() ? "week-strip-next" : "week-strip-prev";
     for (let i = 0; i < 6; i++) {
-      await page.getByTestId(chevron).first().dispatchEvent("click");
+      await root.getByTestId(chevron).first().dispatchEvent("click");
       try {
         // Block until the new week renders OR until ~1.5s passes (then
         // try the next chevron). This is condition-based, not time-based.

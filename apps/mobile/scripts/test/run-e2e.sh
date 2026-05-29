@@ -225,15 +225,6 @@ apply_flow_setup() {
         link-trainer trainer.reformer@e2e.test client.active.reformer@e2e.test \
         > /dev/null
       ;;
-    trainer-post-cron-attendance.yaml)
-      echo "==> Seeding past attended session for cron attendance"
-      local out
-      out="$(pnpm exec tsx scripts/test/seed-extension.ts past-attended-session)"
-      local session_id date_key
-      session_id="$(printf "%s" "$out" | tail -1 | python3 -c 'import json,sys;d=json.loads(sys.stdin.read());print(d["sessionId"])')"
-      date_key="$(printf "%s" "$out" | tail -1 | python3 -c 'import json,sys;d=json.loads(sys.stdin.read());print(d["dateKey"])')"
-      FLOW_ENV_ARGS=(-e "SESSION_ID=$session_id" -e "DATE_KEY=$date_key")
-      ;;
   esac
 }
 

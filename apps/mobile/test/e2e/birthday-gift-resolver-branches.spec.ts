@@ -121,7 +121,14 @@ test.describe("birthday gift — resolver branches", () => {
     //    returned null for this client.
     const submit = page.getByTestId("assign-package-submit");
     await expect(submit).toBeVisible({ timeout: 8_000 });
-    await expect(submit).toBeDisabled();
+    // The Button is a RN-Web <div role="button">: a disabled state surfaces as
+    // `aria-disabled="true"` (+ opacity-40 / pointerEvents:none), NOT the HTML
+    // `disabled` attribute, so Playwright's `toBeDisabled()` mis-reports it as
+    // enabled. Assert the attribute the app actually sets. The submit is
+    // disabled here because the resolver preselected no PackageType for the
+    // empty client (`!packageTypeId` → submitDisabled), which is the behavior
+    // under test.
+    await expect(submit).toHaveAttribute("aria-disabled", "true");
 
     // 6. Tapping any gift PackageType option enables the submit (after the
     //    date is picked too). We don't drive the full submit here — the
