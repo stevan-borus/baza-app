@@ -14,6 +14,7 @@ const required = [
   "pregled/sessions/[id].tsx",
   "klijenti/_layout.tsx",
   "klijenti/index.tsx",
+  "klijenti/beleske.tsx",
   "klijenti/[id]/index.tsx",
   "klijenti/[id]/istorija.tsx",
   "klijenti/sessions/[id].tsx",
@@ -31,8 +32,6 @@ const required = [
   "katalog/tipovi-treninga.tsx",
   "katalog/sale.tsx",
   "katalog/tipovi-paketa.tsx",
-  "beleske/_layout.tsx",
-  "beleske/index.tsx",
 ];
 
 const forbidden = [

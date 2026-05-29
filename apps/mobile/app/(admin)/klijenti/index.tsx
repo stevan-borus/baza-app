@@ -339,24 +339,32 @@ export default function AdminClients() {
       title={t("tabs.clients")}
       leftSlot={<AdminTabLeftSlot />}
       rightSlot={
-        <HeaderIconButton
-          icon="plus"
-          onPress={() =>
-            tab === "clients"
-              ? setShowCreateClient(true)
-              : setShowInviteForm(true)
-          }
-          testID={
-            tab === "clients"
-              ? "admin-new-client-button"
-              : "admin-new-invite-button"
-          }
-          accessibilityLabel={
-            tab === "clients"
-              ? t("admin.clients.sheetNewClient")
-              : t("admin.clients.sheetInvite")
-          }
-        />
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
+          <HeaderIconButton
+            icon="sticky-note-o"
+            onPress={() => router.push("/(admin)/klijenti/beleske")}
+            testID="admin-notes-button"
+            accessibilityLabel={t("admin.notes.title")}
+          />
+          <HeaderIconButton
+            icon="plus"
+            onPress={() =>
+              tab === "clients"
+                ? setShowCreateClient(true)
+                : setShowInviteForm(true)
+            }
+            testID={
+              tab === "clients"
+                ? "admin-new-client-button"
+                : "admin-new-invite-button"
+            }
+            accessibilityLabel={
+              tab === "clients"
+                ? t("admin.clients.sheetNewClient")
+                : t("admin.clients.sheetInvite")
+            }
+          />
+        </View>
       }
     >
       <View style={{ flex: 1 }}>
