@@ -124,7 +124,7 @@ export function ScheduleRow({
             }}
           >
             {full
-              ? t("client.home.waitlistAvailable")
+              ? t("client.home.full")
               : t("client.home.of", {
                   available: session.availableSlots,
                   capacity: session.capacity,
@@ -132,7 +132,9 @@ export function ScheduleRow({
           </Text>
         </View>
 
-        {/* Action label — confirms state / invites the tap. */}
+        {/* Action label — confirms state / invites the tap. A full session still
+            shows "Rezerviši" (the sheet handles the waitlist join path); we don't
+            surface the waitlist on the row itself. */}
         <Text
           style={{
             fontFamily: "AlbertSans-SemiBold",
@@ -142,11 +144,7 @@ export function ScheduleRow({
             textTransform: "uppercase",
           }}
         >
-          {bookedByMe
-            ? t("client.home.booked")
-            : full
-              ? t("client.home.join")
-              : t("client.home.book")}
+          {bookedByMe ? t("client.home.booked") : t("client.home.book")}
         </Text>
       </View>
     </Pressable>
