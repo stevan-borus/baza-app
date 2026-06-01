@@ -56,6 +56,27 @@ const sessionsListResponseSchema = z.object({
   sessions: z.array(sessionSchema),
 });
 
+// Shared client + consent shape for both booked and waitlisted clients —
+// the session-detail screen renders them with the same row + consent strip.
+const sessionClientSchema = z.object({
+  id: z.string(),
+  clientProfileId: z.string(),
+  client: z.object({
+    id: z.string(),
+    fullName: z.string(),
+    email: z.string(),
+  }),
+  consentFlags: z.object({
+    showFirstPilatesHint: z.boolean(),
+    conditions: z.array(z.string()),
+    conditionsOther: z.string().nullable(),
+    additionalNotes: z.string().nullable(),
+    intakeRecorded: z.boolean(),
+    intakeWithdrawn: z.boolean(),
+    socialMediaAccepted: z.boolean().nullable(),
+  }),
+});
+
 const sessionDetailSchema = z.object({
   id: z.string(),
   startsAt: z.string(),
@@ -73,25 +94,12 @@ const sessionDetailSchema = z.object({
   bookedCount: z.number(),
   seriesBookedCount: z.number(),
   bookings: z.array(
-    z.object({
-      id: z.string(),
-      createdAt: z.string(),
-      clientProfileId: z.string(),
-      client: z.object({
-        id: z.string(),
-        fullName: z.string(),
-        email: z.string(),
-      }),
-      consentFlags: z.object({
-        showFirstPilatesHint: z.boolean(),
-        conditions: z.array(z.string()),
-        conditionsOther: z.string().nullable(),
-        additionalNotes: z.string().nullable(),
-        intakeRecorded: z.boolean(),
-        intakeWithdrawn: z.boolean(),
-        socialMediaAccepted: z.boolean().nullable(),
-      }),
-    }),
+    sessionClientSchema.extend({ createdAt: z.string() }),
+  ),
+  // Queued clients (capacity full). Empty array when nobody is waiting; the
+  // UI hides the section entirely in that case.
+  waitlist: z.array(
+    sessionClientSchema.extend({ position: z.number() }),
   ),
 });
 

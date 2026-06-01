@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { router, type Href } from "expo-router";
 import dayjs from "dayjs";
-import Feather from "@expo/vector-icons/Feather";
+import { Icon } from "@/components/ui/icon";
 import { GlassCard } from "@/components/ui/glass-card";
 import { ErrorState, EmptyState } from "@/components/ui/states";
 import { SkeletonCard } from "@/components/ui/skeleton";
@@ -17,6 +17,7 @@ import {
   useSessionEditSheet,
 } from "@/components/ui/session-edit-sheet";
 import { sessionsQueries } from "@/lib/queries/sessions-queries-factory";
+import { authQueries } from "@/lib/queries/auth-queries-factory";
 import { ReturnToPill } from "@/components/admin/return-to-pill";
 
 type SessionDetailProps = {
@@ -45,6 +46,12 @@ export function SessionDetail({
   const query = useQuery(sessionsQueries.byId(id));
   const session = query.data?.session;
 
+  // Only admins may edit a session. Trainers get a read-only view (the PATCH
+  // endpoint enforces this server-side too). Derived from the role rather than
+  // a prop so a route wrapper can't accidentally expose the edit affordance.
+  const meQuery = useQuery(authQueries.me());
+  const canEdit = meQuery.data?.user.role === "ADMIN";
+
   const headerTitle = session?.classType?.name ?? t("admin.sessionDetail.title");
   const dateLabel = session
     ? dayjs(session.startsAt).locale(lang).format("dddd, D. MMMM YYYY")
@@ -60,7 +67,7 @@ export function SessionDetail({
       title={headerTitle}
       headerVariant="detail"
       rightSlot={
-        session ? (
+        session && canEdit ? (
           <HeaderIconButton
             testID="session-detail-edit-button"
             icon="pencil"
@@ -121,19 +128,19 @@ export function SessionDetail({
                 </Text>
                 <View style={{ flexDirection: "row", gap: 16, marginTop: 4 }}>
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                    <Feather name="user" size={13} color={tokens.muted} />
+                    <Icon name="user" size={13} color={tokens.muted} />
                     <Text className="text-muted" style={{ fontSize: 13 }}>
                       {session.trainer?.fullName ?? "—"}
                     </Text>
                   </View>
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                    <Feather name="home" size={13} color={tokens.muted} />
+                    <Icon name="home" size={13} color={tokens.muted} />
                     <Text className="text-muted" style={{ fontSize: 13 }}>
                       {session.room?.name ?? "—"}
                     </Text>
                   </View>
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                    <Feather name="users" size={13} color={tokens.muted} />
+                    <Icon name="users" size={13} color={tokens.muted} />
                     <Text className="text-muted" style={{ fontSize: 13 }}>
                       {bookedCount}/{capacity}
                     </Text>
@@ -148,67 +155,112 @@ export function SessionDetail({
                 <EmptyState title={t("admin.sessionDetail.noBookings")} />
               ) : (
                 session.bookings.map((b) => (
-                  <Pressable
+                  <ClientRow
                     key={b.id}
                     testID={`session-detail-booking-${b.id}`}
+                    client={b.client}
+                    consentFlags={b.consentFlags}
                     onPress={() => router.push(buildClientHref(b.client.id))}
-                    android_ripple={null}
-                    className="active:opacity-70"
-                  >
-                    <GlassCard size="md">
-                      <View
-                        style={{
-                          flexDirection: "row",
-                          alignItems: "center",
-                          gap: 12,
-                        }}
-                      >
-                        <View className="items-center justify-center w-10 h-10 rounded-full bg-accent-soft">
-                          <Text
-                            className="text-accent font-body-bold"
-                            style={{ fontSize: 13 }}
-                          >
-                            {b.client.fullName
-                              .split(" ")
-                              .map((w) => w[0] ?? "")
-                              .join("")
-                              .toUpperCase()
-                              .slice(0, 2)}
-                          </Text>
-                        </View>
-                        <View style={{ flex: 1 }}>
-                          <Text
-                            className="text-foreground font-body-semibold"
-                            style={{ fontSize: 15 }}
-                            numberOfLines={1}
-                          >
-                            {b.client.fullName}
-                          </Text>
-                          <Text
-                            className="text-muted"
-                            style={{ fontSize: 12 }}
-                            numberOfLines={1}
-                          >
-                            {b.client.email}
-                          </Text>
-                        </View>
-                        <Feather
-                          name="chevron-right"
-                          size={16}
-                          color={tokens.faint}
-                        />
-                      </View>
-                      <BookingConsentFlags flags={b.consentFlags} />
-                    </GlassCard>
-                  </Pressable>
+                  />
                 ))
               )}
             </View>
+
+            {/* Waitlist — only rendered when someone is queued. */}
+            {session.waitlist.length > 0 ? (
+              <View style={{ gap: 10 }}>
+                <SectionLabel>
+                  {t("admin.sessionDetail.waitlistClients")}
+                </SectionLabel>
+                {session.waitlist.map((w) => (
+                  <ClientRow
+                    key={w.id}
+                    testID={`session-detail-waitlist-${w.id}`}
+                    client={w.client}
+                    consentFlags={w.consentFlags}
+                    position={w.position}
+                    onPress={() => router.push(buildClientHref(w.client.id))}
+                  />
+                ))}
+              </View>
+            ) : null}
           </>
         ) : null}
       </ScrollView>
-      <SessionEditSheet {...editSheet.bind()} />
+      {canEdit ? <SessionEditSheet {...editSheet.bind()} /> : null}
     </ScreenContainerRaw>
+  );
+}
+
+type RowClient = { id: string; fullName: string; email: string };
+
+/**
+ * One client row on the session detail — used for both booked and waitlisted
+ * clients so they look identical. Avatar initials + name + email + chevron,
+ * tappable through to the client. A `position` (waitlist queue number) renders
+ * as a small badge on the avatar when provided.
+ */
+function ClientRow({
+  client,
+  consentFlags,
+  onPress,
+  testID,
+  position,
+}: {
+  client: RowClient;
+  consentFlags: ConsentFlags;
+  onPress: () => void;
+  testID: string;
+  position?: number;
+}) {
+  const tokens = useThemeTokens();
+  const initials = client.fullName
+    .split(" ")
+    .map((w) => w[0] ?? "")
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
+  return (
+    <Pressable
+      testID={testID}
+      onPress={onPress}
+      android_ripple={null}
+      className="active:opacity-70"
+    >
+      <GlassCard size="md">
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+          <View className="items-center justify-center w-10 h-10 rounded-full bg-accent-soft">
+            <Text className="text-accent font-body-bold" style={{ fontSize: 13 }}>
+              {initials}
+            </Text>
+            {position !== undefined ? (
+              <View className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-accent items-center justify-center">
+                <Text
+                  className="text-white font-body-bold"
+                  style={{ fontSize: 10 }}
+                >
+                  {position}
+                </Text>
+              </View>
+            ) : null}
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text
+              className="text-foreground font-body-semibold"
+              style={{ fontSize: 15 }}
+              numberOfLines={1}
+            >
+              {client.fullName}
+            </Text>
+            <Text className="text-muted" style={{ fontSize: 12 }} numberOfLines={1}>
+              {client.email}
+            </Text>
+          </View>
+          <Icon name="chevron-right" size={16} color={tokens.faint} />
+        </View>
+        <BookingConsentFlags flags={consentFlags} />
+      </GlassCard>
+    </Pressable>
   );
 }
 
@@ -296,7 +348,7 @@ function SocialMediaPill({ accepted }: { accepted: boolean | null }) {
   if (accepted === null) return null;
   return (
     <View className="flex-row items-center gap-1.5">
-      <Feather
+      <Icon
         name={accepted ? "camera" : "camera-off"}
         size={12}
         color={accepted ? "#16a34a" : "#dc2626"}

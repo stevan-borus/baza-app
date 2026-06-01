@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Pressable, Platform, View, Text } from "react-native";
-import FontAwesome from "@expo/vector-icons/FontAwesome";
+import { Icon } from "@/components/ui/icon";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
 import { useTranslation } from "react-i18next";
 import { useColorScheme } from "@/components/useColorScheme";
@@ -107,7 +107,7 @@ export function DateTimePicker({
           >
             {displayValue || placeholder}
           </Text>
-          <FontAwesome
+          <Icon
             name={mode === "time" ? "clock-o" : "calendar"}
             size={15}
             color={MUTED_COLOR}

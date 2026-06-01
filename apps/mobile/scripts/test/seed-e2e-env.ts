@@ -22,6 +22,11 @@ const seedEnvDefaults: Record<string, string> = {
   BASE_URL: "http://localhost:3010",
   TEST_ANCHOR_TIME: "2026-05-09T10:00:00Z",
 };
+// Use presence, not truthiness: a var the caller set explicitly — even to an
+// empty string — is an intentional choice and must win over the default. This
+// is what lets `dev:db:reseed` pass `TEST_ANCHOR_TIME=''` to opt out of the
+// test anchor and seed against the real wall-clock (today), instead of the
+// empty string being treated as "unset" and clobbered back to the anchor.
 for (const [key, value] of Object.entries(seedEnvDefaults)) {
-  if (!process.env[key]) process.env[key] = value;
+  if (!(key in process.env)) process.env[key] = value;
 }

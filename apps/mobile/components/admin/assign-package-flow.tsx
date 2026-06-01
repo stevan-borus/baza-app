@@ -19,7 +19,7 @@ import React, { useDeferredValue, useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Pressable, Text, View } from "react-native";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import Feather from "@expo/vector-icons/Feather";
+import { Icon } from "@/components/ui/icon";
 import { BottomSheetFlatList } from "@gorhom/bottom-sheet";
 import { AppSheet } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
@@ -343,7 +343,7 @@ function SheetHeader({
         accessibilityRole="button"
         accessibilityLabel="Back"
       >
-        <Feather name="chevron-left" size={22} color={tokens.foreground} />
+        <Icon name="chevron-left" size={22} color={tokens.foreground} />
       </Pressable>
       <Text
         className="text-foreground font-body-bold flex-1"

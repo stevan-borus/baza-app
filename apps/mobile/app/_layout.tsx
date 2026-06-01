@@ -1,5 +1,4 @@
 import "../global.css";
-import FontAwesome from "@expo/vector-icons/FontAwesome";
 import {
   DarkTheme,
   DefaultTheme,
@@ -59,7 +58,6 @@ const CustomLightTheme = {
 export default function RootLayout() {
   const [loaded, error] = useFonts({
     SpaceMono: require("../assets/fonts/SpaceMono-Regular.ttf"),
-    ...FontAwesome.font,
     // Display: Fraunces — refined wedge serif (variable). Used for screen
     // titles, big numbers, brand chrome.
     "Fraunces-Regular": require("@expo-google-fonts/fraunces/400Regular/Fraunces_400Regular.ttf"),

@@ -11,7 +11,7 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Pressable, ScrollView, Text, View } from "react-native";
-import FontAwesome from "@expo/vector-icons/FontAwesome";
+import { Icon } from "@/components/ui/icon";
 import { MotiView } from "@/components/ui/styled";
 import { Button } from "@/components/ui/button";
 import { ErrorState } from "@/components/ui/states";
@@ -141,11 +141,11 @@ export default function AdminSettingsRooms() {
 
                 {/* Capacity badge */}
                 <View className="flex-row items-center gap-1.5">
-                  <FontAwesome name="users" size={11} color="#a1a1aa" />
+                  <Icon name="users" size={11} color="#a1a1aa" />
                   <Text className="text-muted" style={{ fontSize: 13 }}>
                     {room.capacity}
                   </Text>
-                  <FontAwesome name="chevron-right" size={11} color="#52525b" />
+                  <Icon name="chevron-right" size={11} color="#52525b" />
                 </View>
               </View>
             </GlassCard>
@@ -160,7 +160,7 @@ export default function AdminSettingsRooms() {
           transition={{ type: "timing", duration: 400, delay: 80 }}
         >
           <View className="items-center py-12">
-            <FontAwesome name="map-marker" size={32} color="#3f3f46" />
+            <Icon name="map-marker" size={32} color="#3f3f46" />
             <Text className="text-muted mt-3" style={{ fontSize: 14 }}>
               {t("admin.manage.rooms")}
             </Text>

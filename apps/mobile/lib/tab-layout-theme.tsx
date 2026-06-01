@@ -1,5 +1,5 @@
 import React from "react";
-import FontAwesome from "@expo/vector-icons/FontAwesome";
+import { Icon, type IconName } from "@/components/ui/icon";
 import { Tabs } from "expo-router";
 import { ActivityIndicator } from "react-native";
 import { Pressable, StyleSheet, Text, View } from "react-native";
@@ -9,10 +9,11 @@ import { useThemePreference } from "@/lib/theme-preference";
 import { ACCENT } from "@/components/ui/tokens";
 
 export function TabIcon(props: {
-  name: React.ComponentProps<typeof FontAwesome>["name"];
+  name: IconName;
   color: string;
+  size?: number;
 }) {
-  return <FontAwesome size={22} {...props} />;
+  return <Icon size={props.size ?? 22} name={props.name} color={props.color} />;
 }
 
 export function AppTabLoading({ isDark: _isDark }: { isDark: boolean }) {

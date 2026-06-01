@@ -18,7 +18,7 @@
 import React from "react";
 import { Pressable, Text, View } from "react-native";
 import dayjs from "dayjs";
-import FontAwesome from "@expo/vector-icons/FontAwesome";
+import { Icon } from "@/components/ui/icon";
 import { useTranslation } from "react-i18next";
 import { useThemeTokens } from "./tokens";
 
@@ -99,7 +99,7 @@ export function WeekStrip({
             accessibilityLabel="Previous week"
             testID="week-strip-prev"
           >
-            <FontAwesome
+            <Icon
               name="chevron-left"
               size={14}
               color={tokens.muted}
@@ -120,7 +120,7 @@ export function WeekStrip({
             accessibilityLabel="Next week"
             testID="week-strip-next"
           >
-            <FontAwesome
+            <Icon
               name="chevron-right"
               size={14}
               color={tokens.muted}

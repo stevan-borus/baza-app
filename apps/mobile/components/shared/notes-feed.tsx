@@ -22,8 +22,7 @@ import { useState, useMemo, useCallback, useRef } from "react";
 import { useMutation, useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
-import FontAwesome from "@expo/vector-icons/FontAwesome";
-import Feather from "@expo/vector-icons/Feather";
+import { Icon, type IconName } from "@/components/ui/icon";
 import { MotiView } from "@/components/ui/styled";
 import { LegendList, type LegendListRef } from "@legendapp/list";
 import { AppSheet } from "@/components/ui/sheet";
@@ -104,7 +103,7 @@ function FilterSheetHeader({
           accessibilityRole="button"
           accessibilityLabel={t("common.close")}
         >
-          <Feather name="x" size={20} color={tokens.muted} />
+          <Icon name="x" size={20} color={tokens.muted} />
         </Pressable>
       </View>
     </View>
@@ -122,7 +121,7 @@ function FilterChip({
 }: {
   label: string;
   active: boolean;
-  trailingIcon?: "chevron-down" | "times";
+  trailingIcon?: IconName;
   onPress: () => void;
   onTrailingIconPress?: () => void;
 }) {
@@ -154,14 +153,14 @@ function FilterChip({
             }}
             hitSlop={8}
           >
-            <FontAwesome
+            <Icon
               name={trailingIcon}
               size={trailingIcon === "times" ? 11 : 9}
               color={active ? tokens.background : tokens.faint}
             />
           </Pressable>
         ) : (
-          <FontAwesome
+          <Icon
             name={trailingIcon}
             size={trailingIcon === "times" ? 11 : 9}
             color={active ? tokens.background : tokens.faint}

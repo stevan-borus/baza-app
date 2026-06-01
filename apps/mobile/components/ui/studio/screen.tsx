@@ -7,7 +7,7 @@ import { Image, Pressable, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import Feather from "@expo/vector-icons/Feather";
+import { Icon } from "@/components/ui/icon";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { authQueries } from "@/lib/queries/auth-queries-factory";
@@ -71,7 +71,7 @@ export function StudioScreen({
                 accessibilityRole="button"
                 accessibilityLabel={t("common.a11yGoBack")}
               >
-                <Feather name="chevron-left" size={26} color={tokens.foreground} />
+                <Icon name="chevron-left" size={26} color={tokens.foreground} />
               </Pressable>
             )}
 

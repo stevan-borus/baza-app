@@ -110,6 +110,7 @@ export type BookingMutationResult = z.infer<typeof bookingMutationResultSchema>;
 
 export const BOOKING_ERRORS = {
   GUARDIAN_VERIFICATION_REQUIRED: "GUARDIAN_VERIFICATION_REQUIRED",
+  SESSION_IN_PAST: "SESSION_IN_PAST",
 } as const;
 
 export type BookingErrorCode =

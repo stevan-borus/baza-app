@@ -5,7 +5,7 @@
  */
 import React from "react";
 import { Pressable, Text } from "react-native";
-import FontAwesome from "@expo/vector-icons/FontAwesome";
+import { Icon, type IconName } from "@/components/ui/icon";
 import { useThemeTokens } from "@/components/ui/tokens";
 
 export function FilterChip({
@@ -17,7 +17,7 @@ export function FilterChip({
   label: string;
   active: boolean;
   onPress: () => void;
-  trailingIcon?: "chevron-down" | "times" | "check";
+  trailingIcon?: IconName;
 }) {
   const tokens = useThemeTokens();
   return (
@@ -45,7 +45,7 @@ export function FilterChip({
         {label}
       </Text>
       {trailingIcon ? (
-        <FontAwesome
+        <Icon
           name={trailingIcon}
           size={trailingIcon === "times" ? 11 : 10}
           color={active ? tokens.background : tokens.faint}

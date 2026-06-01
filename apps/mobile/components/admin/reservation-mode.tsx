@@ -13,7 +13,7 @@ import { useTranslation } from "react-i18next";
 import { useQuery, useInfiniteQuery } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter, type Href } from "expo-router";
 import dayjs from "dayjs";
-import Feather from "@expo/vector-icons/Feather";
+import { Icon } from "@/components/ui/icon";
 import { AppSheet } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { CapsLabel } from "@/components/ui/studio/typography";
@@ -26,6 +26,7 @@ import { Input } from "@/components/ui/input";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { FilterChip } from "@/components/ui/studio/filter-chip";
 import { nowMs } from "@/lib/now";
+import { useThemePreference } from "@/lib/theme-preference";
 import { authQueries } from "@/lib/queries/auth-queries-factory";
 import { expandPattern, type PatternInput, type RhythmWeek } from "@/lib/reservation-pattern";
 import { sessionsQueries } from "@/lib/queries/sessions-queries-factory";
@@ -67,6 +68,10 @@ export function ReservationMode() {
   const router = useRouter();
   const bottomPad = useTabBarBottomPadding(80);
   const params = useLocalSearchParams<ReservationModeParams>();
+  // The "Obrazac" affordance keeps the green accent on light, but the dark
+  // accent green nearly vanishes on the dark canvas — go white there.
+  const { resolvedTheme } = useThemePreference();
+  const obrazacColor = resolvedTheme === "dark" ? "#FFFFFF" : "#2e5b42";
 
   // Role gate — trainers and clients land here only by typing the URL.
   const meQ = useQuery(authQueries.me());
@@ -296,7 +301,7 @@ export function ReservationMode() {
             ) : null}
 
             {/* Day-label + accelerator chip row */}
-            <View className="px-5 pt-2 pb-3 flex-row items-baseline justify-between">
+            <View className="px-5 pt-2 pb-3 flex-row items-center justify-between">
               <CapsLabel size={11} tracking={2.4} className="text-muted">
                 {dayjs(selectedDate).locale(lang).format("dddd, D MMMM").toUpperCase()}
               </CapsLabel>
@@ -308,10 +313,10 @@ export function ReservationMode() {
                 style={{ opacity: clientProfileId ? 1 : 0.4 }}
               >
                 <View className="flex-row items-center gap-1.5">
-                  <Feather name="repeat" size={12} className="text-accent" />
+                  <Icon name="repeat" size={12} color={obrazacColor} />
                   <Text
-                    className="text-accent font-body-medium"
-                    style={{ fontSize: 12, letterSpacing: 0.4 }}
+                    className="font-body-medium"
+                    style={{ fontSize: 12, letterSpacing: 0.4, color: obrazacColor }}
                   >
                     {t("admin.reservations.applyPattern", { defaultValue: "Obrazac" })}
                   </Text>
@@ -487,7 +492,7 @@ function ClientBanner({
             className="items-center justify-center rounded-full bg-glass-surface border border-glass-border"
             style={{ width: 32, height: 32 }}
           >
-            <Feather name="user" size={14} />
+            <Icon name="user" size={14} />
           </View>
         )}
         <View className="flex-1">
@@ -505,10 +510,10 @@ function ClientBanner({
         </View>
         {clientFullName ? (
           <Pressable onPress={onClear} hitSlop={8}>
-            <Feather name="x" size={18} />
+            <Icon name="x" size={18} />
           </Pressable>
         ) : (
-          <Feather name="chevron-right" size={18} />
+          <Icon name="chevron-right" size={18} />
         )}
       </Pressable>
     </View>

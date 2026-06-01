@@ -26,8 +26,7 @@ import {
   View,
 } from "react-native";
 import { MotiView } from "@/components/ui/styled";
-import FontAwesome from "@expo/vector-icons/FontAwesome";
-import Feather from "@expo/vector-icons/Feather";
+import { Icon, type IconName } from "@/components/ui/icon";
 import { AppSheet } from "@/components/ui/sheet";
 import { ConfirmSheet } from "@/components/ui/confirm-sheet";
 import { Badge } from "@/components/ui/badge";
@@ -135,7 +134,7 @@ function ClientRow({
         accessibilityLabel={t("admin.clients.openActions")}
         className="w-8 h-8 items-center justify-center -mr-1 active:opacity-60"
       >
-        <Feather name="edit-2" size={16} color={tokens.faint} />
+        <Icon name="edit-2" size={16} color={tokens.faint} />
       </Pressable>
     </Pressable>
   );
@@ -554,7 +553,7 @@ export default function AdminClients() {
                         className="flex-1 flex-row items-center justify-center gap-1.5 py-2 rounded-lg"
                         style={{ backgroundColor: "rgba(255,255,255,0.06)" }}
                       >
-                        <FontAwesome name="refresh" size={12} color="#a1a1aa" />
+                        <Icon name="refresh" size={12} color="#a1a1aa" />
                         <Text className="text-muted" style={{ fontSize: 12, fontWeight: "600" }}>
                           {t("admin.clients.resend")}
                         </Text>
@@ -565,7 +564,7 @@ export default function AdminClients() {
                         className="flex-1 flex-row items-center justify-center gap-1.5 py-2 rounded-lg"
                         style={{ backgroundColor: "rgba(255,0,0,0.08)" }}
                       >
-                        <FontAwesome name="ban" size={12} color="#ef4444" />
+                        <Icon name="ban" size={12} color="#ef4444" />
                         <Text style={{ fontSize: 12, fontWeight: "600", color: "#ef4444" }}>
                           {t("admin.clients.revoke")}
                         </Text>
@@ -788,7 +787,7 @@ export default function AdminClients() {
               <View className="flex-col gap-5">
                 <View className="items-center gap-3 pt-1">
                   <View className="w-12 h-12 rounded-full bg-danger-soft items-center justify-center">
-                    <Feather name="alert-triangle" size={20} color="#dc2626" />
+                    <Icon name="alert-triangle" size={20} color="#dc2626" />
                   </View>
                   <Text
                     className="text-foreground font-body-bold text-center"
@@ -1010,7 +1009,7 @@ export default function AdminClients() {
 }
 
 // ─── ActionRow ───────────────────────────────────────────────────────────────
-// Used inside the client-actions sheet. Feather icon + label + chevron, full
+// Used inside the client-actions sheet. Icon + label + chevron, full
 // width, hairline-divided. Destructive variant tints icon + label red.
 
 /**
@@ -1036,7 +1035,7 @@ function SheetHeader({
         accessibilityRole="button"
         accessibilityLabel="Back"
       >
-        <Feather name="chevron-left" size={22} color={t.foreground} />
+        <Icon name="chevron-left" size={22} color={t.foreground} />
       </Pressable>
       <Text
         className="text-foreground font-body-bold flex-1"
@@ -1055,7 +1054,7 @@ function ActionRow({
   destructive = false,
   testID,
 }: {
-  icon: React.ComponentProps<typeof Feather>["name"];
+  icon: IconName;
   label: string;
   onPress: () => void;
   destructive?: boolean;
@@ -1069,7 +1068,7 @@ function ActionRow({
       android_ripple={null}
       className="flex-row items-center gap-3 py-3.5 active:opacity-70"
     >
-      <Feather
+      <Icon
         name={icon}
         size={18}
         color={destructive ? "#dc2626" : t.foreground}
@@ -1085,7 +1084,7 @@ function ActionRow({
         {label}
       </Text>
       {!destructive ? (
-        <Feather name="chevron-right" size={16} color={t.faint} />
+        <Icon name="chevron-right" size={16} color={t.faint} />
       ) : null}
     </Pressable>
   );

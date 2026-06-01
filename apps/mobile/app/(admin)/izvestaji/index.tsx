@@ -22,7 +22,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
 import { router, type Href } from "expo-router";
-import Feather from "@expo/vector-icons/Feather";
+import { Icon } from "@/components/ui/icon";
 import { MotiView } from "@/components/ui/styled";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { ErrorState } from "@/components/ui/states";
@@ -206,7 +206,7 @@ function LandingCard({
         <CapsLabel size={11} tracking={2.4} className="text-muted flex-1">
           {title}
         </CapsLabel>
-        <Feather
+        <Icon
           name="chevron-right"
           size={14}
           color={tokens.faint}

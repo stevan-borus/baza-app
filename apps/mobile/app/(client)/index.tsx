@@ -11,7 +11,6 @@ import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import {
-  Image,
   ImageBackground,
   Pressable,
   RefreshControl,
@@ -32,18 +31,18 @@ import { sessionsQueries } from "@/lib/queries/sessions-queries-factory";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { AppHeader } from "@/components/ui/app-header";
 import { StudioWeekStrip } from "@/components/ui/studio";
+import { ScheduleRow } from "@/components/ui/schedule-row";
+import { EmptyState } from "@/components/ui/states";
+import {
+  useBookingSheet,
+  ClientBookingSheet,
+} from "@/components/client/use-booking-sheet";
 import { useThemeTokens } from "@/components/ui/tokens";
 
 dayjs.extend(relativeTime);
 
 // Studio photography (from baza-landing/public/optimized/gal/)
 const PHOTO_HERO = require("@/assets/studio/group.webp");      // BAZA neon, 4 women on reformers
-const PHOTO_RINGS = require("@/assets/studio/rings.webp");
-const PHOTO_PLANK = require("@/assets/studio/plank.webp");
-const PHOTO_TRIPLE = require("@/assets/studio/triple.webp");
-const PHOTO_REFORMER = require("@/assets/studio/reformer-1.webp");
-
-const SCHEDULE_PHOTOS = [PHOTO_RINGS, PHOTO_PLANK, PHOTO_REFORMER, PHOTO_TRIPLE];
 
 // Theme-stable values that go OVER photographs — these are intentionally
 // hard-coded because they sit on top of an image and must read regardless
@@ -53,13 +52,6 @@ const ACCENT_LIGHT = "#9ED6B5"; // sage glow used on dark photo overlays
 function currentMonthKey() {
   const now = new Date();
   return `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}`;
-}
-
-// Stable photo for a session id, so the same class always shows the same photo.
-function photoForSessionId(id: string) {
-  let h = 0;
-  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
-  return SCHEDULE_PHOTOS[h % SCHEDULE_PHOTOS.length];
 }
 
 // ────────────────────────────────────────────────────────────────────────
@@ -219,7 +211,6 @@ function NextClassHero({
     : isTomorrow
       ? t("client.home.tomorrow").toUpperCase()
       : start.locale(lang).format("dddd, D MMM").toUpperCase();
-  const spotsLeft = session.capacity - session.bookedCount;
 
   return (
     <View style={{ paddingHorizontal: 16 }}>
@@ -233,7 +224,7 @@ function NextClassHero({
       >
         <ImageBackground
           source={PHOTO_HERO}
-          style={{ width: "100%", height: 340 }}
+          style={{ width: "100%", height: 260 }}
           resizeMode="cover"
         >
           {/* Top overlay — ink fade for status legibility */}
@@ -244,7 +235,7 @@ function NextClassHero({
               top: 0,
               left: 0,
               right: 0,
-              height: 160,
+              height: 110,
             }}
           />
           {/* Bottom overlay — deep ink so the info ribbon reads */}
@@ -259,7 +250,7 @@ function NextClassHero({
               bottom: 0,
               left: 0,
               right: 0,
-              height: 320,
+              height: 200,
             }}
           />
 
@@ -280,14 +271,6 @@ function NextClassHero({
                 flex: 1,
               }}
             >
-              <View
-                style={{
-                  width: 6,
-                  height: 6,
-                  borderRadius: 3,
-                  backgroundColor: "#2e5b42",
-                }}
-              />
               <Text
                 style={{
                   fontFamily: "AlbertSans-SemiBold",
@@ -301,32 +284,32 @@ function NextClassHero({
                 {greeting}, {userName}
               </Text>
             </View>
-            <View
-              style={{
-                paddingHorizontal: 10,
-                paddingVertical: 5,
-                borderRadius: 999,
-                backgroundColor: isWithinHour
-                  ? "#FFFFFF"
-                  : "rgba(255,255,255,0.18)",
-                borderWidth: isWithinHour ? 0 : 1,
-                borderColor: "rgba(255,255,255,0.35)",
-              }}
-            >
-              <Text
+            {/* Only the time-sensitive "starts in X min" chip is shown. The
+                idle "POTVRĐENO" badge was redundant (the hero already implies
+                the next booked class) and collided with long names, so it's
+                dropped — letting the greeting use the full width. */}
+            {isWithinHour ? (
+              <View
                 style={{
-                  fontFamily: "AlbertSans-SemiBold",
-                  fontSize: 10,
-                  color: isWithinHour ? "#0F0F0D" : "#FFFFFF",
-                  letterSpacing: 1.2,
-                  textTransform: "uppercase",
+                  paddingHorizontal: 10,
+                  paddingVertical: 5,
+                  borderRadius: 999,
+                  backgroundColor: "#FFFFFF",
                 }}
               >
-                {isWithinHour
-                  ? t("client.home.startsInMinutes", { minutes: minsUntil })
-                  : t("client.home.confirmed")}
-              </Text>
-            </View>
+                <Text
+                  style={{
+                    fontFamily: "AlbertSans-SemiBold",
+                    fontSize: 10,
+                    color: "#0F0F0D",
+                    letterSpacing: 1.2,
+                    textTransform: "uppercase",
+                  }}
+                >
+                  {t("client.home.startsInMinutes", { minutes: minsUntil })}
+                </Text>
+              </View>
+            ) : null}
           </View>
 
           {/* Bottom — class info ribbon */}
@@ -343,8 +326,8 @@ function NextClassHero({
             <Text
               style={{
                 fontFamily: "AlbertSans-SemiBold",
-                fontSize: 11,
-                color: "rgba(255,255,255,0.7)",
+                fontSize: 12,
+                color: "#FFFFFF",
                 letterSpacing: 1.6,
               }}
             >
@@ -362,32 +345,23 @@ function NextClassHero({
             >
               {session.classTypeName}
             </Text>
-            <View style={{ flexDirection: "row", gap: 16, marginTop: 2 }}>
-              {session.roomName ? (
+            {/* Spots-left is intentionally omitted here — the hero is the
+                user's already-booked next class, so availability is noise.
+                Only the room is shown. */}
+            {session.roomName ? (
+              <View style={{ flexDirection: "row", marginTop: 2 }}>
                 <Text
                   style={{
                     fontFamily: "AlbertSans-Regular",
-                    fontSize: 12,
-                    color: "rgba(255,255,255,0.7)",
+                    fontSize: 13,
+                    color: "#FFFFFF",
                     letterSpacing: 0.4,
                   }}
                 >
                   {session.roomName}
                 </Text>
-              ) : null}
-              <Text
-                style={{
-                  fontFamily: "AlbertSans-Regular",
-                  fontSize: 12,
-                  color: ACCENT_LIGHT,
-                  letterSpacing: 0.4,
-                }}
-              >
-                {spotsLeft === 1
-                  ? t("client.home.spotLeft", { count: spotsLeft })
-                  : t("client.home.spotsLeft", { count: spotsLeft })}
-              </Text>
-            </View>
+              </View>
+            ) : null}
             <View style={{ flexDirection: "row", gap: 8, marginTop: 8 }}>
               <BlackPill
                 label={
@@ -433,123 +407,6 @@ function NextClassHero({
 }
 
 // ────────────────────────────────────────────────────────────────────────
-// Schedule row — Heartcore-style with photo thumb + instructor avatar
-
-function ScheduleRow({
-  session,
-  onPress,
-}: {
-  session: {
-    id: string;
-    classTypeName: string;
-    startsAt: Date | string;
-    endsAt: Date | string;
-    roomName: string | null;
-    availableSlots: number;
-    capacity: number;
-    isBookedByMe?: boolean;
-  };
-  onPress: () => void;
-}) {
-  const { t } = useTranslation();
-  const tokens = useThemeTokens();
-  const start = dayjs(session.startsAt);
-  const end = dayjs(session.endsAt);
-  const full = session.availableSlots === 0;
-  const bookedByMe = !!session.isBookedByMe;
-  const photo = photoForSessionId(session.id);
-
-  return (
-    <Pressable onPress={onPress}>
-      <View
-        style={{
-          flexDirection: "row",
-          alignItems: "center",
-          paddingVertical: 12,
-          paddingHorizontal: 20,
-          gap: 14,
-        }}
-      >
-        {/* Photo tile */}
-        <Image
-          source={photo}
-          style={{
-            width: 64,
-            height: 64,
-            borderRadius: 4,
-            backgroundColor: tokens.surface2,
-          }}
-          resizeMode="cover"
-        />
-
-        {/* Body */}
-        <View style={{ flex: 1, gap: 4 }}>
-          <Text
-            style={{
-              fontFamily: "AlbertSans-SemiBold",
-              fontSize: 11,
-              color: tokens.muted,
-              letterSpacing: 1.2,
-              textTransform: "uppercase",
-            }}
-          >
-            {start.format("HH:mm")} ·{" "}
-            {t("client.home.minutesShort", { count: end.diff(start, "minute") })}
-            {session.roomName ? ` · ${session.roomName}` : ""}
-          </Text>
-          <Text
-            style={{
-              fontFamily: "AlbertSans-SemiBold",
-              fontSize: 16,
-              color: tokens.foreground,
-              letterSpacing: -0.2,
-            }}
-            numberOfLines={1}
-          >
-            {session.classTypeName}
-          </Text>
-          <Text
-            style={{
-              fontFamily: "AlbertSans-Regular",
-              fontSize: 12,
-              color: full ? tokens.faint : tokens.accent,
-              letterSpacing: 0.2,
-            }}
-          >
-            {full
-              ? t("client.home.waitlistAvailable")
-              : t("client.home.of", {
-                  available: session.availableSlots,
-                  capacity: session.capacity,
-                })}
-          </Text>
-        </View>
-
-        {/* Action chevron-style label. When the client already holds an
-            active booking on this session, show a positive "REZERVISANO"
-            label in the accent color instead of an action verb — the hero
-            card above already exposes the cancel CTA, so the row's only
-            job here is to confirm state. */}
-        <Text
-          style={{
-            fontFamily: "AlbertSans-SemiBold",
-            fontSize: 11,
-            color: bookedByMe ? tokens.accent : tokens.foreground,
-            letterSpacing: 1.4,
-            textTransform: "uppercase",
-          }}
-        >
-          {bookedByMe
-            ? t("client.home.booked")
-            : full
-              ? t("client.home.join")
-              : t("client.home.book")}
-        </Text>
-      </View>
-    </Pressable>
-  );
-}
-
 // ────────────────────────────────────────────────────────────────────────
 // Package — confident card with brand mark
 
@@ -696,6 +553,18 @@ export default function HomeStudio() {
   const queryClient = useQueryClient();
   const tokens = useThemeTokens();
   const [refreshing, setRefreshing] = useState(false);
+
+  // Open the calendar tab focused on a specific day. Passing the session's /
+  // selected day's date means tapping a Friday class lands on Friday, not on
+  // whatever day the calendar was last left on.
+  function goToCalendar(date?: Date | string) {
+    const d = date ? dayjs(date).format("YYYY-MM-DD") : undefined;
+    router.push(
+      d
+        ? { pathname: "/(client)/calendar", params: { date: d } }
+        : "/(client)/calendar",
+    );
+  }
   const [selectedDay, setSelectedDay] = useState(dayjs().startOf("day"));
   // Just a small breathing buffer — the flat tab bar takes its own real
   // layout space, so the ScrollView is naturally clipped at it. No need
@@ -708,6 +577,9 @@ export default function HomeStudio() {
   const availabilityQuery = useQuery(
     sessionsQueries.availabilityByMonth(month),
   );
+  // Same booking sheet as the calendar — tapping a session row (or the hero
+  // buttons) books/cancels inline instead of bouncing to the calendar tab.
+  const booking = useBookingSheet();
 
   const packages = packagesQuery.data?.packages ?? [];
   const activePackage = packages.find(
@@ -716,10 +588,18 @@ export default function HomeStudio() {
   );
   const sessions = availabilityQuery.data?.sessions ?? [];
 
-  const userName = meQuery.data?.user.email?.split("@")[0] ?? "";
+  // First name only. Fall back to the email local-part if the profile has no
+  // name yet.
+  const userName =
+    meQuery.data?.user.fullName?.trim().split(/\s+/)[0] ||
+    meQuery.data?.user.email?.split("@")[0] ||
+    "";
   const now = new Date();
+  // The hero is the client's NEXT BOOKED class (it carries DETALJI/OTKAŽI), so
+  // it must filter to sessions the client actually reserved — not just the next
+  // bookable one. No booking → the "ready for next" empty state shows instead.
   const upcoming = sessions
-    .filter((s) => new Date(s.startsAt) > now)
+    .filter((s) => s.isBookedByMe && new Date(s.startsAt) > now)
     .sort(
       (a, b) =>
         new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime(),
@@ -752,8 +632,12 @@ export default function HomeStudio() {
 
   const greeting = (() => {
     const h = new Date().getHours();
+    // Before 5am it's still night — "Dobro veče", not morning. Morning runs
+    // 5:00–10:59, "Dobar dan" until 18:00 (17:xx still reads daytime), then
+    // evening.
+    if (h < 5) return t("client.home.greetingEvening");
     if (h < 11) return t("client.home.greetingMorning");
-    if (h < 17) return t("client.home.greetingAfternoon");
+    if (h < 18) return t("client.home.greetingAfternoon");
     return t("client.home.greetingEvening");
   })();
 
@@ -789,8 +673,8 @@ export default function HomeStudio() {
             lang={lang}
             userName={userName || "there"}
             greeting={greeting}
-            onPress={() => router.push("/(client)/calendar")}
-            onCancel={() => router.push("/(client)/calendar")}
+            onPress={() => booking.open(next, "view")}
+            onCancel={() => booking.open(next, "cancel")}
           />
         ) : (
           <View style={{ paddingHorizontal: 16 }}>
@@ -911,13 +795,26 @@ export default function HomeStudio() {
           </View>
         )}
 
+        {/* Package — above the week list: a client's own balance is the
+            first thing they want to see, before browsing the schedule. */}
+        {activePackage ? (
+          <View>
+            <SectionRow title={t("client.home.yourPackage")} />
+            <PackageCard
+              pkg={activePackage}
+              lang={lang}
+              onPress={() => router.push("/(client)/profile")}
+            />
+          </View>
+        ) : null}
+
         {/* This week */}
         <View>
           <SectionRow
             title={t("client.home.thisWeek")}
             action={{
               label: t("client.home.seeAll"),
-              onPress: () => router.push("/(client)/calendar"),
+              onPress: () => goToCalendar(dayKey),
             }}
           />
           <StudioWeekStrip
@@ -927,32 +824,15 @@ export default function HomeStudio() {
           />
           <View style={{ height: 18 }} />
           {daySessions.length === 0 ? (
-            <View style={{ paddingHorizontal: 20 }}>
-              <View
-                style={{
-                  paddingVertical: 22,
-                  paddingHorizontal: 18,
-                  borderRadius: 4,
-                  backgroundColor: tokens.surface2,
-                  alignItems: "flex-start",
-                  gap: 12,
-                }}
-              >
-                <Text
-                  style={{
-                    fontFamily: "AlbertSans-Regular",
-                    fontSize: 13,
-                    color: tokens.muted,
-                    lineHeight: 18,
-                  }}
-                >
-                  {t("client.home.noClassesOnDay", {
-                    day: selectedDay.locale(lang).format("dddd, D MMMM"),
-                  })}
-                  {"\n"}
-                  {t("client.home.tryAnotherDay")}
-                </Text>
-              </View>
+            <View style={{ paddingHorizontal: 16 }}>
+              <EmptyState
+                title={
+                  selectedDay.isSame(dayjs(), "day")
+                    ? t("client.home.noClassesToday")
+                    : t("client.home.noClassesThisDay")
+                }
+                description={t("client.home.tryAnotherDay")}
+              />
             </View>
           ) : (
             <View
@@ -968,7 +848,7 @@ export default function HomeStudio() {
                   <View style={{ marginHorizontal: -4 }}>
                     <ScheduleRow
                       session={s}
-                      onPress={() => router.push("/(client)/calendar")}
+                      onPress={() => booking.open(s)}
                     />
                   </View>
                   {i < Math.min(daySessions.length, 5) - 1 ? (
@@ -986,26 +866,9 @@ export default function HomeStudio() {
             </View>
           )}
         </View>
-
-        {/* Package */}
-        {activePackage ? (
-          <View>
-            <SectionRow
-              title={t("client.home.yourPackage")}
-              action={{
-                label: t("client.home.manage"),
-                onPress: () => router.push("/(client)/profile"),
-              }}
-            />
-            <PackageCard
-              pkg={activePackage}
-              lang={lang}
-              onPress={() => router.push("/(client)/profile")}
-            />
-          </View>
-        ) : null}
       </ScrollView>
 
+      <ClientBookingSheet controller={booking} sessions={sessions} />
     </View>
   );
 }

@@ -400,10 +400,15 @@ async function seedSessions(opts: {
   const sala2 = opts.rooms.find((r) => r.name === "Sala 2")!;
 
   const baseDay = now();
-  baseDay.setHours(10, 0, 0, 0);
+  baseDay.setHours(0, 0, 0, 0);
 
-  // Two recurring schedules: Reformer Mon/Wed/Fri × 2 weeks at 10:00 (Sala 1),
-  // Energy Tue/Thu × 2 weeks at 18:00 (Sala 2). Roughly 14 days of cover.
+  // Recurring schedules. Times are minutes-from-midnight so half-hour slots
+  // (06:30, 07:30) are expressible.
+  //  - Reformer Mon/Wed/Fri × 4 weeks at 10:00 (Sala 1) — the long-standing
+  //    e2e fixture; several specs assume Reformer = M/W/F @ 10:00.
+  //  - Reformer Mon/Wed/Fri × 52 weeks at 06:30 AND 07:30 (Sala 1) — a full
+  //    year of early-morning reformer slots for realistic browsing.
+  //  - Energy Tue/Thu × 4 weeks at 18:00 (Sala 2).
   type ScheduleSpec = {
     name: string;
     classTypeId: string;
@@ -411,7 +416,7 @@ async function seedSessions(opts: {
     roomId: string;
     weekdays: number[];
     weekCount: number;
-    timeOfDayHours: number;
+    timeOfDayMins: number;
   };
 
   const schedules: ScheduleSpec[] = [
@@ -422,7 +427,25 @@ async function seedSessions(opts: {
       roomId: sala1.id,
       weekdays: [1, 3, 5],
       weekCount: 4,
-      timeOfDayHours: 10,
+      timeOfDayMins: 10 * 60,
+    },
+    {
+      name: "Reformer Mon/Wed/Fri 06:30 (52wk)",
+      classTypeId: reformer.id,
+      trainerUserId: opts.trainers.reformer.id,
+      roomId: sala1.id,
+      weekdays: [1, 3, 5],
+      weekCount: 52,
+      timeOfDayMins: 6 * 60 + 30,
+    },
+    {
+      name: "Reformer Mon/Wed/Fri 07:30 (52wk)",
+      classTypeId: reformer.id,
+      trainerUserId: opts.trainers.reformer.id,
+      roomId: sala1.id,
+      weekdays: [1, 3, 5],
+      weekCount: 52,
+      timeOfDayMins: 7 * 60 + 30,
     },
     {
       name: "Energy Tue/Thu 18:00",
@@ -431,7 +454,7 @@ async function seedSessions(opts: {
       roomId: sala2.id,
       weekdays: [2, 4],
       weekCount: 4,
-      timeOfDayHours: 18,
+      timeOfDayMins: 18 * 60,
     },
   ];
 
@@ -442,7 +465,7 @@ async function seedSessions(opts: {
         trainerUserId: spec.trainerUserId,
         roomId: spec.roomId,
         weekdays: spec.weekdays,
-        timeOfDayMins: spec.timeOfDayHours * 60,
+        timeOfDayMins: spec.timeOfDayMins,
         durationMins: 60,
         capacity: 6,
         isActive: true,
@@ -451,11 +474,13 @@ async function seedSessions(opts: {
 
     const weekStart = new Date(baseDay);
     weekStart.setDate(baseDay.getDate() - baseDay.getDay()); // Sunday-anchored
+    const hours = Math.floor(spec.timeOfDayMins / 60);
+    const minutes = spec.timeOfDayMins % 60;
 
     for (let week = 0; week < spec.weekCount; week++) {
       for (const dow of spec.weekdays) {
         const startsAt = new Date(weekStart.getTime() + week * WEEK_MS + dow * DAY_MS);
-        startsAt.setHours(spec.timeOfDayHours, 0, 0, 0);
+        startsAt.setHours(hours, minutes, 0, 0);
         if (startsAt.getTime() < nowMs()) continue;
         const endsAt = new Date(startsAt.getTime() + 60 * 60 * 1000);
         await prisma.session.create({
@@ -622,14 +647,38 @@ async function seedBookings(opts: {
     });
   }
 
-  // 3. Waitlist entry — on the same session the active reformer client is
-  //    booked into. Gives the WaitlistBadge / waitlistCount > 0 path a
-  //    test fixture without needing to fully fill the session.
-  if (futureClient && firstReformer) {
+  // 3. Waitlist entry — on a FULL session, so the WaitlistBadge fixture is
+  //    realistic (you can only wait for a class with no free spots; a waitlist
+  //    on an open session is impossible in the product). Fill a dedicated
+  //    reformer session to capacity with throwaway "waitlist filler" clients —
+  //    NOT the named seed clients, whose booking/link state the trainer-scoping
+  //    and profile-access specs depend on — then queue the future client behind
+  //    it. The active reformer is unaffected.
+  const waitlistTarget = reformerSessionsForExtra[2];
+  if (futureClient && waitlistTarget) {
+    for (let i = 0; i < waitlistTarget.capacity; i++) {
+      const filler = await prisma.user.create({
+        data: {
+          email: `waitlist.filler.${i}@e2e.test`,
+          fullName: `Waitlist Filler ${i + 1}`,
+          role: UserRole.CLIENT,
+          clientProfile: { create: { dateOfBirth: new Date("1990-01-01") } },
+        },
+        include: { clientProfile: true },
+      });
+      await prisma.booking.create({
+        data: {
+          clientProfileId: filler.clientProfile!.id,
+          sessionId: waitlistTarget.id,
+          clientPackageId: null,
+        },
+      });
+    }
+
     await prisma.waitlistEntry.create({
       data: {
         clientProfileId: futureClient.clientProfileId,
-        sessionId: firstReformer.id,
+        sessionId: waitlistTarget.id,
         position: 1,
       },
     });

@@ -1,10 +1,8 @@
 import React, { useState } from "react";
 import { Pressable, Text, View } from "react-native";
-import FontAwesome from "@expo/vector-icons/FontAwesome";
+import { Icon, type IconName } from "@/components/ui/icon";
 import { MotiView } from "@/components/ui/styled";
 import { useThemeTokens } from "./tokens";
-
-type IconName = React.ComponentProps<typeof FontAwesome>["name"];
 
 export type SelectOption<V extends string> = {
   value: V;
@@ -68,7 +66,7 @@ export function Select<V extends string>({
               style={{ width: ADORNMENT_WIDTH }}
               className="items-start justify-center"
             >
-              <FontAwesome name={leftIcon} size={16} color={tokens.muted} />
+              <Icon name={leftIcon} size={16} color={tokens.muted} />
             </View>
           ) : null}
 
@@ -91,11 +89,7 @@ export function Select<V extends string>({
               animate={{ rotate: open ? "180deg" : "0deg" }}
               transition={{ type: "timing", duration: 150 }}
             >
-              <FontAwesome
-                name="chevron-down"
-                size={12}
-                color={tokens.muted}
-              />
+              <Icon name="chevron-down" size={12} color={tokens.muted} />
             </MotiView>
           </View>
         </View>
@@ -153,11 +147,7 @@ export function Select<V extends string>({
                       ) : null}
                     </View>
                     {isSelected ? (
-                      <FontAwesome
-                        name="check"
-                        size={13}
-                        color={tokens.accent}
-                      />
+                      <Icon name="check" size={13} color={tokens.accent} />
                     ) : null}
                   </View>
                 </Pressable>

@@ -16,7 +16,7 @@ import {
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import Feather from "@expo/vector-icons/Feather";
+import { Icon } from "@/components/ui/icon";
 import { useRouter } from "expo-router";
 import { useThemeTokens } from "@/components/ui/tokens";
 import { useThemePreference } from "@/lib/theme-preference";
@@ -70,7 +70,7 @@ export function AuthBackground({
                   android_ripple={null}
                   className="absolute left-0 top-0 bottom-0 justify-center active:opacity-60"
                 >
-                  <Feather
+                  <Icon
                     name="chevron-left"
                     size={26}
                     color={tokens.foreground}

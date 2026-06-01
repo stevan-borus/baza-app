@@ -11,7 +11,7 @@
  */
 import dayjs from "dayjs";
 import { Pressable, Text, View } from "react-native";
-import Feather from "@expo/vector-icons/Feather";
+import { Icon } from "@/components/ui/icon";
 import { useThemeTokens } from "@/components/ui/tokens";
 import { CapsLabel } from "./typography";
 
@@ -58,7 +58,7 @@ export function StudioWeekStrip({
               accessibilityLabel="Previous week"
               testID="week-strip-prev"
             >
-              <Feather name="chevron-left" size={20} color={tokens.foreground} />
+              <Icon name="chevron-left" size={20} color={tokens.foreground} />
             </Pressable>
           ) : (
             <View style={{ width: 36 }} />
@@ -80,7 +80,7 @@ export function StudioWeekStrip({
               accessibilityLabel="Next week"
               testID="week-strip-next"
             >
-              <Feather name="chevron-right" size={20} color={tokens.foreground} />
+              <Icon name="chevron-right" size={20} color={tokens.foreground} />
             </Pressable>
           ) : (
             <View style={{ width: 36 }} />

@@ -1,4 +1,4 @@
-import FontAwesome from "@expo/vector-icons/FontAwesome";
+import { Icon, type IconName } from "@/components/ui/icon";
 import { Tabs } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
@@ -10,11 +10,8 @@ import {
 import { notificationsQueries } from "@/lib/queries/notifications-queries-factory";
 import { ConsentGateRedirect } from "@/components/consent/consent-gate-redirect";
 
-function TabIcon(props: {
-  name: React.ComponentProps<typeof FontAwesome>["name"];
-  color: string;
-}) {
-  return <FontAwesome size={22} {...props} />;
+function TabIcon(props: { name: IconName; color: string }) {
+  return <Icon size={22} name={props.name} color={props.color} />;
 }
 
 export default function ClientLayout() {

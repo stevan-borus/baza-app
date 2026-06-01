@@ -3,7 +3,7 @@
 // and create-package AppSheet preserved verbatim.
 
 import React, { useState } from "react";
-import FontAwesome from "@expo/vector-icons/FontAwesome";
+import { Icon } from "@/components/ui/icon";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Pressable, RefreshControl, ScrollView, Switch, Text, View } from "react-native";
@@ -27,7 +27,6 @@ import { useRouter } from "expo-router";
 import { packagesQueries } from "@/lib/queries/packages-queries-factory";
 import { trainingsQueries } from "@/lib/queries/trainings-queries-factory";
 import { fieldErrorsFromApiError } from "@/lib/api-errors";
-import Feather from "@expo/vector-icons/Feather";
 
 function FieldError({ message }: { message?: string }) {
   if (!message) return null;
@@ -287,7 +286,7 @@ export default function AdminPackages() {
                         })}
                       </Text>
                     </View>
-                    <FontAwesome
+                    <Icon
                       name="chevron-right"
                       size={11}
                       color={tokens.faint}
@@ -316,7 +315,7 @@ export default function AdminPackages() {
             <GlassCard size="md">
               <View className="flex-row items-center gap-3">
                 <View className="items-center justify-center w-10 h-10 rounded-full bg-accent-soft">
-                  <Feather name="users" size={16} color={tokens.accent} />
+                  <Icon name="users" size={16} color={tokens.accent} />
                 </View>
                 <View className="flex-1">
                   <Text
@@ -329,7 +328,7 @@ export default function AdminPackages() {
                     {t("admin.manage.activeAssignmentsLinkHint")}
                   </Text>
                 </View>
-                <Feather name="chevron-right" size={18} color={tokens.muted} />
+                <Icon name="chevron-right" size={18} color={tokens.muted} />
               </View>
             </GlassCard>
           </Pressable>

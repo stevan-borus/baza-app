@@ -71,12 +71,54 @@ export function AppSheet({
     [],
   );
 
-  useEffect(() => {
-    if (open) ref.current?.present();
-    else ref.current?.dismiss();
-  }, [open]);
+  // Track the modal's *actual* presented state and whether a desired open was
+  // requested while a dismiss animation was still settling. Driving present()/
+  // dismiss() purely off the `open` prop races with gorhom's animations: a
+  // present() fired mid-dismiss is dropped, and after a couple of open/close
+  // cycles the modal gets wedged and never reopens. We reconcile against the
+  // real lifecycle (onDismiss) instead, retrying a deferred present once the
+  // dismiss completes.
+  const presentedRef = useRef(false);
+  const pendingOpenRef = useRef(false);
 
-  const handleDismiss = useCallback(() => onOpenChange(false), [onOpenChange]);
+  const reconcile = useCallback((shouldOpen: boolean) => {
+    if (shouldOpen) {
+      if (!presentedRef.current) {
+        presentedRef.current = true;
+        pendingOpenRef.current = false;
+        ref.current?.present();
+      }
+    } else if (presentedRef.current) {
+      // Mark dismiss in flight; onDismiss flips presentedRef back to false.
+      ref.current?.dismiss();
+    }
+  }, []);
+
+  useEffect(() => {
+    if (open) {
+      // If a dismiss is still animating (presentedRef true but parent just
+      // toggled closed→open in one tick), defer; onDismiss will pick it up.
+      pendingOpenRef.current = true;
+      reconcile(true);
+    } else {
+      pendingOpenRef.current = false;
+      reconcile(false);
+    }
+  }, [open, reconcile]);
+
+  const handleDismiss = useCallback(() => {
+    presentedRef.current = false;
+    onOpenChange(false);
+    // If the parent re-requested open while we were dismissing, present now
+    // that the modal is fully torn down.
+    if (pendingOpenRef.current) {
+      pendingOpenRef.current = false;
+      requestAnimationFrame(() => {
+        presentedRef.current = true;
+        ref.current?.present();
+      });
+    }
+  }, [onOpenChange]);
 
   const renderBackdrop = useCallback(
     (props: BottomSheetBackdropProps) => (

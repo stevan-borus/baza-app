@@ -9,24 +9,9 @@ import {
 } from "react-native";
 import { BottomSheetTextInput } from "@gorhom/bottom-sheet";
 import { MotiView } from "@/components/ui/styled";
-import FontAwesome from "@expo/vector-icons/FontAwesome";
-import Feather from "@expo/vector-icons/Feather";
+import { Icon, type IconName } from "@/components/ui/icon";
 import { useThemeTokens } from "./tokens";
 import { InsideBottomSheetContext } from "./sheet";
-
-type IconName = React.ComponentProps<typeof FontAwesome>["name"];
-
-// Map of common FontAwesome legacy names → Feather (thin, modern stroke
-// matched to the rest of the Studio chrome). Falls back to FontAwesome
-// for icons not in the map.
-type FeatherName = React.ComponentProps<typeof Feather>["name"];
-const FA_TO_FEATHER: Partial<Record<IconName, FeatherName>> = {
-  envelope: "mail",
-  lock: "lock",
-  user: "user",
-  search: "search",
-  phone: "phone",
-};
 
 type InputProps = TextInputProps & {
   label?: string;
@@ -110,19 +95,11 @@ export function Input({
             style={{ width: ADORNMENT_WIDTH }}
             className="items-start justify-center"
           >
-            {FA_TO_FEATHER[iconName] ? (
-              <Feather
-                name={FA_TO_FEATHER[iconName]!}
-                size={18}
-                color={resolvedIconColor}
-              />
-            ) : (
-              <FontAwesome
-                name={iconName}
-                size={16}
-                color={resolvedIconColor}
-              />
-            )}
+            <Icon
+              name={iconName}
+              size={16}
+              color={resolvedIconColor}
+            />
           </View>
         ) : null}
 
@@ -206,7 +183,7 @@ export function PasswordInput(props: PasswordInputProps) {
           android_ripple={null}
           className="active:opacity-60"
         >
-          <Feather
+          <Icon
             name={hidden ? "eye" : "eye-off"}
             size={18}
             color={tokens.muted}

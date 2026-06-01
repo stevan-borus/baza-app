@@ -1,6 +1,6 @@
 import React, { useEffect } from "react";
 import { View, Text } from "react-native";
-import FontAwesome from "@expo/vector-icons/FontAwesome";
+import { Icon } from "@/components/ui/icon";
 import Animated, {
   FadeInDown,
   useSharedValue,
@@ -48,7 +48,7 @@ export function EmptyState({
       className="p-6 rounded-2xl items-center gap-3"
     >
       <View className="w-14 h-14 rounded-full items-center justify-center bg-glass">
-        <FontAwesome name="inbox" size={24} color={tokens.faint} />
+        <Icon name="inbox" size={24} color={tokens.faint} />
       </View>
       <Text className="font-body-semibold text-xl text-center text-foreground">
         {title}
@@ -97,7 +97,7 @@ export function ErrorState({
       style={animatedStyle}
       className="p-4 rounded-2xl items-center gap-2 flex-row bg-danger-soft"
     >
-      <FontAwesome name="exclamation-circle" size={20} color={tokens.danger} />
+      <Icon name="exclamation-circle" size={20} color={tokens.danger} />
       <Text className="font-body-medium text-base text-center flex-1 text-danger">
         {message}
       </Text>
@@ -114,7 +114,7 @@ export function NetworkError({
   return (
     <View className="flex-1 items-center justify-center p-6 gap-4">
       <View className="w-18 h-18 rounded-full items-center justify-center bg-glass">
-        <FontAwesome name="wifi" size={32} color={tokens.faint} />
+        <Icon name="wifi" size={32} color={tokens.faint} />
       </View>
       <Text className="font-body-semibold text-xl text-center text-foreground">
         No Connection

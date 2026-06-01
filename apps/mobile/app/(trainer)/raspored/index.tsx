@@ -17,7 +17,10 @@ import { EmptyState, ErrorState } from "@/components/ui/states";
 import { startOfLocaleWeek } from "@/components/ui/week-strip";
 import { MonthView } from "@/components/ui/month-view";
 import { SegmentedControl } from "@/components/ui/segmented-control";
-import { SessionCard } from "@/components/ui/session-card";
+import {
+  TimeAxisDayView,
+  type SessionBlock,
+} from "@/components/ui/time-axis-day-view";
 import {
   ScreenContainerRaw,
   useTabBarBottomPadding,
@@ -215,41 +218,45 @@ export default function TrainerSchedule() {
               ) : null}
 
               <View className="px-5">
-                <View className="flex-row items-baseline justify-between pb-3">
+                <View className="pb-3">
                   <CapsLabel size={12} tracking={2.4}>
                     {displayDate.locale(lang).format("dddd, D MMMM").toUpperCase()}
                   </CapsLabel>
-                  {daySessions.length > 0 ? (
-                    <Text className="text-xs text-muted">
-                      {t("admin.dashboard.classCount", {
-                        count: daySessions.length,
-                      })}
-                    </Text>
-                  ) : null}
                 </View>
-                <View className="flex-col gap-3">
-                  {daySessions.length === 0 ? (
+                {daySessions.length === 0 ? (
+                  <View className="flex-col gap-3">
                     <EmptyState title={t("client.dayView.noSessions")} />
-                  ) : (
-                    daySessions.map((session) => (
-                      <SessionCard
-                        key={session.id}
-                        testID={`session-card-${session.id}`}
-                        sessionId={session.id}
-                        time={`${dayjs(session.startsAt).format("HH:mm")} - ${dayjs(session.endsAt).format("HH:mm")}`}
-                        className={session.classTypeName}
-                        trainerName={session.trainerName ?? undefined}
-                        room={session.roomName ?? undefined}
-                        bookedCount={session.bookedCount}
-                        capacity={session.capacity}
-                        status={
-                          session.availableSlots > 0 ? "available" : "full"
-                        }
-                        onPress={() => handleEventPress(session)}
-                      />
-                    ))
-                  )}
-                </View>
+                  </View>
+                ) : (
+                  <TimeAxisDayView
+                    embedded
+                    date={selectedDate}
+                    sessions={daySessions.map(
+                      (s): SessionBlock => ({
+                        id: s.id,
+                        startsAt:
+                          typeof s.startsAt === "string"
+                            ? s.startsAt
+                            : s.startsAt.toISOString(),
+                        endsAt:
+                          typeof s.endsAt === "string"
+                            ? s.endsAt
+                            : s.endsAt.toISOString(),
+                        classTypeName: s.classTypeName,
+                        roomName: s.roomName,
+                        bookedCount: s.bookedCount,
+                        capacity: s.capacity,
+                        status:
+                          s.availableSlots > 0 ? "available" : "full",
+                      }),
+                    )}
+                    onSessionPress={(b) => {
+                      const full = daySessions.find((x) => x.id === b.id);
+                      if (full) handleEventPress(full);
+                    }}
+                    showNowLine
+                  />
+                )}
               </View>
             </>
           ) : (

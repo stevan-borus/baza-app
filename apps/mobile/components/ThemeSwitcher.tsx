@@ -1,4 +1,4 @@
-import FontAwesome from "@expo/vector-icons/FontAwesome";
+import { Icon } from "@/components/ui/icon";
 import { useEffect, useMemo, useRef } from "react";
 import { Animated, Pressable, Text, View } from "react-native";
 import { useTranslation } from "react-i18next";
@@ -82,8 +82,8 @@ export function ThemeSwitcher() {
               justifyContent: "space-between",
             }}
           >
-            <FontAwesome name="sun-o" size={11} color="#9ca3af" />
-            <FontAwesome name="moon-o" size={11} color="#9ca3af" />
+            <Icon name="sun-o" size={11} color="#9ca3af" />
+            <Icon name="moon-o" size={11} color="#9ca3af" />
           </View>
           <Animated.View
             style={[
@@ -100,7 +100,7 @@ export function ThemeSwitcher() {
               thumbTransform,
             ]}
           >
-            <FontAwesome
+            <Icon
               name={resolvedTheme === "dark" ? "moon-o" : "sun-o"}
               size={12}
               color={resolvedTheme === "dark" ? ACCENT : "#667085"}
@@ -116,7 +116,7 @@ export function ThemeSwitcher() {
           <Text className="text-base text-foreground">
             {t("settings.themeSystem")}
           </Text>
-          <FontAwesome
+          <Icon
             name={isSystem ? "check-circle" : "circle-o"}
             size={15}
             color={isSystem ? ACCENT : "#6b7280"}

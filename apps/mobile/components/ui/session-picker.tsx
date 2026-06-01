@@ -16,7 +16,7 @@ import { type ReactNode, useMemo, useState } from "react";
 import dayjs from "dayjs";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { BottomSheetFlatList } from "@gorhom/bottom-sheet";
-import Feather from "@expo/vector-icons/Feather";
+import { Icon } from "@/components/ui/icon";
 import { useTranslation } from "react-i18next";
 import { GlassCard } from "./glass-card";
 import { WeekStrip, startOfLocaleWeek } from "./week-strip";
@@ -260,12 +260,12 @@ function SelectionIndicator({
         }}
       >
         {selected ? (
-          <Feather name="check" size={14} color={tokens.background} />
+          <Icon name="check" size={14} color={tokens.background} />
         ) : null}
       </View>
     );
   }
   return selected ? (
-    <Feather name="check" size={16} color={tokens.accent} />
+    <Icon name="check" size={16} color={tokens.accent} />
   ) : null;
 }

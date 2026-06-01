@@ -1,4 +1,3 @@
-import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Switch, Text, View } from "react-native";
@@ -6,6 +5,7 @@ import { AppSheet } from "@/components/ui/sheet";
 import { EmptyState } from "@/components/ui/states";
 import { useThemeTokens } from "@/components/ui/tokens";
 import { notificationsQueries } from "@/lib/queries/notifications-queries-factory";
+import { Icon } from "@/components/ui/icon";
 
 type Props = {
   open: boolean;
@@ -36,7 +36,7 @@ export function NotificationsPreferencesSheet({ open, onOpenChange }: Props) {
             <View className="flex-row justify-between items-center py-3 border-b border-glass-border">
               <View className="flex-row items-center gap-3">
                 <View style={{ width: 20, alignItems: "center" }}>
-                  <FontAwesome name="bell" size={16} color={tokens.accent} />
+                  <Icon name="bell" size={16} color={tokens.accent} />
                 </View>
                 <Text className="text-[15px] text-foreground">{t("client.notifications.pushEnabled")}</Text>
               </View>
@@ -49,7 +49,7 @@ export function NotificationsPreferencesSheet({ open, onOpenChange }: Props) {
             <View className="flex-row justify-between items-center py-3">
               <View className="flex-row items-center gap-3">
                 <View style={{ width: 20, alignItems: "center" }}>
-                  <FontAwesome name="mobile" size={20} color={tokens.accent} />
+                  <Icon name="mobile" size={20} color={tokens.accent} />
                 </View>
                 <Text className="text-[15px] text-foreground">{t("client.notifications.inAppEnabled")}</Text>
               </View>

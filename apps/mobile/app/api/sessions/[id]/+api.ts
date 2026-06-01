@@ -13,6 +13,32 @@ import { tryCatch } from "@/lib/server/try-catch";
 
 type RouteParams = Record<string, string>;
 
+/**
+ * Shared client selection for the trainer-visible consent strip. Used for both
+ * booked clients and waitlisted clients so they shape identically: the latest
+ * health intake (current state) and the latest withdrawal (revoked consent).
+ */
+const clientConsentSelect = {
+  id: true,
+  user: { select: { id: true, fullName: true, email: true } },
+  healthIntakes: {
+    orderBy: { recordedAt: "desc" },
+    take: 1,
+    select: {
+      conditions: true,
+      conditionsOther: true,
+      pilatesExperience: true,
+      additionalNotes: true,
+      recordedAt: true,
+    },
+  },
+  healthIntakeWithdrawals: {
+    orderBy: { withdrawnAt: "desc" },
+    take: 1,
+    select: { withdrawnAt: true },
+  },
+} as const;
+
 export async function GET(request: Request, { id }: RouteParams) {
   const guard = await requireRole(request, [UserRole.ADMIN, UserRole.TRAINER]);
   if (!guard.ok) return guard.response;
@@ -44,48 +70,34 @@ export async function GET(request: Request, { id }: RouteParams) {
         select: {
           id: true,
           createdAt: true,
-          clientProfile: {
-            select: {
-              id: true,
-              user: { select: { id: true, fullName: true, email: true } },
-              // Latest intake row reflects the trainer-visible current state.
-              healthIntakes: {
-                orderBy: { recordedAt: "desc" },
-                take: 1,
-                select: {
-                  conditions: true,
-                  conditionsOther: true,
-                  pilatesExperience: true,
-                  additionalNotes: true,
-                  recordedAt: true,
-                },
-              },
-              // If a withdrawal row exists with `withdrawnAt` newer than
-              // the latest intake (or no intake remains), the client has
-              // revoked consent — trainer card should reflect that.
-              healthIntakeWithdrawals: {
-                orderBy: { withdrawnAt: "desc" },
-                take: 1,
-                select: { withdrawnAt: true },
-              },
-            },
-          },
+          clientProfile: { select: clientConsentSelect },
+        },
+      },
+      // Waitlisted clients (not yet booked). Surfaced under session.waitlist
+      // so the trainer can see who's queued for a freed slot, in queue order.
+      waitlist: {
+        orderBy: { position: "asc" },
+        select: {
+          id: true,
+          position: true,
+          clientProfile: { select: clientConsentSelect },
         },
       },
     },
   });
   if (!session) return fail("Session not found", 404);
 
-  // Photo/video consent for each booked client — read in one batched query
-  // (single SQL) rather than per-booking. `findMany` over the union of
-  // booked user IDs, then group client-side.
-  const bookedUserIds = session.bookings.map(
-    (b) => b.clientProfile.user.id,
-  );
-  const socialMediaRows = bookedUserIds.length
+  // Photo/video consent — read in one batched query (single SQL) over the
+  // union of booked AND waitlisted user IDs, then group client-side. Both
+  // lists render the same consent strip, so both need the lookup.
+  const allUserIds = [
+    ...session.bookings.map((b) => b.clientProfile.user.id),
+    ...session.waitlist.map((w) => w.clientProfile.user.id),
+  ];
+  const socialMediaRows = allUserIds.length
     ? await prisma.consentRecord.findMany({
         where: {
-          userId: { in: bookedUserIds },
+          userId: { in: allUserIds },
           documentKey: "social_media",
         },
         orderBy: { acceptedAt: "desc" },
@@ -97,17 +109,20 @@ export async function GET(request: Request, { id }: RouteParams) {
     socialMediaRows.map((r) => [r.userId, r.accepted]),
   );
 
-  // Count prior non-canceled bookings per booked client (sessions starting
-  // before this one). Used to decide whether to surface the "Prvi put pilates"
-  // hint on the trainer card — it only makes sense for clients in their first
-  // few sessions. Cutoff: < 3 prior sessions.
+  // Count prior non-canceled bookings per client (sessions starting before
+  // this one). Drives the "Prvi put pilates" hint — only meaningful for a
+  // client's first few sessions. Cutoff: < 3 prior sessions. Covers booked
+  // and waitlisted clients alike.
   const PRIOR_SESSIONS_CUTOFF = 3;
-  const bookedClientProfileIds = session.bookings.map((b) => b.clientProfile.id);
-  const priorBookingCounts = bookedClientProfileIds.length
+  const allClientProfileIds = [
+    ...session.bookings.map((b) => b.clientProfile.id),
+    ...session.waitlist.map((w) => w.clientProfile.id),
+  ];
+  const priorBookingCounts = allClientProfileIds.length
     ? await prisma.booking.groupBy({
         by: ["clientProfileId"],
         where: {
-          clientProfileId: { in: bookedClientProfileIds },
+          clientProfileId: { in: allClientProfileIds },
           canceledAt: null,
           session: { startsAt: { lt: session.startsAt } },
         },
@@ -117,6 +132,62 @@ export async function GET(request: Request, { id }: RouteParams) {
   const priorCountByProfileId = new Map(
     priorBookingCounts.map((r) => [r.clientProfileId, r._count._all]),
   );
+
+  // Shapes one client (booked or waitlisted) into the consent strip the
+  // trainer card renders. Identical for both lists — factored out so they
+  // can't drift. `clientProfile` matches `clientConsentSelect`.
+  type ConsentClientProfile = {
+    id: string;
+    user: { id: string; fullName: string; email: string };
+    healthIntakes: Array<{
+      conditions: string[];
+      conditionsOther: string | null;
+      pilatesExperience: string[];
+      additionalNotes: string | null;
+      recordedAt: Date;
+    }>;
+    healthIntakeWithdrawals: Array<{ withdrawnAt: Date }>;
+  };
+  const shapeClient = (clientProfile: ConsentClientProfile) => {
+    const latestIntake = clientProfile.healthIntakes[0] ?? null;
+    const latestWithdrawal = clientProfile.healthIntakeWithdrawals[0] ?? null;
+    // "Withdrawn" is true when there's a withdrawal newer than the latest
+    // intake (or no intake at all). Old withdrawals before a fresh intake
+    // shouldn't show as withdrawn.
+    const intakeWithdrawn =
+      !!latestWithdrawal &&
+      (!latestIntake || latestWithdrawal.withdrawnAt > latestIntake.recordedAt);
+    const priorCount = priorCountByProfileId.get(clientProfile.id) ?? 0;
+    const intakeConditions =
+      !intakeWithdrawn && latestIntake ? latestIntake.conditions : [];
+    const showFirstPilatesHint =
+      !intakeWithdrawn &&
+      latestIntake?.pilatesExperience.includes("none") === true &&
+      priorCount < PRIOR_SESSIONS_CUTOFF;
+    const consentFlags = {
+      showFirstPilatesHint,
+      conditions: intakeConditions,
+      conditionsOther: intakeWithdrawn
+        ? null
+        : (latestIntake?.conditionsOther ?? null),
+      additionalNotes: intakeWithdrawn
+        ? null
+        : (latestIntake?.additionalNotes ?? null),
+      intakeRecorded: !intakeWithdrawn && latestIntake !== null,
+      intakeWithdrawn,
+      socialMediaAccepted:
+        socialMediaByUserId.get(clientProfile.user.id) ?? null,
+    };
+    return {
+      clientProfileId: clientProfile.id,
+      client: {
+        id: clientProfile.user.id,
+        fullName: clientProfile.user.fullName,
+        email: clientProfile.user.email,
+      },
+      consentFlags,
+    };
+  };
 
   // ADR-0002: surface bookedCount + seriesBookedCount so the edit sheet can
   // gate the "visible to clients" toggle by both rules. For a singleton
@@ -138,67 +209,28 @@ export async function GET(request: Request, { id }: RouteParams) {
     ...session,
     bookedCount,
     seriesBookedCount,
-    bookings: session.bookings.map((b) => {
-      const latestIntake = b.clientProfile.healthIntakes[0] ?? null;
-      const latestWithdrawal =
-        b.clientProfile.healthIntakeWithdrawals[0] ?? null;
-      // "Withdrawn" is true when there's a withdrawal newer than the latest
-      // intake (or no intake at all). Old withdrawals before a fresh intake
-      // shouldn't show as withdrawn.
-      const intakeWithdrawn =
-        !!latestWithdrawal &&
-        (!latestIntake ||
-          latestWithdrawal.withdrawnAt > latestIntake.recordedAt);
-      const priorCount = priorCountByProfileId.get(b.clientProfile.id) ?? 0;
-      // Only surface "first time pilates" if (a) intake says so AND
-      // (b) this is one of the client's first few sessions at the studio.
-      // After PRIOR_SESSIONS_CUTOFF the trainer knows them, so it's noise.
-      const intakeConditions =
-        !intakeWithdrawn && latestIntake ? latestIntake.conditions : [];
-      const showFirstPilatesHint =
-        !intakeWithdrawn &&
-        latestIntake?.pilatesExperience.includes("none") === true &&
-        priorCount < PRIOR_SESSIONS_CUTOFF;
-      const consentFlags = {
-        showFirstPilatesHint,
-        conditions: intakeConditions,
-        conditionsOther: intakeWithdrawn
-          ? null
-          : (latestIntake?.conditionsOther ?? null),
-        additionalNotes: intakeWithdrawn
-          ? null
-          : (latestIntake?.additionalNotes ?? null),
-        intakeRecorded: !intakeWithdrawn && latestIntake !== null,
-        intakeWithdrawn,
-        socialMediaAccepted:
-          socialMediaByUserId.get(b.clientProfile.user.id) ?? null,
-      };
-      return {
-        id: b.id,
-        createdAt: b.createdAt,
-        clientProfileId: b.clientProfile.id,
-        client: {
-          id: b.clientProfile.user.id,
-          fullName: b.clientProfile.user.fullName,
-          email: b.clientProfile.user.email,
-        },
-        consentFlags,
-      };
-    }),
+    bookings: session.bookings.map((b) => ({
+      id: b.id,
+      createdAt: b.createdAt,
+      ...shapeClient(b.clientProfile),
+    })),
+    waitlist: session.waitlist.map((w) => ({
+      id: w.id,
+      position: w.position,
+      ...shapeClient(w.clientProfile),
+    })),
   };
 
   return ok({ success: true, session: shaped });
 }
 
 export async function PATCH(request: Request, { id }: RouteParams) {
-  const guard = await requireRole(request, [UserRole.ADMIN, UserRole.TRAINER]);
+  // Admin-only. Trainers are read-only on sessions — they can view their
+  // roster (GET) but cannot edit, cancel, change capacity, reassign, or hide
+  // a session. The session-detail UI hides the edit affordance for trainers;
+  // this is the matching server-side boundary.
+  const guard = await requireRole(request, [UserRole.ADMIN]);
   if (!guard.ok) return guard.response;
-
-  // Trainers may only edit sessions they are assigned to.
-  if (guard.user.role === UserRole.TRAINER) {
-    const ownsSession = await trainerOwnsSession(guard.user.id, id);
-    if (!ownsSession) return fail("Forbidden", 403);
-  }
 
   const bodyResult = await tryCatch(request.json());
   const body = bodyResult.error ? null : bodyResult.data;
@@ -245,15 +277,6 @@ export async function PATCH(request: Request, { id }: RouteParams) {
     );
   }
 
-  // Trainers cannot reassign the session to another trainer.
-  if (
-    guard.user.role === UserRole.TRAINER &&
-    parsed.data.trainerUserId &&
-    parsed.data.trainerUserId !== guard.user.id
-  ) {
-    return fail("Trainers can only keep themselves assigned", 403);
-  }
-
   const startsAt = parsed.data.startsAt ? new Date(parsed.data.startsAt) : existing.startsAt;
   const endsAt = parsed.data.endsAt ? new Date(parsed.data.endsAt) : existing.endsAt;
   if (
@@ -269,11 +292,9 @@ export async function PATCH(request: Request, { id }: RouteParams) {
   const nextRoomId =
     parsed.data.roomId === undefined ? existing.roomId : parsed.data.roomId;
   const nextTrainerUserId =
-    guard.user.role === UserRole.TRAINER
-      ? guard.user.id
-      : parsed.data.trainerUserId === undefined
-        ? existing.trainerUserId
-        : parsed.data.trainerUserId;
+    parsed.data.trainerUserId === undefined
+      ? existing.trainerUserId
+      : parsed.data.trainerUserId;
   const conflict = await findScheduleConflict({
     startsAt,
     endsAt,
@@ -301,11 +322,7 @@ export async function PATCH(request: Request, { id }: RouteParams) {
       roomId: parsed.data.roomId,
       status: parsed.data.status,
       isActive: parsed.data.isActive,
-      // Trainers always stay assigned; admins may change trainer.
-      trainerUserId:
-        guard.user.role === UserRole.TRAINER
-          ? guard.user.id
-          : parsed.data.trainerUserId,
+      trainerUserId: parsed.data.trainerUserId,
     },
     select: {
       id: true,

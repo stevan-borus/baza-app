@@ -67,8 +67,8 @@ vi.mock("react-native", () => {
 });
 
 vi.mock("expo-blur", () => ({ BlurView: () => null }));
-vi.mock("@expo/vector-icons/Feather", () => ({
-  default: ({ name, testID }: any) =>
+vi.mock("@/components/ui/icon", () => ({
+  Icon: ({ name, testID }: any) =>
     require("react").createElement("i", {
       "data-icon": name,
       "data-testid": testID,

@@ -1,8 +1,8 @@
-import Feather from "@expo/vector-icons/Feather";
 import { useQuery } from "@tanstack/react-query";
 import { Pressable, View } from "react-native";
 import { notificationsQueries } from "@/lib/queries/notifications-queries-factory";
 import { useThemeTokens } from "@/components/ui/tokens";
+import { Icon } from "@/components/ui/icon";
 
 type Props = {
   onPress: () => void;
@@ -31,7 +31,7 @@ export function NotificationsBell({ onPress, accessibilityLabel }: Props) {
       className="active:opacity-60"
     >
       <View>
-        <Feather name="bell" size={20} color={tokens.foreground} />
+        <Icon name="bell" size={20} color={tokens.foreground} />
         {hasUnread ? (
           <View
             testID="notifications-bell-unread-dot"
