@@ -17,6 +17,7 @@ import {
   useSessionEditSheet,
 } from "@/components/ui/session-edit-sheet";
 import { sessionsQueries } from "@/lib/queries/sessions-queries-factory";
+import { authQueries } from "@/lib/queries/auth-queries-factory";
 import { ReturnToPill } from "@/components/admin/return-to-pill";
 
 type SessionDetailProps = {
@@ -45,6 +46,12 @@ export function SessionDetail({
   const query = useQuery(sessionsQueries.byId(id));
   const session = query.data?.session;
 
+  // Only admins may edit a session. Trainers get a read-only view (the PATCH
+  // endpoint enforces this server-side too). Derived from the role rather than
+  // a prop so a route wrapper can't accidentally expose the edit affordance.
+  const meQuery = useQuery(authQueries.me());
+  const canEdit = meQuery.data?.user.role === "ADMIN";
+
   const headerTitle = session?.classType?.name ?? t("admin.sessionDetail.title");
   const dateLabel = session
     ? dayjs(session.startsAt).locale(lang).format("dddd, D. MMMM YYYY")
@@ -60,7 +67,7 @@ export function SessionDetail({
       title={headerTitle}
       headerVariant="detail"
       rightSlot={
-        session ? (
+        session && canEdit ? (
           <HeaderIconButton
             testID="session-detail-edit-button"
             icon="pencil"
@@ -180,7 +187,7 @@ export function SessionDetail({
           </>
         ) : null}
       </ScrollView>
-      <SessionEditSheet {...editSheet.bind()} />
+      {canEdit ? <SessionEditSheet {...editSheet.bind()} /> : null}
     </ScreenContainerRaw>
   );
 }

@@ -207,6 +207,35 @@ describe("sessions CRUD", () => {
     expect(response.status).toBe(403);
   });
 
+  it("PATCH as trainer editing a session they DO own is rejected (403)", async () => {
+    // Trainers are read-only on sessions — only admins may edit/cancel/hide.
+    const { trainer, reformer } = await seed();
+    const session = await prisma.session.create({
+      data: {
+        classTypeId: reformer.id,
+        trainerUserId: trainer.id,
+        startsAt: futureStart,
+        endsAt: futureEnd,
+        capacity: 6,
+        status: "SCHEDULED",
+        isActive: true,
+      },
+    });
+    asTrainer(trainer);
+
+    const response = await PATCH(
+      jsonRequest(`http://test.local/api/sessions/${session.id}`, "PATCH", {
+        capacity: 12,
+      }),
+      { id: session.id },
+    );
+    expect(response.status).toBe(403);
+
+    // And nothing changed in the DB.
+    const after = await prisma.session.findUnique({ where: { id: session.id } });
+    expect(after?.capacity).toBe(6);
+  });
+
   it("PATCH as trainer attempting to reassign their session to another trainer is rejected (403)", async () => {
     const { trainer, otherTrainer, reformer } = await seed();
     const session = await prisma.session.create({

@@ -225,14 +225,12 @@ export async function GET(request: Request, { id }: RouteParams) {
 }
 
 export async function PATCH(request: Request, { id }: RouteParams) {
-  const guard = await requireRole(request, [UserRole.ADMIN, UserRole.TRAINER]);
+  // Admin-only. Trainers are read-only on sessions — they can view their
+  // roster (GET) but cannot edit, cancel, change capacity, reassign, or hide
+  // a session. The session-detail UI hides the edit affordance for trainers;
+  // this is the matching server-side boundary.
+  const guard = await requireRole(request, [UserRole.ADMIN]);
   if (!guard.ok) return guard.response;
-
-  // Trainers may only edit sessions they are assigned to.
-  if (guard.user.role === UserRole.TRAINER) {
-    const ownsSession = await trainerOwnsSession(guard.user.id, id);
-    if (!ownsSession) return fail("Forbidden", 403);
-  }
 
   const bodyResult = await tryCatch(request.json());
   const body = bodyResult.error ? null : bodyResult.data;
@@ -279,15 +277,6 @@ export async function PATCH(request: Request, { id }: RouteParams) {
     );
   }
 
-  // Trainers cannot reassign the session to another trainer.
-  if (
-    guard.user.role === UserRole.TRAINER &&
-    parsed.data.trainerUserId &&
-    parsed.data.trainerUserId !== guard.user.id
-  ) {
-    return fail("Trainers can only keep themselves assigned", 403);
-  }
-
   const startsAt = parsed.data.startsAt ? new Date(parsed.data.startsAt) : existing.startsAt;
   const endsAt = parsed.data.endsAt ? new Date(parsed.data.endsAt) : existing.endsAt;
   if (
@@ -303,11 +292,9 @@ export async function PATCH(request: Request, { id }: RouteParams) {
   const nextRoomId =
     parsed.data.roomId === undefined ? existing.roomId : parsed.data.roomId;
   const nextTrainerUserId =
-    guard.user.role === UserRole.TRAINER
-      ? guard.user.id
-      : parsed.data.trainerUserId === undefined
-        ? existing.trainerUserId
-        : parsed.data.trainerUserId;
+    parsed.data.trainerUserId === undefined
+      ? existing.trainerUserId
+      : parsed.data.trainerUserId;
   const conflict = await findScheduleConflict({
     startsAt,
     endsAt,
@@ -335,11 +322,7 @@ export async function PATCH(request: Request, { id }: RouteParams) {
       roomId: parsed.data.roomId,
       status: parsed.data.status,
       isActive: parsed.data.isActive,
-      // Trainers always stay assigned; admins may change trainer.
-      trainerUserId:
-        guard.user.role === UserRole.TRAINER
-          ? guard.user.id
-          : parsed.data.trainerUserId,
+      trainerUserId: parsed.data.trainerUserId,
     },
     select: {
       id: true,
