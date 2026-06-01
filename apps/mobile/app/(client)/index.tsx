@@ -210,7 +210,6 @@ function NextClassHero({
     : isTomorrow
       ? t("client.home.tomorrow").toUpperCase()
       : start.locale(lang).format("dddd, D MMM").toUpperCase();
-  const spotsLeft = session.capacity - session.bookedCount;
 
   return (
     <View style={{ paddingHorizontal: 16 }}>
@@ -326,8 +325,8 @@ function NextClassHero({
             <Text
               style={{
                 fontFamily: "AlbertSans-SemiBold",
-                fontSize: 11,
-                color: "rgba(255,255,255,0.7)",
+                fontSize: 12,
+                color: "#FFFFFF",
                 letterSpacing: 1.6,
               }}
             >
@@ -345,32 +344,23 @@ function NextClassHero({
             >
               {session.classTypeName}
             </Text>
-            <View style={{ flexDirection: "row", gap: 16, marginTop: 2 }}>
-              {session.roomName ? (
+            {/* Spots-left is intentionally omitted here — the hero is the
+                user's already-booked next class, so availability is noise.
+                Only the room is shown. */}
+            {session.roomName ? (
+              <View style={{ flexDirection: "row", marginTop: 2 }}>
                 <Text
                   style={{
                     fontFamily: "AlbertSans-Regular",
-                    fontSize: 12,
-                    color: "rgba(255,255,255,0.7)",
+                    fontSize: 13,
+                    color: "#FFFFFF",
                     letterSpacing: 0.4,
                   }}
                 >
                   {session.roomName}
                 </Text>
-              ) : null}
-              <Text
-                style={{
-                  fontFamily: "AlbertSans-Regular",
-                  fontSize: 12,
-                  color: ACCENT_LIGHT,
-                  letterSpacing: 0.4,
-                }}
-              >
-                {spotsLeft >= session.capacity
-                  ? t("client.home.allFree")
-                  : t("client.home.spotsFree", { count: spotsLeft })}
-              </Text>
-            </View>
+              </View>
+            ) : null}
             <View style={{ flexDirection: "row", gap: 8, marginTop: 8 }}>
               <BlackPill
                 label={
