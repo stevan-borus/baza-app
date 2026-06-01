@@ -622,14 +622,38 @@ async function seedBookings(opts: {
     });
   }
 
-  // 3. Waitlist entry — on the same session the active reformer client is
-  //    booked into. Gives the WaitlistBadge / waitlistCount > 0 path a
-  //    test fixture without needing to fully fill the session.
-  if (futureClient && firstReformer) {
+  // 3. Waitlist entry — on a FULL session, so the WaitlistBadge fixture is
+  //    realistic (you can only wait for a class with no free spots; a waitlist
+  //    on an open session is impossible in the product). Fill a dedicated
+  //    reformer session to capacity with throwaway "waitlist filler" clients —
+  //    NOT the named seed clients, whose booking/link state the trainer-scoping
+  //    and profile-access specs depend on — then queue the future client behind
+  //    it. The active reformer is unaffected.
+  const waitlistTarget = reformerSessionsForExtra[2];
+  if (futureClient && waitlistTarget) {
+    for (let i = 0; i < waitlistTarget.capacity; i++) {
+      const filler = await prisma.user.create({
+        data: {
+          email: `waitlist.filler.${i}@e2e.test`,
+          fullName: `Waitlist Filler ${i + 1}`,
+          role: UserRole.CLIENT,
+          clientProfile: { create: { dateOfBirth: new Date("1990-01-01") } },
+        },
+        include: { clientProfile: true },
+      });
+      await prisma.booking.create({
+        data: {
+          clientProfileId: filler.clientProfile!.id,
+          sessionId: waitlistTarget.id,
+          clientPackageId: null,
+        },
+      });
+    }
+
     await prisma.waitlistEntry.create({
       data: {
         clientProfileId: futureClient.clientProfileId,
-        sessionId: firstReformer.id,
+        sessionId: waitlistTarget.id,
         position: 1,
       },
     });
