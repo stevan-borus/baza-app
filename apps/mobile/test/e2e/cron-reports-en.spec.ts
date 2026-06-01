@@ -221,7 +221,7 @@ test.describe("cron + reports + EN smoke (Serbian + English)", () => {
     await navigateWeekStripTo(page, nextReformerDayKey());
 
     // Open booking sheet.
-    const block = page.locator('[data-testid^="session-block-"]').first();
+    const block = page.locator('[data-testid^="schedule-row-"]').first();
     await expect(block).toBeVisible({ timeout: 10_000 });
     await block.dispatchEvent("click");
 

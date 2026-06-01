@@ -7,7 +7,10 @@ import dayjs from "dayjs";
 import { MotiView } from "@/components/ui/styled";
 import { NumberRollup } from "@/components/ui/number-rollup";
 import { SegmentedControl } from "@/components/ui/segmented-control";
-import { SessionCard } from "@/components/ui/session-card";
+import {
+  TimeAxisDayView,
+  type SessionBlock,
+} from "@/components/ui/time-axis-day-view";
 import { startOfLocaleWeek } from "@/components/ui/week-strip";
 import { MonthView } from "@/components/ui/month-view";
 import { EmptyState, ErrorState } from "@/components/ui/states";
@@ -45,13 +48,6 @@ export default function AdminSchedule() {
   const router = useRouter();
   const bottomPad = useTabBarBottomPadding(24);
   const [selectedDate, setSelectedDate] = useState(dayjs().format("YYYY-MM-DD"));
-  const prevDateRef = React.useRef(selectedDate);
-  const dayDirection = React.useMemo(() => {
-    const prev = prevDateRef.current;
-    const dir = selectedDate > prev ? 1 : selectedDate < prev ? -1 : 1;
-    prevDateRef.current = selectedDate;
-    return dir;
-  }, [selectedDate]);
   const [month, setMonth] = useState(() => monthKeyFromDate(dayjs()));
   const [weekStart, setWeekStart] = useState(() => startOfLocaleWeek(dayjs()));
   const [monthDate, setMonthDate] = useState(() => dayjs().startOf("month"));
@@ -287,43 +283,40 @@ export default function AdminSchedule() {
                   ) : null}
                 </View>
 
-                <View className="flex-col gap-3">
-                  {daySessions.length === 0 ? (
+                {daySessions.length === 0 ? (
+                  <View className="flex-col gap-3">
                     <EmptyState title={t("client.dayView.noSessions")} />
-                  ) : (
-                    daySessions.map((session, idx) => (
-                      <MotiView
-                        // Re-key on selectedDate so MotiView remounts and replays the entry
-                        // animation when the user navigates between days.
-                        key={`${selectedDate}-${session.id}`}
-                        from={{
-                          opacity: 0,
-                          translateX: dayDirection * 24,
-                        }}
-                        animate={{ opacity: 1, translateX: 0 }}
-                        transition={{
-                          type: "timing",
-                          duration: 220,
-                          delay: Math.min(idx, 8) * 30,
-                        }}
-                      >
-                      <SessionCard
-                        testID={`session-card-${session.id}`}
-                        time={`${dayjs(session.startsAt).format("HH:mm")} - ${dayjs(session.endsAt).format("HH:mm")}`}
-                        className={session.classTypeName}
-                        trainerName={session.trainerName ?? undefined}
-                        room={session.roomName ?? undefined}
-                        bookedCount={session.bookedCount}
-                        capacity={session.capacity}
-                        status={session.availableSlots > 0 ? "available" : "full"}
-                        hidden={session.isActive === false}
-                        hiddenLabel={t("admin.schedule.hiddenBadge")}
-                        onPress={() => handleEventPress(session)}
-                      />
-                      </MotiView>
-                    ))
-                  )}
-                </View>
+                  </View>
+                ) : (
+                  <TimeAxisDayView
+                    embedded
+                    date={selectedDate}
+                    sessions={daySessions.map(
+                      (s): SessionBlock => ({
+                        id: s.id,
+                        startsAt:
+                          typeof s.startsAt === "string"
+                            ? s.startsAt
+                            : s.startsAt.toISOString(),
+                        endsAt:
+                          typeof s.endsAt === "string"
+                            ? s.endsAt
+                            : s.endsAt.toISOString(),
+                        classTypeName: s.classTypeName,
+                        roomName: s.roomName,
+                        bookedCount: s.bookedCount,
+                        capacity: s.capacity,
+                        status:
+                          s.availableSlots > 0 ? "available" : "full",
+                      }),
+                    )}
+                    onSessionPress={(b) => {
+                      const full = daySessions.find((x) => x.id === b.id);
+                      if (full) handleEventPress(full);
+                    }}
+                    showNowLine
+                  />
+                )}
               </View>
             </>
           ) : (

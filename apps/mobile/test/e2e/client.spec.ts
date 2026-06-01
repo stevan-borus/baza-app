@@ -93,7 +93,7 @@ test.describe("client (Serbian)", () => {
     await dayPill.dispatchEvent("click");
 
     await expect(
-      page.locator('[data-testid^="session-block-"]').first(),
+      page.locator('[data-testid^="schedule-row-"]').first(),
     ).toBeVisible({ timeout: 10_000 });
     await expect(page.getByText("Reformer pilates").first()).toBeVisible();
   });
@@ -111,7 +111,7 @@ test.describe("client (Serbian)", () => {
       .dispatchEvent("click");
 
     const sessionBlock = page
-      .locator('[data-testid^="session-block-"]')
+      .locator('[data-testid^="schedule-row-"]')
       .first();
     await expect(sessionBlock).toBeVisible({ timeout: 10_000 });
     await sessionBlock.dispatchEvent("click");
@@ -139,7 +139,7 @@ test.describe("client (Serbian)", () => {
       .dispatchEvent("click");
 
     await page
-      .locator('[data-testid^="session-block-"]')
+      .locator('[data-testid^="schedule-row-"]')
       .first()
       .dispatchEvent("click");
 
@@ -182,7 +182,7 @@ test.describe("client (Serbian)", () => {
 
     // Open the same Reformer session booked in spec 55.
     await page
-      .locator('[data-testid^="session-block-"]')
+      .locator('[data-testid^="schedule-row-"]')
       .first()
       .dispatchEvent("click");
 
@@ -231,7 +231,7 @@ test.describe("client (Serbian)", () => {
 
     // Find this specific session block and book it.
     await page
-      .getByTestId(`session-block-${session.id}`)
+      .getByTestId(`schedule-row-${session.id}`)
       .dispatchEvent("click");
     await page.getByTestId("booking-book-button").dispatchEvent("click");
     await page
@@ -276,7 +276,7 @@ test.describe("client (Serbian)", () => {
     // now shows the "already booked" state (isBookedByMe is true after the
     // refetch), so the cancel button is available.
     await page
-      .getByTestId(`session-block-${session.id}`)
+      .getByTestId(`schedule-row-${session.id}`)
       .dispatchEvent("click");
     await page.getByTestId("booking-cancel-button").dispatchEvent("click");
     await page
@@ -323,7 +323,7 @@ test.describe("client (Serbian)", () => {
       .dispatchEvent("click");
 
     await page
-      .getByTestId(`session-block-${session.id}`)
+      .getByTestId(`schedule-row-${session.id}`)
       .dispatchEvent("click");
 
     // Full sessions render the waitlist button instead of the book button.
@@ -390,7 +390,7 @@ test.describe("client (Serbian)", () => {
     // server-side waitlist row exists for them and the session is full
     // — which is the closest signal we can drive purely from this client.
     await page
-      .getByTestId(`session-block-${session.id}`)
+      .getByTestId(`schedule-row-${session.id}`)
       .dispatchEvent("click");
 
     // The booking sheet's body shows the waitlist count badge from the
@@ -462,8 +462,40 @@ test.describe("client (Serbian)", () => {
     // Wait for the page to settle then assert zero blocks.
     await page.waitForTimeout(1500);
     const blockCount = await page
-      .locator('[data-testid^="session-block-"]')
+      .locator('[data-testid^="schedule-row-"]')
       .count();
     expect(blockCount).toBe(0);
+  });
+
+  test("64: tapping a session on the overview opens the calendar on that day", async ({
+    page,
+  }) => {
+    await signInAsActiveReformer(page);
+
+    // Pick a Reformer day in the home week strip, then tap one of that day's
+    // session rows. The calendar must open focused on THAT day — proving the
+    // date param carries through (it used to always open on today).
+    const target = nextReformerDate();
+    await page
+      .locator(`[data-testid="week-strip-day-${target}"]:visible`)
+      .first()
+      .dispatchEvent("click");
+
+    const overviewRow = page
+      .locator('[data-testid^="schedule-row-"]')
+      .first();
+    await expect(overviewRow).toBeVisible({ timeout: 10_000 });
+    await overviewRow.dispatchEvent("click");
+
+    // On the calendar tab, the target day's pill is rendered+selected and its
+    // session list shows — if the date hadn't carried, the calendar would have
+    // opened on today instead.
+    await expect(
+      page.locator(`[data-testid="week-strip-day-${target}"]:visible`).first(),
+    ).toBeVisible({ timeout: 10_000 });
+    await expect(
+      page.locator('[data-testid^="schedule-row-"]').first(),
+    ).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText("Reformer pilates").first()).toBeVisible();
   });
 });

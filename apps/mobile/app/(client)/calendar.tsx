@@ -1,14 +1,15 @@
 /**
  * Client Calendar tab — Day / Month views over the booking schedule.
  *
- * - Day view: StudioWeekStrip + TimeAxisDayView; tap a session to book/cancel
- *   via the booking sheet.
+ * - Day view: StudioWeekStrip + a ScheduleRow card list; tap a session to
+ *   book/cancel via the booking sheet. (Staff get the timeline view instead.)
  * - Month view: MonthView grid with accent dots on days that have any
  *   bookable sessions; tap a date to switch to Day mode focused on it.
  */
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ScrollView, Text, View } from "react-native";
+import { useLocalSearchParams } from "expo-router";
 import { MotiView } from "@/components/ui/styled";
 import dayjs from "dayjs";
 import * as Haptics from "expo-haptics";
@@ -17,10 +18,7 @@ import { startOfLocaleWeek } from "@/components/ui/week-strip";
 import { StudioWeekStrip, CapsLabel } from "@/components/ui/studio";
 import { MonthView } from "@/components/ui/month-view";
 import { SegmentedControl } from "@/components/ui/segmented-control";
-import {
-  TimeAxisDayView,
-  type SessionBlock,
-} from "@/components/ui/time-axis-day-view";
+import { ScheduleRow } from "@/components/ui/schedule-row";
 import { EmptyState, ErrorState } from "@/components/ui/states";
 import {
   ScreenContainerRaw,
@@ -43,13 +41,40 @@ export default function ClientCalendar() {
   const lang = i18n.language === "en" ? "en" : "sr";
   const bottomPad = useTabBarBottomPadding(24);
   const queryClient = useQueryClient();
+
+  // Optional ?date=YYYY-MM-DD deep-link from the overview: tapping a session
+  // there should open the calendar focused on THAT session's day, not today.
+  const params = useLocalSearchParams<{ date?: string }>();
+  const isValidDate = (d?: string) =>
+    !!d && /^\d{4}-\d{2}-\d{2}$/.test(d) && dayjs(d).isValid();
+  const initialDay = isValidDate(params.date)
+    ? dayjs(params.date)
+    : dayjs();
+
   const [selectedDate, setSelectedDate] = useState(
-    dayjs().format("YYYY-MM-DD"),
+    initialDay.format("YYYY-MM-DD"),
   );
-  const [month, setMonth] = useState(() => monthKeyFromDate(dayjs()));
-  const [weekStart, setWeekStart] = useState(() => startOfLocaleWeek(dayjs()));
-  const [monthDate, setMonthDate] = useState(() => dayjs().startOf("month"));
+  const [month, setMonth] = useState(() => monthKeyFromDate(initialDay));
+  const [weekStart, setWeekStart] = useState(() =>
+    startOfLocaleWeek(initialDay),
+  );
+  const [monthDate, setMonthDate] = useState(() => initialDay.startOf("month"));
   const [viewTab, setViewTab] = useState<ViewTab>("day");
+
+  // Re-focus when the deep-link param changes between visits (the screen stays
+  // mounted as a tab, so initial state alone won't update on the next tap).
+  const lastDateParam = useRef(params.date);
+  useEffect(() => {
+    if (params.date === lastDateParam.current) return;
+    lastDateParam.current = params.date;
+    if (!isValidDate(params.date)) return;
+    const d = dayjs(params.date);
+    setSelectedDate(d.format("YYYY-MM-DD"));
+    setWeekStart(startOfLocaleWeek(d));
+    setMonth(monthKeyFromDate(d));
+    setMonthDate(d.startOf("month"));
+    setViewTab("day");
+  }, [params.date]);
   const [selectedSession, setSelectedSession] =
     useState<AvailabilitySession | null>(null);
 
@@ -139,24 +164,11 @@ export default function ClientCalendar() {
     setViewTab("day");
   }
 
-  function handleSessionPress(s: SessionBlock) {
-    const full = sessions.find((x) => x.id === s.id);
-    if (full) setSelectedSession(full);
+  function handleSessionPress(s: AvailabilitySession) {
+    setSelectedSession(s);
   }
 
   const bookingResultState = bookingMutation.data?.state as string | undefined;
-
-  const timeAxisSessions: SessionBlock[] = daySessions.map((s) => ({
-    id: s.id,
-    startsAt:
-      typeof s.startsAt === "string" ? s.startsAt : s.startsAt.toISOString(),
-    endsAt: typeof s.endsAt === "string" ? s.endsAt : s.endsAt.toISOString(),
-    classTypeName: s.classTypeName,
-    roomName: s.roomName,
-    bookedCount: s.bookedCount,
-    capacity: s.capacity,
-    status: s.availableSlots > 0 ? "available" : "full",
-  }));
 
   return (
     <ScreenContainerRaw title={t("tabs.calendar")}>
@@ -255,14 +267,23 @@ export default function ClientCalendar() {
               <EmptyState title={t("client.dayView.noSessions")} />
             </ScrollView>
           ) : (
-            <View style={{ flex: 1 }}>
-              <TimeAxisDayView
-                date={selectedDate}
-                sessions={timeAxisSessions}
-                onSessionPress={handleSessionPress}
-                showNowLine
-              />
-            </View>
+            <ScrollView
+              style={{ flex: 1 }}
+              contentContainerStyle={{ paddingTop: 4, paddingBottom: bottomPad }}
+              showsVerticalScrollIndicator={false}
+            >
+              {daySessions.map((s, i) => (
+                <View key={s.id}>
+                  <ScheduleRow
+                    session={s}
+                    onPress={() => handleSessionPress(s)}
+                  />
+                  {i < daySessions.length - 1 ? (
+                    <View className="h-px bg-glass-border mx-5" />
+                  ) : null}
+                </View>
+              ))}
+            </ScrollView>
           )}
         </>
       ) : null}

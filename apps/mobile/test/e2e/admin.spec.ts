@@ -438,7 +438,7 @@ test.describe("admin (Serbian)", () => {
     // Pick the first Reformer day from the seed so a session exists to tap.
     await navigateWeekStripTo(page, nextReformerDayKey());
 
-    const card = page.locator('[data-testid^="session-card-"]').first();
+    const card = page.locator('[data-testid^="session-block-"]').first();
     await expect(card).toBeVisible({ timeout: 10_000 });
     await openSessionEditSheet(page, card);
 
@@ -459,7 +459,7 @@ test.describe("admin (Serbian)", () => {
     await signInAsAdmin(page);
     await navigateWeekStripTo(page, nextReformerDayKey());
 
-    const card = page.locator('[data-testid^="session-card-"]').first();
+    const card = page.locator('[data-testid^="session-block-"]').first();
     await expect(card).toBeVisible({ timeout: 10_000 });
     await openSessionEditSheet(page, card);
 
@@ -571,7 +571,7 @@ test.describe("admin (Serbian)", () => {
     // later week.
     await navigateWeekStripTo(page, dateKeyFromDate(ref.startsAt));
 
-    await openSessionEditSheet(page, page.getByTestId(`session-card-${ref.id}`));
+    await openSessionEditSheet(page, page.getByTestId(`session-block-${ref.id}`));
 
     // Default scope is "session" — confirm by clicking save.
     await page.getByTestId("session-edit-scope-session").dispatchEvent("click");
@@ -605,7 +605,7 @@ test.describe("admin (Serbian)", () => {
     await signInAsAdmin(page);
     await navigateWeekStripTo(page, dateKeyFromDate(ref.startsAt));
 
-    await openSessionEditSheet(page, page.getByTestId(`session-card-${ref.id}`));
+    await openSessionEditSheet(page, page.getByTestId(`session-block-${ref.id}`));
 
     // Switch to series scope; the series-edit form mounts.
     await page.getByTestId("session-edit-scope-series").dispatchEvent("click");
@@ -640,7 +640,7 @@ test.describe("admin (Serbian)", () => {
     await signInAsAdmin(page);
     await navigateWeekStripTo(page, dateKeyFromDate(ref.startsAt));
 
-    await openSessionEditSheet(page, page.getByTestId(`session-card-${ref.id}`));
+    await openSessionEditSheet(page, page.getByTestId(`session-block-${ref.id}`));
 
     // Default scope is "session"; the danger button cancels just this one.
     await page.getByTestId("session-edit-cancel-button").dispatchEvent("click");
@@ -675,7 +675,7 @@ test.describe("admin (Serbian)", () => {
     await signInAsAdmin(page);
     await navigateWeekStripTo(page, dateKeyFromDate(ref.startsAt));
 
-    await openSessionEditSheet(page, page.getByTestId(`session-card-${ref.id}`));
+    await openSessionEditSheet(page, page.getByTestId(`session-block-${ref.id}`));
 
     await page.getByTestId("session-edit-scope-series").dispatchEvent("click");
     await expect(page.getByTestId("series-edit-delete-button")).toBeVisible({
