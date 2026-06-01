@@ -76,7 +76,28 @@ async function seedAdminSessionWithBookings() {
       clientPackageId: anaPkg.id,
     },
   });
-  return { admin, session, ana };
+  return { admin, session, ana, reformer, anaProfile };
+}
+
+/**
+ * Adds a waitlisted client to an existing session at the given position.
+ * Waitlist entries don't consume a package (they aren't booked yet), so this
+ * only needs a client profile + the WaitlistEntry row.
+ */
+async function seedWaitlistEntry(
+  sessionId: string,
+  position: number,
+  email: string,
+  fullName: string,
+) {
+  const user = await prisma.user.create({
+    data: { email, fullName, role: "CLIENT" },
+  });
+  const profile = await prisma.clientProfile.create({ data: { userId: user.id } });
+  await prisma.waitlistEntry.create({
+    data: { sessionId, clientProfileId: profile.id, position },
+  });
+  return { user, profile };
 }
 
 function asAdmin(admin: { id: string; email: string }) {
@@ -110,6 +131,53 @@ describe("GET /api/sessions/[id]", () => {
     expect(body.session.id).toBe(session.id);
     expect(body.session.bookings).toHaveLength(1);
     expect(body.session.bookings[0].client.fullName).toBe(ana.fullName);
+  });
+
+  it("returns waitlisted clients in position order under session.waitlist", async () => {
+    const { admin, session } = await seedAdminSessionWithBookings();
+    // Insert out of order to prove the endpoint sorts by position.
+    await seedWaitlistEntry(session.id, 2, "wl2@test.local", "Waitlist Two");
+    await seedWaitlistEntry(session.id, 1, "wl1@test.local", "Waitlist One");
+    asAdmin(admin);
+    const response = await GET(
+      new Request(`http://test.local/api/sessions/${session.id}`),
+      { id: session.id },
+    );
+    const body = await response.json();
+    expect(body.session.waitlist).toHaveLength(2);
+    expect(body.session.waitlist.map((w: { position: number }) => w.position)).toEqual([1, 2]);
+    expect(body.session.waitlist[0].client.fullName).toBe("Waitlist One");
+    expect(body.session.waitlist[0].client.email).toBe("wl1@test.local");
+  });
+
+  it("returns an empty waitlist array when no one is queued", async () => {
+    const { admin, session } = await seedAdminSessionWithBookings();
+    asAdmin(admin);
+    const response = await GET(
+      new Request(`http://test.local/api/sessions/${session.id}`),
+      { id: session.id },
+    );
+    const body = await response.json();
+    expect(body.session.waitlist).toEqual([]);
+  });
+
+  it("carries consentFlags on each waitlist entry, same shape as bookings", async () => {
+    const { admin, session } = await seedAdminSessionWithBookings();
+    await seedWaitlistEntry(session.id, 1, "wl1@test.local", "Waitlist One");
+    asAdmin(admin);
+    const response = await GET(
+      new Request(`http://test.local/api/sessions/${session.id}`),
+      { id: session.id },
+    );
+    const body = await response.json();
+    const entry = body.session.waitlist[0];
+    expect(entry.consentFlags).toMatchObject({
+      intakeRecorded: expect.any(Boolean),
+      intakeWithdrawn: expect.any(Boolean),
+      conditions: expect.any(Array),
+      socialMediaAccepted: null,
+    });
+    expect(entry.client.id).toBeDefined();
   });
 
   it("404s for unknown session id", async () => {
