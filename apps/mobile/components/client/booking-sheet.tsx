@@ -33,12 +33,6 @@ type Props = {
   errorCode: string | null;
 };
 
-const classTypeColor: Record<string, string> = {
-  Pilates: "#2e5b42",
-  Yoga: "#2dd4bf",
-  HIIT: "#f87171",
-};
-
 export function BookingSheet({
   session,
   onClose,
@@ -90,18 +84,9 @@ export function BookingSheet({
             transition={{ type: "timing", duration: 250 }}
           >
             <View className="gap-1.5">
-              <View className="flex-row items-center gap-2">
-                <View
-                  className="w-2 h-2 rounded-full"
-                  style={{
-                    backgroundColor:
-                      classTypeColor[session.classTypeName] ?? "#2e5b42",
-                  }}
-                />
-                <Text className="text-xs font-body-semibold text-muted uppercase tracking-wider">
-                  {session.classTypeName}
-                </Text>
-              </View>
+              <Text className="text-xs font-body-semibold text-muted uppercase tracking-wider">
+                {session.classTypeName}
+              </Text>
               <Text
                 className="text-foreground font-display"
                 style={{ fontSize: 34, letterSpacing: -0.5, lineHeight: 38 }}

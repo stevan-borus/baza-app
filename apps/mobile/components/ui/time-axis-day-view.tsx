@@ -145,7 +145,7 @@ export function TimeAxisDayView({
                 // height communicate the span, so we don't repeat the time
                 // text inside — just the class and room.
                 className="absolute left-0 active:opacity-80"
-                style={{ top, height, right: 4, paddingBottom: 3 }}
+                style={{ top, height, right: 4 }}
               >
                 <View
                   className="flex-1 rounded-xl overflow-hidden justify-center"
