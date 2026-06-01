@@ -32,6 +32,7 @@ import { UserAvatar } from "@/components/ui/user-avatar";
 import { AppHeader } from "@/components/ui/app-header";
 import { StudioWeekStrip } from "@/components/ui/studio";
 import { ScheduleRow } from "@/components/ui/schedule-row";
+import { EmptyState } from "@/components/ui/states";
 import {
   useBookingSheet,
   ClientBookingSheet,
@@ -223,7 +224,7 @@ function NextClassHero({
       >
         <ImageBackground
           source={PHOTO_HERO}
-          style={{ width: "100%", height: 340 }}
+          style={{ width: "100%", height: 260 }}
           resizeMode="cover"
         >
           {/* Top overlay — ink fade for status legibility */}
@@ -234,7 +235,7 @@ function NextClassHero({
               top: 0,
               left: 0,
               right: 0,
-              height: 160,
+              height: 110,
             }}
           />
           {/* Bottom overlay — deep ink so the info ribbon reads */}
@@ -249,7 +250,7 @@ function NextClassHero({
               bottom: 0,
               left: 0,
               right: 0,
-              height: 320,
+              height: 200,
             }}
           />
 
@@ -794,6 +795,19 @@ export default function HomeStudio() {
           </View>
         )}
 
+        {/* Package — above the week list: a client's own balance is the
+            first thing they want to see, before browsing the schedule. */}
+        {activePackage ? (
+          <View>
+            <SectionRow title={t("client.home.yourPackage")} />
+            <PackageCard
+              pkg={activePackage}
+              lang={lang}
+              onPress={() => router.push("/(client)/profile")}
+            />
+          </View>
+        ) : null}
+
         {/* This week */}
         <View>
           <SectionRow
@@ -810,32 +824,13 @@ export default function HomeStudio() {
           />
           <View style={{ height: 18 }} />
           {daySessions.length === 0 ? (
-            <View style={{ paddingHorizontal: 20 }}>
-              <View
-                style={{
-                  paddingVertical: 22,
-                  paddingHorizontal: 18,
-                  borderRadius: 4,
-                  backgroundColor: tokens.surface2,
-                  alignItems: "flex-start",
-                  gap: 12,
-                }}
-              >
-                <Text
-                  style={{
-                    fontFamily: "AlbertSans-Regular",
-                    fontSize: 13,
-                    color: tokens.muted,
-                    lineHeight: 18,
-                  }}
-                >
-                  {t("client.home.noClassesOnDay", {
-                    day: selectedDay.locale(lang).format("dddd, D MMMM"),
-                  })}
-                  {"\n"}
-                  {t("client.home.tryAnotherDay")}
-                </Text>
-              </View>
+            <View style={{ paddingHorizontal: 16 }}>
+              <EmptyState
+                title={t("client.home.noClassesOnDay", {
+                  day: selectedDay.locale(lang).format("dddd, D MMMM"),
+                })}
+                description={t("client.home.tryAnotherDay")}
+              />
             </View>
           ) : (
             <View
@@ -869,18 +864,6 @@ export default function HomeStudio() {
             </View>
           )}
         </View>
-
-        {/* Package */}
-        {activePackage ? (
-          <View>
-            <SectionRow title={t("client.home.yourPackage")} />
-            <PackageCard
-              pkg={activePackage}
-              lang={lang}
-              onPress={() => router.push("/(client)/profile")}
-            />
-          </View>
-        ) : null}
       </ScrollView>
 
       <ClientBookingSheet controller={booking} sessions={sessions} />
