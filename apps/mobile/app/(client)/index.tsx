@@ -32,6 +32,10 @@ import { UserAvatar } from "@/components/ui/user-avatar";
 import { AppHeader } from "@/components/ui/app-header";
 import { StudioWeekStrip } from "@/components/ui/studio";
 import { ScheduleRow } from "@/components/ui/schedule-row";
+import {
+  useBookingSheet,
+  ClientBookingSheet,
+} from "@/components/client/use-booking-sheet";
 import { useThemeTokens } from "@/components/ui/tokens";
 
 dayjs.extend(relativeTime);
@@ -590,6 +594,9 @@ export default function HomeStudio() {
   const availabilityQuery = useQuery(
     sessionsQueries.availabilityByMonth(month),
   );
+  // Same booking sheet as the calendar — tapping a session row (or the hero
+  // buttons) books/cancels inline instead of bouncing to the calendar tab.
+  const booking = useBookingSheet();
 
   const packages = packagesQuery.data?.packages ?? [];
   const activePackage = packages.find(
@@ -672,8 +679,8 @@ export default function HomeStudio() {
             lang={lang}
             userName={userName || "there"}
             greeting={greeting}
-            onPress={() => goToCalendar(next.startsAt)}
-            onCancel={() => goToCalendar(next.startsAt)}
+            onPress={() => booking.open(next, "view")}
+            onCancel={() => booking.open(next, "cancel")}
           />
         ) : (
           <View style={{ paddingHorizontal: 16 }}>
@@ -851,7 +858,7 @@ export default function HomeStudio() {
                   <View style={{ marginHorizontal: -4 }}>
                     <ScheduleRow
                       session={s}
-                      onPress={() => goToCalendar(s.startsAt)}
+                      onPress={() => booking.open(s)}
                     />
                   </View>
                   {i < Math.min(daySessions.length, 5) - 1 ? (
@@ -883,6 +890,7 @@ export default function HomeStudio() {
         ) : null}
       </ScrollView>
 
+      <ClientBookingSheet controller={booking} sessions={sessions} />
     </View>
   );
 }

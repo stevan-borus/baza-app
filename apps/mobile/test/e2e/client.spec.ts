@@ -395,7 +395,9 @@ test.describe("client (Serbian)", () => {
 
     // The booking sheet's body shows the waitlist count badge from the
     // /api/sessions/availability response; we assert the session is full.
-    await expect(page.getByText(/Č\. lista|Waitlist/i).first()).toBeVisible({
+    await expect(
+      page.getByText(/Lista čekanja|Waitlist/i).first(),
+    ).toBeVisible({
       timeout: 10_000,
     });
   });
@@ -467,14 +469,14 @@ test.describe("client (Serbian)", () => {
     expect(blockCount).toBe(0);
   });
 
-  test("64: tapping a session on the overview opens the calendar on that day", async ({
+  test("64: tapping a session on the overview opens the booking sheet inline", async ({
     page,
   }) => {
     await signInAsActiveReformer(page);
 
     // Pick a Reformer day in the home week strip, then tap one of that day's
-    // session rows. The calendar must open focused on THAT day — proving the
-    // date param carries through (it used to always open on today).
+    // session rows. The same booking sheet as the calendar opens right here —
+    // no bounce to the calendar tab — exposing the detail testIDs.
     const target = nextReformerDate();
     await page
       .locator(`[data-testid="week-strip-day-${target}"]:visible`)
@@ -487,15 +489,11 @@ test.describe("client (Serbian)", () => {
     await expect(overviewRow).toBeVisible({ timeout: 10_000 });
     await overviewRow.dispatchEvent("click");
 
-    // On the calendar tab, the target day's pill is rendered+selected and its
-    // session list shows — if the date hadn't carried, the calendar would have
-    // opened on today instead.
-    await expect(
-      page.locator(`[data-testid="week-strip-day-${target}"]:visible`).first(),
-    ).toBeVisible({ timeout: 10_000 });
-    await expect(
-      page.locator('[data-testid^="schedule-row-"]').first(),
-    ).toBeVisible({ timeout: 10_000 });
-    await expect(page.getByText("Reformer pilates").first()).toBeVisible();
+    await expect(page.getByTestId("booking-detail-room")).toHaveText("Sala 1", {
+      timeout: 10_000,
+    });
+    await expect(page.getByTestId("booking-detail-trainer")).toHaveText(
+      "Trainer Reformer Lead",
+    );
   });
 });

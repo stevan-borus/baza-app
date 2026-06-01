@@ -7,7 +7,7 @@
  *   bookable sessions; tap a date to switch to Day mode focused on it.
  */
 import { useEffect, useRef, useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { ScrollView, Text, View } from "react-native";
 import { useLocalSearchParams } from "expo-router";
 import { MotiView } from "@/components/ui/styled";
@@ -19,15 +19,17 @@ import { StudioWeekStrip, CapsLabel } from "@/components/ui/studio";
 import { MonthView } from "@/components/ui/month-view";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { ScheduleRow } from "@/components/ui/schedule-row";
+import {
+  useBookingSheet,
+  ClientBookingSheet,
+} from "@/components/client/use-booking-sheet";
 import { EmptyState, ErrorState } from "@/components/ui/states";
 import {
   ScreenContainerRaw,
   useTabBarBottomPadding,
 } from "@/components/ui/screen-container";
 import { SkeletonList } from "@/components/ui/skeleton";
-import { BookingSheet } from "@/components/client/booking-sheet";
 import { sessionsQueries } from "@/lib/queries/sessions-queries-factory";
-import { bookingsQueries } from "@/lib/queries/bookings-queries-factory";
 import type { AvailabilitySession } from "@baza/types";
 
 type ViewTab = "day" | "month";
@@ -40,8 +42,6 @@ export default function ClientCalendar() {
   const { t, i18n } = useTranslation();
   const lang = i18n.language === "en" ? "en" : "sr";
   const bottomPad = useTabBarBottomPadding(24);
-  const queryClient = useQueryClient();
-
   // Optional ?date=YYYY-MM-DD deep-link from the overview: tapping a session
   // there should open the calendar focused on THAT session's day, not today.
   const params = useLocalSearchParams<{ date?: string }>();
@@ -75,8 +75,7 @@ export default function ClientCalendar() {
     setMonthDate(d.startOf("month"));
     setViewTab("day");
   }, [params.date]);
-  const [selectedSession, setSelectedSession] =
-    useState<AvailabilitySession | null>(null);
+  const booking = useBookingSheet();
 
   const displayDate = dayjs(selectedDate);
 
@@ -84,27 +83,8 @@ export default function ClientCalendar() {
     sessionsQueries.availabilityByMonth(month),
   );
 
-  const bookingMutation = useMutation({
-    ...bookingsQueries.mutateBooking(),
-    onSuccess: async () => {
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      await queryClient.invalidateQueries({
-        queryKey: ["sessions", "availability", month],
-      });
-      await queryClient.invalidateQueries({ queryKey: ["packages"] });
-      // Sheet stays open so the in-sheet success block can show.
-      // It closes when the user taps Zatvori (BookingSheet's handleClose).
-    },
-  });
-
   const sessions = availabilityQuery.data?.sessions ?? [];
 
-  // After mutation invalidation, sessions list re-fetches with updated
-  // bookedCount / isBookedByMe. Re-hydrate the open sheet's session from the
-  // fresh array so the post-success state reflects current data (1/6 etc.).
-  const freshSelectedSession = selectedSession
-    ? (sessions.find((s) => s.id === selectedSession.id) ?? selectedSession)
-    : null;
   const daySessions = sessions.filter(
     (s) => dayjs(s.startsAt).format("YYYY-MM-DD") === selectedDate,
   );
@@ -165,10 +145,8 @@ export default function ClientCalendar() {
   }
 
   function handleSessionPress(s: AvailabilitySession) {
-    setSelectedSession(s);
+    booking.open(s);
   }
-
-  const bookingResultState = bookingMutation.data?.state as string | undefined;
 
   return (
     <ScreenContainerRaw title={t("tabs.calendar")}>
@@ -288,41 +266,7 @@ export default function ClientCalendar() {
         </>
       ) : null}
 
-      <BookingSheet
-        session={freshSelectedSession}
-        onClose={() => {
-          setSelectedSession(null);
-          // Clear stale success/error state so re-opening the sheet for
-          // another session starts fresh (no leftover "booked!" confirmation).
-          bookingMutation.reset();
-        }}
-        onBook={(id) =>
-          bookingMutation.mutate({ sessionId: id, action: "BOOK" })
-        }
-        onCancel={(id) =>
-          bookingMutation.mutate({ sessionId: id, action: "CANCEL" })
-        }
-        pending={bookingMutation.isPending}
-        successState={
-          bookingMutation.isSuccess
-            ? (bookingResultState === "BOOKED" ||
-              bookingResultState === "BOOKED_ALREADY"
-                ? "BOOKED"
-                : bookingResultState === "WAITLISTED"
-                  ? "WAITLISTED"
-                  : bookingResultState === "CANCELED"
-                    ? "CANCELED"
-                    : null)
-            : null
-        }
-        errorCode={
-          bookingMutation.isError
-            ? ((bookingMutation.error as Error & { code?: string })?.code ??
-                bookingMutation.error?.message ??
-                "UNKNOWN")
-            : null
-        }
-      />
+      <ClientBookingSheet controller={booking} sessions={sessions} />
     </ScreenContainerRaw>
   );
 }

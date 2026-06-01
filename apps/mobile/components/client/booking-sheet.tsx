@@ -6,7 +6,7 @@
  * Structure: hero stripe with class name + time; metric rows for details;
  * status badges; two-step confirm for booking and cancellation.
  */
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import { Text, View } from "react-native";
 import { MotiView } from "@/components/ui/styled";
 import dayjs from "dayjs";
@@ -31,6 +31,9 @@ type Props = {
   successState: "BOOKED" | "WAITLISTED" | "CANCELED" | null;
   /** Server error code (e.g. GUARDIAN_VERIFICATION_REQUIRED) when the mutation fails. */
   errorCode: string | null;
+  /** Step to open on for a freshly-opened session. "confirmCancel" lets the
+   * overview's OTKAŽI jump straight to cancel confirmation. Defaults "idle". */
+  initialStep?: BookingStep;
 };
 
 export function BookingSheet({
@@ -41,11 +44,23 @@ export function BookingSheet({
   pending,
   successState,
   errorCode,
+  initialStep = "idle",
 }: Props) {
   const { t, i18n } = useTranslation();
   const tokens = useThemeTokens();
   const lang = i18n.language === "en" ? "en" : "sr";
-  const [step, setStep] = useState<BookingStep>("idle");
+  const [step, setStep] = useState<BookingStep>(initialStep);
+
+  // Seed the step when a new session opens (id changes) — render-time state
+  // adjustment, not an effect. After that the user drives `step` via taps.
+  const openedId = useRef<string | null>(null);
+  if (session && session.id !== openedId.current) {
+    openedId.current = session.id;
+    if (step !== initialStep) setStep(initialStep);
+  }
+  if (!session && openedId.current !== null) {
+    openedId.current = null;
+  }
 
   function handleClose() {
     setStep("idle");
