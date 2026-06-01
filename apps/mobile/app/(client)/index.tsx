@@ -626,8 +626,11 @@ export default function HomeStudio() {
 
   const greeting = (() => {
     const h = new Date().getHours();
+    // Before 5am it's still night — "Dobro veče", not morning. Morning runs
+    // 5:00–10:59, "Dobar dan" until 18:00 (17:xx still reads daytime), then
+    // evening.
+    if (h < 5) return t("client.home.greetingEvening");
     if (h < 11) return t("client.home.greetingMorning");
-    // "Dobar dan" runs until 18:00 — 17:xx still reads as daytime here.
     if (h < 18) return t("client.home.greetingAfternoon");
     return t("client.home.greetingEvening");
   })();
