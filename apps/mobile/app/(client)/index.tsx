@@ -374,9 +374,9 @@ function NextClassHero({
                   letterSpacing: 0.4,
                 }}
               >
-                {spotsLeft === 1
-                  ? t("client.home.spotLeft", { count: spotsLeft })
-                  : t("client.home.spotsLeft", { count: spotsLeft })}
+                {spotsLeft >= session.capacity
+                  ? t("client.home.allFree")
+                  : t("client.home.spotsFree", { count: spotsLeft })}
               </Text>
             </View>
             <View style={{ flexDirection: "row", gap: 8, marginTop: 8 }}>
