@@ -607,8 +607,11 @@ export default function HomeStudio() {
 
   const userName = meQuery.data?.user.email?.split("@")[0] ?? "";
   const now = new Date();
+  // The hero is the client's NEXT BOOKED class (it carries DETALJI/OTKAŽI), so
+  // it must filter to sessions the client actually reserved — not just the next
+  // bookable one. No booking → the "ready for next" empty state shows instead.
   const upcoming = sessions
-    .filter((s) => new Date(s.startsAt) > now)
+    .filter((s) => s.isBookedByMe && new Date(s.startsAt) > now)
     .sort(
       (a, b) =>
         new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime(),

@@ -8,7 +8,7 @@
  */
 import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ScrollView, Text, View } from "react-native";
+import { ScrollView, View } from "react-native";
 import { useLocalSearchParams } from "expo-router";
 import { MotiView } from "@/components/ui/styled";
 import dayjs from "dayjs";
@@ -211,15 +211,10 @@ export default function ClientCalendar() {
             </View>
           ) : null}
 
-          <View className="px-5 pb-2 flex-row items-baseline justify-between">
+          <View className="px-5 pb-2">
             <CapsLabel size={12} tracking={2.4}>
               {displayDate.locale(lang).format("dddd, D MMMM").toUpperCase()}
             </CapsLabel>
-            <Text className="text-xs text-muted">
-              {daySessions.length === 0
-                ? ""
-                : t("client.calendar.classCount", { count: daySessions.length })}
-            </Text>
           </View>
 
           {availabilityQuery.isLoading ? (

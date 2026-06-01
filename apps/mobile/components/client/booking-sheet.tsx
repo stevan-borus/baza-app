@@ -68,7 +68,10 @@ export function BookingSheet({
   }
 
   const isFull = !!session && session.availableSlots <= 0;
-  const hasWaitlist = !!session && session.waitlistCount > 0;
+  // A waitlist only makes sense once the class is full — only then can someone
+  // actually be waiting for a seat. Gate on isFull so a stray/seed waitlist
+  // count never surfaces on a class that still has open spots.
+  const hasWaitlist = isFull && !!session && session.waitlistCount > 0;
   const isBookedByMe = !!session?.isBookedByMe;
   // A session that has already started/passed can't be booked. The server
   // rejects it too (SESSION_IN_PAST) — this just hides the CTA up front.
