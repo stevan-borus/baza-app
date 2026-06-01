@@ -826,9 +826,11 @@ export default function HomeStudio() {
           {daySessions.length === 0 ? (
             <View style={{ paddingHorizontal: 16 }}>
               <EmptyState
-                title={t("client.home.noClassesOnDay", {
-                  day: selectedDay.locale(lang).format("dddd, D MMMM"),
-                })}
+                title={
+                  selectedDay.isSame(dayjs(), "day")
+                    ? t("client.home.noClassesToday")
+                    : t("client.home.noClassesThisDay")
+                }
                 description={t("client.home.tryAnotherDay")}
               />
             </View>

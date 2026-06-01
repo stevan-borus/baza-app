@@ -298,7 +298,8 @@
       "sessionsRemaining": "Sessions left",
       "expiresOn": "Expires {{date}}",
       "expiresWithCountdown": "Expires {{date}} · {{days}} days left",
-      "noClassesOnDay": "No classes on {{day}}.",
+      "noClassesToday": "No classes today",
+      "noClassesThisDay": "No classes on this day",
       "tryAnotherDay": "Try another day."
     },
     "onboarding": {

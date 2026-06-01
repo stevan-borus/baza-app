@@ -299,8 +299,10 @@
       "sessionsRemaining": "Preostalo termina",
       "expiresOn": "Ističe {{date}}",
       "expiresWithCountdown": "Ističe {{date}} · još {{days}} dana",
-      "noClassesOnDay": "Nema treninga {{day}}.",
-      "tryAnotherDay": "Probaj drugi dan."
+      "noClassesToday": "Nema treninga danas",
+      "noClassesThisDay": "Nema treninga ovog dana",
+      "tryAnotherDay": "Probaj drugi dan.",
+      "noClassesDescription": "Izaberi drugi dan iz rasporeda."
     },
     "onboarding": {
       "getStarted": "Započnite",
