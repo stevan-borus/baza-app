@@ -183,8 +183,8 @@ export function BookingSheet({
               isBookedByMe ? (
                 <View className="flex-col gap-3">
                   <View className="flex-row items-center justify-center gap-2">
-                    <Icon name="check-circle" size={16} color={tokens.accent} />
-                    <Text className="font-body-semibold text-accent text-[14px]">
+                    <Icon name="check-circle" size={16} color={tokens.accentLight} />
+                    <Text className="font-body-semibold text-accent-light text-[14px]">
                       {t("client.dayView.alreadyBooked")}
                     </Text>
                   </View>

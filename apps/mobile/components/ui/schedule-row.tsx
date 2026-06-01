@@ -119,16 +119,17 @@ export function ScheduleRow({
             style={{
               fontFamily: "AlbertSans-Regular",
               fontSize: 12,
-              color: full ? tokens.faint : tokens.accent,
+              // accentLight is theme-aware (lighter sage on dark); the plain
+              // accent green is illegible on the dark canvas.
+              color: full ? tokens.faint : tokens.accentLight,
               letterSpacing: 0.2,
             }}
           >
             {full
               ? t("client.home.full")
-              : t("client.home.of", {
-                  available: session.availableSlots,
-                  capacity: session.capacity,
-                })}
+              : session.availableSlots >= session.capacity
+                ? t("client.home.allFree")
+                : t("client.home.spotsFree", { count: session.availableSlots })}
           </Text>
         </View>
 
@@ -139,7 +140,7 @@ export function ScheduleRow({
           style={{
             fontFamily: "AlbertSans-SemiBold",
             fontSize: 11,
-            color: bookedByMe ? tokens.accent : tokens.foreground,
+            color: bookedByMe ? tokens.accentLight : tokens.foreground,
             letterSpacing: 1.4,
             textTransform: "uppercase",
           }}
