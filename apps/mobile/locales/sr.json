@@ -697,6 +697,8 @@
       "placeholderEnd": "Kraj",
       "placeholderDuration": "Trajanje (min)",
       "placeholderWeekCount": "Broj nedelja",
+      "weekCountHint": "Najviše {{max}} nedelja",
+      "weekCountMaxError": "Najviše {{max}} nedelja",
       "weekdaysLabel": "Dani u nedelji",
       "weekday0Short": "N",
       "weekday1Short": "P",

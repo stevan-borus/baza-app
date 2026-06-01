@@ -42,6 +42,11 @@ type SessionFormState = {
   weekdays: number[];
 };
 
+// Mirrors the server cap in createRecurringSessionsInputSchema (weekCount
+// .max(52)). Surfaced in the form so the limit is visible up front instead of
+// coming back as a generic "Invalid payload" after submit.
+const MAX_WEEK_COUNT = 52;
+
 const INITIAL_FORM: SessionFormState = {
   classTypeId: "",
   roomId: "",
@@ -67,6 +72,11 @@ export function NewSessionSheet({ open, onOpenChange }: NewSessionSheetProps) {
   const classTypesQuery = useQuery(trainingsQueries.classTypes());
   const roomsQuery = useQuery(roomsQueries.list());
   const trainersQuery = useQuery(usersQueries.trainers());
+
+  const weekCountTooHigh =
+    isRecurring &&
+    newSession.weekCount.length > 0 &&
+    Number(newSession.weekCount) > MAX_WEEK_COUNT;
 
   function resetCreateForm() {
     setNewSession(INITIAL_FORM);
@@ -203,7 +213,7 @@ export function NewSessionSheet({ open, onOpenChange }: NewSessionSheetProps) {
         />
 
         <Input
-          placeholder={t("admin.schedule.placeholderDuration")}
+          label={t("admin.schedule.placeholderDuration")}
           keyboardType="numeric"
           value={newSession.durationMins}
           onChangeText={(v) =>
@@ -213,15 +223,26 @@ export function NewSessionSheet({ open, onOpenChange }: NewSessionSheetProps) {
 
         {isRecurring ? (
           <>
-            <Input
-              testID="session-create-week-count-input"
-              placeholder={t("admin.schedule.placeholderWeekCount")}
-              keyboardType="numeric"
-              value={newSession.weekCount}
-              onChangeText={(v) =>
-                setNewSession((s) => ({ ...s, weekCount: v }))
-              }
-            />
+            <View className="gap-1">
+              <Input
+                testID="session-create-week-count-input"
+                label={t("admin.schedule.placeholderWeekCount")}
+                keyboardType="numeric"
+                value={newSession.weekCount}
+                onChangeText={(v) =>
+                  setNewSession((s) => ({ ...s, weekCount: v }))
+                }
+              />
+              <Text
+                className={`text-xs px-1 ${
+                  weekCountTooHigh ? "text-danger" : "text-faint"
+                }`}
+              >
+                {weekCountTooHigh
+                  ? t("admin.schedule.weekCountMaxError", { max: MAX_WEEK_COUNT })
+                  : t("admin.schedule.weekCountHint", { max: MAX_WEEK_COUNT })}
+              </Text>
+            </View>
             <View className="gap-2">
               <SectionLabel>
                 {t("admin.schedule.weekdaysLabel")}
@@ -263,7 +284,7 @@ export function NewSessionSheet({ open, onOpenChange }: NewSessionSheetProps) {
         ) : null}
 
         <Input
-          placeholder={t("admin.schedule.placeholderCapacity")}
+          label={t("admin.schedule.placeholderCapacity")}
           keyboardType="numeric"
           value={newSession.capacity}
           onChangeText={(v) =>
@@ -294,7 +315,9 @@ export function NewSessionSheet({ open, onOpenChange }: NewSessionSheetProps) {
             !newSession.capacity ||
             !newSession.durationMins ||
             (isRecurring
-              ? !newSession.weekCount || newSession.weekdays.length === 0
+              ? !newSession.weekCount ||
+                newSession.weekdays.length === 0 ||
+                weekCountTooHigh
               : false)
           }
           onPress={() => {
@@ -308,6 +331,7 @@ export function NewSessionSheet({ open, onOpenChange }: NewSessionSheetProps) {
               const weekCount = parseInt(newSession.weekCount, 10);
               if (
                 !Number.isFinite(weekCount) ||
+                weekCount > MAX_WEEK_COUNT ||
                 newSession.weekdays.length === 0
               )
                 return;

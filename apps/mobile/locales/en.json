@@ -695,6 +695,8 @@
       "placeholderEnd": "End",
       "placeholderDuration": "Duration (min)",
       "placeholderWeekCount": "Number of weeks",
+      "weekCountHint": "Up to {{max}} weeks",
+      "weekCountMaxError": "Maximum {{max}} weeks",
       "weekdaysLabel": "Days of the week",
       "weekday0Short": "S",
       "weekday1Short": "M",
