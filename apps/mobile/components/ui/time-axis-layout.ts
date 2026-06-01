@@ -10,6 +10,44 @@ export const HOUR_END = 22;
 export const PX_PER_MINUTE = 1;
 export const HOUR_HEIGHT = 60 * PX_PER_MINUTE;
 
+function parseHex(hex: string): [number, number, number] {
+  const h = hex.replace("#", "");
+  return [
+    parseInt(h.slice(0, 2), 16),
+    parseInt(h.slice(2, 4), 16),
+    parseInt(h.slice(4, 6), 16),
+  ];
+}
+
+/**
+ * Opaque soft-tint fill: the class color blended over the page background at a
+ * low ratio. Returns an `rgb(...)` (never `rgba`) so the hour grid lines drawn
+ * underneath a block can never show through — a translucent wash let a line cut
+ * across any block spanning an hour boundary (e.g. 06:30–07:30), which looked
+ * broken. `ratio` is how much of the class color bleeds into the canvas color.
+ */
+export function tintBg(hex: string, background: string, ratio = 0.2): string {
+  const [r, g, b] = parseHex(hex);
+  const [br, bg, bb] = parseHex(background);
+  const mix = (c: number, bc: number) => Math.round(bc + (c - bc) * ratio);
+  return `rgb(${mix(r, br)}, ${mix(g, bg)}, ${mix(b, bb)})`;
+}
+
+/**
+ * On-block text color: the theme foreground nudged toward the class color so
+ * the secondary line reads as a darker shade of the event (a dark green in
+ * light mode, a light green in dark mode) with strong contrast against the
+ * tinted fill — generic `muted` grey, tuned for the page background, washes
+ * out on a colored block. Starting from `foreground` (not the class color)
+ * guarantees the right light/dark direction; `ratio` is how much hue to add.
+ */
+export function tintText(hex: string, foreground: string, ratio = 0.35): string {
+  const [r, g, b] = parseHex(hex);
+  const [fr, fg, fb] = parseHex(foreground);
+  const mix = (c: number, fc: number) => Math.round(fc + (c - fc) * ratio);
+  return `rgb(${mix(r, fr)}, ${mix(g, fg)}, ${mix(b, fb)})`;
+}
+
 /**
  * Computes the top offset (px) and height (px) for a session block on the
  * time axis. Sessions outside [HOUR_START, HOUR_END] are clipped.

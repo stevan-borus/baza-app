@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import dayjs from "dayjs";
 import { Badge } from "@/components/ui/badge";
+import { useThemeTokens } from "@/components/ui/tokens";
 import {
   HOUR_START,
   HOUR_END,
@@ -9,6 +10,8 @@ import {
   HOUR_HEIGHT,
   sessionBlockPosition,
   layoutSessions,
+  tintBg,
+  tintText,
 } from "@/components/ui/time-axis-layout";
 
 // Re-exported so existing importers of these from the component keep working.
@@ -38,15 +41,6 @@ const classTypeColors: Record<string, string> = {
   HIIT: "#f87171",
 };
 
-/** Low-opacity wash of a #rrggbb class color for the block background. */
-function tintBg(hex: string): string {
-  const h = hex.replace("#", "");
-  const r = parseInt(h.slice(0, 2), 16);
-  const g = parseInt(h.slice(2, 4), 16);
-  const b = parseInt(h.slice(4, 6), 16);
-  return `rgba(${r}, ${g}, ${b}, 0.1)`;
-}
-
 type Props = {
   date: string;
   sessions: SessionBlock[];
@@ -69,6 +63,7 @@ export function TimeAxisDayView({
   embedded = false,
 }: Props) {
   const scrollRef = useRef<ScrollView>(null);
+  const tokens = useThemeTokens();
   const now = dayjs();
   const isToday = now.format("YYYY-MM-DD") === date;
   const nowTop =
@@ -101,20 +96,20 @@ export function TimeAxisDayView({
 
   const grid = (
     <View className="flex-row pt-2">
-        <View style={{ width: 56 }}>
+        <View style={{ width: 48 }}>
           {hours.map((h) => (
             <View
               key={h}
               style={{ height: HOUR_HEIGHT, justifyContent: "flex-start" }}
             >
-              <Text className="text-xs pl-6 -mt-1.5 text-muted">
+              <Text className="text-xs -mt-1.5 text-muted">
                 {h === 12 ? "12 PM" : h > 12 ? `${h - 12} PM` : `${h} AM`}
               </Text>
             </View>
           ))}
         </View>
         <View
-          className="flex-1 relative pr-6"
+          className="flex-1 relative"
           style={{ height: (HOUR_END - HOUR_START) * HOUR_HEIGHT }}
         >
           {hours.map((h, i) => (
@@ -149,34 +144,63 @@ export function TimeAxisDayView({
                   height: Math.max(22, height - 2),
                   left: `${col * widthPct}%`,
                   width: `${widthPct}%`,
-                  // Small right gutter; doubles as the gap between columns.
-                  paddingRight: 4,
+                  // Right gutter only when columns share the row — it's the gap
+                  // between concurrent blocks. A lone block runs full-width to
+                  // the grid edge so it doesn't look inset from the right.
+                  paddingRight: cols > 1 ? 6 : 0,
                 }}
               >
                 <View
                   className="flex-1 rounded-xl overflow-hidden justify-center"
                   style={{
-                    borderLeftWidth: 3,
+                    // 4px colored spine. overflow-hidden + rounded-xl clips its
+                    // outer corners to match the card radius automatically.
+                    borderLeftWidth: 4,
                     borderLeftColor: color,
-                    backgroundColor: tintBg(color),
+                    backgroundColor: tintBg(color, tokens.background),
                   }}
                 >
-                  <View className="px-2.5 gap-0.5">
-                    <View className="flex-row items-center gap-1.5">
+                  <View className="px-2.5 flex-row items-center gap-2">
+                    <View className="flex-1 gap-0.5">
                       <Text
-                        className="font-body-semibold text-sm text-foreground flex-1"
+                        className="font-body-semibold text-sm text-foreground"
                         numberOfLines={1}
                       >
                         {s.classTypeName}
                       </Text>
-                      {isFull ? <Badge status="danger">Full</Badge> : null}
+                      {compact ? null : (
+                        <Text
+                          className="text-xs"
+                          style={{ color: tintText(color, tokens.foreground) }}
+                          numberOfLines={1}
+                        >
+                          {dayjs(s.startsAt).format("HH:mm")}–
+                          {dayjs(s.endsAt).format("HH:mm")}
+                          {s.roomName ? ` · ${s.roomName}` : ""}
+                        </Text>
+                      )}
                     </View>
-                    {compact ? null : (
-                      <Text className="text-xs text-muted" numberOfLines={1}>
-                        {dayjs(s.startsAt).format("HH:mm")}–
-                        {dayjs(s.endsAt).format("HH:mm")}
-                        {s.roomName ? ` · ${s.roomName}` : ""}
-                      </Text>
+                    {/* Always-visible capacity, vertically centered. Full →
+                        danger pill (red); otherwise an opaque on-block pill
+                        tinted from the class color so it stays legible against
+                        the green fill (the shared neutral Badge's glass bg +
+                        muted text washed out here). */}
+                    {isFull ? (
+                      <Badge status="danger">
+                        {s.bookedCount}/{s.capacity}
+                      </Badge>
+                    ) : (
+                      <View
+                        className="px-2.5 py-1 rounded-full"
+                        style={{ backgroundColor: tintBg(color, tokens.background, 0.32) }}
+                      >
+                        <Text
+                          className="text-xs font-body-semibold"
+                          style={{ color: tintText(color, tokens.foreground) }}
+                        >
+                          {s.bookedCount}/{s.capacity}
+                        </Text>
+                      </View>
                     )}
                   </View>
                 </View>

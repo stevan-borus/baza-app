@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { layoutSessions } from "@/components/ui/time-axis-layout";
+import {
+  layoutSessions,
+  tintBg,
+  tintText,
+} from "@/components/ui/time-axis-layout";
 
 /**
  * layoutSessions assigns each session a column index + the number of columns
@@ -56,5 +60,53 @@ describe("layoutSessions", () => {
     expect(out.find((x) => x.id === "c")).toEqual({ id: "c", col: 0, cols: 1 });
     expect(out.find((x) => x.id === "a")?.cols).toBe(2);
     expect(out.find((x) => x.id === "b")?.cols).toBe(2);
+  });
+});
+
+describe("tintBg", () => {
+  // The whole point of blending over the canvas: an OPAQUE fill. A translucent
+  // wash let the hour grid line underneath show through any block spanning an
+  // hour boundary (06:30–07:30 crosses the 07:00 line) — the bug we fixed.
+  it("returns an opaque rgb() with no alpha channel", () => {
+    const fill = tintBg("#2e5b42", "#F4EFE3");
+    expect(fill).toMatch(/^rgb\(\d+, \d+, \d+\)$/);
+    expect(fill).not.toContain("rgba");
+  });
+
+  it("blends toward the class color but stays close to the background at low ratio", () => {
+    // ratio 0.12 over the cream canvas → each channel mostly the canvas value.
+    expect(tintBg("#2e5b42", "#F4EFE3", 0.12)).toBe("rgb(220, 221, 208)");
+  });
+
+  it("re-tints over a dark canvas so the fill works in dark mode", () => {
+    const light = tintBg("#2e5b42", "#F4EFE3");
+    const dark = tintBg("#2e5b42", "#1A1A1C");
+    expect(light).not.toBe(dark);
+  });
+
+  it("returns the pure background when ratio is 0", () => {
+    expect(tintBg("#2e5b42", "#F4EFE3", 0)).toBe("rgb(244, 239, 227)");
+  });
+});
+
+describe("tintText", () => {
+  // The secondary line sits ON the tinted block, so it can't use the page's
+  // `muted` grey — that washed out on the green fill. tintText starts from the
+  // theme foreground and pulls it toward the class color: dark green on a light
+  // fill, light green on a dark fill, legible either way.
+  it("produces a dark green from the light-mode (near-black) foreground", () => {
+    expect(tintText("#2e5b42", "#0F0F0D")).toBe("rgb(26, 42, 32)");
+  });
+
+  it("produces a light green from the dark-mode (near-white) foreground", () => {
+    const dark = tintText("#2e5b42", "#EDE8DC");
+    expect(dark).toMatch(/^rgb\(\d+, \d+, \d+\)$/);
+    // Each channel stays bright (close to the near-white foreground) so it
+    // reads against the dark-mode fill, unlike the light-mode result above.
+    expect(dark).not.toBe(tintText("#2e5b42", "#0F0F0D"));
+  });
+
+  it("returns the pure foreground when ratio is 0", () => {
+    expect(tintText("#2e5b42", "#0F0F0D", 0)).toBe("rgb(15, 15, 13)");
   });
 });
