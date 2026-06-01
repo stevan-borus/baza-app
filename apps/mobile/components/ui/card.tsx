@@ -1,6 +1,6 @@
 import React, { PropsWithChildren } from "react";
 import { View } from "react-native";
-import FontAwesome from "@expo/vector-icons/FontAwesome";
+import { type IconName } from "@/components/ui/icon";
 import { Text } from "react-native";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { GlassCard, type GlassCardProps } from "./glass-card";
@@ -33,7 +33,7 @@ export function StatCard({
 }: {
   label: string;
   value: string | number;
-  icon?: React.ComponentProps<typeof FontAwesome>["name"];
+  icon?: IconName;
   accentColor?: string;
 }) {
   return (

@@ -41,6 +41,12 @@ export async function POST(request: Request) {
     return fail("Session not available", 404);
 
   if (action === "BOOK") {
+    // Can't book a session that has already started/passed. CANCEL is exempt —
+    // a client may still need to undo a booking on a past session.
+    if (session.startsAt.getTime() <= now().getTime()) {
+      return fail(BOOKING_ERRORS.SESSION_IN_PAST, 409);
+    }
+
     // Block bookings for unverified minors AFTER their first completed session.
     // First booking goes through so the studio can collect the paper waiver in person.
     const consentStatus = await getConsentStatus(guard.user.id);

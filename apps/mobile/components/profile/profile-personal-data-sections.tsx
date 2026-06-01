@@ -13,7 +13,7 @@ import { useRouter } from "expo-router";
 import { useState } from "react";
 import { Pressable, Switch, Text, View } from "react-native";
 import { useTranslation } from "react-i18next";
-import Feather from "@expo/vector-icons/Feather";
+import { Icon } from "@/components/ui/icon";
 import { authQueries } from "@/lib/queries/auth-queries-factory";
 import {
   consentQueries,
@@ -111,7 +111,7 @@ export function ProfilePersonalDataSections() {
                 ? t("profile.healthStatusFilled")
                 : t("profile.healthStatusMissing")}
             </Text>
-            <Feather name="chevron-right" size={16} color={tokens.faint} />
+            <Icon name="chevron-right" size={16} color={tokens.faint} />
           </Pressable>
         </View>
       </View>
@@ -151,7 +151,7 @@ export function ProfilePersonalDataSections() {
                       {t("profile.legalView")}
                     </Text>
                   )}
-                  <Feather name="chevron-right" size={16} color={tokens.faint} />
+                  <Icon name="chevron-right" size={16} color={tokens.faint} />
                 </View>
               </Pressable>
             );

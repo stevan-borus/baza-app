@@ -25,7 +25,7 @@ import {
   View,
 } from "react-native";
 import { BottomSheetFlatList } from "@gorhom/bottom-sheet";
-import Feather from "@expo/vector-icons/Feather";
+import { Icon } from "@/components/ui/icon";
 import { GlassCard } from "./glass-card";
 import { Input } from "./input";
 import { EmptyState } from "./states";
@@ -371,11 +371,11 @@ function ClientRow({
               }}
             >
               {isSelected ? (
-                <Feather name="check" size={14} color={tokens.background} />
+                <Icon name="check" size={14} color={tokens.background} />
               ) : null}
             </View>
           ) : isSelected ? (
-            <Feather name="check" size={16} color={tokens.accent} />
+            <Icon name="check" size={16} color={tokens.accent} />
           ) : null}
         </View>
       </GlassCard>

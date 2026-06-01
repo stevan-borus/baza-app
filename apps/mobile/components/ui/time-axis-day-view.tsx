@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import dayjs from "dayjs";
+import { Badge } from "@/components/ui/badge";
 
 export const HOUR_START = 6;
 export const HOUR_END = 22;
@@ -121,38 +122,61 @@ export function TimeAxisDayView({
             const { top, height } = sessionBlockPosition(s);
             const color = classTypeColors[s.classTypeName] ?? "#2e5b42";
             const isFull = s.bookedCount >= s.capacity;
+            // Hide the secondary line on very short (clamped) blocks so the
+            // title doesn't get clipped mid-character.
+            const compact = height < 48;
             return (
               <Pressable
                 key={s.id}
                 testID={`session-block-${s.id}`}
                 onPress={() => onSessionPress(s)}
                 className="absolute left-0 right-0 active:opacity-80"
-                style={{ top, height }}
+                style={{ top, height, paddingBottom: 4 }}
               >
                 <View
-                  className="flex-1 rounded-xl overflow-hidden border bg-glass border-glass-border"
+                  className="flex-1 rounded-2xl overflow-hidden border border-glass-border"
                   style={{
                     borderLeftWidth: 3,
                     borderLeftColor: color,
                   }}
                 >
-                  <View className="p-2 gap-0.5">
-                    <Text
-                      className="font-body-semibold text-sm text-foreground"
-                      numberOfLines={1}
-                    >
-                      {s.classTypeName}
-                    </Text>
-                    <Text className="text-xs text-muted" numberOfLines={1}>
-                      {dayjs(s.startsAt).format("HH:mm")}–
-                      {dayjs(s.endsAt).format("HH:mm")}
-                      {s.roomName ? ` · ${s.roomName}` : ""}
-                    </Text>
-                    {isFull && height >= 60 ? (
-                      <Text className="text-xs font-body-semibold text-warning">
-                        Full
+                  {/* Class-type-tinted wash behind the content. */}
+                  <View
+                    style={{
+                      position: "absolute",
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      backgroundColor: color,
+                      opacity: 0.08,
+                    }}
+                  />
+                  <View
+                    className={compact ? "px-3 justify-center flex-1" : "px-3 py-2 gap-1"}
+                  >
+                    <View className="flex-row items-center gap-2">
+                      <View
+                        className="w-1.5 h-1.5 rounded-full"
+                        style={{ backgroundColor: color }}
+                      />
+                      <Text
+                        className="font-body-semibold text-sm text-foreground flex-1"
+                        numberOfLines={1}
+                      >
+                        {s.classTypeName}
                       </Text>
-                    ) : null}
+                      {isFull ? (
+                        <Badge status="danger">Full</Badge>
+                      ) : null}
+                    </View>
+                    {compact ? null : (
+                      <Text className="text-xs text-muted" numberOfLines={1}>
+                        {dayjs(s.startsAt).format("HH:mm")}–
+                        {dayjs(s.endsAt).format("HH:mm")}
+                        {s.roomName ? ` · ${s.roomName}` : ""}
+                      </Text>
+                    )}
                   </View>
                 </View>
               </Pressable>

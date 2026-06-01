@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { Pressable, View } from "react-native";
-import Feather from "@expo/vector-icons/Feather";
+import { Icon } from "@/components/ui/icon";
 import type {
   ActivityLevelCode,
   DiscomfortMovementCode,
@@ -382,7 +382,7 @@ export function HealthIntakeForm({
             }`}
           >
             {state.consented ? (
-              <Feather name="check" size={14} color={tokens.background} />
+              <Icon name="check" size={14} color={tokens.background} />
             ) : null}
           </View>
           <Body size={13} className="flex-1">
@@ -449,7 +449,7 @@ function ChipRow({
         }`}
       >
         {selected ? (
-          <Feather name="check" size={12} color={tokens.background} />
+          <Icon name="check" size={12} color={tokens.background} />
         ) : null}
       </View>
       <Body size={14} className="flex-1 text-foreground">

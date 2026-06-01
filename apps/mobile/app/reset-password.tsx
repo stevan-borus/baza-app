@@ -7,7 +7,7 @@ import { Link, useRouter } from "expo-router";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Pressable, Text, View } from "react-native";
-import Feather from "@expo/vector-icons/Feather";
+import { Icon } from "@/components/ui/icon";
 import { MotiView } from "@/components/ui/styled";
 import { AuthBackground } from "@/components/auth/auth-background";
 import { AuthLanguageToggle } from "@/components/auth/auth-language-toggle";
@@ -148,7 +148,7 @@ export default function ResetPasswordScreen() {
               isSuccess ? "bg-success-soft" : "bg-accent-soft"
             }`}
           >
-            <Feather
+            <Icon
               name={isSuccess ? "check" : "lock"}
               size={22}
               color={isSuccess ? "#16a34a" : tokens.accent}

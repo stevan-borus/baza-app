@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { router, type Href } from "expo-router";
 import dayjs from "dayjs";
-import Feather from "@expo/vector-icons/Feather";
+import { Icon } from "@/components/ui/icon";
 import { GlassCard } from "@/components/ui/glass-card";
 import { ErrorState, EmptyState } from "@/components/ui/states";
 import { SkeletonCard } from "@/components/ui/skeleton";
@@ -121,19 +121,19 @@ export function SessionDetail({
                 </Text>
                 <View style={{ flexDirection: "row", gap: 16, marginTop: 4 }}>
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                    <Feather name="user" size={13} color={tokens.muted} />
+                    <Icon name="user" size={13} color={tokens.muted} />
                     <Text className="text-muted" style={{ fontSize: 13 }}>
                       {session.trainer?.fullName ?? "—"}
                     </Text>
                   </View>
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                    <Feather name="home" size={13} color={tokens.muted} />
+                    <Icon name="home" size={13} color={tokens.muted} />
                     <Text className="text-muted" style={{ fontSize: 13 }}>
                       {session.room?.name ?? "—"}
                     </Text>
                   </View>
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                    <Feather name="users" size={13} color={tokens.muted} />
+                    <Icon name="users" size={13} color={tokens.muted} />
                     <Text className="text-muted" style={{ fontSize: 13 }}>
                       {bookedCount}/{capacity}
                     </Text>
@@ -192,7 +192,7 @@ export function SessionDetail({
                             {b.client.email}
                           </Text>
                         </View>
-                        <Feather
+                        <Icon
                           name="chevron-right"
                           size={16}
                           color={tokens.faint}
@@ -296,7 +296,7 @@ function SocialMediaPill({ accepted }: { accepted: boolean | null }) {
   if (accepted === null) return null;
   return (
     <View className="flex-row items-center gap-1.5">
-      <Feather
+      <Icon
         name={accepted ? "camera" : "camera-off"}
         size={12}
         color={accepted ? "#16a34a" : "#dc2626"}

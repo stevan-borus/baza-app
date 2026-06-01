@@ -52,16 +52,12 @@ vi.mock("react-native", () => {
 });
 
 vi.mock("expo-blur", () => ({ BlurView: () => null }));
-vi.mock("@expo/vector-icons/Feather", () => ({
-  default: ({ name, testID }: any) =>
+vi.mock("@/components/ui/icon", () => ({
+  Icon: ({ name, testID }: any) =>
     require("react").createElement("i", {
       "data-icon": name,
       "data-testid": testID,
     }),
-}));
-vi.mock("@expo/vector-icons/FontAwesome", () => ({
-  default: ({ name }: any) =>
-    require("react").createElement("i", { "data-icon": name }),
 }));
 vi.mock("expo-router", () => ({
   useRouter: () => ({ push: vi.fn(), back: vi.fn() }),

@@ -19,7 +19,7 @@ import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Pressable, Text, View } from "react-native";
-import Feather from "@expo/vector-icons/Feather";
+import { Icon, type IconName } from "@/components/ui/icon";
 import { AppSheet } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { ErrorState } from "@/components/ui/states";
@@ -48,7 +48,7 @@ function ComposeFieldTrigger({
   emphasis = "default",
   testID,
 }: {
-  icon?: "user" | "link";
+  icon?: IconName;
   placeholder: string;
   label: string | null;
   hint?: string | null;
@@ -87,7 +87,7 @@ function ComposeFieldTrigger({
         }}
       >
         {icon ? (
-          <Feather
+          <Icon
             name={icon}
             size={14}
             color={isFilled ? tokens.accent : tokens.muted}
@@ -136,10 +136,10 @@ function ComposeFieldTrigger({
             hitSlop={10}
             accessibilityRole="button"
           >
-            <Feather name="x" size={14} color={tokens.muted} />
+            <Icon name="x" size={14} color={tokens.muted} />
           </Pressable>
         ) : (
-          <Feather name="chevron-down" size={14} color={tokens.muted} />
+          <Icon name="chevron-down" size={14} color={tokens.muted} />
         )}
       </View>
     </Pressable>
@@ -463,7 +463,7 @@ function PickerSheetHeader({ title, onClose }: { title: string; onClose: () => v
         accessibilityLabel={t("common.close")}
         className="active:opacity-60"
       >
-        <Feather name="x" size={20} color="#888" />
+        <Icon name="x" size={20} color="#888" />
       </Pressable>
     </View>
   );

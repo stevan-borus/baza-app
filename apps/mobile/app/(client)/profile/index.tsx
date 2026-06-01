@@ -30,7 +30,7 @@ import {
 import { useTranslation } from "react-i18next";
 import * as ImagePicker from "expo-image-picker";
 import { useLocalAvatar } from "@/lib/use-local-avatar";
-import Feather from "@expo/vector-icons/Feather";
+import { Icon } from "@/components/ui/icon";
 import { MotiView } from "@/components/ui/styled";
 import { SectionRow, CapsLabel } from "@/components/ui/studio";
 import { ScreenContainerRaw, useTabBarBottomPadding } from "@/components/ui/screen-container";
@@ -157,7 +157,7 @@ export default function ClientProfile() {
                     className="absolute right-1 bottom-1 w-8 h-8 rounded-full bg-foreground items-center justify-center"
                     style={{ borderWidth: 2, borderColor: tokens.background }}
                   >
-                    <Feather name="camera" size={14} color={tokens.background} />
+                    <Icon name="camera" size={14} color={tokens.background} />
                   </View>
                 </View>
               ) : (
@@ -174,7 +174,7 @@ export default function ClientProfile() {
                     className="absolute right-1 bottom-1 w-8 h-8 rounded-full bg-foreground items-center justify-center"
                     style={{ borderWidth: 2, borderColor: tokens.background }}
                   >
-                    <Feather name="camera" size={14} color={tokens.background} />
+                    <Icon name="camera" size={14} color={tokens.background} />
                   </View>
                 </View>
               )}
@@ -314,7 +314,7 @@ export default function ClientProfile() {
               >
                 {t("client.profileTab.viewHistory")}
               </Text>
-              <Feather name="chevron-right" size={16} color={tokens.faint} />
+              <Icon name="chevron-right" size={16} color={tokens.faint} />
             </Pressable>
           </View>
         </MotiView>

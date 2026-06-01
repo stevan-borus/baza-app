@@ -152,8 +152,8 @@ vi.mock("react-native-reanimated", () => {
   };
 });
 
-vi.mock("@expo/vector-icons/FontAwesome", () => ({
-  default: () => null,
+vi.mock("@/components/ui/icon", () => ({
+  Icon: () => null,
 }));
 
 vi.mock("@/components/ui/button", () => ({

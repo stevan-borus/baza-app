@@ -13,7 +13,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { useRouter } from "expo-router";
-import Feather from "@expo/vector-icons/Feather";
+import { Icon } from "@/components/ui/icon";
 import {
   ScreenContainerRaw,
   useTabBarBottomPadding,
@@ -57,7 +57,7 @@ export default function KatalogLanding() {
               accessibilityRole="button"
               accessibilityLabel={t("admin.katalog.noviTermin")}
             >
-              <Feather name="plus" size={18} color={tokens.foreground} />
+              <Icon name="plus" size={18} color={tokens.foreground} />
               <View className="flex-1">
                 <Text
                   className="text-foreground font-body-semibold"
@@ -69,7 +69,7 @@ export default function KatalogLanding() {
                   {t("admin.katalog.noviTerminSub")}
                 </Text>
               </View>
-              <Feather name="chevron-right" size={16} color={tokens.faint} />
+              <Icon name="chevron-right" size={16} color={tokens.faint} />
             </Pressable>
           </GlassCard>
         </View>
@@ -88,7 +88,7 @@ export default function KatalogLanding() {
             className="flex-row items-center justify-between py-4 active:opacity-60"
           >
             <View className="flex-row items-center gap-3 flex-1">
-              <Feather name="list" size={16} color={tokens.muted} />
+              <Icon name="list" size={16} color={tokens.muted} />
               <Text
                 className="text-foreground font-body-medium"
                 style={{ fontSize: 15 }}
@@ -96,7 +96,7 @@ export default function KatalogLanding() {
                 {t("admin.manage.classTypes")}
               </Text>
             </View>
-            <Feather name="chevron-right" size={16} color={tokens.faint} />
+            <Icon name="chevron-right" size={16} color={tokens.faint} />
           </Pressable>
           <View className="bg-glass-border" style={{ height: 1 }} />
           <Pressable
@@ -106,7 +106,7 @@ export default function KatalogLanding() {
             className="flex-row items-center justify-between py-4 active:opacity-60"
           >
             <View className="flex-row items-center gap-3 flex-1">
-              <Feather name="home" size={16} color={tokens.muted} />
+              <Icon name="home" size={16} color={tokens.muted} />
               <Text
                 className="text-foreground font-body-medium"
                 style={{ fontSize: 15 }}
@@ -114,7 +114,7 @@ export default function KatalogLanding() {
                 {t("admin.manage.rooms")}
               </Text>
             </View>
-            <Feather name="chevron-right" size={16} color={tokens.faint} />
+            <Icon name="chevron-right" size={16} color={tokens.faint} />
           </Pressable>
           <View className="bg-glass-border" style={{ height: 1 }} />
           <Pressable
@@ -124,7 +124,7 @@ export default function KatalogLanding() {
             className="flex-row items-center justify-between py-4 active:opacity-60"
           >
             <View className="flex-row items-center gap-3 flex-1">
-              <Feather name="package" size={16} color={tokens.muted} />
+              <Icon name="package" size={16} color={tokens.muted} />
               <Text
                 className="text-foreground font-body-medium"
                 style={{ fontSize: 15 }}
@@ -132,7 +132,7 @@ export default function KatalogLanding() {
                 {t("admin.manage.packageTypes")}
               </Text>
             </View>
-            <Feather name="chevron-right" size={16} color={tokens.faint} />
+            <Icon name="chevron-right" size={16} color={tokens.faint} />
           </Pressable>
         </View>
       </ScrollView>

@@ -37,7 +37,7 @@ import { Badge } from "@/components/ui/card";
 import { NumberRollup } from "@/components/ui/number-rollup";
 import { CapsLabel, StatStrip } from "@/components/ui/studio";
 import { useThemeTokens } from "@/components/ui/tokens";
-import Feather from "@expo/vector-icons/Feather";
+import { Icon } from "@/components/ui/icon";
 import { Button } from "@/components/ui/button";
 import { EmptyState, ErrorState } from "@/components/ui/states";
 import { Input } from "@/components/ui/input";
@@ -223,7 +223,7 @@ export default function AdminBilling() {
                 android_ripple={null}
                 className="active:opacity-60 w-9 h-9 items-center justify-center"
               >
-                <Feather name="chevron-left" size={20} color={tokens.foreground} />
+                <Icon name="chevron-left" size={20} color={tokens.foreground} />
               </Pressable>
               <CapsLabel size={11} tracking={1.6}>
                 {periodLabel}
@@ -234,7 +234,7 @@ export default function AdminBilling() {
                 android_ripple={null}
                 className="active:opacity-60 w-9 h-9 items-center justify-center"
               >
-                <Feather name="chevron-right" size={20} color={tokens.foreground} />
+                <Icon name="chevron-right" size={20} color={tokens.foreground} />
               </Pressable>
             </View>
           </MotiView>

@@ -11,7 +11,7 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Pressable, ScrollView, Text, View } from "react-native";
-import FontAwesome from "@expo/vector-icons/FontAwesome";
+import { Icon } from "@/components/ui/icon";
 import { MotiView } from "@/components/ui/styled";
 import { Button } from "@/components/ui/button";
 import { ErrorState } from "@/components/ui/states";
@@ -165,13 +165,13 @@ export default function AdminSettingsClassTypes() {
                 {/* Meta: duration · capacity */}
                 <View className="flex-row items-center gap-3">
                   <View className="flex-row items-center gap-1">
-                    <FontAwesome name="clock-o" size={11} color="#a1a1aa" />
+                    <Icon name="clock-o" size={11} color="#a1a1aa" />
                     <Text className="text-muted" style={{ fontSize: 12 }}>
                       {ct.durationMins}min
                     </Text>
                   </View>
                   <View className="flex-row items-center gap-1">
-                    <FontAwesome name="users" size={11} color="#a1a1aa" />
+                    <Icon name="users" size={11} color="#a1a1aa" />
                     <Text className="text-muted" style={{ fontSize: 12 }}>
                       {ct.maxClients}
                     </Text>
@@ -190,7 +190,7 @@ export default function AdminSettingsClassTypes() {
           transition={{ type: "timing", duration: 400, delay: 80 }}
         >
           <View className="items-center py-12">
-            <FontAwesome name="list" size={32} color="#3f3f46" />
+            <Icon name="list" size={32} color="#3f3f46" />
             <Text className="text-muted mt-3" style={{ fontSize: 14 }}>
               {t("admin.manage.classTypes")}
             </Text>

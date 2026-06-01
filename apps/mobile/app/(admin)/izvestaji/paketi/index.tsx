@@ -26,7 +26,7 @@ import {
   View,
 } from "react-native";
 import { router } from "expo-router";
-import Feather from "@expo/vector-icons/Feather";
+import { Icon } from "@/components/ui/icon";
 import { MotiView } from "@/components/ui/styled";
 import { GlassCard } from "@/components/ui/glass-card";
 import { SegmentedControl } from "@/components/ui/segmented-control";
@@ -393,7 +393,7 @@ export default function IzvestajiPaketi() {
             <GlassCard size="md">
               <View className="flex-row items-center gap-3">
                 <View className="items-center justify-center w-10 h-10 rounded-full bg-accent-soft">
-                  <Feather name="users" size={16} color={tokens.accent} />
+                  <Icon name="users" size={16} color={tokens.accent} />
                 </View>
                 <Text
                   className="flex-1 text-foreground font-body-semibold"
@@ -401,7 +401,7 @@ export default function IzvestajiPaketi() {
                 >
                   {t("admin.izvestaji.paketi.activeAssignmentsLink")}
                 </Text>
-                <Feather name="chevron-right" size={16} color={tokens.faint} />
+                <Icon name="chevron-right" size={16} color={tokens.faint} />
               </View>
             </GlassCard>
           </Pressable>

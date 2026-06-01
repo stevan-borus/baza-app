@@ -3,7 +3,7 @@
  */
 
 import { useMutation } from "@tanstack/react-query";
-import Feather from "@expo/vector-icons/Feather";
+import { Icon } from "@/components/ui/icon";
 import { Link, useRouter, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -105,7 +105,7 @@ export default function AcceptInviteScreen() {
       <AuthBackground showBack>
         <View className="flex-1 items-center justify-center gap-4">
           <View className="w-16 h-16 rounded-full bg-danger-soft border border-danger items-center justify-center">
-            <Feather name="alert-triangle" size={24} color="#dc2626" />
+            <Icon name="alert-triangle" size={24} color="#dc2626" />
           </View>
           <Text
             className="font-body-semibold text-foreground text-center"

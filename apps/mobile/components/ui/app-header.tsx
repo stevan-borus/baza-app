@@ -7,8 +7,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
-import FontAwesome from "@expo/vector-icons/FontAwesome";
-import Feather from "@expo/vector-icons/Feather";
+import { Icon, type IconName } from "@/components/ui/icon";
 import { useRouter } from "expo-router";
 import { useThemeTokens } from "./tokens";
 import { useThemePreference } from "@/lib/theme-preference";
@@ -104,48 +103,25 @@ export function BackButton() {
       accessibilityRole="button"
       accessibilityLabel="Go back"
     >
-      <Feather name="chevron-left" size={26} color={tokens.foreground} />
+      <Icon name="chevron-left" size={26} color={tokens.foreground} />
     </Pressable>
   );
 }
 
 /**
- * Right-side icon button — ink on bone, thin Feather glyphs.
+ * Right-side icon button — ink on bone, thin glyphs.
  */
-type FeatherName = React.ComponentProps<typeof Feather>["name"];
-type FontAwesomeName = React.ComponentProps<typeof FontAwesome>["name"];
-
-const FA_TO_FEATHER: Partial<Record<FontAwesomeName, FeatherName>> = {
-  plus: "plus",
-  cog: "settings",
-  pencil: "edit-2",
-  trash: "trash-2",
-  search: "search",
-  filter: "filter",
-  bell: "bell",
-  envelope: "mail",
-  calendar: "calendar",
-  user: "user",
-  users: "users",
-  archive: "archive",
-  "credit-card": "credit-card",
-  "bar-chart": "bar-chart-2",
-  "chevron-left": "chevron-left",
-  "chevron-right": "chevron-right",
-};
-
 export function HeaderIconButton({
   icon,
   onPress,
   accessibilityLabel,
   testID,
 }: {
-  icon: FontAwesomeName;
+  icon: IconName;
   onPress: () => void;
   accessibilityLabel: string;
   testID?: string;
 }) {
-  const featherName = FA_TO_FEATHER[icon];
   const tokens = useThemeTokens();
   return (
     <Pressable
@@ -157,11 +133,7 @@ export function HeaderIconButton({
       accessibilityLabel={accessibilityLabel}
       testID={testID}
     >
-      {featherName ? (
-        <Feather name={featherName} size={22} color={tokens.foreground} />
-      ) : (
-        <FontAwesome name={icon} size={20} color={tokens.foreground} />
-      )}
+      <Icon name={icon} size={22} color={tokens.foreground} />
     </Pressable>
   );
 }

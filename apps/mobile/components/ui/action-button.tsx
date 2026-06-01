@@ -1,6 +1,6 @@
 import React from "react";
 import { TouchableOpacity, View, Text } from "react-native";
-import FontAwesome from "@expo/vector-icons/FontAwesome";
+import { Icon, type IconName } from "@/components/ui/icon";
 import { useThemeTokens } from "./tokens";
 
 /** Compact action row -- icon + label, used for secondary actions. */
@@ -11,7 +11,7 @@ export function ActionButton({
   variant = "default",
   disabled,
 }: {
-  icon?: React.ComponentProps<typeof FontAwesome>["name"];
+  icon?: IconName;
   label: string;
   onPress: () => void;
   variant?: "default" | "danger";
@@ -35,8 +35,8 @@ export function ActionButton({
           variant === "danger" ? "bg-danger-soft" : "bg-glass",
         ].join(" ")}
       >
-        {showIcon ? (
-          <FontAwesome
+        {showIcon && icon ? (
+          <Icon
             name={icon}
             size={14}
             color={variant === "danger" ? tokens.danger : tokens.foreground}

@@ -11,7 +11,7 @@ import { Text, View } from "react-native";
 import { MotiView } from "@/components/ui/styled";
 import dayjs from "dayjs";
 import { useTranslation } from "react-i18next";
-import FontAwesome from "@expo/vector-icons/FontAwesome";
+import { Icon } from "@/components/ui/icon";
 import * as Haptics from "expo-haptics";
 import { AppSheet } from "@/components/ui/sheet";
 import { HeroCard } from "@/components/ui/hero-card";
@@ -19,6 +19,7 @@ import { GlassCard } from "@/components/ui/glass-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { MetricRow } from "@/components/ui/metric-row";
+import { useThemeTokens } from "@/components/ui/tokens";
 import type { AvailabilitySession } from "@baza/types";
 
 type BookingStep = "idle" | "confirmBook" | "confirmCancel" | "success" | "error";
@@ -51,6 +52,7 @@ export function BookingSheet({
   errorCode,
 }: Props) {
   const { t, i18n } = useTranslation();
+  const tokens = useThemeTokens();
   const lang = i18n.language === "en" ? "en" : "sr";
   const [step, setStep] = useState<BookingStep>("idle");
 
@@ -62,6 +64,10 @@ export function BookingSheet({
   const isFull = !!session && session.availableSlots <= 0;
   const hasWaitlist = !!session && session.waitlistCount > 0;
   const isBookedByMe = !!session?.isBookedByMe;
+  // A session that has already started/passed can't be booked. The server
+  // rejects it too (SESSION_IN_PAST) — this just hides the CTA up front.
+  const isPast =
+    !!session && dayjs(session.startsAt).valueOf() <= dayjs().valueOf();
   // Success / error state is owned by the parent (driven by the mutation
   // result), not by local UI state — so it doesn't need a useEffect to sync.
   // When either is present, the buttons area is replaced with the
@@ -84,7 +90,7 @@ export function BookingSheet({
             animate={{ opacity: 1, translateY: 0 }}
             transition={{ type: "timing", duration: 250 }}
           >
-            <HeroCard tone="accent">
+            <HeroCard tone="default">
               <View className="gap-2">
                 <View className="flex-row items-center gap-2">
                   <View
@@ -139,55 +145,26 @@ export function BookingSheet({
                 value={session.roomName ?? "—"}
                 valueTestID="booking-detail-room"
                 icon={
-                  <FontAwesome
-                    name="map-marker"
-                    size={14}
-                    color="rgba(255,255,255,0.5)"
-                  />
+                  <Icon name="map-marker" size={15} color={tokens.faint} />
                 }
               />
               <MetricRow
                 label={t("client.calendar.trainer")}
                 value={session.trainerName ?? "—"}
                 valueTestID="booking-detail-trainer"
-                icon={
-                  <FontAwesome
-                    name="user"
-                    size={14}
-                    color="rgba(255,255,255,0.5)"
-                  />
-                }
+                icon={<Icon name="user" size={15} color={tokens.faint} />}
               />
               <MetricRow
-                label={t("client.dayView.duration", { minutes: durationMin })
-                  .replace(String(durationMin), "")
-                  .trim()}
+                label={t("client.dayView.durationLabel")}
                 value={`${durationMin} min`}
                 valueTestID="booking-detail-duration"
-                icon={
-                  <FontAwesome
-                    name="clock-o"
-                    size={14}
-                    color="rgba(255,255,255,0.5)"
-                  />
-                }
+                icon={<Icon name="clock-o" size={15} color={tokens.faint} />}
               />
               <MetricRow
-                label={t("client.dayView.participants", {
-                  count: session.bookedCount,
-                  capacity: session.capacity,
-                })
-                  .split(" ")[0]
-                  .replace(":", "")}
+                label={t("client.dayView.participantsLabel")}
                 value={`${session.bookedCount} / ${session.capacity}`}
                 valueTestID="booking-detail-capacity"
-                icon={
-                  <FontAwesome
-                    name="users"
-                    size={14}
-                    color="rgba(255,255,255,0.5)"
-                  />
-                }
+                icon={<Icon name="users" size={15} color={tokens.faint} />}
               />
             </GlassCard>
           </MotiView>
@@ -201,7 +178,7 @@ export function BookingSheet({
               isBookedByMe ? (
                 <View className="flex-col gap-3">
                   <View className="flex-row items-center justify-center gap-2">
-                    <FontAwesome name="check-circle" size={16} color="#2e5b42" />
+                    <Icon name="check-circle" size={16} color={tokens.accent} />
                     <Text className="font-body-semibold text-accent text-[14px]">
                       {t("client.dayView.alreadyBooked")}
                     </Text>
@@ -217,6 +194,16 @@ export function BookingSheet({
                   >
                     {t("client.calendar.cancel")}
                   </Button>
+                </View>
+              ) : isPast ? (
+                <View
+                  testID="booking-past-state"
+                  className="flex-row items-center justify-center gap-2 py-3 rounded-xl border border-glass-border bg-glass"
+                >
+                  <Icon name="clock-o" size={16} color={tokens.faint} />
+                  <Text className="font-body-semibold text-muted text-[14px]">
+                    {t("client.dayView.sessionPast")}
+                  </Text>
                 </View>
               ) : isFull ? (
                 <Button
@@ -316,10 +303,10 @@ export function BookingSheet({
               })()
             ) : effectiveStep === "success" ? (
               <View className="flex-row items-center justify-center gap-2 py-3">
-                <FontAwesome
+                <Icon
                   name={successState === "CANCELED" ? "info-circle" : "check-circle"}
                   size={18}
-                  color={successState === "CANCELED" ? "#a17d3a" : "#2e5b42"}
+                  color={successState === "CANCELED" ? "#a17d3a" : tokens.accent}
                 />
                 <Text
                   testID="booking-success-message"
@@ -339,11 +326,10 @@ export function BookingSheet({
               </View>
             ) : (
               <View className="flex-row items-start gap-2 px-3 py-3 rounded-xl border border-danger/40 bg-danger-soft">
-                <FontAwesome
+                <Icon
                   name="exclamation-circle"
                   size={18}
-                  color="#dc2626"
-                  style={{ marginTop: 1 }}
+                  color={tokens.danger}
                 />
                 <Text
                   testID="booking-error-message"
@@ -353,7 +339,9 @@ export function BookingSheet({
                     ? t("client.calendar.errorGuardianRequired")
                     : errorCode === "no_package_for_class"
                       ? t("client.calendar.errorNoPackage")
-                      : t("client.calendar.bookingError")}
+                      : errorCode === "SESSION_IN_PAST"
+                        ? t("client.calendar.errorSessionPast")
+                        : t("client.calendar.bookingError")}
                 </Text>
               </View>
             )}

@@ -1,6 +1,5 @@
 import React, { createContext, useCallback, useContext, useMemo, useState } from "react";
-import FontAwesome from "@expo/vector-icons/FontAwesome";
-import Feather from "@expo/vector-icons/Feather";
+import { Icon } from "@/components/ui/icon";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
@@ -145,7 +144,7 @@ function ProfileSheetContent({ open, onOpenChange }: Props) {
                 className="absolute -right-0.5 -bottom-0.5 w-6 h-6 rounded-full bg-foreground items-center justify-center"
                 style={{ borderWidth: 2, borderColor: tokens.background }}
               >
-                <Feather name="camera" size={11} color={tokens.background} />
+                <Icon name="camera" size={11} color={tokens.background} />
               </View>
             </View>
           </Pressable>
@@ -193,7 +192,7 @@ function ProfileSheetContent({ open, onOpenChange }: Props) {
             opacity: signOutMutation.isPending ? 0.5 : 1,
           }}
         >
-          <FontAwesome name="sign-out" size={15} color={tokens.danger} />
+          <Icon name="sign-out" size={15} color={tokens.danger} />
           <Text
             style={{
               color: tokens.danger,

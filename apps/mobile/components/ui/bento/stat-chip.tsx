@@ -1,11 +1,11 @@
 import React from "react";
 import { View, Text } from "react-native";
-import FontAwesome from "@expo/vector-icons/FontAwesome";
+import { Icon, type IconName } from "@/components/ui/icon";
 import { ACCENT } from "../tokens";
 
 type StatChipProps = {
   label: string;
-  icon?: React.ComponentProps<typeof FontAwesome>["name"];
+  icon?: IconName;
   accentColor?: string;
 };
 
@@ -23,7 +23,7 @@ export function BentoStatChip({ label, icon, accentColor }: StatChipProps) {
             justifyContent: "center",
           }}
         >
-          <FontAwesome name={icon} size={18} color="#ffffff" />
+          <Icon name={icon} size={18} color="#ffffff" />
         </View>
       ) : null}
       <Text className="text-xs text-muted font-body-medium flex-1">

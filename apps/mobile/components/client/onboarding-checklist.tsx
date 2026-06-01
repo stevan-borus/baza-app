@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Text, View } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useTranslation } from "react-i18next";
-import FontAwesome from "@expo/vector-icons/FontAwesome";
+import { Icon } from "@/components/ui/icon";
 import { GlassCard } from "@/components/ui/glass-card";
 import { Button } from "@/components/ui/button";
 
@@ -18,7 +18,7 @@ const STORAGE_PREFIX = "baza_onboarding_";
 function CheckRow({ done, label }: { done: boolean; label: string }) {
   return (
     <View className="flex-row items-center gap-3 py-2">
-      <FontAwesome
+      <Icon
         name={done ? "check-circle" : "circle-o"}
         size={20}
         color={done ? "#4ade80" : "#6b7280"}

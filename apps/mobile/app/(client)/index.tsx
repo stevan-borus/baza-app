@@ -990,13 +990,7 @@ export default function HomeStudio() {
         {/* Package */}
         {activePackage ? (
           <View>
-            <SectionRow
-              title={t("client.home.yourPackage")}
-              action={{
-                label: t("client.home.manage"),
-                onPress: () => router.push("/(client)/profile"),
-              }}
-            />
+            <SectionRow title={t("client.home.yourPackage")} />
             <PackageCard
               pkg={activePackage}
               lang={lang}

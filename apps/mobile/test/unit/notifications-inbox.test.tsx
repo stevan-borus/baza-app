@@ -59,8 +59,8 @@ vi.mock("react-native", () => {
 });
 
 // ─── expo vector icons mock ───────────────────────────────────────────────
-vi.mock("@expo/vector-icons/FontAwesome", () => ({
-  default: ({ name }: any) =>
+vi.mock("@/components/ui/icon", () => ({
+  Icon: ({ name }: any) =>
     require("react").createElement("i", { "data-icon": name }),
 }));
 

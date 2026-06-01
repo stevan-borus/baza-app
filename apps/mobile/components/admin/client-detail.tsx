@@ -19,7 +19,7 @@ import { useTranslation } from "react-i18next";
 import { Pressable, ScrollView, Switch, Text, View } from "react-native";
 import { useRouter, type Href } from "expo-router";
 import dayjs from "dayjs";
-import Feather from "@expo/vector-icons/Feather";
+import { Icon, type IconName } from "@/components/ui/icon";
 import { AppSheet } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -565,7 +565,7 @@ export function ClientDetail({ id }: { id: string }) {
           <View className="flex-col gap-5">
             <View className="items-center gap-3 pt-1">
               <View className="w-12 h-12 rounded-full bg-danger-soft items-center justify-center">
-                <Feather name="alert-triangle" size={20} color="#dc2626" />
+                <Icon name="alert-triangle" size={20} color="#dc2626" />
               </View>
               <Text
                 className="text-foreground font-body-bold text-center"
@@ -1012,7 +1012,7 @@ function ActionRow({
   destructive = false,
   testID,
 }: {
-  icon: React.ComponentProps<typeof Feather>["name"];
+  icon: IconName;
   label: string;
   onPress: () => void;
   destructive?: boolean;
@@ -1026,7 +1026,7 @@ function ActionRow({
       android_ripple={null}
       className="flex-row items-center gap-3 py-3.5 active:opacity-70"
     >
-      <Feather
+      <Icon
         name={icon}
         size={18}
         color={destructive ? "#dc2626" : tokens.foreground}
@@ -1042,7 +1042,7 @@ function ActionRow({
         {label}
       </Text>
       {!destructive ? (
-        <Feather name="chevron-right" size={16} color={tokens.faint} />
+        <Icon name="chevron-right" size={16} color={tokens.faint} />
       ) : null}
     </Pressable>
   );
