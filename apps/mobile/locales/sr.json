@@ -509,10 +509,7 @@
       "todaySchedule": "Današnji raspored",
       "weekView": "Nedeljni prikaz",
       "monthView": "Mesečni prikaz",
-      "comingSoon": "uskoro",
-      "classCount_one": "{{count}} termin",
-      "classCount_few": "{{count}} termina",
-      "classCount_other": "{{count}} termina"
+      "comingSoon": "uskoro"
     },
     "client": {
       "legalPanel": "Pravna dokumenta",
@@ -731,6 +728,7 @@
       "loadError": "Nije moguće učitati termin.",
       "bookedClients": "Klijenti rezervisani",
       "noBookings": "Još nema rezervacija.",
+      "waitlistClients": "Klijenti na listi čekanja",
       "healthWithdrawn": "Klijent je povukao saglasnost za zdravstvene podatke.",
       "notesLabel": "Napomena",
       "photoConsentYes": "Foto/video: Da",

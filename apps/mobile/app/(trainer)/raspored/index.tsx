@@ -218,17 +218,10 @@ export default function TrainerSchedule() {
               ) : null}
 
               <View className="px-5">
-                <View className="flex-row items-baseline justify-between pb-3">
+                <View className="pb-3">
                   <CapsLabel size={12} tracking={2.4}>
                     {displayDate.locale(lang).format("dddd, D MMMM").toUpperCase()}
                   </CapsLabel>
-                  {daySessions.length > 0 ? (
-                    <Text className="text-xs text-muted">
-                      {t("admin.dashboard.classCount", {
-                        count: daySessions.length,
-                      })}
-                    </Text>
-                  ) : null}
                 </View>
                 {daySessions.length === 0 ? (
                   <View className="flex-col gap-3">

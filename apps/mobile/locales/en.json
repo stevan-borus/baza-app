@@ -508,9 +508,7 @@
       "todaySchedule": "Today's schedule",
       "weekView": "Week view",
       "monthView": "Month view",
-      "comingSoon": "coming soon",
-      "classCount_one": "{{count}} class",
-      "classCount_other": "{{count}} classes"
+      "comingSoon": "coming soon"
     },
     "client": {
       "legalPanel": "Legal documents",
@@ -728,6 +726,7 @@
       "loadError": "Unable to load session.",
       "bookedClients": "Booked clients",
       "noBookings": "No bookings yet.",
+      "waitlistClients": "Waitlisted clients",
       "healthWithdrawn": "Client withdrew health-data consent.",
       "notesLabel": "Note",
       "photoConsentYes": "Photo/video: Yes",
