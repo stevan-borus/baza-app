@@ -10,6 +10,7 @@
  */
 import React from "react";
 import { type StyleProp, type ViewStyle } from "react-native";
+import { useThemeTokens } from "@/components/ui/tokens";
 import {
   type LucideIcon,
   AlertTriangle,
@@ -148,11 +149,18 @@ export function Icon({
   className,
   testID,
 }: IconProps) {
+  const tokens = useThemeTokens();
   const Glyph = ICONS[name];
+  // Default to the theme foreground when the caller gives neither an explicit
+  // `color` nor a `className` to color the glyph. Lucide otherwise falls back
+  // to `currentColor`, which renders black — invisible on the dark theme.
+  // When a className IS present we leave color undefined so NativeWind's
+  // text-* utility wins.
+  const resolvedColor = color ?? (className ? undefined : tokens.foreground);
   return (
     <Glyph
       size={size}
-      color={color}
+      color={resolvedColor}
       strokeWidth={strokeWidth}
       style={style}
       className={className}
