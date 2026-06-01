@@ -11,15 +11,12 @@ import { Text, View } from "react-native";
 import { MotiView } from "@/components/ui/styled";
 import dayjs from "dayjs";
 import { useTranslation } from "react-i18next";
-import { Icon } from "@/components/ui/icon";
+import { Icon, type IconName } from "@/components/ui/icon";
 import * as Haptics from "expo-haptics";
 import { AppSheet } from "@/components/ui/sheet";
-import { HeroCard } from "@/components/ui/hero-card";
-import { GlassCard } from "@/components/ui/glass-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MetricRow } from "@/components/ui/metric-row";
-import { useThemeTokens } from "@/components/ui/tokens";
+import { useThemeTokens, type ThemeTokens } from "@/components/ui/tokens";
 import type { AvailabilitySession } from "@baza/types";
 
 type BookingStep = "idle" | "confirmBook" | "confirmCancel" | "success" | "error";
@@ -84,89 +81,94 @@ export function BookingSheet({
   return (
     <AppSheet open={!!session} onOpenChange={(v) => !v && handleClose()}>
       {session ? (
-        <View className="flex-col gap-4">
+        <View className="flex-col gap-5">
+          {/* Header — class eyebrow, big time headline, date + availability,
+              sitting directly on the sheet surface (no card chrome). */}
           <MotiView
             from={{ opacity: 0, translateY: 8 }}
             animate={{ opacity: 1, translateY: 0 }}
             transition={{ type: "timing", duration: 250 }}
           >
-            <HeroCard tone="default">
-              <View className="gap-2">
-                <View className="flex-row items-center gap-2">
-                  <View
-                    className="w-2 h-2 rounded-full"
-                    style={{
-                      backgroundColor:
-                        classTypeColor[session.classTypeName] ?? "#2e5b42",
-                    }}
-                  />
-                  <Text className="text-xs font-body-semibold text-muted uppercase tracking-wider">
-                    {session.classTypeName}
-                  </Text>
-                </View>
-                <Text
-                  className="text-foreground font-body-bold"
-                  style={{ fontSize: 28, letterSpacing: -0.5 }}
-                >
-                  {dayjs(session.startsAt).format("HH:mm")} –{" "}
-                  {dayjs(session.endsAt).format("HH:mm")}
+            <View className="gap-1.5">
+              <View className="flex-row items-center gap-2">
+                <View
+                  className="w-2 h-2 rounded-full"
+                  style={{
+                    backgroundColor:
+                      classTypeColor[session.classTypeName] ?? "#2e5b42",
+                  }}
+                />
+                <Text className="text-xs font-body-semibold text-muted uppercase tracking-wider">
+                  {session.classTypeName}
                 </Text>
+              </View>
+              <Text
+                className="text-foreground font-display"
+                style={{ fontSize: 34, letterSpacing: -0.5, lineHeight: 38 }}
+              >
+                {dayjs(session.startsAt).format("HH:mm")} –{" "}
+                {dayjs(session.endsAt).format("HH:mm")}
+              </Text>
+              <View className="flex-row items-center gap-2.5 pt-0.5">
                 <Text className="text-muted text-sm">
                   {dayjs(session.startsAt).locale(lang).format("dddd, D MMMM")}
                 </Text>
-                <View className="flex-row gap-2 pt-1">
-                  <Badge status={isFull ? "danger" : "success"}>
-                    {isFull
-                      ? t("client.calendar.full")
-                      : t("client.calendar.availableSlots", {
-                          count: session.availableSlots,
-                        })}
-                  </Badge>
-                  {hasWaitlist ? (
-                    <Badge status="warning">
-                      {t("client.calendar.waitlistShort", {
-                        count: session.waitlistCount,
+                <View className="w-1 h-1 rounded-full bg-glass-border" />
+                <Badge status={isFull ? "danger" : "success"}>
+                  {isFull
+                    ? t("client.calendar.full")
+                    : t("client.calendar.availableSlots", {
+                        count: session.availableSlots,
                       })}
-                    </Badge>
-                  ) : null}
-                </View>
+                </Badge>
+                {hasWaitlist ? (
+                  <Badge status="warning">
+                    {t("client.calendar.waitlistShort", {
+                      count: session.waitlistCount,
+                    })}
+                  </Badge>
+                ) : null}
               </View>
-            </HeroCard>
+            </View>
           </MotiView>
 
+          {/* Details — hairline-separated rows, no enclosing box. */}
           <MotiView
             from={{ opacity: 0, translateY: 8 }}
             animate={{ opacity: 1, translateY: 0 }}
             transition={{ type: "timing", duration: 250, delay: 80 }}
           >
-            <GlassCard>
-              <MetricRow
+            <View className="border-t border-glass-border">
+              <DetailRow
+                icon="map-marker"
                 label={t("client.calendar.room")}
                 value={session.roomName ?? "—"}
                 valueTestID="booking-detail-room"
-                icon={
-                  <Icon name="map-marker" size={15} color={tokens.faint} />
-                }
+                tokens={tokens}
               />
-              <MetricRow
+              <DetailRow
+                icon="user"
                 label={t("client.calendar.trainer")}
                 value={session.trainerName ?? "—"}
                 valueTestID="booking-detail-trainer"
-                icon={<Icon name="user" size={15} color={tokens.faint} />}
+                tokens={tokens}
               />
-              <MetricRow
+              <DetailRow
+                icon="clock-o"
                 label={t("client.dayView.durationLabel")}
                 value={`${durationMin} min`}
                 valueTestID="booking-detail-duration"
-                icon={<Icon name="clock-o" size={15} color={tokens.faint} />}
+                tokens={tokens}
               />
-              <MetricRow
+              <DetailRow
+                icon="users"
                 label={t("client.dayView.participantsLabel")}
                 value={`${session.bookedCount} / ${session.capacity}`}
                 valueTestID="booking-detail-capacity"
-                icon={<Icon name="users" size={15} color={tokens.faint} />}
+                tokens={tokens}
+                last
               />
-            </GlassCard>
+            </View>
           </MotiView>
 
           <MotiView
@@ -196,12 +198,14 @@ export function BookingSheet({
                   </Button>
                 </View>
               ) : isPast ? (
+                // No action is possible, so this is plain status text — not a
+                // button-shaped element that invites a tap.
                 <View
                   testID="booking-past-state"
-                  className="flex-row items-center justify-center gap-2 py-3 rounded-xl border border-glass-border bg-glass"
+                  className="flex-row items-center justify-center gap-2 py-2"
                 >
-                  <Icon name="clock-o" size={16} color={tokens.faint} />
-                  <Text className="font-body-semibold text-muted text-[14px]">
+                  <Icon name="clock-o" size={14} color={tokens.faint} />
+                  <Text className="text-muted text-[13px]">
                     {t("client.dayView.sessionPast")}
                   </Text>
                 </View>
@@ -349,5 +353,45 @@ export function BookingSheet({
         </View>
       ) : null}
     </AppSheet>
+  );
+}
+
+/**
+ * One key/value line in the flat details list — leading icon + label on the
+ * left, value on the right, separated from the next row by a hairline. No
+ * enclosing card; the rows sit directly on the sheet surface.
+ */
+function DetailRow({
+  icon,
+  label,
+  value,
+  valueTestID,
+  tokens,
+  last,
+}: {
+  icon: IconName;
+  label: string;
+  value: string;
+  valueTestID?: string;
+  tokens: ThemeTokens;
+  last?: boolean;
+}) {
+  return (
+    <View
+      className={`flex-row items-center justify-between py-3.5 ${
+        last ? "" : "border-b border-glass-border"
+      }`}
+    >
+      <View className="flex-row items-center gap-3">
+        <Icon name={icon} size={15} color={tokens.faint} />
+        <Text className="text-sm text-muted">{label}</Text>
+      </View>
+      <Text
+        testID={valueTestID}
+        className="font-body-medium text-sm text-foreground"
+      >
+        {value}
+      </Text>
+    </View>
   );
 }

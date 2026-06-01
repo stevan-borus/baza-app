@@ -51,6 +51,15 @@ const classTypeColors: Record<string, string> = {
   HIIT: "#f87171",
 };
 
+/** Low-opacity wash of a #rrggbb class color for the block background. */
+function tintBg(hex: string): string {
+  const h = hex.replace("#", "");
+  const r = parseInt(h.slice(0, 2), 16);
+  const g = parseInt(h.slice(2, 4), 16);
+  const b = parseInt(h.slice(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, 0.1)`;
+}
+
 type Props = {
   date: string;
   sessions: SessionBlock[];
@@ -122,59 +131,43 @@ export function TimeAxisDayView({
             const { top, height } = sessionBlockPosition(s);
             const color = classTypeColors[s.classTypeName] ?? "#2e5b42";
             const isFull = s.bookedCount >= s.capacity;
-            // Hide the secondary line on very short (clamped) blocks so the
-            // title doesn't get clipped mid-character.
-            const compact = height < 48;
+            // On short (clamped) blocks the room subtitle is dropped so the
+            // class name never gets clipped mid-line.
+            const compact = height < 44;
             return (
               <Pressable
                 key={s.id}
                 testID={`session-block-${s.id}`}
                 onPress={() => onSessionPress(s)}
-                className="absolute left-0 right-0 active:opacity-80"
-                style={{ top, height, paddingBottom: 4 }}
+                // Small right inset so the block reads as a contained card,
+                // not something clipped at the screen edge. The hour rail
+                // already shows the start time and the block's position +
+                // height communicate the span, so we don't repeat the time
+                // text inside — just the class and room.
+                className="absolute left-0 active:opacity-80"
+                style={{ top, height, right: 4, paddingBottom: 3 }}
               >
                 <View
-                  className="flex-1 rounded-2xl overflow-hidden border border-glass-border"
+                  className="flex-1 rounded-xl overflow-hidden justify-center"
                   style={{
                     borderLeftWidth: 3,
                     borderLeftColor: color,
+                    backgroundColor: tintBg(color),
                   }}
                 >
-                  {/* Class-type-tinted wash behind the content. */}
-                  <View
-                    style={{
-                      position: "absolute",
-                      top: 0,
-                      left: 0,
-                      right: 0,
-                      bottom: 0,
-                      backgroundColor: color,
-                      opacity: 0.08,
-                    }}
-                  />
-                  <View
-                    className={compact ? "px-3 justify-center flex-1" : "px-3 py-2 gap-1"}
-                  >
+                  <View className="px-3 gap-0.5">
                     <View className="flex-row items-center gap-2">
-                      <View
-                        className="w-1.5 h-1.5 rounded-full"
-                        style={{ backgroundColor: color }}
-                      />
                       <Text
                         className="font-body-semibold text-sm text-foreground flex-1"
                         numberOfLines={1}
                       >
                         {s.classTypeName}
                       </Text>
-                      {isFull ? (
-                        <Badge status="danger">Full</Badge>
-                      ) : null}
+                      {isFull ? <Badge status="danger">Full</Badge> : null}
                     </View>
-                    {compact ? null : (
+                    {compact || !s.roomName ? null : (
                       <Text className="text-xs text-muted" numberOfLines={1}>
-                        {dayjs(s.startsAt).format("HH:mm")}–
-                        {dayjs(s.endsAt).format("HH:mm")}
-                        {s.roomName ? ` · ${s.roomName}` : ""}
+                        {s.roomName}
                       </Text>
                     )}
                   </View>
