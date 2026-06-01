@@ -19,6 +19,7 @@ import { StudioWeekStrip, CapsLabel } from "@/components/ui/studio";
 import { MonthView } from "@/components/ui/month-view";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { ScheduleRow } from "@/components/ui/schedule-row";
+import { useThemeTokens } from "@/components/ui/tokens";
 import {
   useBookingSheet,
   ClientBookingSheet,
@@ -41,6 +42,7 @@ function monthKeyFromDate(d: dayjs.Dayjs) {
 export default function ClientCalendar() {
   const { t, i18n } = useTranslation();
   const lang = i18n.language === "en" ? "en" : "sr";
+  const tokens = useThemeTokens();
   const bottomPad = useTabBarBottomPadding(24);
   // Optional ?date=YYYY-MM-DD deep-link from the overview: tapping a session
   // there should open the calendar focused on THAT session's day, not today.
@@ -242,20 +244,44 @@ export default function ClientCalendar() {
           ) : (
             <ScrollView
               style={{ flex: 1 }}
-              contentContainerStyle={{ paddingTop: 4, paddingBottom: bottomPad }}
+              contentContainerStyle={{
+                paddingHorizontal: 16,
+                paddingTop: 4,
+                paddingBottom: bottomPad,
+              }}
               showsVerticalScrollIndicator={false}
             >
-              {daySessions.map((s, i) => (
-                <View key={s.id}>
-                  <ScheduleRow
-                    session={s}
-                    onPress={() => handleSessionPress(s)}
-                  />
-                  {i < daySessions.length - 1 ? (
-                    <View className="h-px bg-glass-border mx-5" />
-                  ) : null}
-                </View>
-              ))}
+              {/* Rows sit in one rounded surface card — matches the overview
+                  "this week" list so the calendar day view reads consistently
+                  (a lone row floating on bare bone looked unanchored). */}
+              <View
+                style={{
+                  backgroundColor: tokens.surface,
+                  borderRadius: 8,
+                  overflow: "hidden",
+                }}
+              >
+                {daySessions.map((s, i) => (
+                  <View key={s.id}>
+                    <View style={{ marginHorizontal: -4 }}>
+                      <ScheduleRow
+                        session={s}
+                        onPress={() => handleSessionPress(s)}
+                      />
+                    </View>
+                    {i < daySessions.length - 1 ? (
+                      <View
+                        style={{
+                          height: 1,
+                          backgroundColor: tokens.glassBorder,
+                          marginLeft: 20 + 64 + 14,
+                          marginRight: 20,
+                        }}
+                      />
+                    ) : null}
+                  </View>
+                ))}
+              </View>
             </ScrollView>
           )}
         </>

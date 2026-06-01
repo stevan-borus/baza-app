@@ -21,10 +21,22 @@ const PHOTO_REFORMER = require("@/assets/studio/reformer-1.webp");
 
 const SCHEDULE_PHOTOS = [PHOTO_RINGS, PHOTO_PLANK, PHOTO_REFORMER, PHOTO_TRIPLE];
 
-/** Stable photo for a session id, so the same class always shows the same photo. */
-export function photoForSessionId(id: string) {
+// One photo per class type, so every Reformer session shows the same image
+// (not a random per-session photo). Known class types are pinned; anything
+// unmapped falls back to a stable hash of the name so it's still consistent.
+const PHOTO_BY_CLASS_TYPE: Record<string, number> = {
+  "Reformer pilates": PHOTO_REFORMER,
+  "Energy pilates": PHOTO_PLANK,
+  "Golden age pilates": PHOTO_RINGS,
+  "Moms&Minis": PHOTO_TRIPLE,
+};
+
+/** Stable photo for a class type, so all sessions of that class share one image. */
+export function photoForClassType(name: string) {
+  const pinned = PHOTO_BY_CLASS_TYPE[name];
+  if (pinned) return pinned;
   let h = 0;
-  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
   return SCHEDULE_PHOTOS[h % SCHEDULE_PHOTOS.length];
 }
 
@@ -52,7 +64,7 @@ export function ScheduleRow({
   const end = dayjs(session.endsAt);
   const full = session.availableSlots === 0;
   const bookedByMe = !!session.isBookedByMe;
-  const photo = photoForSessionId(session.id);
+  const photo = photoForClassType(session.classTypeName);
 
   return (
     <Pressable onPress={onPress} testID={`schedule-row-${session.id}`}>
