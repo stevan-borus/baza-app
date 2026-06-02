@@ -36,62 +36,88 @@ const DAY_MS = 24 * HOUR_MS;
 const WEEK_MS = 7 * DAY_MS;
 
 const USERS = {
-  admin: { email: "admin.e2e@example.test", fullName: "Admin E2E", role: UserRole.ADMIN },
+  admin: {
+    email: "admin.e2e@example.test",
+    firstName: "Admin",
+    lastName: "E2E",
+    role: UserRole.ADMIN,
+  },
   trainerReformer: {
     email: "trainer.reformer@e2e.test",
-    fullName: "Trainer Reformer Lead",
+    firstName: "Trainer",
+    lastName: "Reformer Lead",
     role: UserRole.TRAINER,
   },
   trainerEnergy: {
     email: "trainer.energy@e2e.test",
-    fullName: "Trainer Energy Lead",
+    firstName: "Trainer",
+    lastName: "Energy Lead",
     role: UserRole.TRAINER,
   },
   activeReformer: {
     email: "client.active.reformer@e2e.test",
-    fullName: "Active Reformer Client",
+    firstName: "Active",
+    lastName: "Reformer Client",
     role: UserRole.CLIENT,
     dateOfBirth: "1990-05-11", // matches anchor day — birthday fixture for PR3
   },
   activeEnergy: {
     email: "client.active.energy@e2e.test",
-    fullName: "Active Energy Client",
+    firstName: "Active",
+    lastName: "Energy Client",
     role: UserRole.CLIENT,
     dateOfBirth: "1985-08-22", // non-anchor-day birthday
   },
   expired: {
     email: "client.expired@e2e.test",
-    fullName: "Expired Pack Client",
+    firstName: "Expired",
+    lastName: "Pack Client",
     role: UserRole.CLIENT,
     dateOfBirth: "1988-03-14", // adult; needed so consent gate doesn't crash
   },
   paused: {
     email: "client.paused@e2e.test",
-    fullName: "Paused Pack Client",
+    firstName: "Paused",
+    lastName: "Pack Client",
     role: UserRole.CLIENT,
     dateOfBirth: "1992-07-20", // adult
   },
   future: {
     email: "client.future@e2e.test",
-    fullName: "Future Pack Client",
+    firstName: "Future",
+    lastName: "Pack Client",
     role: UserRole.CLIENT,
     dateOfBirth: "1995-11-03", // adult
   },
   empty: {
     email: "client.empty@e2e.test",
-    fullName: "Empty Pack Client",
+    firstName: "Empty",
+    lastName: "Pack Client",
     role: UserRole.CLIENT,
     dateOfBirth: "1991-01-30", // adult
   },
   unconsented: {
     email: "client.unconsented@e2e.test",
-    fullName: "Unconsented Client",
+    firstName: "Unconsented",
+    lastName: "Client",
     role: UserRole.CLIENT,
     dateOfBirth: "1995-06-15", // adult — dedicated gate-test subject
   },
+  // Multi-part FIRST name. The old greeting heuristic
+  // (fullName.split(/\s+/)[0]) would have shown "Ana"; reading firstName
+  // directly the home greeting must render the full "Ana Maria". Anchors
+  // the bug fix this PR exists for. No package (modeled on `empty`).
+  multiPartName: {
+    email: "client.multipart-name@e2e.test",
+    firstName: "Ana Maria",
+    lastName: "Petrović",
+    role: UserRole.CLIENT,
+    dateOfBirth: "1993-09-12", // adult
+  },
   minorBooking: {
     email: "client.minor-booking@e2e.test",
-    fullName: "Minor Booking Test",
+    firstName: "Minor",
+    lastName: "Booking Test",
     role: UserRole.CLIENT,
     // 12-year-old at the anchor instant — used by booking-guardian-gate
     // spec. Consent records (incl. waiver_minor) are pre-seeded so the
@@ -184,16 +210,20 @@ async function wipe() {
 }
 
 async function seedUser(
-  input: { email: string; fullName: string; role: UserRole; dateOfBirth?: string },
+  input: {
+    email: string;
+    firstName: string;
+    lastName: string;
+    role: UserRole;
+    dateOfBirth?: string;
+  },
   hash: string,
 ) {
-  const [firstName, ...rest] = input.fullName.split(" ");
-  const lastName = rest.join(" ") || "Test";
   const user = await prisma.user.create({
     data: {
       email: input.email,
-      firstName,
-      lastName,
+      firstName: input.firstName,
+      lastName: input.lastName,
       role: input.role,
       isActive: true,
       passwordHash: hash,
@@ -735,6 +765,7 @@ async function seedConsentRecords(opts: {
     "paused",
     "future",
     "empty",
+    "multiPartName",
   ];
   // Minor user pre-onboarded for the booking-guardian-gate spec. Seeded
   // with waiver_minor so the legal gate doesn't intercept; the spec sets
