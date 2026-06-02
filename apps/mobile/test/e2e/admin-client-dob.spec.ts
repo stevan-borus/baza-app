@@ -1,5 +1,6 @@
 import { test, expect, type Page } from "./helpers/fixtures";
 import { disconnect, resetAndSeed } from "./helpers/db";
+import { pickInviteDob } from "./helpers/forms";
 
 const SEED_PASSWORD = "Password123!";
 
@@ -63,21 +64,20 @@ test.describe("admin client DOB (Serbian)", () => {
 
     const inviteEmail = `e2e-dob-${Date.now()}@test.local`;
     await page.getByTestId("invite-create-email-input").fill(inviteEmail);
-    await page.getByTestId("invite-create-name-input").fill("E2E DOB Client");
+    await page.getByTestId("invite-create-name-input").fill("E2E DOB");
+    await page.getByTestId("invite-create-lastname-input").fill("Client");
 
     // Tap the DOB field — WebDateTimeSheet mounts inside an AppSheet
     // (gorhom BottomSheetModal, no ARIA `dialog` role). Assert the
-    // calendar testID is visible instead. Don't drive day-cell clicks
-    // here — that path is brittle on web and is covered at the API
-    // level by the integration suite.
+    // calendar testID is visible, then pick a valid day: DOB is REQUIRED to
+    // enable the invite submit (consent gate, #32), so the old "cancel and
+    // submit without a DOB" flow no longer reflects the form.
     await page.getByTestId("invite-create-dob-input").click();
     await expect(
       page.locator('[data-testid="date-time-picker-calendar"]'),
     ).toBeVisible({ timeout: 5_000 });
 
-    // Close the picker without selecting — submit without a DOB. The
-    // invite must still go out cleanly (DOB is optional on this form).
-    await page.getByTestId("date-time-picker-cancel").click();
+    await pickInviteDob(page);
 
     await page.getByTestId("invite-create-submit-button").click();
 

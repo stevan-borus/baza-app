@@ -150,7 +150,11 @@ function ProfileSheetContent({ open, onOpenChange }: Props) {
             </View>
           </Pressable>
           <View className="flex-1">
-            <Text className="text-foreground font-body-semibold" style={{ fontSize: 16 }}>
+            <Text
+              testID="profile-sheet-display-name"
+              className="text-foreground font-body-semibold"
+              style={{ fontSize: 16 }}
+            >
               {displayName(meQuery.data?.user) || t("client.profileTab.account")}
             </Text>
             <Text className="text-muted" style={{ fontSize: 13 }}>

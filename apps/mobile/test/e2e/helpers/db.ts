@@ -50,7 +50,12 @@ export async function resetAndSeed() {
 
 type CreateInviteInput = {
   email: string;
-  fullName: string;
+  /** Convenience: split on the first space into first/last. */
+  fullName?: string;
+  /** Explicit first/last — overrides `fullName`. Use when the first name is
+   *  itself multi-part (e.g. "Ana Maria"), which a space-split can't express. */
+  firstName?: string;
+  lastName?: string;
   expiresAt?: Date;
   status?: "PENDING" | "COMPLETED" | "EXPIRED" | "REVOKED";
 };
@@ -64,8 +69,9 @@ export async function createInvite(input: CreateInviteInput) {
   const tokenHash = hashToken(rawToken);
   const expiresAt =
     input.expiresAt ?? new Date(nowMs() + 24 * 60 * 60 * 1000);
-  const [inviteFirstName, ...inviteRest] = input.fullName.split(" ");
-  const inviteLastName = inviteRest.join(" ") || "Test";
+  const [splitFirst, ...splitRest] = (input.fullName ?? "").split(" ");
+  const inviteFirstName = input.firstName ?? splitFirst;
+  const inviteLastName = input.lastName ?? (splitRest.join(" ") || "Test");
   const invite = await db().userInvite.create({
     data: {
       email: input.email.toLowerCase(),

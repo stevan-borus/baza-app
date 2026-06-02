@@ -183,6 +183,7 @@ export default function ClientProfile() {
 
             <View className="items-center gap-1">
               <Text
+                testID="profile-display-name"
                 className="font-body-bold text-foreground text-center"
                 style={{ fontSize: 26, letterSpacing: -0.5, textTransform: "capitalize" }}
                 numberOfLines={1}
