@@ -108,12 +108,13 @@ export function ClientDetail({ id }: { id: string }) {
   const [showDelete, setShowDelete] = useState(false);
 
   const [editForm, setEditForm] = useState<{
-    fullName: string;
+    firstName: string;
+    lastName: string;
     phone: string;
     notes: string;
     isActive: boolean;
     dateOfBirth: Date | null;
-  }>({ fullName: "", phone: "", notes: "", isActive: true, dateOfBirth: null });
+  }>({ firstName: "", lastName: "", phone: "", notes: "", isActive: true, dateOfBirth: null });
   const [pauseForm, setPauseForm] = useState({ startsAt: "", endsAt: "", reason: "" });
 
   const clientQuery = useQuery(clientsQueries.byId(id));
@@ -165,7 +166,8 @@ export function ClientDetail({ id }: { id: string }) {
   function openEdit() {
     if (!client) return;
     setEditForm({
-      fullName: client.user.fullName,
+      firstName: client.user.firstName,
+      lastName: client.user.lastName,
       phone: client.user.phone ?? "",
       notes: client.notes ?? "",
       isActive: client.user.isActive,
@@ -407,11 +409,17 @@ export function ClientDetail({ id }: { id: string }) {
           >
             {t("admin.clients.sheetEdit")}
           </Text>
-          <SectionLabel>{t("admin.clients.placeholderFullName")}</SectionLabel>
+          <SectionLabel>{t("admin.clients.placeholderFirstName")}</SectionLabel>
           <Input
-            placeholder={t("admin.clients.placeholderFullName")}
-            value={editForm.fullName}
-            onChangeText={(v) => setEditForm((s) => ({ ...s, fullName: v }))}
+            placeholder={t("admin.clients.placeholderFirstName")}
+            value={editForm.firstName}
+            onChangeText={(v) => setEditForm((s) => ({ ...s, firstName: v }))}
+          />
+          <SectionLabel>{t("admin.clients.placeholderLastName")}</SectionLabel>
+          <Input
+            placeholder={t("admin.clients.placeholderLastName")}
+            value={editForm.lastName}
+            onChangeText={(v) => setEditForm((s) => ({ ...s, lastName: v }))}
           />
           <SectionLabel>{t("admin.clients.placeholderPhoneRequired")}</SectionLabel>
           <Input
@@ -468,7 +476,8 @@ export function ClientDetail({ id }: { id: string }) {
               if (!client) return;
               updateClientMutation.mutate({
                 id: client.user.id,
-                fullName: editForm.fullName,
+                firstName: editForm.firstName,
+                lastName: editForm.lastName,
                 phone: editForm.phone || undefined,
                 notes: editForm.notes || undefined,
                 isActive: editForm.isActive,

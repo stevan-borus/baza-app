@@ -559,6 +559,8 @@
       "sheetNewClient": "New client",
       "placeholderEmail": "Email",
       "placeholderFullName": "Full name",
+      "placeholderFirstName": "First name",
+      "placeholderLastName": "Last name",
       "placeholderPhone": "Phone (optional)",
       "createClient": "Create client",
       "createError": "Creating client failed.",

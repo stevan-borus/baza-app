@@ -225,12 +225,13 @@ export default function AdminClients() {
   // ── Form state ────────────────────────────────────────────────────────────
   const [inviteForm, setInviteForm] = useState<{
     email: string;
-    fullName: string;
+    firstName: string;
+    lastName: string;
     phone: string;
     dateOfBirth: Date | null;
-  }>({ email: "", fullName: "", phone: "", dateOfBirth: null });
-  const [clientForm, setClientForm] = useState({ email: "", fullName: "", phone: "" });
-  const [editForm, setEditForm] = useState({ fullName: "", phone: "", notes: "", isActive: true });
+  }>({ email: "", firstName: "", lastName: "", phone: "", dateOfBirth: null });
+  const [clientForm, setClientForm] = useState({ email: "", firstName: "", lastName: "", phone: "" });
+  const [editForm, setEditForm] = useState({ firstName: "", lastName: "", phone: "", notes: "", isActive: true });
   const [pauseForm, setPauseForm] = useState({ startsAt: "", endsAt: "", reason: "" });
 
   // ── Queries ───────────────────────────────────────────────────────────────
@@ -249,7 +250,7 @@ export default function AdminClients() {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["invites"] });
       setShowInviteForm(false);
-      setInviteForm({ email: "", fullName: "", phone: "", dateOfBirth: null });
+      setInviteForm({ email: "", firstName: "", lastName: "", phone: "", dateOfBirth: null });
     },
   });
   const revokeMutation = useMutation({
@@ -268,7 +269,7 @@ export default function AdminClients() {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["clients"] });
       setShowCreateClient(false);
-      setClientForm({ email: "", fullName: "", phone: "" });
+      setClientForm({ email: "", firstName: "", lastName: "", phone: "" });
     },
   });
   const updateClientMutation = useMutation({
@@ -597,9 +598,14 @@ export default function AdminClients() {
               onChangeText={(v) => setClientForm((s) => ({ ...s, email: v }))}
             />
             <Input
-              placeholder={t("admin.clients.placeholderFullName")}
-              value={clientForm.fullName}
-              onChangeText={(v) => setClientForm((s) => ({ ...s, fullName: v }))}
+              placeholder={t("admin.clients.placeholderFirstName")}
+              value={clientForm.firstName}
+              onChangeText={(v) => setClientForm((s) => ({ ...s, firstName: v }))}
+            />
+            <Input
+              placeholder={t("admin.clients.placeholderLastName")}
+              value={clientForm.lastName}
+              onChangeText={(v) => setClientForm((s) => ({ ...s, lastName: v }))}
             />
             <Input
               placeholder={t("admin.clients.placeholderPhone")}
@@ -608,11 +614,17 @@ export default function AdminClients() {
               onChangeText={(v) => setClientForm((s) => ({ ...s, phone: v }))}
             />
             <Button
-              disabled={createClientMutation.isPending || !clientForm.email || !clientForm.fullName}
+              disabled={
+                createClientMutation.isPending ||
+                !clientForm.email ||
+                !clientForm.firstName ||
+                !clientForm.lastName
+              }
               onPress={() =>
                 createClientMutation.mutate({
                   email: clientForm.email,
-                  fullName: clientForm.fullName,
+                  firstName: clientForm.firstName,
+                  lastName: clientForm.lastName,
                   phone: clientForm.phone || undefined,
                 })
               }
@@ -634,11 +646,17 @@ export default function AdminClients() {
                 if (id) setShowActionsFor(id);
               }}
             />
-            <SectionLabel>{t("admin.clients.placeholderFullName")}</SectionLabel>
+            <SectionLabel>{t("admin.clients.placeholderFirstName")}</SectionLabel>
             <Input
-              placeholder={t("admin.clients.placeholderFullName")}
-              value={editForm.fullName}
-              onChangeText={(v) => setEditForm((s) => ({ ...s, fullName: v }))}
+              placeholder={t("admin.clients.placeholderFirstName")}
+              value={editForm.firstName}
+              onChangeText={(v) => setEditForm((s) => ({ ...s, firstName: v }))}
+            />
+            <SectionLabel>{t("admin.clients.placeholderLastName")}</SectionLabel>
+            <Input
+              placeholder={t("admin.clients.placeholderLastName")}
+              value={editForm.lastName}
+              onChangeText={(v) => setEditForm((s) => ({ ...s, lastName: v }))}
             />
             <SectionLabel>{t("admin.clients.placeholderPhoneRequired")}</SectionLabel>
             <Input
@@ -670,7 +688,8 @@ export default function AdminClients() {
                 showEditClient &&
                 updateClientMutation.mutate({
                   id: showEditClient,
-                  fullName: editForm.fullName,
+                  firstName: editForm.firstName,
+                  lastName: editForm.lastName,
                   phone: editForm.phone || undefined,
                   notes: editForm.notes || undefined,
                   isActive: editForm.isActive,
@@ -720,7 +739,8 @@ export default function AdminClients() {
                   label={t("admin.clients.edit")}
                   onPress={() => {
                     setEditForm({
-                      fullName: client.user.fullName,
+                      firstName: client.user.firstName,
+                      lastName: client.user.lastName,
                       phone: client.user.phone ?? "",
                       notes: client.notes ?? "",
                       isActive: true,
@@ -846,9 +866,15 @@ export default function AdminClients() {
             />
             <Input
               testID="invite-create-name-input"
-              placeholder={t("admin.clients.placeholderFullName")}
-              value={inviteForm.fullName}
-              onChangeText={(v) => setInviteForm((s) => ({ ...s, fullName: v }))}
+              placeholder={t("admin.clients.placeholderFirstName")}
+              value={inviteForm.firstName}
+              onChangeText={(v) => setInviteForm((s) => ({ ...s, firstName: v }))}
+            />
+            <Input
+              testID="invite-create-lastname-input"
+              placeholder={t("admin.clients.placeholderLastName")}
+              value={inviteForm.lastName}
+              onChangeText={(v) => setInviteForm((s) => ({ ...s, lastName: v }))}
             />
             <Input
               testID="invite-create-phone-input"
@@ -871,14 +897,16 @@ export default function AdminClients() {
               disabled={
                 createInviteMutation.isPending ||
                 !inviteForm.email ||
-                !inviteForm.fullName ||
+                !inviteForm.firstName ||
+                !inviteForm.lastName ||
                 !inviteForm.dateOfBirth
               }
               onPress={() => {
                 if (!inviteForm.dateOfBirth) return;
                 createInviteMutation.mutate({
                   email: inviteForm.email,
-                  fullName: inviteForm.fullName,
+                  firstName: inviteForm.firstName,
+                  lastName: inviteForm.lastName,
                   phone: inviteForm.phone || undefined,
                   dateOfBirth: toIsoDate(inviteForm.dateOfBirth),
                 });

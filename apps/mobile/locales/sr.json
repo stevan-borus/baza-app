@@ -562,6 +562,8 @@
       "sheetNewClient": "Novi klijent",
       "placeholderEmail": "Email",
       "placeholderFullName": "Puno ime",
+      "placeholderFirstName": "Ime",
+      "placeholderLastName": "Prezime",
       "placeholderPhone": "Telefon (opciono)",
       "createClient": "Dodaj klijenta",
       "createError": "Kreiranje klijenta nije uspelo.",

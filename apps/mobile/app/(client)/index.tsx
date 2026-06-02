@@ -591,7 +591,7 @@ export default function HomeStudio() {
   // First name only. Fall back to the email local-part if the profile has no
   // name yet.
   const userName =
-    meQuery.data?.user.fullName?.trim().split(/\s+/)[0] ||
+    meQuery.data?.user.firstName ||
     meQuery.data?.user.email?.split("@")[0] ||
     "";
   const now = new Date();
