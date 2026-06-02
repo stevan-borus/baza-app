@@ -76,7 +76,8 @@ export const clientsQueries = {
       mutationKey: ["clients", "create"] as const,
       mutationFn: async (payload: {
         email: string;
-        fullName: string;
+        firstName: string;
+        lastName: string;
         phone?: string;
       }) => {
         const response = await apiFetch(`${sharedEnv.EXPO_PUBLIC_API_URL}/api/clients`, {
@@ -98,7 +99,8 @@ export const clientsQueries = {
         ...payload
       }: {
         id: string;
-        fullName?: string;
+        firstName?: string;
+        lastName?: string;
         phone?: string;
         notes?: string;
         isActive?: boolean;

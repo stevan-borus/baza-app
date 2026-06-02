@@ -1,4 +1,4 @@
-import { inviteClientInputSchema } from "@baza/types";
+import { formatFullName, inviteClientInputSchema } from "@baza/types";
 import { UserRole } from "@/generated/prisma";
 import { now } from "@/lib/now";
 import { requireRole } from "@/lib/server/auth-guards";
@@ -18,7 +18,8 @@ export async function GET(request: Request) {
     select: {
       id: true,
       email: true,
-      fullName: true,
+      firstName: true,
+      lastName: true,
       phone: true,
       status: true,
       createdAt: true,
@@ -29,6 +30,7 @@ export async function GET(request: Request) {
     success: true,
     invites: invites.map((inv) => ({
       ...inv,
+      fullName: formatFullName(inv.firstName, inv.lastName),
       createdAt: inv.createdAt.toISOString(),
     })),
   });
@@ -45,7 +47,7 @@ export async function POST(request: Request) {
     return fail("Invalid payload", 400, parsed.error);
   }
 
-  const { email, fullName, phone, dateOfBirth } = parsed.data;
+  const { email, firstName, lastName, phone, dateOfBirth } = parsed.data;
   const normalizedEmail = email.toLowerCase().trim();
 
   const existingUser = await prisma.user.findUnique({
@@ -64,7 +66,8 @@ export async function POST(request: Request) {
   const invite = await prisma.userInvite.create({
     data: {
       email: normalizedEmail,
-      fullName,
+      firstName,
+      lastName,
       phone,
       dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : null,
       role: UserRole.CLIENT,
@@ -83,7 +86,8 @@ export async function POST(request: Request) {
 
   await sendInviteEmail({
     to: normalizedEmail,
-    fullName,
+    firstName,
+    lastName,
     inviteToken: rawToken,
   });
 

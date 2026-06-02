@@ -6,6 +6,8 @@ import { sharedEnv } from "@/lib/env.shared";
 const inviteSchema = z.object({
   id: z.string(),
   email: z.string(),
+  firstName: z.string(),
+  lastName: z.string(),
   fullName: z.string(),
   phone: z.nullable(z.string()).optional(),
   status: z.enum(["PENDING", "COMPLETED", "REVOKED", "EXPIRED"]),
@@ -36,7 +38,7 @@ export const invitesQueries = {
   create: () =>
     mutationOptions({
       mutationKey: ["invites", "create"] as const,
-      mutationFn: async (payload: { email: string; fullName: string; phone?: string; dateOfBirth?: string }) => {
+      mutationFn: async (payload: { email: string; firstName: string; lastName: string; phone?: string; dateOfBirth?: string }) => {
         const response = await apiFetch(`${sharedEnv.EXPO_PUBLIC_API_URL}/api/invites`, {
           method: "POST",
           credentials: "include",

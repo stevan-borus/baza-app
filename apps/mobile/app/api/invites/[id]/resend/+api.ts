@@ -33,7 +33,8 @@ export async function POST(request: Request, { id }: RouteParams) {
 
   await sendInviteEmail({
     to: invite.email,
-    fullName: invite.fullName,
+    firstName: invite.firstName,
+    lastName: invite.lastName,
     inviteToken: rawToken,
   });
 
