@@ -1,8 +1,9 @@
 import React from "react";
 import { Pressable, Text, type PressableProps } from "react-native";
 import * as Haptics from "expo-haptics";
+import { WHATSAPP_GREEN } from "./whatsapp-icon";
 
-type Variant = "primary" | "secondary" | "danger" | "ghost";
+type Variant = "primary" | "secondary" | "danger" | "ghost" | "whatsapp";
 type Size = "small" | "default" | "large";
 
 type ButtonProps = Omit<PressableProps, "children"> & {
@@ -23,6 +24,8 @@ const variantCls: Record<Variant, string> = {
   secondary: "bg-glass border border-glass-border active:opacity-90",
   danger: "bg-danger-soft active:opacity-90",
   ghost: "bg-transparent active:opacity-65",
+  // WhatsApp's official brand green (#25D366) as the button fill.
+  whatsapp: "active:opacity-90",
 };
 
 const variantTextCls: Record<Variant, string> = {
@@ -30,6 +33,7 @@ const variantTextCls: Record<Variant, string> = {
   secondary: "text-foreground font-body-semibold text-sm",
   danger: "text-danger font-body-semibold text-sm",
   ghost: "text-foreground font-body-semibold text-sm",
+  whatsapp: "text-white font-body-semibold text-sm",
 };
 
 export function Button({
@@ -39,6 +43,7 @@ export function Button({
   children,
   onPress,
   className,
+  style,
   ...props
 }: ButtonProps) {
   function handlePress(e: Parameters<NonNullable<PressableProps["onPress"]>>[0]) {
@@ -51,12 +56,16 @@ export function Button({
       disabled={disabled}
       onPress={handlePress}
       className={[
-        "items-center justify-center flex-row",
+        "items-center justify-center flex-row gap-2",
         sizeCls[size],
         variantCls[variant],
         disabled ? "opacity-40" : "",
         className ?? "",
       ].join(" ")}
+      style={[
+        variant === "whatsapp" ? { backgroundColor: WHATSAPP_GREEN } : null,
+        style as object,
+      ]}
       {...props}
     >
       {typeof children === "string" || typeof children === "number" ? (

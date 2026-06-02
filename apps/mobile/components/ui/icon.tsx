@@ -65,6 +65,7 @@ import {
   Filter,
   Mail,
   Archive,
+  MessageCircle,
 } from "lucide-react-native";
 
 const ICONS = {
@@ -98,6 +99,7 @@ const ICONS = {
   "sticky-note-o": StickyNote,
   lock: Lock,
   mail: Mail,
+  message: MessageCircle,
   "map-marker": MapPin,
   mobile: Smartphone,
   "moon-o": Moon,

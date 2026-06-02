@@ -261,7 +261,9 @@ export function ClientDetail({ id }: { id: string }) {
                     <Pressable
                       testID="client-detail-email"
                       onPress={() =>
-                        void Linking.openURL(`mailto:${client.user.email}`)
+                        void Linking.openURL(
+                          `mailto:${client.user.email}`,
+                        ).catch(() => {})
                       }
                       accessibilityRole="link"
                     >

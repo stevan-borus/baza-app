@@ -3,6 +3,9 @@ import { Linking, Text, View } from "react-native";
 import { useTranslation } from "react-i18next";
 import { AppSheet } from "./sheet";
 import { Button } from "./button";
+import { Icon } from "./icon";
+import { WhatsAppIcon } from "./whatsapp-icon";
+import { useThemeTokens } from "./tokens";
 import { contactLinks } from "@/lib/contact-links";
 
 type ContactSheetProps = {
@@ -20,13 +23,15 @@ type ContactSheetProps = {
  */
 export function ContactSheet({ open, onOpenChange, phone }: ContactSheetProps) {
   const { t } = useTranslation();
+  const tokens = useThemeTokens();
   const links = contactLinks(phone);
 
   function openAnd(url: string) {
     onOpenChange(false);
-    // Fire-and-forget — the OS surfaces its own error if no handler exists
-    // (e.g. WhatsApp not installed). Nothing actionable for us to recover.
-    void Linking.openURL(url);
+    // openURL() REJECTS when no app can handle the scheme — a simulator with
+    // no Mail/Phone, or a client without WhatsApp installed. Swallow it so a
+    // missing handler is a no-op, not an uncaught-rejection error overlay.
+    Linking.openURL(url).catch(() => {});
   }
 
   return (
@@ -47,21 +52,30 @@ export function ContactSheet({ open, onOpenChange, phone }: ContactSheetProps) {
             variant="primary"
             onPress={() => openAnd(links.tel)}
           >
-            {t("admin.clients.contactCall")}
+            <Icon name="phone" size={17} color="#ffffff" />
+            <Text className="text-white font-body-semibold text-sm">
+              {t("admin.clients.contactCall")}
+            </Text>
           </Button>
           <Button
             testID="contact-action-sms"
             variant="secondary"
             onPress={() => openAnd(links.sms)}
           >
-            {t("admin.clients.contactSms")}
+            <Icon name="message" size={17} color={tokens.foreground} />
+            <Text className="text-foreground font-body-semibold text-sm">
+              {t("admin.clients.contactSms")}
+            </Text>
           </Button>
           <Button
             testID="contact-action-whatsapp"
-            variant="secondary"
+            variant="whatsapp"
             onPress={() => openAnd(links.whatsapp)}
           >
-            {t("admin.clients.contactWhatsapp")}
+            <WhatsAppIcon size={17} color="#ffffff" />
+            <Text className="text-white font-body-semibold text-sm">
+              {t("admin.clients.contactWhatsapp")}
+            </Text>
           </Button>
           <Button variant="ghost" onPress={() => onOpenChange(false)}>
             {t("common.cancel")}
