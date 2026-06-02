@@ -27,6 +27,11 @@ export const auth = betterAuth({
   user: {
     modelName: "User",
     fields: {
+      // better-auth requires a `name` column, but the app never surfaces it:
+      // sign-up is disabled (users are created by our own complete-invite
+      // route) and nothing reads better-auth's `name`. We point it at the
+      // real `firstName` column as an incidental anchor — `fullName` can't be
+      // the target because it's derived at the response layer, not stored.
       name: "firstName",
     },
     additionalFields: {

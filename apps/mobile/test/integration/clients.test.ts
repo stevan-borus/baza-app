@@ -201,6 +201,46 @@ describe("clients API", () => {
     expect(persisted?.clientProfile).not.toBeNull();
   });
 
+  it("POST trims surrounding whitespace from first/last name before persisting", async () => {
+    asAdmin();
+    const response = await POST(
+      new Request("http://test.local/api/clients", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          email: "spaced@test.local",
+          firstName: "  Ana  ",
+          lastName: "  Petrović ",
+          dateOfBirth: "1990-01-01",
+        }),
+      }),
+    );
+    expect(response.status).toBe(201);
+    const persisted = await prisma.user.findUnique({
+      where: { email: "spaced@test.local" },
+    });
+    // Trimmed inputs keep the derived fullName free of double spaces.
+    expect(persisted?.firstName).toBe("Ana");
+    expect(persisted?.lastName).toBe("Petrović");
+  });
+
+  it("POST rejects a blank (whitespace-only) name field", async () => {
+    asAdmin();
+    const response = await POST(
+      new Request("http://test.local/api/clients", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          email: "blank@test.local",
+          firstName: "   ",
+          lastName: "Petrović",
+          dateOfBirth: "1990-01-01",
+        }),
+      }),
+    );
+    expect(response.status).toBe(400);
+  });
+
   it("PATCH as admin can deactivate a client (isActive=false)", async () => {
     const { user } = await makeClient({
       email: "deact@test.local",

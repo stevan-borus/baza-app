@@ -558,7 +558,6 @@
       "deleteConfirm": "Are you sure you want to delete this client?",
       "sheetNewClient": "New client",
       "placeholderEmail": "Email",
-      "placeholderFullName": "Full name",
       "placeholderFirstName": "First name",
       "placeholderLastName": "Last name",
       "placeholderPhone": "Phone (optional)",

@@ -20,6 +20,14 @@ export function formatFullName(first: string, last: string): string {
 }
 
 /**
+ * A required person-name field. Trims surrounding whitespace *before* the
+ * length check, so a whitespace-only input (e.g. "   ") is rejected rather
+ * than stored — and a padded value ("  Ana  ") persists clean, keeping the
+ * derived `fullName` free of stray/double spaces.
+ */
+export const nameFieldSchema = z.string().trim().min(1).max(50);
+
+/**
  * Civil-date YYYY-MM-DD string. Server casts to Postgres DATE; UI formats
  * for display via `formatDateOfBirth`. Empty string is treated as absent
  * by the API routes (translated to null before persisting).
@@ -48,16 +56,16 @@ export const inviteClientInputSchema = UserInviteResultSchema.pick({
   lastName: true,
   phone: true,
 }).extend({
-  firstName: z.string().min(1).max(50),
-  lastName: z.string().min(1).max(50),
+  firstName: nameFieldSchema,
+  lastName: nameFieldSchema,
   phone: z.string().min(6).max(30).optional(),
   dateOfBirth: dateOfBirthSchema,
 });
 export type InviteClientInput = z.infer<typeof inviteClientInputSchema>;
 
 export const updateClientInputSchema = z.object({
-  firstName: z.string().min(1).max(50).optional(),
-  lastName: z.string().min(1).max(50).optional(),
+  firstName: nameFieldSchema.optional(),
+  lastName: nameFieldSchema.optional(),
   phone: z.string().min(6).max(30).nullable().optional(),
   notes: z.string().max(2000).nullable().optional(),
   isActive: z.boolean().optional(),
