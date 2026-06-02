@@ -1,4 +1,4 @@
-import { billingRecordInputSchema, paginationQuerySchema } from "@baza/types";
+import { billingRecordInputSchema, formatFullName, paginationQuerySchema } from "@baza/types";
 import { UserRole } from "@/generated/prisma";
 import { now } from "@/lib/now";
 import { requireRole } from "@/lib/server/auth-guards";
@@ -56,7 +56,7 @@ export async function GET(request: Request) {
     clientUserIds.length > 0
       ? await prisma.user.findMany({
           where: { id: { in: clientUserIds } },
-          select: { id: true, fullName: true, email: true },
+          select: { id: true, firstName: true, lastName: true, email: true },
         })
       : [];
   const userById = new Map(users.map((u) => [u.id, u] as const));
@@ -65,7 +65,7 @@ export async function GET(request: Request) {
     return {
       ...p,
       client: u
-        ? { fullName: u.fullName, email: u.email }
+        ? { fullName: formatFullName(u.firstName, u.lastName), email: u.email }
         : null,
     };
   });

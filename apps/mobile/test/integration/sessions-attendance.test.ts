@@ -39,19 +39,19 @@ import { prisma } from "@/lib/server/prisma";
 
 async function seed() {
   const trainer = await prisma.user.create({
-    data: { email: "tr@test.local", fullName: "T", role: "TRAINER" },
+    data: { email: "tr@test.local", firstName: "T", lastName: "Test", role: "TRAINER" },
   });
   const otherTrainer = await prisma.user.create({
-    data: { email: "tr2@test.local", fullName: "T2", role: "TRAINER" },
+    data: { email: "tr2@test.local", firstName: "T2", lastName: "Test", role: "TRAINER" },
   });
   const c1User = await prisma.user.create({
-    data: { email: "c1@test.local", fullName: "C1", role: "CLIENT" },
+    data: { email: "c1@test.local", firstName: "C1", lastName: "Test", role: "CLIENT" },
   });
   const c2User = await prisma.user.create({
-    data: { email: "c2@test.local", fullName: "C2", role: "CLIENT" },
+    data: { email: "c2@test.local", firstName: "C2", lastName: "Test", role: "CLIENT" },
   });
   const c3User = await prisma.user.create({
-    data: { email: "c3@test.local", fullName: "C3", role: "CLIENT" },
+    data: { email: "c3@test.local", firstName: "C3", lastName: "Test", role: "CLIENT" },
   });
   const c1 = await prisma.clientProfile.create({ data: { userId: c1User.id } });
   const c2 = await prisma.clientProfile.create({ data: { userId: c2User.id } });

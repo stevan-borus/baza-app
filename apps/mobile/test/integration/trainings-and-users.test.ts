@@ -85,19 +85,20 @@ describe("trainings + users/trainers", () => {
     expect(persisted).not.toBeNull();
   });
 
-  it("GET /api/users/trainers returns only active trainers and admins, sorted by name", async () => {
+  it("GET /api/users/trainers returns only active trainers and admins, sorted by lastName", async () => {
     await prisma.user.createMany({
       data: [
-        { email: "z-admin@test.local", fullName: "Z Admin", role: "ADMIN" },
-        { email: "trainer-b@test.local", fullName: "Trainer B", role: "TRAINER" },
-        { email: "trainer-a@test.local", fullName: "Trainer A", role: "TRAINER" },
+        { email: "z-admin@test.local", firstName: "Z", lastName: "Admin", role: "ADMIN" },
+        { email: "trainer-b@test.local", firstName: "Trainer", lastName: "B", role: "TRAINER" },
+        { email: "trainer-a@test.local", firstName: "Trainer", lastName: "A", role: "TRAINER" },
         {
           email: "deactivated@test.local",
-          fullName: "Deactivated",
+          firstName: "Deactivated",
+          lastName: "Test",
           role: "TRAINER",
           isActive: false,
         },
-        { email: "client@test.local", fullName: "Client", role: "CLIENT" },
+        { email: "client@test.local", firstName: "Client", lastName: "Test", role: "CLIENT" },
       ],
     });
     asRole("ADMIN");
@@ -105,13 +106,14 @@ describe("trainings + users/trainers", () => {
       new Request("http://test.local/api/users/trainers"),
     );
     const body = (await response.json()) as { users: { fullName: string; role: string }[] };
+    // Ordered by lastName asc: "A" (Trainer A), "Admin" (Z Admin), "B" (Trainer B).
     expect(body.users.map((u) => u.fullName)).toEqual([
       "Trainer A",
-      "Trainer B",
       "Z Admin",
+      "Trainer B",
     ]);
-    expect(body.users.map((u) => u.fullName)).not.toContain("Deactivated");
-    expect(body.users.map((u) => u.fullName)).not.toContain("Client");
+    expect(body.users.map((u) => u.fullName)).not.toContain("Deactivated Test");
+    expect(body.users.map((u) => u.fullName)).not.toContain("Client Test");
   });
 
   it("GET /api/users/trainers is forbidden for clients", async () => {

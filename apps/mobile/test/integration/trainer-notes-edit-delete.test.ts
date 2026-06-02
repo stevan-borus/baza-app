@@ -23,12 +23,13 @@ async function seedNoteByTrainer(opts: { trainerEmail: string }) {
   const trainer = await prisma.user.create({
     data: {
       email: opts.trainerEmail,
-      fullName: opts.trainerEmail,
+      firstName: opts.trainerEmail,
+      lastName: "Test",
       role: "TRAINER",
     },
   });
   const client = await prisma.user.create({
-    data: { email: `c-${opts.trainerEmail}`, fullName: "C", role: "CLIENT" },
+    data: { email: `c-${opts.trainerEmail}`, firstName: "C", lastName: "Test", role: "CLIENT" },
   });
   const profile = await prisma.clientProfile.create({
     data: { userId: client.id },
@@ -110,7 +111,7 @@ describe("trainer-notes PATCH + DELETE", () => {
       trainerEmail: "owner2@test.local",
     });
     const otherTrainer = await prisma.user.create({
-      data: { email: "other@test.local", fullName: "Other", role: "TRAINER" },
+      data: { email: "other@test.local", firstName: "Other", lastName: "Test", role: "TRAINER" },
     });
     asTrainer(otherTrainer);
     const response = await PATCH(
@@ -146,7 +147,7 @@ describe("trainer-notes PATCH + DELETE", () => {
       trainerEmail: "owner4@test.local",
     });
     const otherTrainer = await prisma.user.create({
-      data: { email: "other2@test.local", fullName: "Other", role: "TRAINER" },
+      data: { email: "other2@test.local", firstName: "Other", lastName: "Test", role: "TRAINER" },
     });
     asTrainer(otherTrainer);
     const response = await DELETE(
@@ -195,10 +196,10 @@ describe("trainer-notes PATCH + DELETE", () => {
     // The author of a note can always edit it, regardless of role. An
     // admin who wrote the note (trainerUserId === their own id) can edit.
     const admin = await prisma.user.create({
-      data: { email: "self-admin@test.local", fullName: "Admin", role: "ADMIN" },
+      data: { email: "self-admin@test.local", firstName: "Admin", lastName: "Test", role: "ADMIN" },
     });
     const client = await prisma.user.create({
-      data: { email: "c-self@test.local", fullName: "C", role: "CLIENT" },
+      data: { email: "c-self@test.local", firstName: "C", lastName: "Test", role: "CLIENT" },
     });
     const profile = await prisma.clientProfile.create({
       data: { userId: client.id },

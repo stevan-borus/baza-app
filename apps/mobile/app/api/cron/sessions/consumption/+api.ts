@@ -1,4 +1,5 @@
 import { NOTIFICATION_MESSAGE_KEYS } from "@baza/i18n";
+import { formatFullName } from "@baza/types";
 import { UserRole } from "@/generated/prisma";
 import { now } from "@/lib/now";
 import { requireCronAuth } from "@/lib/server/cron-auth";
@@ -59,7 +60,7 @@ export async function POST(request: Request) {
         },
       },
       clientProfile: {
-        select: { user: { select: { fullName: true } } },
+        select: { user: { select: { firstName: true, lastName: true } } },
       },
     },
   });
@@ -186,7 +187,10 @@ export async function POST(request: Request) {
       noEligiblePackage += 1;
       unbackedForNotification.push({
         sessionId: booking.sessionId,
-        clientFullName: booking.clientProfile.user.fullName,
+        clientFullName: formatFullName(
+          booking.clientProfile.user.firstName,
+          booking.clientProfile.user.lastName,
+        ),
         classTypeName: booking.session.classType.name,
         sessionStartsAt: booking.session.startsAt,
       });

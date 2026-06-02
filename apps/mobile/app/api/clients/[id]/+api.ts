@@ -1,5 +1,5 @@
 import type { ClientPackageStatus } from "@baza/types";
-import { updateClientInputSchema } from "@baza/types";
+import { formatFullName, updateClientInputSchema } from "@baza/types";
 import { UserRole } from "@/generated/prisma";
 import { now } from "@/lib/now";
 import { requireRole } from "@/lib/server/auth-guards";
@@ -28,7 +28,8 @@ export async function GET(request: Request, { id }: RouteParams) {
       user: {
         select: {
           id: true,
-          fullName: true,
+          firstName: true,
+          lastName: true,
           email: true,
           phone: true,
           isActive: true,
@@ -91,7 +92,13 @@ export async function GET(request: Request, { id }: RouteParams) {
         ? clientProfile.dateOfBirth.toISOString().slice(0, 10)
         : null,
       packageStatus,
-      user: clientProfile.user,
+      user: {
+        ...clientProfile.user,
+        fullName: formatFullName(
+          clientProfile.user.firstName,
+          clientProfile.user.lastName,
+        ),
+      },
     },
   });
 }
@@ -122,9 +129,10 @@ export async function PATCH(request: Request, { id }: RouteParams) {
       return fail("Forbidden", 403);
     }
 
-    // Trainers restricted to notes only; fullName/phone/isActive/dateOfBirth are admin-only.
+    // Trainers restricted to notes only; firstName/lastName/phone/isActive/dateOfBirth are admin-only.
     if (
-      body.fullName !== undefined ||
+      body.firstName !== undefined ||
+      body.lastName !== undefined ||
       body.phone !== undefined ||
       body.isActive !== undefined ||
       body.dateOfBirth !== undefined
@@ -143,7 +151,8 @@ export async function PATCH(request: Request, { id }: RouteParams) {
   const user = await prisma.user.update({
     where: { id },
     data: {
-      fullName: body.fullName,
+      ...(body.firstName !== undefined ? { firstName: body.firstName } : {}),
+      ...(body.lastName !== undefined ? { lastName: body.lastName } : {}),
       phone: body.phone,
       isActive: body.isActive,
       clientProfile: Object.keys(clientProfileUpdate).length
@@ -152,7 +161,8 @@ export async function PATCH(request: Request, { id }: RouteParams) {
     },
     select: {
       id: true,
-      fullName: true,
+      firstName: true,
+      lastName: true,
       email: true,
       phone: true,
       isActive: true,
@@ -162,5 +172,8 @@ export async function PATCH(request: Request, { id }: RouteParams) {
     },
   });
 
-  return ok({ success: true, user });
+  return ok({
+    success: true,
+    user: { ...user, fullName: formatFullName(user.firstName, user.lastName) },
+  });
 }

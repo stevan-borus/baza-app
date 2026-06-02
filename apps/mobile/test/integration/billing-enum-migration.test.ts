@@ -31,7 +31,7 @@ describe("billing enum migration (PR β schema trim)", () => {
 
   it("rejects BillingRecord writes with method=QR", async () => {
     const client = await prisma.user.create({
-      data: { email: "c@test.local", fullName: "C", role: "CLIENT" },
+      data: { email: "c@test.local", firstName: "C", lastName: "Client", role: "CLIENT" },
     });
     await expect(
       prisma.$executeRawUnsafe(
@@ -43,7 +43,7 @@ describe("billing enum migration (PR β schema trim)", () => {
 
   it("rejects BillingRecord writes with status=PENDING", async () => {
     const client = await prisma.user.create({
-      data: { email: "c@test.local", fullName: "C", role: "CLIENT" },
+      data: { email: "c@test.local", firstName: "C", lastName: "Client", role: "CLIENT" },
     });
     await expect(
       prisma.$executeRawUnsafe(
@@ -55,7 +55,7 @@ describe("billing enum migration (PR β schema trim)", () => {
 
   it("rejects BillingRecord writes with status=CANCELED", async () => {
     const client = await prisma.user.create({
-      data: { email: "c@test.local", fullName: "C", role: "CLIENT" },
+      data: { email: "c@test.local", firstName: "C", lastName: "Client", role: "CLIENT" },
     });
     await expect(
       prisma.$executeRawUnsafe(
@@ -67,7 +67,7 @@ describe("billing enum migration (PR β schema trim)", () => {
 
   it("accepts all four remaining PaymentMethod values + CONFIRMED status", async () => {
     const client = await prisma.user.create({
-      data: { email: "c@test.local", fullName: "C", role: "CLIENT" },
+      data: { email: "c@test.local", firstName: "C", lastName: "Client", role: "CLIENT" },
     });
     for (const method of ["CASH", "CARD", "COMPANY", "MANUAL_ONLINE"] as const) {
       await prisma.billingRecord.create({

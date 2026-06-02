@@ -1,4 +1,4 @@
-import { completeInviteInputSchema } from "@baza/types";
+import { completeInviteInputSchema, formatFullName } from "@baza/types";
 import { type Prisma, InviteStatus, UserRole } from "@/generated/prisma";
 import { now } from "@/lib/now";
 import { auth } from "@/lib/server/auth";
@@ -40,13 +40,14 @@ export async function POST(request: Request) {
     const created = await tx.user.create({
       data: {
         email: invite.email,
-        fullName: invite.fullName,
+        firstName: invite.firstName,
+        lastName: invite.lastName,
         emailVerified: true,
         phone: invite.phone,
         role: invite.role ?? UserRole.CLIENT,
         passwordHash,
       },
-      select: { id: true, email: true, role: true, fullName: true },
+      select: { id: true, email: true, role: true, firstName: true, lastName: true },
     });
 
     if (created.role === UserRole.CLIENT) {
@@ -89,7 +90,7 @@ export async function POST(request: Request) {
 
   const response = ok({
     success: true,
-    user,
+    user: { ...user, fullName: formatFullName(user.firstName, user.lastName) },
   });
   const sessionCookie = signInResponse.headers.get("set-cookie");
   if (sessionCookie) {

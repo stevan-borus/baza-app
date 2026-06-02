@@ -21,10 +21,10 @@ import { prisma } from "@/lib/server/prisma";
 
 async function seedAcrossMonths() {
   const admin = await prisma.user.create({
-    data: { email: "admin@test.local", fullName: "Admin", role: "ADMIN" },
+    data: { email: "admin@test.local", firstName: "Admin", lastName: "User", role: "ADMIN" },
   });
   const client = await prisma.user.create({
-    data: { email: "client@test.local", fullName: "Client", role: "CLIENT" },
+    data: { email: "client@test.local", firstName: "Client", lastName: "User", role: "CLIENT" },
   });
   await prisma.billingRecord.create({
     data: {

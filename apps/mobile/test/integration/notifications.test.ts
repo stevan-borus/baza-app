@@ -62,7 +62,8 @@ async function makeUser(opts: { email: string; role?: "ADMIN" | "CLIENT" | "TRAI
   const user = await prisma.user.create({
     data: {
       email: opts.email,
-      fullName: opts.email,
+      firstName: opts.email,
+      lastName: "Test",
       role: opts.role ?? "CLIENT",
     },
   });

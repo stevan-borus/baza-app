@@ -138,12 +138,12 @@ describe("MINOR_PAPER_NEEDED notification trigger", () => {
     await resetDb();
 
     const adminUser = await prisma.user.create({
-      data: { email: "admin@test.local", fullName: "Admin", role: "ADMIN", isActive: true },
+      data: { email: "admin@test.local", firstName: "Admin", lastName: "Test", role: "ADMIN", isActive: true },
     });
     admin = { id: adminUser.id, email: adminUser.email };
 
     const trainerUser = await prisma.user.create({
-      data: { email: "trainer@test.local", fullName: "Trainer", role: "TRAINER" },
+      data: { email: "trainer@test.local", firstName: "Trainer", lastName: "Test", role: "TRAINER" },
     });
     trainer = { id: trainerUser.id, email: trainerUser.email };
 
@@ -165,7 +165,8 @@ describe("MINOR_PAPER_NEEDED notification trigger", () => {
     const clientUser = await prisma.user.create({
       data: {
         email: "minor@test.local",
-        fullName: "Minor Client",
+        firstName: "Minor",
+        lastName: "Client",
         role: "CLIENT",
         clientProfile: { create: { dateOfBirth: dobYearsAgo(15) } },
       },
@@ -212,7 +213,8 @@ describe("MINOR_PAPER_NEEDED notification trigger", () => {
     const clientUser = await prisma.user.create({
       data: {
         email: "adult@test.local",
-        fullName: "Adult Client",
+        firstName: "Adult",
+        lastName: "Client",
         role: "CLIENT",
         clientProfile: { create: { dateOfBirth: dobYearsAgo(25) } },
       },
@@ -244,7 +246,8 @@ describe("MINOR_PAPER_NEEDED notification trigger", () => {
     const clientUser = await prisma.user.create({
       data: {
         email: "minor-verified@test.local",
-        fullName: "Verified Minor",
+        firstName: "Verified",
+        lastName: "Minor",
         role: "CLIENT",
         clientProfile: { create: { dateOfBirth: dobYearsAgo(14) } },
       },
@@ -289,7 +292,8 @@ describe("MINOR_PAPER_NEEDED notification trigger", () => {
     const clientUser = await prisma.user.create({
       data: {
         email: "minor-repeat@test.local",
-        fullName: "Repeat Minor",
+        firstName: "Repeat",
+        lastName: "Minor",
         role: "CLIENT",
         clientProfile: { create: { dateOfBirth: dobYearsAgo(16) } },
       },
@@ -349,17 +353,18 @@ describe("MINOR_PAPER_NEEDED notification trigger", () => {
   // ----------------------------------------------------------------
   it("sends one notification to each active admin", async () => {
     const admin2User = await prisma.user.create({
-      data: { email: "admin2@test.local", fullName: "Admin Two", role: "ADMIN", isActive: true },
+      data: { email: "admin2@test.local", firstName: "Admin", lastName: "Two", role: "ADMIN", isActive: true },
     });
     // Inactive admin — should NOT receive a notification.
     await prisma.user.create({
-      data: { email: "admin-off@test.local", fullName: "Admin Off", role: "ADMIN", isActive: false },
+      data: { email: "admin-off@test.local", firstName: "Admin", lastName: "Off", role: "ADMIN", isActive: false },
     });
 
     const clientUser = await prisma.user.create({
       data: {
         email: "minor-multi@test.local",
-        fullName: "Multi Minor",
+        firstName: "Multi",
+        lastName: "Minor",
         role: "CLIENT",
         clientProfile: { create: { dateOfBirth: dobYearsAgo(13) } },
       },

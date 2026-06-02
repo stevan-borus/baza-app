@@ -21,10 +21,10 @@ import { prisma } from "@/lib/server/prisma";
 
 async function seed() {
   const admin = await prisma.user.create({
-    data: { email: "admin@test.local", fullName: "Admin", role: "ADMIN" },
+    data: { email: "admin@test.local", firstName: "Admin", lastName: "Test", role: "ADMIN" },
   });
   const trainer = await prisma.user.create({
-    data: { email: "trainer@test.local", fullName: "Trainer", role: "TRAINER" },
+    data: { email: "trainer@test.local", firstName: "Trainer", lastName: "Test", role: "TRAINER" },
   });
   const reformer = await prisma.classType.create({
     data: { name: "Reformer pilates", maxClients: 6, durationMins: 60 },
@@ -165,7 +165,7 @@ describe("POST /api/sessions/recurring", () => {
   it("rejects a trainer assigning a series to a different trainer (403)", async () => {
     const { trainer, reformer } = await seed();
     const otherTrainer = await prisma.user.create({
-      data: { email: "other@test.local", fullName: "Other", role: "TRAINER" },
+      data: { email: "other@test.local", firstName: "Other", lastName: "Test", role: "TRAINER" },
     });
     setMockUser({
       id: trainer.id,

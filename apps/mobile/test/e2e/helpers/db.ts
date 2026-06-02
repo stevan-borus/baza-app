@@ -50,7 +50,12 @@ export async function resetAndSeed() {
 
 type CreateInviteInput = {
   email: string;
-  fullName: string;
+  /** Convenience: split on the first space into first/last. */
+  fullName?: string;
+  /** Explicit first/last — overrides `fullName`. Use when the first name is
+   *  itself multi-part (e.g. "Ana Maria"), which a space-split can't express. */
+  firstName?: string;
+  lastName?: string;
   expiresAt?: Date;
   status?: "PENDING" | "COMPLETED" | "EXPIRED" | "REVOKED";
 };
@@ -64,10 +69,14 @@ export async function createInvite(input: CreateInviteInput) {
   const tokenHash = hashToken(rawToken);
   const expiresAt =
     input.expiresAt ?? new Date(nowMs() + 24 * 60 * 60 * 1000);
+  const [splitFirst, ...splitRest] = (input.fullName ?? "").split(" ");
+  const inviteFirstName = input.firstName ?? splitFirst;
+  const inviteLastName = input.lastName ?? (splitRest.join(" ") || "Test");
   const invite = await db().userInvite.create({
     data: {
       email: input.email.toLowerCase(),
-      fullName: input.fullName,
+      firstName: inviteFirstName,
+      lastName: inviteLastName,
       role: "CLIENT",
       tokenHash,
       status: input.status ?? "PENDING",
@@ -423,7 +432,8 @@ export async function fillSessionToCapacity(
       update: {},
       create: {
         email,
-        fullName: `Filler ${i}`,
+        firstName: "Filler",
+        lastName: String(i),
         role: "CLIENT",
         isActive: true,
         passwordHash: "$2b$10$placeholder",
@@ -592,7 +602,8 @@ export async function seedExtraClients(count: number) {
       update: {},
       create: {
         email,
-        fullName: `Pagi Client ${idx}`,
+        firstName: "Pagi",
+        lastName: `Client ${idx}`,
         role: "CLIENT",
         isActive: true,
         passwordHash: "$2b$10$placeholder",
@@ -600,7 +611,8 @@ export async function seedExtraClients(count: number) {
       },
       select: {
         id: true,
-        fullName: true,
+        firstName: true,
+        lastName: true,
         clientProfile: { select: { id: true } },
       },
     });
@@ -608,7 +620,7 @@ export async function seedExtraClients(count: number) {
       created.push({
         userId: user.id,
         profileId: user.clientProfile.id,
-        fullName: user.fullName,
+        fullName: `${user.firstName} ${user.lastName}`,
       });
     }
   }

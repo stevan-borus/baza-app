@@ -49,7 +49,7 @@ describe("reports — all-time pill (no from/to)", () => {
 
   it("summary covers every CONFIRMED payment regardless of age", async () => {
     const client = await prisma.user.create({
-      data: { email: "c@test.local", fullName: "C", role: "CLIENT" },
+      data: { email: "c@test.local", firstName: "C", lastName: "Test", role: "CLIENT" },
     });
     // One payment from years ago, one from this year — both should count.
     await prisma.billingRecord.create({
@@ -85,7 +85,7 @@ describe("reports — all-time pill (no from/to)", () => {
 
   it("revenue time-series returns yearly buckets spanning earliest payment to now", async () => {
     const client = await prisma.user.create({
-      data: { email: "c@test.local", fullName: "C", role: "CLIENT" },
+      data: { email: "c@test.local", firstName: "C", lastName: "Test", role: "CLIENT" },
     });
     await prisma.billingRecord.create({
       data: {

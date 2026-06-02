@@ -29,7 +29,7 @@ function patchRequest(body: unknown) {
 
 async function seedAdminAndClient() {
   const admin = await prisma.user.create({
-    data: { email: "admin@test.local", fullName: "Admin", role: "ADMIN" },
+    data: { email: "admin@test.local", firstName: "Admin", lastName: "Test", role: "ADMIN" },
   });
   setMockUser({
     id: admin.id, role: "ADMIN", email: admin.email, isActive: true,
@@ -38,7 +38,8 @@ async function seedAdminAndClient() {
   const clientUser = await prisma.user.create({
     data: {
       email: "client@test.local",
-      fullName: "Client X",
+      firstName: "Client",
+      lastName: "X",
       role: "CLIENT",
       clientProfile: { create: { dateOfBirth: new Date("1990-05-14T00:00:00.000Z") } },
     },
@@ -96,7 +97,7 @@ describe("clients/[id] API — dateOfBirth", () => {
     const { clientUserId, clientProfileId } = await seedAdminAndClient();
     // Replace mock with a trainer linked to this client.
     const trainer = await prisma.user.create({
-      data: { email: "t@test.local", fullName: "T", role: "TRAINER" },
+      data: { email: "t@test.local", firstName: "T", lastName: "Test", role: "TRAINER" },
     });
     setMockUser({
       id: trainer.id, role: "TRAINER", email: trainer.email, isActive: true,

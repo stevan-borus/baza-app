@@ -32,13 +32,13 @@ const DAY_MS = 24 * HOUR_MS;
 
 async function seed() {
   const trainer = await prisma.user.create({
-    data: { email: "trainer@test.local", fullName: "Trainer", role: "TRAINER" },
+    data: { email: "trainer@test.local", firstName: "Trainer", lastName: "Test", role: "TRAINER" },
   });
   const otherTrainer = await prisma.user.create({
-    data: { email: "other@test.local", fullName: "Other", role: "TRAINER" },
+    data: { email: "other@test.local", firstName: "Other", lastName: "Test", role: "TRAINER" },
   });
   const client = await prisma.user.create({
-    data: { email: "client@test.local", fullName: "Client", role: "CLIENT" },
+    data: { email: "client@test.local", firstName: "Client", lastName: "Test", role: "CLIENT" },
   });
   const clientProfile = await prisma.clientProfile.create({
     data: { userId: client.id },
@@ -177,7 +177,7 @@ describe("trainer-notes", () => {
   it("POST as ADMIN can write a session-less note for any client (no trainer-link check)", async () => {
     const { clientProfile } = await seed();
     const admin = await prisma.user.create({
-      data: { email: "admin@test.local", fullName: "Admin", role: "ADMIN" },
+      data: { email: "admin@test.local", firstName: "Admin", lastName: "Test", role: "ADMIN" },
     });
     setMockUser({
       id: admin.id,

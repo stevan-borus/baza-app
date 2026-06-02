@@ -80,7 +80,7 @@ describe("reports/revenue/time-series", () => {
 
   it("aggregates CONFIRMED payments into the correct daily bucket", async () => {
     const client = await prisma.user.create({
-      data: { email: "c@test.local", fullName: "C", role: "CLIENT" },
+      data: { email: "c@test.local", firstName: "C", lastName: "Test", role: "CLIENT" },
     });
     // Two payments on day 1 (Jul 1) — 10000 + 5000.
     await prisma.billingRecord.create({
@@ -178,7 +178,7 @@ describe("reports/revenue/by-package-type", () => {
 
   it("groups CONFIRMED payments by PackageType, sorts desc, and ignores anonymous rows", async () => {
     const client = await prisma.user.create({
-      data: { email: "c@test.local", fullName: "C", role: "CLIENT" },
+      data: { email: "c@test.local", firstName: "C", lastName: "Test", role: "CLIENT" },
     });
     const reformer = await prisma.classType.create({
       data: { name: "Reformer", maxClients: 6, durationMins: 60 },
@@ -285,7 +285,7 @@ describe("reports/revenue/by-method", () => {
 
   it("groups CONFIRMED payments by PaymentMethod and sorts desc", async () => {
     const client = await prisma.user.create({
-      data: { email: "c@test.local", fullName: "C", role: "CLIENT" },
+      data: { email: "c@test.local", firstName: "C", lastName: "Test", role: "CLIENT" },
     });
     const at = new Date("2026-07-15T10:00:00Z");
     // CARD: 8000 (single biggest)

@@ -22,7 +22,7 @@ import { now } from "@/lib/now";
 
 async function seedTwoClientsTwoPackages() {
   const admin = await prisma.user.create({
-    data: { email: "admin@test.local", fullName: "Admin", role: "ADMIN" },
+    data: { email: "admin@test.local", firstName: "Admin", lastName: "Test", role: "ADMIN" },
   });
   const reformer = await prisma.classType.create({
     data: { name: "Reformer", maxClients: 6, durationMins: 60 },
@@ -37,11 +37,11 @@ async function seedTwoClientsTwoPackages() {
     },
   });
   const ana = await prisma.user.create({
-    data: { email: "ana@test.local", fullName: "Ana Anić", role: "CLIENT" },
+    data: { email: "ana@test.local", firstName: "Ana", lastName: "Anić", role: "CLIENT" },
   });
   const anaProfile = await prisma.clientProfile.create({ data: { userId: ana.id } });
   const milos = await prisma.user.create({
-    data: { email: "milos@test.local", fullName: "Miloš Mitrović", role: "CLIENT" },
+    data: { email: "milos@test.local", firstName: "Miloš", lastName: "Mitrović", role: "CLIENT" },
   });
   const milosProfile = await prisma.clientProfile.create({ data: { userId: milos.id } });
   const startsAt = now();

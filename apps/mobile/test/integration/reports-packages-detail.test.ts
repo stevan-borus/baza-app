@@ -94,7 +94,8 @@ async function makeClient(tag: string) {
   const user = await prisma.user.create({
     data: {
       email: `client-${tag}@test.local`,
-      fullName: `Client ${tag}`,
+      firstName: "Client",
+      lastName: tag,
       role: "CLIENT",
     },
   });

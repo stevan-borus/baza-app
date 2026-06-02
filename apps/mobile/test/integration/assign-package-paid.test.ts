@@ -33,10 +33,10 @@ import { prisma } from "@/lib/server/prisma";
 
 async function seed() {
   const adminUser = await prisma.user.create({
-    data: { email: "admin@test.local", fullName: "Admin", role: "ADMIN" },
+    data: { email: "admin@test.local", firstName: "Admin", lastName: "User", role: "ADMIN" },
   });
   const clientUser = await prisma.user.create({
-    data: { email: "client@test.local", fullName: "Client", role: "CLIENT" },
+    data: { email: "client@test.local", firstName: "Client", lastName: "User", role: "CLIENT" },
   });
   const clientProfile = await prisma.clientProfile.create({
     data: { userId: clientUser.id },

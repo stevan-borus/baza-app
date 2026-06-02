@@ -23,10 +23,13 @@ import { nowMs } from "@/lib/now";
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 async function makeClient(opts: { email: string; fullName: string }) {
+  const [firstName, ...rest] = opts.fullName.split(" ");
+  const lastName = rest.join(" ") || "Test";
   const user = await prisma.user.create({
     data: {
       email: opts.email,
-      fullName: opts.fullName,
+      firstName,
+      lastName,
       role: "CLIENT",
       isActive: true,
     },
@@ -36,8 +39,10 @@ async function makeClient(opts: { email: string; fullName: string }) {
 }
 
 async function makeTrainer(opts: { email: string; fullName: string }) {
+  const [firstName, ...rest] = opts.fullName.split(" ");
+  const lastName = rest.join(" ") || "Test";
   return prisma.user.create({
-    data: { email: opts.email, fullName: opts.fullName, role: "TRAINER" },
+    data: { email: opts.email, firstName, lastName, role: "TRAINER" },
   });
 }
 

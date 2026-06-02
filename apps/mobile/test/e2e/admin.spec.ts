@@ -17,6 +17,7 @@ import {
   openSessionEditSheet,
 } from "./helpers/dates";
 import { t } from "./helpers/locales";
+import { pickInviteDob } from "./helpers/forms";
 
 const SEED_PASSWORD = "Password123!";
 
@@ -795,9 +796,9 @@ test.describe("admin (Serbian)", () => {
       .getByRole("button", { name: t.admin.clients.sheetInvite })
       .click();
     await page.getByTestId("invite-create-email-input").fill(inviteEmail);
-    await page
-      .getByTestId("invite-create-name-input")
-      .fill("Admin Invite Smoke");
+    await page.getByTestId("invite-create-name-input").fill("Admin Invite");
+    await page.getByTestId("invite-create-lastname-input").fill("Smoke");
+    await pickInviteDob(page);
     await page.getByTestId("invite-create-submit-button").click();
 
     await expect(

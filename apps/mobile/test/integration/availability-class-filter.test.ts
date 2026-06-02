@@ -21,10 +21,10 @@ import { prisma } from "@/lib/server/prisma";
 
 async function baseFixtures() {
   const trainer = await prisma.user.create({
-    data: { email: "tr@test.local", fullName: "T", role: "TRAINER" },
+    data: { email: "tr@test.local", firstName: "T", lastName: "Trainer", role: "TRAINER" },
   });
   const client = await prisma.user.create({
-    data: { email: "c@test.local", fullName: "C", role: "CLIENT" },
+    data: { email: "c@test.local", firstName: "C", lastName: "Client", role: "CLIENT" },
   });
   const clientProfile = await prisma.clientProfile.create({
     data: { userId: client.id },
@@ -240,7 +240,7 @@ describe("GET /api/sessions/availability class-scoped client filtering", () => {
 
   it("admins see everything regardless of pack scope", async () => {
     const adminUser = await prisma.user.create({
-      data: { email: "a@test.local", fullName: "Admin", role: "ADMIN" },
+      data: { email: "a@test.local", firstName: "Admin", lastName: "User", role: "ADMIN" },
     });
     const { trainer, reformer, energy } = await baseFixtures();
     await makeSession(reformer.id, trainer.id, SESSION_DATE);

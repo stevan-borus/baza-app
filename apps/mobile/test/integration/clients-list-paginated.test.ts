@@ -39,7 +39,8 @@ async function seedClients(count: number) {
     const user = await prisma.user.create({
       data: {
         email: `client-${idx}@test.local`,
-        fullName: `Client ${idx}`,
+        firstName: "Client",
+        lastName: idx,
         role: "CLIENT",
         isActive: true,
       },
@@ -47,7 +48,11 @@ async function seedClients(count: number) {
     const profile = await prisma.clientProfile.create({
       data: { userId: user.id },
     });
-    created.push({ profileId: profile.id, userId: user.id, fullName: user.fullName });
+    created.push({
+      profileId: profile.id,
+      userId: user.id,
+      fullName: `${user.firstName} ${user.lastName}`,
+    });
   }
   return created;
 }
@@ -135,7 +140,8 @@ describe("clients API — pagination & search", () => {
     const targetUser = await prisma.user.create({
       data: {
         email: "zebra@test.local",
-        fullName: "Zebra Special",
+        firstName: "Zebra",
+        lastName: "Special",
         role: "CLIENT",
         isActive: true,
       },

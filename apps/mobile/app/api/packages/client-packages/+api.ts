@@ -1,4 +1,4 @@
-import { createClientPackageInputSchema } from "@baza/types";
+import { createClientPackageInputSchema, formatFullName } from "@baza/types";
 import { NOTIFICATION_MESSAGE_KEYS } from "@baza/i18n";
 import { UserRole } from "@/generated/prisma";
 import { now } from "@/lib/now";
@@ -107,7 +107,8 @@ export async function GET(request: Request) {
             clientProfile: {
               user: {
                 OR: [
-                  { fullName: { contains: search, mode: "insensitive" } },
+                  { firstName: { contains: search, mode: "insensitive" } },
+                  { lastName: { contains: search, mode: "insensitive" } },
                   { email: { contains: search, mode: "insensitive" } },
                 ],
               },
@@ -123,7 +124,7 @@ export async function GET(request: Request) {
         },
         clientProfile: {
           select: {
-            user: { select: { id: true, fullName: true, email: true } },
+            user: { select: { id: true, firstName: true, lastName: true, email: true } },
           },
         },
       },
@@ -135,7 +136,13 @@ export async function GET(request: Request) {
       : null;
     const shaped = pagePackages.map((p) => ({
       ...p,
-      client: p.clientProfile.user,
+      client: {
+        ...p.clientProfile.user,
+        fullName: formatFullName(
+          p.clientProfile.user.firstName,
+          p.clientProfile.user.lastName,
+        ),
+      },
     }));
     return ok({ success: true, packages: shaped, nextCursor });
   }

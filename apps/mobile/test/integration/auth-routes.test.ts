@@ -69,27 +69,46 @@ describe("auth routes", () => {
 
     it("returns the active user payload when authenticated", async () => {
       const user = await prisma.user.create({
-        data: { email: "u@test.local", fullName: "U", role: "ADMIN" },
+        data: {
+          email: "u@test.local",
+          firstName: "Ana",
+          lastName: "Petrović",
+          role: "ADMIN",
+        },
       });
       setMockUser({
         id: user.id,
         role: "ADMIN",
         email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        fullName: `${user.firstName} ${user.lastName}`,
         isActive: true,
         clientProfile: null,
       });
       const response = await GET_ME(new Request("http://test.local/api/auth/me"));
       expect(response.status).toBe(200);
-      const body = (await response.json()) as { user: { id: string; role: string } };
+      const body = (await response.json()) as {
+        user: {
+          id: string;
+          role: string;
+          firstName: string;
+          lastName: string;
+          fullName: string;
+        };
+      };
       expect(body.user.id).toBe(user.id);
       expect(body.user.role).toBe("ADMIN");
+      expect(body.user.firstName).toBe("Ana");
+      expect(body.user.lastName).toBe("Petrović");
+      expect(body.user.fullName).toBe("Ana Petrović");
     });
   });
 
   describe("POST /api/auth/sign-out", () => {
     it("deactivates the caller's active push tokens before signing out", async () => {
       const user = await prisma.user.create({
-        data: { email: "p@test.local", fullName: "P", role: "CLIENT" },
+        data: { email: "p@test.local", firstName: "Petar", lastName: "Test", role: "CLIENT" },
       });
       await prisma.pushToken.create({
         data: {
@@ -123,7 +142,8 @@ describe("auth routes", () => {
       const user = await prisma.user.create({
         data: {
           email: "reset@test.local",
-          fullName: "Reset",
+          firstName: "Reset",
+          lastName: "Test",
           role: "CLIENT",
           isActive: true,
         },
@@ -159,7 +179,8 @@ describe("auth routes", () => {
       await prisma.user.create({
         data: {
           email: "off@test.local",
-          fullName: "Off",
+          firstName: "Off",
+          lastName: "Test",
           role: "CLIENT",
           isActive: false,
         },
@@ -183,7 +204,8 @@ describe("auth routes", () => {
       const user = await prisma.user.create({
         data: {
           email: "rp@test.local",
-          fullName: "RP",
+          firstName: "Reset",
+          lastName: "Password",
           role: "CLIENT",
           isActive: true,
           passwordHash: await hashPassword("OldPassword123!"),

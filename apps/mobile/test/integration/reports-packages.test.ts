@@ -21,7 +21,7 @@ import { prisma } from "@/lib/server/prisma";
 
 async function seedPackagesAndAssignments() {
   const admin = await prisma.user.create({
-    data: { email: "admin@test.local", fullName: "Admin", role: "ADMIN" },
+    data: { email: "admin@test.local", firstName: "Admin", lastName: "Test", role: "ADMIN" },
   });
   const reformer = await prisma.classType.create({
     data: { name: "Reformer", maxClients: 6, durationMins: 60 },
@@ -64,7 +64,7 @@ async function seedPackagesAndAssignments() {
   const clients = [];
   for (let i = 0; i < 3; i++) {
     const client = await prisma.user.create({
-      data: { email: `c${i}@test.local`, fullName: `C${i}`, role: "CLIENT" },
+      data: { email: `c${i}@test.local`, firstName: `C${i}`, lastName: "Test", role: "CLIENT" },
     });
     const profile = await prisma.clientProfile.create({
       data: { userId: client.id },
@@ -133,7 +133,7 @@ async function seedPackagesAndAssignments() {
 
   // Energy 12 — paid.
   const energyClient = await prisma.user.create({
-    data: { email: "energy@test.local", fullName: "Energy C", role: "CLIENT" },
+    data: { email: "energy@test.local", firstName: "Energy", lastName: "C", role: "CLIENT" },
   });
   const energyProfile = await prisma.clientProfile.create({
     data: { userId: energyClient.id },

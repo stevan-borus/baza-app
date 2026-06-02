@@ -26,10 +26,10 @@ import { now, nowMs } from "@/lib/now";
 
 async function seed() {
   const trainer = await prisma.user.create({
-    data: { email: "trainer@test.local", fullName: "Trainer", role: "TRAINER" },
+    data: { email: "trainer@test.local", firstName: "Trainer", lastName: "User", role: "TRAINER" },
   });
   const client = await prisma.user.create({
-    data: { email: "client@test.local", fullName: "Client", role: "CLIENT" },
+    data: { email: "client@test.local", firstName: "Client", lastName: "User", role: "CLIENT" },
   });
   const clientProfile = await prisma.clientProfile.create({
     data: { userId: client.id, dateOfBirth: new Date("1990-01-01") },

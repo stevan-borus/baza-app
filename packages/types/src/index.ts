@@ -14,6 +14,34 @@ import { NotificationTypeSchema } from "./generated/prisma-zod/schemas/enums/Not
 export const roleSchema = UserRoleSchema;
 export type Role = z.infer<typeof roleSchema>;
 
+/** Display name derived from the normalized first/last fields. */
+export function formatFullName(first: string, last: string): string {
+  return `${first} ${last}`.trim();
+}
+
+/**
+ * The name to show for a user in the UI: their real full name, falling back
+ * to the email local-part only when no name is on the record (e.g. an
+ * incompletely-provisioned account). Single source for every "who is this"
+ * label — profile header, settings sheet, greeting — so none of them silently
+ * render the email instead of the name.
+ */
+export function displayName(
+  user?: { firstName?: string | null; lastName?: string | null; email?: string | null },
+): string {
+  const full = formatFullName(user?.firstName ?? "", user?.lastName ?? "");
+  if (full) return full;
+  return user?.email?.split("@")[0] ?? "";
+}
+
+/**
+ * A required person-name field. Trims surrounding whitespace *before* the
+ * length check, so a whitespace-only input (e.g. "   ") is rejected rather
+ * than stored — and a padded value ("  Ana  ") persists clean, keeping the
+ * derived `fullName` free of stray/double spaces.
+ */
+export const nameFieldSchema = z.string().trim().min(1).max(50);
+
 /**
  * Civil-date YYYY-MM-DD string. Server casts to Postgres DATE; UI formats
  * for display via `formatDateOfBirth`. Empty string is treated as absent
@@ -39,17 +67,20 @@ export const dateOfBirthSchema = z
 
 export const inviteClientInputSchema = UserInviteResultSchema.pick({
   email: true,
-  fullName: true,
+  firstName: true,
+  lastName: true,
   phone: true,
 }).extend({
-  fullName: z.string().min(2).max(100),
+  firstName: nameFieldSchema,
+  lastName: nameFieldSchema,
   phone: z.string().min(6).max(30).optional(),
   dateOfBirth: dateOfBirthSchema,
 });
 export type InviteClientInput = z.infer<typeof inviteClientInputSchema>;
 
 export const updateClientInputSchema = z.object({
-  fullName: z.string().min(2).max(100).optional(),
+  firstName: nameFieldSchema.optional(),
+  lastName: nameFieldSchema.optional(),
   phone: z.string().min(6).max(30).nullable().optional(),
   notes: z.string().max(2000).nullable().optional(),
   isActive: z.boolean().optional(),
@@ -126,7 +157,9 @@ export type MonthlyAvailabilityQuery = z.infer<
 export const sessionUserSchema = z.object({
   id: z.string(),
   email: z.string(),
-  fullName: z.string(),
+  firstName: z.string(),
+  lastName: z.string(),
+  fullName: z.string(), // derived server-side; kept for display sites
   role: UserRoleSchema,
   isActive: z.boolean(),
   createdAt: z.coerce.date(),
@@ -377,7 +410,9 @@ export const clientsResponseSchema = z.object({
       packageStatus: clientPackageStatusSchema,
       user: z.object({
         id: z.string(),
-        fullName: z.string(),
+        firstName: z.string(),
+        lastName: z.string(),
+        fullName: z.string(), // derived
         email: z.email(),
         phone: z.optional(z.nullable(z.string())),
       }),
@@ -400,7 +435,9 @@ export const clientByIdResponseSchema = z.object({
     packageStatus: clientPackageStatusSchema,
     user: z.object({
       id: z.string(),
-      fullName: z.string(),
+      firstName: z.string(),
+      lastName: z.string(),
+      fullName: z.string(), // derived
       email: z.email(),
       phone: z.nullable(z.string()),
       isActive: z.boolean(),

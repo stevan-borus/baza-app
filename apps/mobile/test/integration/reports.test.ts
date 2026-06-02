@@ -26,7 +26,7 @@ const DAY_MS = 24 * HOUR_MS;
 
 async function seedReformerWithTrainer() {
   const trainer = await prisma.user.create({
-    data: { email: "trainer@test.local", fullName: "Trainer", role: "TRAINER" },
+    data: { email: "trainer@test.local", firstName: "Trainer", lastName: "Test", role: "TRAINER" },
   });
   const reformer = await prisma.classType.create({
     data: { name: "Reformer", maxClients: 6, durationMins: 60 },
@@ -36,7 +36,7 @@ async function seedReformerWithTrainer() {
 
 async function makeClient(email: string) {
   const user = await prisma.user.create({
-    data: { email, fullName: email, role: "CLIENT" },
+    data: { email, firstName: email, lastName: "Test", role: "CLIENT" },
   });
   const profile = await prisma.clientProfile.create({
     data: { userId: user.id },

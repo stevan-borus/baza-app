@@ -40,7 +40,8 @@ async function seedClassRoomTrainer() {
   const trainer = await prisma.user.create({
     data: {
       email: "trainer-gate@t.local",
-      fullName: "Trainer",
+      firstName: "Trainer",
+      lastName: "User",
       role: "TRAINER",
       trainerProfile: { create: {} },
     },
@@ -159,7 +160,8 @@ describe("POST /api/bookings — guardian verification gate", () => {
     const minor = await prisma.user.create({
       data: {
         email: "minor-gate@t.local",
-        fullName: "Minor Client",
+        firstName: "Minor",
+        lastName: "Client",
         role: "CLIENT",
         clientProfile: {
           create: { dateOfBirth: new Date(now().getFullYear() - 12, 0, 1) },
@@ -183,7 +185,8 @@ describe("POST /api/bookings — guardian verification gate", () => {
     const adult = await prisma.user.create({
       data: {
         email: "adult-gate@t.local",
-        fullName: "Adult Client",
+        firstName: "Adult",
+        lastName: "Client",
         role: "CLIENT",
         clientProfile: { create: { dateOfBirth: new Date("1990-01-01") } },
       },
@@ -291,7 +294,7 @@ describe("POST /api/bookings — guardian verification gate", () => {
 
     // Swap to an admin user and call the verify endpoint.
     const admin = await prisma.user.create({
-      data: { email: "adm-gate@t.local", fullName: "Admin", role: "ADMIN" },
+      data: { email: "adm-gate@t.local", firstName: "Admin", lastName: "User", role: "ADMIN" },
     });
     setMockUser({
       id: admin.id,

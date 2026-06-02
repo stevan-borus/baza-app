@@ -4,6 +4,7 @@ import { ok } from "@/lib/server/http";
 import { createSystemNotification } from "@/lib/server/notifications";
 import { resolveSuggestedClassType } from "@/lib/server/birthday-suggested-class-type";
 import { NOTIFICATION_MESSAGE_KEYS } from "@baza/i18n";
+import { formatFullName } from "@baza/types";
 import { UserRole, Prisma } from "@/generated/prisma";
 import { prisma } from "@/lib/server/prisma";
 
@@ -38,9 +39,9 @@ export async function POST(request: Request) {
   // form does not splice nested Sql fragments from Prisma.join, which causes
   // them to be serialized into bind parameters and Postgres throws 22P02.
   const matchedClients = await prisma.$queryRaw<
-    Array<{ clientProfileId: string; userId: string; fullName: string }>
+    Array<{ clientProfileId: string; userId: string; firstName: string; lastName: string }>
   >(Prisma.sql`
-    SELECT cp.id as "clientProfileId", u.id as "userId", u."fullName"
+    SELECT cp.id as "clientProfileId", u.id as "userId", u."firstName", u."lastName"
     FROM "ClientProfile" cp
     JOIN "User" u ON u.id = cp."userId"
     WHERE u."isActive" = true
@@ -70,7 +71,7 @@ export async function POST(request: Request) {
     const payload = {
       clientProfileId: client.clientProfileId,
       clientUserId: client.userId,
-      clientFullName: client.fullName,
+      clientFullName: formatFullName(client.firstName, client.lastName),
       suggestedClassTypeId,
       today: todayIso,
     };

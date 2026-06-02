@@ -44,13 +44,13 @@ const DAY_MS = 24 * HOUR_MS;
 
 async function fixtures() {
   const admin = await prisma.user.create({
-    data: { email: "adm-npt@t.local", fullName: "Admin", role: "ADMIN" },
+    data: { email: "adm-npt@t.local", firstName: "Admin", lastName: "Test", role: "ADMIN" },
   });
   const trainer = await prisma.user.create({
-    data: { email: "tr-npt@t.local", fullName: "Trainer Reformer", role: "TRAINER" },
+    data: { email: "tr-npt@t.local", firstName: "Trainer", lastName: "Reformer", role: "TRAINER" },
   });
   const client = await prisma.user.create({
-    data: { email: "cl-npt@t.local", fullName: "Marko Petrović", role: "CLIENT" },
+    data: { email: "cl-npt@t.local", firstName: "Marko", lastName: "Petrović", role: "CLIENT" },
   });
   const clientProfile = await prisma.clientProfile.create({
     data: { userId: client.id, dateOfBirth: new Date("1990-01-01") },

@@ -22,7 +22,7 @@ import { now } from "@/lib/now";
 
 async function seedAdminSessionWithBookings() {
   const admin = await prisma.user.create({
-    data: { email: "admin@test.local", fullName: "Admin", role: "ADMIN" },
+    data: { email: "admin@test.local", firstName: "Admin", lastName: "Test", role: "ADMIN" },
   });
   const reformer = await prisma.classType.create({
     data: { name: "Reformer", maxClients: 6, durationMins: 60 },
@@ -31,7 +31,7 @@ async function seedAdminSessionWithBookings() {
     data: { name: "Sala 1", capacity: 6 },
   });
   const trainer = await prisma.user.create({
-    data: { email: "t@test.local", fullName: "Trainer T", role: "TRAINER" },
+    data: { email: "t@test.local", firstName: "Trainer", lastName: "T", role: "TRAINER" },
   });
   const startsAt = new Date(now().getTime() + 24 * 60 * 60 * 1000);
   const endsAt = new Date(startsAt.getTime() + 60 * 60 * 1000);
@@ -55,7 +55,7 @@ async function seedAdminSessionWithBookings() {
     },
   });
   const ana = await prisma.user.create({
-    data: { email: "ana@test.local", fullName: "Ana Anić", role: "CLIENT" },
+    data: { email: "ana@test.local", firstName: "Ana", lastName: "Anić", role: "CLIENT" },
   });
   const anaProfile = await prisma.clientProfile.create({ data: { userId: ana.id } });
   const anaPkg = await prisma.clientPackage.create({
@@ -90,8 +90,10 @@ async function seedWaitlistEntry(
   email: string,
   fullName: string,
 ) {
+  const [firstName, ...rest] = fullName.split(" ");
+  const lastName = rest.join(" ") || "Test";
   const user = await prisma.user.create({
-    data: { email, fullName, role: "CLIENT" },
+    data: { email, firstName, lastName, role: "CLIENT" },
   });
   const profile = await prisma.clientProfile.create({ data: { userId: user.id } });
   await prisma.waitlistEntry.create({
@@ -130,7 +132,9 @@ describe("GET /api/sessions/[id]", () => {
     expect(body.success).toBe(true);
     expect(body.session.id).toBe(session.id);
     expect(body.session.bookings).toHaveLength(1);
-    expect(body.session.bookings[0].client.fullName).toBe(ana.fullName);
+    expect(body.session.bookings[0].client.fullName).toBe(
+      `${ana.firstName} ${ana.lastName}`,
+    );
   });
 
   it("returns waitlisted clients in position order under session.waitlist", async () => {

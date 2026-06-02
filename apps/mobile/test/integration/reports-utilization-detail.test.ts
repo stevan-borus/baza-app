@@ -67,7 +67,7 @@ async function seedSessionWithBookings(opts: {
   const trainer =
     (await prisma.user.findFirst({ where: { email: "t@test.local" } })) ??
     (await prisma.user.create({
-      data: { email: "t@test.local", fullName: "T", role: "TRAINER" },
+      data: { email: "t@test.local", firstName: "T", lastName: "Test", role: "TRAINER" },
     }));
   const sala =
     (await prisma.studioRoom.findFirst({ where: { name: "Sala" } })) ??
@@ -103,7 +103,8 @@ async function seedSessionWithBookings(opts: {
     const client = await prisma.user.create({
       data: {
         email: `client-${session.id}-${i}@test.local`,
-        fullName: `Client ${i}`,
+        firstName: "Client",
+        lastName: String(i),
         role: "CLIENT",
       },
     });

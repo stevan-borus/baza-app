@@ -1,4 +1,4 @@
-import { updateSessionInputSchema } from "@baza/types";
+import { formatFullName, updateSessionInputSchema } from "@baza/types";
 import { UserRole } from "@/generated/prisma";
 import { nowMs } from "@/lib/now";
 import { requireRole } from "@/lib/server/auth-guards";
@@ -20,7 +20,7 @@ type RouteParams = Record<string, string>;
  */
 const clientConsentSelect = {
   id: true,
-  user: { select: { id: true, fullName: true, email: true } },
+  user: { select: { id: true, firstName: true, lastName: true, email: true } },
   healthIntakes: {
     orderBy: { recordedAt: "desc" },
     take: 1,
@@ -63,7 +63,7 @@ export async function GET(request: Request, { id }: RouteParams) {
       recurringScheduleId: true,
       classType: { select: { id: true, name: true } },
       room: { select: { id: true, name: true } },
-      trainer: { select: { id: true, fullName: true } },
+      trainer: { select: { id: true, firstName: true, lastName: true } },
       bookings: {
         where: { canceledAt: null },
         orderBy: { createdAt: "asc" },
@@ -138,7 +138,7 @@ export async function GET(request: Request, { id }: RouteParams) {
   // can't drift. `clientProfile` matches `clientConsentSelect`.
   type ConsentClientProfile = {
     id: string;
-    user: { id: string; fullName: string; email: string };
+    user: { id: string; firstName: string; lastName: string; email: string };
     healthIntakes: Array<{
       conditions: string[];
       conditionsOther: string | null;
@@ -182,7 +182,10 @@ export async function GET(request: Request, { id }: RouteParams) {
       clientProfileId: clientProfile.id,
       client: {
         id: clientProfile.user.id,
-        fullName: clientProfile.user.fullName,
+        fullName: formatFullName(
+          clientProfile.user.firstName,
+          clientProfile.user.lastName,
+        ),
         email: clientProfile.user.email,
       },
       consentFlags,
@@ -207,6 +210,15 @@ export async function GET(request: Request, { id }: RouteParams) {
 
   const shaped = {
     ...session,
+    trainer: session.trainer
+      ? {
+          id: session.trainer.id,
+          fullName: formatFullName(
+            session.trainer.firstName,
+            session.trainer.lastName,
+          ),
+        }
+      : null,
     bookedCount,
     seriesBookedCount,
     bookings: session.bookings.map((b) => ({

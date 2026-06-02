@@ -1,4 +1,4 @@
-import { bookingMutationInputSchema, BOOKING_ERRORS } from "@baza/types";
+import { bookingMutationInputSchema, BOOKING_ERRORS, formatFullName } from "@baza/types";
 import { type Prisma, UserRole } from "@/generated/prisma";
 import { getConsentStatus } from "@/lib/legal/consent-status";
 import { now } from "@/lib/now";
@@ -155,7 +155,7 @@ export async function POST(request: Request) {
         },
       },
       clientProfile: {
-        select: { user: { select: { fullName: true } } },
+        select: { user: { select: { firstName: true, lastName: true } } },
       },
     },
   });
@@ -304,7 +304,10 @@ export async function POST(request: Request) {
     void notifyCancellation({
       sessionId,
       trainerUserId: session.trainerUserId,
-      clientFullName: activeBooking.clientProfile.user.fullName,
+      clientFullName: formatFullName(
+        activeBooking.clientProfile.user.firstName,
+        activeBooking.clientProfile.user.lastName,
+      ),
       classTypeName: session.classType.name,
       sessionStartsAt: session.startsAt,
       canceledAt: cancellationTime,

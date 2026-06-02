@@ -30,7 +30,8 @@ async function seedAdmins(count: number) {
     const a = await prisma.user.create({
       data: {
         email: `admin${i}@test.local`,
-        fullName: `Admin ${i}`,
+        firstName: "Admin",
+        lastName: String(i),
         role: "ADMIN",
       },
     });
@@ -58,10 +59,10 @@ describe("cron:sessions unbacked-attendance notification", () => {
   it("notifies all admins (RESERVATION_UNBACKED_ATTENDANCE) when a completed booking has no eligible package", async () => {
     const [adminA, adminB] = await seedAdmins(2);
     const trainer = await prisma.user.create({
-      data: { email: "trainer@test.local", fullName: "Trainer", role: "TRAINER" },
+      data: { email: "trainer@test.local", firstName: "Trainer", lastName: "Test", role: "TRAINER" },
     });
     const clientUser = await prisma.user.create({
-      data: { email: "client@test.local", fullName: "Marija", role: "CLIENT" },
+      data: { email: "client@test.local", firstName: "Marija", lastName: "Test", role: "CLIENT" },
     });
     const clientProfile = await prisma.clientProfile.create({
       data: { userId: clientUser.id },
@@ -107,10 +108,10 @@ describe("cron:sessions unbacked-attendance notification", () => {
   it("does not fire when consumption succeeds against a package", async () => {
     await seedAdmins(1);
     const trainer = await prisma.user.create({
-      data: { email: "trainer@test.local", fullName: "Trainer", role: "TRAINER" },
+      data: { email: "trainer@test.local", firstName: "Trainer", lastName: "Test", role: "TRAINER" },
     });
     const clientUser = await prisma.user.create({
-      data: { email: "client@test.local", fullName: "Marija", role: "CLIENT" },
+      data: { email: "client@test.local", firstName: "Marija", lastName: "Test", role: "CLIENT" },
     });
     const clientProfile = await prisma.clientProfile.create({
       data: { userId: clientUser.id },

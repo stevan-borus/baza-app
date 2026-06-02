@@ -30,7 +30,8 @@ describe("GET /api/consent/status — social-media fields", () => {
     const user = await prisma.user.create({
       data: {
         email: "social-status@t.local",
-        fullName: "Adult Social",
+        firstName: "Adult",
+        lastName: "Social",
         role: "CLIENT",
         clientProfile: { create: { dateOfBirth: new Date("1990-01-01") } },
       },

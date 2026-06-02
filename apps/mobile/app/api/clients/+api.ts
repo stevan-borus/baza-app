@@ -1,4 +1,8 @@
-import { inviteClientInputSchema, type ClientPackageStatus } from "@baza/types";
+import {
+  formatFullName,
+  inviteClientInputSchema,
+  type ClientPackageStatus,
+} from "@baza/types";
 import { UserRole } from "@/generated/prisma";
 import { now } from "@/lib/now";
 import { requireRole } from "@/lib/server/auth-guards";
@@ -15,9 +19,11 @@ export async function GET(request: Request) {
   const currentInstant = now();
 
   // Parse cursor + take + q from the URL. Cursor-based pagination over a
-  // stable `id` ordering — we tried orderBy fullName before but couldn't
-  // express that as a Prisma cursor and still get deterministic paging.
-  // Search ("q") matches user.fullName or user.email case-insensitively.
+  // stable `id` ordering — we tried orderBy name before but couldn't
+  // express that as a Prisma cursor and still get deterministic paging, so the
+  // lastName index exists for future use but ordering stays on id here.
+  // Search ("q") matches user.firstName, user.lastName or user.email
+  // case-insensitively.
   const url = new URL(request.url);
   const cursor = url.searchParams.get("cursor") ?? undefined;
   const rawTake = url.searchParams.get("take");
@@ -45,7 +51,8 @@ export async function GET(request: Request) {
   const searchWhere = q
     ? {
         OR: [
-          { user: { fullName: { contains: q, mode: "insensitive" as const } } },
+          { user: { firstName: { contains: q, mode: "insensitive" as const } } },
+          { user: { lastName: { contains: q, mode: "insensitive" as const } } },
           { user: { email: { contains: q, mode: "insensitive" as const } } },
         ],
       }
@@ -66,7 +73,8 @@ export async function GET(request: Request) {
       user: {
         select: {
           id: true,
-          fullName: true,
+          firstName: true,
+          lastName: true,
           email: true,
           phone: true,
           isActive: true,
@@ -105,9 +113,17 @@ export async function GET(request: Request) {
 
   // Compute the most meaningful package status per client.
   // Priority: paused (overrides) > active > expiring > expired > none.
-  const withStatus = pageClients.map(({ packages, packagePauses, ...rest }) => {
+  const withStatus = pageClients.map(({ packages, packagePauses, user, ...rest }) => {
+    const userWithName = {
+      ...user,
+      fullName: formatFullName(user.firstName, user.lastName),
+    };
     if (packagePauses.length > 0) {
-      return { ...rest, packageStatus: "paused" as ClientPackageStatus };
+      return {
+        ...rest,
+        user: userWithName,
+        packageStatus: "paused" as ClientPackageStatus,
+      };
     }
 
     let status: ClientPackageStatus = "none";
@@ -127,7 +143,7 @@ export async function GET(request: Request) {
     }
 
     if (status === "none" && hasExpired) status = "expired";
-    return { ...rest, packageStatus: status };
+    return { ...rest, user: userWithName, packageStatus: status };
   });
 
   return ok({ success: true, clients: withStatus, nextCursor });
@@ -142,13 +158,14 @@ export async function POST(request: Request) {
   const parsed = inviteClientInputSchema.safeParse(body);
   if (!parsed.success) return fail("Invalid payload", 400, parsed.error);
 
-  const { email, fullName, phone, dateOfBirth } = parsed.data;
+  const { email, firstName, lastName, phone, dateOfBirth } = parsed.data;
   const normalizedEmail = email.toLowerCase().trim();
   // Creates user and linked clientProfile; admin-only.
   const user = await prisma.user.create({
     data: {
       email: normalizedEmail,
-      fullName,
+      firstName,
+      lastName,
       phone,
       role: "CLIENT",
       isActive: true,
@@ -159,12 +176,19 @@ export async function POST(request: Request) {
     select: {
       id: true,
       email: true,
-      fullName: true,
+      firstName: true,
+      lastName: true,
       phone: true,
       role: true,
       clientProfile: { select: { id: true } },
     },
   });
 
-  return ok({ success: true, user }, 201);
+  return ok(
+    {
+      success: true,
+      user: { ...user, fullName: formatFullName(user.firstName, user.lastName) },
+    },
+    201,
+  );
 }

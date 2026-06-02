@@ -9,13 +9,13 @@ import { prisma } from "@/lib/server/prisma";
 
 async function seed() {
   const trainerA = await prisma.user.create({
-    data: { email: "trainer.a@test.local", fullName: "Trainer A", role: "TRAINER" },
+    data: { email: "trainer.a@test.local", firstName: "Trainer", lastName: "A", role: "TRAINER" },
   });
   const trainerB = await prisma.user.create({
-    data: { email: "trainer.b@test.local", fullName: "Trainer B", role: "TRAINER" },
+    data: { email: "trainer.b@test.local", firstName: "Trainer", lastName: "B", role: "TRAINER" },
   });
   const client = await prisma.user.create({
-    data: { email: "client@test.local", fullName: "Client", role: "CLIENT" },
+    data: { email: "client@test.local", firstName: "Client", lastName: "Test", role: "CLIENT" },
   });
   const clientProfile = await prisma.clientProfile.create({
     data: { userId: client.id },

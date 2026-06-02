@@ -87,7 +87,7 @@ describe("rooms PATCH + DELETE", () => {
       data: { name: "Sala 3", capacity: 6 },
     });
     const trainer = await prisma.user.create({
-      data: { email: "t@test.local", fullName: "T", role: "TRAINER" },
+      data: { email: "t@test.local", firstName: "T", lastName: "Test", role: "TRAINER" },
     });
     const reformer = await prisma.classType.create({
       data: { name: "Reformer", maxClients: 6, durationMins: 60 },

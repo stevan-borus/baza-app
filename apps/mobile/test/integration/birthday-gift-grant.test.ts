@@ -29,7 +29,7 @@ const createSystemNotificationMock = vi.mocked(createSystemNotification);
 
 async function seedAdminAndClient() {
   const admin = await prisma.user.create({
-    data: { email: "admin@test.local", fullName: "Admin", role: "ADMIN" },
+    data: { email: "admin@test.local", firstName: "Admin", lastName: "User", role: "ADMIN" },
   });
   setMockUser({
     id: admin.id, role: "ADMIN", email: admin.email, isActive: true,
@@ -38,7 +38,8 @@ async function seedAdminAndClient() {
   const clientUser = await prisma.user.create({
     data: {
       email: "client@test.local",
-      fullName: "Client",
+      firstName: "Client",
+      lastName: "User",
       role: "CLIENT",
       clientProfile: { create: {} },
     },

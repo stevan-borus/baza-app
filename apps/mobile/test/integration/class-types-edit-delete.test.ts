@@ -114,7 +114,7 @@ describe("class-types PATCH + DELETE", () => {
       data: { name: "WithSession", maxClients: 6, durationMins: 60 },
     });
     const trainer = await prisma.user.create({
-      data: { email: "t@test.local", fullName: "T", role: "TRAINER" },
+      data: { email: "t@test.local", firstName: "T", lastName: "Test", role: "TRAINER" },
     });
     await prisma.session.create({
       data: {

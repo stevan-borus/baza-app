@@ -30,10 +30,10 @@ const DAY_MS = 24 * HOUR_MS;
 
 async function seed() {
   const trainer = await prisma.user.create({
-    data: { email: "trainer@test.local", fullName: "Trainer", role: "TRAINER" },
+    data: { email: "trainer@test.local", firstName: "Trainer", lastName: "Test", role: "TRAINER" },
   });
   const otherTrainer = await prisma.user.create({
-    data: { email: "other@test.local", fullName: "Other", role: "TRAINER" },
+    data: { email: "other@test.local", firstName: "Other", lastName: "Test", role: "TRAINER" },
   });
   const reformer = await prisma.classType.create({
     data: { name: "Reformer", maxClients: 6, durationMins: 60 },
@@ -263,7 +263,7 @@ describe("sessions CRUD", () => {
   it("PATCH refuses to hide (isActive=false) a future session that has active bookings (409)", async () => {
     const { trainer, reformer } = await seed();
     const client = await prisma.user.create({
-      data: { email: "c@test.local", fullName: "C", role: "CLIENT" },
+      data: { email: "c@test.local", firstName: "C", lastName: "Test", role: "CLIENT" },
     });
     const profile = await prisma.clientProfile.create({
       data: { userId: client.id },

@@ -1,7 +1,17 @@
 import { describe, expect, it } from "vitest";
 import { render } from "@react-email/render";
+import { formatFullName } from "@baza/types";
 import { InviteEmail } from "@/emails/invite-email";
 import { ResetEmail } from "@/emails/reset-email";
+
+describe("formatFullName", () => {
+  it("joins first and last with a single space", () => {
+    expect(formatFullName("Ana", "Petrović")).toBe("Ana Petrović");
+  });
+  it("preserves multi-part first names", () => {
+    expect(formatFullName("Ana Maria", "Petrović")).toBe("Ana Maria Petrović");
+  });
+});
 
 describe("invite-email", () => {
   it("renders the activation CTA with the user's name and the invite URL", async () => {

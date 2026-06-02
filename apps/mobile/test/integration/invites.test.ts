@@ -43,7 +43,7 @@ const sendInviteEmailMock = vi.mocked(sendInviteEmail);
 
 async function seedAdmin() {
   const admin = await prisma.user.create({
-    data: { email: "admin@test.local", fullName: "Admin", role: "ADMIN" },
+    data: { email: "admin@test.local", firstName: "Admin", lastName: "User", role: "ADMIN" },
   });
   setMockUser({
     id: admin.id,
@@ -78,7 +78,8 @@ describe("invites API", () => {
     const response = await POST_INVITE(
       inviteRequest({
         email: "newclient@test.local",
-        fullName: "New Client",
+        firstName: "New",
+        lastName: "Client",
         phone: "+381 60 000 0000",
         dateOfBirth: "1990-01-01",
       }),
@@ -99,12 +100,13 @@ describe("invites API", () => {
   it("POST /api/invites returns 409 when the email already belongs to a user", async () => {
     await seedAdmin();
     await prisma.user.create({
-      data: { email: "existing@test.local", fullName: "Existing", role: "CLIENT" },
+      data: { email: "existing@test.local", firstName: "Existing", lastName: "User", role: "CLIENT" },
     });
     const response = await POST_INVITE(
       inviteRequest({
         email: "existing@test.local",
-        fullName: "Existing",
+        firstName: "Existing",
+        lastName: "User",
         dateOfBirth: "1990-01-01",
       }),
     );
@@ -120,7 +122,8 @@ describe("invites API", () => {
     await prisma.userInvite.create({
       data: {
         email: "redeemer@test.local",
-        fullName: "Redeemer",
+        firstName: "Redeemer",
+        lastName: "Test",
         role: "CLIENT",
         tokenHash,
         expiresAt: new Date(nowMs() + 24 * 60 * 60 * 1000),
@@ -160,7 +163,8 @@ describe("invites API", () => {
     const invite = await prisma.userInvite.create({
       data: {
         email: "expired@test.local",
-        fullName: "Expired",
+        firstName: "Expired",
+        lastName: "Test",
         role: "CLIENT",
         tokenHash,
         expiresAt: new Date(nowMs() - 60 * 1000),
@@ -199,7 +203,8 @@ describe("invites API", () => {
     const invite = await prisma.userInvite.create({
       data: {
         email: "to-revoke@test.local",
-        fullName: "To Revoke",
+        firstName: "To",
+        lastName: "Revoke",
         role: "CLIENT",
         tokenHash: hashToken(generateRawToken()),
         expiresAt: new Date(nowMs() + 24 * 60 * 60 * 1000),
@@ -223,7 +228,8 @@ describe("invites API", () => {
     const invite = await prisma.userInvite.create({
       data: {
         email: "to-resend@test.local",
-        fullName: "To Resend",
+        firstName: "To",
+        lastName: "Resend",
         role: "CLIENT",
         tokenHash: oldTokenHash,
         expiresAt: new Date(nowMs() + 1000),
@@ -250,7 +256,8 @@ describe("invites API", () => {
     const inviteRes = await POST_INVITE(
       inviteRequest({
         email: "dob@test.local",
-        fullName: "DOB Client",
+        firstName: "DOB",
+        lastName: "Client",
         phone: "+381601234567",
         dateOfBirth: "1990-05-14",
       }),
@@ -291,7 +298,8 @@ describe("invites API", () => {
     const res = await POST_INVITE(
       inviteRequest({
         email: "bad@test.local",
-        fullName: "Bad DOB",
+        firstName: "Bad",
+        lastName: "DOB",
         dateOfBirth: "1990-02-30",
       }),
     );
@@ -303,7 +311,8 @@ describe("invites API", () => {
     const invite = await prisma.userInvite.create({
       data: {
         email: "already-revoked@test.local",
-        fullName: "X",
+        firstName: "Already",
+        lastName: "Revoked",
         role: "CLIENT",
         tokenHash: hashToken(generateRawToken()),
         expiresAt: new Date(nowMs() + 24 * 60 * 60 * 1000),

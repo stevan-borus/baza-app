@@ -22,7 +22,7 @@ import { prisma } from "@/lib/server/prisma";
 
 async function makeUser(email: string) {
   const user = await prisma.user.create({
-    data: { email, fullName: email, role: "CLIENT" },
+    data: { email, firstName: email, lastName: "Test", role: "CLIENT" },
   });
   setMockUser({
     id: user.id,

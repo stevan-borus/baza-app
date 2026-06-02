@@ -37,7 +37,8 @@ describe("DELETE /api/health-intake — withdraw", () => {
     const user = await prisma.user.create({
       data: {
         email: "withdraw@t.local",
-        fullName: "Withdraw Adult",
+        firstName: "Withdraw",
+        lastName: "Adult",
         role: "CLIENT",
         clientProfile: { create: { dateOfBirth: new Date("1990-01-01") } },
       },

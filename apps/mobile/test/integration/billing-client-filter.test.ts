@@ -21,13 +21,13 @@ import { prisma } from "@/lib/server/prisma";
 
 async function seedTwoClientsWithPayments() {
   const admin = await prisma.user.create({
-    data: { email: "admin@test.local", fullName: "Admin", role: "ADMIN" },
+    data: { email: "admin@test.local", firstName: "Admin", lastName: "User", role: "ADMIN" },
   });
   const clientA = await prisma.user.create({
-    data: { email: "a@test.local", fullName: "Client A", role: "CLIENT" },
+    data: { email: "a@test.local", firstName: "Client", lastName: "A", role: "CLIENT" },
   });
   const clientB = await prisma.user.create({
-    data: { email: "b@test.local", fullName: "Client B", role: "CLIENT" },
+    data: { email: "b@test.local", firstName: "Client", lastName: "B", role: "CLIENT" },
   });
   await prisma.billingRecord.create({
     data: { clientUserId: clientA.id, amount: 100, method: "CASH", status: "CONFIRMED" },

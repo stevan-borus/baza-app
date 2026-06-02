@@ -38,7 +38,8 @@ describe("/api/health-intake — record + read", () => {
     const user = await prisma.user.create({
       data: {
         email: "intake@t.local",
-        fullName: "Intake Adult",
+        firstName: "Intake",
+        lastName: "Adult",
         role: "CLIENT",
         clientProfile: { create: { dateOfBirth: new Date("1990-01-01") } },
       },

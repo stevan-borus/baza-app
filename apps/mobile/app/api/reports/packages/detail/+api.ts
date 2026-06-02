@@ -28,6 +28,7 @@
  * A match means "paid"; otherwise "comp". O(clients) DB queries for now —
  * optimization can come later if needed.
  */
+import { formatFullName } from "@baza/types";
 import { UserRole } from "@/generated/prisma";
 import { requireRole } from "@/lib/server/auth-guards";
 import {
@@ -95,7 +96,7 @@ export async function GET(request: Request) {
       clientProfile: {
         select: {
           userId: true,
-          user: { select: { id: true, fullName: true } },
+          user: { select: { id: true, firstName: true, lastName: true } },
         },
       },
       packageType: {
@@ -214,7 +215,10 @@ export async function GET(request: Request) {
     .map((pkg) => ({
       clientPackageId: pkg.id,
       clientUserId: pkg.clientProfile.userId,
-      clientFullName: pkg.clientProfile.user.fullName,
+      clientFullName: formatFullName(
+        pkg.clientProfile.user.firstName,
+        pkg.clientProfile.user.lastName,
+      ),
       packageTypeName: pkg.packageType.name,
       startsAt: pkg.startsAt.toISOString(),
       isPaid: paidIds.has(pkg.id),

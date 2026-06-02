@@ -1,4 +1,5 @@
 import { NOTIFICATION_MESSAGE_KEYS } from "@baza/i18n";
+import { formatFullName } from "@baza/types";
 import { UserRole } from "@/generated/prisma";
 import { requireRole } from "@/lib/server/auth-guards";
 import { shouldApplyLateCancelPenalty } from "@/lib/server/cancellation-policy";
@@ -31,7 +32,7 @@ export async function POST(request: Request) {
       clientProfileId: true,
       clientPackageId: true,
       clientPackage: { select: { id: true, lateCancelHours: true } },
-      clientProfile: { select: { user: { select: { id: true, fullName: true } } } },
+      clientProfile: { select: { user: { select: { id: true, firstName: true, lastName: true } } } },
       session: {
         select: {
           id: true,
@@ -99,7 +100,10 @@ export async function POST(request: Request) {
     }
   >();
   for (const b of bookings) {
-    const clientFullName = b.clientProfile.user.fullName;
+    const clientFullName = formatFullName(
+      b.clientProfile.user.firstName,
+      b.clientProfile.user.lastName,
+    );
     const clientUserId = b.clientProfile.user.id;
     const bucket = byClient.get(clientUserId) ?? { clientFullName, bookings: [] };
     bucket.bookings.push(b);

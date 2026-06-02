@@ -36,7 +36,7 @@ function asAdmin(adminId: string) {
 
 async function ensureFixtures() {
   const admin = await prisma.user.create({
-    data: { email: "admin@test.local", fullName: "Admin", role: "ADMIN" },
+    data: { email: "admin@test.local", firstName: "Admin", lastName: "Test", role: "ADMIN" },
   });
   const classType = await prisma.classType.create({
     data: { name: "Reformer", maxClients: 6, durationMins: 60 },
@@ -45,7 +45,7 @@ async function ensureFixtures() {
     data: { name: "Sala 1", capacity: 6 },
   });
   const trainer = await prisma.user.create({
-    data: { email: "t@test.local", fullName: "Trainer T", role: "TRAINER" },
+    data: { email: "t@test.local", firstName: "Trainer", lastName: "T", role: "TRAINER" },
   });
   const pkgType = await prisma.packageType.create({
     data: {
@@ -64,8 +64,10 @@ async function createClient(
   fullName: string,
   pkgType: { id: string; classTypeId: string },
 ) {
+  const [firstName, ...rest] = fullName.split(" ");
+  const lastName = rest.join(" ") || "Test";
   const user = await prisma.user.create({
-    data: { email, fullName, role: "CLIENT" },
+    data: { email, firstName, lastName, role: "CLIENT" },
   });
   const profile = await prisma.clientProfile.create({ data: { userId: user.id } });
   const pkg = await prisma.clientPackage.create({

@@ -10,6 +10,7 @@
  */
 import { NotificationType } from "@/generated/prisma";
 import { now } from "@/lib/now";
+import { formatFullName } from "@baza/types";
 import { NOTIFICATION_MESSAGE_KEYS } from "@baza/i18n";
 import { createSystemNotification } from "@/lib/server/notifications";
 import { prisma } from "@/lib/server/prisma";
@@ -25,7 +26,7 @@ export async function maybeNotifyMinorPaperNeeded(sessionId: string): Promise<vo
             select: {
               id: true,
               dateOfBirth: true,
-              user: { select: { id: true, fullName: true } },
+              user: { select: { id: true, firstName: true, lastName: true } },
             },
           },
         },
@@ -79,7 +80,11 @@ export async function maybeNotifyMinorPaperNeeded(sessionId: string): Promise<vo
           admin.id,
           NOTIFICATION_MESSAGE_KEYS.MINOR_PAPER_NEEDED,
           NotificationType.MINOR_PAPER_NEEDED,
-          { sessionId, userName: cp.user.fullName, clientUserId: cp.user.id },
+          {
+            sessionId,
+            userName: formatFullName(cp.user.firstName, cp.user.lastName),
+            clientUserId: cp.user.id,
+          },
         ),
       ),
     );

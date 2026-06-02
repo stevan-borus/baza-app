@@ -13,13 +13,14 @@ describe("getConsentStatus — socialMediaDecided + socialMediaLatestAccepted", 
     const adult = await prisma.user.create({
       data: {
         email: "adult-social@t.local",
-        fullName: "Adult Client",
+        firstName: "Adult",
+        lastName: "Client",
         role: "CLIENT",
         clientProfile: { create: { dateOfBirth: new Date("1990-01-01") } },
       },
     });
     const admin = await prisma.user.create({
-      data: { email: "admin-social@t.local", fullName: "Admin", role: "ADMIN" },
+      data: { email: "admin-social@t.local", firstName: "Admin", lastName: "Test", role: "ADMIN" },
     });
     adultClientId = adult.id;
     adminId = admin.id;

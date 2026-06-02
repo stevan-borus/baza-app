@@ -13,12 +13,13 @@ describe("getConsentStatus", () => {
     await resetDb();
 
     const admin = await prisma.user.create({
-      data: { email: "a@t.local", fullName: "Admin", role: "ADMIN" },
+      data: { email: "a@t.local", firstName: "Admin", lastName: "Test", role: "ADMIN" },
     });
     const adultUser = await prisma.user.create({
       data: {
         email: "adult@t.local",
-        fullName: "Adult Client",
+        firstName: "Adult",
+        lastName: "Client",
         role: "CLIENT",
         clientProfile: { create: { dateOfBirth: new Date("1990-01-01") } },
       },
@@ -26,7 +27,8 @@ describe("getConsentStatus", () => {
     const minorUser = await prisma.user.create({
       data: {
         email: "minor@t.local",
-        fullName: "Minor Client",
+        firstName: "Minor",
+        lastName: "Client",
         role: "CLIENT",
         clientProfile: {
           create: { dateOfBirth: new Date(now().getFullYear() - 12, 0, 1) },

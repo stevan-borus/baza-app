@@ -9,6 +9,7 @@ import {
   resetAndSeed,
 } from "./helpers/db";
 import { t } from "./helpers/locales";
+import { pickInviteDob } from "./helpers/forms";
 
 const SEED_PASSWORD = "Password123!";
 const NEW_PASSWORD = "NewPassword456!";
@@ -75,6 +76,40 @@ test.describe("auth extended (Serbian)", () => {
     });
   });
 
+  test("invited client's first+last name carries through to the profile after activation", async ({
+    page,
+  }) => {
+    // The invite carries firstName/lastName (admin-entered); complete-invite
+    // ignores any name typed on the activation form and creates the user from
+    // the invite row. A MULTI-PART first name ("Ana Maria") is the regression
+    // case: the pre-split greeting heuristic would have dropped "Maria".
+    const inviteEmail = "named.invite@e2e.test";
+    const { rawToken } = await createInvite({
+      email: inviteEmail,
+      firstName: "Ana Maria",
+      lastName: "Petrović",
+    });
+
+    await page.goto(`/accept-invite?token=${rawToken}`);
+    await page.getByTestId("invite-name-input").fill("ignored by server");
+    await page.getByTestId("invite-password-input").fill(NEW_PASSWORD);
+    await page.getByTestId("invite-confirm-password-input").fill(NEW_PASSWORD);
+    await page.getByTestId("invite-submit-button").click();
+
+    await expect(page).toHaveURL(/\/sign-in/, { timeout: 15_000 });
+    await page.getByTestId("auth-email-input").fill(inviteEmail);
+    await page.getByTestId("auth-password-input").fill(NEW_PASSWORD);
+    await page.getByTestId("auth-submit-button").click();
+    await expect(page.getByTestId("tab-index")).toBeVisible({ timeout: 15_000 });
+
+    // The profile sheet renders the derived full name — not the email-local
+    // part — and preserves the full multi-part first name.
+    await page.getByTestId("open-profile-sheet").click();
+    await expect(page.getByTestId("profile-sheet-display-name")).toHaveText(
+      "Ana Maria Petrović",
+    );
+  });
+
   test("expired invite token shows error UI", async ({ page }) => {
     const { rawToken } = await createInvite({
       email: "expired.invite@e2e.test",
@@ -139,9 +174,15 @@ test.describe("auth extended (Serbian)", () => {
     const emailField = page.getByTestId("invite-create-email-input");
     await emailField.fill(inviteEmail);
     await expect(emailField).toHaveValue(inviteEmail);
-    const nameField = page.getByTestId("invite-create-name-input");
-    await nameField.fill("Invited Smoke Client");
-    await expect(nameField).toHaveValue("Invited Smoke Client");
+    // The invite form now takes first + last name separately (both required).
+    const firstNameField = page.getByTestId("invite-create-name-input");
+    await firstNameField.fill("Invited");
+    await expect(firstNameField).toHaveValue("Invited");
+    const lastNameField = page.getByTestId("invite-create-lastname-input");
+    await lastNameField.fill("Smoke Client");
+    await expect(lastNameField).toHaveValue("Smoke Client");
+    // DOB is required to enable submit (consent gate, #32). Pick a valid day.
+    await pickInviteDob(page);
     await page.getByTestId("invite-create-submit-button").click();
 
     // Server-side: invite row exists in PENDING state with this email.

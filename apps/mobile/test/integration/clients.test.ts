@@ -24,10 +24,13 @@ import { now, nowMs } from "@/lib/now";
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 async function makeClient(opts: { email: string; fullName: string }) {
+  const [firstName, ...rest] = opts.fullName.split(" ");
+  const lastName = rest.join(" ") || "Test";
   const user = await prisma.user.create({
     data: {
       email: opts.email,
-      fullName: opts.fullName,
+      firstName,
+      lastName,
       role: "CLIENT",
       isActive: true,
     },
@@ -138,7 +141,7 @@ describe("clients API", () => {
   it("GET as trainer lists only clients linked via active booking", async () => {
     const { reformer } = await makeReformerPackageType();
     const trainer = await prisma.user.create({
-      data: { email: "tx@test.local", fullName: "TX", role: "TRAINER" },
+      data: { email: "tx@test.local", firstName: "Trainer", lastName: "X", role: "TRAINER" },
     });
     const linked = await makeClient({
       email: "linked@test.local",
@@ -183,7 +186,8 @@ describe("clients API", () => {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           email: "fresh@test.local",
-          fullName: "Fresh Client",
+          firstName: "Fresh",
+          lastName: "Client",
           dateOfBirth: "1990-01-01",
         }),
       }),
@@ -195,6 +199,46 @@ describe("clients API", () => {
     });
     expect(persisted?.role).toBe("CLIENT");
     expect(persisted?.clientProfile).not.toBeNull();
+  });
+
+  it("POST trims surrounding whitespace from first/last name before persisting", async () => {
+    asAdmin();
+    const response = await POST(
+      new Request("http://test.local/api/clients", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          email: "spaced@test.local",
+          firstName: "  Ana  ",
+          lastName: "  Petrović ",
+          dateOfBirth: "1990-01-01",
+        }),
+      }),
+    );
+    expect(response.status).toBe(201);
+    const persisted = await prisma.user.findUnique({
+      where: { email: "spaced@test.local" },
+    });
+    // Trimmed inputs keep the derived fullName free of double spaces.
+    expect(persisted?.firstName).toBe("Ana");
+    expect(persisted?.lastName).toBe("Petrović");
+  });
+
+  it("POST rejects a blank (whitespace-only) name field", async () => {
+    asAdmin();
+    const response = await POST(
+      new Request("http://test.local/api/clients", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          email: "blank@test.local",
+          firstName: "   ",
+          lastName: "Petrović",
+          dateOfBirth: "1990-01-01",
+        }),
+      }),
+    );
+    expect(response.status).toBe(400);
   });
 
   it("PATCH as admin can deactivate a client (isActive=false)", async () => {
@@ -255,7 +299,7 @@ describe("clients API", () => {
   it("PATCH as trainer trying to set isActive on a linked client is rejected (admin-only field)", async () => {
     const { reformer } = await makeReformerPackageType();
     const trainer = await prisma.user.create({
-      data: { email: "ty@test.local", fullName: "TY", role: "TRAINER" },
+      data: { email: "ty@test.local", firstName: "Trainer", lastName: "Y", role: "TRAINER" },
     });
     const linked = await makeClient({
       email: "linked2@test.local",
@@ -294,7 +338,7 @@ describe("clients API", () => {
 
   it("PATCH as trainer for a non-linked client is forbidden", async () => {
     const trainer = await prisma.user.create({
-      data: { email: "tz@test.local", fullName: "TZ", role: "TRAINER" },
+      data: { email: "tz@test.local", firstName: "Trainer", lastName: "Z", role: "TRAINER" },
     });
     const stranger = await makeClient({
       email: "no-link@test.local",
@@ -316,7 +360,7 @@ describe("clients API", () => {
   it("PATCH as trainer can update notes on a linked client", async () => {
     const { reformer } = await makeReformerPackageType();
     const trainer = await prisma.user.create({
-      data: { email: "tw@test.local", fullName: "TW", role: "TRAINER" },
+      data: { email: "tw@test.local", firstName: "Trainer", lastName: "W", role: "TRAINER" },
     });
     const linked = await makeClient({
       email: "linked3@test.local",
@@ -357,16 +401,16 @@ describe("clients API", () => {
 describe("GET /api/clients/[id]", () => {
   async function seedForGet() {
     const admin = await prisma.user.create({
-      data: { email: "admin-get@test.local", fullName: "Admin", role: "ADMIN" },
+      data: { email: "admin-get@test.local", firstName: "Admin", lastName: "Get", role: "ADMIN" },
     });
     const trainerLinked = await prisma.user.create({
-      data: { email: "trainer-linked@test.local", fullName: "Linked Trainer", role: "TRAINER" },
+      data: { email: "trainer-linked@test.local", firstName: "Linked", lastName: "Trainer", role: "TRAINER" },
     });
     const trainerOther = await prisma.user.create({
-      data: { email: "trainer-other@test.local", fullName: "Other Trainer", role: "TRAINER" },
+      data: { email: "trainer-other@test.local", firstName: "Other", lastName: "Trainer", role: "TRAINER" },
     });
     const clientUser = await prisma.user.create({
-      data: { email: "client-get@test.local", fullName: "The Client", role: "CLIENT" },
+      data: { email: "client-get@test.local", firstName: "The", lastName: "Client", role: "CLIENT" },
     });
     const clientProfile = await prisma.clientProfile.create({
       data: { userId: clientUser.id, notes: "Has tight hamstrings" },
