@@ -6,6 +6,11 @@ type MockUser = {
   email: string;
   isActive: boolean;
   clientProfile: { id: string } | null;
+  // The real getRequestUser always returns these; most tests don't assert on
+  // them so they're optional on the stub.
+  firstName?: string;
+  lastName?: string;
+  fullName?: string;
 };
 
 let currentMockUser: MockUser | null = null;

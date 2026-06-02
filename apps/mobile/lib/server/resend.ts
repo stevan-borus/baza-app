@@ -1,6 +1,7 @@
 import { Resend } from "resend";
 import { render } from "@react-email/render";
 import { createElement } from "react";
+import { formatFullName } from "@baza/types";
 import { InviteEmail } from "@/emails/invite-email";
 import { ResetEmail } from "@/emails/reset-email";
 import { captureResetTokenForE2E } from "@/lib/server/e2e-reset-token-capture";
@@ -39,12 +40,14 @@ async function sendEmail(to: string, subject: string, html: string) {
 
 export async function sendInviteEmail(params: {
   to: string;
-  fullName: string;
+  firstName: string;
+  lastName: string;
   inviteToken: string;
 }) {
   const inviteUrl = `${env.APP_WEB_URL}/auth/activate?token=${encodeURIComponent(params.inviteToken)}`;
+  const fullName = formatFullName(params.firstName, params.lastName);
   const html = await render(
-    createElement(InviteEmail, { fullName: params.fullName, inviteUrl }),
+    createElement(InviteEmail, { fullName, inviteUrl }),
   );
   await sendEmail(params.to, "Baza Pilates - aktivacija naloga", html);
 }

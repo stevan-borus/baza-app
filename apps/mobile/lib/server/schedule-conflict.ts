@@ -7,6 +7,7 @@
  *  human-readable message without the client having to make a second
  *  request to look up what's already booked.
  */
+import { formatFullName } from "@baza/types";
 import { prisma } from "@/lib/server/prisma";
 import { SessionStatus } from "@/generated/prisma";
 
@@ -39,7 +40,7 @@ const CONFLICT_INCLUDE = {
   startsAt: true,
   endsAt: true,
   room: { select: { name: true } },
-  trainer: { select: { fullName: true } },
+  trainer: { select: { firstName: true, lastName: true } },
   classType: { select: { name: true } },
 } as const;
 
@@ -48,7 +49,7 @@ type ConflictRow = {
   startsAt: Date;
   endsAt: Date;
   room: { name: string } | null;
-  trainer: { fullName: string } | null;
+  trainer: { firstName: string; lastName: string } | null;
   classType: { name: string } | null;
 };
 
@@ -59,7 +60,9 @@ function toConflict(row: ConflictRow, kind: "room" | "trainer"): ScheduleConflic
     existingStartsAt: row.startsAt.toISOString(),
     existingEndsAt: row.endsAt.toISOString(),
     existingRoomName: row.room?.name ?? null,
-    existingTrainerName: row.trainer?.fullName ?? null,
+    existingTrainerName: row.trainer
+      ? formatFullName(row.trainer.firstName, row.trainer.lastName)
+      : null,
     existingClassTypeName: row.classType?.name ?? null,
   };
 }

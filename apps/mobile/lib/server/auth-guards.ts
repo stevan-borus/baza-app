@@ -1,4 +1,5 @@
 import { UserRole } from "@/generated/prisma";
+import { formatFullName } from "@baza/types";
 import { auth } from "@/lib/server/auth";
 import { fail } from "@/lib/server/http";
 import { prisma } from "@/lib/server/prisma";
@@ -19,7 +20,8 @@ export async function getRequestUser(request: Request) {
       id: true,
       role: true,
       email: true,
-      fullName: true,
+      firstName: true,
+      lastName: true,
       isActive: true,
       createdAt: true,
       clientProfile: { select: { id: true } },
@@ -28,7 +30,7 @@ export async function getRequestUser(request: Request) {
 
   if (!user || !user.isActive) return null;
 
-  return user;
+  return { ...user, fullName: formatFullName(user.firstName, user.lastName) };
 }
 
 /** Enforces role; returns guard with user or fail response. */
