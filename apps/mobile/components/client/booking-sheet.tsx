@@ -241,10 +241,9 @@ export function BookingSheet({
                 >
                   {t("client.dayView.confirmBook")}
                 </Text>
-                <View className="flex-row gap-3">
+                <View className="flex-col gap-2">
                   <Button
                     testID="booking-confirm-book-button"
-                    className="flex-1"
                     onPress={() => {
                       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
                       onBook(session.id);
@@ -255,11 +254,10 @@ export function BookingSheet({
                   </Button>
                   <Button
                     testID="booking-confirm-book-back-button"
-                    className="flex-1"
-                    variant="secondary"
+                    variant="ghost"
                     onPress={() => setStep("idle")}
                   >
-                    {t("client.calendar.cancel")}
+                    {t("common.back", { defaultValue: "Nazad" })}
                   </Button>
                 </View>
               </View>
@@ -283,10 +281,9 @@ export function BookingSheet({
                         ? t("client.dayView.cancelWarningLate", { hours })
                         : t("client.dayView.cancelWarning")}
                     </Text>
-                    <View className="flex-row gap-3">
+                    <View className="flex-col gap-2">
                       <Button
                         testID="booking-confirm-cancel-button"
-                        className="flex-1"
                         variant="danger"
                         onPress={() => {
                           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
@@ -298,11 +295,10 @@ export function BookingSheet({
                       </Button>
                       <Button
                         testID="booking-confirm-cancel-back-button"
-                        className="flex-1"
-                        variant="secondary"
+                        variant="ghost"
                         onPress={() => setStep("idle")}
                       >
-                        {t("client.calendar.cancel")}
+                        {t("common.back", { defaultValue: "Nazad" })}
                       </Button>
                     </View>
                   </View>

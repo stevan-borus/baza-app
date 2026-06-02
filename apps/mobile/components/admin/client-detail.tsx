@@ -607,18 +607,10 @@ export function ClientDetail({ id }: { id: string }) {
                 {t("admin.clients.deleteConfirm")}
               </Text>
             </View>
-            <View className="flex-row gap-3">
-              <Button
-                variant="secondary"
-                className="flex-1"
-                onPress={() => setShowDelete(false)}
-              >
-                {t("admin.clients.cancel", { defaultValue: "Otkaži" })}
-              </Button>
+            <View className="flex-col gap-2">
               <Button
                 testID="client-delete-confirm-button"
                 variant="danger"
-                className="flex-1"
                 onPress={() => {
                   updateClientMutation.mutate({
                     id: client.user.id,
@@ -628,6 +620,12 @@ export function ClientDetail({ id }: { id: string }) {
                 }}
               >
                 {t("admin.clients.delete")}
+              </Button>
+              <Button
+                variant="ghost"
+                onPress={() => setShowDelete(false)}
+              >
+                {t("common.close", { defaultValue: "Zatvori" })}
               </Button>
             </View>
           </View>

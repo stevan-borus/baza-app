@@ -430,7 +430,8 @@
     "time": "Time",
     "pickDate": "Pick a date",
     "pickTime": "Pick a time",
-    "pickDateTime": "Pick date and time"
+    "pickDateTime": "Pick date and time",
+    "back": "Back"
   },
   "confirm": {
     "deletePackageTitle": "Delete package type?",
@@ -742,9 +743,8 @@
       "photoConsentYes": "Photo/video: Yes",
       "photoConsentNo": "Photo/video: No",
       "hintFirstPilates": "First time pilates",
-      "excuseClientLabel": "Client",
-      "openClient": "Open client",
-      "excuseRemoveCta": "Cancel session"
+      "excuseRemoveCta": "Cancel session",
+      "excuseTitle": "Cancel session?"
     },
     "manage": {
       "title": "Manage",
@@ -982,7 +982,10 @@
     },
     "reservations": {
       "waiveChargeLabel": "Don't charge this session",
-      "waiveChargeHint": "The client won't lose a session from their package."
+      "waiveChargeHint": "The client won't lose a session from their package.",
+      "cancelTitle_one": "Cancel this session?",
+      "cancelTitle_other": "Cancel {{count}} sessions?",
+      "cancelConfirmCta": "Cancel session"
     }
   },
   "trainer": {

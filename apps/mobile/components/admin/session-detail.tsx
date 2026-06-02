@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { Pressable, ScrollView, Switch, Text, View } from "react-native";
+import { Pressable, ScrollView, Text, View } from "react-native";
 import { router, type Href } from "expo-router";
 import dayjs from "dayjs";
 import { Icon } from "@/components/ui/icon";
@@ -14,7 +14,7 @@ import { HeaderIconButton } from "@/components/ui/app-header";
 import { useThemeTokens } from "@/components/ui/tokens";
 import { AppSheet } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { CapsLabel } from "@/components/ui/studio/typography";
+import { SwitchRow } from "@/components/ui/switch-row";
 import {
   SessionEditSheet,
   useSessionEditSheet,
@@ -60,7 +60,6 @@ export function SessionDetail({
   const [excuseTarget, setExcuseTarget] = useState<{
     bookingId: string;
     clientFullName: string;
-    clientUserId: string;
   } | null>(null);
 
   const headerTitle = session?.classType?.name ?? t("admin.sessionDetail.title");
@@ -178,7 +177,6 @@ export function SessionDetail({
                             setExcuseTarget({
                               bookingId: b.id,
                               clientFullName: b.client.fullName,
-                              clientUserId: b.client.id,
                             })
                         : undefined
                     }
@@ -214,11 +212,6 @@ export function SessionDetail({
           key={excuseTarget?.bookingId ?? "none"}
           target={excuseTarget}
           onClose={() => setExcuseTarget(null)}
-          onOpenClient={() => {
-            const t = excuseTarget;
-            setExcuseTarget(null);
-            if (t) router.push(buildClientHref(t.clientUserId));
-          }}
         />
       ) : null}
     </ScreenContainerRaw>
@@ -403,20 +396,19 @@ function SocialMediaPill({ accepted }: { accepted: boolean | null }) {
 }
 
 /**
- * Admin action sheet opened by long-pressing a booked client on the session
- * detail. Offers "open client" and an "excuse & remove" cancel that reuses the
- * bulk-cancel endpoint with a single bookingId. The charge waiver toggle
+ * Admin confirm sheet opened by long-pressing a booked client on the session
+ * detail — a focused "cancel this client's session" action that reuses the
+ * bulk-cancel endpoint with a single bookingId. The charge-waiver toggle
  * (default OFF) mirrors the bulk reservation-cancel sheet so both admin cancel
- * surfaces behave identically.
+ * surfaces behave identically. Row TAP still opens the client; this sheet is
+ * cancel-only.
  */
 function ExcuseRemoveSheet({
   target,
   onClose,
-  onOpenClient,
 }: {
-  target: { bookingId: string; clientFullName: string; clientUserId: string } | null;
+  target: { bookingId: string; clientFullName: string } | null;
   onClose: () => void;
-  onOpenClient: () => void;
 }) {
   const { t } = useTranslation();
   const cancelMut = useCancelReservationsBulkMutation();
@@ -426,66 +418,40 @@ function ExcuseRemoveSheet({
 
   return (
     <AppSheet open={target !== null} onOpenChange={(o) => (o ? undefined : onClose())}>
-      <View className="flex-col" testID="session-detail-excuse-sheet">
-        <View className="pb-3">
-          <CapsLabel size={9} tracking={1.6} className="text-muted">
-            {t("admin.sessionDetail.excuseClientLabel", { defaultValue: "Klijent" })}
-          </CapsLabel>
+      <View className="flex-col gap-4" testID="session-detail-excuse-sheet">
+        <View>
           <Text
             className="text-foreground font-display"
-            style={{ fontSize: 22, lineHeight: 26, letterSpacing: -0.4, paddingTop: 2 }}
-            numberOfLines={1}
+            style={{ fontSize: 22, lineHeight: 28 }}
           >
-            {target?.clientFullName ?? ""}
+            {t("admin.sessionDetail.excuseTitle", { defaultValue: "Otkaži termin?" })}
           </Text>
-        </View>
-
-        <Pressable
-          testID="session-detail-excuse-open-client"
-          onPress={onOpenClient}
-          className="flex-row items-center justify-between py-3 active:opacity-70"
-          style={{ borderTopWidth: 1, borderTopColor: "rgba(0,0,0,0.08)" }}
-        >
-          <Text className="text-foreground" style={{ fontSize: 15 }}>
-            {t("admin.sessionDetail.openClient", { defaultValue: "Otvori klijenta" })}
-          </Text>
-          <Icon name="chevron-right" size={16} color="#999" />
-        </Pressable>
-
-        <View
-          className="flex-row items-center justify-between py-3"
-          style={{ borderTopWidth: 1, borderTopColor: "rgba(0,0,0,0.08)" }}
-        >
-          <View className="flex-1 pr-3">
+          {target?.clientFullName ? (
             <Text
-              className="text-foreground"
-              style={{ fontSize: 14, lineHeight: 18, fontWeight: "600" }}
+              className="text-muted"
+              style={{ fontSize: 14, lineHeight: 20, paddingTop: 4 }}
             >
-              {t("admin.reservations.waiveChargeLabel", {
-                defaultValue: "Ne naplaćuj ovu sesiju",
-              })}
+              {target.clientFullName}
             </Text>
-            <Text className="text-muted" style={{ fontSize: 12, lineHeight: 16, paddingTop: 2 }}>
-              {t("admin.reservations.waiveChargeHint", {
-                defaultValue: "Klijent neće izgubiti sesiju iz paketa.",
-              })}
-            </Text>
-          </View>
-          <Switch
-            testID="session-detail-excuse-waive-switch"
-            value={waiveCharge}
-            onValueChange={setWaiveCharge}
-          />
+          ) : null}
         </View>
 
-        <View className="flex-row gap-3 pt-4">
-          <Button variant="secondary" className="flex-1" onPress={onClose}>
-            {t("admin.clients.cancel", { defaultValue: "Otkaži" })}
-          </Button>
+        <SwitchRow
+          testID="session-detail-excuse-waive-switch"
+          label={t("admin.reservations.waiveChargeLabel", {
+            defaultValue: "Ne naplaćuj ovu sesiju",
+          })}
+          hint={t("admin.reservations.waiveChargeHint", {
+            defaultValue: "Klijent neće izgubiti sesiju iz paketa.",
+          })}
+          value={waiveCharge}
+          onValueChange={setWaiveCharge}
+        />
+
+        <View className="flex-col gap-2 mt-1">
           <Button
             testID="session-detail-excuse-confirm"
             variant="danger"
-            className="flex-1"
             disabled={cancelMut.isPending || target === null}
             onPress={() => {
               if (!target) return;
@@ -496,6 +462,9 @@ function ExcuseRemoveSheet({
             }}
           >
             {t("admin.sessionDetail.excuseRemoveCta", { defaultValue: "Otkaži termin" })}
+          </Button>
+          <Button variant="ghost" disabled={cancelMut.isPending} onPress={onClose}>
+            {t("common.close", { defaultValue: "Zatvori" })}
           </Button>
         </View>
       </View>

@@ -8,7 +8,7 @@
  * /klijenti/rezervisi get redirected to their home tab.
  */
 import React, { useState, useEffect } from "react";
-import { Pressable, ScrollView, Switch, Text, View } from "react-native";
+import { Pressable, ScrollView, Text, View } from "react-native";
 import { useTranslation } from "react-i18next";
 import { useQuery, useInfiniteQuery } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter, type Href } from "expo-router";
@@ -16,6 +16,7 @@ import dayjs from "dayjs";
 import { Icon } from "@/components/ui/icon";
 import { AppSheet } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
+import { SwitchRow } from "@/components/ui/switch-row";
 import { CapsLabel } from "@/components/ui/studio/typography";
 import { SessionCard } from "@/components/ui/session-card";
 import { StudioWeekStrip } from "@/components/ui/studio";
@@ -1117,13 +1118,9 @@ function ConfirmSheet({
         </View>
       ) : null}
 
-      <View className="flex-row gap-3 pt-5">
-        <Button variant="secondary" className="flex-1" onPress={onCancel}>
-          {t("admin.clients.cancel", { defaultValue: "Otkaži" })}
-        </Button>
+      <View className="flex-col gap-2 pt-5">
         <Button
           testID="reservation-confirm-sheet-cta"
-          className="flex-1"
           disabled={create.isPending}
           onPress={() => {
             create.mutate(
@@ -1136,6 +1133,9 @@ function ConfirmSheet({
           }}
         >
           {t("admin.reservations.confirm", { defaultValue: "Rezerviši" })}
+        </Button>
+        <Button variant="ghost" disabled={create.isPending} onPress={onCancel}>
+          {t("common.close", { defaultValue: "Zatvori" })}
         </Button>
       </View>
     </View>
@@ -1174,30 +1174,16 @@ function CancelConfirmSheet({
   const cancelMut = useCancelReservationsBulkMutation();
   const [waiveCharge, setWaiveCharge] = useState(false);
   return (
-    <View className="flex-col">
-      <View className="pb-4">
+    <View className="flex-col gap-4">
+      <View>
         <Text
           className="text-foreground font-display"
-          style={{ fontSize: 36, lineHeight: 40, letterSpacing: -0.8 }}
+          style={{ fontSize: 22, lineHeight: 28 }}
         >
-          {bookingIds.length}
+          {t("admin.reservations.cancelTitle", { count: bookingIds.length })}
         </Text>
-        <CapsLabel size={10} tracking={1.6} className="text-muted">
-          {t("admin.reservations.cancelCountLabel", {
-            defaultValue: "Termina za otkazivanje",
-          })}
-        </CapsLabel>
-      </View>
-
-      <View
-        className="pt-3 pb-3"
-        style={{ borderTopWidth: 1, borderTopColor: "rgba(0,0,0,0.08)" }}
-      >
-        <CapsLabel size={9} tracking={1.6} className="text-muted">
-          {t("admin.reservations.cancelNoteLabel", { defaultValue: "Napomena" })}
-        </CapsLabel>
         <Text
-          className="text-foreground"
+          className="text-muted"
           style={{ fontSize: 14, lineHeight: 20, paddingTop: 4 }}
         >
           {t("admin.reservations.cancelConfirmBody", {
@@ -1207,46 +1193,31 @@ function CancelConfirmSheet({
         </Text>
       </View>
 
-      <View
-        className="flex-row items-center justify-between pt-3 pb-1"
-        style={{ borderTopWidth: 1, borderTopColor: "rgba(0,0,0,0.08)" }}
-      >
-        <View className="flex-1 pr-3">
-          <Text
-            className="text-foreground"
-            style={{ fontSize: 14, lineHeight: 18, fontWeight: "600" }}
-          >
-            {t("admin.reservations.waiveChargeLabel", {
-              defaultValue: "Ne naplaćuj ovu sesiju",
-            })}
-          </Text>
-          <Text className="text-muted" style={{ fontSize: 12, lineHeight: 16, paddingTop: 2 }}>
-            {t("admin.reservations.waiveChargeHint", {
-              defaultValue: "Klijent neće izgubiti sesiju iz paketa.",
-            })}
-          </Text>
-        </View>
-        <Switch
-          testID="reservation-cancel-waive-charge-switch"
-          value={waiveCharge}
-          onValueChange={setWaiveCharge}
-        />
-      </View>
+      <SwitchRow
+        testID="reservation-cancel-waive-charge-switch"
+        label={t("admin.reservations.waiveChargeLabel", {
+          defaultValue: "Ne naplaćuj ovu sesiju",
+        })}
+        hint={t("admin.reservations.waiveChargeHint", {
+          defaultValue: "Klijent neće izgubiti sesiju iz paketa.",
+        })}
+        value={waiveCharge}
+        onValueChange={setWaiveCharge}
+      />
 
-      <View className="flex-row gap-3 pt-5">
-        <Button variant="secondary" className="flex-1" onPress={onCancel}>
-          {t("admin.clients.cancel", { defaultValue: "Otkaži" })}
-        </Button>
+      <View className="flex-col gap-2 mt-1">
         <Button
           testID="reservation-cancel-confirm-sheet-cta"
           variant="danger"
-          className="flex-1"
           disabled={cancelMut.isPending}
           onPress={() => {
             cancelMut.mutate({ bookingIds, waiveCharge }, { onSuccess: onDone });
           }}
         >
-          {t("admin.reservations.cancelConfirmCta", { defaultValue: "Potvrdi" })}
+          {t("admin.reservations.cancelConfirmCta", { defaultValue: "Otkaži termin" })}
+        </Button>
+        <Button variant="ghost" disabled={cancelMut.isPending} onPress={onCancel}>
+          {t("common.close", { defaultValue: "Zatvori" })}
         </Button>
       </View>
     </View>

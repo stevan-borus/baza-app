@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { Pressable, Switch, Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import dayjs from "dayjs";
 import type { ConsentDocumentKey } from "@baza/types";
 import { SectionLabel } from "@/components/ui/typography";
-import { useThemeTokens } from "@/components/ui/tokens";
+import { SwitchRow } from "@/components/ui/switch-row";
 import { useMarkGuardianVerifiedMutation } from "@/lib/queries/consent-queries-factory";
 import { clientsQueries } from "@/lib/queries/clients-queries-factory";
 import { DocumentSheet } from "@/components/consent/document-sheet";
@@ -27,7 +27,6 @@ const LABEL_KEY: Partial<Record<ConsentDocumentKey, string>> = {
 
 export function ClientLegalPanel({ clientUserId, clientFullName, lang }: Props) {
   const { t } = useTranslation();
-  const tokens = useThemeTokens();
   const recordsQuery = useQuery(clientsQueries.consentRecords(clientUserId));
   const records = recordsQuery.data?.records ?? [];
   const socialMedia = recordsQuery.data?.socialMedia ?? null;
@@ -110,13 +109,11 @@ export function ClientLegalPanel({ clientUserId, clientFullName, lang }: Props) 
         {minorWaiver ? (
           <View
             testID={`guardian-verified-row-${clientUserId}`}
-            className={`${rowClass} border-t border-glass-border`}
+            className="h-12 justify-center border-t border-glass-border"
           >
-            <Text className="flex-1 text-[14px] text-foreground">
-              {t("admin.client.guardianVerifiedToggle")}
-            </Text>
-            <Switch
+            <SwitchRow
               testID={`guardian-verified-${clientUserId}`}
+              label={t("admin.client.guardianVerifiedToggle")}
               value={guardianVerified}
               onValueChange={() => {
                 if (guardianVerified) return;
@@ -124,8 +121,6 @@ export function ClientLegalPanel({ clientUserId, clientFullName, lang }: Props) 
                 guardianMutation.mutate(clientUserId);
               }}
               disabled={guardianVerified || guardianMutation.isPending}
-              accessibilityLabel={t("admin.client.guardianVerifiedToggle")}
-              trackColor={{ false: tokens.glassStrong, true: tokens.accent }}
             />
           </View>
         ) : null}
