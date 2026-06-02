@@ -39,6 +39,8 @@ describe("getRequestUser", () => {
       id: "user-1",
       role: "CLIENT",
       email: "deactivated@test.local",
+      firstName: "Deactivated",
+      lastName: "User",
       isActive: false,
       clientProfile: null,
     });
@@ -52,6 +54,8 @@ describe("getRequestUser", () => {
       id: "user-2",
       role: "ADMIN",
       email: "admin@test.local",
+      firstName: "Ana",
+      lastName: "Petrović",
       isActive: true,
       clientProfile: null,
     });
@@ -60,6 +64,9 @@ describe("getRequestUser", () => {
       id: "user-2",
       role: "ADMIN",
       email: "admin@test.local",
+      firstName: "Ana",
+      lastName: "Petrović",
+      fullName: "Ana Petrović",
       isActive: true,
       clientProfile: null,
     });
@@ -82,6 +89,8 @@ describe("requireRole", () => {
       id: "client-1",
       role: "CLIENT",
       email: "client@test.local",
+      firstName: "Client",
+      lastName: "One",
       isActive: true,
       clientProfile: { id: "profile-1" },
     });
@@ -98,6 +107,8 @@ describe("requireRole", () => {
       id: "admin-1",
       role: "ADMIN",
       email: "admin@test.local",
+      firstName: "Admin",
+      lastName: "One",
       isActive: true,
       clientProfile: null,
     });
@@ -115,6 +126,8 @@ describe("requireRole", () => {
       id: "trainer-1",
       role: "TRAINER",
       email: "trainer@test.local",
+      firstName: "Trainer",
+      lastName: "One",
       isActive: true,
       clientProfile: null,
     });
