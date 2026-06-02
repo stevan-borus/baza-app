@@ -1,7 +1,7 @@
-import React from "react";
+import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { Pressable, ScrollView, Switch, Text, View } from "react-native";
 import { router, type Href } from "expo-router";
 import dayjs from "dayjs";
 import { Icon } from "@/components/ui/icon";
@@ -12,12 +12,16 @@ import { SectionLabel } from "@/components/ui/typography";
 import { ScreenContainerRaw, useTabBarBottomPadding } from "@/components/ui/screen-container";
 import { HeaderIconButton } from "@/components/ui/app-header";
 import { useThemeTokens } from "@/components/ui/tokens";
+import { AppSheet } from "@/components/ui/sheet";
+import { Button } from "@/components/ui/button";
+import { CapsLabel } from "@/components/ui/studio/typography";
 import {
   SessionEditSheet,
   useSessionEditSheet,
 } from "@/components/ui/session-edit-sheet";
 import { sessionsQueries } from "@/lib/queries/sessions-queries-factory";
 import { authQueries } from "@/lib/queries/auth-queries-factory";
+import { useCancelReservationsBulkMutation } from "@/lib/queries/reservations-queries-factory";
 import { ReturnToPill } from "@/components/admin/return-to-pill";
 
 type SessionDetailProps = {
@@ -51,6 +55,13 @@ export function SessionDetail({
   // a prop so a route wrapper can't accidentally expose the edit affordance.
   const meQuery = useQuery(authQueries.me());
   const canEdit = meQuery.data?.user.role === "ADMIN";
+
+  // Long-press on a booked row (admin only) opens the excuse-&-remove sheet.
+  const [excuseTarget, setExcuseTarget] = useState<{
+    bookingId: string;
+    clientFullName: string;
+    clientUserId: string;
+  } | null>(null);
 
   const headerTitle = session?.classType?.name ?? t("admin.sessionDetail.title");
   const dateLabel = session
@@ -161,6 +172,16 @@ export function SessionDetail({
                     client={b.client}
                     consentFlags={b.consentFlags}
                     onPress={() => router.push(buildClientHref(b.client.id))}
+                    onLongPress={
+                      canEdit
+                        ? () =>
+                            setExcuseTarget({
+                              bookingId: b.id,
+                              clientFullName: b.client.fullName,
+                              clientUserId: b.client.id,
+                            })
+                        : undefined
+                    }
                   />
                 ))
               )}
@@ -188,6 +209,18 @@ export function SessionDetail({
         ) : null}
       </ScrollView>
       {canEdit ? <SessionEditSheet {...editSheet.bind()} /> : null}
+      {canEdit ? (
+        <ExcuseRemoveSheet
+          key={excuseTarget?.bookingId ?? "none"}
+          target={excuseTarget}
+          onClose={() => setExcuseTarget(null)}
+          onOpenClient={() => {
+            const t = excuseTarget;
+            setExcuseTarget(null);
+            if (t) router.push(buildClientHref(t.clientUserId));
+          }}
+        />
+      ) : null}
     </ScreenContainerRaw>
   );
 }
@@ -204,12 +237,14 @@ function ClientRow({
   client,
   consentFlags,
   onPress,
+  onLongPress,
   testID,
   position,
 }: {
   client: RowClient;
   consentFlags: ConsentFlags;
   onPress: () => void;
+  onLongPress?: () => void;
   testID: string;
   position?: number;
 }) {
@@ -224,6 +259,7 @@ function ClientRow({
     <Pressable
       testID={testID}
       onPress={onPress}
+      onLongPress={onLongPress}
       android_ripple={null}
       className="active:opacity-70"
     >
@@ -363,5 +399,106 @@ function SocialMediaPill({ accepted }: { accepted: boolean | null }) {
           : t("admin.sessionDetail.photoConsentNo")}
       </Text>
     </View>
+  );
+}
+
+/**
+ * Admin action sheet opened by long-pressing a booked client on the session
+ * detail. Offers "open client" and an "excuse & remove" cancel that reuses the
+ * bulk-cancel endpoint with a single bookingId. The charge waiver toggle
+ * (default OFF) mirrors the bulk reservation-cancel sheet so both admin cancel
+ * surfaces behave identically.
+ */
+function ExcuseRemoveSheet({
+  target,
+  onClose,
+  onOpenClient,
+}: {
+  target: { bookingId: string; clientFullName: string; clientUserId: string } | null;
+  onClose: () => void;
+  onOpenClient: () => void;
+}) {
+  const { t } = useTranslation();
+  const cancelMut = useCancelReservationsBulkMutation();
+  // The toggle defaults OFF on every open: the parent remounts this component
+  // via a `key` tied to the targeted booking, so no reset effect is needed.
+  const [waiveCharge, setWaiveCharge] = useState(false);
+
+  return (
+    <AppSheet open={target !== null} onOpenChange={(o) => (o ? undefined : onClose())}>
+      <View className="flex-col" testID="session-detail-excuse-sheet">
+        <View className="pb-3">
+          <CapsLabel size={9} tracking={1.6} className="text-muted">
+            {t("admin.sessionDetail.excuseClientLabel", { defaultValue: "Klijent" })}
+          </CapsLabel>
+          <Text
+            className="text-foreground font-display"
+            style={{ fontSize: 22, lineHeight: 26, letterSpacing: -0.4, paddingTop: 2 }}
+            numberOfLines={1}
+          >
+            {target?.clientFullName ?? ""}
+          </Text>
+        </View>
+
+        <Pressable
+          testID="session-detail-excuse-open-client"
+          onPress={onOpenClient}
+          className="flex-row items-center justify-between py-3 active:opacity-70"
+          style={{ borderTopWidth: 1, borderTopColor: "rgba(0,0,0,0.08)" }}
+        >
+          <Text className="text-foreground" style={{ fontSize: 15 }}>
+            {t("admin.sessionDetail.openClient", { defaultValue: "Otvori klijenta" })}
+          </Text>
+          <Icon name="chevron-right" size={16} color="#999" />
+        </Pressable>
+
+        <View
+          className="flex-row items-center justify-between py-3"
+          style={{ borderTopWidth: 1, borderTopColor: "rgba(0,0,0,0.08)" }}
+        >
+          <View className="flex-1 pr-3">
+            <Text
+              className="text-foreground"
+              style={{ fontSize: 14, lineHeight: 18, fontWeight: "600" }}
+            >
+              {t("admin.reservations.waiveChargeLabel", {
+                defaultValue: "Ne naplaćuj ovu sesiju",
+              })}
+            </Text>
+            <Text className="text-muted" style={{ fontSize: 12, lineHeight: 16, paddingTop: 2 }}>
+              {t("admin.reservations.waiveChargeHint", {
+                defaultValue: "Klijent neće izgubiti sesiju iz paketa.",
+              })}
+            </Text>
+          </View>
+          <Switch
+            testID="session-detail-excuse-waive-switch"
+            value={waiveCharge}
+            onValueChange={setWaiveCharge}
+          />
+        </View>
+
+        <View className="flex-row gap-3 pt-4">
+          <Button variant="secondary" className="flex-1" onPress={onClose}>
+            {t("admin.clients.cancel", { defaultValue: "Otkaži" })}
+          </Button>
+          <Button
+            testID="session-detail-excuse-confirm"
+            variant="danger"
+            className="flex-1"
+            disabled={cancelMut.isPending || target === null}
+            onPress={() => {
+              if (!target) return;
+              cancelMut.mutate(
+                { bookingIds: [target.bookingId], waiveCharge },
+                { onSuccess: onClose },
+              );
+            }}
+          >
+            {t("admin.sessionDetail.excuseRemoveCta", { defaultValue: "Otkaži termin" })}
+          </Button>
+        </View>
+      </View>
+    </AppSheet>
   );
 }

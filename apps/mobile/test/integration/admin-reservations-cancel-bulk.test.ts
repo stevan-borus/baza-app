@@ -288,4 +288,163 @@ describe("POST /api/admin/reservations/cancel-bulk", () => {
     const res = await POST(buildRequest({ bookingIds: [] }));
     expect(res.status).toBe(400);
   });
+
+  describe("charge waiver", () => {
+    // Builds a late, package-backed booking: session 1h out, lateCancelHours 8 → inside cutoff.
+    async function seedLateBackedBooking() {
+      const { admin, trainer, clientProfile, reformer } = await seedBasics();
+      const session = await createSession({
+        classTypeId: reformer.id,
+        trainerUserId: trainer.id,
+        startsAt: new Date(nowMs() + 60 * 60 * 1000),
+      });
+      const packageType = await prisma.packageType.create({
+        data: {
+          name: "Reformer 12-pack",
+          sessionCount: 12,
+          validityDays: 30,
+          lateCancelHours: 8,
+          classTypeId: reformer.id,
+        },
+      });
+      const pack = await prisma.clientPackage.create({
+        data: {
+          clientProfileId: clientProfile.id,
+          packageTypeId: packageType.id,
+          classTypeId: reformer.id,
+          lateCancelHours: 8,
+          startsAt: new Date(nowMs() - 24 * 60 * 60 * 1000),
+          expiresAt: new Date(nowMs() + 30 * 24 * 60 * 60 * 1000),
+          sessionsRemaining: 8,
+        },
+      });
+      const booking = await prisma.booking.create({
+        data: {
+          sessionId: session.id,
+          clientProfileId: clientProfile.id,
+          clientPackageId: pack.id,
+          createdByUserId: admin.id,
+        },
+      });
+      return { admin, clientProfile, session, pack, booking };
+    }
+
+    it("with waiveCharge does not consume the session and stamps waivedByUserId", async () => {
+      const { admin, clientProfile, session, pack, booking } =
+        await seedLateBackedBooking();
+      asAdmin(admin);
+
+      const res = await POST(
+        buildRequest({ bookingIds: [booking.id], waiveCharge: true }),
+      );
+      expect(res.status).toBe(200);
+
+      const after = await prisma.clientPackage.findUnique({ where: { id: pack.id } });
+      expect(after?.sessionsRemaining).toBe(8); // unchanged
+
+      const consumption = await prisma.sessionConsumption.findUnique({
+        where: {
+          clientProfileId_sessionId: {
+            clientProfileId: clientProfile.id,
+            sessionId: session.id,
+          },
+        },
+      });
+      expect(consumption).toBeNull();
+
+      const stamped = await prisma.booking.findUnique({ where: { id: booking.id } });
+      expect(stamped?.waivedByUserId).toBe(admin.id);
+    });
+
+    it("without waiveCharge still consumes the session and leaves waivedByUserId null", async () => {
+      const { admin, pack, booking } = await seedLateBackedBooking();
+      asAdmin(admin);
+
+      const res = await POST(buildRequest({ bookingIds: [booking.id] }));
+      expect(res.status).toBe(200);
+
+      const after = await prisma.clientPackage.findUnique({ where: { id: pack.id } });
+      expect(after?.sessionsRemaining).toBe(7); // charged
+
+      const stamped = await prisma.booking.findUnique({ where: { id: booking.id } });
+      expect(stamped?.waivedByUserId).toBeNull();
+    });
+
+    it("does not stamp waivedByUserId on an early (pre-cutoff) cancel even with waiveCharge", async () => {
+      const { admin, trainer, clientProfile, reformer } = await seedBasics();
+      // Session 7 days out, lateCancelHours 8 → well before cutoff (no forfeit to waive).
+      const session = await createSession({
+        classTypeId: reformer.id,
+        trainerUserId: trainer.id,
+        startsAt: new Date(nowMs() + 7 * 24 * 60 * 60 * 1000),
+      });
+      const packageType = await prisma.packageType.create({
+        data: {
+          name: "Reformer 12-pack",
+          sessionCount: 12,
+          validityDays: 30,
+          lateCancelHours: 8,
+          classTypeId: reformer.id,
+        },
+      });
+      const pack = await prisma.clientPackage.create({
+        data: {
+          clientProfileId: clientProfile.id,
+          packageTypeId: packageType.id,
+          classTypeId: reformer.id,
+          lateCancelHours: 8,
+          startsAt: new Date(nowMs() - 24 * 60 * 60 * 1000),
+          expiresAt: new Date(nowMs() + 30 * 24 * 60 * 60 * 1000),
+          sessionsRemaining: 8,
+        },
+      });
+      const booking = await prisma.booking.create({
+        data: {
+          sessionId: session.id,
+          clientProfileId: clientProfile.id,
+          clientPackageId: pack.id,
+          createdByUserId: admin.id,
+        },
+      });
+      asAdmin(admin);
+
+      const res = await POST(
+        buildRequest({ bookingIds: [booking.id], waiveCharge: true }),
+      );
+      expect(res.status).toBe(200);
+
+      const after = await prisma.clientPackage.findUnique({ where: { id: pack.id } });
+      expect(after?.sessionsRemaining).toBe(8); // early cancel never charged anyway
+      const stamped = await prisma.booking.findUnique({ where: { id: booking.id } });
+      expect(stamped?.waivedByUserId).toBeNull(); // nothing was waived
+    });
+
+    it("does not stamp waivedByUserId on an unbacked admin reservation even with waiveCharge", async () => {
+      const { admin, trainer, clientProfile, reformer } = await seedBasics();
+      // Late session but no clientPackageId → nothing to forfeit, nothing to waive.
+      const session = await createSession({
+        classTypeId: reformer.id,
+        trainerUserId: trainer.id,
+        startsAt: new Date(nowMs() + 60 * 60 * 1000),
+      });
+      const booking = await prisma.booking.create({
+        data: {
+          sessionId: session.id,
+          clientProfileId: clientProfile.id,
+          createdByUserId: admin.id,
+        },
+      });
+      asAdmin(admin);
+
+      const res = await POST(
+        buildRequest({ bookingIds: [booking.id], waiveCharge: true }),
+      );
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.canceled).toBe(1);
+
+      const stamped = await prisma.booking.findUnique({ where: { id: booking.id } });
+      expect(stamped?.waivedByUserId).toBeNull();
+    });
+  });
 });

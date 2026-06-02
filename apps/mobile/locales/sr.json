@@ -744,7 +744,10 @@
       "notesLabel": "Napomena",
       "photoConsentYes": "Foto/video: Da",
       "photoConsentNo": "Foto/video: Ne",
-      "hintFirstPilates": "Prvi put pilates"
+      "hintFirstPilates": "Prvi put pilates",
+      "excuseClientLabel": "Klijent",
+      "openClient": "Otvori klijenta",
+      "excuseRemoveCta": "Otkaži termin"
     },
     "manage": {
       "title": "Upravljanje",
@@ -980,6 +983,10 @@
       },
       "noviTermin": "Novi termin",
       "noviTerminSub": "Jednokratno ili serija"
+    },
+    "reservations": {
+      "waiveChargeLabel": "Ne naplaćuj ovu sesiju",
+      "waiveChargeHint": "Klijent neće izgubiti sesiju iz paketa."
     }
   },
   "trainer": {

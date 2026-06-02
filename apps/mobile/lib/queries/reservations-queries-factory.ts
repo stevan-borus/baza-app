@@ -27,6 +27,8 @@ export type CreateReservationsInput = {
 
 export type CancelReservationsInput = {
   bookingIds: string[];
+  /** When true, skip the late-cancel forfeit and stamp the acting admin as the waiver. */
+  waiveCharge?: boolean;
 };
 
 // Exported so unit tests can exercise the request/response contract without

@@ -741,7 +741,10 @@
       "notesLabel": "Note",
       "photoConsentYes": "Photo/video: Yes",
       "photoConsentNo": "Photo/video: No",
-      "hintFirstPilates": "First time pilates"
+      "hintFirstPilates": "First time pilates",
+      "excuseClientLabel": "Client",
+      "openClient": "Open client",
+      "excuseRemoveCta": "Cancel session"
     },
     "manage": {
       "title": "Manage",
@@ -976,6 +979,10 @@
       },
       "noviTermin": "New session",
       "noviTerminSub": "One-time or recurring"
+    },
+    "reservations": {
+      "waiveChargeLabel": "Don't charge this session",
+      "waiveChargeHint": "The client won't lose a session from their package."
     }
   },
   "trainer": {

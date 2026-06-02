@@ -98,4 +98,18 @@ describe("cancelReservationsBulkRequest", () => {
     expect(data.canceled).toBe(3);
     expect(data.promotedUserIds).toEqual(["u1"]);
   });
+
+  it("forwards waiveCharge in the body when provided", async () => {
+    fetchMock.mockReturnValueOnce(
+      jsonResponse({ success: true, canceled: 1, promotedUserIds: [] }),
+    );
+    await cancelReservationsBulkRequest({
+      bookingIds: ["b1"],
+      waiveCharge: true,
+    });
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(init.body).toBe(
+      JSON.stringify({ bookingIds: ["b1"], waiveCharge: true }),
+    );
+  });
 });

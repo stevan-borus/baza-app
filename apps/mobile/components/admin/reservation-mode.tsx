@@ -8,7 +8,7 @@
  * /klijenti/rezervisi get redirected to their home tab.
  */
 import React, { useState, useEffect } from "react";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { Pressable, ScrollView, Switch, Text, View } from "react-native";
 import { useTranslation } from "react-i18next";
 import { useQuery, useInfiniteQuery } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter, type Href } from "expo-router";
@@ -1172,6 +1172,7 @@ function CancelConfirmSheet({
 }) {
   const { t } = useTranslation();
   const cancelMut = useCancelReservationsBulkMutation();
+  const [waiveCharge, setWaiveCharge] = useState(false);
   return (
     <View className="flex-col">
       <View className="pb-4">
@@ -1206,6 +1207,32 @@ function CancelConfirmSheet({
         </Text>
       </View>
 
+      <View
+        className="flex-row items-center justify-between pt-3 pb-1"
+        style={{ borderTopWidth: 1, borderTopColor: "rgba(0,0,0,0.08)" }}
+      >
+        <View className="flex-1 pr-3">
+          <Text
+            className="text-foreground"
+            style={{ fontSize: 14, lineHeight: 18, fontWeight: "600" }}
+          >
+            {t("admin.reservations.waiveChargeLabel", {
+              defaultValue: "Ne naplaćuj ovu sesiju",
+            })}
+          </Text>
+          <Text className="text-muted" style={{ fontSize: 12, lineHeight: 16, paddingTop: 2 }}>
+            {t("admin.reservations.waiveChargeHint", {
+              defaultValue: "Klijent neće izgubiti sesiju iz paketa.",
+            })}
+          </Text>
+        </View>
+        <Switch
+          testID="reservation-cancel-waive-charge-switch"
+          value={waiveCharge}
+          onValueChange={setWaiveCharge}
+        />
+      </View>
+
       <View className="flex-row gap-3 pt-5">
         <Button variant="secondary" className="flex-1" onPress={onCancel}>
           {t("admin.clients.cancel", { defaultValue: "Otkaži" })}
@@ -1216,7 +1243,7 @@ function CancelConfirmSheet({
           className="flex-1"
           disabled={cancelMut.isPending}
           onPress={() => {
-            cancelMut.mutate({ bookingIds }, { onSuccess: onDone });
+            cancelMut.mutate({ bookingIds, waiveCharge }, { onSuccess: onDone });
           }}
         >
           {t("admin.reservations.cancelConfirmCta", { defaultValue: "Potvrdi" })}
