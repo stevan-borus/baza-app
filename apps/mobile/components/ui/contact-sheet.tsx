@@ -4,7 +4,6 @@ import { useTranslation } from "react-i18next";
 import { AppSheet } from "./sheet";
 import { Button } from "./button";
 import { Icon } from "./icon";
-import { WhatsAppIcon } from "./whatsapp-icon";
 import { useThemeTokens } from "./tokens";
 import { contactLinks } from "@/lib/contact-links";
 
@@ -72,7 +71,7 @@ export function ContactSheet({ open, onOpenChange, phone }: ContactSheetProps) {
             variant="whatsapp"
             onPress={() => openAnd(links.whatsapp)}
           >
-            <WhatsAppIcon size={17} color="#ffffff" />
+            <Icon name="message" size={17} color="#ffffff" />
             <Text className="text-white font-body-semibold text-sm">
               {t("admin.clients.contactWhatsapp")}
             </Text>

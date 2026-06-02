@@ -1,7 +1,10 @@
 import React from "react";
 import { Pressable, Text, type PressableProps } from "react-native";
 import * as Haptics from "expo-haptics";
-import { WHATSAPP_GREEN } from "./whatsapp-icon";
+
+/** WhatsApp's official brand green — used as a recognizable accent (color is
+ *  not the restricted logo, so it's guideline-clean). */
+const WHATSAPP_GREEN = "#25D366";
 
 type Variant = "primary" | "secondary" | "danger" | "ghost" | "whatsapp";
 type Size = "small" | "default" | "large";
