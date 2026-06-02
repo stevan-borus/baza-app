@@ -432,7 +432,8 @@
     "time": "Vreme",
     "pickDate": "Izaberi datum",
     "pickTime": "Izaberi vreme",
-    "pickDateTime": "Izaberi datum i vreme"
+    "pickDateTime": "Izaberi datum i vreme",
+    "back": "Nazad"
   },
   "confirm": {
     "deletePackageTitle": "Obrisati tip paketa?",
@@ -744,7 +745,9 @@
       "notesLabel": "Napomena",
       "photoConsentYes": "Foto/video: Da",
       "photoConsentNo": "Foto/video: Ne",
-      "hintFirstPilates": "Prvi put pilates"
+      "hintFirstPilates": "Prvi put pilates",
+      "excuseRemoveCta": "Otkaži termin",
+      "excuseTitle": "Otkaži termin?"
     },
     "manage": {
       "title": "Upravljanje",
@@ -980,6 +983,14 @@
       },
       "noviTermin": "Novi termin",
       "noviTerminSub": "Jednokratno ili serija"
+    },
+    "reservations": {
+      "waiveChargeLabel": "Ne naplaćuj ovu sesiju",
+      "waiveChargeHint": "Klijent neće izgubiti sesiju iz paketa.",
+      "cancelTitle_one": "Otkaži termin?",
+      "cancelTitle_few": "Otkaži {{count}} termina?",
+      "cancelTitle_other": "Otkaži {{count}} termina?",
+      "cancelConfirmCta": "Otkaži termin"
     }
   },
   "trainer": {

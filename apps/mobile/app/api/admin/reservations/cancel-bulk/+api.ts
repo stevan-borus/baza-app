@@ -9,7 +9,7 @@ import { findEligibleClientPackage } from "@/lib/server/package-eligibility";
 import { now } from "@/lib/now";
 import { prisma } from "@/lib/server/prisma";
 
-type CancelBulkBody = { bookingIds?: unknown };
+type CancelBulkBody = { bookingIds?: unknown; waiveCharge?: unknown };
 
 export async function POST(request: Request) {
   const guard = await requireRole(request, [UserRole.ADMIN]);
@@ -21,6 +21,7 @@ export async function POST(request: Request) {
     ? raw.bookingIds.filter((id): id is string => typeof id === "string")
     : [];
   if (bookingIds.length === 0) return fail("Missing bookingIds", 400);
+  const waiveCharge = raw.waiveCharge === true;
 
   const cancellationTime = now();
 
@@ -46,6 +47,8 @@ export async function POST(request: Request) {
   });
   if (bookings.length === 0) return ok({ success: true, canceled: 0 });
 
+  const initiatorId = guard.user.id;
+
   // Atomic cancel + late-cancel forfeit.
   await prisma.$transaction(async (tx) => {
     await tx.booking.updateMany({
@@ -60,6 +63,16 @@ export async function POST(request: Request) {
         lateCancelHours,
       );
       if (!isLate || !b.clientPackageId) continue;
+
+      // Charge waiver: a real forfeit would apply here, but the admin chose to
+      // forgive it. Skip the consumption + decrement and record who waived.
+      if (waiveCharge) {
+        await tx.booking.update({
+          where: { id: b.id },
+          data: { waivedByUserId: initiatorId },
+        });
+        continue;
+      }
 
       const existingConsumption = await tx.sessionConsumption.findUnique({
         where: {
@@ -91,7 +104,6 @@ export async function POST(request: Request) {
 
   // Collapsed notification fan-out. Group bookings by trainer and by client.
   // We only fan out one notification per (recipient × client × initiating-admin).
-  const initiatorId = guard.user.id;
   const byClient = new Map<
     string,
     {

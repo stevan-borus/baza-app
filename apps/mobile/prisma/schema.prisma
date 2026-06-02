@@ -103,6 +103,7 @@ model User {
   trainerSessions       Session[]            @relation("SessionTrainer")
   trainerSchedules      RecurringSchedule[]  @relation("ScheduleTrainer")
   bookingsCreated       Booking[]            @relation("BookingCreatedBy")
+  bookingsChargeWaived  Booking[]            @relation("BookingChargeWaivedBy")
 
   @@index([lastName])
 }
@@ -280,15 +281,18 @@ model Booking {
   clientProfileId String
   clientPackageId String?
   createdByUserId String?
+  waivedByUserId  String?
   createdAt       DateTime      @default(now())
   canceledAt      DateTime?
   session         Session       @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   clientProfile   ClientProfile @relation(fields: [clientProfileId], references: [id], onDelete: Cascade)
   clientPackage   ClientPackage? @relation(fields: [clientPackageId], references: [id], onDelete: SetNull)
   createdBy       User?         @relation("BookingCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  waivedBy        User?         @relation("BookingChargeWaivedBy", fields: [waivedByUserId], references: [id], onDelete: SetNull)
 
   @@unique([sessionId, clientProfileId])
   @@index([createdByUserId])
+  @@index([waivedByUserId])
 }
 
 model WaitlistEntry {

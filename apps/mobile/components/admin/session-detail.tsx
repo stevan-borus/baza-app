@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Pressable, ScrollView, Text, View } from "react-native";
@@ -12,12 +12,16 @@ import { SectionLabel } from "@/components/ui/typography";
 import { ScreenContainerRaw, useTabBarBottomPadding } from "@/components/ui/screen-container";
 import { HeaderIconButton } from "@/components/ui/app-header";
 import { useThemeTokens } from "@/components/ui/tokens";
+import { AppSheet } from "@/components/ui/sheet";
+import { Button } from "@/components/ui/button";
+import { SwitchRow } from "@/components/ui/switch-row";
 import {
   SessionEditSheet,
   useSessionEditSheet,
 } from "@/components/ui/session-edit-sheet";
 import { sessionsQueries } from "@/lib/queries/sessions-queries-factory";
 import { authQueries } from "@/lib/queries/auth-queries-factory";
+import { useCancelReservationsBulkMutation } from "@/lib/queries/reservations-queries-factory";
 import { ReturnToPill } from "@/components/admin/return-to-pill";
 
 type SessionDetailProps = {
@@ -51,6 +55,12 @@ export function SessionDetail({
   // a prop so a route wrapper can't accidentally expose the edit affordance.
   const meQuery = useQuery(authQueries.me());
   const canEdit = meQuery.data?.user.role === "ADMIN";
+
+  // Long-press on a booked row (admin only) opens the excuse-&-remove sheet.
+  const [excuseTarget, setExcuseTarget] = useState<{
+    bookingId: string;
+    clientFullName: string;
+  } | null>(null);
 
   const headerTitle = session?.classType?.name ?? t("admin.sessionDetail.title");
   const dateLabel = session
@@ -161,6 +171,15 @@ export function SessionDetail({
                     client={b.client}
                     consentFlags={b.consentFlags}
                     onPress={() => router.push(buildClientHref(b.client.id))}
+                    onLongPress={
+                      canEdit
+                        ? () =>
+                            setExcuseTarget({
+                              bookingId: b.id,
+                              clientFullName: b.client.fullName,
+                            })
+                        : undefined
+                    }
                   />
                 ))
               )}
@@ -188,6 +207,13 @@ export function SessionDetail({
         ) : null}
       </ScrollView>
       {canEdit ? <SessionEditSheet {...editSheet.bind()} /> : null}
+      {canEdit ? (
+        <ExcuseRemoveSheet
+          key={excuseTarget?.bookingId ?? "none"}
+          target={excuseTarget}
+          onClose={() => setExcuseTarget(null)}
+        />
+      ) : null}
     </ScreenContainerRaw>
   );
 }
@@ -204,12 +230,14 @@ function ClientRow({
   client,
   consentFlags,
   onPress,
+  onLongPress,
   testID,
   position,
 }: {
   client: RowClient;
   consentFlags: ConsentFlags;
   onPress: () => void;
+  onLongPress?: () => void;
   testID: string;
   position?: number;
 }) {
@@ -224,6 +252,7 @@ function ClientRow({
     <Pressable
       testID={testID}
       onPress={onPress}
+      onLongPress={onLongPress}
       android_ripple={null}
       className="active:opacity-70"
     >
@@ -363,5 +392,82 @@ function SocialMediaPill({ accepted }: { accepted: boolean | null }) {
           : t("admin.sessionDetail.photoConsentNo")}
       </Text>
     </View>
+  );
+}
+
+/**
+ * Admin confirm sheet opened by long-pressing a booked client on the session
+ * detail — a focused "cancel this client's session" action that reuses the
+ * bulk-cancel endpoint with a single bookingId. The charge-waiver toggle
+ * (default OFF) mirrors the bulk reservation-cancel sheet so both admin cancel
+ * surfaces behave identically. Row TAP still opens the client; this sheet is
+ * cancel-only.
+ */
+function ExcuseRemoveSheet({
+  target,
+  onClose,
+}: {
+  target: { bookingId: string; clientFullName: string } | null;
+  onClose: () => void;
+}) {
+  const { t } = useTranslation();
+  const cancelMut = useCancelReservationsBulkMutation();
+  // The toggle defaults OFF on every open: the parent remounts this component
+  // via a `key` tied to the targeted booking, so no reset effect is needed.
+  const [waiveCharge, setWaiveCharge] = useState(false);
+
+  return (
+    <AppSheet open={target !== null} onOpenChange={(o) => (o ? undefined : onClose())}>
+      <View className="flex-col gap-4" testID="session-detail-excuse-sheet">
+        <View>
+          <Text
+            className="text-foreground font-display"
+            style={{ fontSize: 22, lineHeight: 28 }}
+          >
+            {t("admin.sessionDetail.excuseTitle", { defaultValue: "Otkaži termin?" })}
+          </Text>
+          {target?.clientFullName ? (
+            <Text
+              className="text-muted"
+              style={{ fontSize: 14, lineHeight: 20, paddingTop: 4 }}
+            >
+              {target.clientFullName}
+            </Text>
+          ) : null}
+        </View>
+
+        <SwitchRow
+          testID="session-detail-excuse-waive-switch"
+          label={t("admin.reservations.waiveChargeLabel", {
+            defaultValue: "Ne naplaćuj ovu sesiju",
+          })}
+          hint={t("admin.reservations.waiveChargeHint", {
+            defaultValue: "Klijent neće izgubiti sesiju iz paketa.",
+          })}
+          value={waiveCharge}
+          onValueChange={setWaiveCharge}
+        />
+
+        <View className="flex-col gap-2 mt-1">
+          <Button
+            testID="session-detail-excuse-confirm"
+            variant="danger"
+            disabled={cancelMut.isPending || target === null}
+            onPress={() => {
+              if (!target) return;
+              cancelMut.mutate(
+                { bookingIds: [target.bookingId], waiveCharge },
+                { onSuccess: onClose },
+              );
+            }}
+          >
+            {t("admin.sessionDetail.excuseRemoveCta", { defaultValue: "Otkaži termin" })}
+          </Button>
+          <Button variant="ghost" disabled={cancelMut.isPending} onPress={onClose}>
+            {t("common.close", { defaultValue: "Zatvori" })}
+          </Button>
+        </View>
+      </View>
+    </AppSheet>
   );
 }

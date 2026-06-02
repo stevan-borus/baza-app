@@ -300,7 +300,8 @@
       "expiresWithCountdown": "Expires {{date}} · {{days}} days left",
       "noClassesToday": "No classes today",
       "noClassesThisDay": "No classes on this day",
-      "tryAnotherDay": "Try another day."
+      "tryAnotherDay": "Try another day.",
+      "noClassesDescription": "Pick another day from the schedule."
     },
     "onboarding": {
       "getStarted": "Get started",
@@ -429,7 +430,8 @@
     "time": "Time",
     "pickDate": "Pick a date",
     "pickTime": "Pick a time",
-    "pickDateTime": "Pick date and time"
+    "pickDateTime": "Pick date and time",
+    "back": "Back"
   },
   "confirm": {
     "deletePackageTitle": "Delete package type?",
@@ -740,7 +742,9 @@
       "notesLabel": "Note",
       "photoConsentYes": "Photo/video: Yes",
       "photoConsentNo": "Photo/video: No",
-      "hintFirstPilates": "First time pilates"
+      "hintFirstPilates": "First time pilates",
+      "excuseRemoveCta": "Cancel session",
+      "excuseTitle": "Cancel session?"
     },
     "manage": {
       "title": "Manage",
@@ -975,6 +979,13 @@
       },
       "noviTermin": "New session",
       "noviTerminSub": "One-time or recurring"
+    },
+    "reservations": {
+      "waiveChargeLabel": "Don't charge this session",
+      "waiveChargeHint": "The client won't lose a session from their package.",
+      "cancelTitle_one": "Cancel this session?",
+      "cancelTitle_other": "Cancel {{count}} sessions?",
+      "cancelConfirmCta": "Cancel session"
     }
   },
   "trainer": {
