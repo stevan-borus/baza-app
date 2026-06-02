@@ -5,6 +5,7 @@ import { useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { Image, Pressable, Text, View } from "react-native";
 import * as ImagePicker from "expo-image-picker";
+import { displayName } from "@baza/types";
 import { useLocalAvatar } from "@/lib/use-local-avatar";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { ThemeSwitcher } from "@/components/ThemeSwitcher";
@@ -150,7 +151,7 @@ function ProfileSheetContent({ open, onOpenChange }: Props) {
           </Pressable>
           <View className="flex-1">
             <Text className="text-foreground font-body-semibold" style={{ fontSize: 16 }}>
-              {email.split("@")[0] || t("client.profileTab.account")}
+              {displayName(meQuery.data?.user) || t("client.profileTab.account")}
             </Text>
             <Text className="text-muted" style={{ fontSize: 13 }}>
               {email}

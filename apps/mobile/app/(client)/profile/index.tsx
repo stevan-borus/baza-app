@@ -33,6 +33,7 @@ import { useLocalAvatar } from "@/lib/use-local-avatar";
 import { Icon } from "@/components/ui/icon";
 import { MotiView } from "@/components/ui/styled";
 import { SectionRow, CapsLabel } from "@/components/ui/studio";
+import { displayName } from "@baza/types";
 import { ScreenContainerRaw, useTabBarBottomPadding } from "@/components/ui/screen-container";
 import { useThemeTokens } from "@/components/ui/tokens";
 import { getDateLocale } from "@/lib/i18n";
@@ -75,7 +76,7 @@ export default function ClientProfile() {
 
   const packages = packagesQuery.data?.packages ?? [];
   const userEmail = meQuery.data?.user.email ?? "";
-  const userName = userEmail.split("@")[0];
+  const userName = displayName(meQuery.data?.user);
   const initials = userEmail ? getInitials(userEmail) : "?";
 
   // "Member since" — the User row's createdAt. The previous derivation

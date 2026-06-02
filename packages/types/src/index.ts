@@ -20,6 +20,21 @@ export function formatFullName(first: string, last: string): string {
 }
 
 /**
+ * The name to show for a user in the UI: their real full name, falling back
+ * to the email local-part only when no name is on the record (e.g. an
+ * incompletely-provisioned account). Single source for every "who is this"
+ * label — profile header, settings sheet, greeting — so none of them silently
+ * render the email instead of the name.
+ */
+export function displayName(
+  user?: { firstName?: string | null; lastName?: string | null; email?: string | null },
+): string {
+  const full = formatFullName(user?.firstName ?? "", user?.lastName ?? "");
+  if (full) return full;
+  return user?.email?.split("@")[0] ?? "";
+}
+
+/**
  * A required person-name field. Trims surrounding whitespace *before* the
  * length check, so a whitespace-only input (e.g. "   ") is rejected rather
  * than stored — and a padded value ("  Ana  ") persists clean, keeping the
