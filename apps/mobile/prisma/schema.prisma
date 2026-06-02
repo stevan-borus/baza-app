@@ -76,7 +76,8 @@ enum ConsentDocumentKey {
 model User {
   id           String               @id @default(uuid())
   email        String               @unique
-  fullName     String
+  firstName    String
+  lastName     String
   emailVerified Boolean             @default(false)
   image        String?
   phone        String?
@@ -102,6 +103,8 @@ model User {
   trainerSessions       Session[]            @relation("SessionTrainer")
   trainerSchedules      RecurringSchedule[]  @relation("ScheduleTrainer")
   bookingsCreated       Booking[]            @relation("BookingCreatedBy")
+
+  @@index([lastName])
 }
 
 model ClientProfile {
@@ -134,7 +137,8 @@ model TrainerProfile {
 model UserInvite {
   id             String      @id @default(uuid())
   email          String
-  fullName       String
+  firstName      String
+  lastName       String
   phone          String?
   dateOfBirth    DateTime?   @db.Date
   role           UserRole    @default(CLIENT)
