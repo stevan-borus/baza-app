@@ -14,6 +14,11 @@ import { NotificationTypeSchema } from "./generated/prisma-zod/schemas/enums/Not
 export const roleSchema = UserRoleSchema;
 export type Role = z.infer<typeof roleSchema>;
 
+/** Display name derived from the normalized first/last fields. */
+export function formatFullName(first: string, last: string): string {
+  return `${first} ${last}`.trim();
+}
+
 /**
  * Civil-date YYYY-MM-DD string. Server casts to Postgres DATE; UI formats
  * for display via `formatDateOfBirth`. Empty string is treated as absent
@@ -39,17 +44,20 @@ export const dateOfBirthSchema = z
 
 export const inviteClientInputSchema = UserInviteResultSchema.pick({
   email: true,
-  fullName: true,
+  firstName: true,
+  lastName: true,
   phone: true,
 }).extend({
-  fullName: z.string().min(2).max(100),
+  firstName: z.string().min(1).max(50),
+  lastName: z.string().min(1).max(50),
   phone: z.string().min(6).max(30).optional(),
   dateOfBirth: dateOfBirthSchema,
 });
 export type InviteClientInput = z.infer<typeof inviteClientInputSchema>;
 
 export const updateClientInputSchema = z.object({
-  fullName: z.string().min(2).max(100).optional(),
+  firstName: z.string().min(1).max(50).optional(),
+  lastName: z.string().min(1).max(50).optional(),
   phone: z.string().min(6).max(30).nullable().optional(),
   notes: z.string().max(2000).nullable().optional(),
   isActive: z.boolean().optional(),
@@ -126,7 +134,9 @@ export type MonthlyAvailabilityQuery = z.infer<
 export const sessionUserSchema = z.object({
   id: z.string(),
   email: z.string(),
-  fullName: z.string(),
+  firstName: z.string(),
+  lastName: z.string(),
+  fullName: z.string(), // derived server-side; kept for display sites
   role: UserRoleSchema,
   isActive: z.boolean(),
   createdAt: z.coerce.date(),
@@ -377,7 +387,9 @@ export const clientsResponseSchema = z.object({
       packageStatus: clientPackageStatusSchema,
       user: z.object({
         id: z.string(),
-        fullName: z.string(),
+        firstName: z.string(),
+        lastName: z.string(),
+        fullName: z.string(), // derived
         email: z.email(),
         phone: z.optional(z.nullable(z.string())),
       }),
@@ -400,7 +412,9 @@ export const clientByIdResponseSchema = z.object({
     packageStatus: clientPackageStatusSchema,
     user: z.object({
       id: z.string(),
-      fullName: z.string(),
+      firstName: z.string(),
+      lastName: z.string(),
+      fullName: z.string(), // derived
       email: z.email(),
       phone: z.nullable(z.string()),
       isActive: z.boolean(),
