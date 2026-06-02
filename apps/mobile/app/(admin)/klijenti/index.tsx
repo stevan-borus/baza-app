@@ -113,7 +113,6 @@ function ClientRow({
         </Text>
         <Text className="text-muted" style={{ fontSize: 12 }} numberOfLines={1}>
           {client.user.email}
-          {client.user.phone ? ` · ${client.user.phone}` : ""}
         </Text>
       </View>
       {client.packageStatus === "active" ? (
