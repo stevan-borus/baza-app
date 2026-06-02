@@ -3,9 +3,9 @@ import { hashPassword } from "../lib/server/password";
 import { prisma } from "../lib/server/prisma";
 
 const users = [
-  { email: "admin@baza.rs", fullName: "Admin", role: UserRole.ADMIN },
-  { email: "trainer@baza.rs", fullName: "Trainer", role: UserRole.TRAINER },
-  { email: "client@baza.rs", fullName: "Client", role: UserRole.CLIENT },
+  { email: "admin@baza.rs", firstName: "Admin", lastName: "Baza", role: UserRole.ADMIN },
+  { email: "trainer@baza.rs", firstName: "Trainer", lastName: "Baza", role: UserRole.TRAINER },
+  { email: "client@baza.rs", firstName: "Client", lastName: "Baza", role: UserRole.CLIENT },
 ];
 
 const PASSWORD = "Steva123!";
@@ -66,8 +66,8 @@ async function seedUsers() {
   for (const u of users) {
     const user = await prisma.user.upsert({
       where: { email: u.email },
-      update: { fullName: u.fullName, role: u.role, isActive: true, passwordHash: hash },
-      create: { email: u.email, fullName: u.fullName, role: u.role, isActive: true, passwordHash: hash },
+      update: { firstName: u.firstName, lastName: u.lastName, role: u.role, isActive: true, passwordHash: hash },
+      create: { email: u.email, firstName: u.firstName, lastName: u.lastName, role: u.role, isActive: true, passwordHash: hash },
     });
 
     await prisma.authAccount.upsert({

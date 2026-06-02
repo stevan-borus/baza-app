@@ -187,10 +187,13 @@ async function seedUser(
   input: { email: string; fullName: string; role: UserRole; dateOfBirth?: string },
   hash: string,
 ) {
+  const [firstName, ...rest] = input.fullName.split(" ");
+  const lastName = rest.join(" ") || "Test";
   const user = await prisma.user.create({
     data: {
       email: input.email,
-      fullName: input.fullName,
+      firstName,
+      lastName,
       role: input.role,
       isActive: true,
       passwordHash: hash,
@@ -660,7 +663,8 @@ async function seedBookings(opts: {
       const filler = await prisma.user.create({
         data: {
           email: `waitlist.filler.${i}@e2e.test`,
-          fullName: `Waitlist Filler ${i + 1}`,
+          firstName: "Waitlist Filler",
+          lastName: String(i + 1),
           role: UserRole.CLIENT,
           clientProfile: { create: { dateOfBirth: new Date("1990-01-01") } },
         },
