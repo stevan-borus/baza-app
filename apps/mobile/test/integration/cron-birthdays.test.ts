@@ -24,7 +24,7 @@ function buildCronRequest(params: Record<string, string> = {}) {
 
 async function seedAdmin(email = "admin@test.local") {
   return prisma.user.create({
-    data: { email, fullName: "Admin", role: "ADMIN" },
+    data: { email, firstName: "Admin", lastName: "Test", role: "ADMIN" },
   });
 }
 
@@ -33,10 +33,13 @@ async function seedClientWithBirthday(opts: {
   fullName: string;
   dateOfBirth: string | null; // YYYY-MM-DD or null
 }) {
+  const [firstName, ...rest] = opts.fullName.split(" ");
+  const lastName = rest.join(" ") || "Test";
   return prisma.user.create({
     data: {
       email: opts.email,
-      fullName: opts.fullName,
+      firstName,
+      lastName,
       role: "CLIENT",
       clientProfile: {
         create: opts.dateOfBirth
@@ -94,7 +97,7 @@ describe("cron:birthdays", () => {
     const a1 = await seedAdmin("a1@test.local");
     const a2 = await seedAdmin("a2@test.local");
     await prisma.user.create({
-      data: { email: "inactive@test.local", fullName: "Inactive", role: "ADMIN", isActive: false },
+      data: { email: "inactive@test.local", firstName: "Inactive", lastName: "Test", role: "ADMIN", isActive: false },
     });
     await seedClientWithBirthday({
       email: "client@test.local",

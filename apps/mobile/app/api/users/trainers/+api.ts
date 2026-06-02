@@ -1,3 +1,4 @@
+import { formatFullName } from "@baza/types";
 import { UserRole } from "@/generated/prisma";
 import { requireRole } from "@/lib/server/auth-guards";
 import { ok } from "@/lib/server/http";
@@ -14,11 +15,18 @@ export async function GET(request: Request) {
     },
     select: {
       id: true,
-      fullName: true,
+      firstName: true,
+      lastName: true,
       role: true,
     },
-    orderBy: { fullName: "asc" },
+    orderBy: { lastName: "asc" },
   });
 
-  return ok({ success: true, users });
+  const shapedUsers = users.map((u) => ({
+    id: u.id,
+    fullName: formatFullName(u.firstName, u.lastName),
+    role: u.role,
+  }));
+
+  return ok({ success: true, users: shapedUsers });
 }

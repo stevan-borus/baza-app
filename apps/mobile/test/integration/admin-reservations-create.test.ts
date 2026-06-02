@@ -26,13 +26,13 @@ import { nowMs } from "@/lib/now";
 
 async function seedBasics() {
   const admin = await prisma.user.create({
-    data: { email: "admin@test.local", fullName: "Admin", role: "ADMIN" },
+    data: { email: "admin@test.local", firstName: "Admin", lastName: "User", role: "ADMIN" },
   });
   const trainer = await prisma.user.create({
-    data: { email: "trainer@test.local", fullName: "Trainer", role: "TRAINER" },
+    data: { email: "trainer@test.local", firstName: "Trainer", lastName: "User", role: "TRAINER" },
   });
   const clientUser = await prisma.user.create({
-    data: { email: "client@test.local", fullName: "Marija", role: "CLIENT" },
+    data: { email: "client@test.local", firstName: "Marija", lastName: "Klijent", role: "CLIENT" },
   });
   const clientProfile = await prisma.clientProfile.create({
     data: { userId: clientUser.id },
@@ -128,7 +128,7 @@ describe("POST /api/admin/reservations", () => {
       capacity: 1,
     });
     const otherClient = await prisma.user.create({
-      data: { email: "other@test.local", fullName: "Other", role: "CLIENT" },
+      data: { email: "other@test.local", firstName: "Other", lastName: "Client", role: "CLIENT" },
     });
     const otherProfile = await prisma.clientProfile.create({
       data: { userId: otherClient.id },

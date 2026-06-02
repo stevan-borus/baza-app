@@ -1,3 +1,4 @@
+import { formatFullName } from "@baza/types";
 import { UserRole } from "@/generated/prisma";
 import { now } from "@/lib/now";
 import { requireRole } from "@/lib/server/auth-guards";
@@ -145,7 +146,7 @@ export async function GET(request: Request, { id }: RouteParams) {
           endsAt: true,
           classType: { select: { id: true, name: true } },
           room: { select: { id: true, name: true } },
-          trainer: { select: { id: true, fullName: true } },
+          trainer: { select: { id: true, firstName: true, lastName: true } },
         },
       },
     },
@@ -166,7 +167,15 @@ export async function GET(request: Request, { id }: RouteParams) {
       endsAt: b.session.endsAt.toISOString(),
       classType: b.session.classType,
       room: b.session.room,
-      trainer: b.session.trainer,
+      trainer: b.session.trainer
+        ? {
+            id: b.session.trainer.id,
+            fullName: formatFullName(
+              b.session.trainer.firstName,
+              b.session.trainer.lastName,
+            ),
+          }
+        : null,
     },
   }));
 

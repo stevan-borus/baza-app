@@ -32,8 +32,10 @@ async function seedReformer() {
 }
 
 async function makeClientWithProfile(email: string) {
+  const [firstName, ...rest] = email.split(" ");
+  const lastName = rest.join(" ") || "Test";
   const user = await prisma.user.create({
-    data: { email, fullName: email, role: "CLIENT" },
+    data: { email, firstName, lastName, role: "CLIENT" },
   });
   const profile = await prisma.clientProfile.create({
     data: { userId: user.id },
@@ -66,7 +68,7 @@ describe("cron: reminders + package-expiry", () => {
     it("sends one reminder per non-canceled booking on a session inside the window", async () => {
       const reformer = await seedReformer();
       const trainer = await prisma.user.create({
-        data: { email: "t@test.local", fullName: "T", role: "TRAINER" },
+        data: { email: "t@test.local", firstName: "T", lastName: "Test", role: "TRAINER" },
       });
       const c1 = await makeClientWithProfile("c1@test.local");
       const c2 = await makeClientWithProfile("c2@test.local");
@@ -115,7 +117,7 @@ describe("cron: reminders + package-expiry", () => {
     it("does not send reminders for sessions outside the window", async () => {
       const reformer = await seedReformer();
       const trainer = await prisma.user.create({
-        data: { email: "t2@test.local", fullName: "T2", role: "TRAINER" },
+        data: { email: "t2@test.local", firstName: "T2", lastName: "Test", role: "TRAINER" },
       });
       const c = await makeClientWithProfile("future@test.local");
       const startsAt = new Date(nowMs() + 5 * DAY_MS); // far outside 180min

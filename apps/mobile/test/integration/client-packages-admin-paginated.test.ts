@@ -68,7 +68,8 @@ async function seedClientPackages(count: number) {
     const user = await prisma.user.create({
       data: {
         email,
-        fullName: `Pkg Client ${idx}`,
+        firstName: "Pkg",
+        lastName: `Client ${idx}`,
         role: "CLIENT",
         isActive: true,
       },
@@ -90,7 +91,7 @@ async function seedClientPackages(count: number) {
     rows.push({
       id: pkg.id,
       userId: user.id,
-      fullName: user.fullName,
+      fullName: `${user.firstName} ${user.lastName}`,
       email: user.email,
     });
   }
@@ -207,7 +208,8 @@ describe("GET /api/packages/client-packages — admin pagination", () => {
     const targetUser = await prisma.user.create({
       data: {
         email: "zebra@test.local",
-        fullName: "Zebra Special",
+        firstName: "Zebra",
+        lastName: "Special",
         role: "CLIENT",
         isActive: true,
       },

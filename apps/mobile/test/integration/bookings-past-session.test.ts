@@ -38,7 +38,8 @@ async function seedClassRoomTrainer() {
   const trainer = await prisma.user.create({
     data: {
       email: "trainer-past@t.local",
-      fullName: "Trainer",
+      firstName: "Trainer",
+      lastName: "Test",
       role: "TRAINER",
       trainerProfile: { create: {} },
     },
@@ -50,7 +51,8 @@ async function seedAdultWithPackage(classTypeId: string) {
   const adult = await prisma.user.create({
     data: {
       email: "adult-past@t.local",
-      fullName: "Adult Client",
+      firstName: "Adult",
+      lastName: "Client",
       role: "CLIENT",
       clientProfile: { create: { dateOfBirth: new Date("1990-01-01") } },
     },

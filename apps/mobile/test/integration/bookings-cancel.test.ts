@@ -32,10 +32,10 @@ const DAY_MS = 24 * HOUR_MS;
 
 async function seedBaseline() {
   const trainer = await prisma.user.create({
-    data: { email: "trainer@test.local", fullName: "Trainer", role: "TRAINER" },
+    data: { email: "trainer@test.local", firstName: "Trainer", lastName: "User", role: "TRAINER" },
   });
   const client = await prisma.user.create({
-    data: { email: "client@test.local", fullName: "Client", role: "CLIENT" },
+    data: { email: "client@test.local", firstName: "Client", lastName: "User", role: "CLIENT" },
   });
   const clientProfile = await prisma.clientProfile.create({
     data: { userId: client.id, dateOfBirth: new Date("1990-01-01") },
@@ -241,7 +241,7 @@ describe("POST /api/bookings cancel", () => {
 
     // Second client + eligible pack + waitlist entry.
     const client2 = await prisma.user.create({
-      data: { email: "client2@test.local", fullName: "Client 2", role: "CLIENT" },
+      data: { email: "client2@test.local", firstName: "Client", lastName: "2", role: "CLIENT" },
     });
     const clientProfile2 = await prisma.clientProfile.create({
       data: { userId: client2.id, dateOfBirth: new Date("1990-01-01") },
@@ -364,10 +364,10 @@ describe("POST /api/bookings cancel", () => {
     it("every active admin receives BOOKING_CANCELED_ADMIN", async () => {
       const baseline = await seedBaseline();
       const admin1 = await prisma.user.create({
-        data: { email: "admin1@test.local", fullName: "Admin One", role: "ADMIN" },
+        data: { email: "admin1@test.local", firstName: "Admin", lastName: "One", role: "ADMIN" },
       });
       const admin2 = await prisma.user.create({
-        data: { email: "admin2@test.local", fullName: "Admin Two", role: "ADMIN" },
+        data: { email: "admin2@test.local", firstName: "Admin", lastName: "Two", role: "ADMIN" },
       });
       const session = await createFutureSession({
         classTypeId: baseline.reformer.id,

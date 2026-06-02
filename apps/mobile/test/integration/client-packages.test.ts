@@ -40,8 +40,10 @@ async function seedReformerWithPackageType(opts?: { lateCancelHours?: number }) 
 }
 
 async function makeClient(email: string) {
+  const [firstName, ...rest] = email.split(" ");
+  const lastName = rest.join(" ") || "Test";
   const user = await prisma.user.create({
-    data: { email, fullName: email, role: "CLIENT" },
+    data: { email, firstName, lastName, role: "CLIENT" },
   });
   const profile = await prisma.clientProfile.create({
     data: { userId: user.id },
@@ -139,7 +141,7 @@ describe("packages/client-packages", () => {
   it("POST as trainer assigning a pack to a non-linked client is rejected (403)", async () => {
     const { packageType } = await seedReformerWithPackageType();
     const trainer = await prisma.user.create({
-      data: { email: "tr@test.local", fullName: "Tr", role: "TRAINER" },
+      data: { email: "tr@test.local", firstName: "Tr", lastName: "Test", role: "TRAINER" },
     });
     const stranger = await makeClient("stranger@test.local");
     asTrainer(trainer.id);
@@ -201,7 +203,7 @@ describe("packages/client-packages", () => {
 
   it("GET as trainer for a non-linked client is forbidden", async () => {
     const trainer = await prisma.user.create({
-      data: { email: "tr2@test.local", fullName: "Tr2", role: "TRAINER" },
+      data: { email: "tr2@test.local", firstName: "Tr2", lastName: "Test", role: "TRAINER" },
     });
     const stranger = await makeClient("nolink@test.local");
     asTrainer(trainer.id);
@@ -293,7 +295,7 @@ describe("packages/client-packages", () => {
 
     it("POST as trainer pausing a non-linked client is rejected (403)", async () => {
       const trainer = await prisma.user.create({
-        data: { email: "tr3@test.local", fullName: "Tr3", role: "TRAINER" },
+        data: { email: "tr3@test.local", firstName: "Tr3", lastName: "Test", role: "TRAINER" },
       });
       const stranger = await makeClient("nl@test.local");
       asTrainer(trainer.id);

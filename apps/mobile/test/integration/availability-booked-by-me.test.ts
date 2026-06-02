@@ -43,10 +43,10 @@ type SessionRow = {
 
 async function fixtures() {
   const trainer = await prisma.user.create({
-    data: { email: "av-tr@t.local", fullName: "T", role: "TRAINER" },
+    data: { email: "av-tr@t.local", firstName: "T", lastName: "Trainer", role: "TRAINER" },
   });
   const client = await prisma.user.create({
-    data: { email: "av-c@t.local", fullName: "C", role: "CLIENT" },
+    data: { email: "av-c@t.local", firstName: "C", lastName: "Client", role: "CLIENT" },
   });
   const clientProfile = await prisma.clientProfile.create({
     data: { userId: client.id, dateOfBirth: new Date("1990-01-01") },

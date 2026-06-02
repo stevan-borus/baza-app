@@ -21,10 +21,10 @@ import { prisma } from "@/lib/server/prisma";
 
 async function seedSessionsAcrossClassTypes() {
   const admin = await prisma.user.create({
-    data: { email: "admin@test.local", fullName: "Admin", role: "ADMIN" },
+    data: { email: "admin@test.local", firstName: "Admin", lastName: "Test", role: "ADMIN" },
   });
   const trainer = await prisma.user.create({
-    data: { email: "t@test.local", fullName: "T", role: "TRAINER" },
+    data: { email: "t@test.local", firstName: "T", lastName: "Test", role: "TRAINER" },
   });
   const reformer = await prisma.classType.create({
     data: { name: "Reformer", maxClients: 6, durationMins: 60 },
@@ -75,7 +75,7 @@ async function seedSessionsAcrossClassTypes() {
   // 3 bookings on the reformer session.
   for (let i = 0; i < 3; i++) {
     const c = await prisma.user.create({
-      data: { email: `r-${i}@test.local`, fullName: `R ${i}`, role: "CLIENT" },
+      data: { email: `r-${i}@test.local`, firstName: "R", lastName: String(i), role: "CLIENT" },
     });
     const cProfile = await prisma.clientProfile.create({ data: { userId: c.id } });
     const cPkg = await prisma.clientPackage.create({
@@ -96,7 +96,7 @@ async function seedSessionsAcrossClassTypes() {
   // 6 bookings on the energy session.
   for (let i = 0; i < 6; i++) {
     const c = await prisma.user.create({
-      data: { email: `e-${i}@test.local`, fullName: `E ${i}`, role: "CLIENT" },
+      data: { email: `e-${i}@test.local`, firstName: "E", lastName: String(i), role: "CLIENT" },
     });
     const cProfile = await prisma.clientProfile.create({ data: { userId: c.id } });
     const cPkg = await prisma.clientPackage.create({

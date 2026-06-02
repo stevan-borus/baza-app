@@ -64,7 +64,7 @@ async function seedSession(startsAt: Date, capacity = 6) {
   const trainer =
     (await prisma.user.findFirst({ where: { email: "t@test.local" } })) ??
     (await prisma.user.create({
-      data: { email: "t@test.local", fullName: "T", role: "TRAINER" },
+      data: { email: "t@test.local", firstName: "T", lastName: "Test", role: "TRAINER" },
     }));
   const sala =
     (await prisma.studioRoom.findFirst({ where: { name: "Sala" } })) ??

@@ -29,7 +29,7 @@ const DAY_MS = 24 * HOUR_MS;
 
 async function seedSessionWith(opts?: { withBooking?: boolean }) {
   const trainer = await prisma.user.create({
-    data: { email: "trainer@test.local", fullName: "Trainer", role: "TRAINER" },
+    data: { email: "trainer@test.local", firstName: "Trainer", lastName: "Test", role: "TRAINER" },
   });
   const reformer = await prisma.classType.create({
     data: { name: "Reformer", maxClients: 6, durationMins: 60 },
@@ -48,7 +48,7 @@ async function seedSessionWith(opts?: { withBooking?: boolean }) {
   });
   if (opts?.withBooking) {
     const client = await prisma.user.create({
-      data: { email: "c@test.local", fullName: "C", role: "CLIENT" },
+      data: { email: "c@test.local", firstName: "C", lastName: "Test", role: "CLIENT" },
     });
     const profile = await prisma.clientProfile.create({
       data: { userId: client.id },

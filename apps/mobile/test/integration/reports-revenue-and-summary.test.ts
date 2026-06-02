@@ -51,7 +51,7 @@ describe("reports/revenue", () => {
 
   it("aggregates CONFIRMED payments per day bucket and excludes other statuses", async () => {
     const client = await prisma.user.create({
-      data: { email: "c@test.local", fullName: "C", role: "CLIENT" },
+      data: { email: "c@test.local", firstName: "C", lastName: "Test", role: "CLIENT" },
     });
     await prisma.billingRecord.create({
       data: {
@@ -91,7 +91,7 @@ describe("reports/revenue", () => {
 
   it("excludes payments outside the from-to window", async () => {
     const client = await prisma.user.create({
-      data: { email: "c2@test.local", fullName: "C2", role: "CLIENT" },
+      data: { email: "c2@test.local", firstName: "C2", lastName: "Test", role: "CLIENT" },
     });
     await prisma.billingRecord.create({
       data: {
@@ -135,19 +135,20 @@ describe("reports/summary", () => {
 
   it("returns totals across clients, sessions, and CONFIRMED revenue", async () => {
     const trainer = await prisma.user.create({
-      data: { email: "t@test.local", fullName: "T", role: "TRAINER" },
+      data: { email: "t@test.local", firstName: "T", lastName: "Test", role: "TRAINER" },
     });
     const reformer = await prisma.classType.create({
       data: { name: "Reformer", maxClients: 6, durationMins: 60 },
     });
     const active = await prisma.user.create({
-      data: { email: "a@test.local", fullName: "A", role: "CLIENT", isActive: true },
+      data: { email: "a@test.local", firstName: "A", lastName: "Test", role: "CLIENT", isActive: true },
     });
     await prisma.clientProfile.create({ data: { userId: active.id } });
     const inactive = await prisma.user.create({
       data: {
         email: "i@test.local",
-        fullName: "I",
+        firstName: "I",
+        lastName: "Test",
         role: "CLIENT",
         isActive: false,
       },

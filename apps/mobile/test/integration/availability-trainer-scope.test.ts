@@ -21,10 +21,10 @@ import { prisma } from "@/lib/server/prisma";
 
 async function seed() {
   const trainerA = await prisma.user.create({
-    data: { email: "ta@test.local", fullName: "Trainer A", role: "TRAINER" },
+    data: { email: "ta@test.local", firstName: "Trainer", lastName: "A", role: "TRAINER" },
   });
   const trainerB = await prisma.user.create({
-    data: { email: "tb@test.local", fullName: "Trainer B", role: "TRAINER" },
+    data: { email: "tb@test.local", firstName: "Trainer", lastName: "B", role: "TRAINER" },
   });
   const reformer = await prisma.classType.create({
     data: { name: "Reformer", maxClients: 6, durationMins: 60 },

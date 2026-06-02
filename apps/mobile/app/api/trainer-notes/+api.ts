@@ -1,4 +1,4 @@
-import { trainerNoteInputSchema, trainerNotesQuerySchema } from "@baza/types";
+import { formatFullName, trainerNoteInputSchema, trainerNotesQuerySchema } from "@baza/types";
 import { UserRole } from "@/generated/prisma";
 import { requireRole } from "@/lib/server/auth-guards";
 import { fail, ok } from "@/lib/server/http";
@@ -66,7 +66,8 @@ export async function GET(request: Request) {
       trainer: {
         select: {
           id: true,
-          fullName: true,
+          firstName: true,
+          lastName: true,
         },
       },
       clientProfile: {
@@ -74,7 +75,8 @@ export async function GET(request: Request) {
           user: {
             select: {
               id: true,
-              fullName: true,
+              firstName: true,
+              lastName: true,
             },
           },
         },
@@ -88,9 +90,27 @@ export async function GET(request: Request) {
     },
   });
 
+  const shapedNotes = notes.map((n) => ({
+    ...n,
+    trainer: {
+      id: n.trainer.id,
+      fullName: formatFullName(n.trainer.firstName, n.trainer.lastName),
+    },
+    clientProfile: {
+      ...n.clientProfile,
+      user: {
+        id: n.clientProfile.user.id,
+        fullName: formatFullName(
+          n.clientProfile.user.firstName,
+          n.clientProfile.user.lastName,
+        ),
+      },
+    },
+  }));
+
   return ok({
     success: true,
-    notes,
+    notes: shapedNotes,
     nextCursor:
       notes.length === parsed.data.take ? notes[notes.length - 1]?.id ?? null : null,
   });

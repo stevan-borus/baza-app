@@ -27,12 +27,13 @@ describe("POST /api/consent/refuse", () => {
     await resetDb();
 
     const admin = await prisma.user.create({
-      data: { email: "admin@t.local", fullName: "Admin Adminović", role: "ADMIN" },
+      data: { email: "admin@t.local", firstName: "Admin", lastName: "Adminović", role: "ADMIN" },
     });
     const user = await prisma.user.create({
       data: {
         email: "u@t.local",
-        fullName: "Refusing User",
+        firstName: "Refusing",
+        lastName: "User",
         role: "CLIENT",
         clientProfile: { create: { dateOfBirth: new Date("1990-01-01") } },
       },
@@ -63,7 +64,7 @@ describe("POST /api/consent/refuse", () => {
   it("notifies multiple admins", async () => {
     // Add a second admin
     await prisma.user.create({
-      data: { email: "admin2@t.local", fullName: "Admin Two", role: "ADMIN" },
+      data: { email: "admin2@t.local", firstName: "Admin", lastName: "Two", role: "ADMIN" },
     });
     await POST(
       new Request("https://t.local/api/consent/refuse", { method: "POST" }),

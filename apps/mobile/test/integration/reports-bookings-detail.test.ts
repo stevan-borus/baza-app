@@ -80,7 +80,7 @@ async function ensureFixtures() {
   const trainer =
     (await prisma.user.findFirst({ where: { email: "t@test.local" } })) ??
     (await prisma.user.create({
-      data: { email: "t@test.local", fullName: "T", role: "TRAINER" },
+      data: { email: "t@test.local", firstName: "T", lastName: "Test", role: "TRAINER" },
     }));
   const room =
     (await prisma.studioRoom.findFirst({ where: { name: "Sala" } })) ??
@@ -110,7 +110,8 @@ async function makeClientWithPackage(
   const client = await prisma.user.create({
     data: {
       email: `client-${tag}@test.local`,
-      fullName: `Client ${tag}`,
+      firstName: "Client",
+      lastName: tag,
       role: "CLIENT",
     },
   });
@@ -418,7 +419,8 @@ describe("reports/bookings/detail", () => {
       const client = await prisma.user.create({
         data: {
           email: `wl-${i}@test.local`,
-          fullName: `WL ${i}`,
+          firstName: "WL",
+          lastName: String(i),
           role: "CLIENT",
         },
       });
@@ -438,7 +440,8 @@ describe("reports/bookings/detail", () => {
       const client = await prisma.user.create({
         data: {
           email: "wl-out@test.local",
-          fullName: "WL Out",
+          firstName: "WL",
+          lastName: "Out",
           role: "CLIENT",
         },
       });

@@ -34,10 +34,10 @@ const DAY_MS = 24 * HOUR_MS;
 
 async function fixtures() {
   const admin = await prisma.user.create({
-    data: { email: "adm-fpe@t.local", fullName: "A", role: "ADMIN" },
+    data: { email: "adm-fpe@t.local", firstName: "A", lastName: "Test", role: "ADMIN" },
   });
   const trainer = await prisma.user.create({
-    data: { email: "tr-fpe@t.local", fullName: "T", role: "TRAINER" },
+    data: { email: "tr-fpe@t.local", firstName: "T", lastName: "Test", role: "TRAINER" },
   });
   const reformer = await prisma.classType.create({
     data: { name: "Reformer pilates", maxClients: 6, durationMins: 60 },
@@ -55,7 +55,7 @@ async function fixtures() {
     },
   });
   const client = await prisma.user.create({
-    data: { email: "cl-fpe@t.local", fullName: "Klijent", role: "CLIENT" },
+    data: { email: "cl-fpe@t.local", firstName: "Klijent", lastName: "Test", role: "CLIENT" },
   });
   const clientProfile = await prisma.clientProfile.create({
     data: { userId: client.id, dateOfBirth: new Date("1990-01-01") },
@@ -264,10 +264,10 @@ describe("GET /api/sessions/[id] — showFirstPilatesHint cutoff", () => {
 
   it("is false when no intake exists (no first-time signal)", async () => {
     const admin = await prisma.user.create({
-      data: { email: "adm2-fpe@t.local", fullName: "A", role: "ADMIN" },
+      data: { email: "adm2-fpe@t.local", firstName: "A", lastName: "Test", role: "ADMIN" },
     });
     const trainer = await prisma.user.create({
-      data: { email: "tr2-fpe@t.local", fullName: "T", role: "TRAINER" },
+      data: { email: "tr2-fpe@t.local", firstName: "T", lastName: "Test", role: "TRAINER" },
     });
     const reformer = await prisma.classType.create({
       data: { name: "Reformer pilates", maxClients: 6, durationMins: 60 },
@@ -285,7 +285,7 @@ describe("GET /api/sessions/[id] — showFirstPilatesHint cutoff", () => {
       },
     });
     const client = await prisma.user.create({
-      data: { email: "cl2-fpe@t.local", fullName: "K", role: "CLIENT" },
+      data: { email: "cl2-fpe@t.local", firstName: "K", lastName: "Test", role: "CLIENT" },
     });
     const clientProfile = await prisma.clientProfile.create({
       data: { userId: client.id, dateOfBirth: new Date("1990-01-01") },

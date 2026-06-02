@@ -21,10 +21,10 @@ import { prisma } from "@/lib/server/prisma";
 
 async function seedSessionsAcrossRooms() {
   const admin = await prisma.user.create({
-    data: { email: "admin@test.local", fullName: "Admin", role: "ADMIN" },
+    data: { email: "admin@test.local", firstName: "Admin", lastName: "Test", role: "ADMIN" },
   });
   const trainer = await prisma.user.create({
-    data: { email: "t@test.local", fullName: "T", role: "TRAINER" },
+    data: { email: "t@test.local", firstName: "T", lastName: "Test", role: "TRAINER" },
   });
   const reformer = await prisma.classType.create({
     data: { name: "Reformer", maxClients: 6, durationMins: 60 },
@@ -72,7 +72,7 @@ async function seedSessionsAcrossRooms() {
   // Add bookings: 3 in the first Sala 1 session, 6 in the Sala 2 session.
   // Total Sala 1: 3 booked / 12 capacity = 25%. Sala 2: 6/12 = 50%.
   const ana = await prisma.user.create({
-    data: { email: "ana@test.local", fullName: "Ana", role: "CLIENT" },
+    data: { email: "ana@test.local", firstName: "Ana", lastName: "Test", role: "CLIENT" },
   });
   const anaProfile = await prisma.clientProfile.create({ data: { userId: ana.id } });
   const pkgType = await prisma.packageType.create({
@@ -102,7 +102,7 @@ async function seedSessionsAcrossRooms() {
   // 3 bookings on first session (Sala 1).
   for (let i = 0; i < 3; i++) {
     const c = await prisma.user.create({
-      data: { email: `s1-${i}@test.local`, fullName: `S1 ${i}`, role: "CLIENT" },
+      data: { email: `s1-${i}@test.local`, firstName: "S1", lastName: String(i), role: "CLIENT" },
     });
     const cProfile = await prisma.clientProfile.create({ data: { userId: c.id } });
     await prisma.clientPackage.create({
@@ -131,7 +131,7 @@ async function seedSessionsAcrossRooms() {
   // 6 bookings on the Sala 2 session.
   for (let i = 0; i < 6; i++) {
     const c = await prisma.user.create({
-      data: { email: `s2-${i}@test.local`, fullName: `S2 ${i}`, role: "CLIENT" },
+      data: { email: `s2-${i}@test.local`, firstName: "S2", lastName: String(i), role: "CLIENT" },
     });
     const cProfile = await prisma.clientProfile.create({ data: { userId: c.id } });
     await prisma.clientPackage.create({

@@ -25,7 +25,7 @@ describe("POST /api/consent/accept", () => {
   beforeEach(async () => {
     await resetDb();
     const user = await prisma.user.create({
-      data: { email: "a@t.local", fullName: "A", role: "ADMIN" },
+      data: { email: "a@t.local", firstName: "A", lastName: "Test", role: "ADMIN" },
     });
     userId = user.id;
     setMockUser({

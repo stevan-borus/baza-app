@@ -1,3 +1,4 @@
+import { formatFullName } from "@baza/types";
 import { UserRole, NotificationType } from "@/generated/prisma";
 import { requireRole } from "@/lib/server/auth-guards";
 import { ok } from "@/lib/server/http";
@@ -17,8 +18,9 @@ export async function POST(request: Request) {
 
   const user = await prisma.user.findUnique({
     where: { id: guard.user.id },
-    select: { fullName: true },
+    select: { firstName: true, lastName: true },
   });
+  const userName = user ? formatFullName(user.firstName, user.lastName) : "Korisnik";
 
   const admins = await prisma.user.findMany({
     where: { role: "ADMIN", isActive: true },
@@ -30,11 +32,11 @@ export async function POST(request: Request) {
       createAndDispatchUserNotification({
         userId: admin.id,
         type: NotificationType.CONSENT_REFUSED,
-        title: `${user?.fullName ?? "Korisnik"} nije prihvatio dokumente`,
-        body: `${user?.fullName ?? "Korisnik"} je odbio/la pravne dokumente i odjavljen/a je.`,
+        title: `${userName} nije prihvatio dokumente`,
+        body: `${userName} je odbio/la pravne dokumente i odjavljen/a je.`,
         payload: {
           messageKey: "notif.consentRefused",
-          userName: user?.fullName ?? "",
+          userName: user ? formatFullName(user.firstName, user.lastName) : "",
         },
       }),
     ),

@@ -14,13 +14,13 @@ describe("Booking.createdByUserId audit field", () => {
 
   it("persists the admin who created an admin reservation and reads it back via relation", async () => {
     const admin = await prisma.user.create({
-      data: { email: "admin@test.local", fullName: "Admin", role: "ADMIN" },
+      data: { email: "admin@test.local", firstName: "Admin", lastName: "User", role: "ADMIN" },
     });
     const trainer = await prisma.user.create({
-      data: { email: "trainer@test.local", fullName: "Trainer", role: "TRAINER" },
+      data: { email: "trainer@test.local", firstName: "Trainer", lastName: "User", role: "TRAINER" },
     });
     const clientUser = await prisma.user.create({
-      data: { email: "client@test.local", fullName: "Client", role: "CLIENT" },
+      data: { email: "client@test.local", firstName: "Client", lastName: "User", role: "CLIENT" },
     });
     const clientProfile = await prisma.clientProfile.create({
       data: { userId: clientUser.id },
@@ -55,10 +55,10 @@ describe("Booking.createdByUserId audit field", () => {
 
   it("leaves createdByUserId null when omitted (client self-booking)", async () => {
     const trainer = await prisma.user.create({
-      data: { email: "trainer@test.local", fullName: "Trainer", role: "TRAINER" },
+      data: { email: "trainer@test.local", firstName: "Trainer", lastName: "User", role: "TRAINER" },
     });
     const clientUser = await prisma.user.create({
-      data: { email: "client@test.local", fullName: "Client", role: "CLIENT" },
+      data: { email: "client@test.local", firstName: "Client", lastName: "User", role: "CLIENT" },
     });
     const clientProfile = await prisma.clientProfile.create({
       data: { userId: clientUser.id },

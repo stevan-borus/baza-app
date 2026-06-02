@@ -21,13 +21,13 @@ import { prisma } from "@/lib/server/prisma";
 
 async function seedSessionsAcrossTrainers() {
   const admin = await prisma.user.create({
-    data: { email: "admin@test.local", fullName: "Admin", role: "ADMIN" },
+    data: { email: "admin@test.local", firstName: "Admin", lastName: "Test", role: "ADMIN" },
   });
   const ana = await prisma.user.create({
-    data: { email: "ana@test.local", fullName: "Ana Trainer", role: "TRAINER" },
+    data: { email: "ana@test.local", firstName: "Ana", lastName: "Trainer", role: "TRAINER" },
   });
   const bo = await prisma.user.create({
-    data: { email: "bo@test.local", fullName: "Bo Trainer", role: "TRAINER" },
+    data: { email: "bo@test.local", firstName: "Bo", lastName: "Trainer", role: "TRAINER" },
   });
   const reformer = await prisma.classType.create({
     data: { name: "Reformer", maxClients: 6, durationMins: 60 },
@@ -74,7 +74,7 @@ async function seedSessionsAcrossTrainers() {
   });
   for (let i = 0; i < 4; i++) {
     const c = await prisma.user.create({
-      data: { email: `a-${i}@test.local`, fullName: `A ${i}`, role: "CLIENT" },
+      data: { email: `a-${i}@test.local`, firstName: "A", lastName: String(i), role: "CLIENT" },
     });
     const cProfile = await prisma.clientProfile.create({ data: { userId: c.id } });
     const cPkg = await prisma.clientPackage.create({
@@ -94,7 +94,7 @@ async function seedSessionsAcrossTrainers() {
   }
   for (let i = 0; i < 2; i++) {
     const c = await prisma.user.create({
-      data: { email: `b-${i}@test.local`, fullName: `B ${i}`, role: "CLIENT" },
+      data: { email: `b-${i}@test.local`, firstName: "B", lastName: String(i), role: "CLIENT" },
     });
     const cProfile = await prisma.clientProfile.create({ data: { userId: c.id } });
     const cPkg = await prisma.clientPackage.create({

@@ -26,12 +26,13 @@ describe("GET /api/admin/clients/:id/consent-records", () => {
     await resetDb();
 
     const admin = await prisma.user.create({
-      data: { email: "a@t.local", fullName: "Admin", role: "ADMIN" },
+      data: { email: "a@t.local", firstName: "Admin", lastName: "Test", role: "ADMIN" },
     });
     const client = await prisma.user.create({
       data: {
         email: "c@t.local",
-        fullName: "Client",
+        firstName: "Client",
+        lastName: "Test",
         role: "CLIENT",
         clientProfile: { create: { dateOfBirth: new Date(1990, 0, 1) } },
       },
@@ -92,7 +93,8 @@ describe("GET /api/admin/clients/:id/consent-records", () => {
     const otherClient = await prisma.user.create({
       data: {
         email: "o@t.local",
-        fullName: "Other",
+        firstName: "Other",
+        lastName: "Test",
         role: "CLIENT",
         clientProfile: { create: { dateOfBirth: new Date("1985-06-15") } },
       },

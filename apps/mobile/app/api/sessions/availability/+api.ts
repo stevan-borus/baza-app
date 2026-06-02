@@ -1,4 +1,4 @@
-import { monthlyAvailabilityQuerySchema } from "@baza/types";
+import { formatFullName, monthlyAvailabilityQuerySchema } from "@baza/types";
 import { UserRole } from "@/generated/prisma";
 import { requireRole } from "@/lib/server/auth-guards";
 import { fail, ok } from "@/lib/server/http";
@@ -59,7 +59,7 @@ export async function GET(request: Request) {
       recurringScheduleId: true,
       classType: { select: { name: true } },
       room: { select: { name: true } },
-      trainer: { select: { fullName: true } },
+      trainer: { select: { firstName: true, lastName: true } },
       recurringSchedule: { select: { isActive: true } },
       _count: {
         select: {
@@ -153,7 +153,9 @@ export async function GET(request: Request) {
         roomId: session.roomId,
         roomName: session.room?.name ?? null,
         trainerUserId: session.trainerUserId,
-        trainerName: session.trainer?.fullName ?? null,
+        trainerName: session.trainer
+          ? formatFullName(session.trainer.firstName, session.trainer.lastName)
+          : null,
         capacity: session.capacity,
         bookedCount: session._count.bookings,
         waitlistCount: session._count.waitlist,

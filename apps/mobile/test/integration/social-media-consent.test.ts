@@ -28,7 +28,8 @@ describe("POST /api/consent/social-media", () => {
     const user = await prisma.user.create({
       data: {
         email: "social-post@t.local",
-        fullName: "Adult Social Poster",
+        firstName: "Adult",
+        lastName: "Social Poster",
         role: "CLIENT",
         clientProfile: { create: { dateOfBirth: new Date("1990-01-01") } },
       },
@@ -108,7 +109,7 @@ describe("POST /api/consent/social-media", () => {
 
   it("allows ADMIN and TRAINER too", async () => {
     const admin = await prisma.user.create({
-      data: { email: "admin-sm@t.local", fullName: "Admin SM", role: "ADMIN" },
+      data: { email: "admin-sm@t.local", firstName: "Admin", lastName: "SM", role: "ADMIN" },
     });
     setMockUser({ id: admin.id, role: "ADMIN", email: admin.email, isActive: true, clientProfile: null });
     const res = await POST(makeReq({ accepted: true }));

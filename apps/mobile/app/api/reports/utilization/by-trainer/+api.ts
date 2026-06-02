@@ -1,3 +1,4 @@
+import { formatFullName } from "@baza/types";
 import { UserRole } from "@/generated/prisma";
 import { requireRole } from "@/lib/server/auth-guards";
 import { fail, ok } from "@/lib/server/http";
@@ -26,7 +27,7 @@ export async function GET(request: Request) {
     select: {
       capacity: true,
       trainerUserId: true,
-      trainer: { select: { fullName: true } },
+      trainer: { select: { firstName: true, lastName: true } },
       _count: {
         select: {
           bookings: { where: { canceledAt: null } },
@@ -42,7 +43,9 @@ export async function GET(request: Request) {
   for (const session of sessions) {
     const existing = byTrainer.get(session.trainerUserId) ?? {
       trainerUserId: session.trainerUserId,
-      trainerName: session.trainer?.fullName ?? "—",
+      trainerName: session.trainer
+        ? formatFullName(session.trainer.firstName, session.trainer.lastName)
+        : "—",
       capacity: 0,
       booked: 0,
     };

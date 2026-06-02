@@ -64,10 +64,13 @@ export async function createInvite(input: CreateInviteInput) {
   const tokenHash = hashToken(rawToken);
   const expiresAt =
     input.expiresAt ?? new Date(nowMs() + 24 * 60 * 60 * 1000);
+  const [inviteFirstName, ...inviteRest] = input.fullName.split(" ");
+  const inviteLastName = inviteRest.join(" ") || "Test";
   const invite = await db().userInvite.create({
     data: {
       email: input.email.toLowerCase(),
-      fullName: input.fullName,
+      firstName: inviteFirstName,
+      lastName: inviteLastName,
       role: "CLIENT",
       tokenHash,
       status: input.status ?? "PENDING",
@@ -423,7 +426,8 @@ export async function fillSessionToCapacity(
       update: {},
       create: {
         email,
-        fullName: `Filler ${i}`,
+        firstName: "Filler",
+        lastName: String(i),
         role: "CLIENT",
         isActive: true,
         passwordHash: "$2b$10$placeholder",
@@ -592,7 +596,8 @@ export async function seedExtraClients(count: number) {
       update: {},
       create: {
         email,
-        fullName: `Pagi Client ${idx}`,
+        firstName: "Pagi",
+        lastName: `Client ${idx}`,
         role: "CLIENT",
         isActive: true,
         passwordHash: "$2b$10$placeholder",
@@ -600,7 +605,8 @@ export async function seedExtraClients(count: number) {
       },
       select: {
         id: true,
-        fullName: true,
+        firstName: true,
+        lastName: true,
         clientProfile: { select: { id: true } },
       },
     });
@@ -608,7 +614,7 @@ export async function seedExtraClients(count: number) {
       created.push({
         userId: user.id,
         profileId: user.clientProfile.id,
-        fullName: user.fullName,
+        fullName: `${user.firstName} ${user.lastName}`,
       });
     }
   }

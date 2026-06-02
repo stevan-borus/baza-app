@@ -79,7 +79,7 @@ async function makeUser(
   opts?: { pushEnabled?: boolean; preferredLocale?: "sr" | "en" },
 ) {
   const user = await prisma.user.create({
-    data: { email, fullName: email, role: "CLIENT" },
+    data: { email, firstName: email, lastName: "Test", role: "CLIENT" },
   });
   if (opts) {
     await prisma.notificationPreference.create({

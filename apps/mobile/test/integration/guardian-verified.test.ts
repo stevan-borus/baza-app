@@ -27,12 +27,13 @@ describe("POST /api/admin/clients/:id/guardian-verified", () => {
     await resetDb();
 
     const admin = await prisma.user.create({
-      data: { email: "a@t.local", fullName: "Admin", role: "ADMIN" },
+      data: { email: "a@t.local", firstName: "Admin", lastName: "Test", role: "ADMIN" },
     });
     const minor = await prisma.user.create({
       data: {
         email: "m@t.local",
-        fullName: "Minor",
+        firstName: "Minor",
+        lastName: "Test",
         role: "CLIENT",
         clientProfile: { create: { dateOfBirth: new Date(2015, 0, 1) } },
       },
@@ -78,7 +79,7 @@ describe("POST /api/admin/clients/:id/guardian-verified", () => {
 
   it("404 when client has no waiver_minor record", async () => {
     const otherClient = await prisma.user.create({
-      data: { email: "o@t.local", fullName: "Other", role: "CLIENT", clientProfile: { create: { dateOfBirth: new Date("1990-01-01") } } },
+      data: { email: "o@t.local", firstName: "Other", lastName: "Test", role: "CLIENT", clientProfile: { create: { dateOfBirth: new Date("1990-01-01") } } },
     });
     const res = await POST(
       new Request(

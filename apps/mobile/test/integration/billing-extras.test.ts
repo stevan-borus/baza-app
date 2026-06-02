@@ -23,10 +23,10 @@ import { now, nowMs } from "@/lib/now";
 
 async function seedAdminClientPackageType() {
   const admin = await prisma.user.create({
-    data: { email: "admin@test.local", fullName: "Admin", role: "ADMIN" },
+    data: { email: "admin@test.local", firstName: "Admin", lastName: "User", role: "ADMIN" },
   });
   const client = await prisma.user.create({
-    data: { email: "c@test.local", fullName: "C", role: "CLIENT" },
+    data: { email: "c@test.local", firstName: "C", lastName: "Client", role: "CLIENT" },
   });
   const profile = await prisma.clientProfile.create({
     data: { userId: client.id },
