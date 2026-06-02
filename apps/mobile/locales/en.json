@@ -300,7 +300,8 @@
       "expiresWithCountdown": "Expires {{date}} · {{days}} days left",
       "noClassesToday": "No classes today",
       "noClassesThisDay": "No classes on this day",
-      "tryAnotherDay": "Try another day."
+      "tryAnotherDay": "Try another day.",
+      "noClassesDescription": "Pick another day from the schedule."
     },
     "onboarding": {
       "getStarted": "Get started",
