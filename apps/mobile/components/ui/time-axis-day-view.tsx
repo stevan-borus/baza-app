@@ -66,12 +66,16 @@ export function TimeAxisDayView({
   const tokens = useThemeTokens();
   const now = dayjs();
   const isToday = now.format("YYYY-MM-DD") === date;
+  // Minutes from the top of the visible axis. Negative before HOUR_START,
+  // beyond the grid after HOUR_END.
+  const nowMinutes = now.hour() * 60 + now.minute() - HOUR_START * 60;
+  const axisMinutes = (HOUR_END - HOUR_START) * 60;
+  // Only show the marker when "now" actually falls inside the visible
+  // window (6 AM–10 PM). Outside it the studio is closed and there's nothing
+  // to mark — clamping to an edge would falsely read as "it's 6 AM now".
   const nowTop =
-    isToday && showNowLine
-      ? Math.max(
-          0,
-          now.hour() * 60 + now.minute() - HOUR_START * 60,
-        ) * PX_PER_MINUTE
+    isToday && showNowLine && nowMinutes >= 0 && nowMinutes <= axisMinutes
+      ? nowMinutes * PX_PER_MINUTE
       : null;
 
   const hours: number[] = [];
@@ -214,8 +218,8 @@ export function TimeAxisDayView({
               style={{ top: nowTop }}
               pointerEvents="none"
             >
-              <View className="w-2 h-2 rounded-full -ml-1 bg-danger" />
-              <View className="flex-1 h-[1px] bg-danger" />
+              <View className="w-2 h-2 rounded-full -ml-1 bg-accent" />
+              <View className="flex-1 h-[1px] bg-accent" />
             </View>
           ) : null}
         </View>
