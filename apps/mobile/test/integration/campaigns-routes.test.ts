@@ -55,3 +55,35 @@ describe("POST /api/campaigns/preview", () => {
     expect(res.status).toBe(403);
   });
 });
+
+describe("POST + GET /api/campaigns", () => {
+  beforeEach(async () => { await resetDb(); });
+  it("creates a DRAFT when neither scheduledFor nor sendNow is given", async () => {
+    const { admin } = await seedAdminAndClients(); asAdmin(admin);
+    const res = await CREATE(new Request("http://test.local/api/campaigns", { method: "POST", body: JSON.stringify({ title: "T", body: "B", audienceSpec: { everyone: true } }) }));
+    const b = await res.json();
+    expect(b.campaign.status).toBe("DRAFT");
+    expect(b.campaign.sentAt).toBeNull();
+  });
+  it("creates a SCHEDULED campaign when scheduledFor is given", async () => {
+    const { admin } = await seedAdminAndClients(); asAdmin(admin);
+    const res = await CREATE(new Request("http://test.local/api/campaigns", { method: "POST", body: JSON.stringify({ title: "T", body: "B", audienceSpec: { everyone: true }, scheduledFor: "2026-08-01T09:00:00.000Z" }) }));
+    expect((await res.json()).campaign.status).toBe("SCHEDULED");
+  });
+  it("dispatches immediately and returns SENT when sendNow is true", async () => {
+    const { admin } = await seedAdminAndClients(); asAdmin(admin);
+    const res = await CREATE(new Request("http://test.local/api/campaigns", { method: "POST", body: JSON.stringify({ title: "T", body: "B", audienceSpec: { everyone: true }, sendNow: true }) }));
+    const b = await res.json();
+    expect(b.campaign.status).toBe("SENT");
+    expect(b.campaign.recipientCount).toBe(2);
+  });
+  it("lists campaigns newest first", async () => {
+    const { admin } = await seedAdminAndClients(); asAdmin(admin);
+    await prisma.campaign.create({ data: { createdByUserId: admin.id, title: "old", body: "b", audienceSpec: { everyone: true }, status: "DRAFT" } });
+    await prisma.campaign.create({ data: { createdByUserId: admin.id, title: "new", body: "b", audienceSpec: { everyone: true }, status: "DRAFT" } });
+    const res = await LIST(new Request("http://test.local/api/campaigns"));
+    const b = await res.json();
+    expect(b.campaigns[0].title).toBe("new");
+    expect(b.campaigns).toHaveLength(2);
+  });
+});
