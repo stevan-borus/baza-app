@@ -639,6 +639,17 @@ export const campaignAudienceSpecSchema = z
       message:
         "Choose 'everyone' alone, or one or more narrowing axes (not both).",
     },
+  )
+  .refine(
+    // `lapsed` means "no active package"; `idlePackage` means "has an active
+    // package". They are mutually contradictory — ANDing them is always empty
+    // and nonsensical — so forbid the combination at the boundary rather than
+    // silently returning nobody.
+    (spec) => !(spec.lapsedDays !== undefined && spec.idlePackageDays !== undefined),
+    {
+      message:
+        "'lapsed' and 'idle package' are mutually exclusive (one means no active package, the other requires one).",
+    },
   );
 export type CampaignAudienceSpec = z.infer<typeof campaignAudienceSpecSchema>;
 

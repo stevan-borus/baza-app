@@ -24,6 +24,11 @@ describe("campaignAudienceSpecSchema", () => {
   it("rejects an empty spec (no axis chosen)", () => {
     expect(campaignAudienceSpecSchema.safeParse({}).success).toBe(false);
   });
+  it("rejects lapsed combined with idlePackage (contradictory axes)", () => {
+    expect(
+      campaignAudienceSpecSchema.safeParse({ lapsedDays: 30, idlePackageDays: 7 }).success,
+    ).toBe(false);
+  });
 });
 
 describe("createCampaignInputSchema", () => {
