@@ -77,8 +77,28 @@ Navedeni podaci obrađuju se isključivo radi prilagođavanja treninga individua
   Obrađujemo Vaše lične podatke kako bismo ispunili svoje zakonske dužnosti, npr. objavljivanje podataka državnim institucijama ili nadzornim telima vezano za obaveze izveštavanja i ispunjavanje zahteva od strane državnih tela ili drugih javnih tela. U tom slučaju, osnova za obradu Vaših ličnih zahteva je ispunjenje naših zakonskih dužnosti.
 - **Informacije o zahtevima i uslugama**
   Obrađujemo Vaše lične podatke kako bismo Vas informisali o statusu pojedinog zahteva, izvršenju usluge ili slično, sve u cilju Vaše pune informisanosti. U tom slučaju, osnova za obradu Vaših ličnih podataka je naš legitimni interes.
+- **Direktni marketing i promotivne komunikacije**
+  Kada ste nam dali svoju saglasnost, obrađujemo Vaše kontakt podatke (e-mail adresu i kanal za obaveštenja unutar Aplikacije) kako bismo Vam slali promotivne komunikacije — informacije o popustima i posebnim ponudama, novim programima, radionicama i novostima Studija. Osnov za ovu obradu je Vaša saglasnost. Slanje ovakvih komunikacija detaljnije je opisano u članu 4A.
 - **Ostali slučajevi**
   Kako bismo zaštitili svoje opravdane interese kao privrednog subjekta (npr. kada je to neophodno za potrebe vođenja sudskih i drugih postupaka ili kada je to neophodno kako bismo osigurali primereni stepen zaštite). Takođe, određeni podaci se prikupljaju kako bismo poboljšali vaše iskustvo u našoj mobilnoj aplikaciji/web sajtu. U tom slučaju, osnova za obradu Vaših ličnih zahteva je naš legitimni interes.
+
+## 4A. Marketinške komunikacije i kako da ih otkažete
+
+4A.1. **Servisne (transakcione) komunikacije nasuprot marketinškim komunikacijama.** Razlikujemo dve vrste komunikacije:
+
+- **Servisne (transakcione) komunikacije** su poruke neophodne za izvršenje ugovora i pružanje usluge — npr. potvrda da je termin u koji ste bili zakazani otkazan od strane Studija, da ste sa liste čekanja prebačeni u termin, ili da su izmenjeni vreme, sala ili instruktor termina. Njih šaljemo na osnovu izvršenja ugovora (tačka 4.2, „Zaključenje i izvršenje ugovora") i **nisu** marketing. Primaćete ih kako ne biste bili pogrešno informisani o svojim rezervacijama.
+- **Marketinške komunikacije** su promotivne poruke u smislu tačke 4.2 („Direktni marketing i promotivne komunikacije"). Njih šaljemo **isključivo na osnovu Vaše saglasnosti**.
+
+4A.2. **Kanali.** Marketinške komunikacije mogu biti poslate putem bilo kog od sledećih kanala: obaveštenje unutar Aplikacije, push obaveštenje na Vašem uređaju i e-pošta.
+
+4A.3. **Davanje i povlačenje saglasnosti.** Saglasnost za marketinške komunikacije dajete, a možete je i povući u svakom trenutku, besplatno i bez navođenja razloga, na sledeće načine:
+
+- unutar Aplikacije, putem podešavanja **„Promocije / novi programi"**; i
+- klikom na link za odjavu koji se nalazi u svakoj marketinškoj e-poruci, a koji funkcioniše bez potrebe za prijavljivanjem.
+
+Povlačenje saglasnosti ne utiče na zakonitost obrade koja je vršena na osnovu saglasnosti pre njenog povlačenja. Nakon povlačenja, prestajemo sa slanjem marketinških komunikacija u najkraćem mogućem roku. Povlačenje saglasnosti za marketinške komunikacije **ne** zaustavlja servisne (transakcione) komunikacije, koje ostaju neophodne za izvršenje ugovora.
+
+4A.4. **Bez automatizovanog donošenja odluka.** Odabir primalaca marketinške komunikacije ne proizvodi pravne posledice po Vas, niti na Vas slično značajno utiče; služi isključivo tome da naše komunikacije učini relevantnijim.
 
 ## 5. Ko ima pristup Vašim ličnim podacima?
 
@@ -87,6 +107,7 @@ Navedeni podaci obrađuju se isključivo radi prilagođavanja treninga individua
 5.2. Vaše lične podatke ćemo obrađivati mi sami, dok treća lica imaju pravo pristupa i obrade Vaših ličnih podataka samo u niže opisanim situacijama:
 
 - Pravna lica sa kojima poslovno sarađujemo i koja nam pomažu u redovnom poslovanju (WhyNot Solutions). U tom slučaju ta pravna lica obrađuju Vaše lične podatke isključivo za naše potrebe;
+- Pružaoci usluga koji u naše ime dostavljaju naše komunikacije — naročito pružalac usluge dostave e-pošte — koji obrađuju Vaše kontakt podatke isključivo radi dostave komunikacija koje šaljemo i isključivo za naše potrebe;
 - Lica s kojima poslovno sarađujemo, kada ocenimo da je to potrebno radi zaštite određenih naših opravdanih interesa. Npr. poreski savetnici, računovođe, advokati i drugi savetnici. U tom slučaju ta lica obrađuju Vaše lične podatke isključivo za naše potrebe;
 - Nadležna tela kod sprovođenja nadzora nad zakonitošću poslovanja i postupanja, kao i druga pravna lica kad je to potrebno za izvršenje neke naše zakonske dužnosti, npr. revizor. U tom slučaju ta pravna lica obrađuju Vaše lične podatke u svrhu koja im je zakonom dodeljena;
 - Ostale stranke u vezi s poslovnim transakcijama kao što su npr. prodaja društva ili dela društva, reorganizacija, spajanje, zajedničko ulaganje ili bilo koja druga vrsta raspolaganja našim društvom, imovinom ili zalihama (uključujući i bankrot ili sličan postupak).
@@ -122,6 +143,7 @@ Navedeni podaci obrađuju se isključivo radi prilagođavanja treninga individua
 | Osnovni podaci o nalogu (ime i prezime, e-mail, broj telefona) | Sve vreme važenja ugovora; nakon prestanka ugovora ili deaktivacije naloga, dodatnih 12 meseci za potrebe naknadnog kontakta i rešavanja eventualnih sporova |
 | Beleške instruktora o klijentu (interne beleške relevantne za trening) | Dok je nalog aktivan; brišu se najkasnije 30 dana nakon deaktivacije naloga |
 | Zdravstveni podaci (čl. 3.6) | Dok imamo Vašu izričitu saglasnost; u slučaju povlačenja saglasnosti, brišu se u najkraćem mogućem roku |
+| Saglasnost za marketinške komunikacije i povezani kontakt podaci | Dok imamo Vašu saglasnost za marketinške komunikacije; po povlačenju, prestajemo sa marketinškom obradom u najkraćem mogućem roku (sami kontakt podaci čuvaju se prema redu „osnovni podaci o nalogu", sve dok nalog postoji) |
 | Metapodaci o pristanku (datum, vreme, IP adresa, verzija dokumenta) | 5 godina od povlačenja pristanka ili deaktivacije naloga, radi mogućnosti dokazivanja datog pristanka |
 | Sesijski tokeni i push tokeni | Dok je sesija aktivna, odnosno dok korisnik koristi aplikaciju na konkretnom uređaju; ističu i poništavaju se prema standardnoj praksi |
 
@@ -153,10 +175,10 @@ Imate pravo da tražite ispravku Vaših netačnih ličnih podataka, kao i pravo 
 Imate pravo preuzeti i tražiti prenos Vaših ličnih podataka. Molimo Vas da pitanja i zahteve, u pisanom obliku i potpisane pošaljete na adresu Futoška 33, 21000 Novi Sad. Na Vaš zahtev ćemo odgovoriti odmah, a najkasnije u roku od mesec dana, osim ako izuzetna složenost pojedinačnog slučaja ne zahteva produženje navedenog roka.
 
 10.6. **Pravo na povlačenje saglasnosti i zaborav:**
-Imate pravo da povučete Vašu saglasnost za obradu ličnih podataka kao i da tražite da se trajno brišu Vaši lični podaci koje smo obrađivali na osnovu Vaše saglasnosti. Molimo Vas da pitanje i zahteve, u pisanom obliku i potpisane pošaljete na adresu Futoška 33, 21000 Novi Sad. Na Vaš zahtev ćemo odgovoriti odmah, a najkasnije u roku od mesec dana, osim ako izuzetna složenost pojedinog slučaja ne zahteva produženje navedenog roka.
+Imate pravo da povučete Vašu saglasnost za obradu ličnih podataka kao i da tražite da se trajno brišu Vaši lični podaci koje smo obrađivali na osnovu Vaše saglasnosti. Naročito, saglasnost za **marketinške komunikacije** možete povući u svakom trenutku na načine opisane u članu 4A.3 (podešavanje „Promocije / novi programi" unutar Aplikacije, ili link za odjavu u bilo kojoj marketinškoj e-poruci), bez potrebe da nam pišete. Za ostalu obradu zasnovanu na saglasnosti, molimo Vas da pitanje i zahteve, u pisanom obliku i potpisane pošaljete na adresu Futoška 33, 21000 Novi Sad. Na Vaš zahtev ćemo odgovoriti odmah, a najkasnije u roku od mesec dana, osim ako izuzetna složenost pojedinog slučaja ne zahteva produženje navedenog roka.
 
 10.7. **Prigovor protiv obrade ili postupanja s Vašim ličnim podacima:**
-Imate pravo prigovora na obradu Vaših ličnih podataka kao i uopšteno na naš način postupanja s Vašim ličnim podacima. Vaš zahtev nam pošaljite putem e-pošte na adresu bazapilates@gmail.com, gde u naslovu poruke navodite Prigovor protiv obrade i u samoj poruci objašnjavate razlog prigovora i Vaš zahtev.
+Imate pravo prigovora na obradu Vaših ličnih podataka kao i uopšteno na naš način postupanja s Vašim ličnim podacima. Kada Vaše podatke obrađujemo u svrhe direktnog marketinga, imate pravo da u svakom trenutku podnesete prigovor na tu obradu, nakon čega Vaše podatke više nećemo obrađivati u te svrhe. Vaš zahtev nam pošaljite putem e-pošte na adresu bazapilates@gmail.com, gde u naslovu poruke navodite Prigovor protiv obrade i u samoj poruci objašnjavate razlog prigovora i Vaš zahtev.
 
 10.8. **Pravo na pritužbu Povereniku za informacije od javnog značaja i zaštitu podataka o ličnosti:**
 U svakom trenutku imate pravo na pritužbu pred nadležnim organom za zaštitu ličnih podataka — Povereniku za informacije od javnog značaja i zaštitu podataka o ličnosti (https://www.poverenik.rs/).

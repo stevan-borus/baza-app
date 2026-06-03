@@ -13,6 +13,15 @@
    - `EXPO_UNSTABLE_DEPLOY_SERVER=1`
 4. Ensure production URL/origin is reflected in app config and envs.
 
+### Email deliverability (BLOCKS campaign email)
+
+Invites/resets are low-volume transactional. **Campaign** email is bulk marketing and will land in spam or get rate-limited from an unverified domain. Before campaign email ships:
+
+1. Verify a dedicated **sending domain** in Resend (not a shared/sandbox domain); set `RESEND_FROM_EMAIL` to an address on it.
+2. Configure **SPF, DKIM, and DMARC** DNS records for that domain and confirm Resend shows them verified.
+3. Send a test campaign to a seed inbox and confirm inbox (not spam) placement.
+4. Legal gate: marketing-consent clause is **drafted into `privacy-v1.md`** (en + sr) but still needs lawyer review — see `docs/legal/MARKETING-CONSENT-TODO.md`.
+
 ## 2) Database (Neon + Prisma)
 
 1. Provision Neon Postgres database.
@@ -37,6 +46,7 @@
 1. Configure external scheduler to call:
    - `POST /api/cron/notifications/reminders`
    - `POST /api/cron/notifications/package-expiry`
+   - `POST /api/cron/campaigns/dispatch` — **30-min interval** (fires scheduled Campaigns; interval = worst-case send-time drift, marketing-tolerant)
 2. Send header `x-cron-token: $API_ADMIN_BOOTSTRAP_TOKEN`.
 3. Validate scheduler runs and response payloads.
 

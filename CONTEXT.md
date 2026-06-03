@@ -90,11 +90,78 @@ _sr_: "Poklon paket" — _en_: "Complimentary package". _Avoid_: "komp paket" (c
 **BillingRecord**:
 A row of money received. Always paired with a ClientPackage in Flow 1 (Nova uplata). Carries `packageTypeId` (nullable — non-null on Flow 1, null on legacy / non-package payments) so revenue-per-PackageType reporting joins cleanly without inferring from timestamps.
 
+**Moji paketi** (the client-facing timeline):
+The Client's own view of every ClientPackage they've held, newest first — the client-scoped *mirror* of **Naplata**, seen through a package lens rather than a money lens. Each entry is one of:
+- **Paid** — backed by a `BillingRecord`: shows amount + method + the PackageType it bought.
+- **Comp** — a Flow-2 ClientPackage (Poklon paket / birthday gift) with no `BillingRecord`: labeled "Poklon paket", **no amount**.
+So a comp never leaves a confusing gap (a Client can always see where a package came from), and the list answers both "what did I pay" and "what do I hold". Payment `method` is shown for self-pay methods (card / cash / online); **COMPANY is softened to "Plaćeno"** (the method chip is not surfaced to the Client) — defaulting to less disclosure on a shared-device glance.
+This is read-only and Client-scoped: a Client sees only their own. It is **not** Naplata (admin, money-only, all clients) and **not** a generic "payment history" money ledger (which would hide comps).
+_Avoid_: "payment history" / "ledger" (excludes comps), "subscription" (no recurring billing exists), reusing "Naplata" for the client view.
+
 ### Trainer notes
 
 **TrainerNote**:
 Free-text observation a Trainer writes about a Client. Optionally attached to a specific Session — session-less TrainerNotes hold general client context (e.g. an injury history note that isn't tied to one class). The authoring Trainer can read, edit, and delete their own TrainerNotes. Admins can read every TrainerNote about every Client. Clients **never** see TrainerNotes — if a future product need calls for client-visible observations, that is a new concept and a new domain term, not a flag on this one.
 _Avoid_: "Note" alone (overloads with the `pause.reason` field, commit notes, and the `editForm.notes` admin form input); "comment"; "client log".
+
+### Campaigns
+
+**Campaign**:
+An Admin-composed message sent to a selected audience of Clients at a point in time — covers promotions (discounts), new-program / workshop announcements, and studio news under one concept. Distinct from system-generated notifications: a Campaign carries its own `NotificationType` value (`CAMPAIGN`), so it is filterable in the client feed and bindable to the client's "Promocije / novi programi" preference. The Serbian client-facing label stays **Promocije / novi programi**; **Campaign** is the internal domain term.
+_Avoid_: "Promotion" alone (too narrow — excludes new-program announcements), "blast", "broadcast", reusing `GENERAL`.
+
+**Campaign audience** (the targeting model):
+A Campaign is sent to an audience computed from one or more **axes**, ANDed together. The axes:
+- **Everyone** — all Clients. Mutually exclusive: cannot be ANDed with a narrowing axis.
+- **Package state** — active / expired / none / paused.
+- **ClassType** — Clients who own or have owned a ClientPackage scoped to a given ClassType.
+- **Expiring soon** — Clients with an active ClientPackage within N days of `expiresAt` (N typed at send-time). Overlaps `cron:package-expiry` by design; the two are different messages (system nudge vs. marketing offer) and are **not** deduped.
+- **Lapsed** — Clients with **no** currently-active ClientPackage **and** no BillingRecord / comp ClientPackage created in the last N days (N typed at send-time, default 30). Intent: "come back & renew." Keyed off payment recency, not bookings — a package lasts ~30 days, so a Client mid-package is never lapsed.
+- **Idle package** — Clients who own an active ClientPackage but booked **nothing** in the first N days of that package (no uncancelled Booking with `startsAt` within N days of the ClientPackage's `startsAt`). Intent: "you paid — book your first session before the window burns."
+
+**Campaign channels & opt-out**:
+A Campaign is delivered across **three channels at once** — in-app `NotificationLog`, Expo push, and email — so it can reach even Clients who rarely open the app (the prime Lapsed target). Delivery is governed by a single **`campaignsEnabled`** flag on `NotificationPreference` (default `true`) — the client-facing **"Promocije / novi programi"** checkbox the spreadsheet asks for. Rule:
+- A Campaign reaches a Client only if `campaignsEnabled = true`.
+- Within that: in-app/push subject to `inAppEnabled` / `pushEnabled` and a push token; email subject to a deliverable address.
+- **Transactional** email (booking / cancel confirmations) is **not** a Campaign and ignores `campaignsEnabled` — it is never marketing.
+
+Because Campaigns go by email, a compliant **no-login unsubscribe** is mandatory: every Campaign email carries a tokenized `/unsubscribe?token=…` link that flips `campaignsEnabled = false` without requiring sign-in (a deleted-app Client must still be able to opt out). This is a legal requirement (GDPR / anti-spam), not a nicety.
+
+Every audience is implicitly bounded by **deliverability**: a Campaign reaches only Clients who can receive the chosen channel. Deliverability is a delivery constraint, **not** a pickable audience axis.
+
+**Campaign record & history**:
+A Campaign **persists as its own row** — `{ id, createdByUserId, title, body, audienceSpec (axes as JSON), recipientCount, sentAt }` — never fire-and-forget. Each delivered `NotificationLog` / email references its Campaign. Rationale: consistent with the studio's audit-everything pattern (`Charge waiver`, `Admin reservation` audit pointer, permanent `BillingRecord`), and it backs an admin-facing **sent-campaigns history** screen (the marketing analogue of **Naplata**'s list of past payments). The send is a point-in-time snapshot: editing a PackageType / ClassType later never rewrites a sent Campaign.
+**Campaign lifecycle** (`status`: `DRAFT | SCHEDULED | SENT`):
+- **DRAFT** — saved, half-written, no `sentAt`. Editable, deletable.
+- **SCHEDULED** — has a `scheduledFor` timestamp; still admin-composed (the admin wrote every word and picked the axes — this does **not** contradict [ADR 0009](docs/adr/0009-campaigns-are-admin-composed-not-cron.md), which only forbids cron *authoring* fixed text, not cron *firing* admin-authored content). Editable and cancellable (→ back to DRAFT) until it fires.
+- **SENT** — dispatched, `sentAt` stamped, immutable snapshot.
+
+Scheduled sends reuse the existing **stateless-HTTP-cron** pattern — one new endpoint `POST /api/cron/campaigns/dispatch`, triggered by the same external scheduler as the other crons, finds `status = SCHEDULED AND scheduledFor <= now()`, dispatches, flips to `SENT`. **No job queue / BullMQ / Redis** — that would be over-engineering for a single-studio cadence; a `scheduledFor` column + a polling cron matches every other scheduled job in the codebase. Dispatch interval: **30 min** (marketing tolerates the slop; the interval is the worst-case send-time drift). The interval is external-scheduler config, not code.
+
+**Audience is re-computed at dispatch time**, not frozen at compose — a dynamic segment ("lapsed clients") must reflect who is lapsed *when it sends*, not 3 days earlier. The admin sees a **live preview count** while composing, with the final audience resolved at send.
+
+**Campaign locale**: a Campaign body is admin-composed free text in **one language** (whatever the admin typed) and goes to the whole audience as-is, ignoring each Client's `preferredLocale` — the admin won't author every segment twice. Only the **system-templated chrome** (email header, the mandatory unsubscribe footer) localizes to the Client's locale. Contrast transactional **Booking-change email**, which is fully localized because it's system-authored from i18n keys.
+
+A Campaign is always **admin-composed and admin-sent** — never auto-sent by a cron. The machine's job is to *compute the audience on demand* and surface a live match count while the admin composes; the admin writes the message and decides whether and when to send. (Auto-sent fixed-text nudges, if ever wanted, are a separate concept living alongside `cron:reminders` / `cron:package-expiry`, not a Campaign — see [ADR 0009](docs/adr/0009-campaigns-are-admin-composed-not-cron.md).)
+_Avoid_: "inactive" (ambiguous — split into the distinct **Lapsed** and **Idle package** axes).
+
+### Transactional email
+
+**Booking-change email**:
+A transactional email sent to a Client when something changes **to** their booking that they did **not** do themselves — never for their own actions. The governing principle: *email the client for things that happen to them, not for things they did* (a self-book / self-cancel was confirmed on-screen; an admin-cancel or auto-promotion happened while they weren't looking). The four events:
+- **Waitlist auto-promotion** — a spot opened and the system booked them.
+- **Admin cancels their Booking** — single admin cancel.
+- **Bulk reservation cancel** — admin cancels N of their Bookings at once → **one summary email** ("your 6 sessions Jun 9–13 were cancelled"), mirroring how the in-app fan-out already coalesces, not N emails.
+- **Session updated** — time / room / trainer moved (strongest case: without it the Client shows up wrong).
+
+Explicitly **no** booking-change email for: self-book, self-cancel (client was the actor), or the `cron:reminders` / `cron:package-expiry` nudges (push already handles those).
+
+Fully **localized** to the Client's `preferredLocale` (sr/en) — it is system-authored from i18n keys, unlike an admin-composed Campaign body.
+
+Governed by a **`bookingEmailsEnabled`** flag on `NotificationPreference` (default `true`) — a single client toggle ("Email me about changes to my bookings"), **not** per-event. Legally these are transactional and *could* always-send; offering an opt-out is a deliberate courtesy, not a requirement (contrast `campaignsEnabled`, where opt-out is mandatory). **Scope of the toggle:** it suppresses **only the email channel** — the in-app `NotificationLog` + push for these events still fire regardless, so a Client who muted booking emails still sees an admin-cancel and never silently shows up to a dead class.
+
+`NotificationPreference` thus carries **two** marketing/transactional flags: `campaignsEnabled` (marketing, all channels, mandatory opt-out) and `bookingEmailsEnabled` (transactional email only, courtesy opt-out).
+_Avoid_: conflating "transactional" with "marketing" — they obey different rules, different flags, different legal footing.
 
 ### Cron
 
@@ -137,7 +204,13 @@ The 6-Client shape inside the rich seed, named to make package-state coverage ob
 - `client.empty@e2e.test` — no packages at all
 
 **Anchor time**:
-A fixed instant the entire stack (seed, server, helpers, browser, integration tests) is pinned to so date-dependent tests don't drift over wall-clock time. The current anchor is `2026-05-11T09:00:00Z` (Monday morning, just before the 10:00 seeded session) — picking a Monday means the seeded weekly schedule (Reformer Mon/Wed/Fri, Energy Tue/Thu) all fall inside the visible week. Toggle via the `TEST_ANCHOR_TIME` env var — set to a parseable ISO string to override, leave unset for production / wall-clock behaviour. Server, seed, helpers and Vitest setup all read it through `apps/mobile/lib/now.ts` (`now()` / `nowMs()`); Playwright additionally pins the browser clock via `page.clock.install` in the e2e fixture. Maestro flows still use the device's wall clock — keep date-relative assertions out of Maestro.
+A fixed instant the test stack is pinned to so date-dependent tests don't drift over wall-clock time, toggled via the `TEST_ANCHOR_TIME` env var (set to a parseable ISO string to override, leave unset for production / wall-clock behaviour). Server, seed, helpers and Vitest setup all read it through `apps/mobile/lib/now.ts` (`now()` / `nowMs()`); Playwright additionally pins the browser clock via `page.clock.install` in the e2e fixture; Maestro flows still use the device's wall clock — keep date-relative assertions out of Maestro.
+
+There are **two anchors** by test layer (don't assume one):
+- **Integration (Vitest)**: `2026-05-09T10:00:00Z` — set in `apps/mobile/test/integration/env.setup.ts` (and `seed-e2e-env.ts`). Use this in integration tests / `lib/server` date-window logic.
+- **Playwright e2e**: `2026-05-11T09:00:00Z` (Monday, just before the 10:00 seeded session — a Monday keeps the seeded weekly schedule Reformer Mon/Wed/Fri + Energy Tue/Thu inside the visible week) — set in `apps/mobile/playwright.config.ts`.
+
+When writing a date-relative test, match the anchor of the layer you're in.
 
 ## Relationships
 
