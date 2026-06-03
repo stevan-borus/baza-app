@@ -1,12 +1,12 @@
 import { updateCampaignInputSchema } from "@baza/types";
 import { Prisma, UserRole } from "@/generated/prisma";
 import { requireRole } from "@/lib/server/auth-guards";
+import { CAMPAIGN_SELECT } from "@/lib/server/campaign-select";
 import { fail, ok, paramFromCtxOrUrl } from "@/lib/server/http";
 import { prisma } from "@/lib/server/prisma";
 import { tryCatch } from "@/lib/server/try-catch";
 
 type Ctx = { params?: Record<string, string | undefined> };
-const CAMPAIGN_SELECT = { id: true, title: true, body: true, audienceSpec: true, recipientCount: true, status: true, scheduledFor: true, sentAt: true, createdAt: true } satisfies Prisma.CampaignSelect;
 
 export async function GET(request: Request, ctx?: Ctx) {
   const guard = await requireRole(request, [UserRole.ADMIN]);

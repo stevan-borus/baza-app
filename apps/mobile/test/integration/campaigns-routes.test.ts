@@ -131,6 +131,17 @@ describe("/api/campaigns/[id]", () => {
     const res = await DELETE(new Request(`http://test.local/api/campaigns/${c.id}`, { method: "DELETE" }), { params: { id: c.id } });
     expect(res.status).toBe(409);
   });
+
+  it("GET/PATCH/DELETE 404 for a missing campaign id", async () => {
+    const { admin } = await seedAdminAndClients(); asAdmin(admin);
+    const missing = "00000000-0000-0000-0000-000000000000";
+    const getRes = await GET_ONE(new Request(`http://test.local/api/campaigns/${missing}`), { params: { id: missing } });
+    expect(getRes.status).toBe(404);
+    const patchRes = await PATCH(new Request(`http://test.local/api/campaigns/${missing}`, { method: "PATCH", body: JSON.stringify({ title: "x" }) }), { params: { id: missing } });
+    expect(patchRes.status).toBe(404);
+    const delRes = await DELETE(new Request(`http://test.local/api/campaigns/${missing}`, { method: "DELETE" }), { params: { id: missing } });
+    expect(delRes.status).toBe(404);
+  });
 });
 
 describe("POST /api/campaigns/[id]/send", () => {
@@ -142,11 +153,20 @@ describe("POST /api/campaigns/[id]/send", () => {
     const b = await res.json();
     expect(b.campaign.status).toBe("SENT");
     expect(b.campaign.recipientCount).toBe(2);
+    // Full campaign shape (same as every other single-campaign response).
+    expect(b.campaign.title).toBe("T");
+    expect(b.campaign.body).toBe("B");
   });
   it("refuses to re-send a SENT campaign", async () => {
     const { admin } = await seedAdminAndClients(); asAdmin(admin);
     const c = await prisma.campaign.create({ data: { createdByUserId: admin.id, title: "T", body: "B", audienceSpec: { everyone: true }, status: "SENT", sentAt: new Date() } });
     const res = await SEND(new Request(`http://test.local/api/campaigns/${c.id}/send`, { method: "POST" }), { params: { id: c.id } });
     expect(res.status).toBe(409);
+  });
+  it("404 for a missing campaign id", async () => {
+    const { admin } = await seedAdminAndClients(); asAdmin(admin);
+    const missing = "00000000-0000-0000-0000-000000000000";
+    const res = await SEND(new Request(`http://test.local/api/campaigns/${missing}/send`, { method: "POST" }), { params: { id: missing } });
+    expect(res.status).toBe(404);
   });
 });

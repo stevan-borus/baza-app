@@ -1,6 +1,7 @@
 import { UserRole } from "@/generated/prisma";
 import { requireRole } from "@/lib/server/auth-guards";
 import { dispatchCampaign } from "@/lib/server/campaign-dispatch";
+import { CAMPAIGN_SELECT } from "@/lib/server/campaign-select";
 import { fail, ok, paramFromCtxOrUrl } from "@/lib/server/http";
 import { prisma } from "@/lib/server/prisma";
 
@@ -15,6 +16,8 @@ export async function POST(request: Request, ctx?: Ctx) {
   const existing = await prisma.campaign.findUnique({ where: { id }, select: { status: true } });
   if (!existing) return fail("Not found", 404);
   if (existing.status === "SENT") return fail("Already sent", 409);
-  const sent = await dispatchCampaign(id);
+  await dispatchCampaign(id);
+  // Re-fetch the full shape so this matches every other single-campaign response.
+  const sent = await prisma.campaign.findUniqueOrThrow({ where: { id }, select: CAMPAIGN_SELECT });
   return ok({ campaign: sent });
 }

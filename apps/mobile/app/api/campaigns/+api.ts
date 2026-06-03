@@ -2,6 +2,7 @@ import { createCampaignInputSchema } from "@baza/types";
 import { Prisma, UserRole } from "@/generated/prisma";
 import { requireRole } from "@/lib/server/auth-guards";
 import { dispatchCampaign } from "@/lib/server/campaign-dispatch";
+import { CAMPAIGN_SELECT } from "@/lib/server/campaign-select";
 import { fail, ok } from "@/lib/server/http";
 import { prisma } from "@/lib/server/prisma";
 import { tryCatch } from "@/lib/server/try-catch";
@@ -11,7 +12,7 @@ export async function GET(request: Request) {
   if (!guard.ok) return guard.response;
   const campaigns = await prisma.campaign.findMany({
     orderBy: { createdAt: "desc" },
-    select: { id: true, title: true, body: true, audienceSpec: true, recipientCount: true, status: true, scheduledFor: true, sentAt: true, createdAt: true },
+    select: CAMPAIGN_SELECT,
   });
   return ok({ campaigns });
 }
@@ -33,11 +34,14 @@ export async function POST(request: Request) {
       status,
       scheduledFor: scheduledFor ? new Date(scheduledFor) : null,
     },
-    select: { id: true, title: true, status: true, scheduledFor: true, sentAt: true, recipientCount: true },
+    select: CAMPAIGN_SELECT,
   });
   if (!scheduledFor && sendNow) {
-    const sent = await dispatchCampaign(created.id);
-    return ok({ campaign: { ...created, status: sent.status, sentAt: sent.sentAt, recipientCount: sent.recipientCount } });
+    await dispatchCampaign(created.id);
+    // Re-fetch so the response is the same full shape as every other
+    // single-campaign endpoint (dispatch returns only its mutated fields).
+    const sent = await prisma.campaign.findUniqueOrThrow({ where: { id: created.id }, select: CAMPAIGN_SELECT });
+    return ok({ campaign: sent });
   }
   return ok({ campaign: created });
 }
