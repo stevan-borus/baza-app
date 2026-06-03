@@ -79,11 +79,56 @@ describe("POST + GET /api/campaigns", () => {
   });
   it("lists campaigns newest first", async () => {
     const { admin } = await seedAdminAndClients(); asAdmin(admin);
-    await prisma.campaign.create({ data: { createdByUserId: admin.id, title: "old", body: "b", audienceSpec: { everyone: true }, status: "DRAFT" } });
-    await prisma.campaign.create({ data: { createdByUserId: admin.id, title: "new", body: "b", audienceSpec: { everyone: true }, status: "DRAFT" } });
+    // Distinct createdAt so "newest first" ordering is deterministic — two
+    // back-to-back creates can otherwise share a timestamp and tie.
+    await prisma.campaign.create({ data: { createdByUserId: admin.id, title: "old", body: "b", audienceSpec: { everyone: true }, status: "DRAFT", createdAt: new Date("2026-01-01T00:00:00Z") } });
+    await prisma.campaign.create({ data: { createdByUserId: admin.id, title: "new", body: "b", audienceSpec: { everyone: true }, status: "DRAFT", createdAt: new Date("2026-01-02T00:00:00Z") } });
     const res = await LIST(new Request("http://test.local/api/campaigns"));
     const b = await res.json();
     expect(b.campaigns[0].title).toBe("new");
     expect(b.campaigns).toHaveLength(2);
+  });
+});
+
+describe("/api/campaigns/[id]", () => {
+  beforeEach(async () => { await resetDb(); });
+  it("GET returns one campaign", async () => {
+    const { admin } = await seedAdminAndClients(); asAdmin(admin);
+    const c = await prisma.campaign.create({ data: { createdByUserId: admin.id, title: "T", body: "B", audienceSpec: { everyone: true }, status: "DRAFT" } });
+    const res = await GET_ONE(new Request(`http://test.local/api/campaigns/${c.id}`), { params: { id: c.id } });
+    expect((await res.json()).campaign.id).toBe(c.id);
+  });
+  it("PATCH edits a DRAFT", async () => {
+    const { admin } = await seedAdminAndClients(); asAdmin(admin);
+    const c = await prisma.campaign.create({ data: { createdByUserId: admin.id, title: "old", body: "B", audienceSpec: { everyone: true }, status: "DRAFT" } });
+    const res = await PATCH(new Request(`http://test.local/api/campaigns/${c.id}`, { method: "PATCH", body: JSON.stringify({ title: "new" }) }), { params: { id: c.id } });
+    expect((await res.json()).campaign.title).toBe("new");
+  });
+  it("PATCH cancels a SCHEDULED campaign back to DRAFT", async () => {
+    const { admin } = await seedAdminAndClients(); asAdmin(admin);
+    const c = await prisma.campaign.create({ data: { createdByUserId: admin.id, title: "T", body: "B", audienceSpec: { everyone: true }, status: "SCHEDULED", scheduledFor: new Date("2026-09-01T09:00:00Z") } });
+    const res = await PATCH(new Request(`http://test.local/api/campaigns/${c.id}`, { method: "PATCH", body: JSON.stringify({ status: "DRAFT" }) }), { params: { id: c.id } });
+    const b = await res.json();
+    expect(b.campaign.status).toBe("DRAFT");
+    expect(b.campaign.scheduledFor).toBeNull();
+  });
+  it("PATCH refuses to edit a SENT campaign", async () => {
+    const { admin } = await seedAdminAndClients(); asAdmin(admin);
+    const c = await prisma.campaign.create({ data: { createdByUserId: admin.id, title: "T", body: "B", audienceSpec: { everyone: true }, status: "SENT", sentAt: new Date() } });
+    const res = await PATCH(new Request(`http://test.local/api/campaigns/${c.id}`, { method: "PATCH", body: JSON.stringify({ title: "x" }) }), { params: { id: c.id } });
+    expect(res.status).toBe(409);
+  });
+  it("DELETE removes a DRAFT", async () => {
+    const { admin } = await seedAdminAndClients(); asAdmin(admin);
+    const c = await prisma.campaign.create({ data: { createdByUserId: admin.id, title: "T", body: "B", audienceSpec: { everyone: true }, status: "DRAFT" } });
+    const res = await DELETE(new Request(`http://test.local/api/campaigns/${c.id}`, { method: "DELETE" }), { params: { id: c.id } });
+    expect(res.status).toBe(200);
+    expect(await prisma.campaign.findUnique({ where: { id: c.id } })).toBeNull();
+  });
+  it("DELETE refuses a SENT campaign", async () => {
+    const { admin } = await seedAdminAndClients(); asAdmin(admin);
+    const c = await prisma.campaign.create({ data: { createdByUserId: admin.id, title: "T", body: "B", audienceSpec: { everyone: true }, status: "SENT", sentAt: new Date() } });
+    const res = await DELETE(new Request(`http://test.local/api/campaigns/${c.id}`, { method: "DELETE" }), { params: { id: c.id } });
+    expect(res.status).toBe(409);
   });
 });
