@@ -3,6 +3,7 @@ import { render } from "@react-email/render";
 import { createElement } from "react";
 import { formatFullName } from "@baza/types";
 import { BookingChangeEmail } from "@/emails/booking-change-email";
+import { CampaignEmail } from "@/emails/campaign-email";
 import { InviteEmail } from "@/emails/invite-email";
 import { ResetEmail } from "@/emails/reset-email";
 import { captureResetTokenForE2E } from "@/lib/server/e2e-reset-token-capture";
@@ -71,6 +72,24 @@ export async function sendBookingChangeEmail(params: {
 }) {
   const html = await render(
     createElement(BookingChangeEmail, { heading: params.heading, lines: params.lines }),
+  );
+  await sendEmail(params.to, params.subject, html);
+}
+
+export async function sendCampaignEmail(params: {
+  to: string;
+  subject: string;
+  bodyText: string;
+  unsubscribeUrl: string;
+  chrome: { headerLabel: string; unsubscribeText: string; footerNote: string };
+}) {
+  const html = await render(
+    createElement(CampaignEmail, {
+      title: params.subject,
+      body: params.bodyText,
+      unsubscribeUrl: params.unsubscribeUrl,
+      chrome: params.chrome,
+    }),
   );
   await sendEmail(params.to, params.subject, html);
 }
