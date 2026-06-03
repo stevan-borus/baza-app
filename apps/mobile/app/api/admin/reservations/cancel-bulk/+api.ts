@@ -2,6 +2,7 @@ import { NOTIFICATION_MESSAGE_KEYS } from "@baza/i18n";
 import { formatFullName } from "@baza/types";
 import { UserRole } from "@/generated/prisma";
 import { requireRole } from "@/lib/server/auth-guards";
+import { sendBookingChangeEmailIfEnabled } from "@/lib/server/booking-emails";
 import { shouldApplyLateCancelPenalty } from "@/lib/server/cancellation-policy";
 import { fail, ok } from "@/lib/server/http";
 import { createSystemNotification } from "@/lib/server/notifications";
@@ -129,7 +130,12 @@ export async function POST(request: Request) {
   const otherAdminIds = admins.map((a) => a.id).filter((id) => id !== initiatorId);
 
   void (async () => {
-    for (const [, bucket] of byClient) {
+    for (const [clientUserId, bucket] of byClient) {
+      void sendBookingChangeEmailIfEnabled({
+        userId: clientUserId,
+        kind: "BULK_CANCEL",
+        vars: { clientFullName: bucket.clientFullName, count: bucket.bookings.length },
+      });
       // Distinct trainers affected for this client's cancellations.
       const trainerToCount = new Map<string, number>();
       for (const b of bucket.bookings) {
@@ -167,6 +173,7 @@ export async function POST(request: Request) {
 
     // Coalesced waitlist-promotion push: one per promoted client.
     for (const userId of promotedUserIds) {
+      void sendBookingChangeEmailIfEnabled({ userId, kind: "WAITLIST_PROMOTED" });
       await createSystemNotification(
         userId,
         NOTIFICATION_MESSAGE_KEYS.SPOT_OPENED_FROM_WAITLIST,
