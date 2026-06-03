@@ -1117,5 +1117,23 @@
       "title": "Parent signature needed",
       "body": "{{userName}} attended their first session — a parent signature on the written waiver is needed."
     }
+  },
+  "campaigns": {
+    "title": "Campaigns",
+    "navRow": "Campaigns",
+    "empty": "No campaigns yet.",
+    "error": "Unable to load campaigns.",
+    "status": { "DRAFT": "Draft", "SCHEDULED": "Scheduled", "SENT": "Sent" },
+    "recipients": "{{count}} recipients",
+    "compose": {
+      "title": "New campaign",
+      "titleLabel": "Title", "titlePlaceholder": "Message title",
+      "bodyLabel": "Message", "bodyPlaceholder": "Message text (single language)",
+      "audience": "Audience", "previewCount": "Reach: {{count}}",
+      "axes": { "everyone": "All clients", "packageState": "Package state", "classType": "Class type", "expiringSoon": "Package expiring soon", "lapsed": "Lapsed (no renewal)", "idlePackage": "Paid but not attending" },
+      "packageState": { "active": "Active", "expired": "Expired", "none": "No package", "paused": "Paused" },
+      "daysLabel": "Days (N)", "saveDraft": "Save draft", "sendNow": "Send now", "schedule": "Schedule", "scheduledFor": "Send time"
+    },
+    "a11y": { "newCampaign": "Create a new campaign", "axisToggle": "Toggle {{axis}} criterion" }
   }
 }

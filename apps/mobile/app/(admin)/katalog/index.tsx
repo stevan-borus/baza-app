@@ -134,6 +134,24 @@ export default function KatalogLanding() {
             </View>
             <Icon name="chevron-right" size={16} color={tokens.faint} />
           </Pressable>
+          <View className="bg-glass-border" style={{ height: 1 }} />
+          <Pressable
+            testID="katalog-row-campaigns"
+            onPress={() => router.push("/(admin)/kampanje")}
+            android_ripple={null}
+            className="flex-row items-center justify-between py-4 active:opacity-60"
+          >
+            <View className="flex-row items-center gap-3 flex-1">
+              <Icon name="bell" size={16} color={tokens.muted} />
+              <Text
+                className="text-foreground font-body-medium"
+                style={{ fontSize: 15 }}
+              >
+                {t("campaigns.navRow")}
+              </Text>
+            </View>
+            <Icon name="chevron-right" size={16} color={tokens.faint} />
+          </Pressable>
         </View>
       </ScrollView>
 

@@ -1122,5 +1122,23 @@
       "title": "Potreban potpis roditelja",
       "body": "{{userName}} je odradio/la prvu sesiju — potreban je potpis roditelja na pisanoj izjavi."
     }
+  },
+  "campaigns": {
+    "title": "Kampanje",
+    "navRow": "Kampanje",
+    "empty": "Još nema kampanja.",
+    "error": "Nije moguće učitati kampanje.",
+    "status": { "DRAFT": "Nacrt", "SCHEDULED": "Zakazano", "SENT": "Poslato" },
+    "recipients": "{{count}} primalaca",
+    "compose": {
+      "title": "Nova kampanja",
+      "titleLabel": "Naslov", "titlePlaceholder": "Naslov poruke",
+      "bodyLabel": "Poruka", "bodyPlaceholder": "Tekst poruke (jedan jezik)",
+      "audience": "Publika", "previewCount": "Doseg: {{count}}",
+      "axes": { "everyone": "Svi klijenti", "packageState": "Status paketa", "classType": "Tip treninga", "expiringSoon": "Paket uskoro ističe", "lapsed": "Neaktivni (bez obnove)", "idlePackage": "Kupili, ne dolaze" },
+      "packageState": { "active": "Aktivan", "expired": "Istekao", "none": "Bez paketa", "paused": "Pauziran" },
+      "daysLabel": "Broj dana (N)", "saveDraft": "Sačuvaj nacrt", "sendNow": "Pošalji odmah", "schedule": "Zakaži", "scheduledFor": "Vreme slanja"
+    },
+    "a11y": { "newCampaign": "Kreiraj novu kampanju", "axisToggle": "Uključi kriterijum {{axis}}" }
   }
 }
