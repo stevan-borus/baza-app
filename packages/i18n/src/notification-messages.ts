@@ -175,3 +175,85 @@ export function getNotificationMessage(
     body: interpolate(template.body, vars),
   };
 }
+
+export type BookingEmailKind =
+  | "WAITLIST_PROMOTED"
+  | "ADMIN_CANCEL"
+  | "BULK_CANCEL"
+  | "SESSION_UPDATED";
+
+// Client-facing email copy is written in the SECOND PERSON, addressed to the
+// recipient directly ("your booking"). It deliberately does NOT reuse the
+// admin/trainer notification bodies (e.g. BULK_RESERVATION_CANCEL_ADMIN reads
+// "{{count}} reservations canceled for {{clientFullName}}" — third-person, for
+// an operator), which would read wrong landing in the client's own inbox.
+// BULK_CANCEL keeps {{count}} interpolation; the others need no vars.
+type EmailContent = { subject: string; heading: string; body: string };
+
+const BOOKING_EMAIL_CONTENT: Record<
+  BookingEmailKind,
+  Record<NotificationLocale, EmailContent>
+> = {
+  WAITLIST_PROMOTED: {
+    sr: {
+      subject: "Oslobodilo se mesto — rezervacija potvrđena",
+      heading: "Tvoja rezervacija je potvrđena",
+      body: "Oslobodilo se mesto i prebačen/a si sa liste čekanja — termin je sada tvoj. Vidimo se na treningu!",
+    },
+    en: {
+      subject: "A spot opened — your booking is confirmed",
+      heading: "Your booking is confirmed",
+      body: "A spot opened up and you've been moved off the waitlist — the session is now yours. See you in class!",
+    },
+  },
+  ADMIN_CANCEL: {
+    sr: {
+      subject: "Vaša rezervacija je otkazana",
+      heading: "Tvoja rezervacija je otkazana",
+      body: "Tvoj termin je otkazan. Ako misliš da je ovo greška, javi se studiju.",
+    },
+    en: {
+      subject: "Your booking was canceled",
+      heading: "Your booking was canceled",
+      body: "Your session has been canceled. If you think this is a mistake, please contact the studio.",
+    },
+  },
+  BULK_CANCEL: {
+    sr: {
+      subject: "Vaše rezervacije su otkazane",
+      heading: "Tvoje rezervacije su otkazane",
+      body: "Otkazano je {{count}} tvojih termina. Ako misliš da je ovo greška, javi se studiju.",
+    },
+    en: {
+      subject: "Your reservations were canceled",
+      heading: "Your reservations were canceled",
+      body: "{{count}} of your sessions have been canceled. If you think this is a mistake, please contact the studio.",
+    },
+  },
+  SESSION_UPDATED: {
+    sr: {
+      subject: "Vaš termin je izmenjen",
+      heading: "Tvoj termin je izmenjen",
+      body: "Detalji tvog termina su izmenjeni (vreme, sala ili trener). Otvori aplikaciju da vidiš najnovije.",
+    },
+    en: {
+      subject: "Your session was updated",
+      heading: "Your session was updated",
+      body: "The details of your session changed (time, room, or trainer). Open the app to see the latest.",
+    },
+  },
+};
+
+/** Resolves the localized, client-voiced email subject + heading + body. */
+export function getBookingEmailContent(
+  kind: BookingEmailKind,
+  locale: NotificationLocale = "sr",
+  vars?: Record<string, string | number | undefined>,
+): EmailContent {
+  const content = BOOKING_EMAIL_CONTENT[kind][locale] ?? BOOKING_EMAIL_CONTENT[kind].sr;
+  return {
+    subject: interpolate(content.subject, vars),
+    heading: interpolate(content.heading, vars),
+    body: interpolate(content.body, vars),
+  };
+}
