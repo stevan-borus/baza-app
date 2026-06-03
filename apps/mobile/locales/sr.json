@@ -1134,7 +1134,7 @@
       "title": "Nova kampanja",
       "titleLabel": "Naslov", "titlePlaceholder": "Naslov poruke",
       "bodyLabel": "Poruka", "bodyPlaceholder": "Tekst poruke (jedan jezik)",
-      "audience": "Publika", "previewCount": "Doseg: {{count}}",
+      "audience": "Publika", "previewCount": "Doseg: {{count}}", "reachNote": "Klijenti koji su isključili promocije se ne računaju u stvarne primaoce.",
       "axes": { "everyone": "Svi klijenti", "packageState": "Status paketa", "classType": "Tip treninga", "expiringSoon": "Paket uskoro ističe", "lapsed": "Neaktivni (bez obnove)", "idlePackage": "Kupili, ne dolaze" },
       "packageState": { "active": "Aktivan", "expired": "Istekao", "none": "Bez paketa", "paused": "Pauziran" },
       "daysLabel": "Broj dana (N)", "saveDraft": "Sačuvaj nacrt", "sendNow": "Pošalji odmah", "schedule": "Zakaži", "scheduledFor": "Vreme slanja"

@@ -1129,7 +1129,7 @@
       "title": "New campaign",
       "titleLabel": "Title", "titlePlaceholder": "Message title",
       "bodyLabel": "Message", "bodyPlaceholder": "Message text (single language)",
-      "audience": "Audience", "previewCount": "Reach: {{count}}",
+      "audience": "Audience", "previewCount": "Reach: {{count}}", "reachNote": "Clients who opted out of promotions are excluded from actual recipients.",
       "axes": { "everyone": "All clients", "packageState": "Package state", "classType": "Class type", "expiringSoon": "Package expiring soon", "lapsed": "Lapsed (no renewal)", "idlePackage": "Paid but not attending" },
       "packageState": { "active": "Active", "expired": "Expired", "none": "No package", "paused": "Paused" },
       "daysLabel": "Days (N)", "saveDraft": "Save draft", "sendNow": "Send now", "schedule": "Schedule", "scheduledFor": "Send time"

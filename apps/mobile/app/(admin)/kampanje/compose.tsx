@@ -383,16 +383,20 @@ export default function CampaignCompose() {
         </GlassCard>
 
         {/* ── Live reach preview ──────────────────────────────────── */}
-        <View
-          testID="campaign-preview-count"
-          className="flex-row items-center gap-2"
-        >
-          <Icon name="users" size={16} color={tokens.muted} />
-          <Text
-            className="text-foreground font-body-semibold"
-            style={{ fontSize: 15 }}
-          >
-            {t("campaigns.compose.previewCount", { count: previewCount })}
+        <View testID="campaign-preview-count" className="gap-1">
+          <View className="flex-row items-center gap-2">
+            <Icon name="users" size={16} color={tokens.muted} />
+            <Text
+              className="text-foreground font-body-semibold"
+              style={{ fontSize: 15 }}
+            >
+              {t("campaigns.compose.previewCount", { count: previewCount })}
+            </Text>
+          </View>
+          {/* Reach is the matching-audience size; clients who opted out of
+              promotions are counted here but won't actually be messaged. */}
+          <Text className="text-muted" style={{ fontSize: 12 }}>
+            {t("campaigns.compose.reachNote")}
           </Text>
         </View>
 
