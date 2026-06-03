@@ -2,6 +2,7 @@ import { formatFullName, updateSessionInputSchema } from "@baza/types";
 import { UserRole } from "@/generated/prisma";
 import { nowMs } from "@/lib/now";
 import { requireRole } from "@/lib/server/auth-guards";
+import { sendBookingChangeEmailIfEnabled } from "@/lib/server/booking-emails";
 import { fail, ok } from "@/lib/server/http";
 import { createSystemNotification } from "@/lib/server/notifications";
 import { maybeNotifyMinorPaperNeeded } from "@/lib/server/minor-paper-needed";
@@ -355,6 +356,11 @@ export async function PATCH(request: Request, { id }: RouteParams) {
   if (changed) {
     // Notify booked clients and assigned trainer of schedule/status changes.
     const bookedUserIds = existing.bookings.map((booking: { clientProfile: { userId: string } }) => booking.clientProfile.userId);
+    // Email only booked clients — something changed about a session they hold.
+    // The trainer keeps the in-app notification below but gets no email.
+    for (const clientUserId of bookedUserIds) {
+      void sendBookingChangeEmailIfEnabled({ userId: clientUserId, kind: "SESSION_UPDATED" });
+    }
     const notifyUserIds = new Set<string>(bookedUserIds);
     if (session.trainerUserId) {
       notifyUserIds.add(session.trainerUserId);

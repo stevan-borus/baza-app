@@ -205,4 +205,42 @@ describe("booking-change emails — integration points", () => {
     const trainerLogs = await prisma.notificationLog.count({ where: { userId: trainer.id } });
     expect(trainerLogs).toBeGreaterThan(0);
   });
+
+  it("session update emails each booked client (not the trainer)", async () => {
+    const { admin, clientProfile, trainer, reformer } = await seedAdminAndClient();
+    const startsAt = new Date(nowMs() + 9 * 24 * 60 * 60 * 1000);
+    const session = await prisma.session.create({
+      data: {
+        classTypeId: reformer.id,
+        trainerUserId: trainer.id,
+        startsAt,
+        endsAt: new Date(startsAt.getTime() + 60 * 60 * 1000),
+        capacity: 6,
+      },
+    });
+    await prisma.booking.create({
+      data: { sessionId: session.id, clientProfileId: clientProfile.id, createdByUserId: admin.id },
+    });
+
+    const newStart = new Date(startsAt.getTime() + 30 * 60 * 1000).toISOString();
+    const req = new Request(`http://test.local/api/sessions/${session.id}`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        startsAt: newStart,
+        endsAt: new Date(new Date(newStart).getTime() + 60 * 60 * 1000).toISOString(),
+        capacity: 6,
+        status: "SCHEDULED",
+        isActive: true,
+        trainerUserId: trainer.id,
+      }),
+    });
+    const res = await sessionPATCH(req, { id: session.id });
+    expect(res.status).toBe(200);
+    await waitFor(() => sendSpy.mock.calls.length >= 1);
+
+    const recipients = sendSpy.mock.calls.map((c) => c[0].to);
+    expect(recipients).toContain("klijent@test.local");
+    expect(recipients).not.toContain("trainer@test.local");
+  });
 });
