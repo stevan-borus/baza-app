@@ -9,7 +9,6 @@ import { useQuery } from "@tanstack/react-query";
 import { ScrollView, Switch, Text, View } from "react-native";
 import { useTranslation } from "react-i18next";
 import { ScreenContainerRaw, useTabBarBottomPadding } from "@/components/ui/screen-container";
-import { SectionRow } from "@/components/ui/studio";
 import {
   notificationsQueries,
   useUpdatePreferencesMutation,
@@ -43,7 +42,6 @@ export default function NotificationSettings() {
         contentContainerStyle={{ paddingBottom: bottomPad, gap: 8 }}
         showsVerticalScrollIndicator={false}
       >
-        <SectionRow title={t("client.notificationSettings.title")} />
         {updateMutation.isError ? (
           <View className="mx-4 bg-danger-soft border border-danger rounded-lg px-3.5 py-2.5">
             <Text className="text-danger text-[13px] font-body-medium">

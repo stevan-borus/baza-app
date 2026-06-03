@@ -64,7 +64,7 @@ describe("sendBookingChangeEmailIfEnabled", () => {
     expect(sendSpy).toHaveBeenCalledTimes(1);
     const arg = sendSpy.mock.calls[0][0];
     expect(arg.to).toBe("mara@test.local");
-    expect(arg.subject).toBe("Vaša rezervacija je otkazana");
+    expect(arg.subject).toBe("Tvoja rezervacija je otkazana");
     // Client-voiced body (second person), not the admin third-person copy.
     expect(arg.lines.join(" ")).toContain("Tvoj termin je otkazan");
   });

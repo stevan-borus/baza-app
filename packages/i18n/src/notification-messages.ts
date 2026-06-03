@@ -208,7 +208,7 @@ const BOOKING_EMAIL_CONTENT: Record<
   },
   ADMIN_CANCEL: {
     sr: {
-      subject: "Vaša rezervacija je otkazana",
+      subject: "Tvoja rezervacija je otkazana",
       heading: "Tvoja rezervacija je otkazana",
       body: "Tvoj termin je otkazan. Ako misliš da je ovo greška, javi se studiju.",
     },
@@ -220,7 +220,7 @@ const BOOKING_EMAIL_CONTENT: Record<
   },
   BULK_CANCEL: {
     sr: {
-      subject: "Vaše rezervacije su otkazane",
+      subject: "Tvoje rezervacije su otkazane",
       heading: "Tvoje rezervacije su otkazane",
       body: "Otkazano je {{count}} tvojih termina. Ako misliš da je ovo greška, javi se studiju.",
     },
@@ -232,7 +232,7 @@ const BOOKING_EMAIL_CONTENT: Record<
   },
   SESSION_UPDATED: {
     sr: {
-      subject: "Vaš termin je izmenjen",
+      subject: "Tvoj termin je izmenjen",
       heading: "Tvoj termin je izmenjen",
       body: "Detalji tvog termina su izmenjeni (vreme, sala ili trener). Otvori aplikaciju da vidiš najnovije.",
     },
