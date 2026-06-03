@@ -3,6 +3,7 @@ import { type Prisma, UserRole } from "@/generated/prisma";
 import { getConsentStatus } from "@/lib/legal/consent-status";
 import { now } from "@/lib/now";
 import { requireRole } from "@/lib/server/auth-guards";
+import { sendBookingChangeEmailIfEnabled } from "@/lib/server/booking-emails";
 import { shouldApplyLateCancelPenalty } from "@/lib/server/cancellation-policy";
 import { fail, ok } from "@/lib/server/http";
 import { createSystemNotification } from "@/lib/server/notifications";
@@ -316,6 +317,10 @@ export async function POST(request: Request) {
   }
 
   if (promoted) {
+    // The promoted client did not act — the system moved them off the waitlist
+    // when the actor (this canceling client) freed a spot — so they get the
+    // email. The canceling client gets no email (it was their own action).
+    void sendBookingChangeEmailIfEnabled({ userId: promoted, kind: "WAITLIST_PROMOTED" });
     // Notify promoted client that they now hold a confirmed booking.
     void createSystemNotification(promoted, NOTIFICATION_MESSAGE_KEYS.SPOT_OPENED_FROM_WAITLIST, "BOOKING_CONFIRMED", {
       sessionId,

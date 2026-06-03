@@ -243,4 +243,62 @@ describe("booking-change emails — integration points", () => {
     expect(recipients).toContain("klijent@test.local");
     expect(recipients).not.toContain("trainer@test.local");
   });
+
+  it("waitlist auto-promotion emails the promoted client, not the self-canceler", async () => {
+    const { admin, reformer, trainer } = await seedAdminAndClient();
+    const aUser = await prisma.user.create({
+      data: { email: "a@test.local", firstName: "A", lastName: "A", role: "CLIENT" },
+    });
+    const aProfile = await prisma.clientProfile.create({ data: { userId: aUser.id } });
+    const bUser = await prisma.user.create({
+      data: { email: "b@test.local", firstName: "B", lastName: "B", role: "CLIENT" },
+    });
+    await prisma.notificationPreference.create({ data: { userId: bUser.id, bookingEmailsEnabled: true } });
+    const bProfile = await prisma.clientProfile.create({ data: { userId: bUser.id } });
+
+    const startsAt = new Date(nowMs() + 7 * 24 * 60 * 60 * 1000);
+    const session = await prisma.session.create({
+      data: {
+        classTypeId: reformer.id,
+        trainerUserId: trainer.id,
+        startsAt,
+        endsAt: new Date(startsAt.getTime() + 60 * 60 * 1000),
+        capacity: 1,
+      },
+    });
+    await prisma.booking.create({
+      data: { sessionId: session.id, clientProfileId: aProfile.id, createdByUserId: admin.id },
+    });
+    const packageType = await prisma.packageType.create({
+      data: { name: "Reformer 12", sessionCount: 12, validityDays: 30, lateCancelHours: 8, classTypeId: reformer.id },
+    });
+    await prisma.clientPackage.create({
+      data: {
+        clientProfileId: bProfile.id,
+        packageTypeId: packageType.id,
+        classTypeId: reformer.id,
+        lateCancelHours: 8,
+        startsAt: new Date(nowMs() - 24 * 60 * 60 * 1000),
+        expiresAt: new Date(nowMs() + 30 * 24 * 60 * 60 * 1000),
+        sessionsRemaining: 12,
+      },
+    });
+    await prisma.waitlistEntry.create({
+      data: { sessionId: session.id, clientProfileId: bProfile.id, position: 1 },
+    });
+
+    setMockUser({ id: aUser.id, role: "CLIENT", email: aUser.email, isActive: true, clientProfile: { id: aProfile.id } });
+    const req = new Request("http://test.local/api/bookings", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ action: "CANCEL", sessionId: session.id }),
+    });
+    const res = await bookingsPOST(req);
+    expect(res.status).toBe(200);
+    await waitFor(() => sendSpy.mock.calls.length >= 1);
+
+    const recipients = sendSpy.mock.calls.map((c) => c[0].to);
+    expect(recipients).toContain("b@test.local");
+    expect(recipients).not.toContain("a@test.local");
+  });
 });
