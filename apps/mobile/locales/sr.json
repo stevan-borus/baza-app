@@ -259,6 +259,22 @@
       "packageName": "Paket",
       "sessionsUntil": "Termini: {{count}} | Do: {{date}}"
     },
+    "clientPackages": {
+      "title": "Moji paketi",
+      "viewAll": "Pogledaj sve pakete",
+      "empty": "Još nemaš nijedan paket.",
+      "error": "Nije moguće učitati pakete.",
+      "comp": "Poklon paket",
+      "paid": "Plaćeno",
+      "methodCash": "Gotovina",
+      "methodCard": "Kartica",
+      "methodOnline": "Online",
+      "sessionsRemaining": "Preostalo termina: {{count}}",
+      "purchasedOn": "Kupljeno {{date}}",
+      "expires": "Ističe {{date}}",
+      "expired": "Istekao",
+      "rowLabel": "Paket {{name}}, kupljeno {{date}}"
+    },
     "signOut": "Odjavi se",
     "home": {
       "greeting": "Zdravo, {{name}}",
