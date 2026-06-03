@@ -56,6 +56,13 @@ enum NotificationType {
   RESERVATION_UNBACKED_ATTENDANCE
   BULK_RESERVATION_CANCEL_ADMIN
   BULK_RESERVATION_CANCEL_TRAINER
+  CAMPAIGN
+}
+
+enum CampaignStatus {
+  DRAFT
+  SCHEDULED
+  SENT
 }
 
 enum AppLocale {
@@ -96,6 +103,7 @@ model User {
   notificationPreference NotificationPreference?
   pushTokens   PushToken[]
   notifications NotificationLog[]
+  campaigns               Campaign[]
   consentRecords          ConsentRecord[]
   consentRecordsVerified  ConsentRecord[]  @relation("GuardianVerifier")
   healthIntakesRecorded ClientHealthIntake[] @relation("HealthIntakeRecordedBy")
@@ -405,10 +413,31 @@ model NotificationLog {
   pushSent    Boolean          @default(false)
   pushStatus  String?
   readAt      DateTime?
+  campaignId  String?
   createdAt   DateTime         @default(now())
   user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  campaign    Campaign?        @relation(fields: [campaignId], references: [id], onDelete: SetNull)
 
   @@index([userId, createdAt])
+  @@index([campaignId])
+}
+
+model Campaign {
+  id              String         @id @default(uuid())
+  createdByUserId String
+  title           String
+  body            String
+  audienceSpec    Json
+  recipientCount  Int            @default(0)
+  status          CampaignStatus @default(DRAFT)
+  scheduledFor    DateTime?
+  sentAt          DateTime?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  createdBy       User           @relation(fields: [createdByUserId], references: [id], onDelete: Cascade)
+  notifications   NotificationLog[]
+
+  @@index([status, scheduledFor])
 }
 
 model TrainerNote {
