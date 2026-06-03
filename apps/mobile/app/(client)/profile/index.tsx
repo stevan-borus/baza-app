@@ -294,6 +294,24 @@ export default function ClientProfile() {
               );
             })}
           </View>
+          <View className="mx-4 mt-1 border-t border-glass-border">
+            <Pressable
+              testID="client-profile-packages-row"
+              onPress={() => router.push("/(client)/profile/packages")}
+              android_ripple={null}
+              className="flex-row items-center justify-between py-4 active:opacity-60"
+              accessibilityRole="button"
+              accessibilityLabel={t("client.clientPackages.viewAll")}
+            >
+              <Text
+                className="font-body-medium text-foreground"
+                style={{ fontSize: 15, letterSpacing: -0.1 }}
+              >
+                {t("client.clientPackages.viewAll")}
+              </Text>
+              <Icon name="chevron-right" size={16} color={tokens.faint} />
+            </Pressable>
+          </View>
         </MotiView>
 
         {/* ── ISTORIJA TRENINGA — hairline list row, no card chrome ── */}
