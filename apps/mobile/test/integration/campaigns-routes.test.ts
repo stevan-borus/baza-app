@@ -132,3 +132,21 @@ describe("/api/campaigns/[id]", () => {
     expect(res.status).toBe(409);
   });
 });
+
+describe("POST /api/campaigns/[id]/send", () => {
+  beforeEach(async () => { await resetDb(); });
+  it("dispatches a DRAFT and marks it SENT", async () => {
+    const { admin } = await seedAdminAndClients(); asAdmin(admin);
+    const c = await prisma.campaign.create({ data: { createdByUserId: admin.id, title: "T", body: "B", audienceSpec: { everyone: true }, status: "DRAFT" } });
+    const res = await SEND(new Request(`http://test.local/api/campaigns/${c.id}/send`, { method: "POST" }), { params: { id: c.id } });
+    const b = await res.json();
+    expect(b.campaign.status).toBe("SENT");
+    expect(b.campaign.recipientCount).toBe(2);
+  });
+  it("refuses to re-send a SENT campaign", async () => {
+    const { admin } = await seedAdminAndClients(); asAdmin(admin);
+    const c = await prisma.campaign.create({ data: { createdByUserId: admin.id, title: "T", body: "B", audienceSpec: { everyone: true }, status: "SENT", sentAt: new Date() } });
+    const res = await SEND(new Request(`http://test.local/api/campaigns/${c.id}/send`, { method: "POST" }), { params: { id: c.id } });
+    expect(res.status).toBe(409);
+  });
+});
