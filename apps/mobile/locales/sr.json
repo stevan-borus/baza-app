@@ -328,6 +328,15 @@
       "changePhoto": "Promeni profilnu sliku",
       "memberSince": "Član od {{year}}."
     },
+    "notificationSettings": {
+      "title": "Podešavanja obaveštenja",
+      "navRow": "Podešavanja obaveštenja",
+      "pushEnabled": "Push obaveštenja",
+      "inAppEnabled": "Obaveštenja u aplikaciji",
+      "campaignsEnabled": "Promocije / novi programi",
+      "bookingEmailsEnabled": "Email o izmenama rezervacija",
+      "saveError": "Nije moguće sačuvati podešavanja."
+    },
     "history": {
       "empty": "Još nema završenih treninga.",
       "error": "Nije moguće učitati istoriju."

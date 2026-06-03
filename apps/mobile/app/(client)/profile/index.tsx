@@ -321,6 +321,33 @@ export default function ClientProfile() {
           </View>
         </MotiView>
 
+        {/* ── PODEŠAVANJA OBAVEŠTENJA — hairline link row ── */}
+        <MotiView
+          from={{ opacity: 0, translateY: 8 }}
+          animate={{ opacity: 1, translateY: 0 }}
+          transition={{ type: "timing", duration: 400, delay: 300 }}
+        >
+          <SectionRow title={t("client.notificationSettings.title")} />
+          <View className="mx-4 border-t border-glass-border">
+            <Pressable
+              testID="client-profile-settings-row"
+              onPress={() => router.push("/(client)/profile/settings")}
+              android_ripple={null}
+              className="flex-row items-center justify-between py-4 active:opacity-60"
+              accessibilityRole="button"
+              accessibilityLabel={t("client.notificationSettings.navRow")}
+            >
+              <Text
+                className="font-body-medium text-foreground"
+                style={{ fontSize: 15, letterSpacing: -0.1 }}
+              >
+                {t("client.notificationSettings.navRow")}
+              </Text>
+              <Icon name="chevron-right" size={16} color={tokens.faint} />
+            </Pressable>
+          </View>
+        </MotiView>
+
         {/* ── FOTOGRAFIJE / ZDRAVSTVENI PODACI / PRAVNA DOKUMENTA ── */}
         <MotiView
           from={{ opacity: 0, translateY: 8 }}

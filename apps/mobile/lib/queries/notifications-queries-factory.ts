@@ -1,4 +1,4 @@
-import { queryOptions, mutationOptions, infiniteQueryOptions } from "@tanstack/react-query";
+import { queryOptions, mutationOptions, infiniteQueryOptions, useMutation, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 import { apiFetch } from "@/lib/api";
 import { sharedEnv } from "@/lib/env.shared";
@@ -33,6 +33,8 @@ const notificationsResponseSchema = z.object({
 const preferencesSchema = z.object({
   pushEnabled: z.boolean(),
   inAppEnabled: z.boolean(),
+  campaignsEnabled: z.boolean(),
+  bookingEmailsEnabled: z.boolean(),
   preferredLocale: z.string().nullable().optional(),
 });
 
@@ -166,6 +168,8 @@ export const notificationsQueries = {
       mutationFn: async (payload: {
         pushEnabled?: boolean;
         inAppEnabled?: boolean;
+        campaignsEnabled?: boolean;
+        bookingEmailsEnabled?: boolean;
         preferredLocale?: "sr" | "en" | null;
       }) => {
         const response = await apiFetch(
@@ -182,3 +186,13 @@ export const notificationsQueries = {
       },
     }),
 };
+
+export function useUpdatePreferencesMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    ...notificationsQueries.updatePreferences(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["notifications", "preferences"] });
+    },
+  });
+}
