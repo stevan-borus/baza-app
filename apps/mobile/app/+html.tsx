@@ -10,9 +10,15 @@ export default function Root({ children }: { children: React.ReactNode }) {
       <head>
         <meta charSet="utf-8" />
         <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
+        {/*
+          Disable user zoom on web. This is an app shell, not a document —
+          a double-tap or pinch zooming the page (and leaving you stuck zoomed
+          in) is never wanted. maximum-scale + user-scalable=no block both;
+          viewport-fit=cover keeps safe-area insets working on notched devices.
+        */}
         <meta
           name="viewport"
-          content="width=device-width, initial-scale=1, shrink-to-fit=no"
+          content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, shrink-to-fit=no, viewport-fit=cover"
         />
 
         {/*
@@ -31,6 +37,11 @@ export default function Root({ children }: { children: React.ReactNode }) {
 }
 
 const responsiveBackground = `
+html {
+  /* Belt-and-suspenders with the viewport meta: kill the double-tap-to-zoom
+     gesture that iOS Safari fires even when user-scalable=no is set. */
+  touch-action: manipulation;
+}
 body {
   background-color: #fff;
 }
