@@ -344,6 +344,15 @@
       "changePhoto": "Change profile photo",
       "memberSince": "Member since {{year}}"
     },
+    "notificationSettings": {
+      "title": "Notification settings",
+      "navRow": "Notification settings",
+      "pushEnabled": "Push notifications",
+      "inAppEnabled": "In-app notifications",
+      "campaignsEnabled": "Promotions / new programs",
+      "bookingEmailsEnabled": "Booking-change emails",
+      "saveError": "Could not save settings."
+    },
     "history": {
       "empty": "No past sessions yet.",
       "error": "Unable to load history."

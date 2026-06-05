@@ -2,6 +2,7 @@ import { Resend } from "resend";
 import { render } from "@react-email/render";
 import { createElement } from "react";
 import { formatFullName } from "@baza/types";
+import { BookingChangeEmail } from "@/emails/booking-change-email";
 import { InviteEmail } from "@/emails/invite-email";
 import { ResetEmail } from "@/emails/reset-email";
 import { captureResetTokenForE2E } from "@/lib/server/e2e-reset-token-capture";
@@ -60,4 +61,24 @@ export async function sendResetEmail(params: {
   const resetUrl = `${env.APP_WEB_URL}/auth/reset-password?token=${encodeURIComponent(params.resetToken)}`;
   const html = await render(createElement(ResetEmail, { resetUrl }));
   await sendEmail(params.to, "Baza Pilates - reset lozinke", html);
+}
+
+export async function sendBookingChangeEmail(params: {
+  to: string;
+  subject: string;
+  heading: string;
+  lines: string[];
+  /** Localized opt-out footer (resolved from the recipient's locale upstream). */
+  footer: string;
+}) {
+  const html = await render(
+    createElement(BookingChangeEmail, {
+      heading: params.heading,
+      lines: params.lines,
+      logoUrl: `${env.APP_WEB_URL}/email-logo.png`,
+      logoDarkUrl: `${env.APP_WEB_URL}/email-logo-dark.png`,
+      footer: params.footer,
+    }),
+  );
+  await sendEmail(params.to, params.subject, html);
 }

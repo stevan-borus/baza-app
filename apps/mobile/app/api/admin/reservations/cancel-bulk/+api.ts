@@ -5,6 +5,7 @@ import { requireRole } from "@/lib/server/auth-guards";
 import { shouldApplyLateCancelPenalty } from "@/lib/server/cancellation-policy";
 import { fail, ok } from "@/lib/server/http";
 import { createSystemNotification } from "@/lib/server/notifications";
+import { notifyClient } from "@/lib/server/notify-client";
 import { findEligibleClientPackage } from "@/lib/server/package-eligibility";
 import { now } from "@/lib/now";
 import { prisma } from "@/lib/server/prisma";
@@ -33,7 +34,21 @@ export async function POST(request: Request) {
       clientProfileId: true,
       clientPackageId: true,
       clientPackage: { select: { id: true, lateCancelHours: true } },
-      clientProfile: { select: { user: { select: { id: true, firstName: true, lastName: true } } } },
+      clientProfile: {
+        select: {
+          user: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+              notificationPreference: {
+                select: { bookingEmailsEnabled: true, preferredLocale: true },
+              },
+            },
+          },
+        },
+      },
       session: {
         select: {
           id: true,
@@ -108,16 +123,28 @@ export async function POST(request: Request) {
     string,
     {
       clientFullName: string;
+      recipient: {
+        email: string | null;
+        bookingEmailsEnabled: boolean;
+        preferredLocale: "sr" | "en" | null;
+      };
       bookings: typeof bookings;
     }
   >();
   for (const b of bookings) {
-    const clientFullName = formatFullName(
-      b.clientProfile.user.firstName,
-      b.clientProfile.user.lastName,
-    );
-    const clientUserId = b.clientProfile.user.id;
-    const bucket = byClient.get(clientUserId) ?? { clientFullName, bookings: [] };
+    const u = b.clientProfile.user;
+    const clientFullName = formatFullName(u.firstName, u.lastName);
+    const clientUserId = u.id;
+    const bucket = byClient.get(clientUserId) ?? {
+      clientFullName,
+      // Email/pref already loaded with the bookings — no per-client re-query.
+      recipient: {
+        email: u.email,
+        bookingEmailsEnabled: u.notificationPreference?.bookingEmailsEnabled ?? true,
+        preferredLocale: u.notificationPreference?.preferredLocale ?? null,
+      },
+      bookings: [],
+    };
     bucket.bookings.push(b);
     byClient.set(clientUserId, bucket);
   }
@@ -129,7 +156,18 @@ export async function POST(request: Request) {
   const otherAdminIds = admins.map((a) => a.id).filter((id) => id !== initiatorId);
 
   void (async () => {
-    for (const [, bucket] of byClient) {
+    for (const [clientUserId, bucket] of byClient) {
+      // Client-facing email. A single-booking cancel gets the singular
+      // ADMIN_CANCEL copy; two or more get the BULK_CANCEL summary with the
+      // count. (There is no separate single-cancel route — one cancel arrives
+      // here with count===1 — so this is where the singular case is handled.)
+      const count = bucket.bookings.length;
+      void notifyClient({
+        userId: clientUserId,
+        event: count === 1 ? "ADMIN_CANCEL" : "BULK_CANCEL",
+        vars: { count },
+        recipient: bucket.recipient,
+      });
       // Distinct trainers affected for this client's cancellations.
       const trainerToCount = new Map<string, number>();
       for (const b of bucket.bookings) {
@@ -165,14 +203,15 @@ export async function POST(request: Request) {
       }
     }
 
-    // Coalesced waitlist-promotion push: one per promoted client.
+    // Coalesced waitlist-promotion notice: one per promoted client, fanned
+    // across in-app + email by the dispatcher. (Promoted clients aren't
+    // necessarily in `byClient`, so the dispatcher resolves their recipient.)
     for (const userId of promotedUserIds) {
-      await createSystemNotification(
+      await notifyClient({
         userId,
-        NOTIFICATION_MESSAGE_KEYS.SPOT_OPENED_FROM_WAITLIST,
-        "BOOKING_CONFIRMED",
-        { state: "WAITLIST_PROMOTED" },
-      );
+        event: "WAITLIST_PROMOTED",
+        vars: { state: "WAITLIST_PROMOTED" },
+      });
     }
   })();
 

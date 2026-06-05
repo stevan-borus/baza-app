@@ -2,6 +2,7 @@ import { formatFullName, updateSessionInputSchema } from "@baza/types";
 import { UserRole } from "@/generated/prisma";
 import { nowMs } from "@/lib/now";
 import { requireRole } from "@/lib/server/auth-guards";
+import { notifyClient } from "@/lib/server/notify-client";
 import { fail, ok } from "@/lib/server/http";
 import { createSystemNotification } from "@/lib/server/notifications";
 import { maybeNotifyMinorPaperNeeded } from "@/lib/server/minor-paper-needed";
@@ -256,6 +257,7 @@ export async function PATCH(request: Request, { id }: RouteParams) {
       startsAt: true,
       endsAt: true,
       status: true,
+      capacity: true,
       trainerUserId: true,
       roomId: true,
       isActive: true,
@@ -264,7 +266,20 @@ export async function PATCH(request: Request, { id }: RouteParams) {
         where: { canceledAt: null },
         select: {
           clientProfile: {
-            select: { userId: true },
+            select: {
+              userId: true,
+              user: {
+                select: {
+                  email: true,
+                  notificationPreference: {
+                    select: {
+                      bookingEmailsEnabled: true,
+                      preferredLocale: true,
+                    },
+                  },
+                },
+              },
+            },
           },
         },
       },
@@ -342,31 +357,59 @@ export async function PATCH(request: Request, { id }: RouteParams) {
       endsAt: true,
       capacity: true,
       status: true,
+      roomId: true,
       trainerUserId: true,
       isActive: true,
     },
   });
 
-  const changed =
-    existing.startsAt.getTime() !== session.startsAt.getTime() ||
-    existing.endsAt.getTime() !== session.endsAt.getTime() ||
-    existing.status !== session.status ||
-    existing.trainerUserId !== session.trainerUserId;
-  if (changed) {
-    // Notify booked clients and assigned trainer of schedule/status changes.
-    const bookedUserIds = existing.bookings.map((booking: { clientProfile: { userId: string } }) => booking.clientProfile.userId);
-    const notifyUserIds = new Set<string>(bookedUserIds);
-    if (session.trainerUserId) {
-      notifyUserIds.add(session.trainerUserId);
+  // Distinguish WHAT changed — the client-facing message depends on it:
+  //   - a cancellation (status -> CANCELED) tells the client their booking was
+  //     canceled, not that "details were updated";
+  //   - a real edit (time / room / trainer / capacity, while still SCHEDULED)
+  //     tells them the session details changed;
+  //   - a pure completion (status -> COMPLETED) is operational and notifies
+  //     no one here (the MINOR_PAPER_NEEDED hook below owns that transition).
+  const becameCanceled =
+    session.status === "CANCELED" && existing.status !== "CANCELED";
+  const detailsEdited =
+    session.status !== "CANCELED" &&
+    session.status !== "COMPLETED" &&
+    (existing.startsAt.getTime() !== session.startsAt.getTime() ||
+      existing.endsAt.getTime() !== session.endsAt.getTime() ||
+      existing.roomId !== session.roomId ||
+      existing.capacity !== session.capacity ||
+      existing.trainerUserId !== session.trainerUserId);
+
+  if (becameCanceled || detailsEdited) {
+    const clientEvent = becameCanceled ? "ADMIN_CANCEL" : "SESSION_UPDATED";
+    // Booked clients: fan across their enabled channels (in-app + email) via
+    // one dispatcher. The recipient's email/locale/flag is already loaded in
+    // the `existing.bookings` select above, so no extra per-client query.
+    for (const booking of existing.bookings) {
+      const profileUser = booking.clientProfile.user;
+      void notifyClient({
+        userId: booking.clientProfile.userId,
+        event: clientEvent,
+        vars: { sessionId: session.id },
+        recipient: {
+          email: profileUser.email,
+          bookingEmailsEnabled:
+            profileUser.notificationPreference?.bookingEmailsEnabled ?? true,
+          preferredLocale: profileUser.notificationPreference?.preferredLocale ?? null,
+        },
+      });
     }
-    await Promise.all(
-      [...notifyUserIds].map((userId) =>
-        createSystemNotification(userId, NOTIFICATION_MESSAGE_KEYS.SESSION_UPDATED, "SESSION_UPDATED", {
-          sessionId: session.id,
-          status: session.status,
-        }),
-      ),
-    );
+    // The assigned trainer keeps an in-app heads-up (no email) so their roster
+    // stays accurate, for both an edit and a cancellation.
+    if (session.trainerUserId) {
+      void createSystemNotification(
+        session.trainerUserId,
+        NOTIFICATION_MESSAGE_KEYS.SESSION_UPDATED,
+        "SESSION_UPDATED",
+        { sessionId: session.id, status: session.status },
+      );
+    }
   }
 
   // Fire MINOR_PAPER_NEEDED when a session transitions to COMPLETED for the
