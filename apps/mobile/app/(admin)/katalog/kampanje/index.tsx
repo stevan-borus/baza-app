@@ -1,8 +1,7 @@
 /**
  * Campaigns history — admin list of every campaign (draft / scheduled / sent)
- * with a "+" affordance into the compose screen. Mirrors the sibling admin
- * list screens (Naplata / Izvestaji): ScreenContainerRaw + AdminTabLeftSlot,
- * a ScrollView body, and hairline-light GlassCard rows.
+ * with a "+" affordance into the compose screen. A child page of Katalog, so it
+ * uses the "detail" header (back button → Katalog), not the tab avatar.
  */
 import { useTranslation } from "react-i18next";
 import { Pressable, ScrollView, Text, View } from "react-native";
@@ -13,7 +12,6 @@ import {
   ScreenContainerRaw,
   useTabBarBottomPadding,
 } from "@/components/ui/screen-container";
-import { AdminTabLeftSlot } from "@/components/admin/admin-tab-left-slot";
 import { GlassCard } from "@/components/ui/glass-card";
 import { SkeletonList } from "@/components/ui/skeleton";
 import { EmptyState, ErrorState } from "@/components/ui/states";
@@ -31,7 +29,7 @@ export default function CampaignsHistory() {
   return (
     <ScreenContainerRaw
       title={t("campaigns.title")}
-      leftSlot={<AdminTabLeftSlot />}
+      headerVariant="detail"
       rightSlot={
         <Pressable
           testID="campaign-new-button"
