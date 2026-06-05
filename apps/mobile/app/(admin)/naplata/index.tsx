@@ -32,6 +32,8 @@ import dayjs from "dayjs";
 import { ReturnToPill } from "@/components/admin/return-to-pill";
 import { MotiView } from "@/components/ui/styled";
 import { getDateLocale } from "@/lib/i18n";
+import { formatRsd } from "@/lib/format";
+import { RAW_METHOD_LABEL_KEYS } from "@/lib/payment-method-labels";
 import { AppSheet } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/card";
 import { NumberRollup } from "@/components/ui/number-rollup";
@@ -166,12 +168,7 @@ export default function AdminBilling() {
     },
   });
 
-  const methodLabelKeys: Record<string, string> = {
-    CASH: "admin.manage.methodCash",
-    CARD: "admin.manage.methodCard",
-    COMPANY: "admin.manage.methodCompany",
-    MANUAL_ONLINE: "admin.manage.methodOnline",
-  };
+  const methodLabelKeys = RAW_METHOD_LABEL_KEYS;
   const methods = ["CASH", "CARD", "COMPANY", "MANUAL_ONLINE"] as const;
   const dateLocale = getDateLocale();
 
@@ -505,7 +502,7 @@ function BillingRow({
           style={{ fontSize: 15 }}
           numberOfLines={1}
         >
-          {item.amount.toLocaleString("sr-RS")} RSD
+          {formatRsd(item.amount)}
         </Text>
         <Badge status="success">{t("admin.manage.statusConfirmed")}</Badge>
       </View>

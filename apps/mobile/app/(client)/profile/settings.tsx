@@ -6,7 +6,7 @@
  * emails; campaignsEnabled is the marketing opt-out (Promocije / novi programi).
  */
 import { useQuery } from "@tanstack/react-query";
-import { ScrollView, Switch, Text, View } from "react-native";
+import { ActivityIndicator, ScrollView, Switch, Text, View } from "react-native";
 import { useTranslation } from "react-i18next";
 import { ScreenContainerRaw, useTabBarBottomPadding } from "@/components/ui/screen-container";
 import {
@@ -35,6 +35,17 @@ export default function NotificationSettings() {
     { key: "campaignsEnabled", label: t("client.notificationSettings.campaignsEnabled") },
   ];
 
+  // Optimistic read: while a single-field PATCH is in flight, prefer the value
+  // the user just flipped (mutation variables) over the not-yet-refetched
+  // cache, so the switch doesn't visibly snap back before the invalidation
+  // lands. The mutation only ever carries one key.
+  function valueFor(key: PrefKey): boolean {
+    const pending = updateMutation.isPending
+      ? (updateMutation.variables as Partial<Record<PrefKey, boolean>> | undefined)?.[key]
+      : undefined;
+    return pending ?? prefs?.[key] ?? true;
+  }
+
   return (
     <ScreenContainerRaw title={t("client.notificationSettings.title")} headerVariant="detail">
       <ScrollView
@@ -49,27 +60,35 @@ export default function NotificationSettings() {
             </Text>
           </View>
         ) : null}
-        <View className="mx-4">
-          {rows.map((row) => (
-            <View
-              key={row.key}
-              className="flex-row items-center justify-between py-4 border-t border-glass-border"
-            >
-              <Text
-                className="font-body-medium text-foreground flex-1 pr-3"
-                style={{ fontSize: 15, letterSpacing: -0.1 }}
+        {/* Don't render toggles until prefs load — a fabricated all-ON default
+            would briefly misrepresent an opted-out client as opted-in. */}
+        {!prefs ? (
+          <View className="items-center justify-center py-16">
+            <ActivityIndicator />
+          </View>
+        ) : (
+          <View className="mx-4">
+            {rows.map((row) => (
+              <View
+                key={row.key}
+                className="flex-row items-center justify-between py-4 border-t border-glass-border"
               >
-                {row.label}
-              </Text>
-              <Switch
-                testID={`notification-settings-${row.key}`}
-                value={prefs?.[row.key] ?? true}
-                onValueChange={(value) => toggle(row.key, value)}
-                disabled={!prefs || updateMutation.isPending}
-              />
-            </View>
-          ))}
-        </View>
+                <Text
+                  className="font-body-medium text-foreground flex-1 pr-3"
+                  style={{ fontSize: 15, letterSpacing: -0.1 }}
+                >
+                  {row.label}
+                </Text>
+                <Switch
+                  testID={`notification-settings-${row.key}`}
+                  value={valueFor(row.key)}
+                  onValueChange={(value) => toggle(row.key, value)}
+                  disabled={updateMutation.isPending}
+                />
+              </View>
+            ))}
+          </View>
+        )}
       </ScrollView>
     </ScreenContainerRaw>
   );

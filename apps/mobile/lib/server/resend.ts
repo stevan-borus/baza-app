@@ -69,9 +69,17 @@ export async function sendBookingChangeEmail(params: {
   subject: string;
   heading: string;
   lines: string[];
+  /** Localized opt-out footer (resolved from the recipient's locale upstream). */
+  footer: string;
 }) {
   const html = await render(
-    createElement(BookingChangeEmail, { heading: params.heading, lines: params.lines }),
+    createElement(BookingChangeEmail, {
+      heading: params.heading,
+      lines: params.lines,
+      logoUrl: `${env.APP_WEB_URL}/email-logo.png`,
+      logoDarkUrl: `${env.APP_WEB_URL}/email-logo-dark.png`,
+      footer: params.footer,
+    }),
   );
   await sendEmail(params.to, params.subject, html);
 }

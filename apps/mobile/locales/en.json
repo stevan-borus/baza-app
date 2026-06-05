@@ -259,6 +259,23 @@
       "packageName": "Package",
       "sessionsUntil": "Sessions: {{count}} | Until: {{date}}"
     },
+    "clientPackages": {
+      "title": "My packages",
+      "viewAll": "View all packages",
+      "empty": "You don't have any packages yet.",
+      "error": "Unable to load packages.",
+      "comp": "Gift package",
+      "paid": "Paid",
+      "methodCash": "Cash",
+      "methodCard": "Card",
+      "methodOnline": "Online",
+      "sessionsRemaining": "Sessions remaining: {{count}}",
+      "purchasedOn": "Purchased {{date}}",
+      "expires": "Expires {{date}}",
+      "expired": "Expired",
+      "usedUp": "Used up",
+      "rowLabel": "{{name}} package, purchased {{date}}"
+    },
     "signOut": "Sign out",
     "home": {
       "greeting": "Hello, {{name}}",

@@ -75,6 +75,13 @@ export default function ClientProfile() {
   const packagesQuery = useQuery(packagesQueries.clientPackages());
 
   const packages = packagesQuery.data?.packages ?? [];
+  // The profile shows the client's CURRENTLY ACTIVE packages only (sessions
+  // left AND not past expiry). Expired/used-up ones live in the full timeline
+  // ("Pogledaj sve pakete"). A real client has ~1-2 active, so no cap is needed.
+  const activePackages = packages.filter(
+    (pkg: ClientPackage) =>
+      pkg.sessionsRemaining > 0 && new Date(pkg.expiresAt) >= new Date(),
+  );
   const userEmail = meQuery.data?.user.email ?? "";
   const userName = displayName(meQuery.data?.user);
   const initials = userEmail ? getInitials(userEmail) : "?";
@@ -212,6 +219,9 @@ export default function ClientProfile() {
           transition={{ type: "timing", duration: 400, delay: 200 }}
         >
           <SectionRow title={t("client.profileTab.myPackages")} />
+          {/* Under-title hairline — matches every other section header
+              (e.g. ISTORIJA TRENINGA below). */}
+          <View className="mx-4 mb-3 border-t border-glass-border" />
           {packagesQuery.isError ? (
             <View className="mx-4 bg-danger-soft rounded-lg px-4 py-3">
               <Text className="text-danger text-sm font-body-medium">
@@ -219,8 +229,8 @@ export default function ClientProfile() {
               </Text>
             </View>
           ) : null}
-          {packages.length === 0 && !packagesQuery.isLoading ? (
-            <View className="mx-4 border-t border-glass-border">
+          {activePackages.length === 0 && !packagesQuery.isLoading ? (
+            <View className="mx-4">
               <View className="flex-row items-center justify-between py-4">
                 <Text
                   className="font-body-medium text-foreground"
@@ -233,7 +243,7 @@ export default function ClientProfile() {
             </View>
           ) : null}
           <View className="gap-3 px-4">
-            {packages.map((pkg: ClientPackage) => {
+            {activePackages.map((pkg: ClientPackage) => {
               const total = pkg.packageType?.sessionCount ?? 0;
               const progress = getPackageProgress(pkg);
               const expires = new Date(pkg.expiresAt);
@@ -293,6 +303,24 @@ export default function ClientProfile() {
                 </View>
               );
             })}
+          </View>
+          <View className="mx-4 mt-1">
+            <Pressable
+              testID="client-profile-packages-row"
+              onPress={() => router.push("/(client)/profile/packages")}
+              android_ripple={null}
+              className="flex-row items-center justify-between py-3 active:opacity-60"
+              accessibilityRole="button"
+              accessibilityLabel={t("client.clientPackages.viewAll")}
+            >
+              <Text
+                className="font-body-medium text-foreground"
+                style={{ fontSize: 15, letterSpacing: -0.1 }}
+              >
+                {t("client.clientPackages.viewAll")}
+              </Text>
+              <Icon name="chevron-right" size={16} color={tokens.faint} />
+            </Pressable>
           </View>
         </MotiView>
 

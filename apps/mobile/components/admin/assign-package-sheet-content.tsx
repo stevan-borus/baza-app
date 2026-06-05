@@ -24,18 +24,14 @@ import { SectionLabel } from "@/components/ui/typography";
 import { DateTimePicker } from "@/components/ui/date-time-picker";
 import { packagesQueries } from "@/lib/queries/packages-queries-factory";
 import { billingQueries } from "@/lib/queries/billing-queries-factory";
+import { RAW_METHOD_LABEL_KEYS } from "@/lib/payment-method-labels";
 
 export type AssignPackageMode = "comp" | "paid";
 
 const PAYMENT_METHODS = ["CASH", "CARD", "COMPANY", "MANUAL_ONLINE"] as const;
 type PaymentMethod = (typeof PAYMENT_METHODS)[number];
 
-const METHOD_LABEL_KEY: Record<PaymentMethod, string> = {
-  CASH: "admin.manage.methodCash",
-  CARD: "admin.manage.methodCard",
-  COMPANY: "admin.manage.methodCompany",
-  MANUAL_ONLINE: "admin.manage.methodOnline",
-};
+const METHOD_LABEL_KEY = RAW_METHOD_LABEL_KEYS;
 
 export type AssignPackageSheetContentProps = {
   /**

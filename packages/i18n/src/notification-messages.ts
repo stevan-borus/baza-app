@@ -200,11 +200,22 @@ export type BookingEmailKind =
 // "{{count}} reservations canceled for {{clientFullName}}" — third-person, for
 // an operator), which would read wrong landing in the client's own inbox.
 // BULK_CANCEL keeps {{count}} interpolation; the others need no vars.
-type EmailContent = { subject: string; heading: string; body: string };
+// The per-kind copy table carries subject/heading/body; the footer is locale-
+// shared and merged in by getBookingEmailContent.
+type EmailCopy = { subject: string; heading: string; body: string };
+type EmailContent = EmailCopy & { footer: string };
+
+// The opt-out footer is the same line on every booking-change email, but it
+// MUST follow the recipient's locale — an en client was getting an sr footer
+// because the template hardcoded it.
+const BOOKING_EMAIL_FOOTER: Record<NotificationLocale, string> = {
+  sr: "Ovaj email možeš isključiti u podešavanjima obaveštenja u aplikaciji.",
+  en: "You can turn this email off in the app's notification settings.",
+};
 
 const BOOKING_EMAIL_CONTENT: Record<
   BookingEmailKind,
-  Record<NotificationLocale, EmailContent>
+  Record<NotificationLocale, EmailCopy>
 > = {
   WAITLIST_PROMOTED: {
     sr: {
@@ -267,5 +278,6 @@ export function getBookingEmailContent(
     subject: interpolate(content.subject, vars),
     heading: interpolate(content.heading, vars),
     body: interpolate(content.body, vars),
+    footer: BOOKING_EMAIL_FOOTER[locale] ?? BOOKING_EMAIL_FOOTER.sr,
   };
 }
