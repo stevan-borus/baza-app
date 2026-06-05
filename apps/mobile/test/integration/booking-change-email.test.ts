@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { resetDb } from "./setup-db";
 
-type SentEmail = { to: string; subject: string; heading: string; lines: string[] };
+type SentEmail = { to: string; subject: string; heading: string; lines: string[]; footer: string };
 const sendSpy = vi.fn(async (_params: SentEmail) => undefined);
 vi.mock("@/lib/server/resend", () => ({
   sendBookingChangeEmail: (params: SentEmail) => sendSpy(params),

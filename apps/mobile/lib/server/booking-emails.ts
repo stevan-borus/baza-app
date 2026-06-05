@@ -19,7 +19,7 @@ export async function sendBookingChangeEmailToRecipient(input: {
   locale: NotificationLocale;
   vars?: Record<string, string | number | undefined>;
 }) {
-  const { subject, heading, body } = getBookingEmailContent(
+  const { subject, heading, body, footer } = getBookingEmailContent(
     input.kind,
     input.locale,
     input.vars,
@@ -29,5 +29,6 @@ export async function sendBookingChangeEmailToRecipient(input: {
     subject,
     heading,
     lines: body ? [body] : [],
+    footer,
   });
 }

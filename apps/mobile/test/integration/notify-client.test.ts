@@ -1,7 +1,7 @@
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { resetDb } from "./setup-db";
 
-type SentEmail = { to: string; subject: string; heading: string; lines: string[] };
+type SentEmail = { to: string; subject: string; heading: string; lines: string[]; footer: string };
 const sendSpy = vi.fn(async (_params: SentEmail) => undefined);
 vi.mock("@/lib/server/resend", () => ({
   sendBookingChangeEmail: (params: SentEmail) => sendSpy(params),
@@ -53,6 +53,19 @@ describe("notifyClient", () => {
     expect(logs).toBe(1);
     expect(sendSpy).toHaveBeenCalledTimes(1);
     expect(sendSpy.mock.calls[0][0].to).toBe("mara@test.local");
+  });
+
+  it("localizes the opt-out footer to the recipient's locale (was hardcoded sr)", async () => {
+    const sr = await seedClient({ email: "sr@test.local", preferredLocale: "sr" });
+    await notifyClient({ userId: sr.id, event: "ADMIN_CANCEL", vars: {} });
+    expect(sendSpy.mock.calls[0][0].footer).toContain("podešavanjima obaveštenja");
+
+    sendSpy.mockClear();
+    const en = await seedClient({ email: "en@test.local", preferredLocale: "en" });
+    await notifyClient({ userId: en.id, event: "ADMIN_CANCEL", vars: {} });
+    const footer = sendSpy.mock.calls[0][0].footer;
+    expect(footer).toContain("notification settings");
+    expect(footer).not.toContain("podešavanjima");
   });
 
   it("suppresses ONLY the email when bookingEmailsEnabled=false; in-app still fires", async () => {
