@@ -1,8 +1,11 @@
 /**
- * Campaigns history — admin list of every campaign (draft / scheduled / sent)
- * with a "+" affordance into the compose screen. A child page of Katalog, so it
- * uses the "detail" header (back button → Katalog), not the tab avatar.
+ * Campaigns history — admin list of every campaign (draft / scheduled / sent).
+ * A child page of Katalog (detail header → back to Katalog). The "+" opens the
+ * compose form in a bottom sheet (the app's "add" pattern), and this screen
+ * owns the create mutation + the send-confirmation sheet so the compose content
+ * stays a pure form.
  */
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { useRouter } from "expo-router";
@@ -12,11 +15,20 @@ import {
   ScreenContainerRaw,
   useTabBarBottomPadding,
 } from "@/components/ui/screen-container";
+import { AppSheet } from "@/components/ui/sheet";
+import { ConfirmSheet } from "@/components/ui/confirm-sheet";
 import { GlassCard } from "@/components/ui/glass-card";
 import { SkeletonList } from "@/components/ui/skeleton";
 import { EmptyState, ErrorState } from "@/components/ui/states";
 import { useThemeTokens } from "@/components/ui/tokens";
-import { campaignsQueries } from "@/lib/queries/campaigns-queries-factory";
+import {
+  campaignsQueries,
+  useCreateCampaignMutation,
+} from "@/lib/queries/campaigns-queries-factory";
+import {
+  CampaignComposeSheetContent,
+  type ComposePayload,
+} from "@/components/admin/campaign-compose-sheet-content";
 
 export default function CampaignsHistory() {
   const { t } = useTranslation();
@@ -26,6 +38,24 @@ export default function CampaignsHistory() {
   const listQuery = useQuery(campaignsQueries.list());
   const campaigns = listQuery.data?.campaigns ?? [];
 
+  const [composeOpen, setComposeOpen] = useState(false);
+  // A send-now / scheduled submit waits on a confirmation sheet; saving a draft
+  // does not. Holds the payload + the resolved reach for the confirm copy.
+  const [pendingSend, setPendingSend] = useState<{ payload: ComposePayload; reach: number } | null>(null);
+  const createMutation = useCreateCampaignMutation();
+
+  function reset() {
+    createMutation.reset();
+  }
+  function submit(payload: ComposePayload) {
+    createMutation.mutate(payload, {
+      onSuccess: () => {
+        setPendingSend(null);
+        setComposeOpen(false);
+      },
+    });
+  }
+
   return (
     <ScreenContainerRaw
       title={t("campaigns.title")}
@@ -33,7 +63,10 @@ export default function CampaignsHistory() {
       rightSlot={
         <Pressable
           testID="campaign-new-button"
-          onPress={() => router.push("/(admin)/katalog/kampanje/compose")}
+          onPress={() => {
+            reset();
+            setComposeOpen(true);
+          }}
           android_ripple={null}
           hitSlop={12}
           className="w-9 h-9 items-center justify-center active:opacity-60"
@@ -99,6 +132,46 @@ export default function CampaignsHistory() {
           </View>
         )}
       </ScrollView>
+
+      {/* Compose — bottom sheet (the app's "add" pattern). */}
+      <AppSheet open={composeOpen} onOpenChange={setComposeOpen}>
+        <CampaignComposeSheetContent
+          busy={createMutation.isPending}
+          errorMessage={
+            createMutation.isError && pendingSend === null
+              ? t("campaigns.compose.saveError")
+              : null
+          }
+          onSaveDraft={submit}
+          onRequestSend={(payload, reach) => setPendingSend({ payload, reach })}
+        />
+      </AppSheet>
+
+      {/* Confirm before messaging the whole audience. */}
+      <ConfirmSheet
+        open={pendingSend !== null}
+        onOpenChange={(open) => {
+          if (!open) setPendingSend(null);
+        }}
+        title={
+          pendingSend?.payload.sendNow
+            ? t("campaigns.compose.confirmSendTitle")
+            : t("campaigns.compose.confirmScheduleTitle")
+        }
+        message={t("campaigns.compose.confirmMessage", { count: pendingSend?.reach ?? 0 })}
+        confirmLabel={
+          pendingSend?.payload.sendNow
+            ? t("campaigns.compose.sendNow")
+            : t("campaigns.compose.schedule")
+        }
+        tone="primary"
+        loading={createMutation.isPending}
+        errorMessage={createMutation.isError ? t("campaigns.compose.saveError") : null}
+        testID="campaign-confirm-send"
+        onConfirm={() => {
+          if (pendingSend) submit(pendingSend.payload);
+        }}
+      />
     </ScreenContainerRaw>
   );
 }
