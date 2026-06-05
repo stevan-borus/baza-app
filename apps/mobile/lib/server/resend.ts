@@ -19,7 +19,12 @@ export function getResendClient(): Resend | null {
   return resendClient;
 }
 
-async function sendEmail(to: string, subject: string, html: string) {
+async function sendEmail(
+  to: string,
+  subject: string,
+  html: string,
+  headers?: Record<string, string>,
+) {
   const client = getResendClient();
   if (!client) {
     console.info("[email:disabled]", { to, subject });
@@ -32,6 +37,7 @@ async function sendEmail(to: string, subject: string, html: string) {
       to,
       subject,
       html,
+      ...(headers ? { headers } : {}),
     }),
   );
 
@@ -96,8 +102,16 @@ export async function sendCampaignEmail(params: {
       title: params.subject,
       body: params.bodyText,
       unsubscribeUrl: params.unsubscribeUrl,
+      logoUrl: `${env.APP_WEB_URL}/email-logo.png`,
+      logoDarkUrl: `${env.APP_WEB_URL}/email-logo-dark.png`,
       chrome: params.chrome,
     }),
   );
-  await sendEmail(params.to, params.subject, html);
+  // Gmail/Yahoo bulk-sender rules require List-Unsubscribe on promotional mail,
+  // and List-Unsubscribe-Post enables the native one-click button (which hits
+  // POST /api/unsubscribe — the same endpoint as the confirm-page button).
+  await sendEmail(params.to, params.subject, html, {
+    "List-Unsubscribe": `<${params.unsubscribeUrl}>`,
+    "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+  });
 }

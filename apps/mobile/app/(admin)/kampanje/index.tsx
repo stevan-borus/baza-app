@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/screen-container";
 import { AdminTabLeftSlot } from "@/components/admin/admin-tab-left-slot";
 import { GlassCard } from "@/components/ui/glass-card";
+import { SkeletonList } from "@/components/ui/skeleton";
 import { EmptyState, ErrorState } from "@/components/ui/states";
 import { useThemeTokens } from "@/components/ui/tokens";
 import { campaignsQueries } from "@/lib/queries/campaigns-queries-factory";
@@ -55,30 +56,47 @@ export default function CampaignsHistory() {
       >
         {listQuery.isError ? (
           <ErrorState message={t("campaigns.error")} />
-        ) : campaigns.length === 0 && !listQuery.isLoading ? (
+        ) : listQuery.isLoading ? (
+          <SkeletonList count={4} />
+        ) : campaigns.length === 0 ? (
           <EmptyState title={t("campaigns.empty")} />
         ) : (
           <View className="gap-3">
             {campaigns.map((c) => (
-              <GlassCard
+              <Pressable
                 key={c.id}
                 testID={`campaign-row-${c.id}`}
-                style={{ paddingVertical: 14 }}
+                onPress={() =>
+                  router.push(`/(admin)/kampanje/${c.id}` as const)
+                }
+                android_ripple={null}
+                className="active:opacity-70"
+                accessibilityRole="button"
+                accessibilityLabel={c.title}
               >
-                <View className="flex-1 gap-1">
-                  <Text
-                    className="text-foreground font-body-semibold"
-                    style={{ fontSize: 15 }}
-                    numberOfLines={1}
-                  >
-                    {c.title}
-                  </Text>
-                  <Text className="text-muted" style={{ fontSize: 12 }}>
-                    {t(`campaigns.status.${c.status}`)} ·{" "}
-                    {t("campaigns.recipients", { count: c.recipientCount })}
-                  </Text>
-                </View>
-              </GlassCard>
+                <GlassCard style={{ paddingVertical: 14 }}>
+                  <View className="flex-row items-center justify-between">
+                    <View className="flex-1 gap-1 pr-3">
+                      <Text
+                        className="text-foreground font-body-semibold"
+                        style={{ fontSize: 15 }}
+                        numberOfLines={1}
+                      >
+                        {c.title}
+                      </Text>
+                      <Text className="text-muted" style={{ fontSize: 12 }}>
+                        {t(`campaigns.status.${c.status}`)}
+                        {/* recipientCount is only meaningful once SENT — it's 0
+                            on DRAFT/SCHEDULED, so don't imply "0 recipients". */}
+                        {c.status === "SENT"
+                          ? ` · ${t("campaigns.recipients", { count: c.recipientCount })}`
+                          : ""}
+                      </Text>
+                    </View>
+                    <Icon name="chevron-right" size={16} color={tokens.faint} />
+                  </View>
+                </GlassCard>
+              </Pressable>
             ))}
           </View>
         )}

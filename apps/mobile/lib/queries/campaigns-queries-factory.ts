@@ -17,7 +17,7 @@ const campaignSchema = z.object({
   body: z.string(),
   audienceSpec: z.record(z.string(), z.unknown()),
   recipientCount: z.number(),
-  status: z.enum(["DRAFT", "SCHEDULED", "SENT"]),
+  status: z.enum(["DRAFT", "SCHEDULED", "SENDING", "SENT"]),
   scheduledFor: z.nullable(z.string()).optional(),
   sentAt: z.nullable(z.string()).optional(),
   createdAt: z.string(),

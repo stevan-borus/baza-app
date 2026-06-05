@@ -1140,13 +1140,24 @@
     "navRow": "Campaigns",
     "empty": "No campaigns yet.",
     "error": "Unable to load campaigns.",
-    "status": { "DRAFT": "Draft", "SCHEDULED": "Scheduled", "SENT": "Sent" },
+    "status": { "DRAFT": "Draft", "SCHEDULED": "Scheduled", "SENDING": "Sending…", "SENT": "Sent" },
     "recipients": "{{count}} recipients",
+    "detail": {
+      "title": "Campaign",
+      "cancelSchedule": "Cancel schedule (back to draft)",
+      "delete": "Delete campaign",
+      "confirmSendMessage": "This will message the campaign's audience now.",
+      "confirmCancelTitle": "Move this campaign back to draft?",
+      "confirmDeleteTitle": "Delete this campaign?",
+      "actionError": "Something went wrong. Please try again."
+    },
     "compose": {
       "title": "New campaign",
       "titleLabel": "Title", "titlePlaceholder": "Message title",
       "bodyLabel": "Message", "bodyPlaceholder": "Message text (single language)",
       "audience": "Audience", "previewCount": "Reach: {{count}}", "reachNote": "Clients who opted out of promotions are excluded from actual recipients.",
+      "previewEmpty": "Choose an audience to see the reach", "previewLoading": "Calculating reach…", "previewError": "Couldn't calculate reach",
+      "confirmSendTitle": "Send this campaign now?", "confirmScheduleTitle": "Schedule this campaign?", "confirmMessage": "It will reach up to {{count}} clients (opted-out clients excluded).", "saveError": "Couldn't save the campaign. Please try again.",
       "axes": { "everyone": "All clients", "packageState": "Package state", "classType": "Class type", "expiringSoon": "Package expiring soon", "lapsed": "Lapsed (no renewal)", "idlePackage": "Paid but not attending" },
       "packageState": { "active": "Active", "expired": "Expired", "none": "No package", "paused": "Paused" },
       "daysLabel": "Days (N)", "saveDraft": "Save draft", "sendNow": "Send now", "schedule": "Schedule", "scheduledFor": "Send time"
