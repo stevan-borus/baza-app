@@ -1,42 +1,31 @@
 /**
- * Central gate for booking-change transactional emails.
+ * Booking-change transactional email — the low-level send.
  *
- * Looks up the recipient's email + preferredLocale + bookingEmailsEnabled in a
- * single query. No-ops when the flag is off (the toggle suppresses ONLY email —
- * in-app NotificationLog and push are handled separately and still fire). When
- * enabled, resolves the localized subject/body from @baza/i18n and sends.
- *
- * Call sites use `void sendBookingChangeEmailIfEnabled({...})` — fire-and-forget.
+ * Given an already-resolved recipient (email + locale), resolves the localized
+ * copy and sends. The `notifyClient` dispatcher (lib/server/notify-client.ts)
+ * is the only caller: it checks the bookingEmailsEnabled flag and resolves the
+ * locale before calling here, so this function does NOT re-check the flag.
  */
-import { type BookingEmailKind, getBookingEmailContent, type NotificationLocale } from "@baza/i18n";
-import { prisma } from "@/lib/server/prisma";
+import {
+  type BookingEmailKind,
+  getBookingEmailContent,
+  type NotificationLocale,
+} from "@baza/i18n";
 import { sendBookingChangeEmail } from "@/lib/server/resend";
-import { tryCatch } from "@/lib/server/try-catch";
 
-export async function sendBookingChangeEmailIfEnabled(input: {
-  userId: string;
+export async function sendBookingChangeEmailToRecipient(input: {
+  to: string;
   kind: BookingEmailKind;
+  locale: NotificationLocale;
   vars?: Record<string, string | number | undefined>;
 }) {
-  const lookup = await tryCatch(
-    prisma.user.findUnique({
-      where: { id: input.userId },
-      select: {
-        email: true,
-        notificationPreference: { select: { bookingEmailsEnabled: true, preferredLocale: true } },
-      },
-    }),
+  const { subject, heading, body } = getBookingEmailContent(
+    input.kind,
+    input.locale,
+    input.vars,
   );
-  if (lookup.error || !lookup.data?.email) return;
-
-  const pref = lookup.data.notificationPreference;
-  if (pref && pref.bookingEmailsEnabled === false) return;
-
-  const locale: NotificationLocale = pref?.preferredLocale === "en" ? "en" : "sr";
-  const { subject, heading, body } = getBookingEmailContent(input.kind, locale, input.vars);
-
   await sendBookingChangeEmail({
-    to: lookup.data.email,
+    to: input.to,
     subject,
     heading,
     lines: body ? [body] : [],

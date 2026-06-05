@@ -3,11 +3,9 @@ import { type Prisma, UserRole } from "@/generated/prisma";
 import { getConsentStatus } from "@/lib/legal/consent-status";
 import { now } from "@/lib/now";
 import { requireRole } from "@/lib/server/auth-guards";
-import { sendBookingChangeEmailIfEnabled } from "@/lib/server/booking-emails";
 import { shouldApplyLateCancelPenalty } from "@/lib/server/cancellation-policy";
 import { fail, ok } from "@/lib/server/http";
-import { createSystemNotification } from "@/lib/server/notifications";
-import { NOTIFICATION_MESSAGE_KEYS } from "@baza/i18n";
+import { notifyClient } from "@/lib/server/notify-client";
 import { notifyCancellation } from "@/lib/server/notify-cancellation";
 import { findEligibleClientPackage } from "@/lib/server/package-eligibility";
 import { prisma } from "@/lib/server/prisma";
@@ -319,12 +317,12 @@ export async function POST(request: Request) {
   if (promoted) {
     // The promoted client did not act — the system moved them off the waitlist
     // when the actor (this canceling client) freed a spot — so they get the
-    // email. The canceling client gets no email (it was their own action).
-    void sendBookingChangeEmailIfEnabled({ userId: promoted, kind: "WAITLIST_PROMOTED" });
-    // Notify promoted client that they now hold a confirmed booking.
-    void createSystemNotification(promoted, NOTIFICATION_MESSAGE_KEYS.SPOT_OPENED_FROM_WAITLIST, "BOOKING_CONFIRMED", {
-      sessionId,
-      state: "WAITLIST_PROMOTED",
+    // in-app notice AND the email. The canceling client gets neither (it was
+    // their own action). One dispatcher fans both channels.
+    void notifyClient({
+      userId: promoted,
+      event: "WAITLIST_PROMOTED",
+      vars: { sessionId, state: "WAITLIST_PROMOTED" },
     });
     return ok({ success: true, state: "WAITLIST_PROMOTED" });
   }
