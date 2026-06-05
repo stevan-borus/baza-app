@@ -145,6 +145,40 @@ describe("GET /api/clients/me/packages", () => {
     expect(body.entries[0].packageTypeName).toBe("Poklon paket");
   });
 
+  it("legacy un-backfilled row (no FK) is still classified PAID via the chronological-zip fallback — matching admin", async () => {
+    const ct = await makeClassType();
+    const pt = await makePackageType(ct.id, "Legacy 10");
+    const { user, profile } = await makeClient("legacy@test.local");
+    const pkg = await makeClientPackage({
+      clientProfileId: profile.id,
+      packageTypeId: pt.id,
+      classTypeId: ct.id,
+    });
+    // The funding payment exists and is confirmed, but the FK was never
+    // backfilled (clientPackageId left NULL) — the exact case the shared
+    // linkPackagesToBilling fallback exists to catch. The bare-FK read would
+    // mis-render this as a comp (gift); admin shows it as PAID, so must we.
+    await prisma.billingRecord.create({
+      data: {
+        clientUserId: user.id,
+        amount: 7500,
+        method: "CARD",
+        status: "CONFIRMED",
+        packageTypeId: pt.id,
+        clientPackageId: null,
+      },
+    });
+    void pkg;
+
+    asClient({ id: user.id, clientProfileId: profile.id });
+    const res = await GET(buildRequest());
+    const body = await res.json();
+    expect(body.entries).toHaveLength(1);
+    expect(body.entries[0].kind).toBe("PAID");
+    expect(body.entries[0].amount).toBe(7500);
+    expect(body.entries[0].method).toBe("CARD");
+  });
+
   it("COMPANY method is softened to PAID (raw chip never reaches the client)", async () => {
     const ct = await makeClassType();
     const pt = await makePackageType(ct.id, "Firma");

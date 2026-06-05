@@ -273,6 +273,7 @@
       "purchasedOn": "Kupljeno {{date}}",
       "expires": "Ističe {{date}}",
       "expired": "Istekao",
+      "usedUp": "Iskorišćen",
       "rowLabel": "Paket {{name}}, kupljeno {{date}}"
     },
     "signOut": "Odjavi se",

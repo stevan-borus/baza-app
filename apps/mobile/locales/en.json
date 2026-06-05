@@ -273,6 +273,7 @@
       "purchasedOn": "Purchased {{date}}",
       "expires": "Expires {{date}}",
       "expired": "Expired",
+      "usedUp": "Used up",
       "rowLabel": "{{name}} package, purchased {{date}}"
     },
     "signOut": "Sign out",

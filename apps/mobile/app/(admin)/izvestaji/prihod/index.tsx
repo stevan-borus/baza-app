@@ -37,21 +37,12 @@ import { billingQueries } from "@/lib/queries/billing-queries-factory";
 import { ScreenContainerRaw, useTabBarBottomPadding } from "@/components/ui/screen-container";
 import { usePeriodPill, type Period } from "@/lib/admin/use-period-pill";
 import { encodeReturnTo } from "@/lib/admin/return-to";
+import { formatRsd } from "@/lib/format";
+import { RAW_METHOD_LABEL_KEYS as methodLabelKeys } from "@/lib/payment-method-labels";
 
 const BAR_HEIGHT_MAX = 110;
 const BAR_HEIGHT_MIN = 4;
 const RETURN_TO_PATH = "/(admin)/izvestaji/prihod";
-
-const methodLabelKeys: Record<string, string> = {
-  CASH: "admin.manage.methodCash",
-  CARD: "admin.manage.methodCard",
-  COMPANY: "admin.manage.methodCompany",
-  MANUAL_ONLINE: "admin.manage.methodOnline",
-};
-
-function formatRsd(n: number): string {
-  return `${Math.round(n).toLocaleString("sr-RS")} RSD`;
-}
 
 export default function IzvestajiPrihod() {
   const { t, i18n } = useTranslation();

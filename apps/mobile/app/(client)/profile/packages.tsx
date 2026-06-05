@@ -6,19 +6,22 @@
  * method chip; COMP entries (Poklon paket) show the "Poklon paket" label
  * with no amount. Method is already softened server-side (COMPANY -> PAID,
  * MANUAL_ONLINE -> ONLINE) so the UI just maps the four allowed values to
- * localized chip copy.
+ * localized chip copy via the shared payment-method-labels module.
  */
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { ScrollView, Text, View } from "react-native";
 import { CapsLabel } from "@/components/ui/studio";
+import { SkeletonList } from "@/components/ui/skeleton";
 import { EmptyState, ErrorState } from "@/components/ui/states";
 import {
   ScreenContainerRaw,
   useTabBarBottomPadding,
 } from "@/components/ui/screen-container";
+import { formatRsd } from "@/lib/format";
 import { getDateLocale } from "@/lib/i18n";
 import { now } from "@/lib/now";
+import { softenedMethodLabelKey } from "@/lib/payment-method-labels";
 import {
   clientPackagesTimelineQueries,
   type ClientPackageTimelineEntry,
@@ -28,26 +31,8 @@ function methodLabel(
   method: ClientPackageTimelineEntry["method"],
   t: (key: string) => string,
 ): string | null {
-  switch (method) {
-    case "CASH":
-      return t("client.clientPackages.methodCash");
-    case "CARD":
-      return t("client.clientPackages.methodCard");
-    case "ONLINE":
-      return t("client.clientPackages.methodOnline");
-    case "PAID":
-      return t("client.clientPackages.paid");
-    case null:
-      return null;
-  }
-}
-
-function formatAmount(amount: number, dateLocale: string): string {
-  return new Intl.NumberFormat(dateLocale, {
-    style: "currency",
-    currency: "RSD",
-    maximumFractionDigits: 0,
-  }).format(amount);
+  const key = softenedMethodLabelKey(method);
+  return key ? t(key) : null;
 }
 
 export default function ClientPackagesTimeline() {
@@ -68,7 +53,28 @@ export default function ClientPackagesTimeline() {
     );
   }
 
-  if (entries.length === 0 && !query.isLoading) {
+  if (query.isLoading) {
+    return (
+      <ScreenContainerRaw
+        title={t("client.clientPackages.title")}
+        headerVariant="detail"
+      >
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={{
+            paddingHorizontal: 20,
+            paddingBottom: bottomPad,
+            gap: 12,
+          }}
+          showsVerticalScrollIndicator={false}
+        >
+          <SkeletonList count={4} />
+        </ScrollView>
+      </ScreenContainerRaw>
+    );
+  }
+
+  if (entries.length === 0) {
     return (
       <ScreenContainerRaw
         title={t("client.clientPackages.title")}
@@ -96,8 +102,12 @@ export default function ClientPackagesTimeline() {
         {entries.map((entry: ClientPackageTimelineEntry) => {
           const purchased = new Date(entry.createdAt);
           const expires = new Date(entry.expiresAt);
-          const isExpired =
-            entry.sessionsRemaining <= 0 || expires < now();
+          // Keep "used up" and "date-expired" distinct — admin shows them as
+          // separate badges, and a client with sessions left but past expiry
+          // is a different story from one who simply spent every session.
+          const usedUp = entry.sessionsRemaining <= 0;
+          const dateExpired = expires < now();
+          const isInactive = usedUp || dateExpired;
           const chip =
             entry.kind === "COMP"
               ? t("client.clientPackages.comp")
@@ -114,15 +124,17 @@ export default function ClientPackagesTimeline() {
             >
               <View className="flex-row items-start justify-between">
                 <View className="flex-1 pr-3 gap-1">
-                  <CapsLabel
-                    size={10}
-                    tracking={1.6}
-                    className={
-                      entry.kind === "COMP" ? "text-accent" : "text-muted"
-                    }
-                  >
-                    {chip ?? ""}
-                  </CapsLabel>
+                  {chip ? (
+                    <CapsLabel
+                      size={10}
+                      tracking={1.6}
+                      className={
+                        entry.kind === "COMP" ? "text-accent" : "text-muted"
+                      }
+                    >
+                      {chip}
+                    </CapsLabel>
+                  ) : null}
                   <Text
                     className="font-body-semibold text-foreground"
                     style={{
@@ -140,7 +152,7 @@ export default function ClientPackagesTimeline() {
                     className="font-body-bold text-foreground"
                     style={{ fontSize: 18, letterSpacing: -0.4 }}
                   >
-                    {formatAmount(entry.amount, dateLocale)}
+                    {formatRsd(entry.amount)}
                   </Text>
                 ) : null}
               </View>
@@ -151,18 +163,20 @@ export default function ClientPackagesTimeline() {
               </Text>
               <Text
                 className={
-                  isExpired
+                  isInactive
                     ? "text-faint text-[12px]"
                     : "text-muted text-[12px]"
                 }
               >
-                {isExpired
-                  ? t("client.clientPackages.expired")
-                  : t("client.clientPackages.expires", {
-                      date: expires.toLocaleDateString(dateLocale),
-                    })}
+                {usedUp
+                  ? t("client.clientPackages.usedUp")
+                  : dateExpired
+                    ? t("client.clientPackages.expired")
+                    : t("client.clientPackages.expires", {
+                        date: expires.toLocaleDateString(dateLocale),
+                      })}
               </Text>
-              {isExpired ? null : (
+              {isInactive ? null : (
                 <Text className="text-muted text-[12px]">
                   {t("client.clientPackages.sessionsRemaining", {
                     count: entry.sessionsRemaining,
