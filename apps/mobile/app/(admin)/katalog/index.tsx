@@ -137,7 +137,7 @@ export default function KatalogLanding() {
           <View className="bg-glass-border" style={{ height: 1 }} />
           <Pressable
             testID="katalog-row-campaigns"
-            onPress={() => router.push("/(admin)/kampanje")}
+            onPress={() => router.push("/(admin)/katalog/kampanje")}
             android_ripple={null}
             className="flex-row items-center justify-between py-4 active:opacity-60"
           >

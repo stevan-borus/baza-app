@@ -35,7 +35,7 @@ export default function CampaignsHistory() {
       rightSlot={
         <Pressable
           testID="campaign-new-button"
-          onPress={() => router.push("/(admin)/kampanje/compose")}
+          onPress={() => router.push("/(admin)/katalog/kampanje/compose")}
           android_ripple={null}
           hitSlop={12}
           className="w-9 h-9 items-center justify-center active:opacity-60"
@@ -67,7 +67,7 @@ export default function CampaignsHistory() {
                 key={c.id}
                 testID={`campaign-row-${c.id}`}
                 onPress={() =>
-                  router.push(`/(admin)/kampanje/${c.id}` as const)
+                  router.push(`/(admin)/katalog/kampanje/${c.id}` as const)
                 }
                 android_ripple={null}
                 className="active:opacity-70"
