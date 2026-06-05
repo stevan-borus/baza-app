@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Pressable, Platform, View, Text } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Icon } from "@/components/ui/icon";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
 import { useTranslation } from "react-i18next";
@@ -43,6 +44,7 @@ export function DateTimePicker({
   const { i18n } = useTranslation();
   const colorScheme = useColorScheme();
   const tokens = useThemeTokens();
+  const insets = useSafeAreaInsets();
 
   const locale = i18n.language === "en" ? "en" : "sr-Latn";
   const dateLocale = getDateLocale();
@@ -144,7 +146,11 @@ export function DateTimePicker({
           cancelTextIOS={i18n.language === "en" ? "Cancel" : "Otkaži"}
           accentColor={ACCENT}
           buttonTextColorIOS={ACCENT}
-          pickerContainerStyleIOS={{ paddingHorizontal: 16 }}
+          // Lift the modal (picker card + cancel button) above the home
+          // indicator — the library doesn't inset for it, so the "Cancel"
+          // button was clipped by the screen edge.
+          modalStyleIOS={{ marginBottom: Math.max(insets.bottom, 8) }}
+          pickerContainerStyleIOS={{ alignItems: "center" }}
         />
       )}
     </>

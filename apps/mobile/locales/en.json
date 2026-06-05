@@ -1160,7 +1160,7 @@
       "confirmSendTitle": "Send this campaign now?", "confirmScheduleTitle": "Schedule this campaign?", "confirmMessage": "It will reach up to {{count}} clients (opted-out clients excluded).", "saveError": "Couldn't save the campaign. Please try again.",
       "axes": { "everyone": "All clients", "packageState": "Package state", "classType": "Class type", "expiringSoon": "Package expiring soon", "lapsed": "Lapsed (no renewal)", "idlePackage": "Paid but not attending" },
       "packageState": { "active": "Active", "expired": "Expired", "none": "No package", "paused": "Paused" },
-      "daysLabel": "Days (N)", "saveDraft": "Save draft", "sendNow": "Send now", "schedule": "Schedule", "scheduledFor": "Send time"
+      "daysLabel": "Days (N)", "saveDraft": "Save draft", "sendNow": "Send now", "schedule": "Schedule", "scheduleFor": "Schedule for {{when}}", "scheduledFor": "Send time"
     },
     "a11y": { "newCampaign": "Create a new campaign", "axisToggle": "Toggle {{axis}} criterion" }
   }

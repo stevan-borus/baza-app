@@ -22,6 +22,8 @@ import { Input } from "@/components/ui/input";
 import { SectionLabel } from "@/components/ui/typography";
 import { DateTimePicker } from "@/components/ui/date-time-picker";
 import { useThemeTokens } from "@/components/ui/tokens";
+import { getDateLocale } from "@/lib/i18n";
+import { useSpinDelay } from "@/lib/use-spin-delay";
 import { campaignsQueries } from "@/lib/queries/campaigns-queries-factory";
 import { trainingsQueries } from "@/lib/queries/trainings-queries-factory";
 
@@ -86,11 +88,25 @@ export function CampaignComposeSheetContent({
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [axes, setAxes] = useState<AxesState>({ everyone: false });
+  // The schedule field is a VALUE: picking a time just records it here; the
+  // action buttons decide what to do with it (no submit on pick).
+  const [scheduledFor, setScheduledFor] = useState<Date | null>(null);
 
   const spec = toSpec(axes);
   const previewQuery = useQuery(campaignsQueries.preview(spec));
   const classTypesQuery = useQuery(trainingsQueries.classTypes());
   const previewCount = previewQuery.data?.count ?? 0;
+  const previewLoading =
+    spec !== null && (previewQuery.isPending || previewQuery.isFetching);
+  // For background refetches (we already have a count to keep showing), delay
+  // the spinner so it doesn't flash. For the FIRST load with no count yet, show
+  // it immediately — otherwise the UI would render a misleading "Reach: 0".
+  const delayedSpinner = useSpinDelay(previewLoading, {
+    delay: 500,
+    minDuration: 300,
+  });
+  const showReachSpinner =
+    previewLoading && (delayedSpinner || previewQuery.data === undefined);
 
   const canSubmit =
     title.trim().length > 0 && body.trim().length > 0 && spec !== null && !busy;
@@ -274,7 +290,7 @@ export function CampaignComposeSheetContent({
             <Text className="text-danger" style={{ fontSize: 15 }}>
               {t("campaigns.compose.previewError")}
             </Text>
-          ) : previewQuery.isPending || previewQuery.isFetching ? (
+          ) : showReachSpinner ? (
             <View className="flex-row items-center gap-2">
               <ActivityIndicator size="small" color={tokens.muted} />
               <Text className="text-muted" style={{ fontSize: 15 }}>
@@ -292,20 +308,18 @@ export function CampaignComposeSheetContent({
         </Text>
       </View>
 
-      {/* Schedule */}
+      {/* Schedule — picking a time only records the value; the action button
+          below turns into "Schedule for {time}". */}
       <View className="gap-2">
         <SectionLabel>{t("campaigns.compose.scheduledFor")}</SectionLabel>
         <DateTimePicker
           testID="campaign-schedule"
           mode="datetime"
-          value={null}
+          value={scheduledFor}
           minimumDate={new Date()}
           placeholder={t("campaigns.compose.schedule")}
-          onChange={(date) => {
-            const p = buildPayload({ scheduledFor: date.toISOString() });
-            if (p) onRequestSend(p, previewCount);
-          }}
-          disabled={!canSubmit}
+          onChange={setScheduledFor}
+          disabled={busy}
         />
       </View>
 
@@ -322,16 +336,31 @@ export function CampaignComposeSheetContent({
         >
           {t("campaigns.compose.saveDraft")}
         </Button>
-        <Button
-          testID="campaign-send-now"
-          disabled={!canSubmit}
-          onPress={() => {
-            const p = buildPayload({ sendNow: true });
-            if (p) onRequestSend(p, previewCount);
-          }}
-        >
-          {t("campaigns.compose.sendNow")}
-        </Button>
+        {scheduledFor ? (
+          <Button
+            testID="campaign-schedule-send"
+            disabled={!canSubmit}
+            onPress={() => {
+              const p = buildPayload({ scheduledFor: scheduledFor.toISOString() });
+              if (p) onRequestSend(p, previewCount);
+            }}
+          >
+            {t("campaigns.compose.scheduleFor", {
+              when: scheduledFor.toLocaleString(getDateLocale()),
+            })}
+          </Button>
+        ) : (
+          <Button
+            testID="campaign-send-now"
+            disabled={!canSubmit}
+            onPress={() => {
+              const p = buildPayload({ sendNow: true });
+              if (p) onRequestSend(p, previewCount);
+            }}
+          >
+            {t("campaigns.compose.sendNow")}
+          </Button>
+        )}
         {errorMessage ? (
           <Text className="text-danger" style={{ fontSize: 13 }}>
             {errorMessage}
