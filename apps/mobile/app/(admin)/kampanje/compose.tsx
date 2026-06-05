@@ -19,7 +19,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { useRouter } from "expo-router";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import type { CampaignAudienceSpec } from "@baza/types";
 import { Icon } from "@/components/ui/icon";
 import { Button } from "@/components/ui/button";
@@ -30,7 +30,10 @@ import {
   useTabBarBottomPadding,
 } from "@/components/ui/screen-container";
 import { useThemeTokens } from "@/components/ui/tokens";
-import { campaignsQueries } from "@/lib/queries/campaigns-queries-factory";
+import {
+  campaignsQueries,
+  useCreateCampaignMutation,
+} from "@/lib/queries/campaigns-queries-factory";
 import { trainingsQueries } from "@/lib/queries/trainings-queries-factory";
 
 type PackageState = "active" | "expired" | "none" | "paused";
@@ -75,7 +78,6 @@ export default function CampaignCompose() {
   const { t } = useTranslation();
   const router = useRouter();
   const tokens = useThemeTokens();
-  const queryClient = useQueryClient();
   const bottomPad = useTabBarBottomPadding(24);
 
   const [title, setTitle] = useState("");
@@ -86,13 +88,9 @@ export default function CampaignCompose() {
   const previewQuery = useQuery(campaignsQueries.preview(spec));
   const classTypesQuery = useQuery(trainingsQueries.classTypes());
 
-  const createMutation = useMutation({
-    ...campaignsQueries.create(),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["campaigns"] });
-      router.back();
-    },
-  });
+  // The factory hook bakes in the ["campaigns"] invalidation; navigation is the
+  // only screen-specific side effect, passed per-call below.
+  const createMutation = useCreateCampaignMutation();
 
   const canSubmit =
     title.trim().length > 0 &&
@@ -102,7 +100,10 @@ export default function CampaignCompose() {
 
   function submit(extra: { sendNow?: boolean; scheduledFor?: string }) {
     if (!canSubmit || spec === null) return;
-    createMutation.mutate({ title, body, audienceSpec: spec, ...extra });
+    createMutation.mutate(
+      { title, body, audienceSpec: spec, ...extra },
+      { onSuccess: () => router.back() },
+    );
   }
 
   // ── Axis togglers — each enforces the schema's exclusivity invariants ──

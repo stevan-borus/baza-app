@@ -1,5 +1,6 @@
 import { createCampaignInputSchema } from "@baza/types";
 import { Prisma, UserRole } from "@/generated/prisma";
+import { now } from "@/lib/now";
 import { requireRole } from "@/lib/server/auth-guards";
 import { dispatchCampaign } from "@/lib/server/campaign-dispatch";
 import { CAMPAIGN_SELECT } from "@/lib/server/campaign-select";
@@ -24,6 +25,12 @@ export async function POST(request: Request) {
   const parsed = createCampaignInputSchema.safeParse(bodyResult.error ? null : bodyResult.data);
   if (!parsed.success) return fail("Invalid payload", 400, parsed.error);
   const { title, body, audienceSpec, scheduledFor, sendNow } = parsed.data;
+  // A past scheduledFor would be picked up by the very next cron tick — a
+  // surprise immediate send that skips the review window. Reject it; the admin
+  // can use sendNow for an intentional immediate dispatch.
+  if (scheduledFor && new Date(scheduledFor) <= now()) {
+    return fail("scheduledFor must be in the future", 400);
+  }
   const status = scheduledFor ? "SCHEDULED" : "DRAFT";
   const created = await prisma.campaign.create({
     data: {
@@ -37,10 +44,8 @@ export async function POST(request: Request) {
     select: CAMPAIGN_SELECT,
   });
   if (!scheduledFor && sendNow) {
-    await dispatchCampaign(created.id);
-    // Re-fetch so the response is the same full shape as every other
-    // single-campaign endpoint (dispatch returns only its mutated fields).
-    const sent = await prisma.campaign.findUniqueOrThrow({ where: { id: created.id }, select: CAMPAIGN_SELECT });
+    // dispatchCampaign returns the full CAMPAIGN_SELECT shape, so no re-fetch.
+    const sent = await dispatchCampaign(created.id);
     return ok({ campaign: sent });
   }
   return ok({ campaign: created });

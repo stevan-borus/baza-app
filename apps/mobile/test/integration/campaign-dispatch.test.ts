@@ -56,4 +56,69 @@ describe("dispatchCampaign", () => {
     const arg = sendCampaignEmailMock.mock.calls[0][0];
     expect(arg.unsubscribeUrl).toContain("/api/unsubscribe?token=");
   });
+
+  it("two concurrent dispatches deliver the campaign only ONCE (atomic claim)", async () => {
+    const { admin, optedIn } = await adminAndClients();
+    const campaign = await prisma.campaign.create({
+      data: { createdByUserId: admin.id, title: "Hi", body: "B", audienceSpec: { everyone: true }, status: "SCHEDULED", scheduledFor: new Date() },
+    });
+
+    // Simulate the manual-send route racing a cron tick: both call dispatch
+    // before either stamps the row done. Only one may win the claim.
+    const results = await Promise.allSettled([
+      dispatchCampaign(campaign.id),
+      dispatchCampaign(campaign.id),
+    ]);
+    // Neither call rejects (the loser no-ops cleanly).
+    expect(results.every((r) => r.status === "fulfilled")).toBe(true);
+
+    const logs = await prisma.notificationLog.findMany({ where: { campaignId: campaign.id } });
+    expect(logs).toHaveLength(1); // opted-in client logged exactly once
+    expect(sendCampaignEmailMock).toHaveBeenCalledTimes(1);
+
+    const updated = await prisma.campaign.findUniqueOrThrow({ where: { id: campaign.id } });
+    expect(updated.status).toBe("SENT");
+    expect(updated.recipientCount).toBe(1);
+    void optedIn;
+  });
+
+  it("a SENT campaign is not re-dispatched", async () => {
+    const { admin } = await adminAndClients();
+    const campaign = await prisma.campaign.create({
+      data: { createdByUserId: admin.id, title: "Hi", body: "B", audienceSpec: { everyone: true }, status: "SENT", sentAt: new Date(), recipientCount: 1 },
+    });
+    await dispatchCampaign(campaign.id);
+    expect(sendCampaignEmailMock).not.toHaveBeenCalled();
+  });
+
+  it("one failing email does not abort delivery to the rest, and still stamps SENT", async () => {
+    const admin = await prisma.user.create({ data: { email: "admin2@test.local", firstName: "A", lastName: "D", role: "ADMIN" } });
+    async function client(email: string) {
+      const user = await prisma.user.create({ data: { email, firstName: "C", lastName: email, role: "CLIENT" } });
+      await prisma.clientProfile.create({ data: { userId: user.id } });
+      await prisma.notificationPreference.create({ data: { userId: user.id, campaignsEnabled: true, inAppEnabled: true, pushEnabled: false } });
+      return user;
+    }
+    await client("one@test.local");
+    await client("two@test.local");
+    await client("three@test.local");
+
+    // First email send throws; the loop must isolate it and continue.
+    sendCampaignEmailMock.mockRejectedValueOnce(new Error("resend boom"));
+
+    const campaign = await prisma.campaign.create({
+      data: { createdByUserId: admin.id, title: "Hi", body: "B", audienceSpec: { everyone: true }, status: "DRAFT" },
+    });
+    await dispatchCampaign(campaign.id);
+
+    // All three still got the in-app notification despite one email failing.
+    const logs = await prisma.notificationLog.findMany({ where: { campaignId: campaign.id } });
+    expect(logs).toHaveLength(3);
+    // Email attempted for all three (one rejected, two succeeded).
+    expect(sendCampaignEmailMock).toHaveBeenCalledTimes(3);
+
+    const updated = await prisma.campaign.findUniqueOrThrow({ where: { id: campaign.id } });
+    expect(updated.status).toBe("SENT");
+    expect(updated.recipientCount).toBe(3);
+  });
 });

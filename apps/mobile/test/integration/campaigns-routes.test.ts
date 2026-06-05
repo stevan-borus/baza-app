@@ -70,6 +70,13 @@ describe("POST + GET /api/campaigns", () => {
     const res = await CREATE(new Request("http://test.local/api/campaigns", { method: "POST", body: JSON.stringify({ title: "T", body: "B", audienceSpec: { everyone: true }, scheduledFor: "2026-08-01T09:00:00.000Z" }) }));
     expect((await res.json()).campaign.status).toBe("SCHEDULED");
   });
+  it("rejects creating a campaign scheduled in the past", async () => {
+    const { admin } = await seedAdminAndClients(); asAdmin(admin);
+    // Anchor is 2026-05-09T10:00:00Z; this is in the past → would fire on the
+    // next cron tick as a surprise send-now, bypassing the review window.
+    const res = await CREATE(new Request("http://test.local/api/campaigns", { method: "POST", body: JSON.stringify({ title: "T", body: "B", audienceSpec: { everyone: true }, scheduledFor: "2026-05-01T09:00:00.000Z" }) }));
+    expect(res.status).toBe(400);
+  });
   it("dispatches immediately and returns SENT when sendNow is true", async () => {
     const { admin } = await seedAdminAndClients(); asAdmin(admin);
     const res = await CREATE(new Request("http://test.local/api/campaigns", { method: "POST", body: JSON.stringify({ title: "T", body: "B", audienceSpec: { everyone: true }, sendNow: true }) }));
@@ -111,6 +118,31 @@ describe("/api/campaigns/[id]", () => {
     const b = await res.json();
     expect(b.campaign.status).toBe("DRAFT");
     expect(b.campaign.scheduledFor).toBeNull();
+  });
+  it("PATCH refuses status=SCHEDULED without a scheduledFor (would never fire)", async () => {
+    const { admin } = await seedAdminAndClients(); asAdmin(admin);
+    // A DRAFT with no scheduledFor. Promoting it to SCHEDULED without supplying
+    // a scheduledFor would leave the cron (scheduledFor <= now) unable to ever
+    // match it — a campaign that silently never sends.
+    const c = await prisma.campaign.create({ data: { createdByUserId: admin.id, title: "T", body: "B", audienceSpec: { everyone: true }, status: "DRAFT" } });
+    const res = await PATCH(new Request(`http://test.local/api/campaigns/${c.id}`, { method: "PATCH", body: JSON.stringify({ status: "SCHEDULED" }) }), { params: { id: c.id } });
+    expect(res.status).toBe(400);
+    const after = await prisma.campaign.findUniqueOrThrow({ where: { id: c.id } });
+    expect(after.status).toBe("DRAFT");
+  });
+  it("PATCH accepts status=SCHEDULED when a future scheduledFor is supplied in the same call", async () => {
+    const { admin } = await seedAdminAndClients(); asAdmin(admin);
+    const c = await prisma.campaign.create({ data: { createdByUserId: admin.id, title: "T", body: "B", audienceSpec: { everyone: true }, status: "DRAFT" } });
+    const res = await PATCH(new Request(`http://test.local/api/campaigns/${c.id}`, { method: "PATCH", body: JSON.stringify({ status: "SCHEDULED", scheduledFor: "2026-08-01T09:00:00.000Z" }) }), { params: { id: c.id } });
+    expect(res.status).toBe(200);
+    expect((await res.json()).campaign.status).toBe("SCHEDULED");
+  });
+  it("PATCH rejects a scheduledFor in the past", async () => {
+    const { admin } = await seedAdminAndClients(); asAdmin(admin);
+    const c = await prisma.campaign.create({ data: { createdByUserId: admin.id, title: "T", body: "B", audienceSpec: { everyone: true }, status: "DRAFT" } });
+    // Anchor is 2026-05-09T10:00:00Z; this instant is in the past.
+    const res = await PATCH(new Request(`http://test.local/api/campaigns/${c.id}`, { method: "PATCH", body: JSON.stringify({ status: "SCHEDULED", scheduledFor: "2026-05-01T09:00:00.000Z" }) }), { params: { id: c.id } });
+    expect(res.status).toBe(400);
   });
   it("PATCH refuses to edit a SENT campaign", async () => {
     const { admin } = await seedAdminAndClients(); asAdmin(admin);

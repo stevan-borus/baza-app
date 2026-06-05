@@ -4,6 +4,7 @@
 import {
   getNotificationMessage,
   NOTIFICATION_MESSAGE_I18N_KEYS,
+  resolveLocale,
   type NotificationLocale,
   type NotificationMessageKey,
 } from "@baza/i18n";
@@ -20,7 +21,7 @@ export async function getPreferredLocale(userId: string): Promise<NotificationLo
     where: { userId },
     select: { preferredLocale: true },
   });
-  return pref?.preferredLocale === "en" ? "en" : "sr";
+  return resolveLocale(pref?.preferredLocale);
 }
 
 /**

@@ -1,7 +1,6 @@
 import { UserRole } from "@/generated/prisma";
 import { requireRole } from "@/lib/server/auth-guards";
 import { dispatchCampaign } from "@/lib/server/campaign-dispatch";
-import { CAMPAIGN_SELECT } from "@/lib/server/campaign-select";
 import { fail, ok, paramFromCtxOrUrl } from "@/lib/server/http";
 import { prisma } from "@/lib/server/prisma";
 
@@ -15,9 +14,11 @@ export async function POST(request: Request, ctx?: Ctx) {
   if (!id) return fail("Missing id", 400);
   const existing = await prisma.campaign.findUnique({ where: { id }, select: { status: true } });
   if (!existing) return fail("Not found", 404);
-  if (existing.status === "SENT") return fail("Already sent", 409);
-  await dispatchCampaign(id);
-  // Re-fetch the full shape so this matches every other single-campaign response.
-  const sent = await prisma.campaign.findUniqueOrThrow({ where: { id }, select: CAMPAIGN_SELECT });
+  if (existing.status === "SENT" || existing.status === "SENDING") {
+    return fail("Already sent", 409);
+  }
+  // dispatchCampaign claims the row atomically and returns the full
+  // CAMPAIGN_SELECT shape — no re-fetch needed.
+  const sent = await dispatchCampaign(id);
   return ok({ campaign: sent });
 }

@@ -1,4 +1,9 @@
-import { mutationOptions, queryOptions } from "@tanstack/react-query";
+import {
+  mutationOptions,
+  queryOptions,
+  useMutation,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { z } from "zod";
 import type { CampaignAudienceSpec } from "@baza/types";
 import { apiFetch } from "@/lib/api";
@@ -143,3 +148,41 @@ export const campaignsQueries = {
       },
     }),
 };
+
+// ── Mutation hooks ──────────────────────────────────────────────────────────
+// Per the project convention (see other *-queries-factory files), mutations are
+// consumed as hooks with the standard invalidation baked into onSuccess — so a
+// component never has to remember to refresh the list/detail after a write. Any
+// component-specific side effect (e.g. router.back()) is passed per-call via
+// `mutate(vars, { onSuccess })`, which runs in addition to the baked-in one.
+
+/** Invalidate everything keyed under ["campaigns"] — list, detail, and preview. */
+function useInvalidateCampaigns() {
+  const queryClient = useQueryClient();
+  return () => queryClient.invalidateQueries({ queryKey: ["campaigns"] });
+}
+
+export function useCreateCampaignMutation() {
+  const invalidate = useInvalidateCampaigns();
+  return useMutation({ ...campaignsQueries.create(), onSuccess: invalidate });
+}
+
+export function useUpdateCampaignMutation() {
+  const invalidate = useInvalidateCampaigns();
+  return useMutation({ ...campaignsQueries.update(), onSuccess: invalidate });
+}
+
+export function useCancelCampaignMutation() {
+  const invalidate = useInvalidateCampaigns();
+  return useMutation({ ...campaignsQueries.cancel(), onSuccess: invalidate });
+}
+
+export function useRemoveCampaignMutation() {
+  const invalidate = useInvalidateCampaigns();
+  return useMutation({ ...campaignsQueries.remove(), onSuccess: invalidate });
+}
+
+export function useSendCampaignMutation() {
+  const invalidate = useInvalidateCampaigns();
+  return useMutation({ ...campaignsQueries.send(), onSuccess: invalidate });
+}
