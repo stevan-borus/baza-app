@@ -218,7 +218,7 @@ export default function CampaignDetail() {
 
       {/* Edit — the compose sheet pre-filled; saving PATCHes the campaign and
           keeps its current status (re-schedules only if a time is re-picked). */}
-      <AppSheet open={editOpen} onOpenChange={setEditOpen}>
+      <AppSheet open={editOpen} onOpenChange={setEditOpen} stackBehavior="push">
         {campaign ? (
           <CampaignComposeSheetContent
             mode="edit"

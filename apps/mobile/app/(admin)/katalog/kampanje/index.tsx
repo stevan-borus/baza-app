@@ -21,6 +21,7 @@ import { GlassCard } from "@/components/ui/glass-card";
 import { SkeletonList } from "@/components/ui/skeleton";
 import { EmptyState, ErrorState } from "@/components/ui/states";
 import { useThemeTokens } from "@/components/ui/tokens";
+import type { CampaignAudienceSpec } from "@baza/types";
 import {
   campaignsQueries,
   useCreateCampaignMutation,
@@ -29,6 +30,7 @@ import {
   CampaignComposeSheetContent,
   type ComposePayload,
 } from "@/components/admin/campaign-compose-sheet-content";
+import { CampaignClientListSheet } from "@/components/admin/campaign-client-list-sheet";
 
 export default function CampaignsHistory() {
   const { t } = useTranslation();
@@ -43,6 +45,15 @@ export default function CampaignsHistory() {
   // does not. Holds the payload + the resolved reach for the confirm copy.
   const [pendingSend, setPendingSend] = useState<{ payload: ComposePayload; reach: number } | null>(null);
   const createMutation = useCreateCampaignMutation();
+
+  // "View clients" — a sibling sheet that STACKS over the compose sheet (the
+  // compose sheet stays mounted underneath). `viewSpec` holds the spec to list;
+  // null = closed.
+  const [viewSpec, setViewSpec] = useState<CampaignAudienceSpec | null>(null);
+  const clientsQuery = useQuery({
+    ...campaignsQueries.audienceClients(viewSpec),
+    enabled: viewSpec !== null,
+  });
 
   function reset() {
     createMutation.reset();
@@ -133,8 +144,9 @@ export default function CampaignsHistory() {
         )}
       </ScrollView>
 
-      {/* Compose — bottom sheet (the app's "add" pattern). */}
-      <AppSheet open={composeOpen} onOpenChange={setComposeOpen}>
+      {/* Compose — bottom sheet (the app's "add" pattern). `push` so it stays
+          visible underneath when the client-list sheet stacks over it. */}
+      <AppSheet open={composeOpen} onOpenChange={setComposeOpen} stackBehavior="push">
         <CampaignComposeSheetContent
           busy={createMutation.isPending}
           errorMessage={
@@ -144,8 +156,22 @@ export default function CampaignsHistory() {
           }
           onSaveDraft={submit}
           onRequestSend={(payload, reach) => setPendingSend({ payload, reach })}
+          onViewClients={setViewSpec}
         />
       </AppSheet>
+
+      {/* Audience clients — STACKS over the compose sheet (sibling, not nested,
+          so the compose sheet stays mounted underneath and there's no flicker). */}
+      <CampaignClientListSheet
+        open={viewSpec !== null}
+        onOpenChange={(open) => {
+          if (!open) setViewSpec(null);
+        }}
+        title={t("campaigns.clients.audienceTitle")}
+        clients={clientsQuery.data?.clients}
+        isLoading={clientsQuery.isLoading}
+        isError={clientsQuery.isError}
+      />
 
       {/* Confirm before messaging the whole audience. */}
       <ConfirmSheet

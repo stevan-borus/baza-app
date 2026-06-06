@@ -325,7 +325,11 @@ export function SessionEditSheet(props: SessionEditSheetBoundProps) {
 
   return (
     <>
-      <AppSheet open={!!showEdit} onOpenChange={() => setShowEdit(null)}>
+      <AppSheet
+        open={!!showEdit}
+        onOpenChange={() => setShowEdit(null)}
+        stackBehavior="push"
+      >
         <View className="flex-col gap-5 pb-5">
           <Text
             className="text-foreground font-body-bold"
@@ -733,6 +737,7 @@ export function SessionEditSheet(props: SessionEditSheetBoundProps) {
       </AppSheet>
       <ConfirmSheet
         testID="series-delete-confirm-button"
+        stackBehavior="push"
         open={confirmDeleteSeries}
         onOpenChange={setConfirmDeleteSeries}
         title={t("confirm.deleteSeriesTitle")}
@@ -756,6 +761,7 @@ export function SessionEditSheet(props: SessionEditSheetBoundProps) {
       />
       <ConfirmSheet
         testID="session-cancel-confirm-button"
+        stackBehavior="push"
         open={confirmCancelSession}
         onOpenChange={setConfirmCancelSession}
         title={t("confirm.cancelSessionTitle")}

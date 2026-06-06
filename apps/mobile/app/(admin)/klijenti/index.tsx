@@ -635,7 +635,11 @@ export default function AdminClients() {
         </AppSheet>
 
         {/* Edit Client Sheet */}
-        <AppSheet open={!!showEditClient} onOpenChange={() => setShowEditClient(null)}>
+        <AppSheet
+          open={!!showEditClient}
+          onOpenChange={() => setShowEditClient(null)}
+          stackBehavior="push"
+        >
           <View className="flex-col gap-4">
             <SheetHeader
               title={t("admin.clients.sheetEdit")}
@@ -706,6 +710,7 @@ export default function AdminClients() {
         <AppSheet
           open={!!showActionsFor}
           onOpenChange={(o) => !o && setShowActionsFor(null)}
+          stackBehavior="push"
         >
           {(() => {
             const client = clients.find((c) => c.id === showActionsFor);
@@ -798,6 +803,7 @@ export default function AdminClients() {
         <AppSheet
           open={!!showDeleteFor}
           onOpenChange={(o) => !o && setShowDeleteFor(null)}
+          stackBehavior="push"
         >
           {(() => {
             const client = clients.find((c) => c.id === showDeleteFor);
@@ -922,6 +928,7 @@ export default function AdminClients() {
           // page set — opening with a `null` render-prop result leaves the
           // bottom-sheet's dynamic sizing stuck at ~0 (the "peeking strip"
           // bug seen when arriving via deep-link before clients had loaded).
+          stackBehavior="push"
           open={
             !!showAssignPackage &&
             !!clients.find((c) => c.id === showAssignPackage)
@@ -966,7 +973,11 @@ export default function AdminClients() {
         </AppSheet>
 
         {/* Pause Package Sheet */}
-        <AppSheet open={!!showPause} onOpenChange={() => setShowPause(null)}>
+        <AppSheet
+          open={!!showPause}
+          onOpenChange={() => setShowPause(null)}
+          stackBehavior="push"
+        >
           <View className="flex-col gap-4">
             <SheetHeader
               title={t("admin.clients.sheetPause")}

@@ -25,7 +25,6 @@ import { useThemeTokens } from "@/components/ui/tokens";
 import { getDateLocale } from "@/lib/i18n";
 import { useSpinDelay } from "@/lib/use-spin-delay";
 import { campaignsQueries } from "@/lib/queries/campaigns-queries-factory";
-import { CampaignClientListSheet } from "@/components/admin/campaign-client-list-sheet";
 import { trainingsQueries } from "@/lib/queries/trainings-queries-factory";
 
 type PackageState = "active" | "expired" | "none" | "paused";
@@ -100,6 +99,7 @@ export function CampaignComposeSheetContent({
   onSaveDraft,
   onRequestSend,
   onSaveEdit,
+  onViewClients,
 }: {
   /** "create" shows Save-draft + Send/Schedule; "edit" shows a single Save. */
   mode?: "create" | "edit";
@@ -114,6 +114,10 @@ export function CampaignComposeSheetContent({
   onRequestSend: (payload: ComposePayload, reach: number) => void;
   /** Save edits to an existing campaign (edit mode). */
   onSaveEdit?: (payload: ComposePayload) => void;
+  /** Open the audience-clients sheet for the current spec. The PARENT owns that
+   *  sheet (mounted as a sibling of the compose sheet) so the two stack cleanly
+   *  instead of nesting — a nested BottomSheetModal wedges + flickers. */
+  onViewClients?: (spec: CampaignAudienceSpec) => void;
 }) {
   const { t } = useTranslation();
   const tokens = useThemeTokens();
@@ -131,14 +135,6 @@ export function CampaignComposeSheetContent({
   const previewQuery = useQuery(campaignsQueries.preview(spec));
   const classTypesQuery = useQuery(trainingsQueries.classTypes());
   const previewCount = previewQuery.data?.count ?? 0;
-
-  // "View clients" — fetch the projected audience members on demand (only once
-  // the sheet is opened, to avoid a list query on every keystroke).
-  const [clientsOpen, setClientsOpen] = useState(false);
-  const clientsQuery = useQuery({
-    ...campaignsQueries.audienceClients(spec),
-    enabled: clientsOpen && spec !== null,
-  });
   const previewLoading =
     spec !== null && (previewQuery.isPending || previewQuery.isFetching);
   // For background refetches (we already have a count to keep showing), delay
@@ -191,7 +187,6 @@ export function CampaignComposeSheetContent({
   }
 
   return (
-    <>
     <View className="flex-col gap-5">
       <Text
         className="text-foreground font-body-bold"
@@ -352,10 +347,10 @@ export function CampaignComposeSheetContent({
         <Text className="text-muted" style={{ fontSize: 12 }}>
           {t("campaigns.compose.reachNote")}
         </Text>
-        {spec !== null && previewQuery.data && previewCount > 0 ? (
+        {spec !== null && previewQuery.data && previewCount > 0 && onViewClients ? (
           <Pressable
             testID="campaign-view-clients"
-            onPress={() => setClientsOpen(true)}
+            onPress={() => onViewClients(spec)}
             android_ripple={null}
             className="active:opacity-60 self-start pt-1"
             accessibilityRole="button"
@@ -444,16 +439,6 @@ export function CampaignComposeSheetContent({
         ) : null}
       </View>
     </View>
-
-    <CampaignClientListSheet
-      open={clientsOpen}
-      onOpenChange={setClientsOpen}
-      title={t("campaigns.clients.audienceTitle")}
-      clients={clientsQuery.data?.clients}
-      isLoading={clientsQuery.isLoading}
-      isError={clientsQuery.isError}
-    />
-    </>
   );
 }
 

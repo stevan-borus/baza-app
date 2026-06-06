@@ -36,7 +36,13 @@ export function CampaignClientListSheet({
   const { t } = useTranslation();
 
   return (
-    <AppSheet open={open} onOpenChange={onOpenChange} rawContent snapPoints={["80%"]}>
+    <AppSheet
+      open={open}
+      onOpenChange={onOpenChange}
+      rawContent
+      snapPoints={["80%"]}
+      stackBehavior="push"
+    >
       <View style={{ flex: 1 }}>
         {/* Pinned header above the flexed list. */}
         <View style={{ paddingHorizontal: 24, paddingTop: 8, paddingBottom: 12 }}>

@@ -19,6 +19,10 @@ type ConfirmSheetProps = {
   errorMessage?: string | null;
   /** Optional testID forwarded to the confirm Button. */
   testID?: string;
+  /** Forwarded to the inner AppSheet — pass "push" when this confirm opens
+   *  OVER another sheet (e.g. a delete-confirm inside an edit sheet) so the
+   *  sheet underneath stays visible instead of flickering. */
+  stackBehavior?: "push" | "switch" | "replace";
   onConfirm: () => void;
 };
 
@@ -39,12 +43,13 @@ export function ConfirmSheet({
   loading = false,
   errorMessage,
   testID,
+  stackBehavior,
   onConfirm,
 }: ConfirmSheetProps) {
   const { t } = useTranslation();
 
   return (
-    <AppSheet open={open} onOpenChange={onOpenChange}>
+    <AppSheet open={open} onOpenChange={onOpenChange} stackBehavior={stackBehavior}>
       <View className="flex-col gap-4">
         <Text
           className="text-foreground font-display"

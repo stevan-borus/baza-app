@@ -39,6 +39,14 @@ type AppSheetProps = {
    * broken. Default: dynamic sizing.
    */
   snapPoints?: readonly (string | number)[];
+  /**
+   * How this sheet behaves when ANOTHER sheet opens over it (gorhom default is
+   * `switch` — the one below is hidden, so opening then closing the top sheet
+   * makes the bottom one flicker closed→open). Pass `push` for true stacking:
+   * a sheet opened over this one mounts on top and this one stays visible
+   * underneath. Default: gorhom's `switch`.
+   */
+  stackBehavior?: "push" | "switch" | "replace";
 };
 
 /**
@@ -62,6 +70,7 @@ export function AppSheet({
   children,
   rawContent = false,
   snapPoints,
+  stackBehavior,
 }: AppSheetProps) {
   const ref = useRef<BottomSheetModal>(null);
   const tokens = useThemeTokens();
@@ -139,6 +148,7 @@ export function AppSheet({
       enableDynamicSizing={!snapPoints}
       maxDynamicContentSize={maxHeight}
       snapPoints={snapPoints as (string | number)[] | undefined}
+      stackBehavior={stackBehavior}
       enablePanDownToClose
       keyboardBehavior="interactive"
       keyboardBlurBehavior="restore"
