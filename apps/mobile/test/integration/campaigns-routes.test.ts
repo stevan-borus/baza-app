@@ -19,9 +19,11 @@ vi.mock("@/lib/server/auth-guards", async () => {
 vi.mock("@/lib/server/resend", () => ({ sendCampaignEmail: vi.fn(async () => undefined) }));
 
 import { POST as PREVIEW } from "@/app/api/campaigns/preview/+api";
+import { POST as PREVIEW_CLIENTS } from "@/app/api/campaigns/preview/clients/+api";
 import { GET as LIST, POST as CREATE } from "@/app/api/campaigns/+api";
 import { GET as GET_ONE, PATCH, DELETE } from "@/app/api/campaigns/[id]/+api";
 import { POST as SEND } from "@/app/api/campaigns/[id]/send/+api";
+import { GET as RECIPIENTS } from "@/app/api/campaigns/[id]/recipients/+api";
 import { prisma } from "@/lib/server/prisma";
 
 async function seedAdminAndClients() {
@@ -53,6 +55,71 @@ describe("POST /api/campaigns/preview", () => {
     asClient();
     const res = await PREVIEW(new Request("http://test.local/api/campaigns/preview", { method: "POST", body: JSON.stringify({ everyone: true }) }));
     expect(res.status).toBe(403);
+  });
+});
+
+describe("POST /api/campaigns/preview/clients", () => {
+  beforeEach(async () => { await resetDb(); });
+
+  it("returns the matching clients with name/email + opted-out flag", async () => {
+    const admin = await prisma.user.create({ data: { email: "admin@test.local", firstName: "A", lastName: "D", role: "ADMIN" } });
+    const inUser = await prisma.user.create({ data: { email: "in@test.local", firstName: "Ana", lastName: "Aaa", role: "CLIENT" } });
+    await prisma.clientProfile.create({ data: { userId: inUser.id } });
+    await prisma.notificationPreference.create({ data: { userId: inUser.id, campaignsEnabled: true } });
+    const outUser = await prisma.user.create({ data: { email: "out@test.local", firstName: "Bo", lastName: "Bbb", role: "CLIENT" } });
+    await prisma.clientProfile.create({ data: { userId: outUser.id } });
+    await prisma.notificationPreference.create({ data: { userId: outUser.id, campaignsEnabled: false } });
+
+    asAdmin(admin);
+    const res = await PREVIEW_CLIENTS(new Request("http://test.local/api/campaigns/preview/clients", { method: "POST", body: JSON.stringify({ everyone: true }) }));
+    expect(res.status).toBe(200);
+    const { clients } = await res.json();
+    expect(clients).toHaveLength(2); // reach counts opted-out clients too
+    const out = clients.find((c: { email: string }) => c.email === "out@test.local");
+    expect(out.fullName).toBe("Bo Bbb");
+    expect(out.campaignsEnabled).toBe(false);
+    const inc = clients.find((c: { email: string }) => c.email === "in@test.local");
+    expect(inc.campaignsEnabled).toBe(true);
+  });
+
+  it("403s for a non-admin", async () => {
+    asClient();
+    const res = await PREVIEW_CLIENTS(new Request("http://test.local/api/campaigns/preview/clients", { method: "POST", body: JSON.stringify({ everyone: true }) }));
+    expect(res.status).toBe(403);
+  });
+});
+
+describe("GET /api/campaigns/[id]/recipients", () => {
+  beforeEach(async () => { await resetDb(); });
+
+  it("projects the saved spec for a DRAFT (actual=false)", async () => {
+    const { admin } = await seedAdminAndClients(); asAdmin(admin);
+    const c = await prisma.campaign.create({ data: { createdByUserId: admin.id, title: "T", body: "B", audienceSpec: { everyone: true }, status: "DRAFT" } });
+    const res = await RECIPIENTS(new Request(`http://test.local/api/campaigns/${c.id}/recipients`), { params: { id: c.id } });
+    const body = await res.json();
+    expect(body.actual).toBe(false);
+    expect(body.clients).toHaveLength(2);
+  });
+
+  it("returns the ACTUAL recipients for a SENT campaign from the notification log", async () => {
+    const { admin } = await seedAdminAndClients(); asAdmin(admin);
+    const c = await prisma.campaign.create({ data: { createdByUserId: admin.id, title: "T", body: "B", audienceSpec: { everyone: true }, status: "SENT", sentAt: new Date(), recipientCount: 1 } });
+    // Only ONE of the two clients actually got a log row (e.g. the other opted
+    // out at dispatch). The recipients list must reflect the log, not the spec.
+    const onlyOne = await prisma.user.findFirstOrThrow({ where: { role: "CLIENT" }, select: { id: true } });
+    await prisma.notificationLog.create({ data: { userId: onlyOne.id, type: "CAMPAIGN", title: "T", body: "B", campaignId: c.id } });
+
+    const res = await RECIPIENTS(new Request(`http://test.local/api/campaigns/${c.id}/recipients`), { params: { id: c.id } });
+    const body = await res.json();
+    expect(body.actual).toBe(true);
+    expect(body.clients).toHaveLength(1);
+    expect(body.clients[0].id).toBe(onlyOne.id);
+  });
+
+  it("404s for a missing campaign", async () => {
+    const { admin } = await seedAdminAndClients(); asAdmin(admin);
+    const res = await RECIPIENTS(new Request("http://test.local/api/campaigns/00000000-0000-0000-0000-000000000000/recipients"), { params: { id: "00000000-0000-0000-0000-000000000000" } });
+    expect(res.status).toBe(404);
   });
 });
 

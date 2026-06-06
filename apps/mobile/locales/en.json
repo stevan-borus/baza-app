@@ -1142,8 +1142,21 @@
     "error": "Unable to load campaigns.",
     "status": { "DRAFT": "Draft", "SCHEDULED": "Scheduled", "SENDING": "Sending…", "SENT": "Sent" },
     "recipients": "{{count}} recipients",
+    "clients": {
+      "viewProjected": "View clients ({{count}})",
+      "viewRecipients": "View recipients ({{count}})",
+      "viewAudience": "View audience",
+      "audienceTitle": "Audience",
+      "recipientsTitle": "Recipients",
+      "optedOut": "opted out",
+      "empty": "No clients match this audience yet.",
+      "error": "Unable to load clients."
+    },
     "detail": {
       "title": "Campaign",
+      "edit": "Edit",
+      "editTitle": "Edit campaign",
+      "saveEdit": "Save changes",
       "cancelSchedule": "Cancel schedule (back to draft)",
       "delete": "Delete campaign",
       "confirmSendMessage": "This will message the campaign's audience now.",
@@ -1160,7 +1173,7 @@
       "confirmSendTitle": "Send this campaign now?", "confirmScheduleTitle": "Schedule this campaign?", "confirmMessage": "It will reach up to {{count}} clients (opted-out clients excluded).", "saveError": "Couldn't save the campaign. Please try again.",
       "axes": { "everyone": "All clients", "packageState": "Package state", "classType": "Class type", "expiringSoon": "Package expiring soon", "lapsed": "Lapsed (no renewal)", "idlePackage": "Paid but not attending" },
       "packageState": { "active": "Active", "expired": "Expired", "none": "No package", "paused": "Paused" },
-      "daysLabel": "Days (N)", "saveDraft": "Save draft", "sendNow": "Send now", "schedule": "Schedule", "scheduleFor": "Schedule for {{when}}", "scheduledFor": "Send time"
+      "daysLabel": "Days", "saveDraft": "Save draft", "sendNow": "Send now", "schedule": "Schedule", "scheduleFor": "Schedule for {{when}}", "scheduledFor": "Send time"
     },
     "a11y": { "newCampaign": "Create a new campaign", "axisToggle": "Toggle {{axis}} criterion" }
   }

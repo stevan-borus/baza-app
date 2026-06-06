@@ -28,6 +28,19 @@ const listSchema = z.object({ campaigns: z.array(campaignSchema) });
 const oneSchema = z.object({ campaign: campaignSchema });
 const previewSchema = z.object({ count: z.number() });
 
+const audienceClientSchema = z.object({
+  id: z.string(),
+  fullName: z.string(),
+  email: z.string(),
+  campaignsEnabled: z.boolean(),
+});
+export type AudienceClient = z.infer<typeof audienceClientSchema>;
+const audienceClientsSchema = z.object({ clients: z.array(audienceClientSchema) });
+const recipientsSchema = z.object({
+  actual: z.boolean(),
+  clients: z.array(audienceClientSchema),
+});
+
 export const campaignsQueries = {
   list: () =>
     queryOptions({
@@ -65,6 +78,37 @@ export const campaignsQueries = {
         });
         if (!res.ok) throw new Error(`Unable to preview audience (${res.status})`);
         return previewSchema.parse(await res.json());
+      },
+      staleTime: 10_000,
+    }),
+
+  /** The PROJECTED audience for a spec, as people (the "view clients" sheet). */
+  audienceClients: (spec: CampaignAudienceSpec | null) =>
+    queryOptions({
+      queryKey: ["campaigns", "audience-clients", JSON.stringify(spec ?? {})] as const,
+      enabled: spec !== null,
+      queryFn: async () => {
+        const res = await apiFetch(`${base}/preview/clients`, {
+          method: "POST",
+          credentials: "include",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(spec),
+        });
+        if (!res.ok) throw new Error(`Unable to load audience (${res.status})`);
+        return audienceClientsSchema.parse(await res.json());
+      },
+      staleTime: 10_000,
+    }),
+
+  /** A campaign's recipients: actual (SENT) or projected (not yet sent). */
+  recipients: (id: string, enabled = true) =>
+    queryOptions({
+      queryKey: ["campaigns", "recipients", id] as const,
+      enabled,
+      queryFn: async () => {
+        const res = await apiFetch(`${base}/${id}/recipients`, { credentials: "include" });
+        if (!res.ok) throw new Error(`Unable to load recipients (${res.status})`);
+        return recipientsSchema.parse(await res.json());
       },
       staleTime: 10_000,
     }),

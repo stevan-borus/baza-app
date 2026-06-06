@@ -14,11 +14,13 @@
  */
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ScrollView, Text, View } from "react-native";
+import { Pressable, ScrollView, Text, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
+import type { CampaignAudienceSpec } from "@baza/types";
 import { Button } from "@/components/ui/button";
 import { ConfirmSheet } from "@/components/ui/confirm-sheet";
+import { AppSheet } from "@/components/ui/sheet";
 import { GlassCard } from "@/components/ui/glass-card";
 import {
   ScreenContainerRaw,
@@ -32,7 +34,13 @@ import {
   useCancelCampaignMutation,
   useRemoveCampaignMutation,
   useSendCampaignMutation,
+  useUpdateCampaignMutation,
 } from "@/lib/queries/campaigns-queries-factory";
+import {
+  CampaignComposeSheetContent,
+  type ComposePayload,
+} from "@/components/admin/campaign-compose-sheet-content";
+import { CampaignClientListSheet } from "@/components/admin/campaign-client-list-sheet";
 
 type Action = "send" | "cancel" | "delete";
 
@@ -49,8 +57,29 @@ export default function CampaignDetail() {
   const sendMutation = useSendCampaignMutation();
   const cancelMutation = useCancelCampaignMutation();
   const removeMutation = useRemoveCampaignMutation();
+  const updateMutation = useUpdateCampaignMutation();
 
   const [pending, setPending] = useState<Action | null>(null);
+  const [editOpen, setEditOpen] = useState(false);
+  // Recipients/audience sheet — fetched on demand (only once opened).
+  const [clientsOpen, setClientsOpen] = useState(false);
+  const recipientsQuery = useQuery(campaignsQueries.recipients(id, clientsOpen));
+
+  function saveEdit(payload: ComposePayload) {
+    if (!campaign) return;
+    updateMutation.mutate(
+      {
+        id: campaign.id,
+        title: payload.title,
+        body: payload.body,
+        audienceSpec: payload.audienceSpec,
+        // Keep the campaign's current status; only re-schedule if a time was
+        // (re)picked in the form.
+        ...(payload.scheduledFor ? { scheduledFor: payload.scheduledFor } : {}),
+      },
+      { onSuccess: () => setEditOpen(false) },
+    );
+  }
 
   const activeMutation =
     pending === "send"
@@ -101,11 +130,34 @@ export default function CampaignDetail() {
               <Text className="text-muted" style={{ fontSize: 14, lineHeight: 21 }}>
                 {campaign.body}
               </Text>
+              <Pressable
+                testID="campaign-detail-view-clients"
+                onPress={() => setClientsOpen(true)}
+                android_ripple={null}
+                className="active:opacity-60 self-start pt-1"
+                accessibilityRole="button"
+              >
+                <Text className="text-accent font-body-medium" style={{ fontSize: 13 }}>
+                  {campaign.status === "SENT"
+                    ? t("campaigns.clients.viewRecipients", { count: campaign.recipientCount })
+                    : t("campaigns.clients.viewAudience")}
+                </Text>
+              </Pressable>
             </GlassCard>
 
             {/* Actions valid for the current status. SENDING/SENT are read-only. */}
             {campaign.status === "DRAFT" || campaign.status === "SCHEDULED" ? (
               <View className="gap-3">
+                <Button
+                  testID="campaign-detail-edit"
+                  variant="secondary"
+                  onPress={() => {
+                    updateMutation.reset();
+                    setEditOpen(true);
+                  }}
+                >
+                  {t("campaigns.detail.edit")}
+                </Button>
                 <Button testID="campaign-detail-send" onPress={() => setPending("send")}>
                   {t("campaigns.compose.sendNow")}
                 </Button>
@@ -162,6 +214,41 @@ export default function CampaignDetail() {
         }
         testID="campaign-detail-confirm"
         onConfirm={confirm}
+      />
+
+      {/* Edit — the compose sheet pre-filled; saving PATCHes the campaign and
+          keeps its current status (re-schedules only if a time is re-picked). */}
+      <AppSheet open={editOpen} onOpenChange={setEditOpen}>
+        {campaign ? (
+          <CampaignComposeSheetContent
+            mode="edit"
+            initial={{
+              title: campaign.title,
+              body: campaign.body,
+              audienceSpec: campaign.audienceSpec as CampaignAudienceSpec,
+              scheduledFor: campaign.scheduledFor ?? null,
+            }}
+            busy={updateMutation.isPending}
+            errorMessage={updateMutation.isError ? t("campaigns.detail.actionError") : null}
+            onSaveDraft={() => {}}
+            onRequestSend={() => {}}
+            onSaveEdit={saveEdit}
+          />
+        ) : null}
+      </AppSheet>
+
+      {/* Recipients (SENT) or projected audience (not yet sent). */}
+      <CampaignClientListSheet
+        open={clientsOpen}
+        onOpenChange={setClientsOpen}
+        title={
+          campaign?.status === "SENT"
+            ? t("campaigns.clients.recipientsTitle")
+            : t("campaigns.clients.audienceTitle")
+        }
+        clients={recipientsQuery.data?.clients}
+        isLoading={recipientsQuery.isLoading}
+        isError={recipientsQuery.isError}
       />
     </ScreenContainerRaw>
   );

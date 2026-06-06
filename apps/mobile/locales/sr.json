@@ -1146,8 +1146,21 @@
     "empty": "Još nema kampanja.",
     "error": "Nije moguće učitati kampanje.",
     "status": { "DRAFT": "Nacrt", "SCHEDULED": "Zakazano", "SENDING": "Šalje se…", "SENT": "Poslato" },
+    "clients": {
+      "viewProjected": "Pogledaj klijente ({{count}})",
+      "viewRecipients": "Pogledaj primaoce ({{count}})",
+      "viewAudience": "Pogledaj publiku",
+      "audienceTitle": "Publika",
+      "recipientsTitle": "Primaoci",
+      "optedOut": "odjavljen",
+      "empty": "Nijedan klijent ne odgovara ovoj publici.",
+      "error": "Nije moguće učitati klijente."
+    },
     "detail": {
       "title": "Kampanja",
+      "edit": "Izmeni",
+      "editTitle": "Izmeni kampanju",
+      "saveEdit": "Sačuvaj izmene",
       "cancelSchedule": "Otkaži zakazivanje (nazad u nacrt)",
       "delete": "Obriši kampanju",
       "confirmSendMessage": "Ovo će odmah poslati poruku publici kampanje.",
@@ -1165,7 +1178,7 @@
       "confirmSendTitle": "Poslati kampanju odmah?", "confirmScheduleTitle": "Zakazati kampanju?", "confirmMessage": "Stići će do {{count}} klijenata (bez onih koji su se odjavili).", "saveError": "Nije moguće sačuvati kampanju. Pokušaj ponovo.",
       "axes": { "everyone": "Svi klijenti", "packageState": "Status paketa", "classType": "Tip treninga", "expiringSoon": "Paket uskoro ističe", "lapsed": "Neaktivni (bez obnove)", "idlePackage": "Kupili, ne dolaze" },
       "packageState": { "active": "Aktivan", "expired": "Istekao", "none": "Bez paketa", "paused": "Pauziran" },
-      "daysLabel": "Broj dana (N)", "saveDraft": "Sačuvaj nacrt", "sendNow": "Pošalji odmah", "schedule": "Zakaži", "scheduleFor": "Zakaži za {{when}}", "scheduledFor": "Vreme slanja"
+      "daysLabel": "Broj dana", "saveDraft": "Sačuvaj nacrt", "sendNow": "Pošalji odmah", "schedule": "Zakaži", "scheduleFor": "Zakaži za {{when}}", "scheduledFor": "Vreme slanja"
     },
     "a11y": { "newCampaign": "Kreiraj novu kampanju", "axisToggle": "Uključi kriterijum {{axis}}" }
   }

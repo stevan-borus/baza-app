@@ -25,6 +25,7 @@ import { useThemeTokens } from "@/components/ui/tokens";
 import { getDateLocale } from "@/lib/i18n";
 import { useSpinDelay } from "@/lib/use-spin-delay";
 import { campaignsQueries } from "@/lib/queries/campaigns-queries-factory";
+import { CampaignClientListSheet } from "@/components/admin/campaign-client-list-sheet";
 import { trainingsQueries } from "@/lib/queries/trainings-queries-factory";
 
 type PackageState = "active" | "expired" | "none" | "paused";
@@ -54,6 +55,21 @@ function toSpec(axes: AxesState): CampaignAudienceSpec | null {
   return Object.keys(spec).length > 0 ? spec : null;
 }
 
+/** Reverse of toSpec — rebuild the UI axis state from a stored audienceSpec
+ *  (used to pre-fill the form when editing an existing campaign). */
+function specToAxes(spec: CampaignAudienceSpec | undefined | null): AxesState {
+  if (!spec) return { everyone: false };
+  if (spec.everyone) return { everyone: true };
+  return {
+    everyone: false,
+    packageState: spec.packageState,
+    classTypeId: spec.classTypeId,
+    expiringSoonDays: spec.expiringSoonDays,
+    lapsedDays: spec.lapsedDays,
+    idlePackageDays: spec.idlePackageDays,
+  };
+}
+
 function parseDays(text: string, fallback: number): number {
   const n = parseInt(text, 10);
   if (!Number.isFinite(n) || n < 1) return fallback;
@@ -68,34 +84,61 @@ export type ComposePayload = {
   sendNow?: boolean;
 };
 
+/** Pre-fill values when editing an existing campaign. */
+export type ComposeInitial = {
+  title: string;
+  body: string;
+  audienceSpec: CampaignAudienceSpec;
+  scheduledFor: string | null;
+};
+
 export function CampaignComposeSheetContent({
+  mode = "create",
+  initial,
   busy,
   errorMessage,
   onSaveDraft,
   onRequestSend,
+  onSaveEdit,
 }: {
-  /** True while the create mutation is in flight (disables actions). */
+  /** "create" shows Save-draft + Send/Schedule; "edit" shows a single Save. */
+  mode?: "create" | "edit";
+  /** Pre-fill values (edit mode). */
+  initial?: ComposeInitial;
+  /** True while the mutation is in flight (disables actions). */
   busy: boolean;
   /** Inline error from the last failed submit, or null. */
   errorMessage: string | null;
   onSaveDraft: (payload: ComposePayload) => void;
   /** Send-now / scheduled — the parent shows a confirm sheet before dispatching. */
   onRequestSend: (payload: ComposePayload, reach: number) => void;
+  /** Save edits to an existing campaign (edit mode). */
+  onSaveEdit?: (payload: ComposePayload) => void;
 }) {
   const { t } = useTranslation();
   const tokens = useThemeTokens();
 
-  const [title, setTitle] = useState("");
-  const [body, setBody] = useState("");
-  const [axes, setAxes] = useState<AxesState>({ everyone: false });
+  const [title, setTitle] = useState(initial?.title ?? "");
+  const [body, setBody] = useState(initial?.body ?? "");
+  const [axes, setAxes] = useState<AxesState>(() => specToAxes(initial?.audienceSpec));
   // The schedule field is a VALUE: picking a time just records it here; the
   // action buttons decide what to do with it (no submit on pick).
-  const [scheduledFor, setScheduledFor] = useState<Date | null>(null);
+  const [scheduledFor, setScheduledFor] = useState<Date | null>(
+    initial?.scheduledFor ? new Date(initial.scheduledFor) : null,
+  );
 
   const spec = toSpec(axes);
   const previewQuery = useQuery(campaignsQueries.preview(spec));
   const classTypesQuery = useQuery(trainingsQueries.classTypes());
   const previewCount = previewQuery.data?.count ?? 0;
+
+  // "View clients" — fetch the projected audience members on demand (only once
+  // the sheet is opened, to avoid a list query on every keystroke).
+  const [clientsOpen, setClientsOpen] = useState(false);
+  const clientsQuery = useQuery({
+    ...campaignsQueries.audienceClients(spec),
+    enabled: clientsOpen && spec !== null,
+  });
   const previewLoading =
     spec !== null && (previewQuery.isPending || previewQuery.isFetching);
   // For background refetches (we already have a count to keep showing), delay
@@ -148,12 +191,15 @@ export function CampaignComposeSheetContent({
   }
 
   return (
+    <>
     <View className="flex-col gap-5">
       <Text
         className="text-foreground font-body-bold"
         style={{ fontSize: 20, letterSpacing: -0.3 }}
       >
-        {t("campaigns.compose.title")}
+        {mode === "edit"
+          ? t("campaigns.detail.editTitle")
+          : t("campaigns.compose.title")}
       </Text>
 
       {/* Message */}
@@ -306,6 +352,19 @@ export function CampaignComposeSheetContent({
         <Text className="text-muted" style={{ fontSize: 12 }}>
           {t("campaigns.compose.reachNote")}
         </Text>
+        {spec !== null && previewQuery.data && previewCount > 0 ? (
+          <Pressable
+            testID="campaign-view-clients"
+            onPress={() => setClientsOpen(true)}
+            android_ripple={null}
+            className="active:opacity-60 self-start pt-1"
+            accessibilityRole="button"
+          >
+            <Text className="text-accent font-body-medium" style={{ fontSize: 13 }}>
+              {t("campaigns.clients.viewProjected", { count: previewCount })}
+            </Text>
+          </Pressable>
+        ) : null}
       </View>
 
       {/* Schedule — picking a time only records the value; the action button
@@ -325,41 +384,58 @@ export function CampaignComposeSheetContent({
 
       {/* Actions */}
       <View className="gap-3">
-        <Button
-          testID="campaign-save-draft"
-          variant="secondary"
-          disabled={!canSubmit}
-          onPress={() => {
-            const p = buildPayload({});
-            if (p) onSaveDraft(p);
-          }}
-        >
-          {t("campaigns.compose.saveDraft")}
-        </Button>
-        {scheduledFor ? (
+        {mode === "edit" ? (
           <Button
-            testID="campaign-schedule-send"
+            testID="campaign-save-edit"
             disabled={!canSubmit}
             onPress={() => {
-              const p = buildPayload({ scheduledFor: scheduledFor.toISOString() });
-              if (p) onRequestSend(p, previewCount);
+              const p = buildPayload(
+                scheduledFor ? { scheduledFor: scheduledFor.toISOString() } : {},
+              );
+              if (p) onSaveEdit?.(p);
             }}
           >
-            {t("campaigns.compose.scheduleFor", {
-              when: scheduledFor.toLocaleString(getDateLocale()),
-            })}
+            {t("campaigns.detail.saveEdit")}
           </Button>
         ) : (
-          <Button
-            testID="campaign-send-now"
-            disabled={!canSubmit}
-            onPress={() => {
-              const p = buildPayload({ sendNow: true });
-              if (p) onRequestSend(p, previewCount);
-            }}
-          >
-            {t("campaigns.compose.sendNow")}
-          </Button>
+          <>
+            <Button
+              testID="campaign-save-draft"
+              variant="secondary"
+              disabled={!canSubmit}
+              onPress={() => {
+                const p = buildPayload({});
+                if (p) onSaveDraft(p);
+              }}
+            >
+              {t("campaigns.compose.saveDraft")}
+            </Button>
+            {scheduledFor ? (
+              <Button
+                testID="campaign-schedule-send"
+                disabled={!canSubmit}
+                onPress={() => {
+                  const p = buildPayload({ scheduledFor: scheduledFor.toISOString() });
+                  if (p) onRequestSend(p, previewCount);
+                }}
+              >
+                {t("campaigns.compose.scheduleFor", {
+                  when: scheduledFor.toLocaleString(getDateLocale()),
+                })}
+              </Button>
+            ) : (
+              <Button
+                testID="campaign-send-now"
+                disabled={!canSubmit}
+                onPress={() => {
+                  const p = buildPayload({ sendNow: true });
+                  if (p) onRequestSend(p, previewCount);
+                }}
+              >
+                {t("campaigns.compose.sendNow")}
+              </Button>
+            )}
+          </>
         )}
         {errorMessage ? (
           <Text className="text-danger" style={{ fontSize: 13 }}>
@@ -368,6 +444,16 @@ export function CampaignComposeSheetContent({
         ) : null}
       </View>
     </View>
+
+    <CampaignClientListSheet
+      open={clientsOpen}
+      onOpenChange={setClientsOpen}
+      title={t("campaigns.clients.audienceTitle")}
+      clients={clientsQuery.data?.clients}
+      isLoading={clientsQuery.isLoading}
+      isError={clientsQuery.isError}
+    />
+    </>
   );
 }
 

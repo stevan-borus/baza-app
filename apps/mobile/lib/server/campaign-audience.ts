@@ -188,3 +188,43 @@ export async function countCampaignAudience(
     return (await resolveCampaignAudience(spec)).length;
   return prisma.user.count({ where: buildClientWhere(spec) });
 }
+
+export type AudienceMember = {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  /** false = opted out of marketing; counted in reach but won't be messaged. */
+  campaignsEnabled: boolean;
+};
+
+/**
+ * The audience as resolvable PEOPLE, not just a count — for the "view clients"
+ * sheet. Reuses resolveCampaignAudience for the id set (so the axis logic lives
+ * in one place), then hydrates names/email + the campaignsEnabled flag.
+ */
+export async function resolveCampaignAudienceMembers(
+  spec: CampaignAudienceSpec,
+): Promise<AudienceMember[]> {
+  const ids = await resolveCampaignAudience(spec);
+  if (ids.length === 0) return [];
+  const users = await prisma.user.findMany({
+    where: { id: { in: ids } },
+    select: {
+      id: true,
+      firstName: true,
+      lastName: true,
+      email: true,
+      notificationPreference: { select: { campaignsEnabled: true } },
+    },
+    orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
+  });
+  return users.map((u) => ({
+    id: u.id,
+    firstName: u.firstName,
+    lastName: u.lastName,
+    email: u.email,
+    // No preference row → column default is true.
+    campaignsEnabled: u.notificationPreference?.campaignsEnabled ?? true,
+  }));
+}
