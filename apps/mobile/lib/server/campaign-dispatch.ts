@@ -10,8 +10,8 @@ import { prisma } from "@/lib/server/prisma";
 import { sendCampaignEmail } from "@/lib/server/resend";
 
 const CHROME = {
-  sr: { headerLabel: "Promocije / novi programi", unsubscribeText: "Odjavi se", footerNote: "Ovu poruku ste dobili jer ste klijent Baza Pilates studija." },
-  en: { headerLabel: "Promotions / new programs", unsubscribeText: "Unsubscribe", footerNote: "You received this because you are a Baza Pilates client." },
+  sr: { unsubscribeText: "Odjavite se", footerNote: "Novosti i ponude studija Baza Pilates. Ne želite ovo?" },
+  en: { unsubscribeText: "Unsubscribe", footerNote: "News and offers from Baza Pilates. Don't want these?" },
 } as const;
 
 // How many recipients to fan out to concurrently. Bounds the in-flight DB/push/

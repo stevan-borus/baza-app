@@ -8,7 +8,7 @@ type CampaignEmailProps = {
   logoUrl: string;
   /** Dark-mode wordmark (cream on dark). */
   logoDarkUrl: string;
-  chrome: { headerLabel: string; unsubscribeText: string; footerNote: string };
+  chrome: { unsubscribeText: string; footerNote: string };
 };
 
 // Mirrors booking-change-email's dark-mode handling so the promo email matches
@@ -16,17 +16,18 @@ type CampaignEmailProps = {
 // (Gmail app, Outlook.com) ignore it and invert themselves — unavoidable.
 const darkModeCss = `
   :root { color-scheme: light dark; supported-color-schemes: light dark; }
-  .logo-dark { display: none; }
+  .logo-light { display: block; }
+  .logo-dark  { display: none; }
   @media (prefers-color-scheme: dark) {
     .email-bg   { background-color: #11151f !important; }
     .email-card { background-color: #1c2333 !important; }
     .email-heading { color: #7fc59b !important; }
     .email-text { color: #e8eaf0 !important; }
-    .email-overline, .email-footer { color: #9aa3b2 !important; }
+    .email-footer { color: #9aa3b2 !important; }
     .email-hr   { border-color: #2c3548 !important; }
     .email-unsub { color: #9aa3b2 !important; }
     .logo-light { display: none !important; }
-    .logo-dark  { display: inline-block !important; }
+    .logo-dark  { display: block !important; }
   }
 `;
 
@@ -49,18 +50,19 @@ export function CampaignEmail({ title, body, unsubscribeUrl, logoUrl, logoDarkUr
       <Body className="email-bg" style={styles.body}>
         <Container className="email-card" style={styles.container}>
           <Section style={styles.logoWrap}>
-            <Img src={logoUrl} alt="Baza Pilates" width="132" className="logo-light" style={styles.logo} />
-            <Img src={logoDarkUrl} alt="Baza Pilates" width="132" className="logo-dark" style={styles.logo} />
+            <Img src={logoUrl} alt="Baza Pilates" width="132" className="logo-light" style={styles.logoLight} />
+            <Img src={logoDarkUrl} alt="Baza Pilates" width="132" className="logo-dark" style={styles.logoDark} />
           </Section>
-          <Text className="email-overline" style={styles.overline}>{chrome.headerLabel}</Text>
           <Heading className="email-heading" style={styles.heading}>{title}</Heading>
           {paragraphs.map((p, i) => (
             <Text key={i} className="email-text" style={styles.text}>{p}</Text>
           ))}
           <Hr className="email-hr" style={styles.hr} />
           <Section>
-            <Text className="email-footer" style={styles.footer}>{chrome.footerNote}</Text>
-            <Link href={unsubscribeUrl} className="email-unsub" style={styles.unsubscribe}>{chrome.unsubscribeText}</Link>
+            <Text className="email-footer" style={styles.footer}>
+              {chrome.footerNote}{" "}
+              <Link href={unsubscribeUrl} className="email-unsub" style={styles.unsubscribe}>{chrome.unsubscribeText}</Link>
+            </Text>
           </Section>
         </Container>
       </Body>
@@ -72,8 +74,13 @@ const styles = {
   body: { backgroundColor: "#fdf7f4", fontFamily: "Arial, sans-serif", margin: 0, padding: "24px 0" },
   container: { backgroundColor: "#ffffff", borderRadius: "12px", margin: "0 auto", maxWidth: "560px", padding: "32px 24px 24px" },
   logoWrap: { textAlign: "center" as const, margin: "0 0 24px" },
-  logo: { display: "inline-block", margin: "0 auto" },
-  overline: { color: "#8a8a8a", fontSize: "11px", letterSpacing: "1.5px", textTransform: "uppercase" as const, margin: "0 0 4px" },
+  // react-email's <Img> always injects an inline `display`, which beats any
+  // stylesheet `.logo-*{display:...}` rule. So the default-mode visibility
+  // MUST be set inline here: the light logo shows (block, auto-centered), the
+  // dark logo is hidden (none) so it adds no dead space in a light inbox. The
+  // dark-mode @media flips both with `!important`, which overrides inline.
+  logoLight: { display: "block", margin: "0 auto" },
+  logoDark: { display: "none", margin: "0 auto" },
   heading: { color: "#2e5b42", fontSize: "22px", margin: "0 0 16px" },
   text: { color: "#333333", fontSize: "15px", lineHeight: "22px", margin: "0 0 12px" },
   hr: { borderColor: "#eee", margin: "24px 0 12px" },

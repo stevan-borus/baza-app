@@ -95,7 +95,7 @@ export async function sendCampaignEmail(params: {
   subject: string;
   bodyText: string;
   unsubscribeUrl: string;
-  chrome: { headerLabel: string; unsubscribeText: string; footerNote: string };
+  chrome: { unsubscribeText: string; footerNote: string };
 }) {
   const html = await render(
     createElement(CampaignEmail, {
