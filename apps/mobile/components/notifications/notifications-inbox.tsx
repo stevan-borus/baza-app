@@ -12,6 +12,8 @@ import { AppSheet } from "@/components/ui/sheet";
 import { EmptyState, ErrorState } from "@/components/ui/states";
 import { SkeletonList } from "@/components/ui/skeleton";
 import { SectionLabel } from "@/components/ui/typography";
+import { useThemeTokens } from "@/components/ui/tokens";
+import { useThemePreference } from "@/lib/theme-preference";
 import { notificationsQueries, type Notification } from "@/lib/queries/notifications-queries-factory";
 import { useNotificationTapHandler } from "@/lib/notification-tap";
 import { shouldOpenDetailSheet } from "@/lib/notification-detail-sheet";
@@ -142,6 +144,12 @@ export function NotificationsInbox({ context, bottomPad = 0 }: Props) {
   const { t, i18n } = useTranslation();
   const lang = i18n.language === "en" ? "en" : "sr";
   const handleNotificationTap = useNotificationTapHandler();
+  const tokens = useThemeTokens();
+  const { resolvedTheme } = useThemePreference();
+  // Megaphone badge: green reads well on the light bone canvas, but on the
+  // dark-green accentSoft wash it muddies into the badge — flip to the cream
+  // foreground in dark mode so it stays legible against the badge in both.
+  const campaignIconColor = resolvedTheme === "dark" ? tokens.foreground : tokens.accent;
 
   // Which body texts overflowed the 2-line clamp, keyed by notification id.
   // Populated by each row's hidden no-clamp measuring Text (see the probe in
@@ -335,7 +343,7 @@ export function NotificationsInbox({ context, bottomPad = 0 }: Props) {
                           testID={`notification-campaign-badge-${n.id}`}
                           className="items-center justify-center w-9 h-9 rounded-full bg-accent-soft"
                         >
-                          <Icon name="megaphone" size={17} className="text-accent" />
+                          <Icon name="megaphone" size={17} color={campaignIconColor} />
                         </View>
                       ) : personName ? (
                         <View

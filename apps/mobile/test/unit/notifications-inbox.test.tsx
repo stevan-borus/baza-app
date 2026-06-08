@@ -155,6 +155,11 @@ vi.mock("@/components/ui/tokens", () => ({
   }),
 }));
 
+// ─── Theme preference mock ────────────────────────────────────────────────
+vi.mock("@/lib/theme-preference", () => ({
+  useThemePreference: () => ({ resolvedTheme: "light" }),
+}));
+
 // ─── States mock ──────────────────────────────────────────────────────────
 vi.mock("@/components/ui/states", () => ({
   EmptyState: ({ title }: any) =>
