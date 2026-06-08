@@ -247,7 +247,7 @@ export default function AdminSettingsClassTypes() {
       </AppSheet>
 
       {/* Edit sheet */}
-      <AppSheet open={!!editingId} onOpenChange={(v) => !v && setEditingId(null)}>
+      <AppSheet open={!!editingId} onOpenChange={(v) => !v && setEditingId(null)} stackBehavior="push">
         <View className="flex-col gap-4">
           <Text
             className="text-foreground font-body-bold"
@@ -309,6 +309,7 @@ export default function AdminSettingsClassTypes() {
         </View>
       </AppSheet>
       <ConfirmSheet
+        stackBehavior="push"
         open={confirmDelete}
         onOpenChange={setConfirmDelete}
         title={t("confirm.deleteClassTypeTitle")}

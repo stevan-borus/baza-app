@@ -1,5 +1,17 @@
 export type NotificationLocale = "sr" | "en";
 
+/**
+ * The single rule for resolving a stored preferredLocale into a notification
+ * locale: "en" only on an exact match, "sr" otherwise (the studio default,
+ * also the fallback for null/unset). Server notification/email paths share
+ * this so the default can't drift between channels.
+ */
+export function resolveLocale(
+  preferredLocale: string | null | undefined,
+): NotificationLocale {
+  return preferredLocale === "en" ? "en" : "sr";
+}
+
 export type NotificationMessageKey =
   | "BOOKING_CONFIRMED"
   | "SESSION_UPDATED"

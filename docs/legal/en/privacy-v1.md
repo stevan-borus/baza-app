@@ -79,8 +79,28 @@ The stated data is processed solely in order to adapt training to the user's ind
   We process your personal data in order to fulfil our legal obligations, e.g. disclosure of data to state institutions or supervisory bodies in connection with reporting obligations and meeting requests from state authorities or other public bodies. In this case, the basis for processing your personal data is the fulfilment of our legal duties.
 - **Information about requests and services**
   We process your personal data in order to inform you about the status of a particular request, the performance of a service or similar matters, all for the purpose of keeping you fully informed. In this case, the basis for processing your personal data is our legitimate interest.
+- **Direct marketing and promotional communications**
+  Where you have given your consent, we process your contact data (e-mail address, and the in-application notification channel) in order to send you promotional communications — information about discounts and special offers, new programmes, workshops and studio news. The basis for this processing is your consent. Sending such communications is described in more detail in Article 4A.
 - **Other cases**
   To protect our legitimate interests as a business entity (e.g. where this is necessary for conducting court and other proceedings or where this is necessary to ensure an adequate level of protection). Also, certain data is collected in order to improve your experience in our mobile application/website. In this case, the basis for processing your personal data is our legitimate interest.
+
+## 4A. Marketing communications and how to opt out
+
+4A.1. **Service (transactional) communications vs. marketing communications.** We distinguish between two types of communication:
+
+- **Service (transactional) communications** are messages necessary for the performance of the contract and the provision of the service — e.g. confirmation that a session in which you were booked has been cancelled by the Studio, that you have been moved from the waiting list into a session, or that the time, room or instructor of a session has changed. We send these on the basis of the performance of the contract (item 4.2, "Conclusion and execution of the contract") and they are **not** marketing. You will receive them so that you are not misinformed about your reservations.
+- **Marketing communications** are promotional messages within the meaning of item 4.2 ("Direct marketing and promotional communications"). We send them **only on the basis of your consent**.
+
+4A.2. **Channels.** Marketing communications may be sent through any of the following channels: a notification within the Application, a push notification on your device, and e-mail.
+
+4A.3. **Giving and withdrawing consent.** You give consent for marketing communications, and you may withdraw it at any time, free of charge and without giving reasons, in the following ways:
+
+- within the Application, through the **"Promotions / new programmes"** setting; and
+- by clicking the unsubscribe link contained in every marketing e-mail, which works without the need to log in.
+
+Withdrawal of consent does not affect the lawfulness of processing carried out on the basis of consent before its withdrawal. After withdrawal, we stop sending marketing communications as soon as reasonably possible. Withdrawing consent for marketing communications does **not** stop service (transactional) communications, which remain necessary for the performance of the contract.
+
+4A.4. **No automated decision-making.** Selecting recipients of a marketing communication does not produce legal effects concerning you, nor does it similarly significantly affect you; it serves solely to make our communications more relevant.
 
 ## 5. Who has access to your personal data?
 
@@ -89,6 +109,7 @@ The stated data is processed solely in order to adapt training to the user's ind
 5.2. Your personal data will be processed by us, while third parties have the right to access and process your personal data only in the situations described below:
 
 - Legal entities with whom we cooperate in business and which assist us in our regular operations (WhyNot Solutions). In that case, those legal entities process your personal data exclusively for our purposes;
+- Providers that deliver our communications on our behalf — in particular our e-mail delivery provider — which process your contact data solely in order to deliver the communications we send and exclusively for our purposes;
 - Persons with whom we cooperate in business, where we assess this is necessary to protect certain of our legitimate interests. E.g. tax advisors, accountants, lawyers and other advisors. In that case, those persons process your personal data exclusively for our purposes;
 - Competent authorities supervising the legality of our operations and conduct, as well as other legal entities where this is necessary for the fulfilment of a legal duty of ours, e.g. an auditor. In that case, those legal entities process your personal data for the purpose assigned to them by law;
 - Other parties in connection with business transactions such as the sale of the company or part of the company, reorganisation, merger, joint venture or any other form of disposal of our company, assets or stock (including bankruptcy or similar proceedings).
@@ -124,6 +145,7 @@ The stated data is processed solely in order to adapt training to the user's ind
 | Basic account data (first and last name, e-mail, telephone) | For the entire duration of the contract; after termination of the contract or deactivation of the account, an additional 12 months for follow-up contact and resolution of any disputes |
 | Trainer notes about the client (internal notes relevant to training) | While the account is active; deleted no later than 30 days after deactivation of the account |
 | Health data (Art. 3.6) | For as long as we have your explicit consent; in the event of withdrawal of consent, deleted as soon as reasonably possible |
+| Marketing-communications consent and the related contact data | For as long as we have your consent for marketing communications; upon withdrawal, we stop the marketing processing as soon as reasonably possible (the contact data itself is retained under the "basic account data" row for as long as the account exists) |
 | Consent metadata (date, time, IP address, document version) | 5 years from withdrawal of consent or deactivation of the account, for the purpose of being able to evidence the consent given |
 | Session tokens and push tokens | While the session is active or while the user uses the application on the relevant device; expire and are invalidated in line with standard practice |
 
@@ -155,10 +177,10 @@ You have the right to request the correction of your inaccurate personal data, a
 You have the right to receive and request the transfer of your personal data. Please send questions and requests, in writing and signed, to the address Futoška 33, 21000 Novi Sad. We will respond to your request immediately, and no later than within one month, unless the exceptional complexity of an individual case requires an extension of the said period.
 
 10.6. **Right to withdraw consent and right to be forgotten:**
-You have the right to withdraw your consent for the processing of personal data, as well as to request the permanent deletion of your personal data which we have processed on the basis of your consent. Please send questions and requests, in writing and signed, to the address Futoška 33, 21000 Novi Sad. We will respond to your request immediately, and no later than within one month, unless the exceptional complexity of a particular case requires an extension of the said period.
+You have the right to withdraw your consent for the processing of personal data, as well as to request the permanent deletion of your personal data which we have processed on the basis of your consent. In particular, you may withdraw your consent for **marketing communications** at any time in the ways described in Article 4A.3 (the in-application "Promotions / new programmes" setting, or the unsubscribe link in any marketing e-mail) without the need to write to us. For other consent-based processing, please send questions and requests, in writing and signed, to the address Futoška 33, 21000 Novi Sad. We will respond to your request immediately, and no later than within one month, unless the exceptional complexity of a particular case requires an extension of the said period.
 
 10.7. **Objection to the processing or handling of your personal data:**
-You have the right to object to the processing of your personal data, as well as generally to the way we handle your personal data. Please send your request by e-mail to bazapilates@gmail.com, with "Objection against processing" in the subject of the message and stating the reason for the objection and your request in the message itself.
+You have the right to object to the processing of your personal data, as well as generally to the way we handle your personal data. Where we process your data for direct-marketing purposes, you have the right to object to that processing at any time, after which we will no longer process your data for those purposes. Please send your request by e-mail to bazapilates@gmail.com, with "Objection against processing" in the subject of the message and stating the reason for the objection and your request in the message itself.
 
 10.8. **Right to complain to the Commissioner for Information of Public Importance and Personal Data Protection:**
 At any time you have the right to lodge a complaint with the competent authority for personal data protection — the Commissioner for Information of Public Importance and Personal Data Protection (https://www.poverenik.rs/).

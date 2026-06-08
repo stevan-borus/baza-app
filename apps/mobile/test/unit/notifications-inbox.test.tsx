@@ -112,6 +112,34 @@ vi.mock("@/components/ui/glass-card", () => ({
     ),
 }));
 
+// ─── AppSheet mock ────────────────────────────────────────────────────────
+// The real AppSheet pulls in @gorhom/bottom-sheet, which vitest can't
+// transform. Render children only when `open` so detail-sheet assertions can
+// observe its contents once a row press sets the open state.
+vi.mock("@/components/ui/sheet", () => ({
+  AppSheet: ({ open, children }: any) =>
+    open
+      ? require("react").createElement(
+          "div",
+          { "data-testid": "app-sheet" },
+          children,
+        )
+      : null,
+}));
+
+// ─── gorhom bottom-sheet mock ─────────────────────────────────────────────
+// The detail sheet imports BottomSheetScrollView directly from
+// @gorhom/bottom-sheet (vitest can't transform that package). Render it as a
+// passthrough so the body paragraphs still appear in static markup.
+vi.mock("@gorhom/bottom-sheet", () => ({
+  BottomSheetScrollView: ({ children }: any) =>
+    require("react").createElement(
+      "div",
+      { "data-role": "bottom-sheet-scroll" },
+      children,
+    ),
+}));
+
 // ─── Tokens mock ──────────────────────────────────────────────────────────
 vi.mock("@/components/ui/tokens", () => ({
   useThemeTokens: () => ({
@@ -125,6 +153,11 @@ vi.mock("@/components/ui/tokens", () => ({
     glassAndroid: "rgba(255,255,255,0.95)",
     glassBorder: "rgba(0,0,0,0.10)",
   }),
+}));
+
+// ─── Theme preference mock ────────────────────────────────────────────────
+vi.mock("@/lib/theme-preference", () => ({
+  useThemePreference: () => ({ resolvedTheme: "light" }),
 }));
 
 // ─── States mock ──────────────────────────────────────────────────────────
@@ -415,6 +448,48 @@ describe("NotificationsInbox — avatar leading", () => {
     // No type icon anywhere — the user explicitly asked for icon-free rows
     // when no person avatar is available.
     expect(html).not.toContain("data-icon=");
+  });
+});
+
+describe("NotificationsInbox — campaign row treatment", () => {
+  it("renders a megaphone badge for CAMPAIGN notifications", () => {
+    const nowIso = now().toISOString();
+    queryState.data = {
+      pages: [
+        {
+          notifications: [
+            makeNotification({
+              id: "camp-1",
+              type: "CAMPAIGN",
+              title: "Nove letnje grupe",
+              body: "Dodali smo tri nova reformer termina ove nedelje.",
+              createdAt: nowIso,
+            }),
+          ],
+          nextCursor: null,
+        },
+      ],
+    };
+    const html = renderInbox({ context: "client" });
+    expect(html).toContain('data-testid="notification-campaign-badge-camp-1"');
+    expect(html).toContain('data-icon="megaphone"');
+  });
+
+  it("does not render a campaign badge for non-campaign notifications", () => {
+    const nowIso = now().toISOString();
+    queryState.data = {
+      pages: [
+        {
+          notifications: [
+            makeNotification({ id: "plain-1", type: "GENERAL", createdAt: nowIso }),
+          ],
+          nextCursor: null,
+        },
+      ],
+    };
+    const html = renderInbox({ context: "client" });
+    expect(html).not.toContain('data-testid="notification-campaign-badge-plain-1"');
+    expect(html).not.toContain('data-icon="megaphone"');
   });
 });
 

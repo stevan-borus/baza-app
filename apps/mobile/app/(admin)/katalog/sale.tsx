@@ -209,7 +209,7 @@ export default function AdminSettingsRooms() {
       </AppSheet>
 
       {/* Edit sheet */}
-      <AppSheet open={!!editingId} onOpenChange={(v) => !v && setEditingId(null)}>
+      <AppSheet open={!!editingId} onOpenChange={(v) => !v && setEditingId(null)} stackBehavior="push">
         <View className="flex-col gap-4">
           <Text
             className="text-foreground font-body-bold"
@@ -263,6 +263,7 @@ export default function AdminSettingsRooms() {
         </View>
       </AppSheet>
       <ConfirmSheet
+        stackBehavior="push"
         open={confirmDelete}
         onOpenChange={setConfirmDelete}
         title={t("confirm.deleteRoomTitle")}

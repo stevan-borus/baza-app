@@ -251,7 +251,7 @@ export function TrainerNoteComposeSheet({
 
   return (
     <>
-      <AppSheet open={open} onOpenChange={onOpenChange}>
+      <AppSheet open={open} onOpenChange={onOpenChange} stackBehavior="push">
         <View className="flex-col gap-4 pb-5">
           <Text
             className="text-foreground font-body-bold"
@@ -333,6 +333,7 @@ export function TrainerNoteComposeSheet({
           onOpenChange={setShowComposeClientPicker}
           rawContent
           snapPoints={["85%"]}
+          stackBehavior="push"
         >
           {form.sessionId ? (
             <ClientPicker
@@ -405,6 +406,7 @@ export function TrainerNoteComposeSheet({
         onOpenChange={setShowComposeSessionPicker}
         rawContent
         snapPoints={["85%"]}
+        stackBehavior="push"
       >
         <SessionPicker
           testID="note-session-picker"

@@ -4,6 +4,7 @@
 import {
   getNotificationMessage,
   NOTIFICATION_MESSAGE_I18N_KEYS,
+  resolveLocale,
   type NotificationLocale,
   type NotificationMessageKey,
 } from "@baza/i18n";
@@ -20,7 +21,7 @@ export async function getPreferredLocale(userId: string): Promise<NotificationLo
     where: { userId },
     select: { preferredLocale: true },
   });
-  return pref?.preferredLocale === "en" ? "en" : "sr";
+  return resolveLocale(pref?.preferredLocale);
 }
 
 /**
@@ -71,6 +72,8 @@ type NotificationPayload = {
    * we want in-app visibility without a phone buzz.
    */
   skipPush?: boolean;
+  /** Links this log to the Campaign it was dispatched from (history + audit). */
+  campaignId?: string;
 };
 
 /**
@@ -191,6 +194,7 @@ export async function createAndDispatchUserNotification(input: NotificationPaylo
       title: input.title,
       body: input.body,
       payload: jsonPayload,
+      campaignId: input.campaignId,
     },
     select: {
       id: true,

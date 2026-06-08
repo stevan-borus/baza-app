@@ -355,7 +355,7 @@ export function ClientDetail({ id }: { id: string }) {
 
       {/* Pencil-opened action sheet — power-user shortcut. The Pregled tab
           surfaces the same actions as visible rows for new admins. */}
-      <AppSheet open={showActions} onOpenChange={setShowActions}>
+      <AppSheet open={showActions} onOpenChange={setShowActions} stackBehavior="push">
         {client ? (
           <View className="flex-col gap-2">
             <View className="flex-row items-center gap-3 pb-3">
@@ -419,7 +419,7 @@ export function ClientDetail({ id }: { id: string }) {
         ) : null}
       </AppSheet>
 
-      <AppSheet open={showEdit} onOpenChange={setShowEdit}>
+      <AppSheet open={showEdit} onOpenChange={setShowEdit} stackBehavior="push">
         <View className="flex-col gap-4">
           <Text
             className="text-foreground font-body-bold"
@@ -513,7 +513,7 @@ export function ClientDetail({ id }: { id: string }) {
         </View>
       </AppSheet>
 
-      <AppSheet open={showAssign} onOpenChange={setShowAssign}>
+      <AppSheet open={showAssign} onOpenChange={setShowAssign} stackBehavior="push">
         {client ? (
           <View className="flex-col gap-4">
             <Text
@@ -533,7 +533,7 @@ export function ClientDetail({ id }: { id: string }) {
         ) : null}
       </AppSheet>
 
-      <AppSheet open={showPause} onOpenChange={setShowPause}>
+      <AppSheet open={showPause} onOpenChange={setShowPause} stackBehavior="push">
         <View className="flex-col gap-4">
           <Text
             className="text-foreground font-body-bold"
@@ -587,7 +587,7 @@ export function ClientDetail({ id }: { id: string }) {
         </View>
       </AppSheet>
 
-      <AppSheet open={showDelete} onOpenChange={setShowDelete}>
+      <AppSheet open={showDelete} onOpenChange={setShowDelete} stackBehavior="push">
         {client ? (
           <View className="flex-col gap-5">
             <View className="items-center gap-3 pt-1">

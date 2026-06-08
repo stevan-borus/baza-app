@@ -444,7 +444,7 @@ export default function AdminPackages() {
         {/* ═══════════════════════════════════════════════════════════════════
             EDIT PACKAGE TYPE SHEET
         ═══════════════════════════════════════════════════════════════════ */}
-        <AppSheet open={!!editingId} onOpenChange={(v) => !v && setEditingId(null)}>
+        <AppSheet open={!!editingId} onOpenChange={(v) => !v && setEditingId(null)} stackBehavior="push">
           <View className="flex-col gap-4">
             <Text
               className="text-foreground font-body-bold"
@@ -564,6 +564,7 @@ export default function AdminPackages() {
           </View>
         </AppSheet>
         <ConfirmSheet
+          stackBehavior="push"
           testID="package-delete-confirm-button"
           open={confirmDelete}
           onOpenChange={setConfirmDelete}

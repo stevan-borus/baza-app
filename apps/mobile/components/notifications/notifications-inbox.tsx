@@ -1,16 +1,22 @@
-import { useCallback, useMemo, useRef } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { useFocusEffect } from "expo-router";
 import { useMutation, useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { ActivityIndicator, Pressable, Text, View } from "react-native";
+import { ActivityIndicator, Pressable, Text, View, type TextLayoutEventData, type NativeSyntheticEvent } from "react-native";
 import { MotiView } from "@/components/ui/styled";
 import { LegendList } from "@legendapp/list";
+import { BottomSheetScrollView } from "@gorhom/bottom-sheet";
 import { GlassCard } from "@/components/ui/glass-card";
+import { Icon } from "@/components/ui/icon";
+import { AppSheet } from "@/components/ui/sheet";
 import { EmptyState, ErrorState } from "@/components/ui/states";
 import { SkeletonList } from "@/components/ui/skeleton";
 import { SectionLabel } from "@/components/ui/typography";
+import { useThemeTokens } from "@/components/ui/tokens";
+import { useThemePreference } from "@/lib/theme-preference";
 import { notificationsQueries, type Notification } from "@/lib/queries/notifications-queries-factory";
 import { useNotificationTapHandler } from "@/lib/notification-tap";
+import { shouldOpenDetailSheet } from "@/lib/notification-detail-sheet";
 import { clearAppBadge } from "@/lib/badge";
 import dayjs from "dayjs";
 
@@ -138,6 +144,29 @@ export function NotificationsInbox({ context, bottomPad = 0 }: Props) {
   const { t, i18n } = useTranslation();
   const lang = i18n.language === "en" ? "en" : "sr";
   const handleNotificationTap = useNotificationTapHandler();
+  const tokens = useThemeTokens();
+  const { resolvedTheme } = useThemePreference();
+  // Megaphone badge: green reads well on the light bone canvas, but on the
+  // dark-green accentSoft wash it muddies into the badge — flip to the cream
+  // foreground in dark mode so it stays legible against the badge in both.
+  const campaignIconColor = resolvedTheme === "dark" ? tokens.foreground : tokens.accent;
+
+  // Which body texts overflowed the 2-line clamp, keyed by notification id.
+  // Populated by each row's hidden no-clamp measuring Text (see the probe in
+  // renderItem) — we can't read this off the clamped Text because iOS reports
+  // `onTextLayout` AFTER clamping. A ref (not state) because we only read it
+  // inside the tap handler; a body becoming truncated never needs a re-render.
+  const truncatedIdsRef = useRef<Set<string>>(new Set());
+
+  // The notification whose full-text detail sheet is open, if any. Holding the
+  // notification (not just an id) keeps the sheet's content stable while it
+  // animates closed even if the list refetches underneath.
+  const [detailNotification, setDetailNotification] = useState<{
+    title: string;
+    body: string;
+    createdAt: string;
+    isCampaign: boolean;
+  } | null>(null);
 
   const notificationsQuery = useInfiniteQuery(notificationsQueries.listInfinite());
   const allNotifications = useMemo(
@@ -279,20 +308,44 @@ export function NotificationsInbox({ context, bottomPad = 0 }: Props) {
                   ? translatedBody
                   : n.body;
               const personName = personNameFromPayload(n.payload);
+              // Campaigns are studio broadcasts, not transactional pings — they
+              // carry a megaphone badge and keep the green accent rail even once
+              // read, so they stay recognizable as "from Baza" in the list.
+              const isCampaign = n.type === "CAMPAIGN";
               return (
                 <Pressable
                   testID={`notification-row-${n.id}-${isUnread ? "unread" : "read"}`}
                   className="px-6 py-1 active:opacity-70"
                   onPress={() => {
                     if (isUnread) markManyReadMutation.mutate([n.id]);
-                    handleNotificationTap({ type: n.type, payload: n.payload });
+                    const navigated = handleNotificationTap({ type: n.type, payload: n.payload });
+                    if (
+                      shouldOpenDetailSheet({
+                        navigated,
+                        bodyTruncated: truncatedIdsRef.current.has(n.id),
+                      })
+                    ) {
+                      setDetailNotification({
+                        title: displayTitle,
+                        body: displayBody,
+                        createdAt: n.createdAt,
+                        isCampaign,
+                      });
+                    }
                   }}
                   accessibilityRole="button"
                   accessibilityLabel={displayTitle}
                 >
-                  <GlassCard size="md" accentBorder={isUnread ? "left" : undefined}>
+                  <GlassCard size="md" accentBorder={isUnread || isCampaign ? "left" : undefined}>
                     <View className="flex-row gap-3 items-start">
-                      {personName ? (
+                      {isCampaign ? (
+                        <View
+                          testID={`notification-campaign-badge-${n.id}`}
+                          className="items-center justify-center w-9 h-9 rounded-full bg-accent-soft"
+                        >
+                          <Icon name="megaphone" size={17} color={campaignIconColor} />
+                        </View>
+                      ) : personName ? (
                         <View
                           testID={`notification-avatar-${n.id}`}
                           className="items-center justify-center w-9 h-9 rounded-full bg-accent-soft"
@@ -316,7 +369,33 @@ export function NotificationsInbox({ context, bottomPad = 0 }: Props) {
                           </Text>
                           <Text className="text-[11px] text-muted">{formatRelativeTime(n.createdAt, lang)}</Text>
                         </View>
-                        <Text className="text-[13px] text-muted" numberOfLines={2}>{displayBody}</Text>
+                        <Text className="text-[13px] text-muted" numberOfLines={2}>
+                          {displayBody}
+                        </Text>
+                        {/*
+                          Truncation probe. iOS reports `onTextLayout` *after*
+                          the `numberOfLines` clamp, so a clamped Text always
+                          reports exactly 2 lines — we can't tell "fits in 2"
+                          from "clipped to 2". So we measure the SAME text with
+                          NO clamp in an absolutely-positioned, invisible twin
+                          (out of flow → adds no height, pointer-transparent →
+                          never steals the row's tap). If the unclamped text
+                          needs >2 lines, the visible body is truncated, which
+                          is the signal the detail sheet keys off.
+                        */}
+                        <Text
+                          className="text-[13px]"
+                          style={{ position: "absolute", left: 0, right: 0, opacity: 0 }}
+                          pointerEvents="none"
+                          accessibilityElementsHidden
+                          importantForAccessibility="no-hide-descendants"
+                          onTextLayout={(e: NativeSyntheticEvent<TextLayoutEventData>) => {
+                            if (e.nativeEvent.lines.length > 2) truncatedIdsRef.current.add(n.id);
+                            else truncatedIdsRef.current.delete(n.id);
+                          }}
+                        >
+                          {displayBody}
+                        </Text>
                       </View>
                     </View>
                   </GlassCard>
@@ -334,6 +413,77 @@ export function NotificationsInbox({ context, bottomPad = 0 }: Props) {
           />
         )}
       </MotiView>
+
+      {/*
+        Full-text detail sheet for clamped, destination-less notifications.
+
+        rawContent + fixed snapPoints so the title/timestamp pin as a header and
+        ONLY the body scrolls, inside gorhom's own BottomSheetScrollView. The
+        default AppSheet wrapper puts everything in one scroll view, which both
+        scrolls the title away AND fights the sheet's pan gesture at the top edge
+        (scrolling up drags the whole sheet). The bottom-sheet scroll primitive
+        composes with the pan: it scrolls content first, panning only once the
+        content is already at the top. Same pattern as the campaign client list.
+      */}
+      <AppSheet
+        open={detailNotification !== null}
+        onOpenChange={(next) => {
+          if (!next) setDetailNotification(null);
+        }}
+        rawContent
+        snapPoints={["60%"]}
+      >
+        {detailNotification ? (
+          <View testID="notification-detail-sheet" style={{ flex: 1 }}>
+            {/*
+              Pinned header. Campaigns read as a branded "studio dispatch": the
+              title is set in the studio's Fraunces display face with an accent
+              hairline below it, so it feels like an in-app letter rather than a
+              transactional alert. No megaphone/"from the studio" chrome here —
+              the whole app IS the one studio, and a lone badge floats awkwardly;
+              the display type + rule carry the editorial tone on their own. The
+              megaphone lives on the inbox row, where it's anchored to the title.
+            */}
+            <View style={{ paddingHorizontal: 24, paddingTop: 8 }}>
+              <Text
+                className={
+                  detailNotification.isCampaign
+                    ? "text-[24px] text-foreground font-display leading-[30px]"
+                    : "text-[18px] text-foreground font-body-bold"
+                }
+              >
+                {detailNotification.title}
+              </Text>
+
+              <Text className="text-[12px] text-muted mt-1">
+                {formatRelativeTime(detailNotification.createdAt, lang)}
+              </Text>
+
+              <View
+                className={detailNotification.isCampaign ? "h-px bg-accent-soft mt-4" : "h-px bg-divider mt-3"}
+              />
+            </View>
+
+            <BottomSheetScrollView
+              contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 16, paddingBottom: 40 }}
+              showsVerticalScrollIndicator={false}
+            >
+              {detailNotification.body
+                .split(/\n{2,}/)
+                .map((para) => para.trim())
+                .filter(Boolean)
+                .map((para, i) => (
+                  <Text
+                    key={i}
+                    className={`text-[15px] text-foreground leading-[24px] ${i > 0 ? "mt-3" : ""}`}
+                  >
+                    {para}
+                  </Text>
+                ))}
+            </BottomSheetScrollView>
+          </View>
+        ) : null}
+      </AppSheet>
     </View>
   );
 }

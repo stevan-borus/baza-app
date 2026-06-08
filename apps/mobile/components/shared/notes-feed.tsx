@@ -585,7 +585,11 @@ export function NotesFeed({
           the body shows as static text and only Delete is offered. The
           PATCH endpoint also enforces this, so the read-only view is the
           friendly half of a defense-in-depth pair. */}
-      <AppSheet open={!!editingNote} onOpenChange={(v) => !v && setEditingNote(null)}>
+      <AppSheet
+        open={!!editingNote}
+        onOpenChange={(v) => !v && setEditingNote(null)}
+        stackBehavior="push"
+      >
         <View className="flex-col gap-4 pb-5">
           <Text
             className="text-foreground font-body-bold"
@@ -647,6 +651,7 @@ export function NotesFeed({
         </View>
       </AppSheet>
       <ConfirmSheet
+        stackBehavior="push"
         open={confirmDelete}
         onOpenChange={setConfirmDelete}
         title={t("confirm.deleteNoteTitle")}
