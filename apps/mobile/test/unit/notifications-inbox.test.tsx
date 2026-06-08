@@ -127,6 +127,19 @@ vi.mock("@/components/ui/sheet", () => ({
       : null,
 }));
 
+// ─── gorhom bottom-sheet mock ─────────────────────────────────────────────
+// The detail sheet imports BottomSheetScrollView directly from
+// @gorhom/bottom-sheet (vitest can't transform that package). Render it as a
+// passthrough so the body paragraphs still appear in static markup.
+vi.mock("@gorhom/bottom-sheet", () => ({
+  BottomSheetScrollView: ({ children }: any) =>
+    require("react").createElement(
+      "div",
+      { "data-role": "bottom-sheet-scroll" },
+      children,
+    ),
+}));
+
 // ─── Tokens mock ──────────────────────────────────────────────────────────
 vi.mock("@/components/ui/tokens", () => ({
   useThemeTokens: () => ({

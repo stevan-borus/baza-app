@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { ActivityIndicator, Pressable, Text, View, type TextLayoutEventData, type NativeSyntheticEvent } from "react-native";
 import { MotiView } from "@/components/ui/styled";
 import { LegendList } from "@legendapp/list";
+import { BottomSheetScrollView } from "@gorhom/bottom-sheet";
 import { GlassCard } from "@/components/ui/glass-card";
 import { Icon } from "@/components/ui/icon";
 import { AppSheet } from "@/components/ui/sheet";
@@ -405,57 +406,73 @@ export function NotificationsInbox({ context, bottomPad = 0 }: Props) {
         )}
       </MotiView>
 
-      {/* Full-text detail sheet for clamped, destination-less notifications. */}
+      {/*
+        Full-text detail sheet for clamped, destination-less notifications.
+
+        rawContent + fixed snapPoints so the title/timestamp pin as a header and
+        ONLY the body scrolls, inside gorhom's own BottomSheetScrollView. The
+        default AppSheet wrapper puts everything in one scroll view, which both
+        scrolls the title away AND fights the sheet's pan gesture at the top edge
+        (scrolling up drags the whole sheet). The bottom-sheet scroll primitive
+        composes with the pan: it scrolls content first, panning only once the
+        content is already at the top. Same pattern as the campaign client list.
+      */}
       <AppSheet
         open={detailNotification !== null}
         onOpenChange={(next) => {
           if (!next) setDetailNotification(null);
         }}
+        rawContent
         snapPoints={["60%"]}
       >
         {detailNotification ? (
-          <View testID="notification-detail-sheet">
+          <View testID="notification-detail-sheet" style={{ flex: 1 }}>
             {/*
-              Campaigns read as a branded "studio dispatch": the title is set in
-              the studio's Fraunces display face and an accent hairline separates
-              it from the body, so it feels like an in-app letter rather than a
+              Pinned header. Campaigns read as a branded "studio dispatch": the
+              title is set in the studio's Fraunces display face with an accent
+              hairline below it, so it feels like an in-app letter rather than a
               transactional alert. No megaphone/"from the studio" chrome here —
               the whole app IS the one studio, and a lone badge floats awkwardly;
               the display type + rule carry the editorial tone on their own. The
               megaphone lives on the inbox row, where it's anchored to the title.
             */}
-            <Text
-              className={
-                detailNotification.isCampaign
-                  ? "text-[24px] text-foreground font-display leading-[30px]"
-                  : "text-[18px] text-foreground font-body-bold"
-              }
+            <View style={{ paddingHorizontal: 24, paddingTop: 8 }}>
+              <Text
+                className={
+                  detailNotification.isCampaign
+                    ? "text-[24px] text-foreground font-display leading-[30px]"
+                    : "text-[18px] text-foreground font-body-bold"
+                }
+              >
+                {detailNotification.title}
+              </Text>
+
+              <Text className="text-[12px] text-muted mt-1">
+                {formatRelativeTime(detailNotification.createdAt, lang)}
+              </Text>
+
+              <View
+                className={detailNotification.isCampaign ? "h-px bg-accent-soft mt-4" : "h-px bg-divider mt-3"}
+              />
+            </View>
+
+            <BottomSheetScrollView
+              contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 16, paddingBottom: 40 }}
+              showsVerticalScrollIndicator={false}
             >
-              {detailNotification.title}
-            </Text>
-
-            <Text className="text-[12px] text-muted mt-1">
-              {formatRelativeTime(detailNotification.createdAt, lang)}
-            </Text>
-
-            {detailNotification.isCampaign ? (
-              <View className="h-px bg-accent-soft my-4" />
-            ) : null}
-
-            {detailNotification.body
-              .split(/\n{2,}/)
-              .map((para) => para.trim())
-              .filter(Boolean)
-              .map((para, i) => (
-                <Text
-                  key={i}
-                  className={`text-[15px] text-foreground leading-[24px] ${
-                    detailNotification.isCampaign ? "" : "mt-2"
-                  } ${i > 0 ? "mt-3" : ""}`}
-                >
-                  {para}
-                </Text>
-              ))}
+              {detailNotification.body
+                .split(/\n{2,}/)
+                .map((para) => para.trim())
+                .filter(Boolean)
+                .map((para, i) => (
+                  <Text
+                    key={i}
+                    className={`text-[15px] text-foreground leading-[24px] ${i > 0 ? "mt-3" : ""}`}
+                  >
+                    {para}
+                  </Text>
+                ))}
+            </BottomSheetScrollView>
           </View>
         ) : null}
       </AppSheet>
