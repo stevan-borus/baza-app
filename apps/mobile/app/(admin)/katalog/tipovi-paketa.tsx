@@ -383,6 +383,7 @@ export default function AdminPackages() {
                 {t("admin.manage.isBirthdayGiftLabel")}
               </Text>
               <Switch
+                testID="package-create-birthday-gift"
                 value={form.isBirthdayGift}
                 onValueChange={(v) =>
                   setForm((s) => ({
@@ -511,6 +512,7 @@ export default function AdminPackages() {
                 {t("admin.manage.isBirthdayGiftLabel")}
               </Text>
               <Switch
+                testID="package-edit-birthday-gift"
                 value={editForm.isBirthdayGift}
                 onValueChange={(v) =>
                   setEditForm((s) => ({
