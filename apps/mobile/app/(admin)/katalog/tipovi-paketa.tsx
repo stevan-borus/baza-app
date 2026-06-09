@@ -24,7 +24,11 @@ import { HeaderIconButton } from "@/components/ui/app-header";
 import { useThemeTokens } from "@/components/ui/tokens";
 import { FilterChip } from "@/components/ui/studio";
 import { useRouter } from "expo-router";
-import { packagesQueries } from "@/lib/queries/packages-queries-factory";
+import {
+  packagesQueries,
+  createPackageTypeMutationOptions,
+  updatePackageTypeMutationOptions,
+} from "@/lib/queries/packages-queries-factory";
 import { trainingsQueries } from "@/lib/queries/trainings-queries-factory";
 import { fieldErrorsFromApiError } from "@/lib/api-errors";
 
@@ -117,29 +121,11 @@ export default function AdminPackages() {
   const typesQuery = useQuery(packagesQueries.types());
   const classTypesQuery = useQuery(trainingsQueries.classTypes());
 
-  const createMutation = useMutation({
-    ...packagesQueries.createType(),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: packagesQueries.types().queryKey });
-      setShowCreate(false);
-      setForm({
-        name: "",
-        sessionCount: "",
-        validityDays: "",
-        lateCancelHours: "8",
-        classTypeId: "",
-        isBirthdayGift: false,
-      });
-    },
-  });
-
-  const updateTypeMutation = useMutation({
-    ...packagesQueries.updateType(),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: packagesQueries.types().queryKey });
-      setEditingId(null);
-    },
-  });
+  // Cache upkeep (types-list splice) is baked into the options-builders; the
+  // component-only side-effects (close sheet, reset form) are passed per-call
+  // via mutate(vars, { onSuccess }).
+  const createMutation = useMutation(createPackageTypeMutationOptions(queryClient));
+  const updateTypeMutation = useMutation(updatePackageTypeMutationOptions(queryClient));
 
   const deleteTypeMutation = useMutation({
     ...packagesQueries.deleteType(),
@@ -419,14 +405,29 @@ export default function AdminPackages() {
                 (form.isBirthdayGift && form.sessionCount !== "1")
               }
               onPress={() =>
-                createMutation.mutate({
-                  name: form.name,
-                  sessionCount: parseInt(form.sessionCount, 10),
-                  validityDays: parseInt(form.validityDays, 10),
-                  lateCancelHours: parseInt(form.lateCancelHours, 10) || 8,
-                  classTypeId: form.classTypeId,
-                  isBirthdayGift: form.isBirthdayGift,
-                })
+                createMutation.mutate(
+                  {
+                    name: form.name,
+                    sessionCount: parseInt(form.sessionCount, 10),
+                    validityDays: parseInt(form.validityDays, 10),
+                    lateCancelHours: parseInt(form.lateCancelHours, 10) || 8,
+                    classTypeId: form.classTypeId,
+                    isBirthdayGift: form.isBirthdayGift,
+                  },
+                  {
+                    onSuccess: () => {
+                      setShowCreate(false);
+                      setForm({
+                        name: "",
+                        sessionCount: "",
+                        validityDays: "",
+                        lateCancelHours: "8",
+                        classTypeId: "",
+                        isBirthdayGift: false,
+                      });
+                    },
+                  },
+                )
               }
             >
               {t("admin.manage.create")}
@@ -533,15 +534,18 @@ export default function AdminPackages() {
               }
               onPress={() => {
                 if (!editingId) return;
-                updateTypeMutation.mutate({
-                  id: editingId,
-                  name: editForm.name,
-                  sessionCount: parseInt(editForm.sessionCount, 10),
-                  validityDays: parseInt(editForm.validityDays, 10),
-                  lateCancelHours: parseInt(editForm.lateCancelHours, 10) || 8,
-                  classTypeId: editForm.classTypeId,
-                  isBirthdayGift: editForm.isBirthdayGift,
-                });
+                updateTypeMutation.mutate(
+                  {
+                    id: editingId,
+                    name: editForm.name,
+                    sessionCount: parseInt(editForm.sessionCount, 10),
+                    validityDays: parseInt(editForm.validityDays, 10),
+                    lateCancelHours: parseInt(editForm.lateCancelHours, 10) || 8,
+                    classTypeId: editForm.classTypeId,
+                    isBirthdayGift: editForm.isBirthdayGift,
+                  },
+                  { onSuccess: () => setEditingId(null) },
+                );
               }}
             >
               {t("admin.schedule.saveChanges")}

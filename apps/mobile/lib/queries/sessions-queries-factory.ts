@@ -1,4 +1,9 @@
-import { queryOptions, mutationOptions, keepPreviousData } from "@tanstack/react-query";
+import {
+  queryOptions,
+  mutationOptions,
+  keepPreviousData,
+  type QueryClient,
+} from "@tanstack/react-query";
 import { z } from "zod";
 import { apiFetch, throwIfNotOk } from "@/lib/api";
 import { sharedEnv } from "@/lib/env.shared";
@@ -54,6 +59,11 @@ const sessionSchema = z.object({
 const sessionsListResponseSchema = z.object({
   success: z.boolean(),
   sessions: z.array(sessionSchema),
+});
+
+const sessionMutationResponseSchema = z.object({
+  success: z.boolean(),
+  session: sessionSchema,
 });
 
 // Shared client + consent shape for both booked and waitlisted clients —
@@ -179,7 +189,7 @@ export const sessionsQueries = {
           body: JSON.stringify(payload),
         });
         await throwIfNotOk(response, "Unable to create session");
-        return response.json();
+        return sessionMutationResponseSchema.parse(await response.json());
       },
     }),
 
@@ -206,7 +216,7 @@ export const sessionsQueries = {
           body: JSON.stringify(payload),
         });
         await throwIfNotOk(response, "Unable to update session");
-        return response.json();
+        return sessionMutationResponseSchema.parse(await response.json());
       },
     }),
 
@@ -314,3 +324,42 @@ export const sessionsQueries = {
       },
     }),
 };
+
+// ── Mutation hooks ──────────────────────────────────────────────────────────
+// Single-session create/update return the full Session (incl. classType/room
+// after the Layer 4 server widening), so splice the returned row into the
+// `list` cache instead of invalidating. Append on create, replace-by-id on
+// update. The byId DETAIL is deliberately left alone here — its shape carries
+// extra nested bookings/waitlist this mutation doesn't return, so the caller
+// invalidates just that one id's detail key as a separate side-effect.
+// (availabilityByMonth and recurring writes are not spliced — they're left to
+// the component's own invalidation, which the builders no longer touch.)
+
+type SessionsListData = z.infer<typeof sessionsListResponseSchema>;
+type SessionMutationResponse = z.infer<typeof sessionMutationResponseSchema>;
+const sessionsListKey = sessionsQueries.list().queryKey;
+
+function spliceSession(queryClient: QueryClient, session: Session) {
+  queryClient.setQueryData<SessionsListData>(sessionsListKey, (prev) => {
+    if (!prev) return prev;
+    const exists = prev.sessions.some((s) => s.id === session.id);
+    const sessions = exists
+      ? prev.sessions.map((s) => (s.id === session.id ? session : s))
+      : [...prev.sessions, session];
+    return { ...prev, sessions };
+  });
+}
+
+export function createSessionMutationOptions(queryClient: QueryClient) {
+  return {
+    ...sessionsQueries.create(),
+    onSuccess: (data: SessionMutationResponse) => spliceSession(queryClient, data.session),
+  };
+}
+
+export function updateSessionMutationOptions(queryClient: QueryClient) {
+  return {
+    ...sessionsQueries.update(),
+    onSuccess: (data: SessionMutationResponse) => spliceSession(queryClient, data.session),
+  };
+}

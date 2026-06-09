@@ -46,7 +46,13 @@ import { PaginatedList } from "@/components/ui/paginated-list";
 import { DateTimePicker } from "@/components/ui/date-time-picker";
 import { toIsoDate } from "@/lib/date-of-birth";
 import { clientsQueries } from "@/lib/queries/clients-queries-factory";
-import { invitesQueries, type Invite } from "@/lib/queries/invites-queries-factory";
+import {
+  invitesQueries,
+  createInviteMutationOptions,
+  revokeInviteMutationOptions,
+  resendInviteMutationOptions,
+  type Invite,
+} from "@/lib/queries/invites-queries-factory";
 import { packagesQueries } from "@/lib/queries/packages-queries-factory";
 import { now } from "@/lib/now";
 import type { ClientsResponse } from "@baza/types";
@@ -244,25 +250,14 @@ export default function AdminClients() {
   const invitesQuery = useQuery(invitesQueries.list());
 
   // ── Mutations ─────────────────────────────────────────────────────────────
-  const createInviteMutation = useMutation({
-    ...invitesQueries.create(),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: invitesQueries.all });
-      setShowInviteForm(false);
-      setInviteForm({ email: "", firstName: "", lastName: "", phone: "", dateOfBirth: null });
-    },
-  });
-  const revokeMutation = useMutation({
-    ...invitesQueries.revoke(),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: invitesQueries.all });
-      setConfirmRevokeId(null);
-    },
-  });
-  const resendMutation = useMutation({
-    ...invitesQueries.resend(),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: invitesQueries.all }),
-  });
+  // Invite mutations splice their returned row into the invites list cache
+  // (baked into the options-builders). The component-only side-effects (close
+  // sheet, reset form, clear the revoke confirm) are passed per-call via
+  // mutate(vars, { onSuccess }). resend has no extra side-effect — the splice
+  // (now SENT/re-PENDING row) is the whole job.
+  const createInviteMutation = useMutation(createInviteMutationOptions(queryClient));
+  const revokeMutation = useMutation(revokeInviteMutationOptions(queryClient));
+  const resendMutation = useMutation(resendInviteMutationOptions(queryClient));
   const createClientMutation = useMutation({
     ...clientsQueries.create(),
     onSuccess: async () => {
@@ -908,13 +903,27 @@ export default function AdminClients() {
               }
               onPress={() => {
                 if (!inviteForm.dateOfBirth) return;
-                createInviteMutation.mutate({
-                  email: inviteForm.email,
-                  firstName: inviteForm.firstName,
-                  lastName: inviteForm.lastName,
-                  phone: inviteForm.phone || undefined,
-                  dateOfBirth: toIsoDate(inviteForm.dateOfBirth),
-                });
+                createInviteMutation.mutate(
+                  {
+                    email: inviteForm.email,
+                    firstName: inviteForm.firstName,
+                    lastName: inviteForm.lastName,
+                    phone: inviteForm.phone || undefined,
+                    dateOfBirth: toIsoDate(inviteForm.dateOfBirth),
+                  },
+                  {
+                    onSuccess: () => {
+                      setShowInviteForm(false);
+                      setInviteForm({
+                        email: "",
+                        firstName: "",
+                        lastName: "",
+                        phone: "",
+                        dateOfBirth: null,
+                      });
+                    },
+                  },
+                );
               }}
             >
               {t("admin.clients.sendInvite")}
@@ -1039,7 +1048,9 @@ export default function AdminClients() {
         }
         onConfirm={() => {
           if (!confirmRevokeId) return;
-          revokeMutation.mutate(confirmRevokeId);
+          revokeMutation.mutate(confirmRevokeId, {
+            onSuccess: () => setConfirmRevokeId(null),
+          });
         }}
       />
     </ScreenContainerRaw>

@@ -1,4 +1,8 @@
-import { queryOptions, mutationOptions } from "@tanstack/react-query";
+import {
+  queryOptions,
+  mutationOptions,
+  type QueryClient,
+} from "@tanstack/react-query";
 import { z } from "zod";
 import { apiFetch, throwIfNotOk } from "@/lib/api";
 import { sharedEnv } from "@/lib/env.shared";
@@ -13,6 +17,11 @@ const classTypeSchema = z.object({
 const classTypesResponseSchema = z.object({
   success: z.boolean(),
   classTypes: z.array(classTypeSchema),
+});
+
+const classTypeMutationResponseSchema = z.object({
+  success: z.boolean(),
+  classType: classTypeSchema,
 });
 
 export type ClassType = z.infer<typeof classTypeSchema>;
@@ -49,7 +58,7 @@ export const trainingsQueries = {
           },
         );
         if (!response.ok) throw new Error(`Unable to create class type (${response.status})`);
-        return response.json();
+        return classTypeMutationResponseSchema.parse(await response.json());
       },
     }),
 
@@ -75,7 +84,7 @@ export const trainingsQueries = {
           },
         );
         await throwIfNotOk(response, "Unable to update class type");
-        return response.json();
+        return classTypeMutationResponseSchema.parse(await response.json());
       },
     }),
 
@@ -92,3 +101,38 @@ export const trainingsQueries = {
       },
     }),
 };
+
+// ── Mutation hooks ──────────────────────────────────────────────────────────
+// create/update return the full ClassType, so splice the returned row into the
+// list cache instead of invalidating. Append on create, replace-by-id on update.
+
+type ClassTypesListData = z.infer<typeof classTypesResponseSchema>;
+type ClassTypeMutationResponse = z.infer<typeof classTypeMutationResponseSchema>;
+const classTypesListKey = trainingsQueries.classTypes().queryKey;
+
+function spliceClassType(queryClient: QueryClient, classType: ClassType) {
+  queryClient.setQueryData<ClassTypesListData>(classTypesListKey, (prev) => {
+    if (!prev) return prev;
+    const exists = prev.classTypes.some((c) => c.id === classType.id);
+    const classTypes = exists
+      ? prev.classTypes.map((c) => (c.id === classType.id ? classType : c))
+      : [...prev.classTypes, classType];
+    return { ...prev, classTypes };
+  });
+}
+
+export function createClassTypeMutationOptions(queryClient: QueryClient) {
+  return {
+    ...trainingsQueries.createClassType(),
+    onSuccess: (data: ClassTypeMutationResponse) =>
+      spliceClassType(queryClient, data.classType),
+  };
+}
+
+export function updateClassTypeMutationOptions(queryClient: QueryClient) {
+  return {
+    ...trainingsQueries.updateClassType(),
+    onSuccess: (data: ClassTypeMutationResponse) =>
+      spliceClassType(queryClient, data.classType),
+  };
+}

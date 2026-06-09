@@ -2,6 +2,7 @@ import {
   queryOptions,
   mutationOptions,
   infiniteQueryOptions,
+  type QueryClient,
 } from "@tanstack/react-query";
 import { z } from "zod";
 import { apiFetch, throwIfNotOk } from "@/lib/api";
@@ -26,6 +27,11 @@ const packageTypeSchema = z.object({
 const packageTypesResponseSchema = z.object({
   success: z.boolean(),
   packageTypes: z.array(packageTypeSchema),
+});
+
+const packageTypeMutationResponseSchema = z.object({
+  success: z.boolean(),
+  packageType: packageTypeSchema,
 });
 
 const embeddedPackageTypeSchema = z.object({
@@ -162,7 +168,7 @@ export const packagesQueries = {
           body: JSON.stringify(payload),
         });
         await throwIfNotOk(response, "Unable to create package type");
-        return response.json();
+        return packageTypeMutationResponseSchema.parse(await response.json());
       },
     }),
 
@@ -191,7 +197,7 @@ export const packagesQueries = {
           },
         );
         await throwIfNotOk(response, "Unable to update package type");
-        return response.json();
+        return packageTypeMutationResponseSchema.parse(await response.json());
       },
     }),
 
@@ -250,3 +256,39 @@ export const packagesQueries = {
       },
     }),
 };
+
+// ── Mutation hooks ──────────────────────────────────────────────────────────
+// createType/updateType return the full PackageType (incl. isBirthdayGift after
+// the Layer 4 server widening), so splice the returned row into the types list
+// cache instead of invalidating. Append on create, replace-by-id on update.
+
+type PackageTypesListData = z.infer<typeof packageTypesResponseSchema>;
+type PackageTypeMutationResponse = z.infer<typeof packageTypeMutationResponseSchema>;
+const packageTypesListKey = packagesQueries.types().queryKey;
+
+function splicePackageType(queryClient: QueryClient, packageType: PackageType) {
+  queryClient.setQueryData<PackageTypesListData>(packageTypesListKey, (prev) => {
+    if (!prev) return prev;
+    const exists = prev.packageTypes.some((p) => p.id === packageType.id);
+    const packageTypes = exists
+      ? prev.packageTypes.map((p) => (p.id === packageType.id ? packageType : p))
+      : [...prev.packageTypes, packageType];
+    return { ...prev, packageTypes };
+  });
+}
+
+export function createPackageTypeMutationOptions(queryClient: QueryClient) {
+  return {
+    ...packagesQueries.createType(),
+    onSuccess: (data: PackageTypeMutationResponse) =>
+      splicePackageType(queryClient, data.packageType),
+  };
+}
+
+export function updatePackageTypeMutationOptions(queryClient: QueryClient) {
+  return {
+    ...packagesQueries.updateType(),
+    onSuccess: (data: PackageTypeMutationResponse) =>
+      splicePackageType(queryClient, data.packageType),
+  };
+}

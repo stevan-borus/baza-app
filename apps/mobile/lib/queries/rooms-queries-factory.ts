@@ -1,4 +1,8 @@
-import { queryOptions, mutationOptions } from "@tanstack/react-query";
+import {
+  queryOptions,
+  mutationOptions,
+  type QueryClient,
+} from "@tanstack/react-query";
 import { z } from "zod";
 import { apiFetch, throwIfNotOk } from "@/lib/api";
 import { sharedEnv } from "@/lib/env.shared";
@@ -12,6 +16,11 @@ const roomSchema = z.object({
 const roomsResponseSchema = z.object({
   success: z.boolean(),
   rooms: z.array(roomSchema),
+});
+
+const roomMutationResponseSchema = z.object({
+  success: z.boolean(),
+  room: roomSchema,
 });
 
 export type Room = z.infer<typeof roomSchema>;
@@ -44,7 +53,7 @@ export const roomsQueries = {
           body: JSON.stringify(payload),
         });
         if (!response.ok) throw new Error(`Unable to create room (${response.status})`);
-        return response.json();
+        return roomMutationResponseSchema.parse(await response.json());
       },
     }),
 
@@ -69,7 +78,7 @@ export const roomsQueries = {
           },
         );
         await throwIfNotOk(response, "Unable to update room");
-        return response.json();
+        return roomMutationResponseSchema.parse(await response.json());
       },
     }),
 
@@ -86,3 +95,37 @@ export const roomsQueries = {
       },
     }),
 };
+
+// ── Mutation hooks ──────────────────────────────────────────────────────────
+// create/update return the full Room (server widened in Layer 4), so we splice
+// the returned row into the list cache instead of invalidating (refetching).
+// Append on create (admin list is creation-ordered), replace-by-id on update.
+
+type RoomsListData = z.infer<typeof roomsResponseSchema>;
+type RoomMutationResponse = z.infer<typeof roomMutationResponseSchema>;
+const roomsListKey = roomsQueries.list().queryKey;
+
+function spliceRoom(queryClient: QueryClient, room: Room) {
+  queryClient.setQueryData<RoomsListData>(roomsListKey, (prev) => {
+    if (!prev) return prev;
+    const exists = prev.rooms.some((r) => r.id === room.id);
+    const rooms = exists
+      ? prev.rooms.map((r) => (r.id === room.id ? room : r))
+      : [...prev.rooms, room];
+    return { ...prev, rooms };
+  });
+}
+
+export function createRoomMutationOptions(queryClient: QueryClient) {
+  return {
+    ...roomsQueries.create(),
+    onSuccess: (data: RoomMutationResponse) => spliceRoom(queryClient, data.room),
+  };
+}
+
+export function updateRoomMutationOptions(queryClient: QueryClient) {
+  return {
+    ...roomsQueries.update(),
+    onSuccess: (data: RoomMutationResponse) => spliceRoom(queryClient, data.room),
+  };
+}

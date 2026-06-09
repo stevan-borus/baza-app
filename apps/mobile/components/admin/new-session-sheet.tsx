@@ -19,7 +19,10 @@ import { DateTimePicker } from "@/components/ui/date-time-picker";
 import { SectionLabel } from "@/components/ui/typography";
 import { ErrorState } from "@/components/ui/states";
 import { useThemeTokens } from "@/components/ui/tokens";
-import { sessionsQueries } from "@/lib/queries/sessions-queries-factory";
+import {
+  sessionsQueries,
+  createSessionMutationOptions,
+} from "@/lib/queries/sessions-queries-factory";
 import { trainingsQueries } from "@/lib/queries/trainings-queries-factory";
 import { roomsQueries } from "@/lib/queries/rooms-queries-factory";
 import { usersQueries } from "@/lib/queries/users-queries-factory";
@@ -84,14 +87,11 @@ export function NewSessionSheet({ open, onOpenChange }: NewSessionSheetProps) {
     setCreateIsActive(true);
   }
 
-  const createMutation = useMutation({
-    ...sessionsQueries.create(),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: sessionsQueries.all });
-      onOpenChange(false);
-      resetCreateForm();
-    },
-  });
+  // Single-session create splices the returned session into the list cache
+  // (baked into the options-builder); the close + reset side-effects are passed
+  // per-call via mutate(vars, { onSuccess }). The recurring path still
+  // invalidates — it returns a batch shape that isn't a single list row.
+  const createMutation = useMutation(createSessionMutationOptions(queryClient));
   const createRecurringMutation = useMutation({
     ...sessionsQueries.createRecurring(),
     onSuccess: async () => {
@@ -350,15 +350,23 @@ export function NewSessionSheet({ open, onOpenChange }: NewSessionSheetProps) {
               const endsAt = new Date(
                 newSession.startsAt.getTime() + durationMins * 60 * 1000,
               );
-              createMutation.mutate({
-                classTypeId: newSession.classTypeId,
-                roomId: newSession.roomId || undefined,
-                trainerUserId: newSession.trainerUserId,
-                startsAt: newSession.startsAt.toISOString(),
-                endsAt: endsAt.toISOString(),
-                capacity,
-                isActive: createIsActive,
-              });
+              createMutation.mutate(
+                {
+                  classTypeId: newSession.classTypeId,
+                  roomId: newSession.roomId || undefined,
+                  trainerUserId: newSession.trainerUserId,
+                  startsAt: newSession.startsAt.toISOString(),
+                  endsAt: endsAt.toISOString(),
+                  capacity,
+                  isActive: createIsActive,
+                },
+                {
+                  onSuccess: () => {
+                    onOpenChange(false);
+                    resetCreateForm();
+                  },
+                },
+              );
             }
           }}
         >

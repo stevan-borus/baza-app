@@ -16,7 +16,10 @@ import { DateTimePicker } from "@/components/ui/date-time-picker";
 import { SectionLabel } from "@/components/ui/typography";
 import { ErrorState } from "@/components/ui/states";
 import { useThemeTokens } from "@/components/ui/tokens";
-import { sessionsQueries } from "@/lib/queries/sessions-queries-factory";
+import {
+  sessionsQueries,
+  updateSessionMutationOptions,
+} from "@/lib/queries/sessions-queries-factory";
 import { roomsQueries } from "@/lib/queries/rooms-queries-factory";
 import { usersQueries } from "@/lib/queries/users-queries-factory";
 import { formatMutationError } from "@/lib/admin/format-mutation-error";
@@ -205,9 +208,15 @@ export function useSessionEditSheet() {
     [queryClient],
   );
 
+  // The single-session update splices the returned row into the `list` cache
+  // (baked into the builder). We compose on top: still invalidate availability
+  // + the byId DETAIL (its shape carries nested bookings/waitlist the mutation
+  // doesn't return, so it must refetch), then run the close/reset side-effects.
+  const updateSessionOptions = updateSessionMutationOptions(queryClient);
   const updateMutation = useMutation({
-    ...sessionsQueries.update(),
-    onSuccess: async (_data, variables) => {
+    ...updateSessionOptions,
+    onSuccess: async (data, variables) => {
+      updateSessionOptions.onSuccess(data);
       await invalidate(variables.id);
       setConfirmCancelSession(false);
       setShowEdit(null);
