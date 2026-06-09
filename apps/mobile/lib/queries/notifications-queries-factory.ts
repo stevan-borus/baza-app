@@ -201,13 +201,16 @@ type UpdatePreferencesInput = {
 };
 
 /**
- * Optimistic options for the preferences PATCH.
+ * Optimistic update options for the preferences PATCH.
  *
- * onMutate writes the flipped field straight into the preferences cache so the
- * switch shows the new position instantly and holds it; onError reverts. No
- * onSuccess/onSettled invalidation — once the PATCH resolves the optimistic
- * value IS the server value, so a refetch would only round-trip to relearn it
- * (and reopen a flicker window). Same fix as the notification-toggle work.
+ * onMutate writes the flipped value straight into the preferences cache so the
+ * switch shows the new position instantly and holds it — fixing the left-right
+ * snap-back that came from reading the stale cache during the old settle→refetch
+ * window. onError reverts to the pre-tap snapshot if the PATCH fails.
+ *
+ * No onSuccess/onSettled invalidation: the optimistic write is already the
+ * server-confirmed value once the PATCH resolves, so re-fetching would only add
+ * a redundant round-trip (and reopen a refetch window) to learn what we know.
  */
 export function updatePreferencesMutationOptions(queryClient: QueryClient) {
   const preferencesKey = notificationsQueries.preferences().queryKey;
@@ -217,6 +220,8 @@ export function updatePreferencesMutationOptions(queryClient: QueryClient) {
       await queryClient.cancelQueries({ queryKey: preferencesKey });
       const previous = queryClient.getQueryData<PreferencesResponse>(preferencesKey);
       if (previous) {
+        // Merge whatever single field this PATCH carries (a toggle, or the
+        // locale) onto the cached preferences so the optimistic value is exact.
         queryClient.setQueryData<PreferencesResponse>(preferencesKey, {
           ...previous,
           preferences: { ...previous.preferences, ...input },
