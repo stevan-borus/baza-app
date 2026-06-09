@@ -1,4 +1,4 @@
-import { queryOptions, mutationOptions, infiniteQueryOptions, useMutation, useQueryClient } from "@tanstack/react-query";
+import { queryOptions, mutationOptions, infiniteQueryOptions, useMutation, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 import { apiFetch } from "@/lib/api";
 import { sharedEnv } from "@/lib/env.shared";
@@ -191,12 +191,48 @@ export const notificationsQueries = {
     }),
 };
 
+type PreferencesResponse = z.infer<typeof preferencesResponseSchema>;
+type UpdatePreferencesInput = {
+  pushEnabled?: boolean;
+  inAppEnabled?: boolean;
+  campaignsEnabled?: boolean;
+  bookingEmailsEnabled?: boolean;
+  preferredLocale?: "sr" | "en" | null;
+};
+
+/**
+ * Optimistic options for the preferences PATCH.
+ *
+ * onMutate writes the flipped field straight into the preferences cache so the
+ * switch shows the new position instantly and holds it; onError reverts. No
+ * onSuccess/onSettled invalidation — once the PATCH resolves the optimistic
+ * value IS the server value, so a refetch would only round-trip to relearn it
+ * (and reopen a flicker window). Same fix as the notification-toggle work.
+ */
+export function updatePreferencesMutationOptions(queryClient: QueryClient) {
+  const preferencesKey = notificationsQueries.preferences().queryKey;
+  return {
+    ...notificationsQueries.updatePreferences(),
+    onMutate: async (input: UpdatePreferencesInput) => {
+      await queryClient.cancelQueries({ queryKey: preferencesKey });
+      const previous = queryClient.getQueryData<PreferencesResponse>(preferencesKey);
+      if (previous) {
+        queryClient.setQueryData<PreferencesResponse>(preferencesKey, {
+          ...previous,
+          preferences: { ...previous.preferences, ...input },
+        });
+      }
+      return { previous };
+    },
+    onError: (_err: unknown, _input: UpdatePreferencesInput, context?: { previous?: PreferencesResponse }) => {
+      if (context?.previous) {
+        queryClient.setQueryData(preferencesKey, context.previous);
+      }
+    },
+  };
+}
+
 export function useUpdatePreferencesMutation() {
   const queryClient = useQueryClient();
-  return useMutation({
-    ...notificationsQueries.updatePreferences(),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["notifications", "preferences"] });
-    },
-  });
+  return useMutation(updatePreferencesMutationOptions(queryClient));
 }

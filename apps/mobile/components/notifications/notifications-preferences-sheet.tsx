@@ -4,7 +4,10 @@ import { Switch, Text, View } from "react-native";
 import { AppSheet } from "@/components/ui/sheet";
 import { EmptyState } from "@/components/ui/states";
 import { useThemeTokens } from "@/components/ui/tokens";
-import { notificationsQueries } from "@/lib/queries/notifications-queries-factory";
+import {
+  notificationsQueries,
+  updatePreferencesMutationOptions,
+} from "@/lib/queries/notifications-queries-factory";
 import { Icon } from "@/components/ui/icon";
 
 type Props = {
@@ -20,11 +23,7 @@ export function NotificationsPreferencesSheet({ open, onOpenChange }: Props) {
   const prefsQuery = useQuery(notificationsQueries.preferences());
   const prefs = prefsQuery.data?.preferences;
 
-  const updatePrefsMutation = useMutation({
-    ...notificationsQueries.updatePreferences(),
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: notificationsQueries.preferences().queryKey }),
-  });
+  const updatePrefsMutation = useMutation(updatePreferencesMutationOptions(queryClient));
 
   return (
     <AppSheet open={open} onOpenChange={onOpenChange}>

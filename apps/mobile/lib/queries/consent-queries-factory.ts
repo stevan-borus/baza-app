@@ -1,4 +1,4 @@
-import { queryOptions, useMutation, useQueryClient } from "@tanstack/react-query";
+import { queryOptions, useMutation, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import {
   consentStatusResponseSchema,
   consentAcceptInputSchema,
@@ -85,10 +85,17 @@ export function useMarkGuardianVerifiedMutation() {
   });
 }
 
-export function useRecordSocialMediaMutation() {
-  const queryClient = useQueryClient();
+/**
+ * Optimistic options for the social-media consent toggle.
+ *
+ * onMutate writes the chosen value into the status cache (+ onError rollback).
+ * No onSettled invalidation: the POST only confirms what we already wrote, so a
+ * refetch would just reopen a window for the switch to flicker — the same
+ * redundant-refetch fix applied to the notification toggle (PR #50).
+ */
+export function recordSocialMediaMutationOptions(queryClient: QueryClient) {
   const statusKey = consentQueries.status().queryKey;
-  return useMutation({
+  return {
     mutationKey: [...consentAll, "social-media"] as const,
     mutationFn: async (input: SocialMediaConsentInput) => {
       const parsed = socialMediaConsentInputSchema.parse(input);
@@ -101,7 +108,7 @@ export function useRecordSocialMediaMutation() {
       if (!res.ok) throw new Error(`Record failed (${res.status})`);
       return res.json();
     },
-    onMutate: async (input) => {
+    onMutate: async (input: SocialMediaConsentInput) => {
       await queryClient.cancelQueries({ queryKey: statusKey });
       const previous = queryClient.getQueryData<ConsentStatusResponse>(statusKey);
       if (previous) {
@@ -112,13 +119,15 @@ export function useRecordSocialMediaMutation() {
       }
       return { previous };
     },
-    onError: (_err, _input, context) => {
+    onError: (_err: unknown, _input: SocialMediaConsentInput, context?: { previous?: ConsentStatusResponse }) => {
       if (context?.previous) {
         queryClient.setQueryData(statusKey, context.previous);
       }
     },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: statusKey });
-    },
-  });
+  };
+}
+
+export function useRecordSocialMediaMutation() {
+  const queryClient = useQueryClient();
+  return useMutation(recordSocialMediaMutationOptions(queryClient));
 }
