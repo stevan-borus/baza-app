@@ -1,3 +1,4 @@
+import { formatFullName } from "@baza/types";
 import { InviteStatus, UserRole } from "@/generated/prisma";
 import { requireRole } from "@/lib/server/auth-guards";
 import { fail, ok } from "@/lib/server/http";
@@ -30,5 +31,10 @@ export async function POST(request: Request, { id }: RouteParams) {
     },
   });
 
-  return ok({ success: true, invite: updated });
+  // Include the derived fullName so the response matches the client invite row
+  // schema (which the cache splice parses) — the GET list builds it the same way.
+  return ok({
+    success: true,
+    invite: { ...updated, fullName: formatFullName(updated.firstName, updated.lastName) },
+  });
 }

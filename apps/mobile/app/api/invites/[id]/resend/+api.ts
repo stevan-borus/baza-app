@@ -1,3 +1,4 @@
+import { formatFullName } from "@baza/types";
 import { InviteStatus, UserRole } from "@/generated/prisma";
 import { now } from "@/lib/now";
 import { requireRole } from "@/lib/server/auth-guards";
@@ -50,5 +51,8 @@ export async function POST(request: Request, { id }: RouteParams) {
     inviteToken: rawToken,
   });
 
-  return ok({ success: true, invite: updated });
+  return ok({
+    success: true,
+    invite: { ...updated, fullName: formatFullName(updated.firstName, updated.lastName) },
+  });
 }

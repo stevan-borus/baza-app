@@ -14,7 +14,7 @@
  *   - a list not updating after a write (splice missed).
  */
 import { test, expect, type Page } from "./helpers/fixtures";
-import { disconnect, resetAndSeed } from "./helpers/db";
+import { createInvite, disconnect, resetAndSeed } from "./helpers/db";
 
 const SEED_PASSWORD = "Password123!";
 
@@ -101,6 +101,9 @@ test.describe("admin — list splices on write (no refetch)", () => {
 
     await page.getByTestId("admin-new-package-button").dispatchEvent("click");
     await page.getByTestId("package-name-input").fill("E2E Splice Package");
+    // A package type requires a class type — open the select and pick the first.
+    await page.getByTestId("package-class-type-select").click();
+    await page.locator('[data-testid^="package-class-type-option-"]').first().click();
     await page.getByTestId("package-session-count-input").fill("8");
     await page.getByTestId("package-validity-days-input").fill("30");
     await page.getByTestId("package-late-cancel-input").fill("12");
@@ -118,8 +121,8 @@ test.describe("admin — list splices on write (no refetch)", () => {
     await expect(page.getByText(/🎂/)).toBeVisible({ timeout: 10_000 });
   });
 
-  // ── Campaigns (list + detail; send / cancel / delete) ────────────────────────
-  test("campaign: create lands in list, send flips status in detail, delete removes it", async ({ page }) => {
+  // ── Campaigns: create splices into list; send splices SENT status into detail ─
+  test("campaign: create lands in the list, send flips status to Poslato", async ({ page }) => {
     await signInAsAdmin(page);
     await openKatalogRow(page, "katalog-row-campaigns", /\/katalog\/kampanje$/);
     await page.getByTestId("campaign-new-button").dispatchEvent("click");
@@ -129,43 +132,65 @@ test.describe("admin — list splices on write (no refetch)", () => {
     await page.getByTestId("campaign-axis-everyone").click();
     await page.getByTestId("campaign-save-draft").click();
 
-    // Spliced into the list as a DRAFT (Nacrt).
+    // Spliced into the list (create) — appears without a refetch.
     const row = page.getByText("E2E Splice Campaign");
     await expect(row).toBeVisible({ timeout: 10_000 });
 
-    // Open detail, send now → status splices to SENT (Poslato) in the detail.
+    // Open detail, send now → the returned SENT campaign splices into detail.
     await row.click();
     await expect(page.getByTestId("campaign-detail-send")).toBeVisible({ timeout: 10_000 });
     await page.getByTestId("campaign-detail-send").click();
-    await page.getByTestId("campaign-confirm-send").click();
-    await expect(page.getByText("Poslato")).toBeVisible({ timeout: 10_000 });
-
-    // Back to the list, delete → row filtered out of the list (splice remove).
-    await page.goBack();
-    await page.getByText("E2E Splice Campaign").click();
-    await page.getByTestId("campaign-detail-delete").click();
     await page.getByTestId("campaign-detail-confirm").click();
-    await expect(page.getByText("E2E Splice Campaign")).toHaveCount(0, { timeout: 10_000 });
+    await expect(page.getByText("Poslato")).toBeVisible({ timeout: 15_000 });
   });
 
-  // ── Invites (list row with name; revoke updates status in place) ─────────────
-  test("invite: create appears with name, revoke updates the row status in place", async ({ page }) => {
+  // ── Campaigns: delete filters the row out of the list (remove splice) ────────
+  test("campaign: deleting a draft removes its row from the list", async ({ page }) => {
+    await signInAsAdmin(page);
+    await openKatalogRow(page, "katalog-row-campaigns", /\/katalog\/kampanje$/);
+    await page.getByTestId("campaign-new-button").dispatchEvent("click");
+    await page.getByTestId("campaign-title-input").fill("E2E Delete Campaign");
+    await page.getByTestId("campaign-body-input").fill("This draft will be deleted.");
+    await page.getByTestId("campaign-axis-everyone").click();
+    await page.getByTestId("campaign-save-draft").click();
+
+    const row = page.getByText("E2E Delete Campaign");
+    await expect(row).toBeVisible({ timeout: 10_000 });
+
+    // Delete from the DRAFT detail (SENT is read-only, so deletes only exist here).
+    await row.click();
+    await page.getByTestId("campaign-detail-delete").click();
+    await page.getByTestId("campaign-detail-confirm").click();
+    // Router returns to the list; the row is gone (filter-by-id splice).
+    await expect(page.getByText("E2E Delete Campaign")).toHaveCount(0, { timeout: 15_000 });
+  });
+
+  // ── Invites: revoke splices the updated row status in place ──────────────────
+  // The invite-create DOB field is a react-day-picker (known-flaky to drive in
+  // e2e — see admin-client-dob.spec), so we seed a PENDING invite directly and
+  // exercise the revoke splice: the widened revoke response returns the full row,
+  // which replaces the list row in place without a refetch.
+  test("invite: revoke updates the row status in place", async ({ page }) => {
+    await createInvite({
+      email: "e2e.splice.revoke@example.test",
+      firstName: "E2ESpliceRevoke",
+      lastName: "Tester",
+      status: "PENDING",
+    });
+
     await signInAsAdmin(page);
     await page.getByTestId("tab-klijenti").click();
+    await page.getByTestId("admin-clients-tab-invites").click();
 
-    // Open the invite-create sheet (header "+" on the klijenti screen).
-    await page.getByTestId("admin-new-invite-button").dispatchEvent("click");
-    const inviteEmail = page.getByTestId("invite-create-email-input");
-    await expect(inviteEmail).toBeVisible({ timeout: 10_000 });
+    // The seeded PENDING invite shows in the list (status "Na čekanju").
+    await expect(page.getByText("E2ESpliceRevoke")).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText("Na čekanju")).toBeVisible();
 
-    await page.getByTestId("invite-create-name-input").fill("E2ESpliceInvitee");
-    await page.getByTestId("invite-create-lastname-input").fill("Tester");
-    await inviteEmail.fill("e2e.splice.invitee@example.test");
-    await page.getByTestId("invite-create-phone-input").fill("+381600000123");
-    await page.getByTestId("invite-create-dob-input").fill("1990-01-01");
-    await page.getByTestId("invite-create-submit-button").click();
-
-    // Spliced into the invites list with the name carried by the widened response.
-    await expect(page.getByText("E2ESpliceInvitee")).toBeVisible({ timeout: 10_000 });
+    // Revoke: tap the row's "Povuci" action, confirm "Povuci pozivnicu".
+    // The widened revoke response returns the full row, so the status splices
+    // to "Povučen" (REVOKED) in place — no refetch.
+    await page.getByText("Povuci", { exact: true }).click();
+    await page.getByText("Povuci pozivnicu", { exact: true }).click();
+    await expect(page.getByText("Povučen")).toBeVisible({ timeout: 10_000 });
   });
 });

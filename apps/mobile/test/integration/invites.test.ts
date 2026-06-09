@@ -87,11 +87,14 @@ describe("invites API", () => {
     expect(response.status).toBe(200);
 
     const createBody = (await response.json()) as {
-      invite: { firstName: string; lastName: string; phone: string | null };
+      invite: { firstName: string; lastName: string; phone: string | null; fullName: string };
     };
     expect(createBody.invite.firstName).toBe("New");
     expect(createBody.invite.lastName).toBe("Client");
     expect(createBody.invite.phone).toBe("+381 60 000 0000");
+    // The cache splice parses the response through the client invite row schema,
+    // which requires a derived fullName — assert the server provides it.
+    expect(createBody.invite.fullName).toBe("New Client");
 
     const invites = await prisma.userInvite.findMany();
     expect(invites).toHaveLength(1);
@@ -234,6 +237,7 @@ describe("invites API", () => {
         lastName: string;
         phone: string | null;
         status: string;
+        fullName: string;
       };
     };
     expect(revokeBody.success).toBe(true);
@@ -242,6 +246,8 @@ describe("invites API", () => {
     expect(revokeBody.invite.firstName).toBe("To");
     expect(revokeBody.invite.lastName).toBe("Revoke");
     expect(revokeBody.invite.status).toBe("REVOKED");
+    // fullName must be present — the cache splice's schema parse requires it.
+    expect(revokeBody.invite.fullName).toBe("To Revoke");
     const updated = await prisma.userInvite.findUnique({ where: { id: invite.id } });
     expect(updated?.status).toBe("REVOKED");
   });
@@ -276,6 +282,7 @@ describe("invites API", () => {
         lastName: string;
         phone: string | null;
         status: string;
+        fullName: string;
       };
     };
     expect(resendBody.success).toBe(true);
@@ -284,6 +291,7 @@ describe("invites API", () => {
     expect(resendBody.invite.firstName).toBe("To");
     expect(resendBody.invite.lastName).toBe("Resend");
     expect(resendBody.invite.status).toBe("PENDING");
+    expect(resendBody.invite.fullName).toBe("To Resend");
     const updated = await prisma.userInvite.findUnique({ where: { id: invite.id } });
     expect(updated?.tokenHash).not.toBe(oldTokenHash);
     expect(updated?.expiresAt.getTime()).toBeGreaterThan(nowMs());
