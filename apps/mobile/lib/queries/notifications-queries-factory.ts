@@ -1,4 +1,4 @@
-import { queryOptions, mutationOptions, infiniteQueryOptions, useMutation, useQueryClient } from "@tanstack/react-query";
+import { queryOptions, mutationOptions, infiniteQueryOptions, useMutation, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 import { apiFetch } from "@/lib/api";
 import { sharedEnv } from "@/lib/env.shared";
@@ -187,12 +187,56 @@ export const notificationsQueries = {
     }),
 };
 
+type PreferencesResponse = z.infer<typeof preferencesResponseSchema>;
+type UpdatePreferencesInput = {
+  pushEnabled?: boolean;
+  inAppEnabled?: boolean;
+  campaignsEnabled?: boolean;
+  bookingEmailsEnabled?: boolean;
+  preferredLocale?: "sr" | "en" | null;
+};
+
+const PREFERENCES_KEY = ["notifications", "preferences"] as const;
+
+/**
+ * Optimistic update options for the preferences PATCH.
+ *
+ * Why onMutate (not just the component's mutation.variables read): the settings
+ * screen's optimistic read only holds while the mutation isPending. The instant
+ * the PATCH settles, isPending flips false but the onSuccess invalidation's
+ * refetch hasn't returned yet — so without a cache write the switch reads the
+ * stale pre-tap value and visibly snaps back (the reported left-right jitter).
+ * Writing the flipped value into the cache here keeps it authoritative across
+ * the whole settle→refetch window; onError rolls it back on failure.
+ */
+export function updatePreferencesMutationOptions(queryClient: QueryClient) {
+  return {
+    ...notificationsQueries.updatePreferences(),
+    onMutate: async (input: UpdatePreferencesInput) => {
+      await queryClient.cancelQueries({ queryKey: PREFERENCES_KEY });
+      const previous = queryClient.getQueryData<PreferencesResponse>(PREFERENCES_KEY);
+      if (previous) {
+        // Merge whatever single field this PATCH carries (a toggle, or the
+        // locale) onto the cached preferences so the optimistic value is exact.
+        queryClient.setQueryData<PreferencesResponse>(PREFERENCES_KEY, {
+          ...previous,
+          preferences: { ...previous.preferences, ...input },
+        });
+      }
+      return { previous };
+    },
+    onError: (_err: unknown, _input: UpdatePreferencesInput, context?: { previous?: PreferencesResponse }) => {
+      if (context?.previous) {
+        queryClient.setQueryData(PREFERENCES_KEY, context.previous);
+      }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: PREFERENCES_KEY });
+    },
+  };
+}
+
 export function useUpdatePreferencesMutation() {
   const queryClient = useQueryClient();
-  return useMutation({
-    ...notificationsQueries.updatePreferences(),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["notifications", "preferences"] });
-    },
-  });
+  return useMutation(updatePreferencesMutationOptions(queryClient));
 }

@@ -35,15 +35,12 @@ export default function NotificationSettings() {
     { key: "campaignsEnabled", label: t("client.notificationSettings.campaignsEnabled") },
   ];
 
-  // Optimistic read: while a single-field PATCH is in flight, prefer the value
-  // the user just flipped (mutation variables) over the not-yet-refetched
-  // cache, so the switch doesn't visibly snap back before the invalidation
-  // lands. The mutation only ever carries one key.
+  // The mutation writes the flipped value into the preferences cache
+  // optimistically (see updatePreferencesMutationOptions), so reading straight
+  // from the cache already shows the new position instantly and holds it across
+  // the settle→refetch window — no snap-back. Default ON only until prefs load.
   function valueFor(key: PrefKey): boolean {
-    const pending = updateMutation.isPending
-      ? (updateMutation.variables as Partial<Record<PrefKey, boolean>> | undefined)?.[key]
-      : undefined;
-    return pending ?? prefs?.[key] ?? true;
+    return prefs?.[key] ?? true;
   }
 
   return (
@@ -83,7 +80,6 @@ export default function NotificationSettings() {
                   testID={`notification-settings-${row.key}`}
                   value={valueFor(row.key)}
                   onValueChange={(value) => toggle(row.key, value)}
-                  disabled={updateMutation.isPending}
                 />
               </View>
             ))}
