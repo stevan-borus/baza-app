@@ -1,4 +1,4 @@
-import { queryOptions, useMutation, useQueryClient } from "@tanstack/react-query";
+import { queryOptions, useMutation, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import {
   consentStatusResponseSchema,
   consentAcceptInputSchema,
@@ -9,13 +9,18 @@ import {
 } from "@baza/types";
 import { apiFetch } from "@/lib/api";
 import { sharedEnv } from "@/lib/env.shared";
+import { authQueries } from "@/lib/queries/auth-queries-factory";
+import { clientsQueries } from "@/lib/queries/clients-queries-factory";
 
 const BASE = `${sharedEnv.EXPO_PUBLIC_API_URL}/api/consent`;
 
+const consentAll = ["consent"] as const;
+
 export const consentQueries = {
+  all: consentAll,
   status: () =>
     queryOptions({
-      queryKey: ["consent", "status"] as const,
+      queryKey: [...consentAll, "status"] as const,
       queryFn: async (): Promise<ConsentStatusResponse> => {
         const res = await apiFetch(`${BASE}/status`, { credentials: "include" });
         if (!res.ok) throw new Error(`Unable to load consent status (${res.status})`);
@@ -28,7 +33,7 @@ export const consentQueries = {
 export function useAcceptConsentMutation() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationKey: ["consent", "accept"] as const,
+    mutationKey: [...consentAll, "accept"] as const,
     mutationFn: async (input: ConsentAcceptInput) => {
       const parsed = consentAcceptInputSchema.parse(input);
       const res = await apiFetch(`${BASE}/accept`, {
@@ -41,15 +46,15 @@ export function useAcceptConsentMutation() {
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["consent"] });
-      queryClient.invalidateQueries({ queryKey: ["auth", "me"] });
+      queryClient.invalidateQueries({ queryKey: consentQueries.all });
+      queryClient.invalidateQueries({ queryKey: authQueries.me().queryKey });
     },
   });
 }
 
 export function useRefuseConsentMutation() {
   return useMutation({
-    mutationKey: ["consent", "refuse"] as const,
+    mutationKey: [...consentAll, "refuse"] as const,
     mutationFn: async () => {
       const res = await apiFetch(`${BASE}/refuse`, {
         method: "POST",
@@ -64,7 +69,7 @@ export function useRefuseConsentMutation() {
 export function useMarkGuardianVerifiedMutation() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationKey: ["consent", "guardian-verified"] as const,
+    mutationKey: [...consentAll, "guardian-verified"] as const,
     mutationFn: async (clientUserId: string) => {
       const res = await apiFetch(
         `${sharedEnv.EXPO_PUBLIC_API_URL}/api/admin/clients/${clientUserId}/guardian-verified`,
@@ -74,17 +79,24 @@ export function useMarkGuardianVerifiedMutation() {
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["consent"] });
-      queryClient.invalidateQueries({ queryKey: ["clients"] });
+      queryClient.invalidateQueries({ queryKey: consentQueries.all });
+      queryClient.invalidateQueries({ queryKey: clientsQueries.all });
     },
   });
 }
 
-export function useRecordSocialMediaMutation() {
-  const queryClient = useQueryClient();
+/**
+ * Optimistic options for the social-media consent toggle.
+ *
+ * onMutate writes the chosen value into the status cache (+ onError rollback).
+ * No onSettled invalidation: the POST only confirms what we already wrote, so a
+ * refetch would just reopen a window for the switch to flicker — the same
+ * redundant-refetch fix applied to the notification toggle (PR #50).
+ */
+export function recordSocialMediaMutationOptions(queryClient: QueryClient) {
   const statusKey = consentQueries.status().queryKey;
-  return useMutation({
-    mutationKey: ["consent", "social-media"] as const,
+  return {
+    mutationKey: [...consentAll, "social-media"] as const,
     mutationFn: async (input: SocialMediaConsentInput) => {
       const parsed = socialMediaConsentInputSchema.parse(input);
       const res = await apiFetch(`${BASE}/social-media`, {
@@ -96,7 +108,7 @@ export function useRecordSocialMediaMutation() {
       if (!res.ok) throw new Error(`Record failed (${res.status})`);
       return res.json();
     },
-    onMutate: async (input) => {
+    onMutate: async (input: SocialMediaConsentInput) => {
       await queryClient.cancelQueries({ queryKey: statusKey });
       const previous = queryClient.getQueryData<ConsentStatusResponse>(statusKey);
       if (previous) {
@@ -107,13 +119,15 @@ export function useRecordSocialMediaMutation() {
       }
       return { previous };
     },
-    onError: (_err, _input, context) => {
+    onError: (_err: unknown, _input: SocialMediaConsentInput, context?: { previous?: ConsentStatusResponse }) => {
       if (context?.previous) {
         queryClient.setQueryData(statusKey, context.previous);
       }
     },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: statusKey });
-    },
-  });
+  };
+}
+
+export function useRecordSocialMediaMutation() {
+  const queryClient = useQueryClient();
+  return useMutation(recordSocialMediaMutationOptions(queryClient));
 }

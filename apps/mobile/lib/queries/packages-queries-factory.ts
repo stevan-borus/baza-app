@@ -2,6 +2,7 @@ import {
   queryOptions,
   mutationOptions,
   infiniteQueryOptions,
+  type QueryClient,
 } from "@tanstack/react-query";
 import { z } from "zod";
 import { apiFetch, throwIfNotOk } from "@/lib/api";
@@ -26,6 +27,11 @@ const packageTypeSchema = z.object({
 const packageTypesResponseSchema = z.object({
   success: z.boolean(),
   packageTypes: z.array(packageTypeSchema),
+});
+
+const packageTypeMutationResponseSchema = z.object({
+  success: z.boolean(),
+  packageType: packageTypeSchema,
 });
 
 const embeddedPackageTypeSchema = z.object({
@@ -76,10 +82,14 @@ const clientPackagesResponseSchema = z.object({
 export type PackageType = z.infer<typeof packageTypeSchema>;
 export type ClientPackage = z.infer<typeof clientPackageSchema>;
 
+const packagesAll = ["packages"] as const;
+
 export const packagesQueries = {
+  all: packagesAll,
+
   types: () =>
     queryOptions({
-      queryKey: ["packages", "types"] as const,
+      queryKey: [...packagesAll, "types"] as const,
       queryFn: async () => {
         const response = await apiFetch(`${sharedEnv.EXPO_PUBLIC_API_URL}/api/packages/types`, {
           credentials: "include",
@@ -92,7 +102,7 @@ export const packagesQueries = {
 
   clientPackages: (clientProfileId?: string) =>
     queryOptions({
-      queryKey: ["packages", "client-packages", clientProfileId ?? "me"] as const,
+      queryKey: [...packagesAll, "client-packages", clientProfileId ?? "me"] as const,
       queryFn: async () => {
         const qs = clientProfileId
           ? `?clientProfileId=${encodeURIComponent(clientProfileId)}`
@@ -119,7 +129,7 @@ export const packagesQueries = {
   clientPackagesAdminList: (params?: { search?: string; take?: number }) =>
     infiniteQueryOptions({
       queryKey: [
-        "packages",
+        ...packagesAll,
         "client-packages",
         "admin",
         { search: params?.search ?? "", take: params?.take ?? 20 },
@@ -142,7 +152,7 @@ export const packagesQueries = {
 
   createType: () =>
     mutationOptions({
-      mutationKey: ["packages", "types", "create"] as const,
+      mutationKey: [...packagesAll, "types", "create"] as const,
       mutationFn: async (payload: {
         name: string;
         sessionCount: number;
@@ -158,13 +168,13 @@ export const packagesQueries = {
           body: JSON.stringify(payload),
         });
         await throwIfNotOk(response, "Unable to create package type");
-        return response.json();
+        return packageTypeMutationResponseSchema.parse(await response.json());
       },
     }),
 
   updateType: () =>
     mutationOptions({
-      mutationKey: ["packages", "types", "update"] as const,
+      mutationKey: [...packagesAll, "types", "update"] as const,
       mutationFn: async ({
         id,
         ...payload
@@ -187,13 +197,13 @@ export const packagesQueries = {
           },
         );
         await throwIfNotOk(response, "Unable to update package type");
-        return response.json();
+        return packageTypeMutationResponseSchema.parse(await response.json());
       },
     }),
 
   deleteType: () =>
     mutationOptions({
-      mutationKey: ["packages", "types", "delete"] as const,
+      mutationKey: [...packagesAll, "types", "delete"] as const,
       mutationFn: async (id: string) => {
         const response = await apiFetch(
           `${sharedEnv.EXPO_PUBLIC_API_URL}/api/packages/types/${id}`,
@@ -206,7 +216,7 @@ export const packagesQueries = {
 
   createClientPackage: () =>
     mutationOptions({
-      mutationKey: ["packages", "client-packages", "create"] as const,
+      mutationKey: [...packagesAll, "client-packages", "create"] as const,
       mutationFn: async (payload: {
         clientProfileId: string;
         packageTypeId: string;
@@ -228,7 +238,7 @@ export const packagesQueries = {
 
   pause: () =>
     mutationOptions({
-      mutationKey: ["packages", "pause"] as const,
+      mutationKey: [...packagesAll, "pause"] as const,
       mutationFn: async (payload: {
         clientProfileId: string;
         startsAt: string;
@@ -246,3 +256,39 @@ export const packagesQueries = {
       },
     }),
 };
+
+// ── Mutation hooks ──────────────────────────────────────────────────────────
+// createType/updateType return the full PackageType (incl. isBirthdayGift after
+// the Layer 4 server widening), so splice the returned row into the types list
+// cache instead of invalidating. Append on create, replace-by-id on update.
+
+type PackageTypesListData = z.infer<typeof packageTypesResponseSchema>;
+type PackageTypeMutationResponse = z.infer<typeof packageTypeMutationResponseSchema>;
+const packageTypesListKey = packagesQueries.types().queryKey;
+
+function splicePackageType(queryClient: QueryClient, packageType: PackageType) {
+  queryClient.setQueryData<PackageTypesListData>(packageTypesListKey, (prev) => {
+    if (!prev) return prev;
+    const exists = prev.packageTypes.some((p) => p.id === packageType.id);
+    const packageTypes = exists
+      ? prev.packageTypes.map((p) => (p.id === packageType.id ? packageType : p))
+      : [...prev.packageTypes, packageType];
+    return { ...prev, packageTypes };
+  });
+}
+
+export function createPackageTypeMutationOptions(queryClient: QueryClient) {
+  return {
+    ...packagesQueries.createType(),
+    onSuccess: (data: PackageTypeMutationResponse) =>
+      splicePackageType(queryClient, data.packageType),
+  };
+}
+
+export function updatePackageTypeMutationOptions(queryClient: QueryClient) {
+  return {
+    ...packagesQueries.updateType(),
+    onSuccess: (data: PackageTypeMutationResponse) =>
+      splicePackageType(queryClient, data.packageType),
+  };
+}

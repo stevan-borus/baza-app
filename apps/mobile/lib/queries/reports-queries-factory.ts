@@ -208,11 +208,15 @@ const bookingsDetailResponseSchema = z.object({
   ),
 });
 
+const reportsAll = ["reports"] as const;
+
 export const reportsQueries = {
+  all: reportsAll,
+
   summary: (params?: { from?: string; to?: string }) =>
     queryOptions({
       queryKey: [
-        "reports",
+        ...reportsAll,
         "summary",
         params?.from ?? "",
         params?.to ?? "",
@@ -234,7 +238,7 @@ export const reportsQueries = {
   revenue: (params?: { from?: string; to?: string; period?: string }) =>
     queryOptions({
       queryKey: [
-        "reports",
+        ...reportsAll,
         "revenue",
         params?.from ?? "",
         params?.to ?? "",
@@ -258,7 +262,7 @@ export const reportsQueries = {
   utilization: (params?: { from?: string; to?: string; period?: string }) =>
     queryOptions({
       queryKey: [
-        "reports",
+        ...reportsAll,
         "utilization",
         params?.from ?? "",
         params?.to ?? "",
@@ -283,7 +287,7 @@ export const reportsQueries = {
   bookings: (params?: { from?: string; to?: string; period?: string }) =>
     queryOptions({
       queryKey: [
-        "reports",
+        ...reportsAll,
         "bookings",
         params?.from ?? "",
         params?.to ?? "",
@@ -308,7 +312,7 @@ export const reportsQueries = {
   utilizationByRoom: (params?: { from?: string; to?: string; period?: string }) =>
     queryOptions({
       queryKey: [
-        "reports",
+        ...reportsAll,
         "utilization-by-room",
         params?.from ?? "",
         params?.to ?? "",
@@ -333,7 +337,7 @@ export const reportsQueries = {
   utilizationByClassType: (params?: { from?: string; to?: string; period?: string }) =>
     queryOptions({
       queryKey: [
-        "reports",
+        ...reportsAll,
         "utilization-by-class-type",
         params?.from ?? "",
         params?.to ?? "",
@@ -358,7 +362,7 @@ export const reportsQueries = {
   utilizationByTrainer: (params?: { from?: string; to?: string; period?: string }) =>
     queryOptions({
       queryKey: [
-        "reports",
+        ...reportsAll,
         "utilization-by-trainer",
         params?.from ?? "",
         params?.to ?? "",
@@ -383,7 +387,7 @@ export const reportsQueries = {
   revenueTimeSeries: (params?: { from?: string; to?: string; period?: string }) =>
     queryOptions({
       queryKey: [
-        "reports",
+        ...reportsAll,
         "revenue-time-series",
         params?.from ?? "",
         params?.to ?? "",
@@ -408,7 +412,7 @@ export const reportsQueries = {
   revenueByPackageType: (params?: { from?: string; to?: string }) =>
     queryOptions({
       queryKey: [
-        "reports",
+        ...reportsAll,
         "revenue-by-package-type",
         params?.from ?? "",
         params?.to ?? "",
@@ -433,7 +437,7 @@ export const reportsQueries = {
   utilizationHeatmap: (params?: { from?: string; to?: string; period?: string }) =>
     queryOptions({
       queryKey: [
-        "reports",
+        ...reportsAll,
         "utilization-heatmap",
         params?.from ?? "",
         params?.to ?? "",
@@ -458,7 +462,7 @@ export const reportsQueries = {
   utilizationTimeSeries: (params?: { from?: string; to?: string; period?: string }) =>
     queryOptions({
       queryKey: [
-        "reports",
+        ...reportsAll,
         "utilization-time-series",
         params?.from ?? "",
         params?.to ?? "",
@@ -485,7 +489,7 @@ export const reportsQueries = {
   revenueByMethod: (params?: { from?: string; to?: string }) =>
     queryOptions({
       queryKey: [
-        "reports",
+        ...reportsAll,
         "revenue-by-method",
         params?.from ?? "",
         params?.to ?? "",
@@ -508,7 +512,7 @@ export const reportsQueries = {
   bookingsDetail: (params?: { from?: string; to?: string; period?: string }) =>
     queryOptions({
       queryKey: [
-        "reports",
+        ...reportsAll,
         "bookings-detail",
         params?.from ?? "",
         params?.to ?? "",
@@ -533,7 +537,7 @@ export const reportsQueries = {
   packagesDetail: (params?: { from?: string; to?: string; period?: string }) =>
     queryOptions({
       queryKey: [
-        "reports",
+        ...reportsAll,
         "packages-detail",
         params?.from ?? "",
         params?.to ?? "",
@@ -558,7 +562,7 @@ export const reportsQueries = {
   packages: (params?: { from?: string; to?: string; period?: string }) =>
     queryOptions({
       queryKey: [
-        "reports",
+        ...reportsAll,
         "packages",
         params?.from ?? "",
         params?.to ?? "",

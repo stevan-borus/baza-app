@@ -38,6 +38,7 @@ export async function PATCH(request: Request, { id }: RouteParams) {
       lateCancelHours: true,
       classTypeId: true,
       classType: { select: { id: true, name: true } },
+      isBirthdayGift: true,
       updatedAt: true,
     },
   });

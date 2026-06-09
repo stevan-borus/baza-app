@@ -102,7 +102,7 @@ export default function ConsentScreen() {
           guardianRelation: p.key === "waiver_minor" ? guardian.relation : undefined,
         });
       }
-      await queryClient.refetchQueries({ queryKey: ["consent", "status"] });
+      await queryClient.refetchQueries({ queryKey: consentQueries.status().queryKey });
       router.replace("/");
     } catch {
       setSubmitError(t("consent.errorSubmit"));

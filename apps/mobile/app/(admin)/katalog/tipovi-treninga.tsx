@@ -21,7 +21,11 @@ import { Input } from "@/components/ui/input";
 import { AppSheet } from "@/components/ui/sheet";
 import { ConfirmSheet } from "@/components/ui/confirm-sheet";
 import { SectionLabel } from "@/components/ui/typography";
-import { trainingsQueries } from "@/lib/queries/trainings-queries-factory";
+import {
+  trainingsQueries,
+  createClassTypeMutationOptions,
+  updateClassTypeMutationOptions,
+} from "@/lib/queries/trainings-queries-factory";
 import { ScreenContainerRaw, useTabBarBottomPadding } from "@/components/ui/screen-container";
 import { HeaderIconButton } from "@/components/ui/app-header";
 
@@ -55,27 +59,16 @@ export default function AdminSettingsClassTypes() {
 
   const classTypesQuery = useQuery(trainingsQueries.classTypes());
 
-  const createMutation = useMutation({
-    ...trainingsQueries.createClassType(),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["trainings"] });
-      setShowCreate(false);
-      setForm({ name: "", maxClients: "", durationMins: "" });
-    },
-  });
-
-  const updateMutation = useMutation({
-    ...trainingsQueries.updateClassType(),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["trainings"] });
-      setEditingId(null);
-    },
-  });
+  // Cache upkeep (list splice) is baked into the options-builders; the
+  // component-only side-effects (close sheet, reset form) are passed per-call
+  // via mutate(vars, { onSuccess }).
+  const createMutation = useMutation(createClassTypeMutationOptions(queryClient));
+  const updateMutation = useMutation(updateClassTypeMutationOptions(queryClient));
 
   const deleteMutation = useMutation({
     ...trainingsQueries.deleteClassType(),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["trainings"] });
+      await queryClient.invalidateQueries({ queryKey: trainingsQueries.all });
       setConfirmDelete(false);
       setEditingId(null);
     },
@@ -231,11 +224,19 @@ export default function AdminSettingsClassTypes() {
             testID="class-type-create-submit"
             disabled={createMutation.isPending || !form.name}
             onPress={() =>
-              createMutation.mutate({
-                name: form.name,
-                maxClients: parseInt(form.maxClients, 10) || 8,
-                durationMins: parseInt(form.durationMins, 10) || 60,
-              })
+              createMutation.mutate(
+                {
+                  name: form.name,
+                  maxClients: parseInt(form.maxClients, 10) || 8,
+                  durationMins: parseInt(form.durationMins, 10) || 60,
+                },
+                {
+                  onSuccess: () => {
+                    setShowCreate(false);
+                    setForm({ name: "", maxClients: "", durationMins: "" });
+                  },
+                },
+              )
             }
           >
             {t("admin.manage.create")}
@@ -280,12 +281,15 @@ export default function AdminSettingsClassTypes() {
             disabled={updateMutation.isPending || !editForm.name}
             onPress={() => {
               if (!editingId) return;
-              updateMutation.mutate({
-                id: editingId,
-                name: editForm.name,
-                maxClients: parseInt(editForm.maxClients, 10) || 8,
-                durationMins: parseInt(editForm.durationMins, 10) || 60,
-              });
+              updateMutation.mutate(
+                {
+                  id: editingId,
+                  name: editForm.name,
+                  maxClients: parseInt(editForm.maxClients, 10) || 8,
+                  durationMins: parseInt(editForm.durationMins, 10) || 60,
+                },
+                { onSuccess: () => setEditingId(null) },
+              );
             }}
           >
             {t("admin.schedule.saveChanges")}

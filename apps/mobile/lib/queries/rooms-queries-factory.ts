@@ -1,4 +1,8 @@
-import { queryOptions, mutationOptions } from "@tanstack/react-query";
+import {
+  queryOptions,
+  mutationOptions,
+  type QueryClient,
+} from "@tanstack/react-query";
 import { z } from "zod";
 import { apiFetch, throwIfNotOk } from "@/lib/api";
 import { sharedEnv } from "@/lib/env.shared";
@@ -14,12 +18,20 @@ const roomsResponseSchema = z.object({
   rooms: z.array(roomSchema),
 });
 
+const roomMutationResponseSchema = z.object({
+  success: z.boolean(),
+  room: roomSchema,
+});
+
 export type Room = z.infer<typeof roomSchema>;
 
+const roomsAll = ["rooms"] as const;
+
 export const roomsQueries = {
+  all: roomsAll,
   list: () =>
     queryOptions({
-      queryKey: ["rooms", "list"] as const,
+      queryKey: [...roomsAll, "list"] as const,
       queryFn: async () => {
         const response = await apiFetch(`${sharedEnv.EXPO_PUBLIC_API_URL}/api/rooms`, {
           credentials: "include",
@@ -32,7 +44,7 @@ export const roomsQueries = {
 
   create: () =>
     mutationOptions({
-      mutationKey: ["rooms", "create"] as const,
+      mutationKey: [...roomsAll, "create"] as const,
       mutationFn: async (payload: { name: string; capacity: number }) => {
         const response = await apiFetch(`${sharedEnv.EXPO_PUBLIC_API_URL}/api/rooms`, {
           method: "POST",
@@ -41,13 +53,13 @@ export const roomsQueries = {
           body: JSON.stringify(payload),
         });
         if (!response.ok) throw new Error(`Unable to create room (${response.status})`);
-        return response.json();
+        return roomMutationResponseSchema.parse(await response.json());
       },
     }),
 
   update: () =>
     mutationOptions({
-      mutationKey: ["rooms", "update"] as const,
+      mutationKey: [...roomsAll, "update"] as const,
       mutationFn: async ({
         id,
         ...payload
@@ -66,13 +78,13 @@ export const roomsQueries = {
           },
         );
         await throwIfNotOk(response, "Unable to update room");
-        return response.json();
+        return roomMutationResponseSchema.parse(await response.json());
       },
     }),
 
   delete: () =>
     mutationOptions({
-      mutationKey: ["rooms", "delete"] as const,
+      mutationKey: [...roomsAll, "delete"] as const,
       mutationFn: async (id: string) => {
         const response = await apiFetch(
           `${sharedEnv.EXPO_PUBLIC_API_URL}/api/rooms/${id}`,
@@ -83,3 +95,37 @@ export const roomsQueries = {
       },
     }),
 };
+
+// ── Mutation hooks ──────────────────────────────────────────────────────────
+// create/update return the full Room (server widened in Layer 4), so we splice
+// the returned row into the list cache instead of invalidating (refetching).
+// Append on create (admin list is creation-ordered), replace-by-id on update.
+
+type RoomsListData = z.infer<typeof roomsResponseSchema>;
+type RoomMutationResponse = z.infer<typeof roomMutationResponseSchema>;
+const roomsListKey = roomsQueries.list().queryKey;
+
+function spliceRoom(queryClient: QueryClient, room: Room) {
+  queryClient.setQueryData<RoomsListData>(roomsListKey, (prev) => {
+    if (!prev) return prev;
+    const exists = prev.rooms.some((r) => r.id === room.id);
+    const rooms = exists
+      ? prev.rooms.map((r) => (r.id === room.id ? room : r))
+      : [...prev.rooms, room];
+    return { ...prev, rooms };
+  });
+}
+
+export function createRoomMutationOptions(queryClient: QueryClient) {
+  return {
+    ...roomsQueries.create(),
+    onSuccess: (data: RoomMutationResponse) => spliceRoom(queryClient, data.room),
+  };
+}
+
+export function updateRoomMutationOptions(queryClient: QueryClient) {
+  return {
+    ...roomsQueries.update(),
+    onSuccess: (data: RoomMutationResponse) => spliceRoom(queryClient, data.room),
+  };
+}

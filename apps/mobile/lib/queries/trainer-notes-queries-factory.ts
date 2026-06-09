@@ -80,17 +80,21 @@ function stableKey(p?: NotesListParams) {
   };
 }
 
+const trainerNotesAll = ["trainer-notes"] as const;
+
 export const trainerNotesQueries = {
+  all: trainerNotesAll,
+
   list: (params?: NotesListParams) =>
     queryOptions({
-      queryKey: ["trainer-notes", "list", stableKey(params)] as const,
+      queryKey: [...trainerNotesAll, "list", stableKey(params)] as const,
       queryFn: () => fetchNotesPage(params),
       staleTime: 30_000,
     }),
 
   listInfinite: (params?: NotesListParams) =>
     infiniteQueryOptions({
-      queryKey: ["trainer-notes", "list-infinite", stableKey(params)] as const,
+      queryKey: [...trainerNotesAll, "list-infinite", stableKey(params)] as const,
       queryFn: ({ pageParam }) => fetchNotesPage(params, pageParam),
       initialPageParam: null as string | null,
       getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
@@ -99,7 +103,7 @@ export const trainerNotesQueries = {
 
   create: () =>
     mutationOptions({
-      mutationKey: ["trainer-notes", "create"] as const,
+      mutationKey: [...trainerNotesAll, "create"] as const,
       mutationFn: async (payload: {
         sessionId?: string;
         clientProfileId: string;
@@ -118,7 +122,7 @@ export const trainerNotesQueries = {
 
   update: () =>
     mutationOptions({
-      mutationKey: ["trainer-notes", "update"] as const,
+      mutationKey: [...trainerNotesAll, "update"] as const,
       mutationFn: async ({ id, note }: { id: string; note: string }) => {
         const response = await apiFetch(
           `${sharedEnv.EXPO_PUBLIC_API_URL}/api/trainer-notes/${id}`,
@@ -136,7 +140,7 @@ export const trainerNotesQueries = {
 
   delete: () =>
     mutationOptions({
-      mutationKey: ["trainer-notes", "delete"] as const,
+      mutationKey: [...trainerNotesAll, "delete"] as const,
       mutationFn: async (id: string) => {
         const response = await apiFetch(
           `${sharedEnv.EXPO_PUBLIC_API_URL}/api/trainer-notes/${id}`,

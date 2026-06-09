@@ -55,10 +55,14 @@ async function fetchClientBookingsPage(params: {
   return clientBookingsResponseSchema.parse(await response.json());
 }
 
+const bookingsAll = ["bookings"] as const;
+
 export const bookingsQueries = {
+  all: bookingsAll,
+
   mutateBooking: () =>
     mutationOptions({
-      mutationKey: ["bookings", "mutate"] as const,
+      mutationKey: [...bookingsAll, "mutate"] as const,
       mutationFn: async (payload: { sessionId: string; action: "BOOK" | "CANCEL" }) => {
         const response = await apiFetch(`${sharedEnv.EXPO_PUBLIC_API_URL}/api/bookings`, {
           method: "POST",
@@ -98,7 +102,7 @@ export const bookingsQueries = {
       // Spread into the key as primitives so React Query's deep-equal cache
       // lookup compares strings rather than fresh object identities.
       queryKey: [
-        "bookings",
+        ...bookingsAll,
         "by-client",
         params.clientUserId,
         params.period,

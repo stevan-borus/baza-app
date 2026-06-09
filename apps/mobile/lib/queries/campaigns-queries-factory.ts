@@ -3,6 +3,7 @@ import {
   queryOptions,
   useMutation,
   useQueryClient,
+  type QueryClient,
 } from "@tanstack/react-query";
 import { z } from "zod";
 import type { CampaignAudienceSpec } from "@baza/types";
@@ -41,10 +42,14 @@ const recipientsSchema = z.object({
   clients: z.array(audienceClientSchema),
 });
 
+const campaignsAll = ["campaigns"] as const;
+
 export const campaignsQueries = {
+  all: campaignsAll,
+
   list: () =>
     queryOptions({
-      queryKey: ["campaigns", "list"] as const,
+      queryKey: [...campaignsAll, "list"] as const,
       queryFn: async () => {
         const res = await apiFetch(base, { credentials: "include" });
         if (!res.ok) throw new Error(`Unable to load campaigns (${res.status})`);
@@ -55,7 +60,7 @@ export const campaignsQueries = {
 
   one: (id: string) =>
     queryOptions({
-      queryKey: ["campaigns", "one", id] as const,
+      queryKey: [...campaignsAll, "one", id] as const,
       queryFn: async () => {
         const res = await apiFetch(`${base}/${id}`, { credentials: "include" });
         if (!res.ok) throw new Error(`Unable to load campaign (${res.status})`);
@@ -67,7 +72,7 @@ export const campaignsQueries = {
   /** Live audience count for a spec; keyed on the spec so it caches per-spec. enabled only when a spec is chosen. */
   preview: (spec: CampaignAudienceSpec | null) =>
     queryOptions({
-      queryKey: ["campaigns", "preview", JSON.stringify(spec ?? {})] as const,
+      queryKey: [...campaignsAll, "preview", JSON.stringify(spec ?? {})] as const,
       enabled: spec !== null,
       queryFn: async () => {
         const res = await apiFetch(`${base}/preview`, {
@@ -85,7 +90,7 @@ export const campaignsQueries = {
   /** The PROJECTED audience for a spec, as people (the "view clients" sheet). */
   audienceClients: (spec: CampaignAudienceSpec | null) =>
     queryOptions({
-      queryKey: ["campaigns", "audience-clients", JSON.stringify(spec ?? {})] as const,
+      queryKey: [...campaignsAll, "audience-clients", JSON.stringify(spec ?? {})] as const,
       enabled: spec !== null,
       queryFn: async () => {
         const res = await apiFetch(`${base}/preview/clients`, {
@@ -103,7 +108,7 @@ export const campaignsQueries = {
   /** A campaign's recipients: actual (SENT) or projected (not yet sent). */
   recipients: (id: string, enabled = true) =>
     queryOptions({
-      queryKey: ["campaigns", "recipients", id] as const,
+      queryKey: [...campaignsAll, "recipients", id] as const,
       enabled,
       queryFn: async () => {
         const res = await apiFetch(`${base}/${id}/recipients`, { credentials: "include" });
@@ -115,7 +120,7 @@ export const campaignsQueries = {
 
   create: () =>
     mutationOptions({
-      mutationKey: ["campaigns", "create"] as const,
+      mutationKey: [...campaignsAll, "create"] as const,
       mutationFn: async (payload: {
         title: string;
         body: string;
@@ -136,7 +141,7 @@ export const campaignsQueries = {
 
   update: () =>
     mutationOptions({
-      mutationKey: ["campaigns", "update"] as const,
+      mutationKey: [...campaignsAll, "update"] as const,
       mutationFn: async (vars: {
         id: string;
         title?: string;
@@ -159,7 +164,7 @@ export const campaignsQueries = {
 
   cancel: () =>
     mutationOptions({
-      mutationKey: ["campaigns", "cancel"] as const,
+      mutationKey: [...campaignsAll, "cancel"] as const,
       mutationFn: async (id: string) => {
         const res = await apiFetch(`${base}/${id}`, {
           method: "PATCH",
@@ -174,7 +179,7 @@ export const campaignsQueries = {
 
   remove: () =>
     mutationOptions({
-      mutationKey: ["campaigns", "remove"] as const,
+      mutationKey: [...campaignsAll, "remove"] as const,
       mutationFn: async (id: string) => {
         const res = await apiFetch(`${base}/${id}`, { method: "DELETE", credentials: "include" });
         if (!res.ok) throw new Error(`Unable to delete campaign (${res.status})`);
@@ -184,7 +189,7 @@ export const campaignsQueries = {
 
   send: () =>
     mutationOptions({
-      mutationKey: ["campaigns", "send"] as const,
+      mutationKey: [...campaignsAll, "send"] as const,
       mutationFn: async (id: string) => {
         const res = await apiFetch(`${base}/${id}/send`, { method: "POST", credentials: "include" });
         if (!res.ok) throw new Error(`Unable to send campaign (${res.status})`);
@@ -195,38 +200,89 @@ export const campaignsQueries = {
 
 // ── Mutation hooks ──────────────────────────────────────────────────────────
 // Per the project convention (see other *-queries-factory files), mutations are
-// consumed as hooks with the standard invalidation baked into onSuccess — so a
-// component never has to remember to refresh the list/detail after a write. Any
+// consumed as hooks with cache upkeep baked into onSuccess — so a component
+// never has to remember to refresh the list/detail after a write. Any
 // component-specific side effect (e.g. router.back()) is passed per-call via
 // `mutate(vars, { onSuccess })`, which runs in addition to the baked-in one.
+//
+// The API returns the full campaign for create/update/cancel/send and delete
+// only needs the id, so these splice the list + detail caches directly instead
+// of invalidating — no refetch round-trip. (The preview/audience queries are
+// spec-derived and left to refetch naturally on their own staleTime.)
 
-/** Invalidate everything keyed under ["campaigns"] — list, detail, and preview. */
-function useInvalidateCampaigns() {
-  const queryClient = useQueryClient();
-  return () => queryClient.invalidateQueries({ queryKey: ["campaigns"] });
+type ListData = z.infer<typeof listSchema>;
+const listKey = campaignsQueries.list().queryKey;
+const oneKey = (id: string) => campaignsQueries.one(id).queryKey;
+
+/** Insert (prepend) or replace a campaign in the list cache, and set its detail. */
+function spliceCampaign(queryClient: QueryClient, campaign: Campaign) {
+  queryClient.setQueryData<ListData>(listKey, (prev) => {
+    if (!prev) return prev;
+    const exists = prev.campaigns.some((c) => c.id === campaign.id);
+    const campaigns = exists
+      ? prev.campaigns.map((c) => (c.id === campaign.id ? campaign : c))
+      : [campaign, ...prev.campaigns];
+    return { campaigns };
+  });
+  queryClient.setQueryData(oneKey(campaign.id), { campaign });
+}
+
+export function createCampaignMutationOptions(queryClient: QueryClient) {
+  return {
+    ...campaignsQueries.create(),
+    onSuccess: (data: { campaign: Campaign }) => spliceCampaign(queryClient, data.campaign),
+  };
+}
+
+export function updateCampaignMutationOptions(queryClient: QueryClient) {
+  return {
+    ...campaignsQueries.update(),
+    onSuccess: (data: { campaign: Campaign }) => spliceCampaign(queryClient, data.campaign),
+  };
+}
+
+export function cancelCampaignMutationOptions(queryClient: QueryClient) {
+  return {
+    ...campaignsQueries.cancel(),
+    onSuccess: (data: { campaign: Campaign }) => spliceCampaign(queryClient, data.campaign),
+  };
+}
+
+export function sendCampaignMutationOptions(queryClient: QueryClient) {
+  return {
+    ...campaignsQueries.send(),
+    onSuccess: (data: { campaign: Campaign }) => spliceCampaign(queryClient, data.campaign),
+  };
+}
+
+export function removeCampaignMutationOptions(queryClient: QueryClient) {
+  return {
+    ...campaignsQueries.remove(),
+    onSuccess: (_data: unknown, id: string) => {
+      queryClient.setQueryData<ListData>(listKey, (prev) =>
+        prev ? { campaigns: prev.campaigns.filter((c) => c.id !== id) } : prev,
+      );
+      queryClient.removeQueries({ queryKey: oneKey(id) });
+    },
+  };
 }
 
 export function useCreateCampaignMutation() {
-  const invalidate = useInvalidateCampaigns();
-  return useMutation({ ...campaignsQueries.create(), onSuccess: invalidate });
+  return useMutation(createCampaignMutationOptions(useQueryClient()));
 }
 
 export function useUpdateCampaignMutation() {
-  const invalidate = useInvalidateCampaigns();
-  return useMutation({ ...campaignsQueries.update(), onSuccess: invalidate });
+  return useMutation(updateCampaignMutationOptions(useQueryClient()));
 }
 
 export function useCancelCampaignMutation() {
-  const invalidate = useInvalidateCampaigns();
-  return useMutation({ ...campaignsQueries.cancel(), onSuccess: invalidate });
+  return useMutation(cancelCampaignMutationOptions(useQueryClient()));
 }
 
 export function useRemoveCampaignMutation() {
-  const invalidate = useInvalidateCampaigns();
-  return useMutation({ ...campaignsQueries.remove(), onSuccess: invalidate });
+  return useMutation(removeCampaignMutationOptions(useQueryClient()));
 }
 
 export function useSendCampaignMutation() {
-  const invalidate = useInvalidateCampaigns();
-  return useMutation({ ...campaignsQueries.send(), onSuccess: invalidate });
+  return useMutation(sendCampaignMutationOptions(useQueryClient()));
 }

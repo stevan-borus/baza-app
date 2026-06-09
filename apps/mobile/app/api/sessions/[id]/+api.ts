@@ -360,6 +360,9 @@ export async function PATCH(request: Request, { id }: RouteParams) {
       roomId: true,
       trainerUserId: true,
       isActive: true,
+      classTypeId: true,
+      classType: { select: { id: true, name: true } },
+      room: { select: { id: true, name: true } },
     },
   });
 

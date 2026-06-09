@@ -97,8 +97,8 @@ export default function ClientProfile() {
   async function handleRefresh() {
     setRefreshing(true);
     await Promise.all([
-      queryClient.invalidateQueries({ queryKey: ["auth"] }),
-      queryClient.invalidateQueries({ queryKey: ["packages"] }),
+      queryClient.invalidateQueries({ queryKey: authQueries.all }),
+      queryClient.invalidateQueries({ queryKey: packagesQueries.all }),
     ]);
     setRefreshing(false);
   }

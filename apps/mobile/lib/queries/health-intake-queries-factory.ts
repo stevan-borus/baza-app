@@ -7,10 +7,14 @@ import {
 } from "@baza/types";
 import { apiFetch } from "@/lib/api";
 import { sharedEnv } from "@/lib/env.shared";
+import { consentQueries } from "@/lib/queries/consent-queries-factory";
 
 const BASE = `${sharedEnv.EXPO_PUBLIC_API_URL}/api/health-intake`;
 
+const healthIntakeAll = ["health-intake"] as const;
+
 export const healthIntakeQueries = {
+  all: healthIntakeAll,
   /**
    * Returns the most-recent intake row for the current client, or `null`
    * when the endpoint reports 404 (no intake recorded yet).
@@ -21,7 +25,7 @@ export const healthIntakeQueries = {
    */
   latest: () =>
     queryOptions({
-      queryKey: ["health-intake", "latest"] as const,
+      queryKey: [...healthIntakeAll, "latest"] as const,
       queryFn: async (): Promise<HealthIntakeResponse | null> => {
         const res = await apiFetch(BASE, { credentials: "include" });
         if (res.status === 404) return null;
@@ -39,7 +43,7 @@ export const healthIntakeQueries = {
 export function useRecordHealthIntakeMutation() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationKey: ["health-intake", "record"] as const,
+    mutationKey: [...healthIntakeAll, "record"] as const,
     mutationFn: async (input: HealthIntakeInput) => {
       const parsed = healthIntakeInputSchema.parse(input);
       const res = await apiFetch(BASE, {
@@ -52,8 +56,8 @@ export function useRecordHealthIntakeMutation() {
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["health-intake"] });
-      queryClient.invalidateQueries({ queryKey: ["consent", "status"] });
+      queryClient.invalidateQueries({ queryKey: healthIntakeQueries.all });
+      queryClient.invalidateQueries({ queryKey: consentQueries.status().queryKey });
     },
   });
 }
@@ -61,14 +65,14 @@ export function useRecordHealthIntakeMutation() {
 export function useWithdrawHealthIntakeMutation() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationKey: ["health-intake", "withdraw"] as const,
+    mutationKey: [...healthIntakeAll, "withdraw"] as const,
     mutationFn: async () => {
       const res = await apiFetch(BASE, { method: "DELETE", credentials: "include" });
       if (!res.ok) throw new Error(`Withdraw failed (${res.status})`);
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["health-intake"] });
+      queryClient.invalidateQueries({ queryKey: healthIntakeQueries.all });
     },
   });
 }

@@ -1,4 +1,8 @@
-import { queryOptions, mutationOptions } from "@tanstack/react-query";
+import {
+  queryOptions,
+  mutationOptions,
+  type QueryClient,
+} from "@tanstack/react-query";
 import { z } from "zod";
 import { apiFetch, throwIfNotOk } from "@/lib/api";
 import { sharedEnv } from "@/lib/env.shared";
@@ -15,12 +19,20 @@ const classTypesResponseSchema = z.object({
   classTypes: z.array(classTypeSchema),
 });
 
+const classTypeMutationResponseSchema = z.object({
+  success: z.boolean(),
+  classType: classTypeSchema,
+});
+
 export type ClassType = z.infer<typeof classTypeSchema>;
 
+const trainingsAll = ["trainings"] as const;
+
 export const trainingsQueries = {
+  all: trainingsAll,
   classTypes: () =>
     queryOptions({
-      queryKey: ["trainings", "class-types"] as const,
+      queryKey: [...trainingsAll, "class-types"] as const,
       queryFn: async () => {
         const response = await apiFetch(
           `${sharedEnv.EXPO_PUBLIC_API_URL}/api/trainings/class-types`,
@@ -34,7 +46,7 @@ export const trainingsQueries = {
 
   createClassType: () =>
     mutationOptions({
-      mutationKey: ["trainings", "class-types", "create"] as const,
+      mutationKey: [...trainingsAll, "class-types", "create"] as const,
       mutationFn: async (payload: { name: string; maxClients: number; durationMins: number }) => {
         const response = await apiFetch(
           `${sharedEnv.EXPO_PUBLIC_API_URL}/api/trainings/class-types`,
@@ -46,13 +58,13 @@ export const trainingsQueries = {
           },
         );
         if (!response.ok) throw new Error(`Unable to create class type (${response.status})`);
-        return response.json();
+        return classTypeMutationResponseSchema.parse(await response.json());
       },
     }),
 
   updateClassType: () =>
     mutationOptions({
-      mutationKey: ["trainings", "class-types", "update"] as const,
+      mutationKey: [...trainingsAll, "class-types", "update"] as const,
       mutationFn: async ({
         id,
         ...payload
@@ -72,13 +84,13 @@ export const trainingsQueries = {
           },
         );
         await throwIfNotOk(response, "Unable to update class type");
-        return response.json();
+        return classTypeMutationResponseSchema.parse(await response.json());
       },
     }),
 
   deleteClassType: () =>
     mutationOptions({
-      mutationKey: ["trainings", "class-types", "delete"] as const,
+      mutationKey: [...trainingsAll, "class-types", "delete"] as const,
       mutationFn: async (id: string) => {
         const response = await apiFetch(
           `${sharedEnv.EXPO_PUBLIC_API_URL}/api/trainings/class-types/${id}`,
@@ -89,3 +101,38 @@ export const trainingsQueries = {
       },
     }),
 };
+
+// ── Mutation hooks ──────────────────────────────────────────────────────────
+// create/update return the full ClassType, so splice the returned row into the
+// list cache instead of invalidating. Append on create, replace-by-id on update.
+
+type ClassTypesListData = z.infer<typeof classTypesResponseSchema>;
+type ClassTypeMutationResponse = z.infer<typeof classTypeMutationResponseSchema>;
+const classTypesListKey = trainingsQueries.classTypes().queryKey;
+
+function spliceClassType(queryClient: QueryClient, classType: ClassType) {
+  queryClient.setQueryData<ClassTypesListData>(classTypesListKey, (prev) => {
+    if (!prev) return prev;
+    const exists = prev.classTypes.some((c) => c.id === classType.id);
+    const classTypes = exists
+      ? prev.classTypes.map((c) => (c.id === classType.id ? classType : c))
+      : [...prev.classTypes, classType];
+    return { ...prev, classTypes };
+  });
+}
+
+export function createClassTypeMutationOptions(queryClient: QueryClient) {
+  return {
+    ...trainingsQueries.createClassType(),
+    onSuccess: (data: ClassTypeMutationResponse) =>
+      spliceClassType(queryClient, data.classType),
+  };
+}
+
+export function updateClassTypeMutationOptions(queryClient: QueryClient) {
+  return {
+    ...trainingsQueries.updateClassType(),
+    onSuccess: (data: ClassTypeMutationResponse) =>
+      spliceClassType(queryClient, data.classType),
+  };
+}

@@ -54,17 +54,21 @@ async function fetchNotificationsPage(cursor?: string | null): Promise<Notificat
   return notificationsResponseSchema.parse(await response.json());
 }
 
+const notificationsAll = ["notifications"] as const;
+
 export const notificationsQueries = {
+  all: notificationsAll,
+
   list: (cursor?: string) =>
     queryOptions({
-      queryKey: ["notifications", "list", cursor] as const,
+      queryKey: [...notificationsAll, "list", cursor] as const,
       queryFn: () => fetchNotificationsPage(cursor),
       staleTime: 15_000,
     }),
 
   listInfinite: () =>
     infiniteQueryOptions({
-      queryKey: ["notifications", "list-infinite"] as const,
+      queryKey: [...notificationsAll, "list-infinite"] as const,
       queryFn: ({ pageParam }) => fetchNotificationsPage(pageParam),
       initialPageParam: null as string | null,
       getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
@@ -73,7 +77,7 @@ export const notificationsQueries = {
 
   markAsRead: () =>
     mutationOptions({
-      mutationKey: ["notifications", "mark-read"] as const,
+      mutationKey: [...notificationsAll, "mark-read"] as const,
       mutationFn: async (id: string) => {
         const response = await apiFetch(
           `${sharedEnv.EXPO_PUBLIC_API_URL}/api/notifications/${id}`,
@@ -86,7 +90,7 @@ export const notificationsQueries = {
 
   markManyRead: () =>
     mutationOptions({
-      mutationKey: ["notifications", "mark-read-batch"] as const,
+      mutationKey: [...notificationsAll, "mark-read-batch"] as const,
       mutationFn: async (ids: string[]) => {
         if (ids.length === 0) return { success: true, count: 0 };
         // PATCH on the collection endpoint — a sibling `/mark-read` subpath
@@ -107,7 +111,7 @@ export const notificationsQueries = {
 
   preferences: () =>
     queryOptions({
-      queryKey: ["notifications", "preferences"] as const,
+      queryKey: [...notificationsAll, "preferences"] as const,
       queryFn: async () => {
         const response = await apiFetch(
           `${sharedEnv.EXPO_PUBLIC_API_URL}/api/notifications/preferences`,
@@ -122,7 +126,7 @@ export const notificationsQueries = {
 
   registerPushToken: () =>
     mutationOptions({
-      mutationKey: ["notifications", "push-token"] as const,
+      mutationKey: [...notificationsAll, "push-token"] as const,
       mutationFn: async (payload: {
         deviceId: string;
         expoPushToken: string;
@@ -144,7 +148,7 @@ export const notificationsQueries = {
 
   unregisterPushToken: () =>
     mutationOptions({
-      mutationKey: ["notifications", "push-token", "unregister"] as const,
+      mutationKey: [...notificationsAll, "push-token", "unregister"] as const,
       mutationFn: async (payload?: { deviceId?: string; expoPushToken?: string }) => {
         const response = await apiFetch(
           `${sharedEnv.EXPO_PUBLIC_API_URL}/api/notifications/push-token`,
@@ -164,7 +168,7 @@ export const notificationsQueries = {
 
   updatePreferences: () =>
     mutationOptions({
-      mutationKey: ["notifications", "preferences", "update"] as const,
+      mutationKey: [...notificationsAll, "preferences", "update"] as const,
       mutationFn: async (payload: {
         pushEnabled?: boolean;
         inAppEnabled?: boolean;

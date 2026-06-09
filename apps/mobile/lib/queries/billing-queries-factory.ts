@@ -58,10 +58,14 @@ async function fetchBillingPage(
   return billingResponseSchema.parse(await response.json());
 }
 
+const billingAll = ["billing"] as const;
+
 export const billingQueries = {
+  all: billingAll,
+
   list: (cursor?: string) =>
     queryOptions({
-      queryKey: ["billing", "list", cursor] as const,
+      queryKey: [...billingAll, "list", cursor] as const,
       queryFn: () => fetchBillingPage(cursor),
       staleTime: 30_000,
     }),
@@ -73,7 +77,7 @@ export const billingQueries = {
       // the same logical filters produced a "new" cache miss every render but
       // changing values didn't always invalidate as expected.
       queryKey: [
-        "billing",
+        ...billingAll,
         "list-infinite",
         filters?.clientUserId ?? "",
         filters?.from ?? "",
@@ -87,7 +91,7 @@ export const billingQueries = {
 
   create: () =>
     mutationOptions({
-      mutationKey: ["billing", "create"] as const,
+      mutationKey: [...billingAll, "create"] as const,
       mutationFn: async (payload: {
         clientUserId: string;
         amount: number;

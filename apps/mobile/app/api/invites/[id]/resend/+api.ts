@@ -1,3 +1,4 @@
+import { formatFullName } from "@baza/types";
 import { InviteStatus, UserRole } from "@/generated/prisma";
 import { now } from "@/lib/now";
 import { requireRole } from "@/lib/server/auth-guards";
@@ -26,9 +27,21 @@ export async function POST(request: Request, { id }: RouteParams) {
   const tokenHash = hashToken(rawToken);
   const expiresAt = addHours(now(), env.INVITE_TOKEN_TTL_HOURS);
 
-  await prisma.userInvite.update({
+  // Return the updated row so the client can splice it into the invites list
+  // cache (new expiry) without a refetch.
+  const updated = await prisma.userInvite.update({
     where: { id: invite.id },
     data: { tokenHash, expiresAt },
+    select: {
+      id: true,
+      email: true,
+      firstName: true,
+      lastName: true,
+      phone: true,
+      status: true,
+      createdAt: true,
+      expiresAt: true,
+    },
   });
 
   await sendInviteEmail({
@@ -38,5 +51,8 @@ export async function POST(request: Request, { id }: RouteParams) {
     inviteToken: rawToken,
   });
 
-  return ok({ success: true });
+  return ok({
+    success: true,
+    invite: { ...updated, fullName: formatFullName(updated.firstName, updated.lastName) },
+  });
 }

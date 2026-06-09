@@ -156,7 +156,7 @@ export default function AdminBilling() {
   const createMutation = useMutation({
     ...billingQueries.create(),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["billing"] });
+      await queryClient.invalidateQueries({ queryKey: billingQueries.all });
       setShowCreate(false);
       setForm({
         clientUserId: "",

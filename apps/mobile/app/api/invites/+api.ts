@@ -78,6 +78,9 @@ export async function POST(request: Request) {
     select: {
       id: true,
       email: true,
+      firstName: true,
+      lastName: true,
+      phone: true,
       status: true,
       expiresAt: true,
       createdAt: true,
@@ -93,6 +96,6 @@ export async function POST(request: Request) {
 
   return ok({
     success: true,
-    invite,
+    invite: { ...invite, fullName: formatFullName(invite.firstName, invite.lastName) },
   });
 }

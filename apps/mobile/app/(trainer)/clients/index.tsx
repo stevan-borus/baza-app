@@ -122,7 +122,7 @@ export default function TrainerClients() {
 
   async function handleRefresh() {
     setRefreshing(true);
-    await queryClient.invalidateQueries({ queryKey: ["clients"] });
+    await queryClient.invalidateQueries({ queryKey: clientsQueries.all });
     setRefreshing(false);
   }
 

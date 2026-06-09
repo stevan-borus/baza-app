@@ -148,14 +148,14 @@ export function ClientDetail({ id }: { id: string }) {
   const updateClientMutation = useMutation({
     ...clientsQueries.update(),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["clients"] });
+      await queryClient.invalidateQueries({ queryKey: clientsQueries.all });
       setShowEdit(false);
     },
   });
   const pauseMutation = useMutation({
     ...packagesQueries.pause(),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["packages"] });
+      await queryClient.invalidateQueries({ queryKey: packagesQueries.all });
       setShowPause(false);
       setPauseForm({ startsAt: "", endsAt: "", reason: "" });
     },
@@ -944,7 +944,7 @@ function BeleskeTab({
   const deleteMutation = useMutation({
     ...trainerNotesQueries.delete(),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["trainer-notes"] });
+      queryClient.invalidateQueries({ queryKey: trainerNotesQueries.all });
     },
   });
 

@@ -11,7 +11,7 @@ import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { ThemeSwitcher } from "@/components/ThemeSwitcher";
 import { authQueries } from "@/lib/queries/auth-queries-factory";
 import { type Locale } from "@/lib/i18n";
-import { notificationsQueries } from "@/lib/queries/notifications-queries-factory";
+import { updatePreferencesMutationOptions } from "@/lib/queries/notifications-queries-factory";
 import { signOutWithPushCleanup } from "@/lib/sign-out";
 import { ProfileLegalSection } from "@/components/profile/profile-legal-section";
 import { AppSheet } from "./sheet";
@@ -102,13 +102,7 @@ function ProfileSheetContent({ open, onOpenChange }: Props) {
     },
   });
 
-  const updateLocalePrefsMutation = useMutation({
-    ...notificationsQueries.updatePreferences(),
-    onSuccess: () =>
-      queryClient.invalidateQueries({
-        queryKey: ["notifications", "preferences"],
-      }),
-  });
+  const updateLocalePrefsMutation = useMutation(updatePreferencesMutationOptions(queryClient));
 
   return (
     <AppSheet open={open} onOpenChange={onOpenChange}>

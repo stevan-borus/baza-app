@@ -2,8 +2,13 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 import { apiFetch, throwIfNotOk } from "@/lib/api";
 import { sharedEnv } from "@/lib/env.shared";
+import { sessionsQueries } from "@/lib/queries/sessions-queries-factory";
+import { clientsQueries } from "@/lib/queries/clients-queries-factory";
+import { bookingsQueries } from "@/lib/queries/bookings-queries-factory";
 
 const BASE = `${sharedEnv.EXPO_PUBLIC_API_URL}/api/admin/reservations`;
+
+const reservationsAll = ["reservations"] as const;
 
 const createResponseSchema = z.object({
   success: z.boolean(),
@@ -58,7 +63,7 @@ export async function cancelReservationsBulkRequest(input: CancelReservationsInp
 export function useCreateReservationsMutation() {
   const qc = useQueryClient();
   return useMutation({
-    mutationKey: ["reservations", "create"] as const,
+    mutationKey: [...reservationsAll, "create"] as const,
     mutationFn: createReservationsRequest,
     onSuccess: () => {
       // Server availability + per-client lists + per-client bookings list
@@ -66,9 +71,9 @@ export function useCreateReservationsMutation() {
       // load-bearing for reservation mode itself — the already-booked badge
       // reads from the bookings query, so without this the screen would
       // still show the just-reserved cards as selectable on a refetch.
-      qc.invalidateQueries({ queryKey: ["sessions"] });
-      qc.invalidateQueries({ queryKey: ["clients"] });
-      qc.invalidateQueries({ queryKey: ["bookings"] });
+      qc.invalidateQueries({ queryKey: sessionsQueries.all });
+      qc.invalidateQueries({ queryKey: clientsQueries.all });
+      qc.invalidateQueries({ queryKey: bookingsQueries.all });
     },
   });
 }
@@ -76,12 +81,12 @@ export function useCreateReservationsMutation() {
 export function useCancelReservationsBulkMutation() {
   const qc = useQueryClient();
   return useMutation({
-    mutationKey: ["reservations", "cancel-bulk"] as const,
+    mutationKey: [...reservationsAll, "cancel-bulk"] as const,
     mutationFn: cancelReservationsBulkRequest,
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["sessions"] });
-      qc.invalidateQueries({ queryKey: ["clients"] });
-      qc.invalidateQueries({ queryKey: ["bookings"] });
+      qc.invalidateQueries({ queryKey: sessionsQueries.all });
+      qc.invalidateQueries({ queryKey: clientsQueries.all });
+      qc.invalidateQueries({ queryKey: bookingsQueries.all });
     },
   });
 }

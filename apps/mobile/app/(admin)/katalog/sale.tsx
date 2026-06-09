@@ -22,7 +22,11 @@ import { AppSheet } from "@/components/ui/sheet";
 import { ConfirmSheet } from "@/components/ui/confirm-sheet";
 import { SectionLabel } from "@/components/ui/typography";
 import { ACCENT_LIGHT } from "@/components/ui/tokens";
-import { roomsQueries } from "@/lib/queries/rooms-queries-factory";
+import {
+  roomsQueries,
+  createRoomMutationOptions,
+  updateRoomMutationOptions,
+} from "@/lib/queries/rooms-queries-factory";
 import { ScreenContainerRaw, useTabBarBottomPadding } from "@/components/ui/screen-container";
 import { HeaderIconButton } from "@/components/ui/app-header";
 
@@ -38,27 +42,16 @@ export default function AdminSettingsRooms() {
 
   const roomsQuery = useQuery(roomsQueries.list());
 
-  const createMutation = useMutation({
-    ...roomsQueries.create(),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["rooms"] });
-      setShowCreate(false);
-      setForm({ name: "", capacity: "" });
-    },
-  });
-
-  const updateMutation = useMutation({
-    ...roomsQueries.update(),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["rooms"] });
-      setEditingId(null);
-    },
-  });
+  // Cache upkeep (list splice) is baked into the options-builders; the
+  // component-only side-effects (close sheet, reset form) are passed per-call
+  // via mutate(vars, { onSuccess }) so they run in addition to the splice.
+  const createMutation = useMutation(createRoomMutationOptions(queryClient));
+  const updateMutation = useMutation(updateRoomMutationOptions(queryClient));
 
   const deleteMutation = useMutation({
     ...roomsQueries.delete(),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["rooms"] });
+      await queryClient.invalidateQueries({ queryKey: roomsQueries.all });
       setConfirmDelete(false);
       setEditingId(null);
     },
@@ -194,10 +187,18 @@ export default function AdminSettingsRooms() {
             testID="room-create-submit"
             disabled={createMutation.isPending || !form.name}
             onPress={() =>
-              createMutation.mutate({
-                name: form.name,
-                capacity: parseInt(form.capacity, 10) || 10,
-              })
+              createMutation.mutate(
+                {
+                  name: form.name,
+                  capacity: parseInt(form.capacity, 10) || 10,
+                },
+                {
+                  onSuccess: () => {
+                    setShowCreate(false);
+                    setForm({ name: "", capacity: "" });
+                  },
+                },
+              )
             }
           >
             {t("admin.manage.create")}
@@ -235,11 +236,14 @@ export default function AdminSettingsRooms() {
             disabled={updateMutation.isPending || !editForm.name}
             onPress={() => {
               if (!editingId) return;
-              updateMutation.mutate({
-                id: editingId,
-                name: editForm.name,
-                capacity: parseInt(editForm.capacity, 10) || 10,
-              });
+              updateMutation.mutate(
+                {
+                  id: editingId,
+                  name: editForm.name,
+                  capacity: parseInt(editForm.capacity, 10) || 10,
+                },
+                { onSuccess: () => setEditingId(null) },
+              );
             }}
           >
             {t("admin.schedule.saveChanges")}
