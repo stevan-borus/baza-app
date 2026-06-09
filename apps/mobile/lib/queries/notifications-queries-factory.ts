@@ -196,29 +196,29 @@ type UpdatePreferencesInput = {
   preferredLocale?: "sr" | "en" | null;
 };
 
-const PREFERENCES_KEY = ["notifications", "preferences"] as const;
-
 /**
  * Optimistic update options for the preferences PATCH.
  *
- * Why onMutate (not just the component's mutation.variables read): the settings
- * screen's optimistic read only holds while the mutation isPending. The instant
- * the PATCH settles, isPending flips false but the onSuccess invalidation's
- * refetch hasn't returned yet — so without a cache write the switch reads the
- * stale pre-tap value and visibly snaps back (the reported left-right jitter).
- * Writing the flipped value into the cache here keeps it authoritative across
- * the whole settle→refetch window; onError rolls it back on failure.
+ * onMutate writes the flipped value straight into the preferences cache so the
+ * switch shows the new position instantly and holds it — fixing the left-right
+ * snap-back that came from reading the stale cache during the old settle→refetch
+ * window. onError reverts to the pre-tap snapshot if the PATCH fails.
+ *
+ * No onSuccess/onSettled invalidation: the optimistic write is already the
+ * server-confirmed value once the PATCH resolves, so re-fetching would only add
+ * a redundant round-trip (and reopen a refetch window) to learn what we know.
  */
 export function updatePreferencesMutationOptions(queryClient: QueryClient) {
+  const preferencesKey = notificationsQueries.preferences().queryKey;
   return {
     ...notificationsQueries.updatePreferences(),
     onMutate: async (input: UpdatePreferencesInput) => {
-      await queryClient.cancelQueries({ queryKey: PREFERENCES_KEY });
-      const previous = queryClient.getQueryData<PreferencesResponse>(PREFERENCES_KEY);
+      await queryClient.cancelQueries({ queryKey: preferencesKey });
+      const previous = queryClient.getQueryData<PreferencesResponse>(preferencesKey);
       if (previous) {
         // Merge whatever single field this PATCH carries (a toggle, or the
         // locale) onto the cached preferences so the optimistic value is exact.
-        queryClient.setQueryData<PreferencesResponse>(PREFERENCES_KEY, {
+        queryClient.setQueryData<PreferencesResponse>(preferencesKey, {
           ...previous,
           preferences: { ...previous.preferences, ...input },
         });
@@ -227,11 +227,8 @@ export function updatePreferencesMutationOptions(queryClient: QueryClient) {
     },
     onError: (_err: unknown, _input: UpdatePreferencesInput, context?: { previous?: PreferencesResponse }) => {
       if (context?.previous) {
-        queryClient.setQueryData(PREFERENCES_KEY, context.previous);
+        queryClient.setQueryData(preferencesKey, context.previous);
       }
-    },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: PREFERENCES_KEY });
     },
   };
 }

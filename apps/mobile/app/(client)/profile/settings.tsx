@@ -9,6 +9,7 @@ import { useQuery } from "@tanstack/react-query";
 import { ActivityIndicator, ScrollView, Switch, Text, View } from "react-native";
 import { useTranslation } from "react-i18next";
 import { ScreenContainerRaw, useTabBarBottomPadding } from "@/components/ui/screen-container";
+import { useThemeTokens } from "@/components/ui/tokens";
 import {
   notificationsQueries,
   useUpdatePreferencesMutation,
@@ -18,6 +19,7 @@ type PrefKey = "pushEnabled" | "inAppEnabled" | "campaignsEnabled" | "bookingEma
 
 export default function NotificationSettings() {
   const { t } = useTranslation();
+  const tokens = useThemeTokens();
   const bottomPad = useTabBarBottomPadding(24);
   const prefsQuery = useQuery(notificationsQueries.preferences());
   const updateMutation = useUpdatePreferencesMutation();
@@ -80,6 +82,7 @@ export default function NotificationSettings() {
                   testID={`notification-settings-${row.key}`}
                   value={valueFor(row.key)}
                   onValueChange={(value) => toggle(row.key, value)}
+                  trackColor={{ false: tokens.glassStrong, true: tokens.accent }}
                 />
               </View>
             ))}

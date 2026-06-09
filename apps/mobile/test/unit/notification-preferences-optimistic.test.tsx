@@ -40,7 +40,9 @@ import {
   updatePreferencesMutationOptions,
 } from "@/lib/queries/notifications-queries-factory";
 
-const PREFS_KEY = ["notifications", "preferences"] as const;
+// Derive the key from the query-options factory — never hand-roll a parallel
+// literal (the factory is the single source of truth for this key).
+const PREFS_KEY = notificationsQueries.preferences().queryKey;
 
 function initialPrefs() {
   return {
@@ -134,5 +136,17 @@ describe("updatePreferencesMutationOptions — optimistic cache (no jitter)", ()
 
     const cached = client.getQueryData<ReturnType<typeof initialPrefs>>(PREFS_KEY);
     expect(cached?.preferences.campaignsEnabled).toBe(true);
+  });
+
+  it("does not re-fetch the preferences query on success — the optimistic write is authoritative", async () => {
+    const invalidateSpy = vi.spyOn(client, "invalidateQueries");
+
+    await runMutation({ campaignsEnabled: false }, "success");
+
+    const invalidatedPrefs = invalidateSpy.mock.calls.some(([filters]) => {
+      const key = (filters as { queryKey?: readonly unknown[] } | undefined)?.queryKey;
+      return key?.[0] === "notifications" && key?.[1] === "preferences";
+    });
+    expect(invalidatedPrefs).toBe(false);
   });
 });
