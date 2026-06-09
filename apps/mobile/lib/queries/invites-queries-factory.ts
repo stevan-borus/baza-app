@@ -21,10 +21,14 @@ const invitesResponseSchema = z.object({
 
 export type Invite = z.infer<typeof inviteSchema>;
 
+const invitesAll = ["invites"] as const;
+
 export const invitesQueries = {
+  all: invitesAll,
+
   list: () =>
     queryOptions({
-      queryKey: ["invites", "list"] as const,
+      queryKey: [...invitesAll, "list"] as const,
       queryFn: async () => {
         const response = await apiFetch(`${sharedEnv.EXPO_PUBLIC_API_URL}/api/invites`, {
           credentials: "include",
@@ -37,7 +41,7 @@ export const invitesQueries = {
 
   create: () =>
     mutationOptions({
-      mutationKey: ["invites", "create"] as const,
+      mutationKey: [...invitesAll, "create"] as const,
       mutationFn: async (payload: { email: string; firstName: string; lastName: string; phone?: string; dateOfBirth?: string }) => {
         const response = await apiFetch(`${sharedEnv.EXPO_PUBLIC_API_URL}/api/invites`, {
           method: "POST",
@@ -52,7 +56,7 @@ export const invitesQueries = {
 
   revoke: () =>
     mutationOptions({
-      mutationKey: ["invites", "revoke"] as const,
+      mutationKey: [...invitesAll, "revoke"] as const,
       mutationFn: async (id: string) => {
         const response = await apiFetch(
           `${sharedEnv.EXPO_PUBLIC_API_URL}/api/invites/${id}/revoke`,
@@ -65,7 +69,7 @@ export const invitesQueries = {
 
   resend: () =>
     mutationOptions({
-      mutationKey: ["invites", "resend"] as const,
+      mutationKey: [...invitesAll, "resend"] as const,
       mutationFn: async (id: string) => {
         const response = await apiFetch(
           `${sharedEnv.EXPO_PUBLIC_API_URL}/api/invites/${id}/resend`,

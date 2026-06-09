@@ -76,10 +76,14 @@ const clientPackagesResponseSchema = z.object({
 export type PackageType = z.infer<typeof packageTypeSchema>;
 export type ClientPackage = z.infer<typeof clientPackageSchema>;
 
+const packagesAll = ["packages"] as const;
+
 export const packagesQueries = {
+  all: packagesAll,
+
   types: () =>
     queryOptions({
-      queryKey: ["packages", "types"] as const,
+      queryKey: [...packagesAll, "types"] as const,
       queryFn: async () => {
         const response = await apiFetch(`${sharedEnv.EXPO_PUBLIC_API_URL}/api/packages/types`, {
           credentials: "include",
@@ -92,7 +96,7 @@ export const packagesQueries = {
 
   clientPackages: (clientProfileId?: string) =>
     queryOptions({
-      queryKey: ["packages", "client-packages", clientProfileId ?? "me"] as const,
+      queryKey: [...packagesAll, "client-packages", clientProfileId ?? "me"] as const,
       queryFn: async () => {
         const qs = clientProfileId
           ? `?clientProfileId=${encodeURIComponent(clientProfileId)}`
@@ -119,7 +123,7 @@ export const packagesQueries = {
   clientPackagesAdminList: (params?: { search?: string; take?: number }) =>
     infiniteQueryOptions({
       queryKey: [
-        "packages",
+        ...packagesAll,
         "client-packages",
         "admin",
         { search: params?.search ?? "", take: params?.take ?? 20 },
@@ -142,7 +146,7 @@ export const packagesQueries = {
 
   createType: () =>
     mutationOptions({
-      mutationKey: ["packages", "types", "create"] as const,
+      mutationKey: [...packagesAll, "types", "create"] as const,
       mutationFn: async (payload: {
         name: string;
         sessionCount: number;
@@ -164,7 +168,7 @@ export const packagesQueries = {
 
   updateType: () =>
     mutationOptions({
-      mutationKey: ["packages", "types", "update"] as const,
+      mutationKey: [...packagesAll, "types", "update"] as const,
       mutationFn: async ({
         id,
         ...payload
@@ -193,7 +197,7 @@ export const packagesQueries = {
 
   deleteType: () =>
     mutationOptions({
-      mutationKey: ["packages", "types", "delete"] as const,
+      mutationKey: [...packagesAll, "types", "delete"] as const,
       mutationFn: async (id: string) => {
         const response = await apiFetch(
           `${sharedEnv.EXPO_PUBLIC_API_URL}/api/packages/types/${id}`,
@@ -206,7 +210,7 @@ export const packagesQueries = {
 
   createClientPackage: () =>
     mutationOptions({
-      mutationKey: ["packages", "client-packages", "create"] as const,
+      mutationKey: [...packagesAll, "client-packages", "create"] as const,
       mutationFn: async (payload: {
         clientProfileId: string;
         packageTypeId: string;
@@ -228,7 +232,7 @@ export const packagesQueries = {
 
   pause: () =>
     mutationOptions({
-      mutationKey: ["packages", "pause"] as const,
+      mutationKey: [...packagesAll, "pause"] as const,
       mutationFn: async (payload: {
         clientProfileId: string;
         startsAt: string;

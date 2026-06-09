@@ -16,10 +16,13 @@ const roomsResponseSchema = z.object({
 
 export type Room = z.infer<typeof roomSchema>;
 
+const roomsAll = ["rooms"] as const;
+
 export const roomsQueries = {
+  all: roomsAll,
   list: () =>
     queryOptions({
-      queryKey: ["rooms", "list"] as const,
+      queryKey: [...roomsAll, "list"] as const,
       queryFn: async () => {
         const response = await apiFetch(`${sharedEnv.EXPO_PUBLIC_API_URL}/api/rooms`, {
           credentials: "include",
@@ -32,7 +35,7 @@ export const roomsQueries = {
 
   create: () =>
     mutationOptions({
-      mutationKey: ["rooms", "create"] as const,
+      mutationKey: [...roomsAll, "create"] as const,
       mutationFn: async (payload: { name: string; capacity: number }) => {
         const response = await apiFetch(`${sharedEnv.EXPO_PUBLIC_API_URL}/api/rooms`, {
           method: "POST",
@@ -47,7 +50,7 @@ export const roomsQueries = {
 
   update: () =>
     mutationOptions({
-      mutationKey: ["rooms", "update"] as const,
+      mutationKey: [...roomsAll, "update"] as const,
       mutationFn: async ({
         id,
         ...payload
@@ -72,7 +75,7 @@ export const roomsQueries = {
 
   delete: () =>
     mutationOptions({
-      mutationKey: ["rooms", "delete"] as const,
+      mutationKey: [...roomsAll, "delete"] as const,
       mutationFn: async (id: string) => {
         const response = await apiFetch(
           `${sharedEnv.EXPO_PUBLIC_API_URL}/api/rooms/${id}`,

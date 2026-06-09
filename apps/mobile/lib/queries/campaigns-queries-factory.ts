@@ -41,10 +41,14 @@ const recipientsSchema = z.object({
   clients: z.array(audienceClientSchema),
 });
 
+const campaignsAll = ["campaigns"] as const;
+
 export const campaignsQueries = {
+  all: campaignsAll,
+
   list: () =>
     queryOptions({
-      queryKey: ["campaigns", "list"] as const,
+      queryKey: [...campaignsAll, "list"] as const,
       queryFn: async () => {
         const res = await apiFetch(base, { credentials: "include" });
         if (!res.ok) throw new Error(`Unable to load campaigns (${res.status})`);
@@ -55,7 +59,7 @@ export const campaignsQueries = {
 
   one: (id: string) =>
     queryOptions({
-      queryKey: ["campaigns", "one", id] as const,
+      queryKey: [...campaignsAll, "one", id] as const,
       queryFn: async () => {
         const res = await apiFetch(`${base}/${id}`, { credentials: "include" });
         if (!res.ok) throw new Error(`Unable to load campaign (${res.status})`);
@@ -67,7 +71,7 @@ export const campaignsQueries = {
   /** Live audience count for a spec; keyed on the spec so it caches per-spec. enabled only when a spec is chosen. */
   preview: (spec: CampaignAudienceSpec | null) =>
     queryOptions({
-      queryKey: ["campaigns", "preview", JSON.stringify(spec ?? {})] as const,
+      queryKey: [...campaignsAll, "preview", JSON.stringify(spec ?? {})] as const,
       enabled: spec !== null,
       queryFn: async () => {
         const res = await apiFetch(`${base}/preview`, {
@@ -85,7 +89,7 @@ export const campaignsQueries = {
   /** The PROJECTED audience for a spec, as people (the "view clients" sheet). */
   audienceClients: (spec: CampaignAudienceSpec | null) =>
     queryOptions({
-      queryKey: ["campaigns", "audience-clients", JSON.stringify(spec ?? {})] as const,
+      queryKey: [...campaignsAll, "audience-clients", JSON.stringify(spec ?? {})] as const,
       enabled: spec !== null,
       queryFn: async () => {
         const res = await apiFetch(`${base}/preview/clients`, {
@@ -103,7 +107,7 @@ export const campaignsQueries = {
   /** A campaign's recipients: actual (SENT) or projected (not yet sent). */
   recipients: (id: string, enabled = true) =>
     queryOptions({
-      queryKey: ["campaigns", "recipients", id] as const,
+      queryKey: [...campaignsAll, "recipients", id] as const,
       enabled,
       queryFn: async () => {
         const res = await apiFetch(`${base}/${id}/recipients`, { credentials: "include" });
@@ -115,7 +119,7 @@ export const campaignsQueries = {
 
   create: () =>
     mutationOptions({
-      mutationKey: ["campaigns", "create"] as const,
+      mutationKey: [...campaignsAll, "create"] as const,
       mutationFn: async (payload: {
         title: string;
         body: string;
@@ -136,7 +140,7 @@ export const campaignsQueries = {
 
   update: () =>
     mutationOptions({
-      mutationKey: ["campaigns", "update"] as const,
+      mutationKey: [...campaignsAll, "update"] as const,
       mutationFn: async (vars: {
         id: string;
         title?: string;
@@ -159,7 +163,7 @@ export const campaignsQueries = {
 
   cancel: () =>
     mutationOptions({
-      mutationKey: ["campaigns", "cancel"] as const,
+      mutationKey: [...campaignsAll, "cancel"] as const,
       mutationFn: async (id: string) => {
         const res = await apiFetch(`${base}/${id}`, {
           method: "PATCH",
@@ -174,7 +178,7 @@ export const campaignsQueries = {
 
   remove: () =>
     mutationOptions({
-      mutationKey: ["campaigns", "remove"] as const,
+      mutationKey: [...campaignsAll, "remove"] as const,
       mutationFn: async (id: string) => {
         const res = await apiFetch(`${base}/${id}`, { method: "DELETE", credentials: "include" });
         if (!res.ok) throw new Error(`Unable to delete campaign (${res.status})`);
@@ -184,7 +188,7 @@ export const campaignsQueries = {
 
   send: () =>
     mutationOptions({
-      mutationKey: ["campaigns", "send"] as const,
+      mutationKey: [...campaignsAll, "send"] as const,
       mutationFn: async (id: string) => {
         const res = await apiFetch(`${base}/${id}/send`, { method: "POST", credentials: "include" });
         if (!res.ok) throw new Error(`Unable to send campaign (${res.status})`);

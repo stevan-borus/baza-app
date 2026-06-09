@@ -111,10 +111,14 @@ const sessionDetailResponseSchema = z.object({
 export type Session = z.infer<typeof sessionSchema>;
 export type SessionDetail = z.infer<typeof sessionDetailSchema>;
 
+const sessionsAll = ["sessions"] as const;
+
 export const sessionsQueries = {
+  all: sessionsAll,
+
   availabilityByMonth: (month: string) =>
     queryOptions({
-      queryKey: ["sessions", "availability", month] as const,
+      queryKey: [...sessionsAll, "availability", month] as const,
       queryFn: async () => {
         const response = await apiFetch(
           `${sharedEnv.EXPO_PUBLIC_API_URL}/api/sessions/availability?month=${encodeURIComponent(month)}`,
@@ -130,7 +134,7 @@ export const sessionsQueries = {
 
   list: () =>
     queryOptions({
-      queryKey: ["sessions", "list"] as const,
+      queryKey: [...sessionsAll, "list"] as const,
       queryFn: async () => {
         const response = await apiFetch(`${sharedEnv.EXPO_PUBLIC_API_URL}/api/sessions`, {
           credentials: "include",
@@ -143,7 +147,7 @@ export const sessionsQueries = {
 
   byId: (id: string) =>
     queryOptions({
-      queryKey: ["sessions", "by-id", id] as const,
+      queryKey: [...sessionsAll, "by-id", id] as const,
       queryFn: async () => {
         const response = await apiFetch(
           `${sharedEnv.EXPO_PUBLIC_API_URL}/api/sessions/${encodeURIComponent(id)}`,
@@ -158,7 +162,7 @@ export const sessionsQueries = {
 
   create: () =>
     mutationOptions({
-      mutationKey: ["sessions", "create"] as const,
+      mutationKey: [...sessionsAll, "create"] as const,
       mutationFn: async (payload: {
         classTypeId: string;
         roomId?: string;
@@ -181,7 +185,7 @@ export const sessionsQueries = {
 
   update: () =>
     mutationOptions({
-      mutationKey: ["sessions", "update"] as const,
+      mutationKey: [...sessionsAll, "update"] as const,
       mutationFn: async ({
         id,
         ...payload
@@ -208,7 +212,7 @@ export const sessionsQueries = {
 
   createRecurring: () =>
     mutationOptions({
-      mutationKey: ["sessions", "create-recurring"] as const,
+      mutationKey: [...sessionsAll, "create-recurring"] as const,
       mutationFn: async (payload: {
         classTypeId: string;
         roomId?: string;
@@ -236,7 +240,7 @@ export const sessionsQueries = {
 
   recurringSchedule: (id: string | null) =>
     queryOptions({
-      queryKey: ["sessions", "recurring-schedule", id] as const,
+      queryKey: [...sessionsAll, "recurring-schedule", id] as const,
       enabled: !!id,
       queryFn: async () => {
         const response = await apiFetch(
@@ -268,7 +272,7 @@ export const sessionsQueries = {
 
   updateRecurring: () =>
     mutationOptions({
-      mutationKey: ["sessions", "update-recurring"] as const,
+      mutationKey: [...sessionsAll, "update-recurring"] as const,
       mutationFn: async ({
         id,
         ...payload
@@ -299,7 +303,7 @@ export const sessionsQueries = {
 
   deleteRecurring: () =>
     mutationOptions({
-      mutationKey: ["sessions", "delete-recurring"] as const,
+      mutationKey: [...sessionsAll, "delete-recurring"] as const,
       mutationFn: async (id: string) => {
         const response = await apiFetch(
           `${sharedEnv.EXPO_PUBLIC_API_URL}/api/sessions/recurring/${id}`,

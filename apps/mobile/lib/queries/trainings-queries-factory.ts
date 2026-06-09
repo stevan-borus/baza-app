@@ -17,10 +17,13 @@ const classTypesResponseSchema = z.object({
 
 export type ClassType = z.infer<typeof classTypeSchema>;
 
+const trainingsAll = ["trainings"] as const;
+
 export const trainingsQueries = {
+  all: trainingsAll,
   classTypes: () =>
     queryOptions({
-      queryKey: ["trainings", "class-types"] as const,
+      queryKey: [...trainingsAll, "class-types"] as const,
       queryFn: async () => {
         const response = await apiFetch(
           `${sharedEnv.EXPO_PUBLIC_API_URL}/api/trainings/class-types`,
@@ -34,7 +37,7 @@ export const trainingsQueries = {
 
   createClassType: () =>
     mutationOptions({
-      mutationKey: ["trainings", "class-types", "create"] as const,
+      mutationKey: [...trainingsAll, "class-types", "create"] as const,
       mutationFn: async (payload: { name: string; maxClients: number; durationMins: number }) => {
         const response = await apiFetch(
           `${sharedEnv.EXPO_PUBLIC_API_URL}/api/trainings/class-types`,
@@ -52,7 +55,7 @@ export const trainingsQueries = {
 
   updateClassType: () =>
     mutationOptions({
-      mutationKey: ["trainings", "class-types", "update"] as const,
+      mutationKey: [...trainingsAll, "class-types", "update"] as const,
       mutationFn: async ({
         id,
         ...payload
@@ -78,7 +81,7 @@ export const trainingsQueries = {
 
   deleteClassType: () =>
     mutationOptions({
-      mutationKey: ["trainings", "class-types", "delete"] as const,
+      mutationKey: [...trainingsAll, "class-types", "delete"] as const,
       mutationFn: async (id: string) => {
         const response = await apiFetch(
           `${sharedEnv.EXPO_PUBLIC_API_URL}/api/trainings/class-types/${id}`,

@@ -16,7 +16,11 @@ export class ClientForbiddenError extends Error {
 
 const DEFAULT_TAKE = 20;
 
+const clientsAll = ["clients"] as const;
+
 export const clientsQueries = {
+  all: clientsAll,
+
   /**
    * Cursor-paginated client list with optional server-side substring search.
    *
@@ -32,7 +36,7 @@ export const clientsQueries = {
   list: (opts: { q?: string; take?: number } = {}) =>
     infiniteQueryOptions({
       queryKey: [
-        "clients",
+        ...clientsAll,
         "list",
         { q: opts.q ?? "", take: opts.take ?? DEFAULT_TAKE },
       ] as const,
@@ -56,7 +60,7 @@ export const clientsQueries = {
 
   byId: (id: string) =>
     queryOptions({
-      queryKey: ["clients", "byId", id] as const,
+      queryKey: [...clientsAll, "byId", id] as const,
       queryFn: async () => {
         const response = await apiFetch(
           `${sharedEnv.EXPO_PUBLIC_API_URL}/api/clients/${id}`,
@@ -73,7 +77,7 @@ export const clientsQueries = {
 
   create: () =>
     mutationOptions({
-      mutationKey: ["clients", "create"] as const,
+      mutationKey: [...clientsAll, "create"] as const,
       mutationFn: async (payload: {
         email: string;
         firstName: string;
@@ -93,7 +97,7 @@ export const clientsQueries = {
 
   update: () =>
     mutationOptions({
-      mutationKey: ["clients", "update"] as const,
+      mutationKey: [...clientsAll, "update"] as const,
       mutationFn: async ({
         id,
         ...payload
@@ -119,7 +123,7 @@ export const clientsQueries = {
 
   consentRecords: (clientUserId: string) =>
     queryOptions({
-      queryKey: ["clients", clientUserId, "consent-records"] as const,
+      queryKey: [...clientsAll, clientUserId, "consent-records"] as const,
       queryFn: async () => {
         const res = await apiFetch(
           `${sharedEnv.EXPO_PUBLIC_API_URL}/api/admin/clients/${clientUserId}/consent-records`,
@@ -145,7 +149,7 @@ export const clientsQueries = {
 
   health: (clientUserId: string) =>
     queryOptions({
-      queryKey: ["clients", clientUserId, "health"] as const,
+      queryKey: [...clientsAll, clientUserId, "health"] as const,
       queryFn: async () => {
         const res = await apiFetch(
           `${sharedEnv.EXPO_PUBLIC_API_URL}/api/admin/clients/${clientUserId}/health`,

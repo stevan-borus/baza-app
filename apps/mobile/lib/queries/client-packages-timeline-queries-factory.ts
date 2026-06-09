@@ -18,11 +18,15 @@ async function fetchTimeline() {
   return clientPackagesTimelineResponseSchema.parse(await response.json());
 }
 
+const clientPackagesTimelineAll = ["client-packages"] as const;
+
 export const clientPackagesTimelineQueries = {
+  all: clientPackagesTimelineAll,
+
   // Read-only surface — no mutation hook belongs here.
   list: () =>
     queryOptions({
-      queryKey: ["client-packages", "timeline"] as const,
+      queryKey: [...clientPackagesTimelineAll, "timeline"] as const,
       queryFn: fetchTimeline,
       staleTime: 60_000,
     }),

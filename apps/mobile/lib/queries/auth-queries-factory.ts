@@ -3,10 +3,13 @@ import { authMeResponseSchema } from "@baza/types";
 import { sharedEnv } from "@/lib/env.shared";
 import { apiFetch } from "@/lib/api";
 
+const authAll = ["auth"] as const;
+
 export const authQueries = {
+  all: authAll,
   me: () =>
     queryOptions({
-      queryKey: ["auth", "me"] as const,
+      queryKey: [...authAll, "me"] as const,
       queryFn: async () => {
         const response = await apiFetch(`${sharedEnv.EXPO_PUBLIC_API_URL}/api/auth/me`);
         if (!response.ok) {

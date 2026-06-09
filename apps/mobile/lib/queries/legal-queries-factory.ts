@@ -9,10 +9,14 @@ import { sharedEnv } from "@/lib/env.shared";
 
 const BASE = `${sharedEnv.EXPO_PUBLIC_API_URL}/api/legal`;
 
+const legalAll = ["legal"] as const;
+
 export const legalQueries = {
+  all: legalAll,
+
   list: () =>
     queryOptions({
-      queryKey: ["legal", "documents", "list"] as const,
+      queryKey: [...legalAll, "documents", "list"] as const,
       queryFn: async () => {
         const res = await apiFetch(`${BASE}/documents`);
         if (!res.ok) throw new Error(`Unable to list legal documents (${res.status})`);
@@ -23,7 +27,7 @@ export const legalQueries = {
 
   byKey: (key: ConsentDocumentKey, locale: "sr" | "en") =>
     queryOptions({
-      queryKey: ["legal", "documents", key, locale] as const,
+      queryKey: [...legalAll, "documents", key, locale] as const,
       queryFn: async () => {
         const res = await apiFetch(`${BASE}/documents/${key}?locale=${locale}`);
         if (!res.ok) throw new Error(`Unable to load ${key}/${locale} (${res.status})`);

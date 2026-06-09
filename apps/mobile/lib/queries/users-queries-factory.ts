@@ -16,10 +16,14 @@ const trainersResponseSchema = z.object({
 
 export type TrainerUser = z.infer<typeof trainerUserSchema>;
 
+const usersAll = ["users"] as const;
+
 export const usersQueries = {
+  all: usersAll,
+
   trainers: () =>
     queryOptions({
-      queryKey: ["users", "trainers"] as const,
+      queryKey: [...usersAll, "trainers"] as const,
       queryFn: async () => {
         const response = await apiFetch(
           `${sharedEnv.EXPO_PUBLIC_API_URL}/api/users/trainers`,
