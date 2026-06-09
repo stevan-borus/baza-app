@@ -83,6 +83,9 @@ export const clientsQueries = {
         firstName: string;
         lastName: string;
         phone?: string;
+        // Required by the server (inviteClientInputSchema) for the
+        // minor/guardian waiver logic; ISO yyyy-mm-dd.
+        dateOfBirth: string;
       }) => {
         const response = await apiFetch(`${sharedEnv.EXPO_PUBLIC_API_URL}/api/clients`, {
           method: "POST",

@@ -235,7 +235,13 @@ export default function AdminClients() {
     phone: string;
     dateOfBirth: Date | null;
   }>({ email: "", firstName: "", lastName: "", phone: "", dateOfBirth: null });
-  const [clientForm, setClientForm] = useState({ email: "", firstName: "", lastName: "", phone: "" });
+  const [clientForm, setClientForm] = useState<{
+    email: string;
+    firstName: string;
+    lastName: string;
+    phone: string;
+    dateOfBirth: Date | null;
+  }>({ email: "", firstName: "", lastName: "", phone: "", dateOfBirth: null });
   const [editForm, setEditForm] = useState({ firstName: "", lastName: "", phone: "", notes: "", isActive: true });
   const [pauseForm, setPauseForm] = useState({ startsAt: "", endsAt: "", reason: "" });
 
@@ -263,7 +269,7 @@ export default function AdminClients() {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: clientsQueries.all });
       setShowCreateClient(false);
-      setClientForm({ email: "", firstName: "", lastName: "", phone: "" });
+      setClientForm({ email: "", firstName: "", lastName: "", phone: "", dateOfBirth: null });
     },
   });
   const updateClientMutation = useMutation({
@@ -585,6 +591,7 @@ export default function AdminClients() {
               {t("admin.clients.sheetNewClient")}
             </Text>
             <Input
+              testID="client-create-email-input"
               placeholder={t("admin.clients.placeholderEmail")}
               autoCapitalize="none"
               keyboardType="email-address"
@@ -592,36 +599,54 @@ export default function AdminClients() {
               onChangeText={(v) => setClientForm((s) => ({ ...s, email: v }))}
             />
             <Input
+              testID="client-create-firstname-input"
               placeholder={t("admin.clients.placeholderFirstName")}
               value={clientForm.firstName}
               onChangeText={(v) => setClientForm((s) => ({ ...s, firstName: v }))}
             />
             <Input
+              testID="client-create-lastname-input"
               placeholder={t("admin.clients.placeholderLastName")}
               value={clientForm.lastName}
               onChangeText={(v) => setClientForm((s) => ({ ...s, lastName: v }))}
             />
             <Input
+              testID="client-create-phone-input"
               placeholder={t("admin.clients.placeholderPhone")}
               keyboardType="phone-pad"
               value={clientForm.phone}
               onChangeText={(v) => setClientForm((s) => ({ ...s, phone: v }))}
             />
+            {/* DOB is required server-side (inviteClientInputSchema) for the
+                minor/guardian waiver logic — collect it here like the invite form. */}
+            <DateTimePicker
+              testID="client-create-dob-input"
+              mode="date"
+              value={clientForm.dateOfBirth}
+              onChange={(d) => setClientForm((s) => ({ ...s, dateOfBirth: d }))}
+              placeholder={t("admin.clients.placeholderDateOfBirth")}
+              maximumDate={now()}
+              minimumDate={new Date(Date.UTC(1900, 0, 1))}
+            />
             <Button
+              testID="client-create-submit-button"
               disabled={
                 createClientMutation.isPending ||
                 !clientForm.email ||
                 !clientForm.firstName ||
-                !clientForm.lastName
+                !clientForm.lastName ||
+                !clientForm.dateOfBirth
               }
-              onPress={() =>
+              onPress={() => {
+                if (!clientForm.dateOfBirth) return;
                 createClientMutation.mutate({
                   email: clientForm.email,
                   firstName: clientForm.firstName,
                   lastName: clientForm.lastName,
                   phone: clientForm.phone || undefined,
-                })
-              }
+                  dateOfBirth: toIsoDate(clientForm.dateOfBirth),
+                });
+              }}
             >
               {t("admin.clients.createClient")}
             </Button>
