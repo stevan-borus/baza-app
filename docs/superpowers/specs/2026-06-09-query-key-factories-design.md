@@ -16,10 +16,14 @@ Two related React Query hygiene issues across the app:
 
 2. **Refetch where a local cache update would do.** Several mutations
    `invalidateQueries` (triggering a network refetch) even though they already
-   know the outcome — either because an optimistic `onMutate` already wrote the
-   correct value, or because the mutation response carries the full
-   created/updated entity. Same principle as the merged notification-toggle fix
-   (PR #50): when the mutation knows what changed, write the cache; don't round-trip.
+   know the outcome — because an optimistic `onMutate` already wrote the correct
+   value, or the response carries the full created/updated entity, or the
+   endpoint can cheaply be made to return that entity. Same principle as the
+   merged notification-toggle fix (PR #50): when the mutation knows what changed,
+   write the cache; don't round-trip. Where a plain-list endpoint returns only a
+   partial today, we widen its server response so the splice has the full row.
+   **Paginated/infinite-list targets are deliberately excluded** — splicing across
+   pages is fragile, so those keep invalidating.
 
 ## Part 1 — the `all` root-key convention
 
@@ -82,12 +86,13 @@ post-settle refetch redundant:
    (`notifications-preferences-sheet.tsx`, `profile-sheet.tsx`) inherit the fix —
    verify they don't add their own duplicate invalidation; remove if present.
 
-### Part 2b — splice cache from result (Cat B, 11 verified-safe sites)
+### Part 2b — splice cache from result (Cat B)
 
-For these, the route handler returns the **complete entity** the target query's
-row needs, AND the target is a **plain (non-infinite) list or a detail query**.
-Replace the `onSuccess` `invalidateQueries` with `setQueryData` that
-inserts/updates the entity in the list (and detail where applicable):
+Replace `invalidateQueries` with `setQueryData` for mutations that target a
+**plain (non-infinite) list or detail** query and whose response carries the
+complete row — either already, or after a small server-side widening (2b-server).
+
+**Already-complete responses (no server change):**
 
 | Factory | Mutation | Target | Server returns |
 |---|---|---|---|
@@ -95,45 +100,67 @@ inserts/updates the entity in the list (and detail where applicable):
 | campaigns | update | `list()` + `one(id)` | `{ campaign }` full |
 | campaigns | cancel | `list()` + `one(id)` | `{ campaign }` full |
 | campaigns | send | `list()` + `one(id)` | `{ campaign }` full |
+| campaigns | remove | `list()` | `{ success }` — delete needs only id (already have it) |
 | rooms | create | `list()` | `{ room }` (id,name,capacity) |
 | rooms | update | `list()` | `{ room }` full |
 | trainings | createClassType | `classTypes()` | `{ classType }` full |
 | trainings | updateClassType | `classTypes()` | `{ classType }` full |
 | packages | createType | `types()` | `{ packageType }` full select |
 
-(9 rows = 11 mutations counting campaigns' four.) Each splice is a small,
-list-shape-specific update: append for create, map-replace by id for update,
-plus `setQueryData` on the matching detail key for campaigns.
+### Part 2b-server — widen server response, then splice (6 plain-list endpoints)
 
-### Part 2c — keep invalidating (documented, NOT changed)
+These target **plain (non-infinite) lists** but the route handler currently
+returns a partial/`{success}` response. Widen the Prisma `select` (or return the
+updated row) so the response is list-row-complete, then splice client-side:
 
-The remaining mutations the audit flagged stay as `invalidateQueries` — splicing
-them would corrupt the cache. Recorded so the next reader knows it was a decision,
-not an oversight:
+| Factory | Mutation | Endpoint | Add to response |
+|---|---|---|---|
+| sessions | create | `sessions/+api.ts` POST | `classTypeId`, `classType{id,name}`, `roomId`, `room{id,name}` |
+| sessions | update | `sessions/[id]/+api.ts` PATCH | `classTypeId`, `classType{}`, `room{}` |
+| invites | create | `invites/+api.ts` POST | `firstName`, `lastName`, `phone` |
+| invites | revoke | `invites/[id]/revoke/+api.ts` | return updated invite row (was `{success}`) |
+| invites | resend | `invites/[id]/resend/+api.ts` | return updated invite row (was `{success}`) |
+| packages | updateType | `packages/types/[id]/+api.ts` PATCH | `isBirthdayGift` |
 
-- **Infinite/paginated targets** — `clients.list`, `trainer-notes.listInfinite`,
-  `billing.listInfinite`, `packages.clientPackagesAdminList`: splicing across
-  `getNextPageParam` pages is fragile; invalidation is correct.
-- **Partial/untyped responses** — `sessions.create/update` (response omits
-  `classTypeId`/`roomId`/`trainerUserId` the list row needs), `invites.create`
-  (omits firstName/lastName/phone), `invites.revoke/resend` (`{success}` only),
-  `clients.create` (returns `user`, not the clientProfile list shape),
-  `clients.update` / `packages.updateType` (untyped `response.json()`),
-  `campaigns.remove` (`{success}` only).
-- **Bulk / derived-aggregate** — `reservations.*`, `bookings.mutateBooking`,
-  `packages.pause`, recurring-session mutations, deletes: affect availability
-  counts and multiple derived lists; invalidation is the safe choice.
+Sessions `byId` **detail** stays a fetch — its nested bookings/waitlist/trainer
+are too heavy to splice from a mutation; only the **list** row is spliced.
 
-Widening server selects or building infinite-page splice helpers to convert these
-is explicitly **out of scope** for this PR (a separate effort if ever wanted).
+**Total splices: 16** (10 already-complete incl. campaigns.remove + 6 from the
+server-widened endpoints). Each splice: append for create, map-replace-by-id for
+update, filter-by-id for delete; plus the matching detail-key `setQueryData` for
+campaigns' four.
+
+### Part 2c — keep invalidating (documented, NOT changed) — **pagination excluded by request**
+
+Per the decision to exclude paginated targets, every **infinite/paginated** query
+stays on `invalidateQueries`. Splicing across `getNextPageParam` pages is fragile,
+and several also need server-computed fields a mutation can't cheaply produce:
+
+- `clients.create` / `clients.update` — infinite `clients.list`, and the row's
+  `packageStatus` is computed from the package tree (POST/PATCH can't return it
+  cheaply).
+- `billing.create` — infinite `billing.listInfinite`.
+- `trainer-notes.create` / `trainer-notes.update` — infinite `listInfinite`.
+- `packages.createClientPackage` — feeds the infinite `clientPackagesAdminList`
+  (the plain `clientPackages()` splice is fine and stays in 2a's original set).
+
+Also unchanged (genuinely need a refetch): **bulk / derived-aggregate** —
+`reservations.*`, `bookings.mutateBooking`, `packages.pause`, recurring-session
+mutations, and destructive deletes that ripple into availability counts.
+
+Building infinite-page splice helpers for the excluded set is out of scope.
 
 ## Risks & containment
 
 - **Narrowing a broad invalidation** → every bare domain literal maps to that
   domain's `all` (identical prefix), never a sub-method key. Reviewable
   prefix-for-prefix.
-- **Splice writing a partial/stale row** → contained by only splicing the 11
-  verified-complete + plain-list cases; everything uncertain stays invalidating.
+- **Splice writing a partial/stale row** → contained by splicing only plain-list
+  targets whose response is (or is made) list-row-complete; every infinite/
+  paginated target and every uncertain response stays invalidating.
+- **Widened server select drifts from the row schema** → each widened endpoint
+  parses its response through the row's zod schema before returning, and an
+  integration test (real test DB) asserts the new fields are present.
 - **Key-shape typos in the spread rewrite** → caught by `tsc --noEmit`
   (`as const` tuples are structurally typed; every `useQuery` consumer
   type-errors on a shape change).
@@ -144,14 +171,18 @@ is explicitly **out of scope** for this PR (a separate effort if ever wanted).
 
 1. `pnpm exec tsc --noEmit` → 0 errors.
 2. `pnpm test:unit` → full suite green (273 baseline; `clients-queries-factory.test.ts`
-   guards key shapes). New unit tests for each of the 11 splices: assert the cache
-   list/detail holds the spliced entity after the mutation and that the target
-   query is **not** invalidated (spy on `invalidateQueries`), mirroring the PR #50
-   no-refetch test.
-3. `pnpm exec oxlint` on changed files → 0 warnings.
-4. Grep gate: `grep -rn 'queryKey: \["' app/ components/` → zero domain-literal
+   guards key shapes). New unit test per splice (16) plus the Cat A optimistic-write
+   tests: assert the cache list/detail holds the spliced entity after the mutation
+   and that the target query is **not** invalidated (spy on `invalidateQueries`),
+   mirroring the PR #50 no-refetch test.
+3. `pnpm test:integration` → for each of the 6 widened endpoints (sessions
+   create/update, invites create/revoke/resend, packages updateType), an integration
+   test against the real `baza_app_test` DB asserts the response now contains the
+   added fields. (Requires the seeded test DB; `pnpm test:e2e:prepare` if needed.)
+4. `pnpm exec oxlint` on changed files → 0 warnings.
+5. Grep gate: `grep -rn 'queryKey: \["' app/ components/` → zero domain-literal
    invalidations.
-5. Per-domain diff: each broad call site's `all` equals the prefix it replaced.
+6. Per-domain diff: each broad call site's `all` equals the prefix it replaced.
 
 ## Commit / PR shape
 
@@ -159,5 +190,6 @@ One branch `refactor/query-key-factories` off `dev`, independent of PR #50.
 Logical commits:
 1. `all` + spread across all factories (no behavior change; suite stays green).
 2. Swap consumer + in-factory broad literals to derived keys.
-3. Cat A: drop redundant invalidations / add optimistic writes (+ tests).
-4. Cat B: 11 verified splices (+ tests).
+3. Cat A: drop redundant invalidations / add optimistic writes (+ unit tests).
+4. Server: widen the 6 plain-list endpoint responses (+ integration tests).
+5. Cat B: 16 verified splices (+ unit tests).
