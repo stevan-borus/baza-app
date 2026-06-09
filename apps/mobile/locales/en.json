@@ -594,7 +594,7 @@
       "sheetEdit": "Edit client",
       "placeholderPhoneRequired": "Phone",
       "placeholderNotes": "Notes",
-      "placeholderDateOfBirth": "Date of birth (YYYY-MM-DD)",
+      "placeholderDateOfBirth": "Date of birth",
       "labelDateOfBirth": "Date of birth",
       "contactTitle": "Contact",
       "contactCall": "Call",
