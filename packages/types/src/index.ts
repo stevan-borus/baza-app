@@ -88,8 +88,6 @@ export const updateClientInputSchema = z.object({
   // a CLIENT's DOB — `getConsentStatus` throws on missing DOB, so nulling
   // here would silently break the consent gate for that client. Either drop
   // `.nullable()` entirely or 409 on { dateOfBirth: null } for CLIENT users.
-  // Tracked in docs/superpowers/specs/2026-05-15-consent-deferred-followups.md
-  // item #12.
   dateOfBirth: dateOfBirthSchema.nullable().optional(),
 });
 export type UpdateClientInput = z.infer<typeof updateClientInputSchema>;
