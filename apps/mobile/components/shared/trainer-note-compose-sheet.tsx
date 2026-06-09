@@ -209,7 +209,7 @@ export function TrainerNoteComposeSheet({
       // Wait for the refetched page to land in cache (refetch, not just
       // invalidate — invalidate resolves on cache-mark, not on data arrival)
       // so the host's onCreated scroll-to-top sees the new row.
-      await queryClient.refetchQueries({ queryKey: ["trainer-notes"] });
+      await queryClient.refetchQueries({ queryKey: trainerNotesQueries.all });
       onCreated?.();
     },
   });

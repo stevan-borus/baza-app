@@ -195,10 +195,10 @@ export function useSessionEditSheet() {
   // for the affected session, so both the dashboard and detail page update.
   const invalidate = React.useCallback(
     async (sessionId?: string) => {
-      await queryClient.invalidateQueries({ queryKey: ["sessions"] });
+      await queryClient.invalidateQueries({ queryKey: sessionsQueries.all });
       if (sessionId) {
         await queryClient.invalidateQueries({
-          queryKey: ["sessions", "by-id", sessionId],
+          queryKey: sessionsQueries.byId(sessionId).queryKey,
         });
       }
     },

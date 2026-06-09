@@ -297,7 +297,7 @@ export function NotesFeed({
   const updateMutation = useMutation({
     ...trainerNotesQueries.update(),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["trainer-notes"] });
+      await queryClient.invalidateQueries({ queryKey: trainerNotesQueries.all });
       setEditingNote(null);
     },
   });
@@ -305,7 +305,7 @@ export function NotesFeed({
   const deleteMutation = useMutation({
     ...trainerNotesQueries.delete(),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["trainer-notes"] });
+      await queryClient.invalidateQueries({ queryKey: trainerNotesQueries.all });
       setConfirmDelete(false);
       setEditingNote(null);
     },
@@ -330,7 +330,7 @@ export function NotesFeed({
 
   async function handleRefresh() {
     setRefreshing(true);
-    await queryClient.invalidateQueries({ queryKey: ["trainer-notes"] });
+    await queryClient.invalidateQueries({ queryKey: trainerNotesQueries.all });
     setRefreshing(false);
   }
 

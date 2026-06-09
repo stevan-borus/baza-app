@@ -106,7 +106,7 @@ function ProfileSheetContent({ open, onOpenChange }: Props) {
     ...notificationsQueries.updatePreferences(),
     onSuccess: () =>
       queryClient.invalidateQueries({
-        queryKey: ["notifications", "preferences"],
+        queryKey: notificationsQueries.preferences().queryKey,
       }),
   });
 

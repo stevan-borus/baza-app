@@ -85,7 +85,7 @@ export function AssignPackageSheetContent({
   const compMutation = useMutation({
     ...packagesQueries.createClientPackage(),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["packages"] });
+      await queryClient.invalidateQueries({ queryKey: packagesQueries.all });
       onSuccess();
     },
   });
@@ -94,8 +94,8 @@ export function AssignPackageSheetContent({
     ...billingQueries.create(),
     onSuccess: async () => {
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["packages"] }),
-        queryClient.invalidateQueries({ queryKey: ["billing"] }),
+        queryClient.invalidateQueries({ queryKey: packagesQueries.all }),
+        queryClient.invalidateQueries({ queryKey: billingQueries.all }),
       ]);
       onSuccess();
     },

@@ -58,7 +58,7 @@ export default function AdminSettingsClassTypes() {
   const createMutation = useMutation({
     ...trainingsQueries.createClassType(),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["trainings"] });
+      await queryClient.invalidateQueries({ queryKey: trainingsQueries.all });
       setShowCreate(false);
       setForm({ name: "", maxClients: "", durationMins: "" });
     },
@@ -67,7 +67,7 @@ export default function AdminSettingsClassTypes() {
   const updateMutation = useMutation({
     ...trainingsQueries.updateClassType(),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["trainings"] });
+      await queryClient.invalidateQueries({ queryKey: trainingsQueries.all });
       setEditingId(null);
     },
   });
@@ -75,7 +75,7 @@ export default function AdminSettingsClassTypes() {
   const deleteMutation = useMutation({
     ...trainingsQueries.deleteClassType(),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["trainings"] });
+      await queryClient.invalidateQueries({ queryKey: trainingsQueries.all });
       setConfirmDelete(false);
       setEditingId(null);
     },

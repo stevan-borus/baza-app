@@ -22,7 +22,8 @@ export function NotificationsPreferencesSheet({ open, onOpenChange }: Props) {
 
   const updatePrefsMutation = useMutation({
     ...notificationsQueries.updatePreferences(),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["notifications", "preferences"] }),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: notificationsQueries.preferences().queryKey }),
   });
 
   return (

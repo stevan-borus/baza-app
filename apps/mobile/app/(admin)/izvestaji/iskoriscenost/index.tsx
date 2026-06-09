@@ -91,7 +91,7 @@ export default function IzvestajiIskoriscenost() {
 
   async function handleRefresh() {
     setRefreshing(true);
-    await queryClient.invalidateQueries({ queryKey: ["reports"] });
+    await queryClient.invalidateQueries({ queryKey: reportsQueries.all });
     setRefreshing(false);
   }
 

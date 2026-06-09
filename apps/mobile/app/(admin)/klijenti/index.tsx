@@ -247,7 +247,7 @@ export default function AdminClients() {
   const createInviteMutation = useMutation({
     ...invitesQueries.create(),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["invites"] });
+      await queryClient.invalidateQueries({ queryKey: invitesQueries.all });
       setShowInviteForm(false);
       setInviteForm({ email: "", firstName: "", lastName: "", phone: "", dateOfBirth: null });
     },
@@ -255,18 +255,18 @@ export default function AdminClients() {
   const revokeMutation = useMutation({
     ...invitesQueries.revoke(),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["invites"] });
+      await queryClient.invalidateQueries({ queryKey: invitesQueries.all });
       setConfirmRevokeId(null);
     },
   });
   const resendMutation = useMutation({
     ...invitesQueries.resend(),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["invites"] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: invitesQueries.all }),
   });
   const createClientMutation = useMutation({
     ...clientsQueries.create(),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["clients"] });
+      await queryClient.invalidateQueries({ queryKey: clientsQueries.all });
       setShowCreateClient(false);
       setClientForm({ email: "", firstName: "", lastName: "", phone: "" });
     },
@@ -274,14 +274,14 @@ export default function AdminClients() {
   const updateClientMutation = useMutation({
     ...clientsQueries.update(),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["clients"] });
+      await queryClient.invalidateQueries({ queryKey: clientsQueries.all });
       setShowEditClient(null);
     },
   });
   const pauseMutation = useMutation({
     ...packagesQueries.pause(),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["packages"] });
+      await queryClient.invalidateQueries({ queryKey: packagesQueries.all });
       setShowPause(null);
       setPauseForm({ startsAt: "", endsAt: "", reason: "" });
     },
@@ -312,8 +312,8 @@ export default function AdminClients() {
   async function handleRefresh() {
     setRefreshing(true);
     await Promise.all([
-      queryClient.invalidateQueries({ queryKey: ["clients"] }),
-      queryClient.invalidateQueries({ queryKey: ["invites"] }),
+      queryClient.invalidateQueries({ queryKey: clientsQueries.all }),
+      queryClient.invalidateQueries({ queryKey: invitesQueries.all }),
     ]);
     setRefreshing(false);
   }

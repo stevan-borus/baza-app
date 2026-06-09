@@ -87,7 +87,7 @@ export function NewSessionSheet({ open, onOpenChange }: NewSessionSheetProps) {
   const createMutation = useMutation({
     ...sessionsQueries.create(),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["sessions"] });
+      await queryClient.invalidateQueries({ queryKey: sessionsQueries.all });
       onOpenChange(false);
       resetCreateForm();
     },
@@ -95,7 +95,7 @@ export function NewSessionSheet({ open, onOpenChange }: NewSessionSheetProps) {
   const createRecurringMutation = useMutation({
     ...sessionsQueries.createRecurring(),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["sessions"] });
+      await queryClient.invalidateQueries({ queryKey: sessionsQueries.all });
       onOpenChange(false);
       resetCreateForm();
     },

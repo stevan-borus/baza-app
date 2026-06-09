@@ -20,6 +20,7 @@ import { Input, PasswordInput } from "@/components/ui/input";
 import { LinkText } from "@/components/ui/typography";
 import { StudioButton } from "@/components/ui/studio";
 import { authClient } from "@/lib/auth-client";
+import { authQueries } from "@/lib/queries/auth-queries-factory";
 import { signInInputSchema } from "@baza/types";
 import { validateForm, type FormErrors } from "@/lib/zod-form";
 
@@ -56,7 +57,7 @@ export default function SignInScreen() {
       return response.data;
     },
     onSuccess: async () => {
-      await queryClient.refetchQueries({ queryKey: ["auth", "me"] });
+      await queryClient.refetchQueries({ queryKey: authQueries.me().queryKey });
       if (
         redirectTo &&
         redirectTo.startsWith("/") &&

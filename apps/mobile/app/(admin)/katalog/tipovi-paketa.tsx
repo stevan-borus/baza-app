@@ -106,7 +106,8 @@ export default function AdminPackages() {
   async function handleRefresh() {
     setRefreshing(true);
     await Promise.all([
-      queryClient.invalidateQueries({ queryKey: ["packages", "types"] }),
+      queryClient.invalidateQueries({ queryKey: packagesQueries.types().queryKey }),
+      // broad 2-segment prefix — no factory member; intentional
       queryClient.invalidateQueries({ queryKey: ["packages", "client-packages"] }),
     ]);
     setRefreshing(false);
@@ -119,7 +120,7 @@ export default function AdminPackages() {
   const createMutation = useMutation({
     ...packagesQueries.createType(),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["packages", "types"] });
+      await queryClient.invalidateQueries({ queryKey: packagesQueries.types().queryKey });
       setShowCreate(false);
       setForm({
         name: "",
@@ -135,7 +136,7 @@ export default function AdminPackages() {
   const updateTypeMutation = useMutation({
     ...packagesQueries.updateType(),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["packages", "types"] });
+      await queryClient.invalidateQueries({ queryKey: packagesQueries.types().queryKey });
       setEditingId(null);
     },
   });
@@ -143,7 +144,7 @@ export default function AdminPackages() {
   const deleteTypeMutation = useMutation({
     ...packagesQueries.deleteType(),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["packages", "types"] });
+      await queryClient.invalidateQueries({ queryKey: packagesQueries.types().queryKey });
       setConfirmDelete(false);
       setEditingId(null);
     },

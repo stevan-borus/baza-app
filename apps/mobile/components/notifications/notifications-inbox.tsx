@@ -176,7 +176,7 @@ export function NotificationsInbox({ context, bottomPad = 0 }: Props) {
 
   const markManyReadMutation = useMutation({
     ...notificationsQueries.markManyRead(),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["notifications"] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: notificationsQueries.all }),
   });
 
   // Debounce mark-read calls — viewability events fire rapidly during scroll;

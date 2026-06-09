@@ -41,7 +41,7 @@ export default function AdminSettingsRooms() {
   const createMutation = useMutation({
     ...roomsQueries.create(),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["rooms"] });
+      await queryClient.invalidateQueries({ queryKey: roomsQueries.all });
       setShowCreate(false);
       setForm({ name: "", capacity: "" });
     },
@@ -50,7 +50,7 @@ export default function AdminSettingsRooms() {
   const updateMutation = useMutation({
     ...roomsQueries.update(),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["rooms"] });
+      await queryClient.invalidateQueries({ queryKey: roomsQueries.all });
       setEditingId(null);
     },
   });
@@ -58,7 +58,7 @@ export default function AdminSettingsRooms() {
   const deleteMutation = useMutation({
     ...roomsQueries.delete(),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["rooms"] });
+      await queryClient.invalidateQueries({ queryKey: roomsQueries.all });
       setConfirmDelete(false);
       setEditingId(null);
     },

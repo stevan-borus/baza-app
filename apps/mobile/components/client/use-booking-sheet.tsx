@@ -14,6 +14,8 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import * as Haptics from "expo-haptics";
 import { BookingSheet } from "@/components/client/booking-sheet";
 import { bookingsQueries } from "@/lib/queries/bookings-queries-factory";
+import { sessionsQueries } from "@/lib/queries/sessions-queries-factory";
+import { packagesQueries } from "@/lib/queries/packages-queries-factory";
 import type { AvailabilitySession } from "@baza/types";
 
 /** Which step the sheet opens on. "cancel" jumps a booked session straight to
@@ -36,8 +38,8 @@ function useBookingMutation() {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       // Broad invalidation so both the calendar's and the overview's
       // availability queries (all keyed under ["sessions", ...]) refetch.
-      await queryClient.invalidateQueries({ queryKey: ["sessions"] });
-      await queryClient.invalidateQueries({ queryKey: ["packages"] });
+      await queryClient.invalidateQueries({ queryKey: sessionsQueries.all });
+      await queryClient.invalidateQueries({ queryKey: packagesQueries.all });
     },
   });
 }
