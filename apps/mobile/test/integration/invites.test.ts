@@ -86,6 +86,13 @@ describe("invites API", () => {
     );
     expect(response.status).toBe(200);
 
+    const createBody = (await response.json()) as {
+      invite: { firstName: string; lastName: string; phone: string | null };
+    };
+    expect(createBody.invite.firstName).toBe("New");
+    expect(createBody.invite.lastName).toBe("Client");
+    expect(createBody.invite.phone).toBe("+381 60 000 0000");
+
     const invites = await prisma.userInvite.findMany();
     expect(invites).toHaveLength(1);
     const [persisted] = invites;
@@ -218,6 +225,23 @@ describe("invites API", () => {
       { id: invite.id },
     );
     expect(response.status).toBe(200);
+    const revokeBody = (await response.json()) as {
+      success: boolean;
+      invite: {
+        id: string;
+        email: string;
+        firstName: string;
+        lastName: string;
+        phone: string | null;
+        status: string;
+      };
+    };
+    expect(revokeBody.success).toBe(true);
+    expect(revokeBody.invite.id).toBe(invite.id);
+    expect(revokeBody.invite.email).toBe("to-revoke@test.local");
+    expect(revokeBody.invite.firstName).toBe("To");
+    expect(revokeBody.invite.lastName).toBe("Revoke");
+    expect(revokeBody.invite.status).toBe("REVOKED");
     const updated = await prisma.userInvite.findUnique({ where: { id: invite.id } });
     expect(updated?.status).toBe("REVOKED");
   });
@@ -243,6 +267,23 @@ describe("invites API", () => {
       { id: invite.id },
     );
     expect(response.status).toBe(200);
+    const resendBody = (await response.json()) as {
+      success: boolean;
+      invite: {
+        id: string;
+        email: string;
+        firstName: string;
+        lastName: string;
+        phone: string | null;
+        status: string;
+      };
+    };
+    expect(resendBody.success).toBe(true);
+    expect(resendBody.invite.id).toBe(invite.id);
+    expect(resendBody.invite.email).toBe("to-resend@test.local");
+    expect(resendBody.invite.firstName).toBe("To");
+    expect(resendBody.invite.lastName).toBe("Resend");
+    expect(resendBody.invite.status).toBe("PENDING");
     const updated = await prisma.userInvite.findUnique({ where: { id: invite.id } });
     expect(updated?.tokenHash).not.toBe(oldTokenHash);
     expect(updated?.expiresAt.getTime()).toBeGreaterThan(nowMs());

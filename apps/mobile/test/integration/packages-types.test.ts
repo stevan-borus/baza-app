@@ -173,6 +173,10 @@ describe("packages/types CRUD", () => {
       { id: created.id },
     );
     expect(response.status).toBe(200);
+    const body = (await response.json()) as {
+      packageType: { id: string; isBirthdayGift: boolean };
+    };
+    expect(body.packageType.isBirthdayGift).toBe(false);
     const persisted = await prisma.packageType.findUnique({
       where: { id: created.id },
     });

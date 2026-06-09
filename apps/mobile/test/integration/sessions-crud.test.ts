@@ -101,6 +101,35 @@ describe("sessions CRUD", () => {
     expect(persisted).not.toBeNull();
   });
 
+  it("POST response body includes the full list-row shape (classType + room)", async () => {
+    const { trainer, reformer } = await seed();
+    asAdmin();
+
+    const response = await POST(
+      jsonRequest("http://test.local/api/sessions", "POST", {
+        classTypeId: reformer.id,
+        trainerUserId: trainer.id,
+        startsAt: futureStart.toISOString(),
+        endsAt: futureEnd.toISOString(),
+        capacity: 6,
+      }),
+    );
+    expect(response.status).toBe(201);
+    const body = (await response.json()) as {
+      session: {
+        classTypeId: string;
+        classType: { id: string; name: string };
+        roomId: string | null;
+        room: { id: string; name: string } | null;
+      };
+    };
+    expect(body.session.classTypeId).toBe(reformer.id);
+    expect(body.session.classType).toEqual({ id: reformer.id, name: "Reformer" });
+    // No room was assigned, so roomId is null and the room relation is null.
+    expect(body.session.roomId).toBeNull();
+    expect(body.session.room).toBeNull();
+  });
+
   it("POST as trainer assigns the session to themselves regardless of payload trainerUserId", async () => {
     const { trainer, reformer } = await seed();
     asTrainer(trainer);
@@ -181,6 +210,42 @@ describe("sessions CRUD", () => {
     expect(response.status).toBe(200);
     const reloaded = await prisma.session.findUnique({ where: { id: session.id } });
     expect(reloaded?.startsAt.getTime()).toBe(newStart.getTime());
+  });
+
+  it("PATCH response body includes the full list-row shape (classType + room)", async () => {
+    const { trainer, reformer } = await seed();
+    const session = await prisma.session.create({
+      data: {
+        classTypeId: reformer.id,
+        trainerUserId: trainer.id,
+        startsAt: futureStart,
+        endsAt: futureEnd,
+        capacity: 6,
+        status: "SCHEDULED",
+        isActive: true,
+      },
+    });
+    asAdmin();
+
+    const response = await PATCH(
+      jsonRequest(`http://test.local/api/sessions/${session.id}`, "PATCH", {
+        capacity: 8,
+      }),
+      { id: session.id },
+    );
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as {
+      session: {
+        classTypeId: string;
+        classType: { id: string; name: string };
+        roomId: string | null;
+        room: { id: string; name: string } | null;
+      };
+    };
+    expect(body.session.classTypeId).toBe(reformer.id);
+    expect(body.session.classType).toEqual({ id: reformer.id, name: "Reformer" });
+    expect(body.session.roomId).toBeNull();
+    expect(body.session.room).toBeNull();
   });
 
   it("PATCH as trainer for a session they do not own is rejected (403)", async () => {

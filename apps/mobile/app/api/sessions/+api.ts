@@ -127,6 +127,10 @@ export async function POST(request: Request) {
       capacity: true,
       status: true,
       isActive: true,
+      classTypeId: true,
+      classType: { select: { id: true, name: true } },
+      roomId: true,
+      room: { select: { id: true, name: true } },
     },
   });
 

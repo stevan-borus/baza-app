@@ -13,11 +13,22 @@ export async function POST(request: Request, { id }: RouteParams) {
   if (!invite) return fail("Invite not found", 404);
   if (invite.status !== InviteStatus.PENDING)
     return fail("Only pending invites can be revoked", 400);
-  // Mark revoked so token can no longer be used.
-  await prisma.userInvite.update({
+  // Mark revoked so token can no longer be used. Return the updated row so
+  // the client can splice it into the invites list cache without a refetch.
+  const updated = await prisma.userInvite.update({
     where: { id },
     data: { status: InviteStatus.REVOKED },
+    select: {
+      id: true,
+      email: true,
+      firstName: true,
+      lastName: true,
+      phone: true,
+      status: true,
+      createdAt: true,
+      expiresAt: true,
+    },
   });
 
-  return ok({ success: true });
+  return ok({ success: true, invite: updated });
 }
