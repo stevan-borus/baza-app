@@ -8,11 +8,9 @@
  *   - the session being completed must be the client's FIRST completed session
  *   - the client's most recent accepted waiver_minor must have guardianVerifiedAt: null
  */
-import { NotificationType } from "@/generated/prisma";
 import { now } from "@/lib/now";
 import { formatFullName } from "@baza/types";
-import { NOTIFICATION_MESSAGE_KEYS } from "@baza/i18n";
-import { createSystemNotification } from "@/lib/server/notifications";
+import { notifyOperators } from "@/lib/server/notify-operators";
 import { prisma } from "@/lib/server/prisma";
 
 export async function maybeNotifyMinorPaperNeeded(sessionId: string): Promise<void> {
@@ -35,13 +33,12 @@ export async function maybeNotifyMinorPaperNeeded(sessionId: string): Promise<vo
   });
   if (!session) return;
 
-  // Fetch active admins once — before iterating bookings.
-  // If there are no admins to notify, skip the entire loop.
-  const admins = await prisma.user.findMany({
+  // If there are no admins to notify, skip the entire loop (the per-booking
+  // guards below each cost queries).
+  const adminCount = await prisma.user.count({
     where: { role: "ADMIN", isActive: true },
-    select: { id: true },
   });
-  if (admins.length === 0) return;
+  if (adminCount === 0) return;
 
   const today = now();
 
@@ -73,21 +70,15 @@ export async function maybeNotifyMinorPaperNeeded(sessionId: string): Promise<vo
     });
     if (waiver?.guardianVerifiedAt) continue;
 
-    // Notify every active admin (list fetched once above).
-    await Promise.all(
-      admins.map((admin) =>
-        createSystemNotification(
-          admin.id,
-          NOTIFICATION_MESSAGE_KEYS.MINOR_PAPER_NEEDED,
-          NotificationType.MINOR_PAPER_NEEDED,
-          {
-            sessionId,
-            userName: formatFullName(cp.user.firstName, cp.user.lastName),
-            clientUserId: cp.user.id,
-          },
-        ),
-      ),
-    );
+    // Notify every active admin.
+    await notifyOperators({
+      event: "MINOR_PAPER_NEEDED",
+      payload: {
+        sessionId,
+        userName: formatFullName(cp.user.firstName, cp.user.lastName),
+        clientUserId: cp.user.id,
+      },
+    });
   }
 }
 

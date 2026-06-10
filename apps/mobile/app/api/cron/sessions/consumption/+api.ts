@@ -1,11 +1,9 @@
-import { NOTIFICATION_MESSAGE_KEYS } from "@baza/i18n";
 import { formatFullName } from "@baza/types";
-import { UserRole } from "@/generated/prisma";
 import { now } from "@/lib/now";
 import { chargeNoShowConsumption } from "@/lib/server/booking-cancellation";
 import { requireCronAuth } from "@/lib/server/cron-auth";
 import { ok } from "@/lib/server/http";
-import { createSystemNotification } from "@/lib/server/notifications";
+import { notifyOperators } from "@/lib/server/notify-operators";
 import { prisma } from "@/lib/server/prisma";
 import { tryCatch } from "@/lib/server/try-catch";
 
@@ -125,26 +123,19 @@ export async function POST(request: Request) {
   }
 
   if (!dryRun && unbackedForNotification.length > 0) {
-    const admins = await prisma.user.findMany({
-      where: { role: UserRole.ADMIN, isActive: true },
-      select: { id: true },
-    });
     void (async () => {
       for (const item of unbackedForNotification) {
-        for (const admin of admins) {
-          await createSystemNotification(
-            admin.id,
-            NOTIFICATION_MESSAGE_KEYS.RESERVATION_UNBACKED_ATTENDANCE,
-            "RESERVATION_UNBACKED_ATTENDANCE",
-            {
-              sessionId: item.sessionId,
-              clientFullName: item.clientFullName,
-              classTypeName: item.classTypeName,
-              sessionStartsAt: item.sessionStartsAt.toISOString(),
-            },
-            { dedupeKey: `unbacked:${item.sessionId}:${admin.id}` },
-          );
-        }
+        await notifyOperators({
+          event: "UNBACKED_ATTENDANCE",
+          payload: {
+            sessionId: item.sessionId,
+            clientFullName: item.clientFullName,
+            classTypeName: item.classTypeName,
+            sessionStartsAt: item.sessionStartsAt.toISOString(),
+          },
+          // Retry-safe across cron re-runs of the same session window.
+          dedupeKey: (adminId) => `unbacked:${item.sessionId}:${adminId}`,
+        });
       }
     })();
   }

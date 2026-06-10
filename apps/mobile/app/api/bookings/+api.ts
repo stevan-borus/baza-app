@@ -8,8 +8,9 @@ import {
   promoteNextWaitlistEntry,
 } from "@/lib/server/booking-cancellation";
 import { fail, ok } from "@/lib/server/http";
+import { shouldApplyLateCancelPenalty } from "@/lib/server/cancellation-policy";
 import { notifyClient } from "@/lib/server/notify-client";
-import { notifyCancellation } from "@/lib/server/notify-cancellation";
+import { notifyOperators } from "@/lib/server/notify-operators";
 import { findEligibleClientPackage } from "@/lib/server/package-eligibility";
 import { prisma } from "@/lib/server/prisma";
 import { tryCatch } from "@/lib/server/try-catch";
@@ -184,20 +185,29 @@ export async function POST(request: Request) {
   );
 
   if (activeBooking && !activeBooking.canceledAt) {
-    // Fan-out: notify admins + trainer.
+    // Fan-out: notify admins + trainer. Late cancels push, early cancels are
+    // silent in-app (the registry's push rule).
     // Fire-and-forget: do not block the response on email/push delivery.
-    const lateCancelHours = activeBooking.clientPackage?.lateCancelHours ?? 0;
-    void notifyCancellation({
-      sessionId,
-      trainerUserId: session.trainerUserId,
-      clientFullName: formatFullName(
-        activeBooking.clientProfile.user.firstName,
-        activeBooking.clientProfile.user.lastName,
-      ),
-      classTypeName: session.classType.name,
-      sessionStartsAt: session.startsAt,
-      canceledAt: cancellationTime,
-      lateCancelHours,
+    const isLate = shouldApplyLateCancelPenalty(
+      session.startsAt,
+      cancellationTime,
+      activeBooking.clientPackage?.lateCancelHours ?? 0,
+    );
+    void notifyOperators({
+      event: "BOOKING_CANCELED",
+      trainers: [{ userId: session.trainerUserId }],
+      isLate,
+      payload: {
+        sessionId,
+        clientFullName: formatFullName(
+          activeBooking.clientProfile.user.firstName,
+          activeBooking.clientProfile.user.lastName,
+        ),
+        classTypeName: session.classType.name,
+        sessionStartsAt: session.startsAt.toISOString(),
+        canceledAt: cancellationTime.toISOString(),
+        isLate,
+      },
     });
   }
 
