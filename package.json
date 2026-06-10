@@ -8,7 +8,7 @@
     "lint:all": "oxlint . --deny-warnings",
     "format": "oxfmt --write .",
     "format:check": "oxfmt --check .",
-    "check-types": "turbo run check-types --filter=./apps/mobile"
+    "check-types": "turbo run check-types"
   },
   "devDependencies": {
     "lefthook": "^2.1.1",
