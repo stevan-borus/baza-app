@@ -16,10 +16,7 @@
           "en"
         ]
       },
-      "bundleIdentifier": "com.steva.borus.baza-pilates",
-      "associatedDomains": [
-        "applinks:app.example.com"
-      ]
+      "bundleIdentifier": "com.steva.borus.baza-pilates"
     },
     "android": {
       "adaptiveIcon": {
@@ -28,29 +25,7 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.steva.borus.bazapilates",
-      "intentFilters": [
-        {
-          "action": "VIEW",
-          "autoVerify": true,
-          "data": [
-            {
-              "scheme": "https",
-              "host": "app.example.com",
-              "pathPrefix": "/accept-invite"
-            },
-            {
-              "scheme": "https",
-              "host": "app.example.com",
-              "pathPrefix": "/reset-password"
-            }
-          ],
-          "category": [
-            "BROWSABLE",
-            "DEFAULT"
-          ]
-        }
-      ]
+      "package": "com.steva.borus.bazapilates"
     },
     "web": {
       "bundler": "metro",
