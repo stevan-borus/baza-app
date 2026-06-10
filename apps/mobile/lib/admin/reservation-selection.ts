@@ -124,26 +124,68 @@ export function setClassTypeFilter(
   return { ...state, classTypeFilter };
 }
 
+/** The outcome of an `applyPattern` sweep: the new state plus a skip summary. */
+export type ApplyPatternResult = {
+  /** The merged selection state — feed straight back into the component. */
+  state: ReservationSelectionState;
+  /** Matched sessions skipped because they are full (capacity reached). */
+  skippedFull: number;
+  /** Matched sessions skipped because the client already booked them. */
+  skippedAlreadyBooked: number;
+  /** Sessions newly added to the selection by this sweep. */
+  added: number;
+};
+
 /**
  * Pattern overlay — expand a weekly/biweekly pattern over the loaded
  * sessions and merge the matches into the SAME selection set tap-selection
- * feeds. Matches on sessions the client already booked are skipped so the
- * selected count never disagrees with the selectable cards (the server's
- * `skippedAlreadyBooked` check stays as defence-in-depth).
+ * feeds. A match is skipped (and counted) when the session is already
+ * booked OR full: pattern and tap share ONE definition of "full" via
+ * `classifySession`, so a pattern sweep can never overfill a class past
+ * capacity (tap already refuses full sessions). The returned summary lets
+ * the screen tell the admin how many matches were dropped.
+ *
+ * Past sessions are never reached here — `expandPattern` already drops them.
+ *
+ * A session that is both full AND already-booked is counted ONLY as
+ * `skippedAlreadyBooked` (checked first), never double-counted, so the
+ * admin notice's total is exact.
  */
 export function applyPattern(
   state: ReservationSelectionState,
   sessions: readonly SelectableSession[],
   input: PatternInput,
   ctx: SelectionContext,
-): ReservationSelectionState {
+): ApplyPatternResult {
   const matched = expandPattern([...sessions], input);
+  const byId = new Map(sessions.map((s) => [s.id, s]));
   const next = new Set(state.selectedSessionIds);
+  let skippedFull = 0;
+  let skippedAlreadyBooked = 0;
+  let added = 0;
   for (const id of matched) {
-    if (ctx.alreadyBookedSessionIds.has(id)) continue;
+    const session = byId.get(id);
+    // expandPattern only returns ids drawn from `sessions`, so a miss here
+    // is impossible — guard for type-safety and skip if it ever happens.
+    if (!session) continue;
+    const { isFull, isAlreadyBooked } = classifySession(session, ctx);
+    if (isAlreadyBooked) {
+      skippedAlreadyBooked += 1;
+      continue;
+    }
+    if (isFull) {
+      skippedFull += 1;
+      continue;
+    }
+    if (!next.has(id)) added += 1;
     next.add(id);
   }
-  return { ...state, selectedSessionIds: next };
+  return {
+    state: { ...state, selectedSessionIds: next },
+    skippedFull,
+    skippedAlreadyBooked,
+    added,
+  };
 }
 
 /**
