@@ -131,6 +131,12 @@ export function ReservationMode() {
   const { selectedDate, weekStart, month } = nav;
   const [showClientPicker, setShowClientPicker] = useState(false);
   const [showPatternSheet, setShowPatternSheet] = useState(false);
+  // Transient line under the "Obrazac" row: when a pattern sweep skips full
+  // sessions, tell the admin how many were dropped (tap silently refuses
+  // full sessions, so the pattern tool surfacing the count avoids a silent
+  // "I selected fewer than the pattern said" surprise). Cleared when the
+  // pattern sheet reopens or another pattern is applied.
+  const [patternNotice, setPatternNotice] = useState<string | null>(null);
   const [showConfirmSheet, setShowConfirmSheet] = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
 
@@ -211,7 +217,18 @@ export function ReservationMode() {
   }, {});
 
   function handleApplyPattern(input: PatternInput) {
-    setSelection((prev) => applyPattern(prev, allSessions, input, selectionCtx));
+    const result = applyPattern(selection, allSessions, input, selectionCtx);
+    setSelection(result.state);
+    const total = result.added + result.skippedFull + result.skippedAlreadyBooked;
+    setPatternNotice(
+      result.skippedFull > 0
+        ? t("admin.reservations.patternSkippedFull", {
+            skipped: result.skippedFull,
+            total,
+            defaultValue: "{{skipped}} of {{total}} sessions were full and skipped",
+          })
+        : null,
+    );
     setShowPatternSheet(false);
   }
 
@@ -265,7 +282,10 @@ export function ReservationMode() {
               </CapsLabel>
               <Pressable
                 testID="reservation-open-pattern-sheet"
-                onPress={() => setShowPatternSheet(true)}
+                onPress={() => {
+                  setPatternNotice(null);
+                  setShowPatternSheet(true);
+                }}
                 disabled={!clientProfileId}
                 hitSlop={6}
                 style={{ opacity: clientProfileId ? 1 : 0.4 }}
@@ -281,6 +301,20 @@ export function ReservationMode() {
                 </View>
               </Pressable>
             </View>
+
+            {patternNotice ? (
+              <View className="px-5 pb-3">
+                <View className="rounded-2xl border border-glass-border bg-glass-surface px-4 py-2.5">
+                  <Text
+                    testID="reservation-pattern-skipped-notice"
+                    className="text-muted font-body-medium"
+                    style={{ fontSize: 13, lineHeight: 18 }}
+                  >
+                    {patternNotice}
+                  </Text>
+                </View>
+              </View>
+            ) : null}
 
             <View className="px-5">
               {daySessions.length === 0 ? (

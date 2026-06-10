@@ -208,25 +208,94 @@ describe("applyPattern", () => {
     let state = createInitialState();
     state = toggleSession(state, futureSession("tapped"), ctx());
 
-    const next = applyPattern(state, sessions, weeklyMonAt7, ctx(["mon2"]));
+    const result = applyPattern(state, sessions, weeklyMonAt7, ctx(["mon2"]));
     // Tap selection survives; mon1 matched; mon2 skipped (already booked);
     // Tuesday never matched.
-    expect([...next.selectedSessionIds].sort()).toEqual(["mon1", "tapped"]);
+    expect([...result.state.selectedSessionIds].sort()).toEqual(["mon1", "tapped"]);
+    // already-booked still skipped and counted separately (regression guard).
+    expect(result.skippedAlreadyBooked).toBe(1);
+    expect(result.skippedFull).toBe(0);
+    expect(result.added).toBe(1);
   });
 
-  it("selects full sessions matched by the pattern (shipped behavior — no conflict classification, unlike tap selection which blocks full)", () => {
-    // Characterization: CONTEXT.md describes a conflict highlight for
-    // pattern hits on full sessions, but the shipped component only skips
-    // already-booked ids when merging — full matches land in the selection.
-    // Preserving that here; changing it is product work, not refactoring.
+  it("skips full sessions matched by the pattern — tap already refuses them, so the pattern overlay must too", () => {
+    // The fix: pattern expansion shares classifySession's "full" notion with
+    // tap selection. A pattern sweep over a full session no longer adds it to
+    // the selection (which would have overfilled the class past capacity).
     const sessions: SelectableSession[] = [
       futureSession("mon-full", {
         startsAt: ANCHOR.hour(7).toDate(),
         availableSlots: 0,
       }),
     ];
-    const next = applyPattern(createInitialState(), sessions, weeklyMonAt7, ctx());
-    expect([...next.selectedSessionIds]).toEqual(["mon-full"]);
+    const result = applyPattern(createInitialState(), sessions, weeklyMonAt7, ctx());
+    expect(result.state.selectedSessionIds.size).toBe(0);
+  });
+
+  it("counts skippedFull and added separately (2 full of 4 matched → skippedFull 2, added 2)", () => {
+    // Weekly Mon 07:00 over 4 weeks: four consecutive Mondays match; two are
+    // full and must be skipped, two are open and selected.
+    const sessions: SelectableSession[] = [
+      futureSession("mon-w0", { startsAt: ANCHOR.hour(7).toDate() }),
+      futureSession("mon-w1", {
+        startsAt: ANCHOR.add(7, "day").hour(7).toDate(),
+        availableSlots: 0,
+      }),
+      futureSession("mon-w2", { startsAt: ANCHOR.add(14, "day").hour(7).toDate() }),
+      futureSession("mon-w3", {
+        startsAt: ANCHOR.add(21, "day").hour(7).toDate(),
+        availableSlots: 0,
+      }),
+    ];
+    const result = applyPattern(
+      createInitialState(),
+      sessions,
+      { ...weeklyMonAt7, weeks: 4 },
+      ctx(),
+    );
+    expect([...result.state.selectedSessionIds].sort()).toEqual(["mon-w0", "mon-w2"]);
+    expect(result.skippedFull).toBe(2);
+    expect(result.added).toBe(2);
+    expect(result.skippedAlreadyBooked).toBe(0);
+  });
+
+  it("adds all matches and reports skippedFull 0 when nothing is full or booked", () => {
+    const sessions: SelectableSession[] = [
+      futureSession("mon-w0", { startsAt: ANCHOR.hour(7).toDate() }),
+      futureSession("mon-w1", { startsAt: ANCHOR.add(7, "day").hour(7).toDate() }),
+    ];
+    const result = applyPattern(
+      createInitialState(),
+      sessions,
+      { ...weeklyMonAt7, weeks: 2 },
+      ctx(),
+    );
+    expect([...result.state.selectedSessionIds].sort()).toEqual(["mon-w0", "mon-w1"]);
+    expect(result.added).toBe(2);
+    expect(result.skippedFull).toBe(0);
+    expect(result.skippedAlreadyBooked).toBe(0);
+  });
+
+  it("counts a full AND already-booked match once, in the already-booked bucket", () => {
+    // A session that is both full and already-booked is counted ONLY as
+    // skippedAlreadyBooked (already-booked is checked first), never double-
+    // counted. Deterministic so the admin notice never overstates the total.
+    const sessions: SelectableSession[] = [
+      futureSession("mon-both", {
+        startsAt: ANCHOR.hour(7).toDate(),
+        availableSlots: 0,
+      }),
+    ];
+    const result = applyPattern(
+      createInitialState(),
+      sessions,
+      weeklyMonAt7,
+      ctx(["mon-both"]),
+    );
+    expect(result.state.selectedSessionIds.size).toBe(0);
+    expect(result.skippedAlreadyBooked).toBe(1);
+    expect(result.skippedFull).toBe(0);
+    expect(result.added).toBe(0);
   });
 
   it("never matches past sessions (expandPattern drops them)", () => {
@@ -235,13 +304,13 @@ describe("applyPattern", () => {
         startsAt: ANCHOR.subtract(7, "day").hour(7).toDate(),
       }),
     ];
-    const next = applyPattern(
+    const result = applyPattern(
       createInitialState(),
       sessions,
       { ...weeklyMonAt7, rangeStart: ANCHOR.subtract(14, "day"), weeks: 4 },
       ctx(),
     );
-    expect(next.selectedSessionIds.size).toBe(0);
+    expect(result.state.selectedSessionIds.size).toBe(0);
   });
 });
 
