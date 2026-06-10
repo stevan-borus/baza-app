@@ -22,8 +22,9 @@ export async function GET(request: Request) {
   // stable `id` ordering — we tried orderBy name before but couldn't
   // express that as a Prisma cursor and still get deterministic paging, so the
   // lastName index exists for future use but ordering stays on id here.
-  // Search ("q") matches user.firstName, user.lastName or user.email
-  // case-insensitively.
+  // Search ("q") is tokenized on whitespace; each token must match
+  // user.firstName, user.lastName or user.email case-insensitively, and the
+  // tokens are ANDed together so full-name queries ("First Last") match.
   const url = new URL(request.url);
   const cursor = url.searchParams.get("cursor") ?? undefined;
   const rawTake = url.searchParams.get("take");
@@ -34,8 +35,8 @@ export async function GET(request: Request) {
   const q = url.searchParams.get("q")?.trim() || undefined;
 
   // The trainer scope (linked-via-active-booking) is preserved as-is; the
-  // search filter is layered on top via AND so trainers also benefit from
-  // the q-search without leaking strangers into their list.
+  // search filter (built below) is layered on top via AND so trainers also
+  // benefit from the q-search without leaking strangers into their list.
   const baseWhere =
     guard.user.role === UserRole.TRAINER
       ? {
@@ -48,15 +49,26 @@ export async function GET(request: Request) {
         }
       : undefined;
 
-  const searchWhere = q
-    ? {
-        OR: [
-          { user: { firstName: { contains: q, mode: "insensitive" as const } } },
-          { user: { lastName: { contains: q, mode: "insensitive" as const } } },
-          { user: { email: { contains: q, mode: "insensitive" as const } } },
-        ],
-      }
-    : undefined;
+  // Tokenize the query on whitespace and require EACH token to match in
+  // firstName OR lastName OR email (case-insensitive), then AND the tokens
+  // together. A single-string `contains` across the three columns never
+  // matched "First Last" queries because the whole string was tested against
+  // each single column. Per-token AND lets "active reformer" land on
+  // firstName="Active"/lastName="Reformer", while a single-token query (one
+  // token, e.g. an email substring "client.active") behaves exactly as before.
+  const tokens = q ? q.split(/\s+/).filter(Boolean) : [];
+  const searchWhere =
+    tokens.length > 0
+      ? {
+          AND: tokens.map((token) => ({
+            OR: [
+              { user: { firstName: { contains: token, mode: "insensitive" as const } } },
+              { user: { lastName: { contains: token, mode: "insensitive" as const } } },
+              { user: { email: { contains: token, mode: "insensitive" as const } } },
+            ],
+          })),
+        }
+      : undefined;
 
   const where =
     baseWhere && searchWhere
