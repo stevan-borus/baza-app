@@ -5,16 +5,16 @@
  * a `returnTo` param. Tapping replaces (not pushes) back to the encoded path
  * so repeat drills don't pile history.
  *
- * Used by every destination screen that wants to be drill-targetable:
- * Naplata, session-detail (Rezervacije top-sessions), client-detail (Paketi
- * recent-activations). Adding a fourth destination is a one-liner — drop
- * this component near the top of its ScrollView and you're done.
+ * Rendered by drill-targetable destination screens (today: Naplata —
+ * session-detail and client-detail receive `returnTo` but don't render the
+ * pill yet). Adding a destination is a one-liner — drop this component near
+ * the top of its ScrollView and you're done.
  */
 import { Pressable, Text } from "react-native";
 import { router } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { MotiView } from "@/components/ui/styled";
-import { useReturnToPill } from "@/lib/admin/return-to";
+import { useReturnToPill } from "@/lib/admin/drill";
 
 export function ReturnToPill({ testID = "return-to-pill" }: { testID?: string } = {}) {
   const { t } = useTranslation();

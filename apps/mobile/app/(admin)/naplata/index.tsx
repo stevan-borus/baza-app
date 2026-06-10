@@ -28,8 +28,10 @@ import {
 } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Pressable, Text, View } from "react-native";
+import { router } from "expo-router";
 import dayjs from "dayjs";
 import { ReturnToPill } from "@/components/admin/return-to-pill";
+import { useDrillWindow, type DrillWindow } from "@/lib/admin/drill";
 import { MotiView } from "@/components/ui/styled";
 import { getDateLocale } from "@/lib/i18n";
 import { formatRsd } from "@/lib/format";
@@ -55,6 +57,22 @@ import { ScreenContainerRaw, useTabBarBottomPadding } from "@/components/ui/scre
 import { HeaderIconButton } from "@/components/ui/app-header";
 import { AdminTabLeftSlot } from "@/components/admin/admin-tab-left-slot";
 
+/**
+ * Period-selector label while a cross-tab drill window is active. Mirrors
+ * the range-label convention on the Izveštaji sub-pages: inclusive end,
+ * year only shown when the range crosses a year boundary.
+ */
+function drillRangeLabel(window: DrillWindow, dateLocale: string): string {
+  const fromD = new Date(window.from);
+  // `to` is an exclusive upper bound — display the last included instant.
+  const inclusiveTo = new Date(new Date(window.to).getTime() - 1);
+  const crossesYear = fromD.getUTCFullYear() !== inclusiveTo.getUTCFullYear();
+  const fmt: Intl.DateTimeFormatOptions = crossesYear
+    ? { day: "numeric", month: "short", year: "numeric" }
+    : { day: "numeric", month: "short" };
+  return `${fromD.toLocaleDateString(dateLocale, fmt)} – ${inclusiveTo.toLocaleDateString(dateLocale, fmt)}`;
+}
+
 export default function AdminBilling() {
   const { t, i18n } = useTranslation();
   const lang = i18n.language === "en" ? "en" : "sr";
@@ -72,12 +90,16 @@ export default function AdminBilling() {
     packageTypeId: "",
   });
 
+  // Cross-tab drill window (ADR-0005) — when Prihod drills into a chart
+  // bucket it sends `from`/`to`; we pre-filter to that window. No (valid)
+  // drill params → fall back to the screen's own selected month.
+  const drillWindow = useDrillWindow();
   const monthFrom = selectedMonth.startOf("month").toISOString();
   const monthTo = selectedMonth.endOf("month").toISOString();
   const billingQuery = useInfiniteQuery(
     billingQueries.listInfinite({
-      from: monthFrom,
-      to: monthTo,
+      from: drillWindow?.from ?? monthFrom,
+      to: drillWindow?.to ?? monthTo,
     }),
   );
   // Naplata uses clients in two places: the filter Select and the create-
@@ -150,6 +172,16 @@ export default function AdminBilling() {
   );
 
   function navigateBillingMonth(direction: -1 | 1) {
+    if (drillWindow) {
+      // Stepping the chooser exits the drill window — clear the drill
+      // params (the destination owns clearing its own state, ADR-0005) and
+      // resume month mode anchored to the drilled range's start.
+      router.setParams({ from: undefined, to: undefined });
+      setSelectedMonth(
+        dayjs(drillWindow.from).startOf("month").add(direction, "month"),
+      );
+      return;
+    }
     setSelectedMonth((m) => m.add(direction, "month"));
   }
 
@@ -172,7 +204,9 @@ export default function AdminBilling() {
   const methods = ["CASH", "CARD", "COMPANY", "MANUAL_ONLINE"] as const;
   const dateLocale = getDateLocale();
 
-  const periodLabel = selectedMonth.locale(lang).format("MMMM YYYY");
+  const periodLabel = drillWindow
+    ? drillRangeLabel(drillWindow, dateLocale)
+    : selectedMonth.locale(lang).format("MMMM YYYY");
 
   return (
     <ScreenContainerRaw

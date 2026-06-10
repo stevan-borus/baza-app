@@ -36,7 +36,7 @@ import { reportsQueries } from "@/lib/queries/reports-queries-factory";
 import { billingQueries } from "@/lib/queries/billing-queries-factory";
 import { ScreenContainerRaw, useTabBarBottomPadding } from "@/components/ui/screen-container";
 import { usePeriodPill, type Period } from "@/lib/admin/use-period-pill";
-import { encodeReturnTo } from "@/lib/admin/return-to";
+import { drillHref } from "@/lib/admin/drill";
 import { formatRsd } from "@/lib/format";
 import { RAW_METHOD_LABEL_KEYS as methodLabelKeys } from "@/lib/payment-method-labels";
 
@@ -139,21 +139,17 @@ export default function IzvestajiPrihod() {
   );
 
   function drillToBucket(bucketStart: string, bucketEnd: string) {
-    router.push({
-      pathname: "/(admin)/naplata",
-      params: {
-        from: bucketStart,
-        to: bucketEnd,
-        returnTo: encodeReturnTo(RETURN_TO_PATH),
-      },
-    });
+    router.push(
+      drillHref({
+        to: "naplata",
+        returnTo: RETURN_TO_PATH,
+        window: { from: bucketStart, to: bucketEnd },
+      }),
+    );
   }
 
   function drillToRecent() {
-    router.push({
-      pathname: "/(admin)/naplata",
-      params: { returnTo: encodeReturnTo(RETURN_TO_PATH) },
-    });
+    router.push(drillHref({ to: "naplata", returnTo: RETURN_TO_PATH }));
   }
 
   return (
