@@ -121,12 +121,9 @@ export function getPreviousTimeframe(timeframe: Pick<Timeframe, "from" | "to">) 
  * quarter→week (≈13 bars), year→month (12 bars). Daily covers both week and
  * month — the count is what differs, not the bucket shape.
  *
- * Both Prihod and Iskorišćenost time-series share this — we keep the
- * `RevenueBucketSize` alias for back-compat and add a neutral `BucketSize`
- * alias for new callers.
+ * Both Prihod and Iskorišćenost time-series share this.
  */
-export type RevenueBucketSize = "day" | "week" | "month" | "year";
-export type BucketSize = RevenueBucketSize;
+export type BucketSize = "day" | "week" | "month" | "year";
 
 /**
  * Maps the UI period pill value to the bucket granularity the time-series
@@ -137,7 +134,7 @@ export type BucketSize = RevenueBucketSize;
  * one bar = one calendar year — keeps the chart readable as the studio ages
  * instead of dumping a year's worth of daily bars.
  */
-export function bucketSizeForPeriod(period: string | null | undefined): RevenueBucketSize {
+export function bucketSizeForPeriod(period: string | null | undefined): BucketSize {
   if (period === "all") return "year";
   if (period === "year") return "month";
   if (period === "quarter") return "week";
@@ -182,7 +179,7 @@ function floorUtcYear(d: Date): Date {
 /**
  * Advance a bucket-start by one bucket of the given size.
  */
-function advanceBucket(start: Date, size: RevenueBucketSize): Date {
+function advanceBucket(start: Date, size: BucketSize): Date {
   if (size === "day") {
     const out = new Date(start);
     out.setUTCDate(out.getUTCDate() + 1);
@@ -205,19 +202,6 @@ function advanceBucket(start: Date, size: RevenueBucketSize): Date {
  * bucket is `from` floored to the bucket's natural alignment (UTC midnight /
  * Monday / first-of-month). Bucket boundaries are exclusive on the right, so
  * the last bucket may extend past `to` — callers can clip when displaying.
- */
-export function buildRevenueBuckets(
-  from: Date,
-  to: Date,
-  size: RevenueBucketSize,
-): Array<{ bucketStart: Date; bucketEnd: Date }> {
-  return buildPeriodBuckets(from, to, size);
-}
-
-/**
- * Neutral alias for `buildRevenueBuckets`. Same implementation — the only
- * reason to use this name is to make non-revenue callers (utilization,
- * future bookings/packages time-series) read naturally at the call site.
  */
 export function buildPeriodBuckets(
   from: Date,

@@ -4,24 +4,30 @@
  * Only CONFIRMED BillingRecords contribute. Sorted by revenue descending so
  * cash/card (typically the biggest contributors) surface first.
  */
+import type { ReportsRevenueByMethodResponse } from "@baza/types";
 import { UserRole } from "@/generated/prisma";
 import { requireRole } from "@/lib/server/auth-guards";
 import { fail, ok } from "@/lib/server/http";
 import { prisma } from "@/lib/server/prisma";
-import { parseDateInput } from "@/lib/server/reports";
+import {
+  parseOptionalWindow,
+  sortedByMetricDesc,
+} from "@/lib/server/report-aggregation";
 
 export async function GET(request: Request) {
   const guard = await requireRole(request, [UserRole.ADMIN]);
   if (!guard.ok) return guard.response;
 
   const url = new URL(request.url);
-  const from = parseDateInput(url.searchParams.get("from"));
-  const to = parseDateInput(url.searchParams.get("to"));
   // All-time pill omits both params — drop the createdAt filter entirely.
-  if ((from && !to) || (!from && to) || (from && to && from >= to)) {
+  const window = parseOptionalWindow(url.searchParams);
+  if (window.kind === "invalid") {
     return fail("Invalid timeframe", 400);
   }
-  const dateFilter = from && to ? { createdAt: { gte: from, lt: to } } : {};
+  const dateFilter =
+    window.kind === "window"
+      ? { createdAt: { gte: window.from, lt: window.to } }
+      : {};
 
   const grouped = await prisma.billingRecord.groupBy({
     by: ["method"],
@@ -33,13 +39,14 @@ export async function GET(request: Request) {
     _count: { id: true },
   });
 
-  const rows = grouped
-    .map((g) => ({
+  const rows = sortedByMetricDesc(
+    grouped.map((g) => ({
       method: g.method,
       revenue: g._sum.amount ?? 0,
       paymentCount: g._count.id,
-    }))
-    .sort((a, b) => b.revenue - a.revenue);
+    })),
+    (row) => row.revenue,
+  );
 
-  return ok({ success: true, rows });
+  return ok({ success: true, rows } satisfies ReportsRevenueByMethodResponse);
 }

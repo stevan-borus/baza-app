@@ -157,7 +157,7 @@ describe("POST /api/bookings — notification payload", () => {
   });
 
   it("cancellation notifications carry clientFullName, classTypeName, sessionStartsAt, isLate", async () => {
-    // Sub-mock notify-cancellation's payload assembly by spying through
+    // Sub-mock notify-operators' payload assembly by spying through
     // the same `createSystemNotification` mock. Cancellation triggers
     // dispatches for the trainer and (no separate admin in this minimal
     // fixture set), so we check at least the trainer call.
@@ -189,7 +189,7 @@ describe("POST /api/bookings — notification payload", () => {
     const res = await POST(cancelReq(session.id));
     expect(res.status).toBe(200);
 
-    // Wait a tick for the fire-and-forget notifyCancellation() promise to
+    // Wait a tick for the fire-and-forget notifyOperators() promise to
     // resolve (the route doesn't await it).
     await new Promise((r) => setTimeout(r, 50));
 

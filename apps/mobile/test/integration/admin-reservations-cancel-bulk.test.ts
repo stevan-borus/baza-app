@@ -172,8 +172,11 @@ describe("POST /api/admin/reservations/cancel-bulk", () => {
     const res = await POST(buildRequest({ bookingIds: [b1.id, b2.id] }));
     expect(res.status).toBe(200);
 
-    // Wait for fire-and-forget notification dispatch to settle.
-    await new Promise((r) => setImmediate(r));
+    // Wait for fire-and-forget notification dispatch to settle (the operator
+    // fan-out resolves its admin recipients asynchronously).
+    await vi.waitFor(() => {
+      expect(createSystemNotificationMock.mock.calls.length).toBeGreaterThanOrEqual(2);
+    });
 
     const recipientCalls = createSystemNotificationMock.mock.calls.map(
       (call) => ({ userId: call[0], type: call[2] }),

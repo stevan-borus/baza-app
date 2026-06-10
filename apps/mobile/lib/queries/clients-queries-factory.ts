@@ -3,9 +3,14 @@ import {
   mutationOptions,
   infiniteQueryOptions,
 } from "@tanstack/react-query";
-import { clientByIdResponseSchema, clientsResponseSchema } from "@baza/types";
-import { apiFetch } from "@/lib/api";
-import { sharedEnv } from "@/lib/env.shared";
+import {
+  adminClientConsentRecordsResponseSchema,
+  adminClientHealthResponseSchema,
+  clientByIdResponseSchema,
+  clientsResponseSchema,
+} from "@baza/types";
+import { ApiError } from "@/lib/api-error";
+import { apiRequest } from "@/lib/api-request";
 
 export class ClientForbiddenError extends Error {
   constructor() {
@@ -40,19 +45,12 @@ export const clientsQueries = {
         "list",
         { q: opts.q ?? "", take: opts.take ?? DEFAULT_TAKE },
       ] as const,
-      queryFn: async ({ pageParam }) => {
-        const params = new URLSearchParams();
-        if (pageParam) params.set("cursor", pageParam);
-        if (opts.q) params.set("q", opts.q);
-        params.set("take", String(opts.take ?? DEFAULT_TAKE));
-        const response = await apiFetch(
-          `${sharedEnv.EXPO_PUBLIC_API_URL}/api/clients?${params.toString()}`,
-          { credentials: "include" },
-        );
-        if (!response.ok)
-          throw new Error(`Unable to load clients (${response.status})`);
-        return clientsResponseSchema.parse(await response.json());
-      },
+      queryFn: ({ pageParam }) =>
+        apiRequest("/api/clients", {
+          params: { cursor: pageParam, q: opts.q, take: opts.take ?? DEFAULT_TAKE },
+          schema: clientsResponseSchema,
+          errorMessage: "Unable to load clients",
+        }),
       initialPageParam: null as string | null,
       getNextPageParam: (last) => last.nextCursor ?? null,
       staleTime: 60_000,
@@ -62,13 +60,16 @@ export const clientsQueries = {
     queryOptions({
       queryKey: [...clientsAll, "byId", id] as const,
       queryFn: async () => {
-        const response = await apiFetch(
-          `${sharedEnv.EXPO_PUBLIC_API_URL}/api/clients/${id}`,
-          { credentials: "include" },
-        );
-        if (response.status === 403) throw new ClientForbiddenError();
-        if (!response.ok) throw new Error(`Unable to load client (${response.status})`);
-        return clientByIdResponseSchema.parse(await response.json());
+        try {
+          return await apiRequest(`/api/clients/${id}`, {
+            schema: clientByIdResponseSchema,
+            errorMessage: "Unable to load client",
+          });
+        } catch (e) {
+          if (e instanceof ApiError && e.status === 403)
+            throw new ClientForbiddenError();
+          throw e;
+        }
       },
       retry: (_count, error) =>
         error instanceof ClientForbiddenError ? false : true,
@@ -86,16 +87,12 @@ export const clientsQueries = {
         // Required by the server (inviteClientInputSchema) for the
         // minor/guardian waiver logic; ISO yyyy-mm-dd.
         dateOfBirth: string;
-      }) => {
-        const response = await apiFetch(`${sharedEnv.EXPO_PUBLIC_API_URL}/api/clients`, {
+      }) =>
+        apiRequest("/api/clients", {
           method: "POST",
-          credentials: "include",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify(payload),
-        });
-        if (!response.ok) throw new Error(`Unable to create client (${response.status})`);
-        return response.json();
-      },
+          body: payload,
+          errorMessage: "Unable to create client",
+        }),
     }),
 
   update: () =>
@@ -112,74 +109,33 @@ export const clientsQueries = {
         notes?: string;
         isActive?: boolean;
         dateOfBirth?: string | null;
-      }) => {
-        const response = await apiFetch(`${sharedEnv.EXPO_PUBLIC_API_URL}/api/clients/${id}`, {
+      }) =>
+        apiRequest(`/api/clients/${id}`, {
           method: "PATCH",
-          credentials: "include",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify(payload),
-        });
-        if (!response.ok) throw new Error(`Unable to update client (${response.status})`);
-        return response.json();
-      },
+          body: payload,
+          errorMessage: "Unable to update client",
+        }),
     }),
 
   consentRecords: (clientUserId: string) =>
     queryOptions({
       queryKey: [...clientsAll, clientUserId, "consent-records"] as const,
-      queryFn: async () => {
-        const res = await apiFetch(
-          `${sharedEnv.EXPO_PUBLIC_API_URL}/api/admin/clients/${clientUserId}/consent-records`,
-          { credentials: "include" },
-        );
-        if (!res.ok) throw new Error(`Unable to load consent records (${res.status})`);
-        return res.json() as Promise<{
-          records: Array<{
-            id: string;
-            documentKey: string;
-            version: number;
-            acceptedAt: string;
-            guardianVerifiedAt: string | null;
-          }>;
-          socialMedia: {
-            accepted: boolean;
-            acceptedAt: string;
-          } | null;
-        }>;
-      },
+      queryFn: () =>
+        apiRequest(`/api/admin/clients/${clientUserId}/consent-records`, {
+          schema: adminClientConsentRecordsResponseSchema,
+          errorMessage: "Unable to load consent records",
+        }),
       staleTime: 30_000,
     }),
 
   health: (clientUserId: string) =>
     queryOptions({
       queryKey: [...clientsAll, clientUserId, "health"] as const,
-      queryFn: async () => {
-        const res = await apiFetch(
-          `${sharedEnv.EXPO_PUBLIC_API_URL}/api/admin/clients/${clientUserId}/health`,
-          { credentials: "include" },
-        );
-        if (!res.ok) throw new Error(`Unable to load health (${res.status})`);
-        return res.json() as Promise<{
-          success: boolean;
-          intake: {
-            id: string;
-            conditions: string[];
-            conditionsOther: string | null;
-            underMedicalTreatment: boolean;
-            medicalTreatmentDetails: string | null;
-            pilatesExperience: string[];
-            pilatesExperienceDuration: string | null;
-            activityLevel: string;
-            exerciseFrequency: string;
-            goals: string[];
-            goalsOther: string | null;
-            discomfortDuring: string[];
-            additionalNotes: string | null;
-            recordedAt: string;
-          } | null;
-          withdrawnAt: string | null;
-        }>;
-      },
+      queryFn: () =>
+        apiRequest(`/api/admin/clients/${clientUserId}/health`, {
+          schema: adminClientHealthResponseSchema,
+          errorMessage: "Unable to load health",
+        }),
       staleTime: 30_000,
     }),
 };

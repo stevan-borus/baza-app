@@ -1,11 +1,10 @@
+import type { ReportsRevenueResponse } from "@baza/types";
 import { UserRole } from "@/generated/prisma";
 import { requireRole } from "@/lib/server/auth-guards";
 import { fail, ok } from "@/lib/server/http";
 import { prisma } from "@/lib/server/prisma";
-import {
-  getReportBucketLabel,
-  parseReportTimeframe,
-} from "@/lib/server/reports";
+import { accumulatePeriodSeries } from "@/lib/server/report-aggregation";
+import { parseReportTimeframe } from "@/lib/server/reports";
 
 export async function GET(request: Request) {
   const guard = await requireRole(request, [UserRole.ADMIN, UserRole.TRAINER]);
@@ -28,29 +27,19 @@ export async function GET(request: Request) {
     orderBy: { createdAt: "asc" },
   });
 
-  const seriesMap = new Map<
-    string,
-    { label: string; payments: number; revenue: number }
-  >();
-  for (const payment of payments) {
-    const label = getReportBucketLabel(payment.createdAt, timeframe.period);
-    const existing = seriesMap.get(label) ?? {
-      label,
-      payments: 0,
-      revenue: 0,
-    };
-    existing.payments += 1;
-    existing.revenue += payment.amount;
-    seriesMap.set(label, existing);
-  }
-  const data = [...seriesMap.values()].map((item) => ({
-    period: item.label,
-    revenue: item.revenue,
-    count: item.payments,
-  }));
+  const data = accumulatePeriodSeries(
+    payments,
+    timeframe.period,
+    (payment) => payment.createdAt,
+    (label) => ({ period: label, revenue: 0, count: 0 }),
+    (acc, payment) => {
+      acc.revenue += payment.amount;
+      acc.count += 1;
+    },
+  );
 
   return ok({
     success: true,
     data,
-  });
+  } satisfies ReportsRevenueResponse);
 }

@@ -15,7 +15,7 @@ import { Input, PasswordInput } from "@/components/ui/input";
 import { LinkText } from "@/components/ui/typography";
 import { StudioButton } from "@/components/ui/studio";
 import { useThemeTokens } from "@/components/ui/tokens";
-import { sharedEnv } from "@/lib/env.shared";
+import { apiRequest } from "@/lib/api-request";
 import {
   requestPasswordResetInputSchema,
   resetPasswordInputSchema,
@@ -97,37 +97,26 @@ export default function ResetPasswordScreen() {
     resetMutation.mutate();
   }
 
+  // Both steps surface failures via their localized ErrorBanner on isError —
+  // no status/body branching, same as the old raw-fetch version. Routed
+  // through the apiRequest seam for cookie injection + ApiError shaping.
   const requestMutation = useMutation({
-    mutationFn: async () => {
-      const response = await fetch(
-        `${sharedEnv.EXPO_PUBLIC_API_URL}/api/auth/request-password-reset`,
-        {
-          method: "POST",
-          credentials: "include",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ email }),
-        },
-      );
-      if (!response.ok) throw new Error(`Request failed (${response.status})`);
-      return response.json();
-    },
+    mutationFn: () =>
+      apiRequest("/api/auth/request-password-reset", {
+        method: "POST",
+        body: { email },
+        errorMessage: "Request failed",
+      }),
     onSuccess: () => setStep("reset"),
   });
 
   const resetMutation = useMutation({
-    mutationFn: async () => {
-      const response = await fetch(
-        `${sharedEnv.EXPO_PUBLIC_API_URL}/api/auth/reset-password`,
-        {
-          method: "POST",
-          credentials: "include",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ token, password }),
-        },
-      );
-      if (!response.ok) throw new Error(`Reset failed (${response.status})`);
-      return response.json();
-    },
+    mutationFn: () =>
+      apiRequest("/api/auth/reset-password", {
+        method: "POST",
+        body: { token, password },
+        errorMessage: "Reset failed",
+      }),
     onSuccess: () => setStep("success"),
   });
 

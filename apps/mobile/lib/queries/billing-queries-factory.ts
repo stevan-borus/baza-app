@@ -4,8 +4,7 @@ import {
   infiniteQueryOptions,
 } from "@tanstack/react-query";
 import { z } from "zod";
-import { apiFetch } from "@/lib/api";
-import { sharedEnv } from "@/lib/env.shared";
+import { apiRequest } from "@/lib/api-request";
 
 const billingRecordSchema = z.object({
   id: z.string(),
@@ -36,26 +35,20 @@ const billingResponseSchema = z.object({
 
 export type BillingRecord = z.infer<typeof billingRecordSchema>;
 
-async function fetchBillingPage(
+function fetchBillingPage(
   cursor?: string | null,
   filters?: { clientUserId?: string; from?: string; to?: string },
 ) {
-  const endpoint = `${sharedEnv.EXPO_PUBLIC_API_URL}/api/billing`;
-  const searchParams = new URLSearchParams();
-  if (cursor) searchParams.set("cursor", cursor);
-  if (filters?.clientUserId) searchParams.set("clientUserId", filters.clientUserId);
-  if (filters?.from) searchParams.set("from", filters.from);
-  if (filters?.to) searchParams.set("to", filters.to);
-  // Don't use `searchParams.size` — RN's URLSearchParams polyfill returns
-  // `undefined` for it, so `size > 0` is always false and the query string
-  // gets dropped. `toString()` returns the empty string when no params are
-  // set, which we can check directly.
-  const qs = searchParams.toString();
-  const url = qs ? `${endpoint}?${qs}` : endpoint;
-  const response = await apiFetch(url, { credentials: "include" });
-  if (!response.ok)
-    throw new Error(`Unable to load billing (${response.status})`);
-  return billingResponseSchema.parse(await response.json());
+  return apiRequest("/api/billing", {
+    params: {
+      cursor,
+      clientUserId: filters?.clientUserId,
+      from: filters?.from,
+      to: filters?.to,
+    },
+    schema: billingResponseSchema,
+    errorMessage: "Unable to load billing",
+  });
 }
 
 const billingAll = ["billing"] as const;
@@ -100,22 +93,12 @@ export const billingQueries = {
         notes?: string;
         packageTypeId?: string;
         activatePackageOnConfirm?: boolean;
-      }) => {
-        const response = await apiFetch(
-          `${sharedEnv.EXPO_PUBLIC_API_URL}/api/billing`,
-          {
-            method: "POST",
-            credentials: "include",
-            headers: { "content-type": "application/json" },
-            body: JSON.stringify(payload),
-          },
-        );
-        if (!response.ok)
-          throw new Error(
-            `Unable to create billing record (${response.status})`,
-          );
-        return response.json();
-      },
+      }) =>
+        apiRequest("/api/billing", {
+          method: "POST",
+          body: payload,
+          errorMessage: "Unable to create billing record",
+        }),
     }),
 };
 

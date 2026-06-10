@@ -5,8 +5,7 @@ import {
   type QueryClient,
 } from "@tanstack/react-query";
 import { z } from "zod";
-import { apiFetch, throwIfNotOk } from "@/lib/api";
-import { sharedEnv } from "@/lib/env.shared";
+import { apiRequest } from "@/lib/api-request";
 
 const embeddedClassTypeSchema = z.object({
   id: z.string(),
@@ -90,30 +89,23 @@ export const packagesQueries = {
   types: () =>
     queryOptions({
       queryKey: [...packagesAll, "types"] as const,
-      queryFn: async () => {
-        const response = await apiFetch(`${sharedEnv.EXPO_PUBLIC_API_URL}/api/packages/types`, {
-          credentials: "include",
-        });
-        if (!response.ok) throw new Error(`Unable to load package types (${response.status})`);
-        return packageTypesResponseSchema.parse(await response.json());
-      },
+      queryFn: () =>
+        apiRequest("/api/packages/types", {
+          schema: packageTypesResponseSchema,
+          errorMessage: "Unable to load package types",
+        }),
       staleTime: 60_000,
     }),
 
   clientPackages: (clientProfileId?: string) =>
     queryOptions({
       queryKey: [...packagesAll, "client-packages", clientProfileId ?? "me"] as const,
-      queryFn: async () => {
-        const qs = clientProfileId
-          ? `?clientProfileId=${encodeURIComponent(clientProfileId)}`
-          : "";
-        const response = await apiFetch(
-          `${sharedEnv.EXPO_PUBLIC_API_URL}/api/packages/client-packages${qs}`,
-          { credentials: "include" },
-        );
-        if (!response.ok) throw new Error(`Unable to load packages (${response.status})`);
-        return clientPackagesResponseSchema.parse(await response.json());
-      },
+      queryFn: () =>
+        apiRequest("/api/packages/client-packages", {
+          params: { clientProfileId },
+          schema: clientPackagesResponseSchema,
+          errorMessage: "Unable to load packages",
+        }),
       staleTime: 30_000,
     }),
 
@@ -134,17 +126,16 @@ export const packagesQueries = {
         "admin",
         { search: params?.search ?? "", take: params?.take ?? 20 },
       ] as const,
-      queryFn: async ({ pageParam }) => {
-        const qs = new URLSearchParams();
-        if (pageParam) qs.set("cursor", pageParam);
-        if (params?.search) qs.set("search", params.search);
-        qs.set("take", String(params?.take ?? 20));
-        const url = `${sharedEnv.EXPO_PUBLIC_API_URL}/api/packages/client-packages?${qs.toString()}`;
-        const response = await apiFetch(url, { credentials: "include" });
-        if (!response.ok)
-          throw new Error(`Unable to load assignments (${response.status})`);
-        return clientPackagesResponseSchema.parse(await response.json());
-      },
+      queryFn: ({ pageParam }) =>
+        apiRequest("/api/packages/client-packages", {
+          params: {
+            cursor: pageParam,
+            search: params?.search,
+            take: params?.take ?? 20,
+          },
+          schema: clientPackagesResponseSchema,
+          errorMessage: "Unable to load assignments",
+        }),
       initialPageParam: null as string | null,
       getNextPageParam: (last) => last.nextCursor ?? null,
       staleTime: 30_000,
@@ -160,16 +151,13 @@ export const packagesQueries = {
         lateCancelHours?: number;
         classTypeId: string;
         isBirthdayGift?: boolean;
-      }) => {
-        const response = await apiFetch(`${sharedEnv.EXPO_PUBLIC_API_URL}/api/packages/types`, {
+      }) =>
+        apiRequest("/api/packages/types", {
           method: "POST",
-          credentials: "include",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify(payload),
-        });
-        await throwIfNotOk(response, "Unable to create package type");
-        return packageTypeMutationResponseSchema.parse(await response.json());
-      },
+          body: payload,
+          schema: packageTypeMutationResponseSchema,
+          errorMessage: "Unable to create package type",
+        }),
     }),
 
   updateType: () =>
@@ -186,32 +174,23 @@ export const packagesQueries = {
         lateCancelHours?: number;
         classTypeId?: string;
         isBirthdayGift?: boolean;
-      }) => {
-        const response = await apiFetch(
-          `${sharedEnv.EXPO_PUBLIC_API_URL}/api/packages/types/${id}`,
-          {
-            method: "PATCH",
-            credentials: "include",
-            headers: { "content-type": "application/json" },
-            body: JSON.stringify(payload),
-          },
-        );
-        await throwIfNotOk(response, "Unable to update package type");
-        return packageTypeMutationResponseSchema.parse(await response.json());
-      },
+      }) =>
+        apiRequest(`/api/packages/types/${id}`, {
+          method: "PATCH",
+          body: payload,
+          schema: packageTypeMutationResponseSchema,
+          errorMessage: "Unable to update package type",
+        }),
     }),
 
   deleteType: () =>
     mutationOptions({
       mutationKey: [...packagesAll, "types", "delete"] as const,
-      mutationFn: async (id: string) => {
-        const response = await apiFetch(
-          `${sharedEnv.EXPO_PUBLIC_API_URL}/api/packages/types/${id}`,
-          { method: "DELETE", credentials: "include" },
-        );
-        await throwIfNotOk(response, "Unable to delete package type");
-        return response.json();
-      },
+      mutationFn: (id: string) =>
+        apiRequest(`/api/packages/types/${id}`, {
+          method: "DELETE",
+          errorMessage: "Unable to delete package type",
+        }),
     }),
 
   createClientPackage: () =>
@@ -221,19 +200,12 @@ export const packagesQueries = {
         clientProfileId: string;
         packageTypeId: string;
         startsAt: string;
-      }) => {
-        const response = await apiFetch(
-          `${sharedEnv.EXPO_PUBLIC_API_URL}/api/packages/client-packages`,
-          {
-            method: "POST",
-            credentials: "include",
-            headers: { "content-type": "application/json" },
-            body: JSON.stringify(payload),
-          },
-        );
-        if (!response.ok) throw new Error(`Unable to create package (${response.status})`);
-        return response.json();
-      },
+      }) =>
+        apiRequest("/api/packages/client-packages", {
+          method: "POST",
+          body: payload,
+          errorMessage: "Unable to create package",
+        }),
     }),
 
   pause: () =>
@@ -244,16 +216,12 @@ export const packagesQueries = {
         startsAt: string;
         endsAt: string;
         reason?: string;
-      }) => {
-        const response = await apiFetch(`${sharedEnv.EXPO_PUBLIC_API_URL}/api/packages/pause`, {
+      }) =>
+        apiRequest("/api/packages/pause", {
           method: "POST",
-          credentials: "include",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify(payload),
-        });
-        if (!response.ok) throw new Error(`Unable to pause package (${response.status})`);
-        return response.json();
-      },
+          body: payload,
+          errorMessage: "Unable to pause package",
+        }),
     }),
 };
 
