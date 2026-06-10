@@ -1,7 +1,6 @@
 import { queryOptions, mutationOptions, infiniteQueryOptions } from "@tanstack/react-query";
 import { z } from "zod";
-import { apiFetch, throwIfNotOk } from "@/lib/api";
-import { sharedEnv } from "@/lib/env.shared";
+import { apiRequest } from "@/lib/api-request";
 
 const trainerNoteSchema = z.object({
   id: z.string(),
@@ -44,26 +43,23 @@ type NotesListParams = {
   take?: number;
 };
 
-async function fetchNotesPage(
+function fetchNotesPage(
   params?: NotesListParams,
   cursor?: string | null,
 ): Promise<TrainerNotesResponse> {
-  const qs = new URLSearchParams();
-  if (params?.sessionId) qs.set("sessionId", params.sessionId);
-  if (params?.clientProfileId) qs.set("clientProfileId", params.clientProfileId);
-  if (params?.sessionIds && params.sessionIds.length > 0) {
-    qs.set("sessionIds", params.sessionIds.join(","));
-  }
-  if (params?.clientProfileIds && params.clientProfileIds.length > 0) {
-    qs.set("clientProfileIds", params.clientProfileIds.join(","));
-  }
-  if (params?.take) qs.set("take", String(params.take));
-  if (cursor) qs.set("cursor", cursor);
-  const query = qs.toString();
-  const url = `${sharedEnv.EXPO_PUBLIC_API_URL}/api/trainer-notes${query ? `?${query}` : ""}`;
-  const response = await apiFetch(url, { credentials: "include" });
-  if (!response.ok) throw new Error(`Unable to load notes (${response.status})`);
-  return trainerNotesResponseSchema.parse(await response.json());
+  return apiRequest("/api/trainer-notes", {
+    params: {
+      sessionId: params?.sessionId,
+      clientProfileId: params?.clientProfileId,
+      // Multi-selects go over the wire comma-separated; empty arrays are omitted.
+      sessionIds: params?.sessionIds,
+      clientProfileIds: params?.clientProfileIds,
+      take: params?.take,
+      cursor,
+    },
+    schema: trainerNotesResponseSchema,
+    errorMessage: "Unable to load notes",
+  });
 }
 
 // Keep array params in queryKey order-stable so identical sets hit the same
@@ -108,46 +104,32 @@ export const trainerNotesQueries = {
         sessionId?: string;
         clientProfileId: string;
         note: string;
-      }) => {
-        const response = await apiFetch(`${sharedEnv.EXPO_PUBLIC_API_URL}/api/trainer-notes`, {
+      }) =>
+        apiRequest("/api/trainer-notes", {
           method: "POST",
-          credentials: "include",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify(payload),
-        });
-        if (!response.ok) throw new Error(`Unable to create note (${response.status})`);
-        return response.json();
-      },
+          body: payload,
+          errorMessage: "Unable to create note",
+        }),
     }),
 
   update: () =>
     mutationOptions({
       mutationKey: [...trainerNotesAll, "update"] as const,
-      mutationFn: async ({ id, note }: { id: string; note: string }) => {
-        const response = await apiFetch(
-          `${sharedEnv.EXPO_PUBLIC_API_URL}/api/trainer-notes/${id}`,
-          {
-            method: "PATCH",
-            credentials: "include",
-            headers: { "content-type": "application/json" },
-            body: JSON.stringify({ note }),
-          },
-        );
-        await throwIfNotOk(response, "Unable to update note");
-        return response.json();
-      },
+      mutationFn: ({ id, note }: { id: string; note: string }) =>
+        apiRequest(`/api/trainer-notes/${id}`, {
+          method: "PATCH",
+          body: { note },
+          errorMessage: "Unable to update note",
+        }),
     }),
 
   delete: () =>
     mutationOptions({
       mutationKey: [...trainerNotesAll, "delete"] as const,
-      mutationFn: async (id: string) => {
-        const response = await apiFetch(
-          `${sharedEnv.EXPO_PUBLIC_API_URL}/api/trainer-notes/${id}`,
-          { method: "DELETE", credentials: "include" },
-        );
-        await throwIfNotOk(response, "Unable to delete note");
-        return response.json();
-      },
+      mutationFn: (id: string) =>
+        apiRequest(`/api/trainer-notes/${id}`, {
+          method: "DELETE",
+          errorMessage: "Unable to delete note",
+        }),
     }),
 };

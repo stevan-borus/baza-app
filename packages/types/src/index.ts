@@ -479,6 +479,40 @@ export const clientByIdResponseSchema = z.object({
 });
 export type ClientByIdResponse = z.infer<typeof clientByIdResponseSchema>;
 
+// GET /api/admin/clients/[id]/consent-records — accepted documents (social
+// media excluded) plus the latest social-media decision. Deliberately has NO
+// `success` wrapper: the handler returns `ok({ records, socialMedia })`.
+export const adminClientConsentRecordsResponseSchema = z.object({
+  records: z.array(
+    z.object({
+      id: z.string(),
+      documentKey: consentDocumentKeySchema,
+      version: z.number(),
+      acceptedAt: z.string(), // ISO date string when JSON-serialized
+      guardianVerifiedAt: z.nullable(z.string()),
+    }),
+  ),
+  // null when the client has never been asked (legacy state pre-gate).
+  socialMedia: z
+    .nullable(z.object({ accepted: z.boolean(), acceptedAt: z.string() }))
+    .optional(),
+});
+export type AdminClientConsentRecordsResponse = z.infer<
+  typeof adminClientConsentRecordsResponseSchema
+>;
+
+// GET /api/admin/clients/[id]/health — the raw ClientHealthIntake row (same
+// shape the client-facing /api/health-intake GET serves, hence the reuse of
+// healthIntakeResponseSchema) or null, plus the latest withdrawal timestamp.
+export const adminClientHealthResponseSchema = z.object({
+  success: z.boolean(),
+  intake: z.nullable(healthIntakeResponseSchema),
+  withdrawnAt: z.nullable(z.string()),
+});
+export type AdminClientHealthResponse = z.infer<
+  typeof adminClientHealthResponseSchema
+>;
+
 export const reportsSummaryResponseSchema = z.object({
   success: z.boolean(),
   summary: z.object({

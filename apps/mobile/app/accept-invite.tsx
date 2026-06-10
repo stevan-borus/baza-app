@@ -15,7 +15,7 @@ import { AuthLanguageToggle } from "@/components/auth/auth-language-toggle";
 import { Input, PasswordInput } from "@/components/ui/input";
 import { LinkText } from "@/components/ui/typography";
 import { StudioButton } from "@/components/ui/studio";
-import { sharedEnv } from "@/lib/env.shared";
+import { apiRequest } from "@/lib/api-request";
 import { validateForm, type FormErrors } from "@/lib/zod-form";
 
 function InviterBadge({ name }: { name: string }) {
@@ -81,20 +81,16 @@ export default function AcceptInviteScreen() {
     completeMutation.mutate();
   }
 
+  // Any failure (status or body, localized banner is generic) just flips
+  // isError — same as the old raw-fetch version, but routed through the
+  // apiRequest seam so native gets cookie injection and ApiError shaping.
   const completeMutation = useMutation({
-    mutationFn: async () => {
-      const response = await fetch(
-        `${sharedEnv.EXPO_PUBLIC_API_URL}/api/auth/complete-invite`,
-        {
-          method: "POST",
-          credentials: "include",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ token, password, name }),
-        },
-      );
-      if (!response.ok) throw new Error(`Failed (${response.status})`);
-      return response.json();
-    },
+    mutationFn: () =>
+      apiRequest("/api/auth/complete-invite", {
+        method: "POST",
+        body: { token, password, name },
+        errorMessage: "Failed",
+      }),
     onSuccess: () => router.replace("/sign-in"),
   });
 

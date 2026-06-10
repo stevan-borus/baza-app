@@ -5,43 +5,11 @@ import {
   type QueryClient,
 } from "@tanstack/react-query";
 import { z } from "zod";
-import { apiFetch, throwIfNotOk } from "@/lib/api";
-import { sharedEnv } from "@/lib/env.shared";
-
-// Local availability schema — duplicates @baza/types but uses z.coerce.date()
-// so the wire format (ISO strings) parses into Date objects for `dayjs(...)`
-// consumers. Kept local to avoid Metro's flaky cross-package HMR.
-const availabilityResponseSchema = z.object({
-  success: z.boolean(),
-  month: z.string(),
-  sessions: z.array(
-    z.object({
-      id: z.string(),
-      startsAt: z.coerce.date(),
-      endsAt: z.coerce.date(),
-      capacity: z.number(),
-      classTypeName: z.string(),
-      roomId: z.nullable(z.string()).optional(),
-      roomName: z.nullable(z.string()),
-      trainerUserId: z.nullable(z.string()).optional(),
-      trainerName: z.nullable(z.string()).optional(),
-      bookedCount: z.number(),
-      waitlistCount: z.number(),
-      availableSlots: z.number(),
-      recurringScheduleId: z.nullable(z.string()).optional(),
-      isActive: z.boolean().optional(),
-      // Server flag: does the current CLIENT user have an active booking on
-      // this session? Used by the BookingSheet to render the "already booked"
-      // state. Optional because admin/trainer responses don't include it.
-      isBookedByMe: z.boolean().optional(),
-      // Server flag: late-cancel-hours window from the client's package on
-      // this session — null when the user has no active booking. Used by
-      // the cancel confirmation to warn that the cancellation would
-      // consume a session.
-      lateCancelHours: z.nullable(z.number()).optional(),
-    }),
-  ),
-});
+// The wire shape (incl. z.coerce.date() on startsAt/endsAt, so dayjs
+// consumers keep receiving Date objects) lives in @baza/types — this factory
+// used to shadow it with a local duplicate.
+import { availabilityResponseSchema } from "@baza/types";
+import { apiRequest } from "@/lib/api-request";
 
 const sessionSchema = z.object({
   id: z.string(),
@@ -129,15 +97,12 @@ export const sessionsQueries = {
   availabilityByMonth: (month: string) =>
     queryOptions({
       queryKey: [...sessionsAll, "availability", month] as const,
-      queryFn: async () => {
-        const response = await apiFetch(
-          `${sharedEnv.EXPO_PUBLIC_API_URL}/api/sessions/availability?month=${encodeURIComponent(month)}`,
-          { credentials: "include" },
-        );
-        if (!response.ok)
-          throw new Error(`Unable to load availability (${response.status})`);
-        return availabilityResponseSchema.parse(await response.json());
-      },
+      queryFn: () =>
+        apiRequest("/api/sessions/availability", {
+          params: { month },
+          schema: availabilityResponseSchema,
+          errorMessage: "Unable to load availability",
+        }),
       staleTime: 30_000,
       placeholderData: keepPreviousData,
     }),
@@ -145,27 +110,22 @@ export const sessionsQueries = {
   list: () =>
     queryOptions({
       queryKey: [...sessionsAll, "list"] as const,
-      queryFn: async () => {
-        const response = await apiFetch(`${sharedEnv.EXPO_PUBLIC_API_URL}/api/sessions`, {
-          credentials: "include",
-        });
-        if (!response.ok) throw new Error(`Unable to load sessions (${response.status})`);
-        return sessionsListResponseSchema.parse(await response.json());
-      },
+      queryFn: () =>
+        apiRequest("/api/sessions", {
+          schema: sessionsListResponseSchema,
+          errorMessage: "Unable to load sessions",
+        }),
       staleTime: 30_000,
     }),
 
   byId: (id: string) =>
     queryOptions({
       queryKey: [...sessionsAll, "by-id", id] as const,
-      queryFn: async () => {
-        const response = await apiFetch(
-          `${sharedEnv.EXPO_PUBLIC_API_URL}/api/sessions/${encodeURIComponent(id)}`,
-          { credentials: "include" },
-        );
-        if (!response.ok) throw new Error(`Unable to load session (${response.status})`);
-        return sessionDetailResponseSchema.parse(await response.json());
-      },
+      queryFn: () =>
+        apiRequest(`/api/sessions/${encodeURIComponent(id)}`, {
+          schema: sessionDetailResponseSchema,
+          errorMessage: "Unable to load session",
+        }),
       staleTime: 30_000,
       enabled: !!id,
     }),
@@ -181,16 +141,13 @@ export const sessionsQueries = {
         endsAt: string;
         capacity: number;
         isActive?: boolean;
-      }) => {
-        const response = await apiFetch(`${sharedEnv.EXPO_PUBLIC_API_URL}/api/sessions`, {
+      }) =>
+        apiRequest("/api/sessions", {
           method: "POST",
-          credentials: "include",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify(payload),
-        });
-        await throwIfNotOk(response, "Unable to create session");
-        return sessionMutationResponseSchema.parse(await response.json());
-      },
+          body: payload,
+          schema: sessionMutationResponseSchema,
+          errorMessage: "Unable to create session",
+        }),
     }),
 
   update: () =>
@@ -208,16 +165,13 @@ export const sessionsQueries = {
         trainerUserId?: string;
         isActive?: boolean;
         status?: "SCHEDULED" | "CANCELED" | "COMPLETED";
-      }) => {
-        const response = await apiFetch(`${sharedEnv.EXPO_PUBLIC_API_URL}/api/sessions/${id}`, {
+      }) =>
+        apiRequest(`/api/sessions/${id}`, {
           method: "PATCH",
-          credentials: "include",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify(payload),
-        });
-        await throwIfNotOk(response, "Unable to update session");
-        return sessionMutationResponseSchema.parse(await response.json());
-      },
+          body: payload,
+          schema: sessionMutationResponseSchema,
+          errorMessage: "Unable to update session",
+        }),
     }),
 
   createRecurring: () =>
@@ -233,34 +187,21 @@ export const sessionsQueries = {
         weekCount: number;
         weekdays: number[];
         isActive?: boolean;
-      }) => {
-        const response = await apiFetch(
-          `${sharedEnv.EXPO_PUBLIC_API_URL}/api/sessions/recurring`,
-          {
-            method: "POST",
-            credentials: "include",
-            headers: { "content-type": "application/json" },
-            body: JSON.stringify(payload),
-          },
-        );
-        await throwIfNotOk(response, "Unable to create recurring sessions");
-        return response.json();
-      },
+      }) =>
+        apiRequest("/api/sessions/recurring", {
+          method: "POST",
+          body: payload,
+          errorMessage: "Unable to create recurring sessions",
+        }),
     }),
 
   recurringSchedule: (id: string | null) =>
     queryOptions({
       queryKey: [...sessionsAll, "recurring-schedule", id] as const,
       enabled: !!id,
-      queryFn: async () => {
-        const response = await apiFetch(
-          `${sharedEnv.EXPO_PUBLIC_API_URL}/api/sessions/recurring/${id}`,
-          { credentials: "include" },
-        );
-        if (!response.ok)
-          throw new Error(`Unable to load schedule (${response.status})`);
-        return z
-          .object({
+      queryFn: () =>
+        apiRequest(`/api/sessions/recurring/${id}`, {
+          schema: z.object({
             success: z.boolean(),
             schedule: z.object({
               id: z.string(),
@@ -274,9 +215,9 @@ export const sessionsQueries = {
               isActive: z.boolean(),
             }),
             futureBookingsCount: z.number(),
-          })
-          .parse(await response.json());
-      },
+          }),
+          errorMessage: "Unable to load schedule",
+        }),
       staleTime: 30_000,
     }),
 
@@ -296,32 +237,22 @@ export const sessionsQueries = {
         capacity?: number;
         isActive?: boolean;
         weekCount?: number;
-      }) => {
-        const response = await apiFetch(
-          `${sharedEnv.EXPO_PUBLIC_API_URL}/api/sessions/recurring/${id}`,
-          {
-            method: "PATCH",
-            credentials: "include",
-            headers: { "content-type": "application/json" },
-            body: JSON.stringify(payload),
-          },
-        );
-        await throwIfNotOk(response, "Unable to update series");
-        return response.json();
-      },
+      }) =>
+        apiRequest(`/api/sessions/recurring/${id}`, {
+          method: "PATCH",
+          body: payload,
+          errorMessage: "Unable to update series",
+        }),
     }),
 
   deleteRecurring: () =>
     mutationOptions({
       mutationKey: [...sessionsAll, "delete-recurring"] as const,
-      mutationFn: async (id: string) => {
-        const response = await apiFetch(
-          `${sharedEnv.EXPO_PUBLIC_API_URL}/api/sessions/recurring/${id}`,
-          { method: "DELETE", credentials: "include" },
-        );
-        await throwIfNotOk(response, "Unable to delete series");
-        return response.json();
-      },
+      mutationFn: (id: string) =>
+        apiRequest(`/api/sessions/recurring/${id}`, {
+          method: "DELETE",
+          errorMessage: "Unable to delete series",
+        }),
     }),
 };
 
