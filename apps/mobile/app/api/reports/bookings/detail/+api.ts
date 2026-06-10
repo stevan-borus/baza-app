@@ -34,17 +34,18 @@
  * Top sessions: top 10 sessions in the window by **non-canceled** booking
  * count. Ties are broken by capacity (so a fuller-of-two sessions wins).
  */
+import type { ReportsBookingsDetailResponse } from "@baza/types";
 import { UserRole } from "@/generated/prisma";
 import { requireRole } from "@/lib/server/auth-guards";
 import { fail, ok } from "@/lib/server/http";
 import { now } from "@/lib/now";
 import { prisma } from "@/lib/server/prisma";
 import {
-  buildPeriodBuckets,
-  bucketSizeForPeriod,
-  parseDateInput,
-  resolveAllTimeWindow,
-} from "@/lib/server/reports";
+  accumulateIntoBucketSeries,
+  resolveBucketedWindow,
+  roundedRatio,
+  sortedByMetricDesc,
+} from "@/lib/server/report-aggregation";
 
 const HOUR_MS = 60 * 60 * 1000;
 const TOP_SESSIONS_LIMIT = 10;
@@ -54,26 +55,21 @@ export async function GET(request: Request) {
   if (!guard.ok) return guard.response;
 
   const url = new URL(request.url);
-  const rawFrom = parseDateInput(url.searchParams.get("from"));
-  const rawTo = parseDateInput(url.searchParams.get("to"));
   // All-time: span yearly buckets from the earliest booking forward.
-  const earliest = rawFrom || rawTo
-    ? null
-    : (
-        await prisma.booking.findFirst({
-          orderBy: { createdAt: "asc" },
-          select: { createdAt: true },
-        })
-      )?.createdAt ?? null;
-  const window = resolveAllTimeWindow(rawFrom, rawTo, earliest);
+  const window = await resolveBucketedWindow(url.searchParams, async () => {
+    const first = await prisma.booking.findFirst({
+      orderBy: { createdAt: "asc" },
+      select: { createdAt: true },
+    });
+    return first?.createdAt ?? null;
+  });
   if (!window) {
     return fail("Invalid timeframe", 400);
   }
-  const { from, to, isAllTime } = window;
-  const size = bucketSizeForPeriod(
-    isAllTime ? "all" : url.searchParams.get("period"),
-  );
-  const buckets = buildPeriodBuckets(from, to, size);
+  // The domain queries scope to the resolved window bounds — NOT the
+  // bucket-aligned queryRange — so headline counts only cover [from, to)
+  // even when the first chart bucket floors earlier.
+  const { from, to } = window;
   const currentInstant = now();
 
   // Bookings created in the window — drives headline, chart, and cancel
@@ -117,27 +113,22 @@ export async function GET(request: Request) {
       if (!b.canceledAt) pastBookingsShown += 1;
     }
   }
-  const showRate = pastBookings > 0 ? pastBookingsShown / pastBookings : 0;
+  const showRate = roundedRatio(pastBookingsShown, pastBookings);
 
   // --- Time-series ------------------------------------------------------
-  const series = buckets.map((bk) => ({
-    bucketStart: bk.bucketStart.toISOString(),
-    bucketEnd: bk.bucketEnd.toISOString(),
-    bookingCount: 0,
-  }));
-  let cursor = 0;
-  for (const b of bookings) {
-    const t = b.createdAt.getTime();
-    while (
-      cursor < buckets.length &&
-      t >= buckets[cursor].bucketEnd.getTime()
-    ) {
-      cursor += 1;
-    }
-    if (cursor >= buckets.length) break;
-    if (t < buckets[cursor].bucketStart.getTime()) continue;
-    series[cursor].bookingCount += 1;
-  }
+  const series = accumulateIntoBucketSeries(
+    window.buckets,
+    bookings,
+    (b) => b.createdAt,
+    (bk) => ({
+      bucketStart: bk.bucketStart.toISOString(),
+      bucketEnd: bk.bucketEnd.toISOString(),
+      bookingCount: 0,
+    }),
+    (acc) => {
+      acc.bookingCount += 1;
+    },
+  );
 
   // --- Top sessions -----------------------------------------------------
   // We rank sessions by *active* (non-canceled) bookings created in the
@@ -169,24 +160,27 @@ export async function GET(request: Request) {
           },
         });
   const sessionMap = new Map(sessionRows.map((s) => [s.id, s]));
-  const topSessions = grouped
-    .map((g) => {
-      const session = sessionMap.get(g.sessionId);
-      if (!session) return null;
-      return {
-        sessionId: session.id,
-        startsAt: session.startsAt.toISOString(),
-        classTypeName: session.classType.name,
-        roomName: session.room?.name ?? null,
-        bookedCount: g._count._all,
-        capacity: session.capacity,
-      };
-    })
-    .filter((row): row is NonNullable<typeof row> => row !== null)
-    // groupBy ordering is by sessionId count desc — when counts tie, fall
-    // back to capacity desc so the fuller of two equally-booked sessions
-    // surfaces first.
-    .sort((a, b) => b.bookedCount - a.bookedCount || b.capacity - a.capacity);
+  // groupBy ordering is by sessionId count desc — when counts tie, fall
+  // back to capacity desc so the fuller of two equally-booked sessions
+  // surfaces first.
+  const topSessions = sortedByMetricDesc(
+    grouped
+      .map((g) => {
+        const session = sessionMap.get(g.sessionId);
+        if (!session) return null;
+        return {
+          sessionId: session.id,
+          startsAt: session.startsAt.toISOString(),
+          classTypeName: session.classType.name,
+          roomName: session.room?.name ?? null,
+          bookedCount: g._count._all,
+          capacity: session.capacity,
+        };
+      })
+      .filter((row): row is NonNullable<typeof row> => row !== null),
+    (row) => row.bookedCount,
+    (a, b) => b.capacity - a.capacity,
+  );
 
   // --- Waitlist ---------------------------------------------------------
   // WaitlistEntry has no "promoted" flag — promotion deletes the row — so
@@ -203,7 +197,7 @@ export async function GET(request: Request) {
     success: true,
     headline: {
       totalBookings: bookings.length,
-      showRate: Number(showRate.toFixed(4)),
+      showRate,
       canceledTotal,
       canceledPreCutoff,
       canceledLate,
@@ -211,5 +205,5 @@ export async function GET(request: Request) {
     },
     timeSeries: series,
     topSessions,
-  });
+  } satisfies ReportsBookingsDetailResponse);
 }

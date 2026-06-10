@@ -1,8 +1,13 @@
-import { formatFullName } from "@baza/types";
+import { formatFullName, type ReportsUtilizationByTrainerResponse } from "@baza/types";
 import { UserRole } from "@/generated/prisma";
 import { requireRole } from "@/lib/server/auth-guards";
 import { fail, ok } from "@/lib/server/http";
 import { prisma } from "@/lib/server/prisma";
+import {
+  accumulateByKey,
+  roundedRatio,
+  sortedByMetricDesc,
+} from "@/lib/server/report-aggregation";
 import { parseReportTimeframe } from "@/lib/server/reports";
 
 /**
@@ -36,34 +41,29 @@ export async function GET(request: Request) {
     },
   });
 
-  const byTrainer = new Map<
-    string,
-    { trainerUserId: string; trainerName: string; capacity: number; booked: number }
-  >();
-  for (const session of sessions) {
-    const existing = byTrainer.get(session.trainerUserId) ?? {
+  const byTrainer = accumulateByKey(
+    sessions,
+    (session) => session.trainerUserId,
+    (session) => ({
       trainerUserId: session.trainerUserId,
       trainerName: session.trainer
         ? formatFullName(session.trainer.firstName, session.trainer.lastName)
         : "—",
-      capacity: 0,
-      booked: 0,
-    };
-    existing.capacity += session.capacity;
-    existing.booked += session._count.bookings;
-    byTrainer.set(session.trainerUserId, existing);
-  }
+      totalCapacity: 0,
+      totalBooked: 0,
+    }),
+    (acc, session) => {
+      acc.totalCapacity += session.capacity;
+      acc.totalBooked += session._count.bookings;
+    },
+  );
+  const data = sortedByMetricDesc(
+    byTrainer.map((row) => ({
+      ...row,
+      utilization: roundedRatio(row.totalBooked, row.totalCapacity),
+    })),
+    (row) => row.utilization,
+  );
 
-  const data = [...byTrainer.values()]
-    .map((row) => ({
-      trainerUserId: row.trainerUserId,
-      trainerName: row.trainerName,
-      totalCapacity: row.capacity,
-      totalBooked: row.booked,
-      utilization:
-        row.capacity > 0 ? Number((row.booked / row.capacity).toFixed(4)) : 0,
-    }))
-    .sort((a, b) => b.utilization - a.utilization);
-
-  return ok({ success: true, data });
+  return ok({ success: true, data } satisfies ReportsUtilizationByTrainerResponse);
 }

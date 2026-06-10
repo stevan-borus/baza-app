@@ -1,8 +1,13 @@
+import type { ReportsUtilizationResponse } from "@baza/types";
 import { UserRole } from "@/generated/prisma";
 import { requireRole } from "@/lib/server/auth-guards";
 import { fail, ok } from "@/lib/server/http";
 import { prisma } from "@/lib/server/prisma";
-import { getReportBucketLabel, parseReportTimeframe } from "@/lib/server/reports";
+import {
+  accumulatePeriodSeries,
+  roundedRatio,
+} from "@/lib/server/report-aggregation";
+import { parseReportTimeframe } from "@/lib/server/reports";
 
 export async function GET(request: Request) {
   const guard = await requireRole(request, [UserRole.ADMIN, UserRole.TRAINER]);
@@ -32,30 +37,22 @@ export async function GET(request: Request) {
     orderBy: { startsAt: "asc" },
   });
 
-  const seriesMap = new Map<string, { label: string; sessions: number; capacity: number; booked: number }>();
-  for (const session of sessions) {
-    const label = getReportBucketLabel(session.startsAt, timeframe.period);
-    const existing = seriesMap.get(label) ?? {
-      label,
-      sessions: 0,
-      capacity: 0,
-      booked: 0,
-    };
-    existing.sessions += 1;
-    existing.capacity += session.capacity;
-    existing.booked += session._count.bookings;
-    seriesMap.set(label, existing);
+  const data = accumulatePeriodSeries(
+    sessions,
+    timeframe.period,
+    (session) => session.startsAt,
+    (label) => ({ period: label, totalCapacity: 0, totalBooked: 0, utilization: 0 }),
+    (acc, session) => {
+      acc.totalCapacity += session.capacity;
+      acc.totalBooked += session._count.bookings;
+    },
+  );
+  for (const item of data) {
+    item.utilization = roundedRatio(item.totalBooked, item.totalCapacity);
   }
-
-  const data = [...seriesMap.values()].map((item) => ({
-    period: item.label,
-    totalCapacity: item.capacity,
-    totalBooked: item.booked,
-    utilization: item.capacity > 0 ? Number((item.booked / item.capacity).toFixed(4)) : 0,
-  }));
 
   return ok({
     success: true,
     data,
-  });
+  } satisfies ReportsUtilizationResponse);
 }

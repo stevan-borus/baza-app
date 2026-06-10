@@ -1,7 +1,13 @@
+import type { ReportsUtilizationByClassTypeResponse } from "@baza/types";
 import { UserRole } from "@/generated/prisma";
 import { requireRole } from "@/lib/server/auth-guards";
 import { fail, ok } from "@/lib/server/http";
 import { prisma } from "@/lib/server/prisma";
+import {
+  accumulateByKey,
+  roundedRatio,
+  sortedByMetricDesc,
+} from "@/lib/server/report-aggregation";
 import { parseReportTimeframe } from "@/lib/server/reports";
 
 /**
@@ -35,32 +41,27 @@ export async function GET(request: Request) {
     },
   });
 
-  const byClassType = new Map<
-    string,
-    { classTypeId: string; name: string; capacity: number; booked: number }
-  >();
-  for (const session of sessions) {
-    const existing = byClassType.get(session.classTypeId) ?? {
+  const byClassType = accumulateByKey(
+    sessions,
+    (session) => session.classTypeId,
+    (session) => ({
       classTypeId: session.classTypeId,
       name: session.classType?.name ?? "—",
-      capacity: 0,
-      booked: 0,
-    };
-    existing.capacity += session.capacity;
-    existing.booked += session._count.bookings;
-    byClassType.set(session.classTypeId, existing);
-  }
+      totalCapacity: 0,
+      totalBooked: 0,
+    }),
+    (acc, session) => {
+      acc.totalCapacity += session.capacity;
+      acc.totalBooked += session._count.bookings;
+    },
+  );
+  const data = sortedByMetricDesc(
+    byClassType.map((row) => ({
+      ...row,
+      utilization: roundedRatio(row.totalBooked, row.totalCapacity),
+    })),
+    (row) => row.utilization,
+  );
 
-  const data = [...byClassType.values()]
-    .map((row) => ({
-      classTypeId: row.classTypeId,
-      name: row.name,
-      totalCapacity: row.capacity,
-      totalBooked: row.booked,
-      utilization:
-        row.capacity > 0 ? Number((row.booked / row.capacity).toFixed(4)) : 0,
-    }))
-    .sort((a, b) => b.utilization - a.utilization);
-
-  return ok({ success: true, data });
+  return ok({ success: true, data } satisfies ReportsUtilizationByClassTypeResponse);
 }

@@ -1,7 +1,12 @@
+import type { ReportsPackagesResponse } from "@baza/types";
 import { UserRole } from "@/generated/prisma";
 import { requireRole } from "@/lib/server/auth-guards";
 import { fail, ok } from "@/lib/server/http";
 import { prisma } from "@/lib/server/prisma";
+import {
+  accumulateByKey,
+  sortedByMetricDesc,
+} from "@/lib/server/report-aggregation";
 import { parseReportTimeframe } from "@/lib/server/reports";
 
 export async function GET(request: Request) {
@@ -24,17 +29,21 @@ export async function GET(request: Request) {
   });
 
   // Most-used = count of ClientPackages per PackageType, sorted desc.
-  const usageByType = new Map<string, { packageTypeId: string; name: string; count: number }>();
-  for (const cp of clientPackages) {
-    const existing = usageByType.get(cp.packageTypeId) ?? {
-      packageTypeId: cp.packageTypeId,
-      name: cp.packageType.name,
-      count: 0,
-    };
-    existing.count += 1;
-    usageByType.set(cp.packageTypeId, existing);
-  }
-  const mostUsed = [...usageByType.values()].sort((a, b) => b.count - a.count);
+  const mostUsed = sortedByMetricDesc(
+    accumulateByKey(
+      clientPackages,
+      (cp) => cp.packageTypeId,
+      (cp) => ({
+        packageTypeId: cp.packageTypeId,
+        name: cp.packageType.name,
+        count: 0,
+      }),
+      (acc) => {
+        acc.count += 1;
+      },
+    ),
+    (row) => row.count,
+  );
 
   // Revenue per PackageType — now that BillingRecord has packageTypeId, this is a direct group-by.
   const billingRecords = await prisma.billingRecord.findMany({
@@ -50,18 +59,21 @@ export async function GET(request: Request) {
       packageType: { select: { name: true } },
     },
   });
-  const revenueByType = new Map<string, { packageTypeId: string; name: string; revenue: number }>();
-  for (const br of billingRecords) {
-    if (!br.packageTypeId) continue;
-    const existing = revenueByType.get(br.packageTypeId) ?? {
-      packageTypeId: br.packageTypeId,
-      name: br.packageType?.name ?? "",
-      revenue: 0,
-    };
-    existing.revenue += br.amount;
-    revenueByType.set(br.packageTypeId, existing);
-  }
-  const revenuePerType = [...revenueByType.values()].sort((a, b) => b.revenue - a.revenue);
+  const revenuePerType = sortedByMetricDesc(
+    accumulateByKey(
+      billingRecords,
+      (br) => br.packageTypeId,
+      (br) => ({
+        packageTypeId: br.packageTypeId as string,
+        name: br.packageType?.name ?? "",
+        revenue: 0,
+      }),
+      (acc, br) => {
+        acc.revenue += br.amount;
+      },
+    ),
+    (row) => row.revenue,
+  );
 
   // Comp vs paid: a ClientPackage is "paid" (Flow 1) if a BillingRecord with the same
   // (clientUserId, packageTypeId) exists; otherwise it's a comp / Poklon paket (Flow 2).
@@ -81,5 +93,5 @@ export async function GET(request: Request) {
     mostUsed,
     revenuePerType,
     compVsPaid: { paid, comp, total: paid + comp },
-  });
+  } satisfies ReportsPackagesResponse);
 }
