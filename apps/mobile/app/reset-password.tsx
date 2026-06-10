@@ -11,6 +11,7 @@ import { Icon } from "@/components/ui/icon";
 import { MotiView } from "@/components/ui/styled";
 import { AuthBackground } from "@/components/auth/auth-background";
 import { AuthLanguageToggle } from "@/components/auth/auth-language-toggle";
+import { GetAppBanner } from "@/components/auth/get-app-banner";
 import { Input, PasswordInput } from "@/components/ui/input";
 import { LinkText } from "@/components/ui/typography";
 import { StudioButton } from "@/components/ui/studio";
@@ -126,6 +127,7 @@ export default function ResetPasswordScreen() {
     <AuthBackground showBack>
 
       <View className="flex-1 justify-center">
+        <GetAppBanner />
         <MotiView
           from={{ opacity: 0, scale: 0.85 }}
           animate={{ opacity: 1, scale: 1 }}

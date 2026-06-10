@@ -59,6 +59,11 @@ test.describe("auth extended (Serbian)", () => {
 
     await page.goto(`/accept-invite?token=${rawToken}`);
 
+    // Desktop UA → no "Get the app" store banner (it's a mobile-web fallback).
+    // Guards the Platform/SSR/UA gating in GetAppBanner.
+    await expect(page.getByTestId("invite-name-input")).toBeVisible();
+    await expect(page.getByTestId("get-app-banner")).toHaveCount(0);
+
     await page.getByTestId("invite-name-input").fill("New Client Invited");
     await page.getByTestId("invite-password-input").fill(NEW_PASSWORD);
     await page.getByTestId("invite-confirm-password-input").fill(NEW_PASSWORD);

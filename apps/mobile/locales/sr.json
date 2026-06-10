@@ -80,6 +80,10 @@
     "inviteInvalid": "Nevažeći link pozivnice",
     "inviteInvalidDesc": "Ovaj link pozivnice je nevažeći ili je istekao.",
     "inviteError": "Registracija nije uspela. Pozivnica je možda istekla.",
+    "getAppTitle": "Preuzmi Baza aplikaciju",
+    "getAppSubtitle": "Otvori na telefonu za potpuno iskustvo.",
+    "getAppButton": "Preuzmi aplikaciju",
+    "getAppDismiss": "Zatvori",
     "languageToggle": "Promeni jezik"
   },
   "notFound": {
