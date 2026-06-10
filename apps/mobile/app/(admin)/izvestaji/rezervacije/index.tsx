@@ -41,7 +41,7 @@ import {
   useTabBarBottomPadding,
 } from "@/components/ui/screen-container";
 import { usePeriodPill, type Period } from "@/lib/admin/use-period-pill";
-import { encodeReturnTo } from "@/lib/admin/return-to";
+import { drillHref } from "@/lib/admin/drill";
 
 const BAR_HEIGHT_MAX = 110;
 const BAR_HEIGHT_MIN = 4;
@@ -119,10 +119,9 @@ export default function IzvestajiRezervacije() {
   const waitlistCount = headline?.waitlistCount ?? 0;
 
   function drillToSession(sessionId: string) {
-    router.push({
-      pathname: "/(admin)/pregled/sessions/[id]",
-      params: { id: sessionId, returnTo: encodeReturnTo(RETURN_TO_PATH) },
-    });
+    router.push(
+      drillHref({ to: "session", returnTo: RETURN_TO_PATH, sessionId }),
+    );
   }
 
   return (

@@ -40,7 +40,7 @@ import {
   useTabBarBottomPadding,
 } from "@/components/ui/screen-container";
 import { usePeriodPill, type Period } from "@/lib/admin/use-period-pill";
-import { encodeReturnTo } from "@/lib/admin/return-to";
+import { drillHref } from "@/lib/admin/drill";
 
 const RETURN_TO_PATH = "/(admin)/izvestaji/paketi";
 
@@ -103,10 +103,9 @@ export default function IzvestajiPaketi() {
   );
 
   function drillToClient(clientUserId: string) {
-    router.push({
-      pathname: "/(admin)/klijenti/[id]",
-      params: { id: clientUserId, returnTo: encodeReturnTo(RETURN_TO_PATH) },
-    });
+    router.push(
+      drillHref({ to: "klijent", returnTo: RETURN_TO_PATH, clientUserId }),
+    );
   }
 
   return (
