@@ -16,8 +16,7 @@ import {
   reportsUtilizationResponseSchema,
   reportsUtilizationTimeSeriesResponseSchema,
 } from "@baza/types";
-import { apiFetch } from "@/lib/api";
-import { sharedEnv } from "@/lib/env.shared";
+import { apiRequest } from "@/lib/api-request";
 
 const reportsAll = ["reports"] as const;
 
@@ -32,17 +31,12 @@ export const reportsQueries = {
         params?.from ?? "",
         params?.to ?? "",
       ] as const,
-      queryFn: async () => {
-        const endpoint = `${sharedEnv.EXPO_PUBLIC_API_URL}/api/reports/summary`;
-        const searchParams = new URLSearchParams();
-        if (params?.from) searchParams.set("from", params.from);
-        if (params?.to) searchParams.set("to", params.to);
-        const qs = searchParams.toString();
-        const url = qs ? `${endpoint}?${qs}` : endpoint;
-        const response = await apiFetch(url, { credentials: "include" });
-        if (!response.ok) throw new Error(`Unable to load reports (${response.status})`);
-        return reportsSummaryResponseSchema.parse(await response.json());
-      },
+      queryFn: () =>
+        apiRequest("/api/reports/summary", {
+          params: { from: params?.from, to: params?.to },
+          schema: reportsSummaryResponseSchema,
+          errorMessage: "Unable to load reports",
+        }),
       staleTime: 60_000,
     }),
 
@@ -55,18 +49,12 @@ export const reportsQueries = {
         params?.to ?? "",
         params?.period ?? "",
       ] as const,
-      queryFn: async () => {
-        const endpoint = `${sharedEnv.EXPO_PUBLIC_API_URL}/api/reports/revenue`;
-        const searchParams = new URLSearchParams();
-        if (params?.from) searchParams.set("from", params.from);
-        if (params?.to) searchParams.set("to", params.to);
-        if (params?.period) searchParams.set("period", params.period);
-        const qs = searchParams.toString();
-        const url = qs ? `${endpoint}?${qs}` : endpoint;
-        const response = await apiFetch(url, { credentials: "include" });
-        if (!response.ok) throw new Error(`Unable to load revenue report (${response.status})`);
-        return reportsRevenueResponseSchema.parse(await response.json());
-      },
+      queryFn: () =>
+        apiRequest("/api/reports/revenue", {
+          params: { from: params?.from, to: params?.to, period: params?.period },
+          schema: reportsRevenueResponseSchema,
+          errorMessage: "Unable to load revenue report",
+        }),
       staleTime: 60_000,
     }),
 
@@ -79,19 +67,12 @@ export const reportsQueries = {
         params?.to ?? "",
         params?.period ?? "",
       ] as const,
-      queryFn: async () => {
-        const endpoint = `${sharedEnv.EXPO_PUBLIC_API_URL}/api/reports/utilization`;
-        const searchParams = new URLSearchParams();
-        if (params?.from) searchParams.set("from", params.from);
-        if (params?.to) searchParams.set("to", params.to);
-        if (params?.period) searchParams.set("period", params.period);
-        const qs = searchParams.toString();
-        const url = qs ? `${endpoint}?${qs}` : endpoint;
-        const response = await apiFetch(url, { credentials: "include" });
-        if (!response.ok)
-          throw new Error(`Unable to load utilization report (${response.status})`);
-        return reportsUtilizationResponseSchema.parse(await response.json());
-      },
+      queryFn: () =>
+        apiRequest("/api/reports/utilization", {
+          params: { from: params?.from, to: params?.to, period: params?.period },
+          schema: reportsUtilizationResponseSchema,
+          errorMessage: "Unable to load utilization report",
+        }),
       staleTime: 60_000,
     }),
 
@@ -104,19 +85,12 @@ export const reportsQueries = {
         params?.to ?? "",
         params?.period ?? "",
       ] as const,
-      queryFn: async () => {
-        const endpoint = `${sharedEnv.EXPO_PUBLIC_API_URL}/api/reports/attendance`;
-        const searchParams = new URLSearchParams();
-        if (params?.from) searchParams.set("from", params.from);
-        if (params?.to) searchParams.set("to", params.to);
-        if (params?.period) searchParams.set("period", params.period);
-        const qs = searchParams.toString();
-        const url = qs ? `${endpoint}?${qs}` : endpoint;
-        const response = await apiFetch(url, { credentials: "include" });
-        if (!response.ok)
-          throw new Error(`Unable to load bookings report (${response.status})`);
-        return reportsBookingsResponseSchema.parse(await response.json());
-      },
+      queryFn: () =>
+        apiRequest("/api/reports/attendance", {
+          params: { from: params?.from, to: params?.to, period: params?.period },
+          schema: reportsBookingsResponseSchema,
+          errorMessage: "Unable to load bookings report",
+        }),
       staleTime: 60_000,
     }),
 
@@ -129,19 +103,12 @@ export const reportsQueries = {
         params?.to ?? "",
         params?.period ?? "",
       ] as const,
-      queryFn: async () => {
-        const endpoint = `${sharedEnv.EXPO_PUBLIC_API_URL}/api/reports/utilization/by-room`;
-        const searchParams = new URLSearchParams();
-        if (params?.from) searchParams.set("from", params.from);
-        if (params?.to) searchParams.set("to", params.to);
-        if (params?.period) searchParams.set("period", params.period);
-        const qs = searchParams.toString();
-        const url = qs ? `${endpoint}?${qs}` : endpoint;
-        const response = await apiFetch(url, { credentials: "include" });
-        if (!response.ok)
-          throw new Error(`Unable to load utilization breakdown (${response.status})`);
-        return reportsUtilizationByRoomResponseSchema.parse(await response.json());
-      },
+      queryFn: () =>
+        apiRequest("/api/reports/utilization/by-room", {
+          params: { from: params?.from, to: params?.to, period: params?.period },
+          schema: reportsUtilizationByRoomResponseSchema,
+          errorMessage: "Unable to load utilization breakdown",
+        }),
       staleTime: 60_000,
     }),
 
@@ -154,19 +121,12 @@ export const reportsQueries = {
         params?.to ?? "",
         params?.period ?? "",
       ] as const,
-      queryFn: async () => {
-        const endpoint = `${sharedEnv.EXPO_PUBLIC_API_URL}/api/reports/utilization/by-class-type`;
-        const searchParams = new URLSearchParams();
-        if (params?.from) searchParams.set("from", params.from);
-        if (params?.to) searchParams.set("to", params.to);
-        if (params?.period) searchParams.set("period", params.period);
-        const qs = searchParams.toString();
-        const url = qs ? `${endpoint}?${qs}` : endpoint;
-        const response = await apiFetch(url, { credentials: "include" });
-        if (!response.ok)
-          throw new Error(`Unable to load utilization breakdown (${response.status})`);
-        return reportsUtilizationByClassTypeResponseSchema.parse(await response.json());
-      },
+      queryFn: () =>
+        apiRequest("/api/reports/utilization/by-class-type", {
+          params: { from: params?.from, to: params?.to, period: params?.period },
+          schema: reportsUtilizationByClassTypeResponseSchema,
+          errorMessage: "Unable to load utilization breakdown",
+        }),
       staleTime: 60_000,
     }),
 
@@ -179,19 +139,12 @@ export const reportsQueries = {
         params?.to ?? "",
         params?.period ?? "",
       ] as const,
-      queryFn: async () => {
-        const endpoint = `${sharedEnv.EXPO_PUBLIC_API_URL}/api/reports/utilization/by-trainer`;
-        const searchParams = new URLSearchParams();
-        if (params?.from) searchParams.set("from", params.from);
-        if (params?.to) searchParams.set("to", params.to);
-        if (params?.period) searchParams.set("period", params.period);
-        const qs = searchParams.toString();
-        const url = qs ? `${endpoint}?${qs}` : endpoint;
-        const response = await apiFetch(url, { credentials: "include" });
-        if (!response.ok)
-          throw new Error(`Unable to load utilization breakdown (${response.status})`);
-        return reportsUtilizationByTrainerResponseSchema.parse(await response.json());
-      },
+      queryFn: () =>
+        apiRequest("/api/reports/utilization/by-trainer", {
+          params: { from: params?.from, to: params?.to, period: params?.period },
+          schema: reportsUtilizationByTrainerResponseSchema,
+          errorMessage: "Unable to load utilization breakdown",
+        }),
       staleTime: 60_000,
     }),
 
@@ -204,19 +157,12 @@ export const reportsQueries = {
         params?.to ?? "",
         params?.period ?? "",
       ] as const,
-      queryFn: async () => {
-        const endpoint = `${sharedEnv.EXPO_PUBLIC_API_URL}/api/reports/revenue/time-series`;
-        const searchParams = new URLSearchParams();
-        if (params?.from) searchParams.set("from", params.from);
-        if (params?.to) searchParams.set("to", params.to);
-        if (params?.period) searchParams.set("period", params.period);
-        const qs = searchParams.toString();
-        const url = qs ? `${endpoint}?${qs}` : endpoint;
-        const response = await apiFetch(url, { credentials: "include" });
-        if (!response.ok)
-          throw new Error(`Unable to load revenue time series (${response.status})`);
-        return reportsRevenueTimeSeriesResponseSchema.parse(await response.json());
-      },
+      queryFn: () =>
+        apiRequest("/api/reports/revenue/time-series", {
+          params: { from: params?.from, to: params?.to, period: params?.period },
+          schema: reportsRevenueTimeSeriesResponseSchema,
+          errorMessage: "Unable to load revenue time series",
+        }),
       staleTime: 60_000,
     }),
 
@@ -228,20 +174,12 @@ export const reportsQueries = {
         params?.from ?? "",
         params?.to ?? "",
       ] as const,
-      queryFn: async () => {
-        const endpoint = `${sharedEnv.EXPO_PUBLIC_API_URL}/api/reports/revenue/by-package-type`;
-        const searchParams = new URLSearchParams();
-        if (params?.from) searchParams.set("from", params.from);
-        if (params?.to) searchParams.set("to", params.to);
-        const qs = searchParams.toString();
-        const url = qs ? `${endpoint}?${qs}` : endpoint;
-        const response = await apiFetch(url, { credentials: "include" });
-        if (!response.ok)
-          throw new Error(
-            `Unable to load revenue by package type (${response.status})`,
-          );
-        return reportsRevenueByPackageTypeResponseSchema.parse(await response.json());
-      },
+      queryFn: () =>
+        apiRequest("/api/reports/revenue/by-package-type", {
+          params: { from: params?.from, to: params?.to },
+          schema: reportsRevenueByPackageTypeResponseSchema,
+          errorMessage: "Unable to load revenue by package type",
+        }),
       staleTime: 60_000,
     }),
 
@@ -254,19 +192,12 @@ export const reportsQueries = {
         params?.to ?? "",
         params?.period ?? "",
       ] as const,
-      queryFn: async () => {
-        const endpoint = `${sharedEnv.EXPO_PUBLIC_API_URL}/api/reports/utilization/heatmap`;
-        const searchParams = new URLSearchParams();
-        if (params?.from) searchParams.set("from", params.from);
-        if (params?.to) searchParams.set("to", params.to);
-        if (params?.period) searchParams.set("period", params.period);
-        const qs = searchParams.toString();
-        const url = qs ? `${endpoint}?${qs}` : endpoint;
-        const response = await apiFetch(url, { credentials: "include" });
-        if (!response.ok)
-          throw new Error(`Unable to load utilization heatmap (${response.status})`);
-        return reportsUtilizationHeatmapResponseSchema.parse(await response.json());
-      },
+      queryFn: () =>
+        apiRequest("/api/reports/utilization/heatmap", {
+          params: { from: params?.from, to: params?.to, period: params?.period },
+          schema: reportsUtilizationHeatmapResponseSchema,
+          errorMessage: "Unable to load utilization heatmap",
+        }),
       staleTime: 60_000,
     }),
 
@@ -279,21 +210,12 @@ export const reportsQueries = {
         params?.to ?? "",
         params?.period ?? "",
       ] as const,
-      queryFn: async () => {
-        const endpoint = `${sharedEnv.EXPO_PUBLIC_API_URL}/api/reports/utilization/time-series`;
-        const searchParams = new URLSearchParams();
-        if (params?.from) searchParams.set("from", params.from);
-        if (params?.to) searchParams.set("to", params.to);
-        if (params?.period) searchParams.set("period", params.period);
-        const qs = searchParams.toString();
-        const url = qs ? `${endpoint}?${qs}` : endpoint;
-        const response = await apiFetch(url, { credentials: "include" });
-        if (!response.ok)
-          throw new Error(
-            `Unable to load utilization time series (${response.status})`,
-          );
-        return reportsUtilizationTimeSeriesResponseSchema.parse(await response.json());
-      },
+      queryFn: () =>
+        apiRequest("/api/reports/utilization/time-series", {
+          params: { from: params?.from, to: params?.to, period: params?.period },
+          schema: reportsUtilizationTimeSeriesResponseSchema,
+          errorMessage: "Unable to load utilization time series",
+        }),
       staleTime: 60_000,
     }),
 
@@ -305,18 +227,12 @@ export const reportsQueries = {
         params?.from ?? "",
         params?.to ?? "",
       ] as const,
-      queryFn: async () => {
-        const endpoint = `${sharedEnv.EXPO_PUBLIC_API_URL}/api/reports/revenue/by-method`;
-        const searchParams = new URLSearchParams();
-        if (params?.from) searchParams.set("from", params.from);
-        if (params?.to) searchParams.set("to", params.to);
-        const qs = searchParams.toString();
-        const url = qs ? `${endpoint}?${qs}` : endpoint;
-        const response = await apiFetch(url, { credentials: "include" });
-        if (!response.ok)
-          throw new Error(`Unable to load revenue by method (${response.status})`);
-        return reportsRevenueByMethodResponseSchema.parse(await response.json());
-      },
+      queryFn: () =>
+        apiRequest("/api/reports/revenue/by-method", {
+          params: { from: params?.from, to: params?.to },
+          schema: reportsRevenueByMethodResponseSchema,
+          errorMessage: "Unable to load revenue by method",
+        }),
       staleTime: 60_000,
     }),
 
@@ -329,19 +245,12 @@ export const reportsQueries = {
         params?.to ?? "",
         params?.period ?? "",
       ] as const,
-      queryFn: async () => {
-        const endpoint = `${sharedEnv.EXPO_PUBLIC_API_URL}/api/reports/bookings/detail`;
-        const searchParams = new URLSearchParams();
-        if (params?.from) searchParams.set("from", params.from);
-        if (params?.to) searchParams.set("to", params.to);
-        if (params?.period) searchParams.set("period", params.period);
-        const qs = searchParams.toString();
-        const url = qs ? `${endpoint}?${qs}` : endpoint;
-        const response = await apiFetch(url, { credentials: "include" });
-        if (!response.ok)
-          throw new Error(`Unable to load bookings detail (${response.status})`);
-        return reportsBookingsDetailResponseSchema.parse(await response.json());
-      },
+      queryFn: () =>
+        apiRequest("/api/reports/bookings/detail", {
+          params: { from: params?.from, to: params?.to, period: params?.period },
+          schema: reportsBookingsDetailResponseSchema,
+          errorMessage: "Unable to load bookings detail",
+        }),
       staleTime: 60_000,
     }),
 
@@ -354,19 +263,12 @@ export const reportsQueries = {
         params?.to ?? "",
         params?.period ?? "",
       ] as const,
-      queryFn: async () => {
-        const endpoint = `${sharedEnv.EXPO_PUBLIC_API_URL}/api/reports/packages/detail`;
-        const searchParams = new URLSearchParams();
-        if (params?.from) searchParams.set("from", params.from);
-        if (params?.to) searchParams.set("to", params.to);
-        if (params?.period) searchParams.set("period", params.period);
-        const qs = searchParams.toString();
-        const url = qs ? `${endpoint}?${qs}` : endpoint;
-        const response = await apiFetch(url, { credentials: "include" });
-        if (!response.ok)
-          throw new Error(`Unable to load packages detail (${response.status})`);
-        return reportsPackagesDetailResponseSchema.parse(await response.json());
-      },
+      queryFn: () =>
+        apiRequest("/api/reports/packages/detail", {
+          params: { from: params?.from, to: params?.to, period: params?.period },
+          schema: reportsPackagesDetailResponseSchema,
+          errorMessage: "Unable to load packages detail",
+        }),
       staleTime: 60_000,
     }),
 
@@ -379,19 +281,12 @@ export const reportsQueries = {
         params?.to ?? "",
         params?.period ?? "",
       ] as const,
-      queryFn: async () => {
-        const endpoint = `${sharedEnv.EXPO_PUBLIC_API_URL}/api/reports/packages`;
-        const searchParams = new URLSearchParams();
-        if (params?.from) searchParams.set("from", params.from);
-        if (params?.to) searchParams.set("to", params.to);
-        if (params?.period) searchParams.set("period", params.period);
-        const qs = searchParams.toString();
-        const url = qs ? `${endpoint}?${qs}` : endpoint;
-        const response = await apiFetch(url, { credentials: "include" });
-        if (!response.ok)
-          throw new Error(`Unable to load packages report (${response.status})`);
-        return reportsPackagesResponseSchema.parse(await response.json());
-      },
+      queryFn: () =>
+        apiRequest("/api/reports/packages", {
+          params: { from: params?.from, to: params?.to, period: params?.period },
+          schema: reportsPackagesResponseSchema,
+          errorMessage: "Unable to load packages report",
+        }),
       staleTime: 60_000,
     }),
 };

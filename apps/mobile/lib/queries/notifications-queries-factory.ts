@@ -1,7 +1,6 @@
 import { queryOptions, mutationOptions, infiniteQueryOptions, useMutation, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { z } from "zod";
-import { apiFetch } from "@/lib/api";
-import { sharedEnv } from "@/lib/env.shared";
+import { apiRequest } from "@/lib/api-request";
 
 const jsonValueSchema: z.ZodType<string | number | boolean | null | Record<string, string | number | boolean | null> | Array<string | number | boolean | null>> = z.lazy(() =>
   z.union([
@@ -46,12 +45,12 @@ const preferencesResponseSchema = z.object({
 export type Notification = z.infer<typeof notificationSchema>;
 type NotificationsResponse = z.infer<typeof notificationsResponseSchema>;
 
-async function fetchNotificationsPage(cursor?: string | null): Promise<NotificationsResponse> {
-  const query = cursor ? `?cursor=${encodeURIComponent(cursor)}` : "";
-  const url = `${sharedEnv.EXPO_PUBLIC_API_URL}/api/notifications${query}`;
-  const response = await apiFetch(url, { credentials: "include" });
-  if (!response.ok) throw new Error(`Unable to load notifications (${response.status})`);
-  return notificationsResponseSchema.parse(await response.json());
+function fetchNotificationsPage(cursor?: string | null): Promise<NotificationsResponse> {
+  return apiRequest("/api/notifications", {
+    params: { cursor },
+    schema: notificationsResponseSchema,
+    errorMessage: "Unable to load notifications",
+  });
 }
 
 const notificationsAll = ["notifications"] as const;
@@ -78,14 +77,11 @@ export const notificationsQueries = {
   markAsRead: () =>
     mutationOptions({
       mutationKey: [...notificationsAll, "mark-read"] as const,
-      mutationFn: async (id: string) => {
-        const response = await apiFetch(
-          `${sharedEnv.EXPO_PUBLIC_API_URL}/api/notifications/${id}`,
-          { method: "PATCH", credentials: "include" },
-        );
-        if (!response.ok) throw new Error(`Unable to mark notification as read (${response.status})`);
-        return response.json();
-      },
+      mutationFn: (id: string) =>
+        apiRequest(`/api/notifications/${id}`, {
+          method: "PATCH",
+          errorMessage: "Unable to mark notification as read",
+        }),
     }),
 
   markManyRead: () =>
@@ -95,32 +91,22 @@ export const notificationsQueries = {
         if (ids.length === 0) return { success: true, count: 0 };
         // PATCH on the collection endpoint — a sibling `/mark-read` subpath
         // gets shadowed by the dynamic `[id]/+api.ts` matcher.
-        const response = await apiFetch(
-          `${sharedEnv.EXPO_PUBLIC_API_URL}/api/notifications`,
-          {
-            method: "PATCH",
-            credentials: "include",
-            headers: { "content-type": "application/json" },
-            body: JSON.stringify({ ids }),
-          },
-        );
-        if (!response.ok) throw new Error(`Unable to mark notifications as read (${response.status})`);
-        return response.json();
+        return apiRequest("/api/notifications", {
+          method: "PATCH",
+          body: { ids },
+          errorMessage: "Unable to mark notifications as read",
+        });
       },
     }),
 
   preferences: () =>
     queryOptions({
       queryKey: [...notificationsAll, "preferences"] as const,
-      queryFn: async () => {
-        const response = await apiFetch(
-          `${sharedEnv.EXPO_PUBLIC_API_URL}/api/notifications/preferences`,
-          { credentials: "include" },
-        );
-        if (!response.ok)
-          throw new Error(`Unable to load notification preferences (${response.status})`);
-        return preferencesResponseSchema.parse(await response.json());
-      },
+      queryFn: () =>
+        apiRequest("/api/notifications/preferences", {
+          schema: preferencesResponseSchema,
+          errorMessage: "Unable to load notification preferences",
+        }),
       staleTime: 60_000,
     }),
 
@@ -131,39 +117,23 @@ export const notificationsQueries = {
         deviceId: string;
         expoPushToken: string;
         preferredLocale?: "sr" | "en";
-      }) => {
-        const response = await apiFetch(
-          `${sharedEnv.EXPO_PUBLIC_API_URL}/api/notifications/push-token`,
-          {
-            method: "POST",
-            credentials: "include",
-            headers: { "content-type": "application/json" },
-            body: JSON.stringify(payload),
-          },
-        );
-        if (!response.ok) throw new Error(`Unable to register push token (${response.status})`);
-        return response.json();
-      },
+      }) =>
+        apiRequest("/api/notifications/push-token", {
+          method: "POST",
+          body: payload,
+          errorMessage: "Unable to register push token",
+        }),
     }),
 
   unregisterPushToken: () =>
     mutationOptions({
       mutationKey: [...notificationsAll, "push-token", "unregister"] as const,
-      mutationFn: async (payload?: { deviceId?: string; expoPushToken?: string }) => {
-        const response = await apiFetch(
-          `${sharedEnv.EXPO_PUBLIC_API_URL}/api/notifications/push-token`,
-          {
-            method: "DELETE",
-            credentials: "include",
-            headers: { "content-type": "application/json" },
-            body: JSON.stringify(payload ?? {}),
-          },
-        );
-        if (!response.ok) {
-          throw new Error(`Unable to unregister push token (${response.status})`);
-        }
-        return response.json();
-      },
+      mutationFn: (payload?: { deviceId?: string; expoPushToken?: string }) =>
+        apiRequest("/api/notifications/push-token", {
+          method: "DELETE",
+          body: payload ?? {},
+          errorMessage: "Unable to unregister push token",
+        }),
     }),
 
   updatePreferences: () =>
@@ -175,19 +145,12 @@ export const notificationsQueries = {
         campaignsEnabled?: boolean;
         bookingEmailsEnabled?: boolean;
         preferredLocale?: "sr" | "en" | null;
-      }) => {
-        const response = await apiFetch(
-          `${sharedEnv.EXPO_PUBLIC_API_URL}/api/notifications/preferences`,
-          {
-            method: "PATCH",
-            credentials: "include",
-            headers: { "content-type": "application/json" },
-            body: JSON.stringify(payload),
-          },
-        );
-        if (!response.ok) throw new Error(`Unable to update preferences (${response.status})`);
-        return response.json();
-      },
+      }) =>
+        apiRequest("/api/notifications/preferences", {
+          method: "PATCH",
+          body: payload,
+          errorMessage: "Unable to update preferences",
+        }),
     }),
 };
 

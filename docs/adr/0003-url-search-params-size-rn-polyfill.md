@@ -1,3 +1,5 @@
 # Don't use URLSearchParams.size in client query factories
 
 React Native's `URLSearchParams` polyfill (whatwg-url-without-unicode via metro/react-native-url-polyfill) returns `undefined` for the `.size` property — silently. Any code that reads `searchParams.size > 0` always evaluates to `false`, so the query string is dropped and the server receives an unfiltered request. This bit us across nine call sites in `billing-queries-factory.ts` and `reports-queries-factory.ts` — every list and report screen looked broken because filters never reached the server, even though the integration tests passed (Node has working `.size`). Canonical pattern is `const qs = searchParams.toString(); const url = qs ? `${endpoint}?${qs}` : endpoint;` — read the actual serialised string and check its truthiness, no `.size` anywhere.
+
+Update: the idiom now lives in exactly one place — `buildApiUrl` in `apps/mobile/lib/api-request.ts` (the `apiRequest` seam). Query factories pass plain param objects and never touch `URLSearchParams` themselves; `test/unit/api-request.test.ts` pins the behavior against a polyfill whose `.size` is `undefined`.
