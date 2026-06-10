@@ -114,29 +114,32 @@ describe("cron:birthdays", () => {
     expect(notifiedAdminIds).toEqual([a1.id, a2.id].sort());
   });
 
-  it("dedupes by birthday:{userId}:{YYYY-MM-DD}", async () => {
+  it("dedupes per recipient: birthday:{clientUserId}:{YYYY-MM-DD}:{adminId}", async () => {
     const today = now().toISOString().slice(0, 10);
     const mmdd = today.slice(5);
 
-    await seedAdmin();
-    await seedClientWithBirthday({
+    const a1 = await seedAdmin("a1@test.local");
+    const a2 = await seedAdmin("a2@test.local");
+    const client = await seedClientWithBirthday({
       email: "client@test.local",
       fullName: "Client",
       dateOfBirth: `1990-${mmdd}`,
     });
 
     await POST_BIRTHDAYS(buildCronRequest());
-    const firstRunCalls = createSystemNotificationMock.mock.calls.filter(
-      (call) => call[2] === "BIRTHDAY_ADMIN_PROMPT",
-    ).length;
-    expect(firstRunCalls).toBe(1);
 
-    const firstCall = createSystemNotificationMock.mock.calls.find(
+    const promptCalls = createSystemNotificationMock.mock.calls.filter(
       (call) => call[2] === "BIRTHDAY_ADMIN_PROMPT",
     );
-    expect(firstCall![4]).toMatchObject({
-      dedupeKey: expect.stringMatching(/^birthday:[a-z0-9-]+:\d{4}-\d{2}-\d{2}$/),
-    });
+    expect(promptCalls).toHaveLength(2);
+    // Each admin's send carries their own dedupe key (client+day+recipient),
+    // so every admin gets a NotificationLog row while cron retries stay
+    // idempotent per recipient.
+    const keysByAdmin = new Map(
+      promptCalls.map((call) => [call[0], (call[4] as { dedupeKey?: string })?.dedupeKey]),
+    );
+    expect(keysByAdmin.get(a1.id)).toBe(`birthday:${client.id}:${today}:${a1.id}`);
+    expect(keysByAdmin.get(a2.id)).toBe(`birthday:${client.id}:${today}:${a2.id}`);
   });
 
   it("dryRun=true counts matches but does not call createSystemNotification", async () => {

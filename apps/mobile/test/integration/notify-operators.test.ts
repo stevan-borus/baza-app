@@ -232,24 +232,30 @@ describe("notifyOperators", () => {
     for (const log of logs) expect(log.type).toBe("MINOR_PAPER_NEEDED");
   });
 
-  it("BIRTHDAY_ADMIN_PROMPT keeps its global (recipient-independent) dedupe key — preserved as-is from the cron", async () => {
-    await seedUser("ADMIN", "a1@test.local");
-    await seedUser("ADMIN", "a2@test.local");
+  it("BIRTHDAY_ADMIN_PROMPT reaches every active admin with a per-recipient dedupe key — a cron retry creates no duplicate rows", async () => {
+    const adminA = await seedUser("ADMIN", "a1@test.local");
+    const adminB = await seedUser("ADMIN", "a2@test.local");
 
-    await notifyOperators({
-      event: "BIRTHDAY_ADMIN_PROMPT",
-      payload: { clientUserId: "u1", today: "2026-05-09" },
-      // The cron's key is per client+day, NOT per recipient — so with several
-      // admins only the first send creates a row. Characterized, not endorsed.
-      dedupeKey: () => "birthday:u1:2026-05-09",
-    });
+    // The cron keys per client+day+recipient so all admins get their own row
+    // while a same-day retry stays idempotent per recipient.
+    const dispatch = () =>
+      notifyOperators({
+        event: "BIRTHDAY_ADMIN_PROMPT",
+        payload: { clientUserId: "u1", today: "2026-05-09" },
+        dedupeKey: (recipientUserId) => `birthday:u1:2026-05-09:${recipientUserId}`,
+      });
+    await dispatch();
+    await dispatch(); // retry — must be idempotent
 
     const logs = await prisma.notificationLog.findMany({
-      select: { type: true, notificationKey: true },
+      select: { userId: true, type: true, notificationKey: true },
     });
-    expect(logs).toHaveLength(1);
-    expect(logs[0].type).toBe("BIRTHDAY_ADMIN_PROMPT");
-    expect(logs[0].notificationKey).toBe("birthday:u1:2026-05-09");
+    expect(logs).toHaveLength(2);
+    expect(logs.map((l) => l.userId).sort()).toEqual([adminA.id, adminB.id].sort());
+    for (const log of logs) {
+      expect(log.type).toBe("BIRTHDAY_ADMIN_PROMPT");
+      expect(log.notificationKey).toBe(`birthday:u1:2026-05-09:${log.userId}`);
+    }
   });
 
   it("BOOKING_CANCELED notifies the assigned trainer (trainer flavor) and every active admin (admin flavor)", async () => {

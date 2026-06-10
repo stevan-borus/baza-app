@@ -78,10 +78,10 @@ export async function POST(request: Request) {
         suggestedClassTypeId,
         today: todayIso,
       },
-      // Keyed per client+day, NOT per recipient — preserved as-is from the
-      // pre-dispatcher cron (with several admins only the first send creates
-      // a row; see the PR notes on dedupe-rule inconsistencies).
-      dedupeKey: () => `birthday:${client.userId}:${todayIso}`,
+      // Keyed per client+day+recipient (mirrors unbacked-attendance): every
+      // admin gets their own NotificationLog row, while cron retries stay
+      // idempotent — same recipient, same client, same day → no duplicate.
+      dedupeKey: (recipientUserId) => `birthday:${client.userId}:${todayIso}:${recipientUserId}`,
     });
     sent += admins.length;
   }
