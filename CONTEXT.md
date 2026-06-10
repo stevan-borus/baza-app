@@ -57,7 +57,7 @@ The ClassType scoping rule (a Reformer ClientPackage cannot back an Energy Booki
 Creation lives on **one screen**: the admin schedule (existing `pregled` calendar) in reservation mode, with a persistent client-selection banner and a selection toolbar. The **only** entry point is the Client profile's "Reserve sessions" action — the screen is never reachable with no client picked, so the banner is always bound. The route is **admin-only**; trainers and clients hitting it are redirected. Under the hood, every reservation is the same gesture: a set of selected `sessionId`s submitted to a single endpoint (`POST /admin/reservations`).
 
 Selection is built from two interchangeable inputs that both feed the *same* selection set:
-- **Tap selection** — Admin taps individual Session cards in the calendar to toggle them. Past Sessions are selectable too (admins routinely backfill).
+- **Tap selection** — Admin taps individual Session cards in the calendar to toggle them. Past Sessions are **not** selectable — reservations are forward-looking; there is no backfill of already-elapsed Sessions from this screen.
 - **Pattern overlay** — A power-tool sheet ("Apply pattern…") with two rhythms:
   - **Weekly**: pick weekday(s) + time-of-day + N-week range. Applies the same set every week.
   - **Biweekly**: pick a "Week A" set + a "Week B" set, each with its own weekdays and time. Alternates A/B/A/B across the range. Week A is anchored to the week the range begins in — there is no week-offset toggle; admins reframe by shifting the start date.
@@ -65,7 +65,7 @@ Selection is built from two interchangeable inputs that both feed the *same* sel
 
 The day list is filterable by **ClassType** chips (All / Reformer / Energy / Moms&Minis / Golden age) so admins picking a specific kind don't have to scan past other class types.
 
-Capacity conflicts are visible **in the calendar during selection**, not summarised after. Full Sessions render with a distinct unavailable treatment in reservation mode and are unselectable; when the pattern overlay matches a full Session, the card highlights in a conflict color rather than the normal selection color. The Client is never auto-waitlisted by a reservation gesture — admin decides per-Session whether to manually waitlist.
+Capacity is visible **in the calendar during selection**, not summarised after: every Session card carries a **capacity badge** (booked / capacity), so an admin sees fullness inline. Full Sessions are unselectable **by tap** (the card renders a distinct unavailable treatment). There is no separate "conflict color"; the capacity badge is the cue. Note one current asymmetry: the **pattern overlay** still adds a matched full Session to the selection set (it skips only Sessions the Client has *already booked*, not full ones) — so a pattern can over-select past capacity where a tap cannot. The Client is never auto-waitlisted by a reservation gesture — admin decides per-Session whether to manually waitlist.
 
 _Avoid_: "Hold", "block", "standing booking". The word is **reservation** when admin-initiated, **booking** in all other contexts; storage is one `Booking` table.
 
