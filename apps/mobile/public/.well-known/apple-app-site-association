@@ -1,0 +1,21 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": ["TEAMID_PLACEHOLDER.com.steva.borus.baza-pilates"],
+        "components": [
+          {
+            "/": "/accept-invite",
+            "?": { "token": "*" },
+            "comment": "Invite activation link"
+          },
+          {
+            "/": "/reset-password",
+            "?": { "token": "*" },
+            "comment": "Password reset link"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -7,6 +7,7 @@ import { CampaignEmail } from "@/emails/campaign-email";
 import { InviteEmail } from "@/emails/invite-email";
 import { ResetEmail } from "@/emails/reset-email";
 import { captureResetTokenForE2E } from "@/lib/server/e2e-reset-token-capture";
+import { buildInviteUrl, buildResetUrl } from "@/lib/server/email-urls";
 import { env } from "@/lib/server/env";
 import { tryCatch } from "@/lib/server/try-catch";
 
@@ -52,7 +53,7 @@ export async function sendInviteEmail(params: {
   lastName: string;
   inviteToken: string;
 }) {
-  const inviteUrl = `${env.APP_WEB_URL}/auth/activate?token=${encodeURIComponent(params.inviteToken)}`;
+  const inviteUrl = buildInviteUrl(env.APP_WEB_URL, params.inviteToken);
   const fullName = formatFullName(params.firstName, params.lastName);
   const html = await render(
     createElement(InviteEmail, { fullName, inviteUrl }),
@@ -65,7 +66,7 @@ export async function sendResetEmail(params: {
   resetToken: string;
 }) {
   await captureResetTokenForE2E({ email: params.to, token: params.resetToken });
-  const resetUrl = `${env.APP_WEB_URL}/auth/reset-password?token=${encodeURIComponent(params.resetToken)}`;
+  const resetUrl = buildResetUrl(env.APP_WEB_URL, params.resetToken);
   const html = await render(createElement(ResetEmail, { resetUrl }));
   await sendEmail(params.to, "Baza Pilates - reset lozinke", html);
 }
