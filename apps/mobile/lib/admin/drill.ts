@@ -53,30 +53,34 @@ export type Drill =
       sessionId: string;
     };
 
-/** Build the `router.push` href for a drill. Pure — unit-tested directly. */
-export function drillHref(drill: Drill):
-  | { pathname: "/(admin)/naplata"; params: Record<string, string> }
-  | { pathname: "/(admin)/klijenti/[id]"; params: Record<string, string> }
-  | { pathname: "/(admin)/pregled/sessions/[id]"; params: Record<string, string> } {
+/**
+ * Build the `router.push` href for a drill. Pure — unit-tested directly.
+ *
+ * The return type is left to inference so each branch keeps the concrete
+ * param shape Expo Router's typed routes require (the `[id]` routes need a
+ * literal `id` key — a widened `Record<string, string>` annotation erases it
+ * and `router.push` rejects the result).
+ */
+export function drillHref(drill: Drill) {
   const returnTo = encodeReturnTo(drill.returnTo);
   if (drill.to === "klijent") {
     return {
-      pathname: "/(admin)/klijenti/[id]",
+      pathname: "/(admin)/klijenti/[id]" as const,
       params: { id: drill.clientUserId, returnTo },
     };
   }
   if (drill.to === "session") {
     return {
-      pathname: "/(admin)/pregled/sessions/[id]",
+      pathname: "/(admin)/pregled/sessions/[id]" as const,
       params: { id: drill.sessionId, returnTo },
     };
   }
-  const params: Record<string, string> = { returnTo };
-  if (drill.window) {
-    params.from = drill.window.from;
-    params.to = drill.window.to;
-  }
-  return { pathname: "/(admin)/naplata", params };
+  return {
+    pathname: "/(admin)/naplata" as const,
+    params: drill.window
+      ? { returnTo, from: drill.window.from, to: drill.window.to }
+      : { returnTo },
+  };
 }
 
 /**
