@@ -1,4 +1,3 @@
-import { NOTIFICATION_MESSAGE_KEYS } from "@baza/i18n";
 import { formatFullName } from "@baza/types";
 import { UserRole } from "@/generated/prisma";
 import { requireRole } from "@/lib/server/auth-guards";
@@ -7,8 +6,11 @@ import {
   promoteNextWaitlistEntry,
 } from "@/lib/server/booking-cancellation";
 import { fail, ok } from "@/lib/server/http";
-import { createSystemNotification } from "@/lib/server/notifications";
 import { notifyClient } from "@/lib/server/notify-client";
+import {
+  coalesceTrainerCancelCounts,
+  notifyOperators,
+} from "@/lib/server/notify-operators";
 import { now } from "@/lib/now";
 import { prisma } from "@/lib/server/prisma";
 
@@ -134,12 +136,6 @@ export async function POST(request: Request) {
     byClient.set(clientUserId, bucket);
   }
 
-  const admins = await prisma.user.findMany({
-    where: { role: UserRole.ADMIN, isActive: true },
-    select: { id: true },
-  });
-  const otherAdminIds = admins.map((a) => a.id).filter((id) => id !== initiatorId);
-
   void (async () => {
     for (const [clientUserId, bucket] of byClient) {
       // Client-facing email. A single-booking cancel gets the singular
@@ -153,39 +149,17 @@ export async function POST(request: Request) {
         vars: { count },
         recipient: bucket.recipient,
       });
-      // Distinct trainers affected for this client's cancellations.
-      const trainerToCount = new Map<string, number>();
-      for (const b of bucket.bookings) {
-        trainerToCount.set(
-          b.session.trainerUserId,
-          (trainerToCount.get(b.session.trainerUserId) ?? 0) + 1,
-        );
-      }
-
-      const payloadBase = {
-        clientFullName: bucket.clientFullName,
-        count: bucket.bookings.length,
-      };
-
-      for (const [trainerUserId, trainerCount] of trainerToCount) {
-        if (trainerUserId === initiatorId) continue;
-        await createSystemNotification(
-          trainerUserId,
-          NOTIFICATION_MESSAGE_KEYS.BULK_RESERVATION_CANCEL_TRAINER,
-          "BULK_RESERVATION_CANCEL_TRAINER",
-          { ...payloadBase, count: trainerCount },
-        );
-      }
-      for (const adminId of otherAdminIds) {
-        // Skip if the admin is also the trainer who already got notified.
-        if (trainerToCount.has(adminId)) continue;
-        await createSystemNotification(
-          adminId,
-          NOTIFICATION_MESSAGE_KEYS.BULK_RESERVATION_CANCEL_ADMIN,
-          "BULK_RESERVATION_CANCEL_ADMIN",
-          payloadBase,
-        );
-      }
+      // Operator fan-out, coalesced: one notification per affected trainer
+      // (with their share of the count), one per other admin (with the
+      // client's total), none to the initiating admin.
+      await notifyOperators({
+        event: "BULK_RESERVATION_CANCEL",
+        excludeUserId: initiatorId,
+        trainers: coalesceTrainerCancelCounts(
+          bucket.bookings.map((b) => b.session.trainerUserId),
+        ),
+        payload: { clientFullName: bucket.clientFullName, count },
+      });
     }
 
     // Coalesced waitlist-promotion notice: one per promoted client, fanned
