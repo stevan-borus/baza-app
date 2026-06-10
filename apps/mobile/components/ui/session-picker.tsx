@@ -12,17 +12,18 @@
  * covers every realistic case. The day with no sessions shows quiet faint
  * text below the strip rather than a heavy empty-state hero.
  */
-import { type ReactNode, useMemo, useState } from "react";
+import { type ReactNode } from "react";
 import dayjs from "dayjs";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { BottomSheetFlatList } from "@gorhom/bottom-sheet";
 import { Icon } from "@/components/ui/icon";
 import { useTranslation } from "react-i18next";
 import { GlassCard } from "./glass-card";
-import { WeekStrip, startOfLocaleWeek } from "./week-strip";
+import { WeekStrip } from "./week-strip";
 import { EmptyState } from "./states";
 import { useThemeTokens } from "./tokens";
 import { getDateLocale } from "@/lib/i18n";
+import { useWeekNavigation } from "@/lib/use-week-navigation";
 
 export type SessionPickerItem = {
   id: string;
@@ -70,40 +71,29 @@ export function SessionPicker(props: SingleProps | MultiProps) {
   const dateLocale = getDateLocale();
   const isMulti = "selectedIds" in props && props.selectedIds !== undefined;
 
-  const filtered = useMemo(
-    () =>
-      scheduledOnly
-        ? sessions.filter((s) => s.status === "SCHEDULED" || s.status === undefined)
-        : sessions,
-    [sessions, scheduledOnly],
-  );
+  const filtered = scheduledOnly
+    ? sessions.filter((s) => s.status === "SCHEDULED" || s.status === undefined)
+    : sessions;
 
-  const [selectedDate, setSelectedDate] = useState(() =>
-    dayjs().format("YYYY-MM-DD"),
-  );
-  const [weekStart, setWeekStart] = useState(() => startOfLocaleWeek(dayjs()));
+  const nav = useWeekNavigation();
+  const { selectedDate, weekStart } = nav;
 
-  const activityByDate = useMemo(() => {
-    const map: Record<string, boolean> = {};
-    for (const s of filtered) {
-      map[dayjs(s.startsAt).format("YYYY-MM-DD")] = true;
-    }
-    return map;
-  }, [filtered]);
+  const activityByDate: Record<string, boolean> = {};
+  for (const s of filtered) {
+    activityByDate[dayjs(s.startsAt).format("YYYY-MM-DD")] = true;
+  }
 
-  const sessionsForSelectedDay = useMemo(() => {
-    const dayStart = dayjs(selectedDate).startOf("day").valueOf();
-    const dayEnd = dayjs(selectedDate).endOf("day").valueOf();
-    return filtered
-      .filter((s) => {
-        const ts = new Date(s.startsAt).getTime();
-        return ts >= dayStart && ts <= dayEnd;
-      })
-      .sort(
-        (a, b) =>
-          new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime(),
-      );
-  }, [filtered, selectedDate]);
+  const dayStart = dayjs(selectedDate).startOf("day").valueOf();
+  const dayEnd = dayjs(selectedDate).endOf("day").valueOf();
+  const sessionsForSelectedDay = filtered
+    .filter((s) => {
+      const ts = new Date(s.startsAt).getTime();
+      return ts >= dayStart && ts <= dayEnd;
+    })
+    .sort(
+      (a, b) =>
+        new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime(),
+    );
 
   function isRowSelected(id: string): boolean {
     return isMulti
@@ -189,10 +179,10 @@ export function SessionPicker(props: SingleProps | MultiProps) {
   const weekStrip = (
     <WeekStrip
       selectedDate={selectedDate}
-      onSelectDate={setSelectedDate}
+      onSelectDate={(date) => nav.selectDay(dayjs(date))}
       weekStart={weekStart}
-      onPrevWeek={() => setWeekStart((w) => w.subtract(7, "day"))}
-      onNextWeek={() => setWeekStart((w) => w.add(7, "day"))}
+      onPrevWeek={nav.goToPreviousWeek}
+      onNextWeek={nav.goToNextWeek}
       activity={activityByDate}
     />
   );

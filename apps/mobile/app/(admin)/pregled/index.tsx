@@ -11,7 +11,6 @@ import {
   TimeAxisDayView,
   type SessionBlock,
 } from "@/components/ui/time-axis-day-view";
-import { startOfLocaleWeek } from "@/components/ui/week-strip";
 import { MonthView } from "@/components/ui/month-view";
 import { EmptyState, ErrorState } from "@/components/ui/states";
 import { ScreenContainerRaw, useTabBarBottomPadding } from "@/components/ui/screen-container";
@@ -28,6 +27,7 @@ import {
 } from "@/components/ui/session-edit-sheet";
 import { sessionsQueries } from "@/lib/queries/sessions-queries-factory";
 import { reportsQueries } from "@/lib/queries/reports-queries-factory";
+import { useWeekNavigation, weekRangeLabel } from "@/lib/use-week-navigation";
 
 /**
  * Design references (from docs/inspiration/):
@@ -38,19 +38,13 @@ import { reportsQueries } from "@/lib/queries/reports-queries-factory";
 
 type ScheduleTab = "day" | "month";
 
-function monthKeyFromDate(d: dayjs.Dayjs) {
-  return d.format("YYYY-MM");
-}
-
 export default function AdminSchedule() {
   const { t, i18n } = useTranslation();
   const lang = i18n.language === "en" ? "en" : "sr";
   const router = useRouter();
   const bottomPad = useTabBarBottomPadding(24);
-  const [selectedDate, setSelectedDate] = useState(dayjs().format("YYYY-MM-DD"));
-  const [month, setMonth] = useState(() => monthKeyFromDate(dayjs()));
-  const [weekStart, setWeekStart] = useState(() => startOfLocaleWeek(dayjs()));
-  const [monthDate, setMonthDate] = useState(() => dayjs().startOf("month"));
+  const nav = useWeekNavigation();
+  const { selectedDate, weekStart, month, monthDate } = nav;
   const [scheduleTab, setScheduleTab] = useState<ScheduleTab>("day");
   const editSheet = useSessionEditSheet();
 
@@ -77,48 +71,10 @@ export default function AdminSchedule() {
     return acc;
   }, {});
 
-  function handleDateSelect(d: dayjs.Dayjs) {
-    const date = d.format("YYYY-MM-DD");
-    // Pick a day. NEVER mutate `weekStart` or `month` here — picking a day
-    // inside the visible week must not page the calendar.
-    setSelectedDate(date);
-    const newMonth = monthKeyFromDate(dayjs(date));
-    if (newMonth !== month) setMonth(newMonth);
-  }
-
-  function handlePrevWeek() {
-    const newStart = weekStart.subtract(1, "week");
-    setWeekStart(newStart);
-    const newMonth = newStart.format("YYYY-MM");
-    if (newMonth !== month) setMonth(newMonth);
-  }
-
-  function handleNextWeek() {
-    const newStart = weekStart.add(1, "week");
-    setWeekStart(newStart);
-    const newMonth = newStart.format("YYYY-MM");
-    if (newMonth !== month) setMonth(newMonth);
-  }
-
-  function handlePrevMonth() {
-    const newMonthDate = monthDate.subtract(1, "month");
-    setMonthDate(newMonthDate);
-    setMonth(newMonthDate.format("YYYY-MM"));
-  }
-
-  function handleNextMonth() {
-    const newMonthDate = monthDate.add(1, "month");
-    setMonthDate(newMonthDate);
-    setMonth(newMonthDate.format("YYYY-MM"));
-  }
-
   function handleMonthCellSelect(date: string) {
     // Tapping a day in MonthView selects the date and switches to Day view,
     // realigning the week strip so the chosen day is in the visible week.
-    setSelectedDate(date);
-    setWeekStart(startOfLocaleWeek(dayjs(date)));
-    const newMonth = monthKeyFromDate(dayjs(date));
-    if (newMonth !== month) setMonth(newMonth);
+    nav.selectMonthCell(date);
     setScheduleTab("day");
   }
 
@@ -251,14 +207,11 @@ export default function AdminSchedule() {
                 <StudioWeekStrip
                   weekStart={weekStart}
                   selected={dayjs(selectedDate)}
-                  onSelect={handleDateSelect}
+                  onSelect={nav.selectDay}
                   sessionsByDay={sessionsByDay}
-                  onPrevWeek={handlePrevWeek}
-                  onNextWeek={handleNextWeek}
-                  rangeLabel={`${weekStart.locale(lang).format("D. MMM")} — ${weekStart
-                    .add(6, "day")
-                    .locale(lang)
-                    .format("D. MMM")}`}
+                  onPrevWeek={nav.goToPreviousWeek}
+                  onNextWeek={nav.goToNextWeek}
+                  rangeLabel={weekRangeLabel(weekStart, lang)}
                 />
               </View>
 
@@ -318,8 +271,8 @@ export default function AdminSchedule() {
                 month={monthDate}
                 selectedDate={selectedDate}
                 onSelectDate={handleMonthCellSelect}
-                onPrevMonth={handlePrevMonth}
-                onNextMonth={handleNextMonth}
+                onPrevMonth={nav.goToPreviousMonth}
+                onNextMonth={nav.goToNextMonth}
                 activity={sessionsByDay}
               />
             </View>

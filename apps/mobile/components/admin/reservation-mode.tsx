@@ -25,13 +25,13 @@ import { SwitchRow } from "@/components/ui/switch-row";
 import { CapsLabel } from "@/components/ui/studio/typography";
 import { SessionCard } from "@/components/ui/session-card";
 import { StudioWeekStrip } from "@/components/ui/studio";
-import { startOfLocaleWeek } from "@/components/ui/week-strip";
 import { ScreenContainerRaw, useTabBarBottomPadding } from "@/components/ui/screen-container";
 import { EmptyState } from "@/components/ui/states";
 import { Input } from "@/components/ui/input";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { FilterChip } from "@/components/ui/studio/filter-chip";
 import { nowMs } from "@/lib/now";
+import { useWeekNavigation, weekRangeLabel } from "@/lib/use-week-navigation";
 import { useThemePreference } from "@/lib/theme-preference";
 import { authQueries } from "@/lib/queries/auth-queries-factory";
 import { type PatternInput, type RhythmWeek } from "@/lib/reservation-pattern";
@@ -127,9 +127,8 @@ export function ReservationMode() {
     }
   }, [params.clientProfileId, params.clientUserId, params.clientFullName, clientProfileId]);
 
-  const [selectedDate, setSelectedDate] = useState(dayjs().format("YYYY-MM-DD"));
-  const [weekStart, setWeekStart] = useState(() => startOfLocaleWeek(dayjs()));
-  const [month, setMonth] = useState(() => dayjs().format("YYYY-MM"));
+  const nav = useWeekNavigation();
+  const { selectedDate, weekStart, month } = nav;
   const [showClientPicker, setShowClientPicker] = useState(false);
   const [showPatternSheet, setShowPatternSheet] = useState(false);
   const [showConfirmSheet, setShowConfirmSheet] = useState(false);
@@ -211,19 +210,6 @@ export function ReservationMode() {
     return acc;
   }, {});
 
-  function handlePrevWeek() {
-    const newStart = weekStart.subtract(1, "week");
-    setWeekStart(newStart);
-    const newMonth = newStart.format("YYYY-MM");
-    if (newMonth !== month) setMonth(newMonth);
-  }
-  function handleNextWeek() {
-    const newStart = weekStart.add(1, "week");
-    setWeekStart(newStart);
-    const newMonth = newStart.format("YYYY-MM");
-    if (newMonth !== month) setMonth(newMonth);
-  }
-
   function handleApplyPattern(input: PatternInput) {
     setSelection((prev) => applyPattern(prev, allSessions, input, selectionCtx));
     setShowPatternSheet(false);
@@ -256,18 +242,11 @@ export function ReservationMode() {
               <StudioWeekStrip
                 weekStart={weekStart}
                 selected={dayjs(selectedDate)}
-                onSelect={(d) => {
-                  setSelectedDate(d.format("YYYY-MM-DD"));
-                  const newMonth = d.format("YYYY-MM");
-                  if (newMonth !== month) setMonth(newMonth);
-                }}
+                onSelect={nav.selectDay}
                 sessionsByDay={sessionsByDay}
-                onPrevWeek={handlePrevWeek}
-                onNextWeek={handleNextWeek}
-                rangeLabel={`${weekStart.locale(lang).format("D. MMM")} — ${weekStart
-                  .add(6, "day")
-                  .locale(lang)
-                  .format("D. MMM")}`}
+                onPrevWeek={nav.goToPreviousWeek}
+                onNextWeek={nav.goToNextWeek}
+                rangeLabel={weekRangeLabel(weekStart, lang)}
               />
             </View>
 
@@ -329,18 +308,11 @@ export function ReservationMode() {
               <StudioWeekStrip
                 weekStart={weekStart}
                 selected={dayjs(selectedDate)}
-                onSelect={(d) => {
-                  setSelectedDate(d.format("YYYY-MM-DD"));
-                  const newMonth = d.format("YYYY-MM");
-                  if (newMonth !== month) setMonth(newMonth);
-                }}
+                onSelect={nav.selectDay}
                 sessionsByDay={bookingsByDay}
-                onPrevWeek={handlePrevWeek}
-                onNextWeek={handleNextWeek}
-                rangeLabel={`${weekStart.locale(lang).format("D. MMM")} — ${weekStart
-                  .add(6, "day")
-                  .locale(lang)
-                  .format("D. MMM")}`}
+                onPrevWeek={nav.goToPreviousWeek}
+                onNextWeek={nav.goToNextWeek}
+                rangeLabel={weekRangeLabel(weekStart, lang)}
               />
             </View>
 

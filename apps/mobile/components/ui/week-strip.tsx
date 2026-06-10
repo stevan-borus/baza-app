@@ -21,6 +21,7 @@ import dayjs from "dayjs";
 import { Icon } from "@/components/ui/icon";
 import { useTranslation } from "react-i18next";
 import { useThemeTokens } from "./tokens";
+import { startOfLocaleWeek } from "@/lib/use-week-navigation";
 
 type ActivityValue = boolean | number | string;
 
@@ -42,18 +43,10 @@ type WeekStripProps = {
   activityByDate?: Record<string, ActivityValue>;
 };
 
-/**
- * Returns the start-of-week dayjs for the given date, using the active
- * dayjs locale to decide the first weekday (Mon for sr, Sun for en).
- *
- * The `weekday` plugin maps weekday(0) to the locale's first day.
- */
-export function startOfLocaleWeek(d: dayjs.Dayjs): dayjs.Dayjs {
-  // dayjs `weekday(0)` returns the locale's first weekday for the same
-  // calendar week as `d`. Strip time-of-day to keep arithmetic stable
-  // across DST transitions.
-  return d.weekday(0).startOf("day");
-}
+// The locale week-start math lives with the rest of the calendar
+// navigation rules in lib/use-week-navigation (pure, unit-tested);
+// re-exported here for the existing component-side importers.
+export { startOfLocaleWeek };
 
 export function WeekStrip({
   selectedDate,
