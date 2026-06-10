@@ -29,6 +29,26 @@ function asAdmin() {
   });
 }
 
+async function seedNamedClient(opts: {
+  email: string;
+  firstName: string;
+  lastName: string;
+}) {
+  const user = await prisma.user.create({
+    data: {
+      email: opts.email,
+      firstName: opts.firstName,
+      lastName: opts.lastName,
+      role: "CLIENT",
+      isActive: true,
+    },
+  });
+  const profile = await prisma.clientProfile.create({
+    data: { userId: user.id },
+  });
+  return { user, profile };
+}
+
 async function seedClients(count: number) {
   // Stable, predictable, ID-sortable names. We seed with numbered names so
   // the cursor ordering (by clientProfile.id ascending) matches insertion
@@ -200,5 +220,166 @@ describe("clients API — pagination & search", () => {
     const body = (await res.json()) as ClientResponse;
     expect(body.clients).toHaveLength(20);
     expect(body.nextCursor).toBeTruthy();
+  });
+
+  it("multi-word q matches across firstName + lastName (full-name search)", async () => {
+    // Decoys that share one of the words but not both, so a per-token AND is
+    // required to isolate the real match.
+    await seedNamedClient({
+      email: "active-other@test.local",
+      firstName: "Active",
+      lastName: "Other",
+    });
+    await seedNamedClient({
+      email: "someone-reformer@test.local",
+      firstName: "Someone",
+      lastName: "Reformer",
+    });
+    await seedNamedClient({
+      email: "active-reformer@test.local",
+      firstName: "Active",
+      lastName: "Reformer",
+    });
+    asAdmin();
+
+    const res = await GET(
+      new Request("http://test.local/api/clients?q=active%20reformer"),
+    );
+    const body = (await res.json()) as ClientResponse;
+    expect(body.clients).toHaveLength(1);
+    expect(body.clients[0].user.fullName).toBe("Active Reformer");
+  });
+
+  it("multi-word q matches when lastName itself contains a space", async () => {
+    await seedNamedClient({
+      email: "pagi-007@test.local",
+      firstName: "Pagi",
+      lastName: "Client 007",
+    });
+    // Decoy sharing "Client" only.
+    await seedNamedClient({
+      email: "pagi-008@test.local",
+      firstName: "Other",
+      lastName: "Client 008",
+    });
+    asAdmin();
+
+    const res = await GET(
+      new Request("http://test.local/api/clients?q=Pagi%20Client%20007"),
+    );
+    const body = (await res.json()) as ClientResponse;
+    expect(body.clients).toHaveLength(1);
+    expect(body.clients[0].user.fullName).toBe("Pagi Client 007");
+  });
+
+  it("single-token q still matches by firstName (regression guard)", async () => {
+    await seedNamedClient({
+      email: "solo@test.local",
+      firstName: "Solo",
+      lastName: "Person",
+    });
+    asAdmin();
+
+    const res = await GET(new Request("http://test.local/api/clients?q=solo"));
+    const body = (await res.json()) as ClientResponse;
+    expect(body.clients).toHaveLength(1);
+    expect(body.clients[0].user.fullName).toBe("Solo Person");
+  });
+
+  it("single-token q still matches by email substring (regression guard)", async () => {
+    await seedNamedClient({
+      email: "client.active@test.local",
+      firstName: "Aaa",
+      lastName: "Bbb",
+    });
+    await seedNamedClient({
+      email: "unrelated@test.local",
+      firstName: "Ccc",
+      lastName: "Ddd",
+    });
+    asAdmin();
+
+    const res = await GET(
+      new Request("http://test.local/api/clients?q=client.active"),
+    );
+    const body = (await res.json()) as ClientResponse;
+    expect(body.clients).toHaveLength(1);
+    expect(body.clients[0].user.email).toBe("client.active@test.local");
+  });
+
+  it("multi-word q is order-independent", async () => {
+    await seedNamedClient({
+      email: "ar@test.local",
+      firstName: "Active",
+      lastName: "Reformer",
+    });
+    await seedNamedClient({
+      email: "ao@test.local",
+      firstName: "Active",
+      lastName: "Other",
+    });
+    asAdmin();
+
+    const res = await GET(
+      new Request("http://test.local/api/clients?q=reformer%20active"),
+    );
+    const body = (await res.json()) as ClientResponse;
+    expect(body.clients).toHaveLength(1);
+    expect(body.clients[0].user.fullName).toBe("Active Reformer");
+  });
+
+  it("trainer-scope still ANDs with a multi-word search (no cross-trainer leak)", async () => {
+    const trainer = await prisma.user.create({
+      data: {
+        email: "trainer-search@test.local",
+        firstName: "Trainer",
+        lastName: "Search",
+        role: "TRAINER",
+      },
+    });
+    const classType = await prisma.classType.create({
+      data: { name: "Reformer Search", maxClients: 6, durationMins: 60 },
+    });
+    // Linked client matching the query.
+    const linked = await seedNamedClient({
+      email: "linked-ar@test.local",
+      firstName: "Active",
+      lastName: "Reformer",
+    });
+    // A stranger that also matches the query but is NOT linked to this trainer.
+    await seedNamedClient({
+      email: "stranger-ar@test.local",
+      firstName: "Active",
+      lastName: "Reformer",
+    });
+    const session = await prisma.session.create({
+      data: {
+        classTypeId: classType.id,
+        trainerUserId: trainer.id,
+        startsAt: new Date("2026-05-10T10:00:00Z"),
+        endsAt: new Date("2026-05-10T11:00:00Z"),
+        capacity: 6,
+        isActive: true,
+        status: "SCHEDULED",
+      },
+    });
+    await prisma.booking.create({
+      data: { sessionId: session.id, clientProfileId: linked.profile.id },
+    });
+
+    setMockUser({
+      id: trainer.id,
+      role: "TRAINER",
+      email: trainer.email,
+      isActive: true,
+      clientProfile: null,
+    });
+
+    const res = await GET(
+      new Request("http://test.local/api/clients?q=active%20reformer"),
+    );
+    const body = (await res.json()) as ClientResponse;
+    expect(body.clients).toHaveLength(1);
+    expect(body.clients[0].user.email).toBe("linked-ar@test.local");
   });
 });
