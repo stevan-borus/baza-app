@@ -2,14 +2,12 @@ import { NOTIFICATION_MESSAGE_KEYS } from "@baza/i18n";
 import { formatFullName } from "@baza/types";
 import { UserRole } from "@/generated/prisma";
 import { now } from "@/lib/now";
+import { chargeNoShowConsumption } from "@/lib/server/booking-cancellation";
 import { requireCronAuth } from "@/lib/server/cron-auth";
 import { ok } from "@/lib/server/http";
 import { createSystemNotification } from "@/lib/server/notifications";
-import { findEligibleClientPackage } from "@/lib/server/package-eligibility";
 import { prisma } from "@/lib/server/prisma";
 import { tryCatch } from "@/lib/server/try-catch";
-
-type ConsumptionOutcome = "CONSUMED" | "NO_PACKAGE";
 
 function isUniqueConstraintError(error: unknown) {
   if (!error || typeof error !== "object") return false;
@@ -83,89 +81,15 @@ export async function POST(request: Request) {
     }
 
     const txResult = await tryCatch(
-      prisma.$transaction(async (tx) => {
-        const existingConsumption = await tx.sessionConsumption.findUnique({
-          where: {
-            clientProfileId_sessionId: {
-              clientProfileId: booking.clientProfileId,
-              sessionId: booking.sessionId,
-            },
-          },
-          select: { id: true },
-        });
-        if (existingConsumption) {
-          return null;
-        }
-
-        let targetPackageId = booking.clientPackageId;
-        if (!targetPackageId) {
-          const [clientPackages, packagePauses] = await Promise.all([
-            tx.clientPackage.findMany({
-              where: {
-                clientProfileId: booking.clientProfileId,
-                classTypeId: booking.session.classTypeId,
-              },
-              select: {
-                id: true,
-                classTypeId: true,
-                startsAt: true,
-                expiresAt: true,
-                sessionsRemaining: true,
-              },
-            }),
-            tx.packagePause.findMany({
-              where: { clientProfileId: booking.clientProfileId },
-              select: {
-                startsAt: true,
-                endsAt: true,
-              },
-            }),
-          ]);
-
-          const eligiblePackage = findEligibleClientPackage(
-            clientPackages,
-            packagePauses,
-            booking.session.startsAt,
-            booking.session.classTypeId,
-          );
-          targetPackageId = eligiblePackage?.id ?? null;
-        }
-
-        if (!targetPackageId) {
-          return "NO_PACKAGE" as const;
-        }
-
-        const updatedPackage = await tx.clientPackage.updateMany({
-          where: {
-            id: targetPackageId,
-            sessionsRemaining: {
-              gt: 0,
-            },
-          },
-          data: {
-            sessionsRemaining: {
-              decrement: 1,
-            },
-          },
-        });
-        if (updatedPackage.count === 0) {
-          return "NO_PACKAGE" as const;
-        }
-
-        const createConsumptionResult = await tryCatch(
-          tx.sessionConsumption.create({
-            data: {
-              clientProfileId: booking.clientProfileId,
-              sessionId: booking.sessionId,
-            },
-          }),
-        );
-        if (createConsumptionResult.error) {
-          throw createConsumptionResult.error;
-        }
-
-        return "CONSUMED" as const;
-      }),
+      prisma.$transaction((tx) =>
+        chargeNoShowConsumption(tx, {
+          clientProfileId: booking.clientProfileId,
+          sessionId: booking.sessionId,
+          clientPackageId: booking.clientPackageId,
+          sessionStartsAt: booking.session.startsAt,
+          sessionClassTypeId: booking.session.classTypeId,
+        }),
+      ),
     );
 
     if (txResult.error) {
@@ -177,12 +101,12 @@ export async function POST(request: Request) {
       continue;
     }
 
-    if (!txResult.data) {
+    const outcome = txResult.data;
+    if (outcome === "ALREADY_CONSUMED") {
       alreadyConsumed += 1;
       continue;
     }
 
-    const outcome = txResult.data as ConsumptionOutcome;
     if (outcome === "NO_PACKAGE") {
       noEligiblePackage += 1;
       unbackedForNotification.push({

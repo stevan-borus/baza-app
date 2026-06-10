@@ -2,11 +2,13 @@ import { NOTIFICATION_MESSAGE_KEYS } from "@baza/i18n";
 import { formatFullName } from "@baza/types";
 import { UserRole } from "@/generated/prisma";
 import { requireRole } from "@/lib/server/auth-guards";
-import { shouldApplyLateCancelPenalty } from "@/lib/server/cancellation-policy";
+import {
+  applyLateCancelForfeit,
+  promoteNextWaitlistEntry,
+} from "@/lib/server/booking-cancellation";
 import { fail, ok } from "@/lib/server/http";
 import { createSystemNotification } from "@/lib/server/notifications";
 import { notifyClient } from "@/lib/server/notify-client";
-import { findEligibleClientPackage } from "@/lib/server/package-eligibility";
 import { now } from "@/lib/now";
 import { prisma } from "@/lib/server/prisma";
 
@@ -71,49 +73,32 @@ export async function POST(request: Request) {
       data: { canceledAt: cancellationTime },
     });
     for (const b of bookings) {
-      const lateCancelHours = b.clientPackage?.lateCancelHours ?? 0;
-      const isLate = shouldApplyLateCancelPenalty(
-        b.session.startsAt,
-        cancellationTime,
-        lateCancelHours,
-      );
-      if (!isLate || !b.clientPackageId) continue;
-
-      // Charge waiver: a real forfeit would apply here, but the admin chose to
-      // forgive it. Skip the consumption + decrement and record who waived.
-      if (waiveCharge) {
+      const result = await applyLateCancelForfeit(tx, {
+        clientProfileId: b.clientProfileId,
+        sessionId: b.sessionId,
+        clientPackageId: b.clientPackageId,
+        sessionStartsAt: b.session.startsAt,
+        canceledAt: cancellationTime,
+        lateCancelHours: b.clientPackage?.lateCancelHours ?? 0,
+        waiveCharge,
+      });
+      // Charge waiver: a real forfeit would have applied, but the admin chose
+      // to forgive it — record who waived.
+      if (result === "WAIVED") {
         await tx.booking.update({
           where: { id: b.id },
           data: { waivedByUserId: initiatorId },
         });
-        continue;
       }
-
-      const existingConsumption = await tx.sessionConsumption.findUnique({
-        where: {
-          clientProfileId_sessionId: {
-            clientProfileId: b.clientProfileId,
-            sessionId: b.sessionId,
-          },
-        },
-        select: { id: true },
-      });
-      if (!existingConsumption) {
-        await tx.sessionConsumption.create({
-          data: { clientProfileId: b.clientProfileId, sessionId: b.sessionId },
-        });
-      }
-      await tx.clientPackage.updateMany({
-        where: { id: b.clientPackageId, sessionsRemaining: { gt: 0 } },
-        data: { sessionsRemaining: { decrement: 1 } },
-      });
     }
   });
 
   // Waitlist promotion per session.
   const promotedUserIds = new Set<string>();
   for (const b of bookings) {
-    const promotedUserId = await promoteWaitlist(b.sessionId);
+    const promotedUserId = await prisma.$transaction((tx) =>
+      promoteNextWaitlistEntry(tx, b.sessionId),
+    );
     if (promotedUserId) promotedUserIds.add(promotedUserId);
   }
 
@@ -219,82 +204,5 @@ export async function POST(request: Request) {
     success: true,
     canceled: bookings.length,
     promotedUserIds: [...promotedUserIds],
-  });
-}
-
-async function promoteWaitlist(sessionId: string): Promise<string | null> {
-  return prisma.$transaction(async (tx) => {
-    const session = await tx.session.findUnique({
-      where: { id: sessionId },
-      select: { id: true, startsAt: true, classTypeId: true },
-    });
-    if (!session) return null;
-    const next = await tx.waitlistEntry.findFirst({
-      where: { sessionId },
-      orderBy: [{ position: "asc" }, { createdAt: "asc" }],
-      select: { id: true, clientProfileId: true },
-    });
-    if (!next) return null;
-
-    await tx.waitlistEntry.delete({ where: { id: next.id } });
-
-    const [packs, pauses] = await Promise.all([
-      tx.clientPackage.findMany({
-        where: {
-          clientProfileId: next.clientProfileId,
-          classTypeId: session.classTypeId,
-        },
-        select: {
-          id: true,
-          classTypeId: true,
-          startsAt: true,
-          expiresAt: true,
-          sessionsRemaining: true,
-        },
-      }),
-      tx.packagePause.findMany({
-        where: { clientProfileId: next.clientProfileId },
-        select: { startsAt: true, endsAt: true },
-      }),
-    ]);
-    const eligible = findEligibleClientPackage(
-      packs,
-      pauses,
-      session.startsAt,
-      session.classTypeId,
-    );
-    if (!eligible) return null;
-
-    await tx.booking.upsert({
-      where: {
-        sessionId_clientProfileId: {
-          sessionId,
-          clientProfileId: next.clientProfileId,
-        },
-      },
-      create: {
-        sessionId,
-        clientProfileId: next.clientProfileId,
-        clientPackageId: eligible.id,
-      },
-      update: { canceledAt: null, clientPackageId: eligible.id },
-    });
-
-    const remaining = await tx.waitlistEntry.findMany({
-      where: { sessionId },
-      orderBy: [{ position: "asc" }, { createdAt: "asc" }],
-      select: { id: true },
-    });
-    await Promise.all(
-      remaining.map((w, i) =>
-        tx.waitlistEntry.update({ where: { id: w.id }, data: { position: i + 1 } }),
-      ),
-    );
-
-    const promotedClient = await tx.clientProfile.findUnique({
-      where: { id: next.clientProfileId },
-      select: { userId: true },
-    });
-    return promotedClient?.userId ?? null;
   });
 }
