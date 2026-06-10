@@ -14,7 +14,6 @@ import { MotiView } from "@/components/ui/styled";
 import dayjs from "dayjs";
 import * as Haptics from "expo-haptics";
 import { useTranslation } from "react-i18next";
-import { startOfLocaleWeek } from "@/components/ui/week-strip";
 import { StudioWeekStrip, CapsLabel } from "@/components/ui/studio";
 import { MonthView } from "@/components/ui/month-view";
 import { SegmentedControl } from "@/components/ui/segmented-control";
@@ -31,13 +30,10 @@ import {
 } from "@/components/ui/screen-container";
 import { SkeletonList } from "@/components/ui/skeleton";
 import { sessionsQueries } from "@/lib/queries/sessions-queries-factory";
+import { useWeekNavigation, weekRangeLabel } from "@/lib/use-week-navigation";
 import type { AvailabilitySession } from "@baza/types";
 
 type ViewTab = "day" | "month";
-
-function monthKeyFromDate(d: dayjs.Dayjs) {
-  return d.format("YYYY-MM");
-}
 
 export default function ClientCalendar() {
   const { t, i18n } = useTranslation();
@@ -53,14 +49,8 @@ export default function ClientCalendar() {
     ? dayjs(params.date)
     : dayjs();
 
-  const [selectedDate, setSelectedDate] = useState(
-    initialDay.format("YYYY-MM-DD"),
-  );
-  const [month, setMonth] = useState(() => monthKeyFromDate(initialDay));
-  const [weekStart, setWeekStart] = useState(() =>
-    startOfLocaleWeek(initialDay),
-  );
-  const [monthDate, setMonthDate] = useState(() => initialDay.startOf("month"));
+  const nav = useWeekNavigation(initialDay);
+  const { selectedDate, weekStart, month, monthDate } = nav;
   const [viewTab, setViewTab] = useState<ViewTab>("day");
 
   // Re-focus when the deep-link param changes between visits (the screen stays
@@ -70,13 +60,9 @@ export default function ClientCalendar() {
     if (params.date === lastDateParam.current) return;
     lastDateParam.current = params.date;
     if (!isValidDate(params.date)) return;
-    const d = dayjs(params.date);
-    setSelectedDate(d.format("YYYY-MM-DD"));
-    setWeekStart(startOfLocaleWeek(d));
-    setMonth(monthKeyFromDate(d));
-    setMonthDate(d.startOf("month"));
+    nav.jumpToDate(dayjs(params.date));
     setViewTab("day");
-  }, [params.date]);
+  }, [params.date, nav]);
   const booking = useBookingSheet();
 
   const displayDate = dayjs(selectedDate);
@@ -103,46 +89,14 @@ export default function ClientCalendar() {
     Haptics.selectionAsync();
     // Picking a day must NOT shift the visible week. The week boundary is
     // owned by `weekStart` and only changes via the arrow buttons below.
-    const date = d.format("YYYY-MM-DD");
-    setSelectedDate(date);
-    const newMonth = monthKeyFromDate(d);
-    if (newMonth !== month) setMonth(newMonth);
-  }
-
-  function handlePrevWeek() {
-    const newStart = weekStart.subtract(1, "week");
-    setWeekStart(newStart);
-    const newMonth = newStart.format("YYYY-MM");
-    if (newMonth !== month) setMonth(newMonth);
-  }
-
-  function handleNextWeek() {
-    const newStart = weekStart.add(1, "week");
-    setWeekStart(newStart);
-    const newMonth = newStart.format("YYYY-MM");
-    if (newMonth !== month) setMonth(newMonth);
-  }
-
-  function handlePrevMonth() {
-    const next = monthDate.subtract(1, "month");
-    setMonthDate(next);
-    setMonth(next.format("YYYY-MM"));
-  }
-
-  function handleNextMonth() {
-    const next = monthDate.add(1, "month");
-    setMonthDate(next);
-    setMonth(next.format("YYYY-MM"));
+    nav.selectDay(d);
   }
 
   // Tap on a day cell in month view: switch back to day mode focused on
   // that date and re-anchor the week strip so the date is in view.
   function handleMonthCellSelect(date: string) {
     Haptics.selectionAsync();
-    setSelectedDate(date);
-    setWeekStart(startOfLocaleWeek(dayjs(date)));
-    const newMonth = monthKeyFromDate(dayjs(date));
-    if (newMonth !== month) setMonth(newMonth);
+    nav.selectMonthCell(date);
     setViewTab("day");
   }
 
@@ -176,12 +130,9 @@ export default function ClientCalendar() {
               selected={dayjs(selectedDate)}
               onSelect={handleDateSelect}
               sessionsByDay={sessionsByDay}
-              onPrevWeek={handlePrevWeek}
-              onNextWeek={handleNextWeek}
-              rangeLabel={`${weekStart.locale(lang).format("D. MMM")} — ${weekStart
-                .add(6, "day")
-                .locale(lang)
-                .format("D. MMM")}`}
+              onPrevWeek={nav.goToPreviousWeek}
+              onNextWeek={nav.goToNextWeek}
+              rangeLabel={weekRangeLabel(weekStart, lang)}
             />
           </View>
         </MotiView>
@@ -197,8 +148,8 @@ export default function ClientCalendar() {
               month={monthDate}
               selectedDate={selectedDate}
               onSelectDate={handleMonthCellSelect}
-              onPrevMonth={handlePrevMonth}
-              onNextMonth={handleNextMonth}
+              onPrevMonth={nav.goToPreviousMonth}
+              onNextMonth={nav.goToNextMonth}
               activity={sessionsByDay}
             />
           </View>

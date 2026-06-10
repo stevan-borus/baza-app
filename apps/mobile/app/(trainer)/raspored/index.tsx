@@ -14,7 +14,6 @@ import { ScrollView, Text, View } from "react-native";
 import { router, type Href } from "expo-router";
 import { MotiView } from "@/components/ui/styled";
 import { EmptyState, ErrorState } from "@/components/ui/states";
-import { startOfLocaleWeek } from "@/components/ui/week-strip";
 import { MonthView } from "@/components/ui/month-view";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import {
@@ -29,21 +28,16 @@ import { TrainerScheduleLeftSlot } from "@/components/trainer/trainer-tab-left-s
 import { CapsLabel, StudioWeekStrip } from "@/components/ui/studio";
 import { authQueries } from "@/lib/queries/auth-queries-factory";
 import { sessionsQueries } from "@/lib/queries/sessions-queries-factory";
+import { useWeekNavigation, weekRangeLabel } from "@/lib/use-week-navigation";
 
 type ScheduleTab = "day" | "month";
-
-function monthKeyFromDate(d: dayjs.Dayjs) {
-  return d.format("YYYY-MM");
-}
 
 export default function TrainerSchedule() {
   const { t, i18n } = useTranslation();
   const lang = i18n.language === "en" ? "en" : "sr";
   const bottomPad = useTabBarBottomPadding(24);
-  const [selectedDate, setSelectedDate] = useState(dayjs().format("YYYY-MM-DD"));
-  const [month, setMonth] = useState(() => monthKeyFromDate(dayjs()));
-  const [weekStart, setWeekStart] = useState(() => startOfLocaleWeek(dayjs()));
-  const [monthDate, setMonthDate] = useState(() => dayjs().startOf("month"));
+  const nav = useWeekNavigation();
+  const { selectedDate, weekStart, month, monthDate } = nav;
   const [scheduleTab, setScheduleTab] = useState<ScheduleTab>("day");
   const displayDate = dayjs(selectedDate);
 
@@ -79,44 +73,8 @@ export default function TrainerSchedule() {
     activityByDate[dateKey] = "available";
   }
 
-  function handleDateSelect(d: dayjs.Dayjs) {
-    const date = d.format("YYYY-MM-DD");
-    setSelectedDate(date);
-    const newMonth = monthKeyFromDate(d);
-    if (newMonth !== month) setMonth(newMonth);
-  }
-
-  function handlePrevWeek() {
-    const newStart = weekStart.subtract(1, "week");
-    setWeekStart(newStart);
-    const newMonth = newStart.format("YYYY-MM");
-    if (newMonth !== month) setMonth(newMonth);
-  }
-
-  function handleNextWeek() {
-    const newStart = weekStart.add(1, "week");
-    setWeekStart(newStart);
-    const newMonth = newStart.format("YYYY-MM");
-    if (newMonth !== month) setMonth(newMonth);
-  }
-
-  function handlePrevMonth() {
-    const newMonthDate = monthDate.subtract(1, "month");
-    setMonthDate(newMonthDate);
-    setMonth(newMonthDate.format("YYYY-MM"));
-  }
-
-  function handleNextMonth() {
-    const newMonthDate = monthDate.add(1, "month");
-    setMonthDate(newMonthDate);
-    setMonth(newMonthDate.format("YYYY-MM"));
-  }
-
   function handleMonthCellSelect(date: string) {
-    setSelectedDate(date);
-    setWeekStart(startOfLocaleWeek(dayjs(date)));
-    const newMonth = monthKeyFromDate(dayjs(date));
-    if (newMonth !== month) setMonth(newMonth);
+    nav.selectMonthCell(date);
     setScheduleTab("day");
   }
 
@@ -200,14 +158,11 @@ export default function TrainerSchedule() {
                 <StudioWeekStrip
                   weekStart={weekStart}
                   selected={dayjs(selectedDate)}
-                  onSelect={handleDateSelect}
+                  onSelect={nav.selectDay}
                   sessionsByDay={sessionsByDay}
-                  onPrevWeek={handlePrevWeek}
-                  onNextWeek={handleNextWeek}
-                  rangeLabel={`${weekStart.locale(lang).format("D. MMM")} — ${weekStart
-                    .add(6, "day")
-                    .locale(lang)
-                    .format("D. MMM")}`}
+                  onPrevWeek={nav.goToPreviousWeek}
+                  onNextWeek={nav.goToNextWeek}
+                  rangeLabel={weekRangeLabel(weekStart, lang)}
                 />
               </View>
 
@@ -265,8 +220,8 @@ export default function TrainerSchedule() {
                 month={monthDate}
                 selectedDate={selectedDate}
                 onSelectDate={handleMonthCellSelect}
-                onPrevMonth={handlePrevMonth}
-                onNextMonth={handleNextMonth}
+                onPrevMonth={nav.goToPreviousMonth}
+                onNextMonth={nav.goToNextMonth}
                 activity={activityByDate}
               />
             </View>
