@@ -1,3 +1,4 @@
+import type { ReportsSummaryResponse } from "@baza/types";
 import { UserRole } from "@/generated/prisma";
 import { requireRole } from "@/lib/server/auth-guards";
 import { ok } from "@/lib/server/http";
@@ -59,5 +60,5 @@ export async function GET(request: Request) {
       revenue: billingAgg._sum.amount ?? 0,
       totalPayments: billingAgg._count.id,
     },
-  });
+  } satisfies ReportsSummaryResponse);
 }

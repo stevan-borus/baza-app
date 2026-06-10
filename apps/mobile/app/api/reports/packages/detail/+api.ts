@@ -28,7 +28,7 @@
  * A match means "paid"; otherwise "comp". O(clients) DB queries for now —
  * optimization can come later if needed.
  */
-import { formatFullName } from "@baza/types";
+import { formatFullName, type ReportsPackagesDetailResponse } from "@baza/types";
 import { UserRole } from "@/generated/prisma";
 import { requireRole } from "@/lib/server/auth-guards";
 import {
@@ -39,7 +39,11 @@ import {
 import { fail, ok } from "@/lib/server/http";
 import { now } from "@/lib/now";
 import { prisma } from "@/lib/server/prisma";
-import { parseDateInput } from "@/lib/server/reports";
+import {
+  accumulateByKey,
+  parseOptionalWindow,
+  sortedByMetricDesc,
+} from "@/lib/server/report-aggregation";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const EXPIRING_SOON_WINDOW_MS = 14 * DAY_MS;
@@ -51,16 +55,18 @@ export async function GET(request: Request) {
   if (!guard.ok) return guard.response;
 
   const url = new URL(request.url);
-  const from = parseDateInput(url.searchParams.get("from"));
-  const to = parseDateInput(url.searchParams.get("to"));
   // All-time pill omits both params — every period-dependent aggregate
   // (sold-in-period, consumption rate, most-sold, paid-vs-comp) then covers
   // every ClientPackage ever created. Active + expiring-soon are already
   // period-independent so they don't change.
-  if ((from && !to) || (!from && to) || (from && to && from >= to)) {
+  const window = parseOptionalWindow(url.searchParams);
+  if (window.kind === "invalid") {
     return fail("Invalid timeframe", 400);
   }
-  const dateFilter = from && to ? { startsAt: { gte: from, lt: to } } : {};
+  const dateFilter =
+    window.kind === "window"
+      ? { startsAt: { gte: window.from, lt: window.to } }
+      : {};
   const currentInstant = now();
   const expiringSoonCutoff = new Date(
     currentInstant.getTime() + EXPIRING_SOON_WINDOW_MS,
@@ -121,22 +127,22 @@ export async function GET(request: Request) {
   }
 
   // --- Most-sold breakdown ----------------------------------------------
-  const byType = new Map<
-    string,
-    { packageTypeId: string; packageTypeName: string; count: number }
-  >();
-  for (const pkg of periodPackages) {
-    const entry = byType.get(pkg.packageTypeId) ?? {
-      packageTypeId: pkg.packageTypeId,
-      packageTypeName: pkg.packageType.name,
-      count: 0,
-    };
-    entry.count += 1;
-    byType.set(pkg.packageTypeId, entry);
-  }
-  const mostSold = Array.from(byType.values())
-    .sort((a, b) => b.count - a.count || a.packageTypeName.localeCompare(b.packageTypeName))
-    .slice(0, MOST_SOLD_LIMIT);
+  const mostSold = sortedByMetricDesc(
+    accumulateByKey(
+      periodPackages,
+      (pkg) => pkg.packageTypeId,
+      (pkg) => ({
+        packageTypeId: pkg.packageTypeId,
+        packageTypeName: pkg.packageType.name,
+        count: 0,
+      }),
+      (acc) => {
+        acc.count += 1;
+      },
+    ),
+    (row) => row.count,
+    (a, b) => a.packageTypeName.localeCompare(b.packageTypeName),
+  ).slice(0, MOST_SOLD_LIMIT);
 
   // --- Paid vs comp -----------------------------------------------------
   // Group the period packages by owning client (userId — BillingRecord
@@ -235,5 +241,5 @@ export async function GET(request: Request) {
     mostSold,
     compVsPaid: { paid, comp },
     recentActivations,
-  });
+  } satisfies ReportsPackagesDetailResponse);
 }

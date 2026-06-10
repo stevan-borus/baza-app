@@ -14,11 +14,16 @@
  * The endpoint always returns all 28 cells, even empty ones, so the UI
  * grid layout is stable across periods.
  */
+import type { ReportsUtilizationHeatmapResponse } from "@baza/types";
 import { UserRole } from "@/generated/prisma";
 import { requireRole } from "@/lib/server/auth-guards";
 import { fail, ok } from "@/lib/server/http";
 import { prisma } from "@/lib/server/prisma";
-import { parseDateInput } from "@/lib/server/reports";
+import {
+  accumulateIntoSlots,
+  parseOptionalWindow,
+  roundedRatio,
+} from "@/lib/server/report-aggregation";
 
 type TimeBucket = "morning" | "midday" | "afternoon" | "evening";
 
@@ -42,14 +47,16 @@ export async function GET(request: Request) {
   if (!guard.ok) return guard.response;
 
   const url = new URL(request.url);
-  const from = parseDateInput(url.searchParams.get("from"));
-  const to = parseDateInput(url.searchParams.get("to"));
   // All-time pill omits both params — the heatmap then folds every SCHEDULED
   // session ever into the 7×4 grid (no time filter on the query).
-  if ((from && !to) || (!from && to) || (from && to && from >= to)) {
+  const window = parseOptionalWindow(url.searchParams);
+  if (window.kind === "invalid") {
     return fail("Invalid timeframe", 400);
   }
-  const dateFilter = from && to ? { startsAt: { gte: from, lt: to } } : {};
+  const dateFilter =
+    window.kind === "window"
+      ? { startsAt: { gte: window.from, lt: window.to } }
+      : {};
 
   const sessions = await prisma.session.findMany({
     where: {
@@ -67,42 +74,35 @@ export async function GET(request: Request) {
     },
   });
 
-  // Pre-build the 7×4 cell grid so the response shape is stable.
-  type CellAgg = { booked: number; capacity: number };
-  const cells: CellAgg[][] = Array.from({ length: 7 }, () =>
-    Array.from({ length: 4 }, () => ({ booked: 0, capacity: 0 })),
+  // Pre-build the 7×4 cell grid so the response shape is stable — the
+  // endpoint always returns all 28 cells, even empty ones.
+  const cells = Array.from({ length: 7 * TIME_BUCKETS.length }, (_, i) => ({
+    dayOfWeek: Math.floor(i / TIME_BUCKETS.length),
+    timeBucket: TIME_BUCKETS[i % TIME_BUCKETS.length],
+    booked: 0,
+    capacity: 0,
+    utilization: 0,
+  }));
+
+  accumulateIntoSlots(
+    cells,
+    sessions,
+    (session) => {
+      const bucket = classifyHour(session.startsAt.getUTCHours());
+      if (bucket === null) return null; // out-of-hours session — dropped.
+      return (
+        session.startsAt.getUTCDay() * TIME_BUCKETS.length +
+        TIME_BUCKETS.indexOf(bucket)
+      );
+    },
+    (cell, session) => {
+      cell.booked += session._count.bookings;
+      cell.capacity += session.capacity;
+    },
   );
-
-  for (const session of sessions) {
-    const dow = session.startsAt.getUTCDay(); // 0..6
-    const hour = session.startsAt.getUTCHours();
-    const bucket = classifyHour(hour);
-    if (bucket === null) continue; // out-of-hours session — dropped.
-    const bucketIdx = TIME_BUCKETS.indexOf(bucket);
-    cells[dow][bucketIdx].booked += session._count.bookings;
-    cells[dow][bucketIdx].capacity += session.capacity;
+  for (const cell of cells) {
+    cell.utilization = roundedRatio(cell.booked, cell.capacity);
   }
 
-  const out: Array<{
-    dayOfWeek: number;
-    timeBucket: TimeBucket;
-    booked: number;
-    capacity: number;
-    utilization: number;
-  }> = [];
-  for (let dow = 0; dow < 7; dow += 1) {
-    for (let b = 0; b < TIME_BUCKETS.length; b += 1) {
-      const c = cells[dow][b];
-      out.push({
-        dayOfWeek: dow,
-        timeBucket: TIME_BUCKETS[b],
-        booked: c.booked,
-        capacity: c.capacity,
-        utilization:
-          c.capacity > 0 ? Number((c.booked / c.capacity).toFixed(4)) : 0,
-      });
-    }
-  }
-
-  return ok({ success: true, cells: out });
+  return ok({ success: true, cells } satisfies ReportsUtilizationHeatmapResponse);
 }
