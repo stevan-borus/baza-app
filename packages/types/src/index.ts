@@ -52,7 +52,12 @@ export const dateOfBirthSchema = z
   .regex(/^\d{4}-\d{2}-\d{2}$/, "Expected YYYY-MM-DD")
   .refine(
     (s) => {
-      const [y, m, d] = s.split("-").map(Number);
+      // The regex above guarantees three numeric parts; the explicit
+      // Number() calls keep that obvious to the type-checker under
+      // noUncheckedIndexedAccess (a destructure would be `number | undefined`).
+      const y = Number(s.slice(0, 4));
+      const m = Number(s.slice(5, 7));
+      const d = Number(s.slice(8, 10));
       const dt = new Date(Date.UTC(y, m - 1, d));
       return (
         dt.getUTCFullYear() === y &&
