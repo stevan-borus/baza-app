@@ -2,7 +2,12 @@
  * Reservation mode — admin-only screen bound to one Client. Two ways to
  * populate the selection set: tap session cards in the calendar, or apply
  * a weekly/biweekly pattern via the accelerator sheet. Both feed the same
- * `selectedSessionIds` set. Past sessions are selectable (admins backfill).
+ * `selectedSessionIds` set.
+ *
+ * The selection state machine (mode, the two selection sets, the ClassType
+ * filter, the unselectable rules, pattern merging) is pure and lives in
+ * `lib/admin/reservation-selection.ts` with unit tests — this component
+ * holds the state value and keeps queries, sheets, mutations and rendering.
  *
  * The route is gated to ADMIN — trainers and clients hitting
  * /klijenti/rezervisi get redirected to their home tab.
@@ -29,7 +34,21 @@ import { FilterChip } from "@/components/ui/studio/filter-chip";
 import { nowMs } from "@/lib/now";
 import { useThemePreference } from "@/lib/theme-preference";
 import { authQueries } from "@/lib/queries/auth-queries-factory";
-import { expandPattern, type PatternInput, type RhythmWeek } from "@/lib/reservation-pattern";
+import { type PatternInput, type RhythmWeek } from "@/lib/reservation-pattern";
+import {
+  applyPattern,
+  classifySession,
+  clearActiveSelection,
+  createInitialState,
+  distinctClassTypeNames,
+  resetSelections,
+  setClassTypeFilter,
+  switchMode,
+  toggleBooking,
+  toggleSession,
+  type SelectionContext,
+  type SessionClassification,
+} from "@/lib/admin/reservation-selection";
 import { sessionsQueries } from "@/lib/queries/sessions-queries-factory";
 import { BottomSheetFlatList } from "@gorhom/bottom-sheet";
 import { clientsQueries } from "@/lib/queries/clients-queries-factory";
@@ -83,7 +102,11 @@ export function ReservationMode() {
     else if (role === "CLIENT") router.replace("/(client)" as Href);
   }, [meQ.data, router]);
 
-  const [mode, setMode] = useState<"reserve" | "cancel">("reserve");
+  // The whole selection state machine lives in the pure module
+  // `lib/admin/reservation-selection` — the component just holds the value
+  // and dispatches transitions, so the rules are unit-testable.
+  const [selection, setSelection] = useState(createInitialState);
+  const { mode, classTypeFilter, selectedSessionIds, selectedBookingIds } = selection;
   const [clientProfileId, setClientProfileId] = useState<string | null>(
     params.clientProfileId ?? null,
   );
@@ -107,9 +130,6 @@ export function ReservationMode() {
   const [selectedDate, setSelectedDate] = useState(dayjs().format("YYYY-MM-DD"));
   const [weekStart, setWeekStart] = useState(() => startOfLocaleWeek(dayjs()));
   const [month, setMonth] = useState(() => dayjs().format("YYYY-MM"));
-  const [classTypeFilter, setClassTypeFilter] = useState<string>("");
-  const [selectedSessionIds, setSelectedSessionIds] = useState<Set<string>>(new Set());
-  const [selectedBookingIds, setSelectedBookingIds] = useState<Set<string>>(new Set());
   const [showClientPicker, setShowClientPicker] = useState(false);
   const [showPatternSheet, setShowPatternSheet] = useState(false);
   const [showConfirmSheet, setShowConfirmSheet] = useState(false);
@@ -136,6 +156,10 @@ export function ReservationMode() {
   const alreadyBookedSessionIds = new Set<string>(
     activeBookings.map((b) => b.session.id),
   );
+  const selectionCtx: SelectionContext = {
+    nowMs: nowMs(),
+    alreadyBookedSessionIds,
+  };
   // Dot density on the cancel-mode week strip reflects the bound client's
   // own bookings, not the studio's overall sessions — admins want to
   // navigate weeks based on "where does this client have stuff", not
@@ -162,20 +186,14 @@ export function ReservationMode() {
   // ClassType names visible to the cancel-mode filter: distinct values
   // observed on this client's bookings (no point showing a chip for a
   // class type the client has zero bookings in).
-  const bookingClassTypeNames: string[] = [];
-  for (const b of activeBookings) {
-    const n = b.session.classType.name;
-    if (!bookingClassTypeNames.includes(n)) bookingClassTypeNames.push(n);
-  }
-  bookingClassTypeNames.sort();
+  const bookingClassTypeNames = distinctClassTypeNames(
+    activeBookings.map((b) => b.session.classType.name),
+  );
 
-  // Distinct ClassTypes for the filter chips, in observed order so the UI
-  // stays stable across refetches.
-  const classTypeNames: string[] = [];
-  for (const s of allSessions) {
-    if (!classTypeNames.includes(s.classTypeName)) classTypeNames.push(s.classTypeName);
-  }
-  classTypeNames.sort();
+  // Distinct ClassTypes for the reserve-mode filter chips.
+  const classTypeNames = distinctClassTypeNames(
+    allSessions.map((s) => s.classTypeName),
+  );
 
   const sessions = classTypeFilter
     ? allSessions.filter((s) => s.classTypeName === classTypeFilter)
@@ -193,31 +211,6 @@ export function ReservationMode() {
     return acc;
   }, {});
 
-  function toggleBooking(bookingId: string) {
-    setSelectedBookingIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(bookingId)) next.delete(bookingId);
-      else next.add(bookingId);
-      return next;
-    });
-  }
-
-  function toggleSession(s: AvailabilitySession) {
-    // Past + full + already-booked sessions are visible (so the schedule
-    // looks complete and the admin can see the client's existing slots)
-    // but not selectable — SelectableSessionCard renders them disabled so
-    // this guard is belt-and-braces.
-    if (new Date(s.startsAt).getTime() < nowMs()) return;
-    if (s.availableSlots <= 0) return;
-    if (alreadyBookedSessionIds.has(s.id)) return;
-    setSelectedSessionIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(s.id)) next.delete(s.id);
-      else next.add(s.id);
-      return next;
-    });
-  }
-
   function handlePrevWeek() {
     const newStart = weekStart.subtract(1, "week");
     setWeekStart(newStart);
@@ -231,18 +224,8 @@ export function ReservationMode() {
     if (newMonth !== month) setMonth(newMonth);
   }
 
-  function applyPattern(input: PatternInput) {
-    const matched = expandPattern(allSessions, input);
-    setSelectedSessionIds((prev) => {
-      const next = new Set(prev);
-      for (const id of matched) {
-        // Don't reapply over an existing booking — the server would skip it
-        // and the admin would see a misleading "N matched" count.
-        if (alreadyBookedSessionIds.has(id)) continue;
-        next.add(id);
-      }
-      return next;
-    });
+  function handleApplyPattern(input: PatternInput) {
+    setSelection((prev) => applyPattern(prev, allSessions, input, selectionCtx));
     setShowPatternSheet(false);
   }
 
@@ -255,17 +238,12 @@ export function ReservationMode() {
           setClientProfileId(null);
           setClientUserId(null);
           setClientFullName(null);
-          setSelectedSessionIds(new Set());
-          setSelectedBookingIds(new Set());
+          setSelection(resetSelections);
         }}
       />
       <ModeToggle
         mode={mode}
-        onChange={(m) => {
-          setMode(m);
-          setSelectedSessionIds(new Set());
-          setSelectedBookingIds(new Set());
-        }}
+        onChange={(m) => setSelection((prev) => switchMode(prev, m))}
       />
 
       <ScrollView
@@ -297,7 +275,7 @@ export function ReservationMode() {
               <ClassTypeFilter
                 names={classTypeNames}
                 value={classTypeFilter}
-                onChange={setClassTypeFilter}
+                onChange={(next) => setSelection((prev) => setClassTypeFilter(prev, next))}
               />
             ) : null}
 
@@ -335,8 +313,10 @@ export function ReservationMode() {
                       key={s.id}
                       session={s}
                       selected={selectedSessionIds.has(s.id)}
-                      alreadyBooked={alreadyBookedSessionIds.has(s.id)}
-                      onPress={() => toggleSession(s)}
+                      classification={classifySession(s, selectionCtx)}
+                      onPress={() =>
+                        setSelection((prev) => toggleSession(prev, s, selectionCtx))
+                      }
                     />
                   ))}
                 </View>
@@ -368,7 +348,7 @@ export function ReservationMode() {
               <ClassTypeFilter
                 names={bookingClassTypeNames}
                 value={classTypeFilter}
-                onChange={setClassTypeFilter}
+                onChange={(next) => setSelection((prev) => setClassTypeFilter(prev, next))}
               />
             ) : null}
 
@@ -398,7 +378,7 @@ export function ReservationMode() {
                       key={b.id}
                       booking={b}
                       selected={selectedBookingIds.has(b.id)}
-                      onPress={() => toggleBooking(b.id)}
+                      onPress={() => setSelection((prev) => toggleBooking(prev, b.id))}
                     />
                   ))}
                 </View>
@@ -413,7 +393,7 @@ export function ReservationMode() {
           count={selectedSessionIds.size}
           disabled={!clientProfileId || selectedSessionIds.size === 0}
           onConfirm={() => setShowConfirmSheet(true)}
-          onClear={() => setSelectedSessionIds(new Set())}
+          onClear={() => setSelection(clearActiveSelection)}
           ctaLabel={t("admin.reservations.confirm", { defaultValue: "Rezerviši" })}
         />
       ) : (
@@ -421,7 +401,7 @@ export function ReservationMode() {
           count={selectedBookingIds.size}
           disabled={!clientProfileId || selectedBookingIds.size === 0}
           onConfirm={() => setShowCancelConfirm(true)}
-          onClear={() => setSelectedBookingIds(new Set())}
+          onClear={() => setSelection(clearActiveSelection)}
           ctaLabel={t("admin.reservations.cancelCta", { defaultValue: "Otkaži" })}
           ctaDanger
         />
@@ -439,7 +419,7 @@ export function ReservationMode() {
       </AppSheet>
 
       <AppSheet open={showPatternSheet} onOpenChange={setShowPatternSheet}>
-        <PatternSheet onApply={applyPattern} />
+        <PatternSheet onApply={handleApplyPattern} />
       </AppSheet>
 
       <AppSheet open={showConfirmSheet} onOpenChange={setShowConfirmSheet}>
@@ -448,7 +428,7 @@ export function ReservationMode() {
             clientProfileId={clientProfileId}
             selectedSessions={allSessions.filter((s) => selectedSessionIds.has(s.id))}
             onDone={() => {
-              setSelectedSessionIds(new Set());
+              setSelection(clearActiveSelection);
               setShowConfirmSheet(false);
             }}
             onCancel={() => setShowConfirmSheet(false)}
@@ -460,7 +440,7 @@ export function ReservationMode() {
         <CancelConfirmSheet
           bookingIds={[...selectedBookingIds]}
           onDone={() => {
-            setSelectedBookingIds(new Set());
+            setSelection(clearActiveSelection);
             setShowCancelConfirm(false);
           }}
           onCancel={() => setShowCancelConfirm(false)}
@@ -576,24 +556,21 @@ function ClassTypeFilter({
 function SelectableSessionCard({
   session,
   selected,
-  alreadyBooked,
+  classification,
   onPress,
 }: {
   session: AvailabilitySession;
   selected: boolean;
-  alreadyBooked: boolean;
+  classification: SessionClassification;
   onPress: () => void;
 }) {
-  const isFull = session.availableSlots <= 0;
-  // Past sessions are visible but disabled — booking a past session has no
-  // real meaning. Full sessions: the "0/6" badge already explains why.
-  // Already-booked: the client owns an active booking on this session, so
-  // re-reserving would just hit the server's skippedAlreadyBooked path.
-  const isPast = new Date(session.startsAt).getTime() < nowMs();
-  const disabled = isPast || isFull || alreadyBooked;
-  // Past and full sessions are dimmed; already-booked sessions get a
-  // tinted-green surface (no opacity drop) so they read as "claimed" rather
-  // than "unavailable". All three states are disabled for tap.
+  // The unselectable rules live in lib/admin/reservation-selection —
+  // this card only translates the classification into visuals:
+  // past/full are dimmed; already-booked gets a tinted-green surface
+  // (no opacity drop) so it reads as "claimed" rather than "unavailable".
+  // All three states are disabled for tap.
+  const { isPast, isFull, isAlreadyBooked, selectable } = classification;
+  const disabled = !selectable;
   const dimOpacity = isPast || isFull ? { opacity: 0.45 } : undefined;
   return (
     <Pressable
@@ -611,7 +588,7 @@ function SelectableSessionCard({
           bookedCount={session.bookedCount}
           capacity={session.capacity}
           status={isFull ? "full" : "available"}
-          tone={alreadyBooked ? "success" : "default"}
+          tone={isAlreadyBooked ? "success" : "default"}
         />
       </View>
       {selected ? (
