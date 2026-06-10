@@ -3,10 +3,9 @@ import { UserRole } from "@/generated/prisma";
 import { nowMs } from "@/lib/now";
 import { requireRole } from "@/lib/server/auth-guards";
 import { notifyClient } from "@/lib/server/notify-client";
+import { notifyOperators } from "@/lib/server/notify-operators";
 import { fail, ok } from "@/lib/server/http";
-import { createSystemNotification } from "@/lib/server/notifications";
 import { maybeNotifyMinorPaperNeeded } from "@/lib/server/minor-paper-needed";
-import { NOTIFICATION_MESSAGE_KEYS } from "@baza/i18n";
 import { prisma } from "@/lib/server/prisma";
 import { findScheduleConflict } from "@/lib/server/schedule-conflict";
 import { trainerOwnsSession } from "@/lib/server/trainer-scope";
@@ -406,12 +405,11 @@ export async function PATCH(request: Request, { id }: RouteParams) {
     // The assigned trainer keeps an in-app heads-up (no email) so their roster
     // stays accurate, for both an edit and a cancellation.
     if (session.trainerUserId) {
-      void createSystemNotification(
-        session.trainerUserId,
-        NOTIFICATION_MESSAGE_KEYS.SESSION_UPDATED,
-        "SESSION_UPDATED",
-        { sessionId: session.id, status: session.status },
-      );
+      void notifyOperators({
+        event: "SESSION_UPDATED",
+        trainers: [{ userId: session.trainerUserId }],
+        payload: { sessionId: session.id, status: session.status },
+      });
     }
   }
 

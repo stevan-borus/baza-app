@@ -10,9 +10,9 @@
  * email kind, which had copy + tests but no dispatch site, was exactly that
  * drift).
  *
- * Events that target only operators (trainer/admin bulk-cancel notices) are NOT
- * client events and keep calling createSystemNotification directly — they must
- * never email a client.
+ * Events that target only operators (trainer/admin notices) are NOT client
+ * events — they dispatch through the parallel `notifyOperators` registry
+ * (see notify-operators.ts) and must never email a client.
  */
 import type { BookingEmailKind, NotificationMessageKey } from "@baza/i18n";
 import type { NotificationType } from "@/generated/prisma";

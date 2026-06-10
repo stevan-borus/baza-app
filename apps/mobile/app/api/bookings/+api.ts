@@ -1,12 +1,16 @@
 import { bookingMutationInputSchema, BOOKING_ERRORS, formatFullName } from "@baza/types";
-import { type Prisma, UserRole } from "@/generated/prisma";
+import { UserRole } from "@/generated/prisma";
 import { getConsentStatus } from "@/lib/legal/consent-status";
 import { now } from "@/lib/now";
 import { requireRole } from "@/lib/server/auth-guards";
-import { shouldApplyLateCancelPenalty } from "@/lib/server/cancellation-policy";
+import {
+  applyLateCancelForfeit,
+  promoteNextWaitlistEntry,
+} from "@/lib/server/booking-cancellation";
 import { fail, ok } from "@/lib/server/http";
+import { shouldApplyLateCancelPenalty } from "@/lib/server/cancellation-policy";
 import { notifyClient } from "@/lib/server/notify-client";
-import { notifyCancellation } from "@/lib/server/notify-cancellation";
+import { notifyOperators } from "@/lib/server/notify-operators";
 import { findEligibleClientPackage } from "@/lib/server/package-eligibility";
 import { prisma } from "@/lib/server/prisma";
 import { tryCatch } from "@/lib/server/try-catch";
@@ -166,151 +170,44 @@ export async function POST(request: Request) {
 
   if (activeBooking && !activeBooking.canceledAt) {
     // Late cancellations (within policy window) consume one package session as penalty.
-    const lateCancelHours =
-      activeBooking.clientPackage?.lateCancelHours ?? 0;
-    if (
-      shouldApplyLateCancelPenalty(
-        session.startsAt,
-        cancellationTime,
-        lateCancelHours,
-      )
-    ) {
-      const existingConsumption = await prisma.sessionConsumption.findUnique({
-        where: {
-          clientProfileId_sessionId: {
-            clientProfileId,
-            sessionId,
-          },
-        },
-        select: { id: true },
-      });
-
-      if (!existingConsumption) {
-        await prisma.sessionConsumption.create({
-          data: {
-            clientProfileId,
-            sessionId,
-          },
-        });
-      }
-
-      if (activeBooking.clientPackageId) {
-        await prisma.clientPackage.updateMany({
-          where: {
-            id: activeBooking.clientPackageId,
-            sessionsRemaining: {
-              gt: 0,
-            },
-          },
-          data: {
-            sessionsRemaining: {
-              decrement: 1,
-            },
-          },
-        });
-      }
-    }
-  }
-
-  const promoted = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-    // Promote first waitlisted client (by position, then createdAt) after cancellation.
-    const nextWaitlist = await tx.waitlistEntry.findFirst({
-      where: { sessionId },
-      orderBy: [{ position: "asc" }, { createdAt: "asc" }],
-      select: { id: true, clientProfileId: true },
-    });
-    if (!nextWaitlist) return null;
-
-    await tx.waitlistEntry.delete({
-      where: { id: nextWaitlist.id },
-    });
-    const [clientPackages, packagePauses] = await Promise.all([
-      tx.clientPackage.findMany({
-        where: {
-          clientProfileId: nextWaitlist.clientProfileId,
-          classTypeId: session.classTypeId,
-        },
-        select: {
-          id: true,
-          classTypeId: true,
-          startsAt: true,
-          expiresAt: true,
-          sessionsRemaining: true,
-        },
-      }),
-      tx.packagePause.findMany({
-        where: { clientProfileId: nextWaitlist.clientProfileId },
-        select: {
-          startsAt: true,
-          endsAt: true,
-        },
-      }),
-    ]);
-    const eligiblePackage = findEligibleClientPackage(
-      clientPackages,
-      packagePauses,
-      session.startsAt,
-      session.classTypeId,
-    );
-    if (!eligiblePackage) return null;
-
-    await tx.booking.upsert({
-      where: {
-        sessionId_clientProfileId: {
-          sessionId,
-          clientProfileId: nextWaitlist.clientProfileId,
-        },
-      },
-      create: {
-        sessionId,
-        clientProfileId: nextWaitlist.clientProfileId,
-        clientPackageId: eligiblePackage.id,
-      },
-      update: {
-        canceledAt: null,
-        clientPackageId: eligiblePackage.id,
-      },
-    });
-
-    // Recompact positions so the next promotion picks the correct client.
-    const remainingWaitlist = await tx.waitlistEntry.findMany({
-      where: { sessionId },
-      orderBy: [{ position: "asc" }, { createdAt: "asc" }],
-      select: { id: true },
-    });
-    await Promise.all(
-      remainingWaitlist.map((item: { id: string }, index: number) =>
-        tx.waitlistEntry.update({
-          where: { id: item.id },
-          data: { position: index + 1 },
-        }),
-      ),
-    );
-
-    const promotedClient = await tx.clientProfile.findUnique({
-      where: { id: nextWaitlist.clientProfileId },
-      select: { userId: true },
-    });
-    if (!promotedClient) return null;
-
-    return promotedClient.userId;
-  });
-
-  if (activeBooking && !activeBooking.canceledAt) {
-    // Fan-out: notify admins + trainer.
-    // Fire-and-forget: do not block the response on email/push delivery.
-    const lateCancelHours = activeBooking.clientPackage?.lateCancelHours ?? 0;
-    void notifyCancellation({
+    await applyLateCancelForfeit(prisma, {
+      clientProfileId,
       sessionId,
-      trainerUserId: session.trainerUserId,
-      clientFullName: formatFullName(
-        activeBooking.clientProfile.user.firstName,
-        activeBooking.clientProfile.user.lastName,
-      ),
-      classTypeName: session.classType.name,
+      clientPackageId: activeBooking.clientPackageId,
       sessionStartsAt: session.startsAt,
       canceledAt: cancellationTime,
-      lateCancelHours,
+      lateCancelHours: activeBooking.clientPackage?.lateCancelHours ?? 0,
+    });
+  }
+
+  const promoted = await prisma.$transaction((tx) =>
+    promoteNextWaitlistEntry(tx, sessionId),
+  );
+
+  if (activeBooking && !activeBooking.canceledAt) {
+    // Fan-out: notify admins + trainer. Late cancels push, early cancels are
+    // silent in-app (the registry's push rule).
+    // Fire-and-forget: do not block the response on email/push delivery.
+    const isLate = shouldApplyLateCancelPenalty(
+      session.startsAt,
+      cancellationTime,
+      activeBooking.clientPackage?.lateCancelHours ?? 0,
+    );
+    void notifyOperators({
+      event: "BOOKING_CANCELED",
+      trainers: [{ userId: session.trainerUserId }],
+      isLate,
+      payload: {
+        sessionId,
+        clientFullName: formatFullName(
+          activeBooking.clientProfile.user.firstName,
+          activeBooking.clientProfile.user.lastName,
+        ),
+        classTypeName: session.classType.name,
+        sessionStartsAt: session.startsAt.toISOString(),
+        canceledAt: cancellationTime.toISOString(),
+        isLate,
+      },
     });
   }
 

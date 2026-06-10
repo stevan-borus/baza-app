@@ -94,7 +94,15 @@ describe("cron:sessions unbacked-attendance notification", () => {
     const body = await res.json();
     expect(body.noEligiblePackage).toBe(1);
 
-    await new Promise((r) => setImmediate(r));
+    // Wait for the fire-and-forget dispatch to settle (the operator fan-out
+    // resolves its admin recipients asynchronously).
+    await vi.waitFor(() => {
+      expect(
+        createSystemNotificationMock.mock.calls.filter(
+          (c) => c[2] === "RESERVATION_UNBACKED_ATTENDANCE",
+        ).length,
+      ).toBeGreaterThanOrEqual(2);
+    });
 
     const unbackedCalls = createSystemNotificationMock.mock.calls.filter(
       (c) => c[2] === "RESERVATION_UNBACKED_ATTENDANCE",

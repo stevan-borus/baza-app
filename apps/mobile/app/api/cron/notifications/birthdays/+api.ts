@@ -1,9 +1,8 @@
 import { now } from "@/lib/now";
 import { requireCronAuth } from "@/lib/server/cron-auth";
 import { ok } from "@/lib/server/http";
-import { createSystemNotification } from "@/lib/server/notifications";
+import { notifyOperators } from "@/lib/server/notify-operators";
 import { resolveSuggestedClassType } from "@/lib/server/birthday-suggested-class-type";
-import { NOTIFICATION_MESSAGE_KEYS } from "@baza/i18n";
 import { formatFullName } from "@baza/types";
 import { UserRole, Prisma } from "@/generated/prisma";
 import { prisma } from "@/lib/server/prisma";
@@ -60,6 +59,8 @@ export async function POST(request: Request) {
     });
   }
 
+  // Fetched here only for the `sent` counter — recipient resolution itself
+  // lives in notifyOperators.
   const admins = await prisma.user.findMany({
     where: { role: UserRole.ADMIN, isActive: true },
     select: { id: true },
@@ -68,23 +69,21 @@ export async function POST(request: Request) {
   let sent = 0;
   for (const client of matchedClients) {
     const suggestedClassTypeId = await resolveSuggestedClassType(client.clientProfileId);
-    const payload = {
-      clientProfileId: client.clientProfileId,
-      clientUserId: client.userId,
-      clientFullName: formatFullName(client.firstName, client.lastName),
-      suggestedClassTypeId,
-      today: todayIso,
-    };
-    for (const admin of admins) {
-      await createSystemNotification(
-        admin.id,
-        NOTIFICATION_MESSAGE_KEYS.BIRTHDAY_ADMIN_PROMPT,
-        "BIRTHDAY_ADMIN_PROMPT",
-        payload,
-        { dedupeKey: `birthday:${client.userId}:${todayIso}` },
-      );
-      sent += 1;
-    }
+    await notifyOperators({
+      event: "BIRTHDAY_ADMIN_PROMPT",
+      payload: {
+        clientProfileId: client.clientProfileId,
+        clientUserId: client.userId,
+        clientFullName: formatFullName(client.firstName, client.lastName),
+        suggestedClassTypeId,
+        today: todayIso,
+      },
+      // Keyed per client+day+recipient (mirrors unbacked-attendance): every
+      // admin gets their own NotificationLog row, while cron retries stay
+      // idempotent — same recipient, same client, same day → no duplicate.
+      dedupeKey: (recipientUserId) => `birthday:${client.userId}:${todayIso}:${recipientUserId}`,
+    });
+    sent += admins.length;
   }
 
   return ok({
