@@ -1,5 +1,4 @@
 import type { MiddlewareFunction } from "expo-router/server";
-import { startCronScheduler } from "@/lib/server/cron-scheduler";
 import { consentGateEnabled } from "@/lib/server/env.server";
 import { getConsentStatus } from "@/lib/legal/consent-status";
 import { getRequestUser } from "@/lib/server/auth-guards";
@@ -21,8 +20,6 @@ export const unstable_settings = {
     ],
   },
 };
-
-startCronScheduler();
 
 const ALLOWED_WITHOUT_CONSENT = [
   "/consent",

@@ -11,11 +11,6 @@ const serverSchema = z.object({
   API_ADMIN_BOOTSTRAP_TOKEN: z.string().min(1),
   INVITE_TOKEN_TTL_HOURS: z.coerce.number().int().positive().default(48),
   RESET_TOKEN_TTL_MINUTES: z.coerce.number().int().positive().default(30),
-  CRON_AUTOSTART: z.enum(["true", "false"]).transform((value) => value === "true"),
-  CRON_REMINDERS_INTERVAL_MS: z.coerce.number().int().positive(),
-  CRON_PACKAGE_EXPIRY_INTERVAL_MS: z.coerce.number().int().positive(),
-  CRON_SESSION_CONSUMPTION_INTERVAL_MS: z.coerce.number().int().positive(),
-  CRON_BIRTHDAYS_INTERVAL_MS: z.coerce.number().int().positive(),
   BASE_URL: z.url().default("http://localhost:3010"),
   BETTER_AUTH_SECRET: z
     .string()
@@ -33,11 +28,6 @@ const source = {
   API_ADMIN_BOOTSTRAP_TOKEN: process.env.API_ADMIN_BOOTSTRAP_TOKEN,
   INVITE_TOKEN_TTL_HOURS: process.env.INVITE_TOKEN_TTL_HOURS,
   RESET_TOKEN_TTL_MINUTES: process.env.RESET_TOKEN_TTL_MINUTES,
-  CRON_AUTOSTART: process.env.CRON_AUTOSTART,
-  CRON_REMINDERS_INTERVAL_MS: process.env.CRON_REMINDERS_INTERVAL_MS,
-  CRON_PACKAGE_EXPIRY_INTERVAL_MS: process.env.CRON_PACKAGE_EXPIRY_INTERVAL_MS,
-  CRON_SESSION_CONSUMPTION_INTERVAL_MS: process.env.CRON_SESSION_CONSUMPTION_INTERVAL_MS,
-  CRON_BIRTHDAYS_INTERVAL_MS: process.env.CRON_BIRTHDAYS_INTERVAL_MS,
   BASE_URL: process.env.BASE_URL,
   BETTER_AUTH_SECRET: process.env.BETTER_AUTH_SECRET,
   BAZA_CONSENT_GATE_ENABLED: process.env.BAZA_CONSENT_GATE_ENABLED,
