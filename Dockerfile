@@ -58,12 +58,28 @@ RUN DATABASE_URL="postgresql://build:build@localhost:5432/build" pnpm exec prism
 ARG NODE_BUILD_HEAP_MB=3072
 RUN NODE_OPTIONS="--max-old-space-size=${NODE_BUILD_HEAP_MB}" pnpm run build:server
 
+# Render the supercronic crontab from the cron manifest (lib/server/cron-jobs.ts).
+# CRON_BASE_URL is the server's own public URL — the cron process curls it.
+ARG CRON_BASE_URL=http://localhost:8081
+RUN pnpm exec tsx scripts/gen-fly-crons.ts --base-url "${CRON_BASE_URL}" > /tmp/crontab
+
 # ---- runtime ----------------------------------------------------------------
 FROM node:${NODE_VERSION}-slim AS runtime
 ENV PNPM_HOME=/pnpm
 ENV PATH=$PNPM_HOME:$PATH
 ENV NODE_ENV=production
 RUN corepack enable
+
+# curl (the cron jobs POST the endpoints) + supercronic (the `cron` process runs
+# the crontab with full cron-expression support, which Fly's native scheduler
+# lacks). See docs/cron-scheduling.md.
+ARG SUPERCRONIC_VERSION=v0.2.33
+RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certificates \
+  && rm -rf /var/lib/apt/lists/* \
+  && curl -fsSL "https://github.com/aptible/supercronic/releases/download/${SUPERCRONIC_VERSION}/supercronic-linux-amd64" \
+       -o /usr/local/bin/supercronic \
+  && chmod +x /usr/local/bin/supercronic
+
 WORKDIR /repo
 
 # Prod-only deps keep the runtime image lean.
@@ -82,6 +98,9 @@ COPY apps/mobile/server ./apps/mobile/server
 COPY apps/mobile/prisma ./apps/mobile/prisma
 COPY apps/mobile/prisma.config.ts ./apps/mobile/prisma.config.ts
 COPY packages ./packages
+
+# The supercronic crontab the `cron` process runs (see fly.toml [processes]).
+COPY --from=build /tmp/crontab /app/crontab
 
 # `prisma` CLI is a devDependency, so a prod install drops it. Pull just the CLI
 # back in (pinned) so the boot step can run `migrate deploy`.
