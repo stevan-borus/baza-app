@@ -1,0 +1,39 @@
+# Fly.io config for the Baza server (Expo Router server output).
+#
+# PLACEHOLDER: set `app` to the name you create with `fly apps create` (one app
+# per environment, e.g. baza-api-staging / baza-api-prod). `primary_region` is
+# fra (Frankfurt) for an EU client base — change if Neon's region differs.
+#
+# Single instance is deliberate: at <500 clients one machine is plenty, and it
+# sidesteps cron leader-election. Crons are externalized to a scheduled Fly
+# Machine (see deployment runbook PR 2), NOT the in-process scheduler
+# (CRON_AUTOSTART stays false).
+app = "baza-api-PLACEHOLDER"
+primary_region = "fra"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  PORT = "8081"
+  # Crons run as an external scheduled job, never in the web process.
+  CRON_AUTOSTART = "false"
+
+[http_service]
+  internal_port = 8081
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  # Keep one machine warm so the DB pool + first request aren't cold.
+  min_machines_running = 1
+
+  [[http_service.checks]]
+    method = "GET"
+    path = "/api/health"
+    interval = "15s"
+    timeout = "5s"
+    grace_period = "20s"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"

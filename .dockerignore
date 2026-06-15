@@ -1,0 +1,16 @@
+# Keep the build context small and never ship local secrets or build output.
+**/node_modules
+**/dist
+**/.expo
+**/.turbo
+**/generated
+**/.git
+**/.env
+**/.env.*
+!**/.env.example
+**/*.log
+apps/mobile/ios
+apps/mobile/android
+apps/mobile/test-results
+apps/mobile/.playwright-mcp
+**/.DS_Store
