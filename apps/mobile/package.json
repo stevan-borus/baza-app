@@ -36,6 +36,10 @@
     "test:e2e": "playwright test",
     "test:e2e:install": "playwright install --with-deps chromium",
     "test:e2e:prepare": "pnpm test:db:bootstrap && pnpm test:db:prepare && pnpm test:db:patch && pnpm test:db:seed-e2e",
+    "test:db:prepare:ci": "prisma migrate reset --force",
+    "test:db:patch:ci": "FORCE_PATCH=1 tsx scripts/test/patch-test-db.ts",
+    "test:db:seed-e2e:ci": "tsx scripts/test/seed-e2e.ts",
+    "test:e2e:prepare:ci": "pnpm test:db:prepare:ci && pnpm test:db:patch:ci && pnpm test:db:seed-e2e:ci",
     "test:e2e:maestro:build": "scripts/test/build-e2e.sh",
     "test:e2e:maestro": "scripts/test/run-e2e.sh"
   },
