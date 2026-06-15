@@ -5,19 +5,42 @@
   "build": {
     "development": {
       "developmentClient": true,
-      "distribution": "internal"
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "http://localhost:8081"
+      }
     },
     "preview": {
       "distribution": "internal",
+      "channel": "preview",
+      "android": {
+        "buildType": "apk"
+      },
       "env": {
-        "EXPO_UNSTABLE_DEPLOY_SERVER": "1"
+        "EXPO_PUBLIC_API_URL": "https://STAGING-SERVER-PLACEHOLDER.fly.dev",
+        "EXPO_PUBLIC_LINK_HOST": "STAGING-LINK-HOST-PLACEHOLDER.fly.dev",
+        "EXPO_PUBLIC_IOS_STORE_URL": "",
+        "EXPO_PUBLIC_ANDROID_STORE_URL": ""
       }
     },
     "production": {
       "autoIncrement": true,
+      "channel": "production",
+      "android": {
+        "buildType": "apk"
+      },
       "env": {
-        "EXPO_UNSTABLE_DEPLOY_SERVER": "1"
+        "EXPO_PUBLIC_API_URL": "https://PROD-SERVER-PLACEHOLDER.fly.dev",
+        "EXPO_PUBLIC_LINK_HOST": "PROD-LINK-HOST-PLACEHOLDER",
+        "EXPO_PUBLIC_IOS_STORE_URL": "",
+        "EXPO_PUBLIC_ANDROID_STORE_URL": ""
       }
     }
+  },
+  "submit": {
+    "production": {}
   }
 }
