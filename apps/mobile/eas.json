@@ -20,10 +20,8 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://STAGING-SERVER-PLACEHOLDER.fly.dev",
-        "EXPO_PUBLIC_LINK_HOST": "STAGING-LINK-HOST-PLACEHOLDER.fly.dev",
-        "EXPO_PUBLIC_IOS_STORE_URL": "",
-        "EXPO_PUBLIC_ANDROID_STORE_URL": ""
+        "EXPO_PUBLIC_API_URL": "https://baza-pilates-staging.fly.dev",
+        "EXPO_PUBLIC_LINK_HOST": "baza-pilates-staging.fly.dev"
       }
     },
     "production": {
@@ -33,10 +31,8 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://PROD-SERVER-PLACEHOLDER.fly.dev",
-        "EXPO_PUBLIC_LINK_HOST": "PROD-LINK-HOST-PLACEHOLDER",
-        "EXPO_PUBLIC_IOS_STORE_URL": "",
-        "EXPO_PUBLIC_ANDROID_STORE_URL": ""
+        "EXPO_PUBLIC_API_URL": "https://baza-pilates-prod.fly.dev",
+        "EXPO_PUBLIC_LINK_HOST": "baza-pilates-prod.fly.dev"
       }
     }
   },

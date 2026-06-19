@@ -67,6 +67,15 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "router": {
+        "unstable_useServerMiddleware": true
+      },
+      "eas": {
+        "projectId": "b9172506-9150-4e03-9fe9-42c71dcfa0b6"
+      }
+    },
+    "owner": "bazapilates"
   }
 }
