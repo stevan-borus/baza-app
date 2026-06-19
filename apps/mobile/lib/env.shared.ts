@@ -10,7 +10,7 @@ const sharedEnvSchema = z.object({
   EXPO_PUBLIC_ANDROID_STORE_URL: z
     .string()
     .default(
-      "https://play.google.com/store/apps/details?id=com.steva.borus.bazapilates",
+      "https://play.google.com/store/apps/details?id=com.bazapilates.app",
     ),
 });
 
