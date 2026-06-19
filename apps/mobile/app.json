@@ -62,6 +62,12 @@
         {
           "photosPermission": "Baza Pilates needs photo access so you can set your profile picture."
         }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#2e5b42"
+        }
       ]
     ],
     "experiments": {
