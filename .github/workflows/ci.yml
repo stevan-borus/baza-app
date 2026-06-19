@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [dev, main]
+  push:
+    branches: [dev]
+
+concurrency:
+  # One run per ref; a new push cancels the in-flight run.
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Pin the toolchain to what the repo declares (package.json packageManager + engines).
+  PNPM_VERSION: "10.28.0"
+  NODE_VERSION: "22"
+
+jobs:
+  # Fast, DB-free gate on every PR: style, types, logic. Integration + e2e are
+  # NOT run here — they need a real Postgres and take ~40min over a remote Neon
+  # branch. They run locally before opening a PR instead (see AGENTS.md →
+  # "Before opening a PR"), where they hit localhost Postgres in ~1-2min.
+  static-and-unit:
+    name: Lint · Types · Unit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # The Prisma client + zod types are gitignored and generated; check-types
+      # and unit tests import them, so generate before either runs.
+      - name: Generate Prisma client
+        working-directory: apps/mobile
+        env:
+          DATABASE_URL: postgresql://build:build@localhost:5432/build
+        run: pnpm exec prisma generate
+
+      - run: pnpm lint
+      - run: pnpm check-types
+      - name: Unit tests
+        working-directory: apps/mobile
+        run: pnpm test:unit

@@ -20,6 +20,32 @@ Testing Trophy — integration > unit. Real DB, real route handlers, real Playwr
 | Integration | Vitest + real Postgres | `apps/mobile/test/integration/` |
 | Unit | Vitest | `apps/mobile/test/unit/` |
 
+### Before opening a PR
+
+CI only runs the fast DB-free gate (lint + types + unit). Integration and e2e
+need a real Postgres and take ~40min over a remote DB, so **they do NOT run in
+CI** — you run them locally first, against localhost Postgres (~1-2min). Do this
+before opening or updating a PR:
+
+```sh
+# 1. Start the local test Postgres (once per session)
+docker compose up -d
+
+# 2. From apps/mobile — the fast gate (also what CI runs):
+pnpm lint && pnpm check-types && pnpm test:unit
+
+# 3. Integration (resets+migrates baza_app_test, then runs the suite):
+pnpm test:db:prepare && pnpm test:integration
+
+# 4. E2E (full prepare chain: bootstrap + reset + patch + rich-seed, then run):
+pnpm test:e2e:prepare && pnpm test:e2e
+```
+
+All four must pass before the PR goes up. If any integration/e2e spec fails,
+fix it — a green PR check does **not** cover these, so a broken spec will only
+surface here. (This is the drift the project kept hitting when these suites had
+no gate at all.)
+
 Anti-flake:
 
 - Wait for state, not time. `expect.poll()` / `waitFor({ state: "visible" })` / `findBy*`. No `setTimeout` / `waitForTimeout` as a primary wait.
