@@ -189,24 +189,26 @@ describe("POST /api/bookings — notification payload", () => {
     const res = await POST(cancelReq(session.id));
     expect(res.status).toBe(200);
 
-    // Wait a tick for the fire-and-forget notifyOperators() promise to
-    // resolve (the route doesn't await it).
-    await new Promise((r) => setTimeout(r, 50));
-
-    const trainerCall = createSystemNotificationMock.mock.calls.find(
-      (c) => c[0] === trainer.id,
+    // notifyOperators() is fire-and-forget (the route doesn't await it) and
+    // dispatches to each operator independently, so poll until both the
+    // trainer and admin calls land rather than racing a fixed delay — the DB
+    // round-trips are far slower against a remote branch (CI) than localhost.
+    const [trainerCall, adminCall] = await vi.waitFor(
+      () => {
+        const t = createSystemNotificationMock.mock.calls.find((c) => c[0] === trainer.id);
+        const a = createSystemNotificationMock.mock.calls.find((c) => c[0] === admin.id);
+        expect(t).toBeDefined();
+        expect(a).toBeDefined();
+        return [t, a] as const;
+      },
+      { timeout: 15_000, interval: 50 },
     );
-    expect(trainerCall).toBeDefined();
     const payload = trainerCall![3] as Record<string, unknown>;
     expect(payload.clientFullName).toBe("Marko Petrović");
     expect(payload.classTypeName).toBe("Reformer pilates");
     expect(typeof payload.sessionStartsAt).toBe("string");
     expect(payload.isLate).toBe(false);
 
-    const adminCall = createSystemNotificationMock.mock.calls.find(
-      (c) => c[0] === admin.id,
-    );
-    expect(adminCall).toBeDefined();
     const adminPayload = adminCall![3] as Record<string, unknown>;
     expect(adminPayload.clientFullName).toBe("Marko Petrović");
   });
@@ -237,12 +239,16 @@ describe("POST /api/bookings — notification payload", () => {
     createSystemNotificationMock.mockClear();
 
     await POST(cancelReq(session.id));
-    await new Promise((r) => setTimeout(r, 50));
 
-    const trainerCall = createSystemNotificationMock.mock.calls.find(
-      (c) => c[0] === trainer.id,
+    // Poll for the fire-and-forget operator notification (see the note above).
+    const trainerCall = await vi.waitFor(
+      () => {
+        const t = createSystemNotificationMock.mock.calls.find((c) => c[0] === trainer.id);
+        expect(t).toBeDefined();
+        return t;
+      },
+      { timeout: 15_000, interval: 50 },
     );
-    expect(trainerCall).toBeDefined();
     const payload = trainerCall![3] as Record<string, unknown>;
     expect(payload.isLate).toBe(true);
   });
