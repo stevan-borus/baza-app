@@ -19,6 +19,8 @@ fly scale count app=1 cron=1
 
 `CRON_BASE_URL` is a **build arg** (the crontab is baked into the image — the cron
 process curls the server's own public URL), so it must be the env's own hostname.
+`EXPO_PUBLIC_*` are likewise inlined at export time → pass any needed for the SSR
+web pages as `--build-arg`, not runtime secrets.
 
 ### Secrets (`fly secrets set ... [-c fly.staging.toml]`, set per environment)
 
@@ -55,14 +57,18 @@ Invites/resets are low-volume transactional. **Campaign** email is bulk marketin
 
 ## 3) Mobile Builds (EAS)
 
-1. Configure EAS project in `apps/mobile`.
-2. Set Expo public env:
-   - `EXPO_PUBLIC_API_URL` (optional; leave empty for same-origin API routes)
-3. Build native binaries:
-   - `eas build --platform ios`
-   - `eas build --platform android`
-4. Push OTA updates:
-   - `eas update`
+Profiles live in `apps/mobile/eas.json`: `development` / `preview` / `production`.
+Android is `buildType: apk` on every profile (distributed as a permanent EAS link
+— no Play Store). Each profile bakes per-env `EXPO_PUBLIC_API_URL` (the Fly server
+URL) and `EXPO_PUBLIC_LINK_HOST` (bare hostname). `preview` → staging, `production`
+→ prod.
+
+1. `eas init` to register the project (writes the EAS project id).
+2. Build per environment:
+   - `eas build --profile preview --platform android` → APK link
+   - `eas build --profile preview --platform ios` → TestFlight / ad-hoc
+3. Push OTA updates to the matching channel:
+   - `eas update --branch preview` / `--branch production`
 
 ## 4) Cron Scheduling (supercronic, baked into the image)
 

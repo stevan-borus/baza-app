@@ -1,0 +1,42 @@
+{
+  "cli": {
+    "version": ">= 12.0.0"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "http://localhost:8081"
+      }
+    },
+    "preview": {
+      "distribution": "internal",
+      "channel": "preview",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://baza-pilates-staging.fly.dev",
+        "EXPO_PUBLIC_LINK_HOST": "baza-pilates-staging.fly.dev"
+      }
+    },
+    "production": {
+      "autoIncrement": true,
+      "channel": "production",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://baza-pilates-prod.fly.dev",
+        "EXPO_PUBLIC_LINK_HOST": "baza-pilates-prod.fly.dev"
+      }
+    }
+  },
+  "submit": {
+    "production": {}
+  }
+}
