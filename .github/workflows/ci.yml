@@ -7,8 +7,7 @@ on:
     branches: [dev]
 
 concurrency:
-  # One run per ref; a new push cancels the in-flight run (and its Neon branch
-  # cleanup still fires via the always() step below).
+  # One run per ref; a new push cancels the in-flight run.
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
@@ -18,8 +17,10 @@ env:
   NODE_VERSION: "22"
 
 jobs:
-  # Fast, DB-free gate — fails the PR early on style/type/logic before we spend
-  # a Neon branch on the slower DB suites.
+  # Fast, DB-free gate on every PR: style, types, logic. Integration + e2e are
+  # NOT run here — they need a real Postgres and take ~40min over a remote Neon
+  # branch. They run locally before opening a PR instead (see AGENTS.md →
+  # "Before opening a PR"), where they hit localhost Postgres in ~1-2min.
   static-and-unit:
     name: Lint · Types · Unit
     runs-on: ubuntu-latest
@@ -50,95 +51,3 @@ jobs:
       - name: Unit tests
         working-directory: apps/mobile
         run: pnpm test:unit
-
-  # Integration + e2e against an ephemeral Neon branch, created per run and
-  # deleted afterwards no matter the outcome.
-  db-tests:
-    name: Integration · E2E (ephemeral Neon branch)
-    runs-on: ubuntu-latest
-    # Skip on forks: secrets (NEON_API_KEY) aren't available to forked PRs, so
-    # the Neon steps would fail with a confusing error instead of being skipped.
-    if: github.event.pull_request.head.repo.full_name == github.repository || github.event_name == 'push'
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: pnpm/action-setup@v4
-        with:
-          version: ${{ env.PNPM_VERSION }}
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: pnpm
-
-      - run: pnpm install --frozen-lockfile
-
-      # A unique branch name per run keeps concurrent PRs isolated.
-      - name: Create ephemeral Neon branch
-        id: neon
-        uses: neondatabase/create-branch-action@v6
-        with:
-          project_id: ${{ vars.NEON_PROJECT_ID }}
-          branch_name: ci-${{ github.run_id }}-${{ github.run_attempt }}
-          api_key: ${{ secrets.NEON_API_KEY }}
-
-      - name: Generate Prisma client
-        working-directory: apps/mobile
-        env:
-          DATABASE_URL: ${{ steps.neon.outputs.db_url }}
-        run: pnpm exec prisma generate
-
-      - name: Apply migrations to the branch
-        working-directory: apps/mobile
-        env:
-          DATABASE_URL: ${{ steps.neon.outputs.db_url }}
-        run: pnpm exec prisma migrate deploy
-
-      - name: Integration tests
-        working-directory: apps/mobile
-        env:
-          DATABASE_URL: ${{ steps.neon.outputs.db_url }}
-        run: pnpm test:integration
-
-      - name: Install Playwright browser
-        working-directory: apps/mobile
-        run: pnpm test:e2e:install
-
-      # Reset + patch + rich-seed the branch, then run the browser suite. The
-      # webServer in playwright.config.ts reads TEST_DATABASE_URL for the app's
-      # own DATABASE_URL, so both the prepare and the server hit the same branch.
-      - name: Prepare e2e database
-        working-directory: apps/mobile
-        env:
-          DATABASE_URL: ${{ steps.neon.outputs.db_url }}
-          # `migrate reset` trips Prisma 7's destructive-action gate. The consent
-          # here is this reviewed workflow itself: a human approved running reset
-          # in CI, and it only ever touches the ephemeral throwaway Neon branch
-          # created above (never a dev/prod DB). This is Prisma's documented
-          # consent channel, not a bypass.
-          PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION: "CI e2e prepare resets the ephemeral throwaway Neon branch only; approved in the reviewed CI workflow."
-        run: pnpm test:e2e:prepare:ci
-
-      - name: E2E tests
-        working-directory: apps/mobile
-        env:
-          TEST_DATABASE_URL: ${{ steps.neon.outputs.db_url }}
-        run: pnpm test:e2e
-
-      - name: Upload Playwright report on failure
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: playwright-report
-          path: apps/mobile/playwright-report
-          retention-days: 7
-
-      # Always delete the branch — on success, failure, or cancellation — so we
-      # never leak ephemeral branches and hit Neon's branch quota.
-      - name: Delete ephemeral Neon branch
-        if: always() && steps.neon.outputs.branch_id != ''
-        uses: neondatabase/delete-branch-action@v3
-        with:
-          project_id: ${{ vars.NEON_PROJECT_ID }}
-          branch_id: ${{ steps.neon.outputs.branch_id }}
-          api_key: ${{ secrets.NEON_API_KEY }}
