@@ -1,0 +1,51 @@
+# Fly.io config for the Baza server (Expo Router server output) — STAGING.
+# Production lives in fly.toml. Deploy this env explicitly:
+#   fly deploy -c fly.staging.toml
+#
+# Mirrors fly.toml exactly except the app name; staging gets its own Neon branch
+# (staging) and its own secrets. primary_region is fra (Frankfurt), next to Neon.
+#
+# Two processes from one image:
+#   app  — the web server; runs `migrate deploy` then serves. Single instance
+#          at this scale. Give it the NON-POOLED Neon DATABASE_URL: `migrate
+#          deploy` takes an advisory lock that Neon's PgBouncer pooler can drop,
+#          and the server already pools in-app via @prisma/adapter-pg.
+#   cron — supercronic running the baked crontab. Run EXACTLY ONE (the default
+#          1) or every job double-fires. The crontab reads $CRON_TOKEN — set it
+#          equal to the bootstrap token:
+#            fly secrets set CRON_TOKEN="$API_ADMIN_BOOTSTRAP_TOKEN" -c fly.staging.toml
+#
+# After first deploy:  fly scale count app=1 cron=1 -c fly.staging.toml
+app = "baza-pilates-staging"
+primary_region = "fra"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  PORT = "8081"
+
+[processes]
+  app = "sh -c 'pnpm exec prisma migrate deploy && pnpm run start:server'"
+  cron = "supercronic /app/crontab"
+
+# Only the web process serves HTTP; the cron process has no public listener.
+[http_service]
+  internal_port = 8081
+  force_https = true
+  processes = ["app"]
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  # Keep one machine warm so the DB pool + first request aren't cold.
+  min_machines_running = 1
+
+  [[http_service.checks]]
+    method = "GET"
+    path = "/api/health"
+    interval = "15s"
+    timeout = "5s"
+    grace_period = "20s"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"
