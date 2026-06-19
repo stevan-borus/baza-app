@@ -4,7 +4,7 @@
   "private": true,
   "main": "expo-router/entry",
   "scripts": {
-    "dev": "(xcrun simctl launch booted com.steva.borus.baza-pilates || true) && expo start --dev-client --port 8090",
+    "dev": "(xcrun simctl launch booted com.bazapilates.app || true) && expo start --dev-client --port 8090",
     "start": "expo start --dev-client --port 8090",
     "dev:go": "expo start --port 8090",
     "android": "expo run:android --port 8090",

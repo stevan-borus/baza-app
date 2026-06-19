@@ -2,7 +2,7 @@
   "applinks": {
     "details": [
       {
-        "appIDs": ["TEAMID_PLACEHOLDER.com.steva.borus.baza-pilates"],
+        "appIDs": ["TEAMID_PLACEHOLDER.com.bazapilates.app"],
         "components": [
           {
             "/": "/accept-invite",

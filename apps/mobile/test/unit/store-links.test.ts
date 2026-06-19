@@ -3,7 +3,7 @@ import { getStoreTarget } from "@/lib/store-links";
 
 const IOS_URL = "https://apps.apple.com/app/id123";
 const ANDROID_URL =
-  "https://play.google.com/store/apps/details?id=com.steva.borus.bazapilates";
+  "https://play.google.com/store/apps/details?id=com.bazapilates.app";
 const urls = { ios: IOS_URL, android: ANDROID_URL };
 
 const IPHONE_UA =
