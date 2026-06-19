@@ -1,20 +1,22 @@
-# Fly.io config for the Baza server (Expo Router server output) — PRODUCTION.
-# Staging lives in fly.staging.toml; deploy it with `fly deploy -c fly.staging.toml`.
+# Fly.io config for the Baza server (Expo Router server output) — STAGING.
+# Production lives in fly.toml. Deploy this env explicitly:
+#   fly deploy -c fly.staging.toml
 #
-# primary_region is fra (Frankfurt) to sit next to the Neon eu-central-1 DB.
+# Mirrors fly.toml exactly except the app name; staging gets its own Neon branch
+# (staging) and its own secrets. primary_region is fra (Frankfurt), next to Neon.
 #
 # Two processes from one image:
 #   app  — the web server; runs `migrate deploy` then serves. Single instance
-#          at this scale (<500 clients). Give it the NON-POOLED Neon DATABASE_URL:
-#          `migrate deploy` takes an advisory lock that Neon's PgBouncer pooler
-#          can drop, and the server already pools in-app via @prisma/adapter-pg.
+#          at this scale. Give it the NON-POOLED Neon DATABASE_URL: `migrate
+#          deploy` takes an advisory lock that Neon's PgBouncer pooler can drop,
+#          and the server already pools in-app via @prisma/adapter-pg.
 #   cron — supercronic running the baked crontab. Run EXACTLY ONE (the default
-#          1) or every job double-fires. Replaces the old in-process scheduler.
-#          The crontab reads $CRON_TOKEN — set it equal to the bootstrap token:
-#            fly secrets set CRON_TOKEN="$API_ADMIN_BOOTSTRAP_TOKEN"
+#          1) or every job double-fires. The crontab reads $CRON_TOKEN — set it
+#          equal to the bootstrap token:
+#            fly secrets set CRON_TOKEN="$API_ADMIN_BOOTSTRAP_TOKEN" -c fly.staging.toml
 #
-# After first deploy:  fly scale count app=1 cron=1
-app = "baza-pilates-prod"
+# After first deploy:  fly scale count app=1 cron=1 -c fly.staging.toml
+app = "baza-pilates-staging"
 primary_region = "fra"
 
 [build]
