@@ -24,6 +24,7 @@ import { useSessionAuth } from "@/lib/session-auth";
 import { useColorScheme } from "@/components/useColorScheme";
 import { ThemePreferenceProvider } from "@/lib/theme-preference";
 import { ProfileSheetProvider } from "@/components/ui/profile-sheet";
+import { AppUpdateGate } from "@/components/ui/app-update-gate";
 
 export { ErrorBoundary } from "expo-router";
 
@@ -114,6 +115,7 @@ function RootLayoutNav() {
       <ProfileSheetProvider>
         <View className="flex-1 bg-background">
           <AppNavigator isDark={isDark} />
+          <AppUpdateGate />
         </View>
       </ProfileSheetProvider>
     </ThemeProvider>

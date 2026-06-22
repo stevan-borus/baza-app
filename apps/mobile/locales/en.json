@@ -463,6 +463,19 @@
     "pickDateTime": "Pick date and time",
     "back": "Back"
   },
+  "updates": {
+    "otaReadyTitle": "Update ready",
+    "otaReadyBody": "A new version of the app has been downloaded. Restart to apply it.",
+    "restartNow": "Restart now",
+    "later": "Later",
+    "storeOptionalTitle": "New version available",
+    "storeOptionalBody": "A newer version of the app is available in the store.",
+    "update": "Update",
+    "storeRequiredTitle": "Update required",
+    "storeRequiredBody": "This version of the app is no longer supported. Please update to continue.",
+    "updateNow": "Update now",
+    "a11yUpdateRequired": "Update required screen"
+  },
   "confirm": {
     "deletePackageTitle": "Delete package type?",
     "deletePackageMessage": "This package type will be removed. Existing client packages won't be affected.",

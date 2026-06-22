@@ -465,6 +465,19 @@
     "pickDateTime": "Izaberi datum i vreme",
     "back": "Nazad"
   },
+  "updates": {
+    "otaReadyTitle": "Ažuriranje je spremno",
+    "otaReadyBody": "Nova verzija aplikacije je preuzeta. Ponovo pokrenite da biste je primenili.",
+    "restartNow": "Pokreni ponovo",
+    "later": "Kasnije",
+    "storeOptionalTitle": "Dostupna je nova verzija",
+    "storeOptionalBody": "Novija verzija aplikacije je dostupna u prodavnici.",
+    "update": "Ažuriraj",
+    "storeRequiredTitle": "Potrebno je ažuriranje",
+    "storeRequiredBody": "Ova verzija aplikacije više nije podržana. Ažurirajte da biste nastavili.",
+    "updateNow": "Ažuriraj sada",
+    "a11yUpdateRequired": "Ekran obaveznog ažuriranja"
+  },
   "confirm": {
     "deletePackageTitle": "Obrisati tip paketa?",
     "deletePackageMessage": "Tip paketa će biti uklonjen. Postojeći klijentski paketi neće biti dirnuti.",
