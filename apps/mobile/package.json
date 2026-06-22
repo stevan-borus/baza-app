@@ -117,19 +117,19 @@
     "schema": "prisma/schema.prisma"
   },
   "devDependencies": {
-    "@playwright/test": "^1.59.1",
+    "@playwright/test": "^1.61.0",
     "@types/express": "^5.0.6",
-    "@types/node": "^25",
+    "@types/node": "^26.0.0",
     "@types/pg": "^8.20.0",
     "@types/react": "~19.2.17",
     "@types/react-dom": "^19.2.3",
-    "@vitest/expect": "^4.1.5",
+    "@vitest/expect": "^4.1.9",
     "babel-plugin-react-compiler": "^1.0.0",
     "babel-preset-expo": "^56.0.15",
     "prisma": "^7.8.0",
     "prisma-zod-generator": "^2.1.4",
     "react-test-renderer": "19.2.3",
-    "tsx": "^4.21.0",
-    "vitest": "^4.1.5"
+    "tsx": "^4.22.4",
+    "vitest": "^4.1.9"
   }
 }
