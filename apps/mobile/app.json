@@ -7,7 +7,6 @@
     "icon": "./assets/images/icon.png",
     "scheme": "baza",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
     "runtimeVersion": {
       "policy": "appVersion"
     },
@@ -31,7 +30,6 @@
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#2e5b42"
       },
-      "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "package": "com.bazapilates.app"
     },
@@ -77,7 +75,10 @@
           "icon": "./assets/images/notification-icon.png",
           "color": "#2e5b42"
         }
-      ]
+      ],
+      "expo-font",
+      "expo-secure-store",
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true,
