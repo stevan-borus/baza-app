@@ -31,7 +31,7 @@ import {
   ViewStyle,
 } from "react-native";
 import type { UseInfiniteQueryResult } from "@tanstack/react-query";
-import { LegendList } from "@legendapp/list";
+import { LegendList } from "@legendapp/list/react-native";
 import { EmptyState, ErrorState } from "@/components/ui/states";
 import { SkeletonCard } from "@/components/ui/skeleton";
 

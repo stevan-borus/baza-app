@@ -4,7 +4,7 @@ import { useMutation, useInfiniteQuery, useQueryClient } from "@tanstack/react-q
 import { useTranslation } from "react-i18next";
 import { ActivityIndicator, Pressable, Text, View, type TextLayoutEventData, type NativeSyntheticEvent } from "react-native";
 import { MotiView } from "@/components/ui/styled";
-import { LegendList } from "@legendapp/list";
+import { LegendList } from "@legendapp/list/react-native";
 import { BottomSheetScrollView } from "@gorhom/bottom-sheet";
 import { GlassCard } from "@/components/ui/glass-card";
 import { Icon } from "@/components/ui/icon";
