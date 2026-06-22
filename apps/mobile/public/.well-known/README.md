@@ -17,19 +17,24 @@ dev at a tunnel and prod at the real domain without editing committed config.
 > Expo's documented dev workflow uses an HTTPS tunnel + a development build on a
 > real device. See Tier 1 below.
 
-## What each file still needs (placeholders)
+## Signing identities (filled in)
 
-- **iOS** — `apple-app-site-association` has `TEAMID_PLACEHOLDER`. Replace with the
-  Apple Developer **Team ID** (10 chars, Apple Developer portal → Membership).
-  Required even for a dev build's `applinks` entitlement.
-- **Android** — `assetlinks.json` has `SHA256_RELEASE_FINGERPRINT_PLACEHOLDER`.
-  Replace with the SHA-256 fingerprint(s) of the signing key. Get it with:
+Both files now carry the real production identities:
+
+- **iOS** — `apple-app-site-association` uses the Apple Developer **Team ID**
+  (`DP99QDPC3A`, 10 chars from Apple Developer portal → Membership) as the
+  `<TeamID>.com.bazapilates.app` appID. Required even for a dev build's
+  `applinks` entitlement.
+- **Android** — `assetlinks.json` carries the SHA-256 of the EAS-managed
+  release signing key (regenerated under `com.bazapilates.app`). Re-read it any
+  time with:
   ```sh
   eas credentials -p android   # read "SHA256 Fingerprint"
   ```
-  For a local `expo run:android` debug build, use the debug keystore's fingerprint
-  instead. With Google Play App Signing, include **both** the upload key and the
-  Play-managed app-signing key fingerprints (Play Console → App integrity).
+  For a local `expo run:android` debug build you'd use the debug keystore's
+  fingerprint instead. With Google Play App Signing, include **both** the upload
+  key and the Play-managed app-signing key fingerprints (Play Console → App
+  integrity).
 
 ## Tier 1 — verify in development (real device, no publish, no prod domain)
 
