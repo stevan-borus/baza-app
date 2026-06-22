@@ -2,7 +2,7 @@
   "applinks": {
     "details": [
       {
-        "appIDs": ["TEAMID_PLACEHOLDER.com.bazapilates.app"],
+        "appIDs": ["DP99QDPC3A.com.bazapilates.app"],
         "components": [
           {
             "/": "/accept-invite",
