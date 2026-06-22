@@ -34,6 +34,12 @@ web pages as `--build-arg`, not runtime secrets.
   (`fly secrets set CRON_TOKEN="$API_ADMIN_BOOTSTRAP_TOKEN"`)
 - TTL/feature envs as needed: `INVITE_TOKEN_TTL_HOURS`, `RESET_TOKEN_TTL_MINUTES`,
   `BAZA_CONSENT_GATE_ENABLED`.
+- App-version nudge (optional; `/api/app-version`): `APP_MIN_VERSION_IOS`,
+  `APP_LATEST_VERSION_IOS`, `APP_MIN_VERSION_ANDROID`, `APP_LATEST_VERSION_ANDROID`.
+  Unset → endpoint reports the app's own `version`, so nobody is nagged or blocked.
+  Bump `APP_LATEST_VERSION_*` when a new native build ships to soft-nudge users,
+  and raise `APP_MIN_VERSION_*` only to hard-block versions below it. Per-platform
+  because iOS and Android releases land at different times.
 
 The old in-process scheduler is gone, so its `CRON_AUTOSTART` / `CRON_*_INTERVAL_MS`
 envs are no longer read — do not set them.
