@@ -91,6 +91,7 @@
     "lucide-react-native": "^1.21.0",
     "moti": "^0.30.0",
     "pg": "^8.22.0",
+    "punycode": "^2.3.1",
     "react": "19.2.3",
     "react-day-picker": "^9.14.0",
     "react-dom": "19.2.3",
