@@ -50,7 +50,7 @@ test.describe.serial("izveštaji → naplata drill (admin)", () => {
     // (unlike the 4px-tall zero-revenue chart bars). Tapping it drills into
     // Naplata carrying the `returnTo` param.
     const recentRow = page.locator('[data-testid^="prihod-recent-"]').first();
-    await expect(recentRow).toBeVisible({ timeout: 10_000 });
+    await expect(recentRow).toBeVisible();
     await recentRow.click();
 
     // Drill lands on Naplata.
@@ -58,14 +58,14 @@ test.describe.serial("izveštaji → naplata drill (admin)", () => {
 
     // The return pill renders because we arrived via a `returnTo` param.
     const pill = page.getByTestId("naplata-return-to-pill");
-    await expect(pill).toBeVisible({ timeout: 10_000 });
+    await expect(pill).toBeVisible();
 
     // Tapping the pill returns to the Izveštaji → Prihod sub-page.
     await pill.click();
     await page.waitForURL(/\/izvestaji\/prihod/, { timeout: 10_000 });
     await expect(
       page.getByText(t.admin.izvestaji.prihod.headline).first(),
-    ).toBeVisible({ timeout: 10_000 });
+    ).toBeVisible();
   });
 
   // Activates when #57 (refactor/cross-tab-drill) merges — Naplata pre-filter
@@ -83,7 +83,7 @@ test.describe.serial("izveštaji → naplata drill (admin)", () => {
         .filter({ hasNotText: "" })
         .and(page.locator(':not([aria-label^="0 RSD"])'))
         .first();
-      await expect(fundedBar).toBeVisible({ timeout: 10_000 });
+      await expect(fundedBar).toBeVisible();
       await fundedBar.click();
 
       await page.waitForURL(/\/naplata/, { timeout: 10_000 });
@@ -93,7 +93,7 @@ test.describe.serial("izveštaji → naplata drill (admin)", () => {
       // current-month default. Assert the rendered rows all fall inside the
       // drilled range (and not the full current month).
       const rows = page.locator('[data-testid^="billing-row-"]');
-      await expect(rows.first()).toBeVisible({ timeout: 10_000 });
+      await expect(rows.first()).toBeVisible();
       // Concrete bound assertions are filled in against the #57 UI surface
       // (which exposes the active range) when that branch merges.
     },

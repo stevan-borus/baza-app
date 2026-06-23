@@ -52,7 +52,7 @@ test.describe.serial("active-assignments pagination (admin)", () => {
     // count — the seed contributes a handful of packages and the extras
     // round it out — but it should never exceed 20 on the initial load.
     const rows = page.locator('[data-testid^="active-assignment-row-"]');
-    await expect(rows.first()).toBeVisible({ timeout: 10_000 });
+    await expect(rows.first()).toBeVisible();
     const firstPageCount = await rows.count();
     expect(firstPageCount).toBeLessThanOrEqual(20);
     expect(firstPageCount).toBeGreaterThan(0);
@@ -92,7 +92,7 @@ test.describe.serial("active-assignments pagination (admin)", () => {
       .getByTestId("active-assignments-search-input")
       .fill("Pagi Client 007");
     await expect
-      .poll(() => rows.count(), { timeout: 10_000 })
+      .poll(() => rows.count())
       .toBeLessThan(firstPageCount);
     await expect(page.getByText("Pagi Client 007").first()).toBeVisible();
   });

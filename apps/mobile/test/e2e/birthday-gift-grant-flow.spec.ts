@@ -101,7 +101,7 @@ test.describe("birthday gift — grant flow", () => {
     await page.getByTestId("assign-package-start-picker").dispatchEvent("click");
     await expect(
       page.locator('[data-testid="date-time-picker-calendar"]'),
-    ).toBeVisible({ timeout: 10_000 });
+    ).toBeVisible();
     const today = String(new Date().getDate());
     await page
       .locator('[data-testid="date-time-picker-calendar"] button.rdp-day_button', {

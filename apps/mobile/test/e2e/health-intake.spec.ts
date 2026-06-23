@@ -46,13 +46,11 @@ test.describe("health intake — profile flow", () => {
     // Switch to the profile tab and tap the Zdravstveni podaci row.
     await page.getByTestId("tab-profile").click();
     const healthRow = page.getByTestId("profile-health-row");
-    await expect(healthRow).toBeVisible({ timeout: 10_000 });
+    await expect(healthRow).toBeVisible();
     await healthRow.click();
 
     // Form is rendered inline (no extra "Add" button now).
-    await expect(page.getByTestId("health-intake-form")).toBeVisible({
-      timeout: 10_000,
-    });
+    await expect(page.getByTestId("health-intake-form")).toBeVisible();
 
     // Minimum required fields: at least one pilates experience, an activity
     // level, an exercise frequency, and an answer to "under medical treatment".
@@ -81,9 +79,7 @@ test.describe("health intake — profile flow", () => {
 
     // Save button hides (no longer dirty) and the withdraw link becomes
     // visible at the bottom of the scrolled form.
-    await expect(page.getByTestId("profile-health-save")).toHaveCount(0, {
-      timeout: 10_000,
-    });
+    await expect(page.getByTestId("profile-health-save")).toHaveCount(0);
     await expect(page.getByTestId("health-intake-form")).toBeVisible();
     await expect(page.getByTestId("profile-health-withdraw")).toBeVisible();
   });

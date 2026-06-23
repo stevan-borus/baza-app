@@ -11,6 +11,7 @@
  * Anchors against names seeded by `seedExtraClients` (Pagi Client 001..).
  */
 import { test, expect } from "./helpers/fixtures";
+import { waitForStableBoundingBox } from "./helpers/interactions";
 import {
   disconnect,
   resetAndSeed,
@@ -46,7 +47,7 @@ test.describe.serial("klijenti pagination (admin)", () => {
     // so the visible mix depends on whose profile rows landed first. Assert
     // that the page is bounded by `take` (we set the default to 20).
     const rows = page.locator('[data-testid^="client-row-"]');
-    await expect(rows.first()).toBeVisible({ timeout: 10_000 });
+    await expect(rows.first()).toBeVisible();
     const firstPageCount = await rows.count();
     expect(firstPageCount).toBeLessThanOrEqual(20);
     expect(firstPageCount).toBeGreaterThan(0);
@@ -98,7 +99,7 @@ test.describe.serial("klijenti pagination (admin)", () => {
       .getByPlaceholder(/search clients|Pretra/i)
       .fill("Pagi Client 007");
     await expect
-      .poll(() => rows.count(), { timeout: 10_000 })
+      .poll(() => rows.count())
       .toBeLessThan(firstPageCount);
     await expect(page.getByText("Pagi Client 007").first()).toBeVisible();
   });
@@ -116,9 +117,9 @@ test.describe.serial("klijenti pagination (admin)", () => {
     await page.getByTestId("tab-klijenti").click();
 
     const search = page.getByTestId("klijenti-search-input");
-    await expect(search).toBeVisible({ timeout: 10_000 });
+    await expect(search).toBeVisible();
     const rows = page.locator('[data-testid^="client-row-"]');
-    await expect(rows.first()).toBeVisible({ timeout: 10_000 });
+    await expect(rows.first()).toBeVisible();
 
     // Capture the search input's Y coordinate before scrolling.
     const beforeBox = await search.boundingBox();
@@ -143,12 +144,9 @@ test.describe.serial("klijenti pagination (admin)", () => {
       }
     });
 
-    // Allow one rAF for the scroll to settle.
-    await page.waitForTimeout(150);
-
-    const afterBox = await search.boundingBox();
-    expect(afterBox).not.toBeNull();
+    // Wait for the post-scroll reflow to settle (state, not a fixed sleep).
+    const afterBox = await waitForStableBoundingBox(search);
     // 2px slack covers sub-pixel layout rounding on RN-Web.
-    expect(Math.abs((afterBox!.y) - (beforeBox!.y))).toBeLessThan(2);
+    expect(Math.abs(afterBox.y - beforeBox!.y)).toBeLessThan(2);
   });
 });

@@ -67,9 +67,7 @@ test.describe("trainer (Serbian)", () => {
       .first()
       .dispatchEvent("click");
 
-    await expect(page.getByText("Reformer pilates").first()).toBeVisible({
-      timeout: 10_000,
-    });
+    await expect(page.getByText("Reformer pilates").first()).toBeVisible();
     expect(await page.getByText("Energy pilates").count()).toBe(0);
   });
 
@@ -84,7 +82,7 @@ test.describe("trainer (Serbian)", () => {
     // traffic). The trainer should therefore see exactly that one client.
     await expect(
       page.getByText("Active Reformer Client"),
-    ).toBeVisible({ timeout: 10_000 });
+    ).toBeVisible();
 
     // No other clients should appear — the link-by-booking scoping means
     // unbooked clients (e.g. activeEnergy, expired, paused, future, empty)
@@ -122,7 +120,7 @@ test.describe("trainer (Serbian)", () => {
     // Click the first option in the open picker.
     await expect(
       page.locator('[data-testid^="note-client-option-"]').first(),
-    ).toBeVisible({ timeout: 10_000 });
+    ).toBeVisible();
     await page
       .locator('[data-testid^="note-client-option-"]')
       .first()
@@ -154,7 +152,7 @@ test.describe("trainer (Serbian)", () => {
 
     // Open the first existing note row (spec 42 left at least one).
     const firstRow = page.locator('[data-testid^="note-row-"]').first();
-    await expect(firstRow).toBeVisible({ timeout: 10_000 });
+    await expect(firstRow).toBeVisible();
     await firstRow.dispatchEvent("click");
 
     const newText = `Edited note ${Date.now()}`;
@@ -162,9 +160,7 @@ test.describe("trainer (Serbian)", () => {
     await page.getByTestId("note-edit-save-button").dispatchEvent("click");
 
     // The note row's preview text updates to the new text.
-    await expect(page.getByText(newText).first()).toBeVisible({
-      timeout: 10_000,
-    });
+    await expect(page.getByText(newText).first()).toBeVisible();
   });
 
   test("44: trainer deletes a note", async ({ page }) => {
@@ -193,7 +189,7 @@ test.describe("trainer (Serbian)", () => {
       await page.getByTestId("note-client-trigger").dispatchEvent("click");
       await expect(
         page.locator('[data-testid^="note-client-option-"]').first(),
-      ).toBeVisible({ timeout: 10_000 });
+      ).toBeVisible();
       await page
         .locator('[data-testid^="note-client-option-"]')
         .first()
@@ -284,7 +280,7 @@ test.describe("trainer (Serbian)", () => {
 
     await expect(
       page.getByTestId("trainer-client-profile-error"),
-    ).toBeVisible({ timeout: 10_000 });
+    ).toBeVisible();
 
     // The unlinked client's identity must not appear on the page.
     expect(await page.getByText("Empty Pack Client").count()).toBe(0);
@@ -347,7 +343,7 @@ test.describe("trainer (Serbian)", () => {
       // just wrote needs a beat to surface).
       await expect(
         page.locator('[data-testid^="note-client-option-"]').first(),
-      ).toBeVisible({ timeout: 10_000 });
+      ).toBeVisible();
       await page
         .locator('[data-testid^="note-client-option-"]')
         .first()
@@ -416,7 +412,7 @@ test.describe("trainer (Serbian)", () => {
     // inside the open picker specifically.
     await expect(
       page.locator('[data-testid^="note-client-option-"]').first(),
-    ).toBeVisible({ timeout: 10_000 });
+    ).toBeVisible();
     await page
       .locator('[data-testid^="note-client-option-"]')
       .first()

@@ -26,7 +26,7 @@ const MINOR_EMAIL = "client.minor-booking@e2e.test";
 
 const DATABASE_URL =
   process.env.DATABASE_URL ??
-  "postgresql://postgres:postgres@localhost:5434/baza_app?schema=public";
+  "postgresql://postgres:postgres@localhost:5434/baza_app_test?schema=public";
 
 const HOUR_MS = 60 * 60 * 1000;
 const DAY_MS = 24 * HOUR_MS;

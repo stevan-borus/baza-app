@@ -94,7 +94,7 @@ test.describe("client (Serbian)", () => {
 
     await expect(
       page.locator('[data-testid^="schedule-row-"]').first(),
-    ).toBeVisible({ timeout: 10_000 });
+    ).toBeVisible();
     await expect(page.getByText("Reformer pilates").first()).toBeVisible();
   });
 
@@ -113,7 +113,7 @@ test.describe("client (Serbian)", () => {
     const sessionBlock = page
       .locator('[data-testid^="schedule-row-"]')
       .first();
-    await expect(sessionBlock).toBeVisible({ timeout: 10_000 });
+    await expect(sessionBlock).toBeVisible();
     await sessionBlock.dispatchEvent("click");
 
     // Booking sheet exposes the room/trainer/duration/capacity testIDs.
@@ -154,7 +154,7 @@ test.describe("client (Serbian)", () => {
 
     await expect(
       page.getByTestId("booking-success-message"),
-    ).toBeVisible({ timeout: 10_000 });
+    ).toBeVisible();
 
     // sessionsRemaining is decremented by the consumption cron after the
     // session ends, not at booking time. The booking counter is the
@@ -256,9 +256,7 @@ test.describe("client (Serbian)", () => {
     // cancel button can render. Closing fires the sheet's onClose →
     // bookingMutation.reset() — the same thing a real user does by dismissing
     // the sheet after booking. Escape dismisses the gorhom AppSheet.
-    await expect(page.getByTestId("booking-success-message")).toBeVisible({
-      timeout: 10_000,
-    });
+    await expect(page.getByTestId("booking-success-message")).toBeVisible();
     // Close the sheet before reopening to cancel. The success block is owned
     // by the booking mutation and overrides the action buttons until the sheet
     // closes (onClose → bookingMutation.reset()) — same as a real user
@@ -270,7 +268,7 @@ test.describe("client (Serbian)", () => {
     await page.mouse.click(page.viewportSize()!.width / 2, 40);
     await expect(
       page.getByTestId("booking-success-message"),
-    ).not.toBeVisible({ timeout: 10_000 });
+    ).not.toBeVisible();
 
     // Re-open the booking and cancel it (within the cutoff window). The sheet
     // now shows the "already booked" state (isBookedByMe is true after the
@@ -397,9 +395,7 @@ test.describe("client (Serbian)", () => {
     // /api/sessions/availability response; we assert the session is full.
     await expect(
       page.getByText(/Lista čekanja|Waitlist/i).first(),
-    ).toBeVisible({
-      timeout: 10_000,
-    });
+    ).toBeVisible();
   });
 
   test("60: notifications list renders", async ({ page }) => {
@@ -459,14 +455,19 @@ test.describe("client (Serbian)", () => {
       .first()
       .dispatchEvent("click");
 
-    // No session blocks should appear — server filters availability by the
+    // No session blocks should appear — the server filters availability by the
     // client's class-type entitlement and an empty-pack client has none.
-    // Wait for the page to settle then assert zero blocks.
-    await page.waitForTimeout(1500);
-    const blockCount = await page
-      .locator('[data-testid^="schedule-row-"]')
-      .count();
-    expect(blockCount).toBe(0);
+    // Asserting an *absence* needs a positive "data has loaded" signal first, or
+    // a count-zero check passes instantly before the fetch resolves (false
+    // green). The day view renders its no-sessions EmptyState only once the
+    // availability query has settled AND returned nothing, so waiting for that
+    // copy proves "loaded and empty" — state, not a fixed `waitForTimeout`.
+    await expect(
+      page.getByText(/Nema termina ovog dana|No sessions on this day/i).first(),
+    ).toBeVisible();
+    await expect(
+      page.locator('[data-testid^="schedule-row-"]'),
+    ).toHaveCount(0);
   });
 
   test("64: tapping a session on the overview opens the booking sheet inline", async ({
@@ -486,7 +487,7 @@ test.describe("client (Serbian)", () => {
     const overviewRow = page
       .locator('[data-testid^="schedule-row-"]')
       .first();
-    await expect(overviewRow).toBeVisible({ timeout: 10_000 });
+    await expect(overviewRow).toBeVisible();
     await overviewRow.dispatchEvent("click");
 
     await expect(page.getByTestId("booking-detail-room")).toHaveText("Sala 1", {

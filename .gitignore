@@ -46,3 +46,6 @@ yarn-error.log*
 # Misc
 .DS_Store
 *.pem
+
+# Playwright MCP browser artifacts (screenshots / snapshots / console logs)
+.playwright-mcp/

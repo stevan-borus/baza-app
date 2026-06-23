@@ -57,9 +57,7 @@ test.describe("admin (Serbian) — katalog tab", () => {
     await signInAsAdmin(page);
     await page.getByTestId("tab-katalog").click();
 
-    await expect(page.getByTestId("katalog-novi-termin")).toBeVisible({
-      timeout: 10_000,
-    });
+    await expect(page.getByTestId("katalog-novi-termin")).toBeVisible();
     await expect(page.getByTestId("katalog-row-class-types")).toBeVisible();
     await expect(page.getByTestId("katalog-row-rooms")).toBeVisible();
     await expect(page.getByTestId("katalog-row-package-types")).toBeVisible();

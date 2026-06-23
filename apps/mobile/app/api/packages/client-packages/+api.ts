@@ -101,20 +101,33 @@ export async function GET(request: Request) {
       : 20;
     const cursor = url.searchParams.get("cursor") ?? undefined;
 
+    // Tokenize the query on whitespace and require EACH token to match in
+    // firstName OR lastName OR email (case-insensitive), then AND the tokens
+    // together — the same pattern as /api/clients. A single-string `contains`
+    // across the three columns never matched "First Last" queries (e.g.
+    // "Pagi Client 007") because the whole string was tested against each
+    // single column; after the fullName→first/last split there is no column
+    // holding the joined name. Per-token AND lets a full-name query land while
+    // a single-token query (one token, e.g. an email substring) behaves as
+    // before.
+    const searchTokens = search ? search.split(/\s+/).filter(Boolean) : [];
     const packages = await prisma.clientPackage.findMany({
-      where: search
-        ? {
-            clientProfile: {
-              user: {
-                OR: [
-                  { firstName: { contains: search, mode: "insensitive" } },
-                  { lastName: { contains: search, mode: "insensitive" } },
-                  { email: { contains: search, mode: "insensitive" } },
-                ],
+      where:
+        searchTokens.length > 0
+          ? {
+              clientProfile: {
+                user: {
+                  AND: searchTokens.map((token) => ({
+                    OR: [
+                      { firstName: { contains: token, mode: "insensitive" } },
+                      { lastName: { contains: token, mode: "insensitive" } },
+                      { email: { contains: token, mode: "insensitive" } },
+                    ],
+                  })),
+                },
               },
-            },
-          }
-        : undefined,
+            }
+          : undefined,
       orderBy: [{ startsAt: "desc" }, { id: "asc" }],
       take: take + 1,
       ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),

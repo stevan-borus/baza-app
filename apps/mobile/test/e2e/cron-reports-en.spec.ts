@@ -51,7 +51,7 @@ test.describe("cron + reports + EN smoke (Serbian + English)", () => {
 
     await expect(
       page.getByText(t.admin.manage.utilization).first(),
-    ).toBeVisible({ timeout: 10_000 });
+    ).toBeVisible();
   });
 
   test("65: admin reports — utilization section renders", async ({ page }) => {
@@ -68,7 +68,7 @@ test.describe("cron + reports + EN smoke (Serbian + English)", () => {
 
     await expect(
       page.getByText(t.admin.izvestaji.prihod.headline).first(),
-    ).toBeVisible({ timeout: 10_000 });
+    ).toBeVisible();
   });
 
   // ── Cron — direct API ─────────────────────────────────────────────────────
@@ -186,9 +186,7 @@ test.describe("cron + reports + EN smoke (Serbian + English)", () => {
     // Select the next Reformer day so today's weekday doesn't matter.
     await navigateWeekStripTo(page, nextReformerDayKey());
 
-    await expect(page.getByText("Reformer pilates").first()).toBeVisible({
-      timeout: 10_000,
-    });
+    await expect(page.getByText("Reformer pilates").first()).toBeVisible();
     void t_en; // imported for reference; not used directly.
   });
 
@@ -222,7 +220,7 @@ test.describe("cron + reports + EN smoke (Serbian + English)", () => {
 
     // Open booking sheet.
     const block = page.locator('[data-testid^="schedule-row-"]').first();
-    await expect(block).toBeVisible({ timeout: 10_000 });
+    await expect(block).toBeVisible();
     await block.dispatchEvent("click");
 
     await page.getByTestId("booking-book-button").dispatchEvent("click");
@@ -232,6 +230,6 @@ test.describe("cron + reports + EN smoke (Serbian + English)", () => {
 
     await expect(
       page.getByTestId("booking-success-message"),
-    ).toBeVisible({ timeout: 10_000 });
+    ).toBeVisible();
   });
 });

@@ -43,7 +43,7 @@ test.describe("DateTimePicker web smoke", () => {
     // The web sheet should mount the calendar + time input.
     await expect(
       page.locator('[data-testid="date-time-picker-calendar"]'),
-    ).toBeVisible({ timeout: 10_000 });
+    ).toBeVisible();
     await expect(
       page.locator('[data-testid="date-time-picker-time-input"]'),
     ).toBeVisible();
