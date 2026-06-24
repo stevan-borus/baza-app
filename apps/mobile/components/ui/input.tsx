@@ -39,6 +39,7 @@ export function Input({
   onFocus,
   onBlur,
   className,
+  testID,
   ...rest
 }: InputProps) {
   const tokens = useThemeTokens();
@@ -104,6 +105,13 @@ export function Input({
         ) : null}
 
         <Pressable
+          // On iOS + the RN new architecture a TextInput's `testID` doesn't
+          // reliably surface as an accessibilityIdentifier in the view tree
+          // XCUITest/Maestro read, but a Pressable's does. Mirror the field's
+          // testID onto this wrapper for native only (tapping it focuses the
+          // input, so Maestro `tapOn id` + `inputText` work). Native-only so the
+          // web DOM doesn't end up with two elements sharing one data-testid.
+          testID={Platform.OS === "web" ? undefined : testID}
           onPress={() => inputRef.current?.focus()}
           className={`flex-1 relative ${isMultiline ? "self-stretch" : "h-full justify-center"}`}
         >
@@ -117,6 +125,11 @@ export function Input({
               transition={{ type: "timing", duration: 150 }}
               style={{ transformOrigin: "left center" }}
               pointerEvents="none"
+              // Keep the decorative floating label out of the accessibility
+              // tree so screen readers (and e2e tools) read the field via its
+              // own accessibilityLabel below, not this overlapping View.
+              accessibilityElementsHidden
+              importantForAccessibility="no-hide-descendants"
             >
               <Text className="font-sans text-sm text-muted">{label}</Text>
             </MotiView>
@@ -125,6 +138,14 @@ export function Input({
           <TextInputComponent
             ref={inputRef}
             value={value}
+            // Keep testID on the input itself for web (react-native-web emits a
+            // `data-testid` that Playwright targets). Native/Maestro matches the
+            // Pressable wrapper above, since a TextInput's testID doesn't
+            // reliably surface in the iOS accessibility tree.
+            testID={testID}
+            // Give the input its own a11y label so iOS keeps it as a distinct
+            // accessible element.
+            accessibilityLabel={label}
             onFocus={(e) => {
               setFocused(true);
               onFocus?.(e);
