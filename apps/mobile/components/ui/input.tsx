@@ -105,13 +105,12 @@ export function Input({
         ) : null}
 
         <Pressable
-          // On iOS + the RN new architecture a TextInput's `testID` doesn't
-          // reliably surface as an accessibilityIdentifier in the view tree
-          // XCUITest/Maestro read, but a Pressable's does. Mirror the field's
-          // testID onto this wrapper for native only (tapping it focuses the
-          // input, so Maestro `tapOn id` + `inputText` work). Native-only so the
-          // web DOM doesn't end up with two elements sharing one data-testid.
-          testID={Platform.OS === "web" ? undefined : testID}
+          // This wrapper only exists to widen the tap target that focuses the
+          // input. Keep it out of the accessibility tree so it doesn't merge
+          // with the TextInput into one element (which would swallow the
+          // input's identifier and value from screen readers / e2e tools).
+          accessible={false}
+          importantForAccessibility="no"
           onPress={() => inputRef.current?.focus()}
           className={`flex-1 relative ${isMultiline ? "self-stretch" : "h-full justify-center"}`}
         >
@@ -138,13 +137,11 @@ export function Input({
           <TextInputComponent
             ref={inputRef}
             value={value}
-            // Keep testID on the input itself for web (react-native-web emits a
-            // `data-testid` that Playwright targets). Native/Maestro matches the
-            // Pressable wrapper above, since a TextInput's testID doesn't
-            // reliably surface in the iOS accessibility tree.
+            // The input is the accessible element for this field (the wrapping
+            // Pressable is hidden from a11y above), so its testID surfaces as
+            // the resource-id and its value stays readable by screen readers /
+            // e2e tools. On web this testID is the `data-testid` Playwright uses.
             testID={testID}
-            // Give the input its own a11y label so iOS keeps it as a distinct
-            // accessible element.
             accessibilityLabel={label}
             onFocus={(e) => {
               setFocused(true);

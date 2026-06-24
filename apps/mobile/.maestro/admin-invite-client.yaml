@@ -19,7 +19,7 @@ env:
     file: helpers/sign-in.yaml
 
 - tapOn:
-    id: "tab-clients"
+    id: "tab-klijenti"
 
 - waitForAnimationToEnd
 
