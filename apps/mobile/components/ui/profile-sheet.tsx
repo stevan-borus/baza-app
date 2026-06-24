@@ -98,7 +98,14 @@ function ProfileSheetContent({ open, onOpenChange }: Props) {
     onSuccess: () => {
       queryClient.clear();
       onOpenChange(false);
-      router.replace("/sign-in");
+      // Route through the root index, not straight to "/sign-in". On sign-out
+      // the better-auth session store clears asynchronously, so a direct
+      // replace to "/sign-in" can fire while it's still gated behind
+      // `Stack.Protected guard={!isAuthenticated}` — the current (admin/…)
+      // group unmounts and the stack is left blank until a reload. The root
+      // index is always mounted (unguarded) and reactively <Redirect>s to
+      // "/sign-in" once the cleared session is observed, so there's no race.
+      router.replace("/");
     },
   });
 

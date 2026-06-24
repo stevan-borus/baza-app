@@ -131,9 +131,7 @@ test.describe("auth extended (Serbian)", () => {
     await page.getByTestId("invite-confirm-password-input").fill(NEW_PASSWORD);
     await page.getByTestId("invite-submit-button").click();
 
-    await expect(page.getByText(t.auth.inviteError)).toBeVisible({
-      timeout: 10_000,
-    });
+    await expect(page.getByText(t.auth.inviteError)).toBeVisible();
   });
 
   test("used invite token shows error UI", async ({ page }) => {
@@ -150,9 +148,7 @@ test.describe("auth extended (Serbian)", () => {
     await page.getByTestId("invite-confirm-password-input").fill(NEW_PASSWORD);
     await page.getByTestId("invite-submit-button").click();
 
-    await expect(page.getByText(t.auth.inviteError)).toBeVisible({
-      timeout: 10_000,
-    });
+    await expect(page.getByText(t.auth.inviteError)).toBeVisible();
   });
 
   test("admin sends invite from clients screen and the invite appears in DB", async ({
@@ -209,9 +205,7 @@ test.describe("auth extended (Serbian)", () => {
 
     // Step 2 (token + new password) is now visible — that's the success
     // signal from the request side.
-    await expect(page.getByTestId("reset-token-input")).toBeVisible({
-      timeout: 10_000,
-    });
+    await expect(page.getByTestId("reset-token-input")).toBeVisible();
 
     // And a row exists in the DB.
     const tokenRow = await findLatestResetTokenFor(
@@ -233,8 +227,6 @@ test.describe("auth extended (Serbian)", () => {
     await page.getByTestId("reset-new-password-input").fill(NEW_PASSWORD);
     await page.getByTestId("reset-submit-button").click();
 
-    await expect(page.getByText(t.auth.resetError)).toBeVisible({
-      timeout: 10_000,
-    });
+    await expect(page.getByText(t.auth.resetError)).toBeVisible();
   });
 });

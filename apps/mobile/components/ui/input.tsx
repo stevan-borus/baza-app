@@ -39,6 +39,7 @@ export function Input({
   onFocus,
   onBlur,
   className,
+  testID,
   ...rest
 }: InputProps) {
   const tokens = useThemeTokens();
@@ -104,6 +105,12 @@ export function Input({
         ) : null}
 
         <Pressable
+          // This wrapper only exists to widen the tap target that focuses the
+          // input. Keep it out of the accessibility tree so it doesn't merge
+          // with the TextInput into one element (which would swallow the
+          // input's identifier and value from screen readers / e2e tools).
+          accessible={false}
+          importantForAccessibility="no"
           onPress={() => inputRef.current?.focus()}
           className={`flex-1 relative ${isMultiline ? "self-stretch" : "h-full justify-center"}`}
         >
@@ -117,6 +124,11 @@ export function Input({
               transition={{ type: "timing", duration: 150 }}
               style={{ transformOrigin: "left center" }}
               pointerEvents="none"
+              // Keep the decorative floating label out of the accessibility
+              // tree so screen readers (and e2e tools) read the field via its
+              // own accessibilityLabel below, not this overlapping View.
+              accessibilityElementsHidden
+              importantForAccessibility="no-hide-descendants"
             >
               <Text className="font-sans text-sm text-muted">{label}</Text>
             </MotiView>
@@ -125,6 +137,12 @@ export function Input({
           <TextInputComponent
             ref={inputRef}
             value={value}
+            // The input is the accessible element for this field (the wrapping
+            // Pressable is hidden from a11y above), so its testID surfaces as
+            // the resource-id and its value stays readable by screen readers /
+            // e2e tools. On web this testID is the `data-testid` Playwright uses.
+            testID={testID}
+            accessibilityLabel={label}
             onFocus={(e) => {
               setFocused(true);
               onFocus?.(e);

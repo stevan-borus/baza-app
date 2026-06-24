@@ -65,7 +65,7 @@ vi.mock("@/components/ui/icon", () => ({
 }));
 
 // ─── LegendList mock ──────────────────────────────────────────────────────
-vi.mock("@legendapp/list", () => {
+vi.mock("@legendapp/list/react-native", () => {
   const RR = require("react");
   return {
     LegendList: (props: any) => {

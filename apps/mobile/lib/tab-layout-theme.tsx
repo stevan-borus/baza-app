@@ -62,6 +62,11 @@ export function FloatingTabBar(
 
   return (
     <View
+      // Stable, role-agnostic anchor for e2e: every authenticated tab layout
+      // (client/trainer/admin) renders this bar, but the first tab's route name
+      // differs per role (index / raspored / pregled), so flows can't rely on a
+      // single `tab-<name>`. Waiting on this confirms "signed in and landed".
+      testID="app-tab-bar"
       style={{
         backgroundColor: tokens.background,
         borderTopWidth: StyleSheet.hairlineWidth,

@@ -16,6 +16,7 @@
  * move anything and the test would be a no-op.
  */
 import { test, expect } from "./helpers/fixtures";
+import { waitForStableBoundingBox } from "./helpers/interactions";
 import {
   disconnect,
   resetAndSeed,
@@ -52,9 +53,9 @@ test.describe.serial("trainer clients sticky header", () => {
     await page.getByTestId("tab-clients").click();
 
     const search = page.getByTestId("trainer-clients-search-input");
-    await expect(search).toBeVisible({ timeout: 10_000 });
+    await expect(search).toBeVisible();
     const rows = page.locator('[data-testid^="trainer-client-row-"]');
-    await expect(rows.first()).toBeVisible({ timeout: 10_000 });
+    await expect(rows.first()).toBeVisible();
 
     // Capture the search input's Y coordinate before scrolling.
     const beforeBox = await search.boundingBox();
@@ -81,21 +82,10 @@ test.describe.serial("trainer clients sticky header", () => {
       }
     });
 
-    // Wait for the search input's Y to stabilize. 150ms is enough on a quiet
-    // server, but under sustained suite load the post-scroll reflow can take
-    // longer; poll boundingBox until two consecutive reads agree, capped at 1s.
-    let afterBox = await search.boundingBox();
-    for (let i = 0; i < 20; i++) {
-      await page.waitForTimeout(50);
-      const next = await search.boundingBox();
-      if (next && afterBox && Math.abs(next.y - afterBox.y) < 0.5) {
-        afterBox = next;
-        break;
-      }
-      afterBox = next;
-    }
-    expect(afterBox).not.toBeNull();
+    // Wait for the search input's Y to stabilize after the post-scroll reflow
+    // (state, not a fixed sleep — see waitForStableBoundingBox).
+    const afterBox = await waitForStableBoundingBox(search);
     // 2px slack covers sub-pixel layout rounding on RN-Web.
-    expect(Math.abs(afterBox!.y - beforeBox!.y)).toBeLessThan(2);
+    expect(Math.abs(afterBox.y - beforeBox!.y)).toBeLessThan(2);
   });
 });

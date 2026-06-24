@@ -11,15 +11,19 @@
     "check-types": "turbo run check-types"
   },
   "devDependencies": {
-    "lefthook": "^2.1.1",
+    "lefthook": "^2.1.9",
     "oxfmt": "^0.33.0",
-    "oxlint": "^1.48.0",
-    "turbo": "^2.8.10",
+    "oxlint": "1.48.0",
+    "turbo": "^2.9.18",
     "typescript": "^5.9.3"
+  },
+  "pnpm": {
+    "overrides": {
+      "oxlint": "1.48.0"
+    }
   },
   "engines": {
     "node": ">=22"
   },
   "packageManager": "pnpm@10.28.0"
 }
-

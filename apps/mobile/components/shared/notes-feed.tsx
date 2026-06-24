@@ -24,7 +24,7 @@ import { useTranslation } from "react-i18next";
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
 import { Icon, type IconName } from "@/components/ui/icon";
 import { MotiView } from "@/components/ui/styled";
-import { LegendList, type LegendListRef } from "@legendapp/list";
+import { LegendList, type LegendListRef } from "@legendapp/list/react-native";
 import { AppSheet } from "@/components/ui/sheet";
 import { ConfirmSheet } from "@/components/ui/confirm-sheet";
 import { Button } from "@/components/ui/button";

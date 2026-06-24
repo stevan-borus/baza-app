@@ -9,7 +9,7 @@
  * separate pass if ever — it would touch every call site and test.
  */
 import React from "react";
-import { type StyleProp, type ViewStyle } from "react-native";
+import { type ColorValue, type StyleProp, type ViewStyle } from "react-native";
 import { useThemeTokens } from "@/components/ui/tokens";
 import {
   type LucideIcon,
@@ -136,7 +136,7 @@ export type IconName = keyof typeof ICONS;
 type IconProps = {
   name: IconName;
   size?: number;
-  color?: string;
+  color?: ColorValue;
   /** Lucide stroke weight. Default 2 matches the previous thin Feather chrome. */
   strokeWidth?: number;
   style?: StyleProp<ViewStyle>;

@@ -39,9 +39,7 @@ test.describe("profile health — edit-existing flow", () => {
     await page.getByTestId("profile-health-row").click();
 
     // Record an initial intake so subsequent loads have something to prefill.
-    await expect(page.getByTestId("health-intake-form")).toBeVisible({
-      timeout: 10_000,
-    });
+    await expect(page.getByTestId("health-intake-form")).toBeVisible();
     await page.getByTestId("pilatesExperience-none").click();
     await page.getByTestId("underMedicalTreatment-no").click();
     await page.getByTestId("activityLevel-moderate").click();
@@ -55,9 +53,7 @@ test.describe("profile health — edit-existing flow", () => {
     await initialSave;
 
     // Sticky save disappears because draft now matches the saved record.
-    await expect(page.getByTestId("profile-health-save")).toHaveCount(0, {
-      timeout: 10_000,
-    });
+    await expect(page.getByTestId("profile-health-save")).toHaveCount(0);
     // Form stays mounted (always-editable, not a chip view).
     await expect(page.getByTestId("health-intake-form")).toBeVisible();
 
@@ -81,8 +77,6 @@ test.describe("profile health — edit-existing flow", () => {
     const editResp = await editSave;
     expect(editResp.status()).toBe(200);
 
-    await expect(page.getByTestId("profile-health-save")).toHaveCount(0, {
-      timeout: 10_000,
-    });
+    await expect(page.getByTestId("profile-health-save")).toHaveCount(0);
   });
 });

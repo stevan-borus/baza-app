@@ -44,7 +44,7 @@ test.describe("admin — create client with DOB", () => {
 
     // Clients tab is the default; open the "Novi klijent" sheet.
     await page.getByTestId("admin-new-client-button").dispatchEvent("click");
-    await expect(page.getByTestId("client-create-email-input")).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByTestId("client-create-email-input")).toBeVisible();
 
     await page.getByTestId("client-create-email-input").fill("klijent.novi.e2e@example.test");
     await page.getByTestId("client-create-firstname-input").fill("Novi");
@@ -58,6 +58,6 @@ test.describe("admin — create client with DOB", () => {
     // email to avoid colliding with the "Novi klijent" sheet title.
     await expect(
       page.getByText("klijent.novi.e2e@example.test"),
-    ).toBeVisible({ timeout: 10_000 });
+    ).toBeVisible();
   });
 });

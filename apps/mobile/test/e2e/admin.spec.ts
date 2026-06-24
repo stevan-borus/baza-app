@@ -18,6 +18,7 @@ import {
 } from "./helpers/dates";
 import { t } from "./helpers/locales";
 import { pickInviteDob } from "./helpers/forms";
+import { pressRNW } from "./helpers/interactions";
 
 const SEED_PASSWORD = "Password123!";
 
@@ -144,9 +145,7 @@ test.describe("admin (Serbian)", () => {
     await page.getByTestId("class-type-duration-input").fill("60");
     await page.getByTestId("class-type-create-submit").dispatchEvent("click");
 
-    await expect(page.getByText(name).first()).toBeVisible({
-      timeout: 10_000,
-    });
+    await expect(page.getByText(name).first()).toBeVisible();
   });
 
   test("13: admin edits a ClassType", async ({ page }) => {
@@ -165,9 +164,7 @@ test.describe("admin (Serbian)", () => {
       .getByTestId("class-type-edit-save-button")
       .dispatchEvent("click");
 
-    await expect(page.getByText(newName).first()).toBeVisible({
-      timeout: 10_000,
-    });
+    await expect(page.getByText(newName).first()).toBeVisible();
   });
 
   test("14: admin deletes a ClassType (no dependents)", async ({ page }) => {
@@ -184,9 +181,7 @@ test.describe("admin (Serbian)", () => {
     await page.getByTestId("class-type-duration-input").fill("60");
     await page.getByTestId("class-type-create-submit").dispatchEvent("click");
 
-    await expect(page.getByText(name).first()).toBeVisible({
-      timeout: 10_000,
-    });
+    await expect(page.getByText(name).first()).toBeVisible();
 
     await page.getByText(name).first().dispatchEvent("click");
     await page
@@ -197,7 +192,7 @@ test.describe("admin (Serbian)", () => {
       .dispatchEvent("click");
 
     await expect
-      .poll(async () => page.getByText(name).count(), { timeout: 10_000 })
+      .poll(async () => page.getByText(name).count())
       .toBe(0);
   });
 
@@ -226,9 +221,7 @@ test.describe("admin (Serbian)", () => {
     await page.getByTestId("package-late-cancel-input").fill("12");
     await page.getByTestId("package-create-submit").dispatchEvent("click");
 
-    await expect(page.getByText(name).first()).toBeVisible({
-      timeout: 10_000,
-    });
+    await expect(page.getByText(name).first()).toBeVisible();
   });
 
   test("16: admin edits a PackageType", async ({ page }) => {
@@ -239,7 +232,7 @@ test.describe("admin (Serbian)", () => {
     const firstRow = page
       .locator('[data-testid^="package-type-row-"]')
       .first();
-    await expect(firstRow).toBeVisible({ timeout: 10_000 });
+    await expect(firstRow).toBeVisible();
     await firstRow.dispatchEvent("click");
 
     const newName = `Edited Package ${Date.now()}`;
@@ -247,9 +240,7 @@ test.describe("admin (Serbian)", () => {
     await nameInput.fill(newName);
     await page.getByTestId("package-edit-save-button").dispatchEvent("click");
 
-    await expect(page.getByText(newName).first()).toBeVisible({
-      timeout: 10_000,
-    });
+    await expect(page.getByText(newName).first()).toBeVisible();
   });
 
   test("17: admin deletes a PackageType (no dependents)", async ({ page }) => {
@@ -275,9 +266,7 @@ test.describe("admin (Serbian)", () => {
     await page.getByTestId("package-late-cancel-input").fill("12");
     await page.getByTestId("package-create-submit").dispatchEvent("click");
 
-    await expect(page.getByText(name).first()).toBeVisible({
-      timeout: 10_000,
-    });
+    await expect(page.getByText(name).first()).toBeVisible();
 
     // Open it, click delete, confirm in the ConfirmSheet.
     await page.getByText(name).first().dispatchEvent("click");
@@ -310,9 +299,7 @@ test.describe("admin (Serbian)", () => {
     await page.getByTestId("room-capacity-input").fill("12");
     await page.getByTestId("room-create-submit").dispatchEvent("click");
 
-    await expect(page.getByText(name).first()).toBeVisible({
-      timeout: 10_000,
-    });
+    await expect(page.getByText(name).first()).toBeVisible();
   });
 
   test("19: admin edits a StudioRoom", async ({ page }) => {
@@ -328,9 +315,7 @@ test.describe("admin (Serbian)", () => {
     await page.getByTestId("room-edit-name-input").fill(newName);
     await page.getByTestId("room-edit-save-button").dispatchEvent("click");
 
-    await expect(page.getByText(newName).first()).toBeVisible({
-      timeout: 10_000,
-    });
+    await expect(page.getByText(newName).first()).toBeVisible();
   });
 
   test("20: admin deletes a StudioRoom (no dependents)", async ({ page }) => {
@@ -345,9 +330,7 @@ test.describe("admin (Serbian)", () => {
     await page.getByTestId("room-capacity-input").fill("8");
     await page.getByTestId("room-create-submit").dispatchEvent("click");
 
-    await expect(page.getByText(name).first()).toBeVisible({
-      timeout: 10_000,
-    });
+    await expect(page.getByText(name).first()).toBeVisible();
 
     await page.getByText(name).first().dispatchEvent("click");
     await page.getByTestId("room-edit-delete-button").dispatchEvent("click");
@@ -356,7 +339,7 @@ test.describe("admin (Serbian)", () => {
       .dispatchEvent("click");
 
     await expect
-      .poll(async () => page.getByText(name).count(), { timeout: 10_000 })
+      .poll(async () => page.getByText(name).count())
       .toBe(0);
   });
 
@@ -426,7 +409,7 @@ test.describe("admin (Serbian)", () => {
       .dispatchEvent("click");
 
     await expect
-      .poll(async () => countSessions(), { timeout: 10_000 })
+      .poll(async () => countSessions())
       .toBe(sessionsBefore + 1);
   });
 
@@ -440,7 +423,7 @@ test.describe("admin (Serbian)", () => {
     await navigateWeekStripTo(page, nextReformerDayKey());
 
     const card = page.locator('[data-testid^="session-block-"]').first();
-    await expect(card).toBeVisible({ timeout: 10_000 });
+    await expect(card).toBeVisible();
     await openSessionEditSheet(page, card);
 
     // Edit sheet opens; just tap save with no changes — round-trips the API.
@@ -461,7 +444,7 @@ test.describe("admin (Serbian)", () => {
     await navigateWeekStripTo(page, nextReformerDayKey());
 
     const card = page.locator('[data-testid^="session-block-"]').first();
-    await expect(card).toBeVisible({ timeout: 10_000 });
+    await expect(card).toBeVisible();
     await openSessionEditSheet(page, card);
 
     await page.getByTestId("session-edit-cancel-button").dispatchEvent("click");
@@ -608,14 +591,30 @@ test.describe("admin (Serbian)", () => {
 
     await openSessionEditSheet(page, page.getByTestId(`session-block-${ref.id}`));
 
-    // Switch to series scope; the series-edit form mounts.
-    await page.getByTestId("session-edit-scope-series").dispatchEvent("click");
+    // Switch to series scope; the series-edit form mounts. Use a realistic
+    // pointer press (see pressRNW): a bare `dispatchEvent("click")` only
+    // intermittently drives RN-Web's Pressable responder, so the scope toggle
+    // and the save tap below would sometimes "not fire" — leaving no PATCH for
+    // waitForResponse to catch (the source of this spec's 15s timeout flake).
+    await pressRNW(page.getByTestId("session-edit-scope-series"));
 
-    // The series form loads asynchronously (fetches the recurring schedule).
+    // The series form loads asynchronously (fetches the recurring schedule,
+    // then hydrates weekdays/trainer/time from it). The save button mounts
+    // disabled and only enables once that hydration lands — so waiting for it
+    // to be merely *visible* and pressing immediately races the fetch: the
+    // press fires on a still-disabled button, no mutation runs, and the
+    // waitForResponse below times out. RN-Web renders a disabled Button as
+    // `aria-disabled="true"` (NOT the DOM `disabled` attr — Playwright's
+    // toBeDisabled misreads it), so we poll that attribute to clear before
+    // pressing. State, not time — per AGENTS.md anti-flake.
     const saveBtn = page.getByTestId("series-edit-save-button");
-    await expect(saveBtn).toBeVisible({ timeout: 10_000 });
+    await expect(saveBtn).toBeVisible();
+    // Inherit the config's 10s expect default rather than restating it — this
+    // resolves the instant the form hydration enables the button (sub-second
+    // locally); the timeout is only a failure ceiling, not a sleep.
+    await expect(saveBtn).not.toHaveAttribute("aria-disabled", "true");
     await saveBtn.scrollIntoViewIfNeeded();
-    await saveBtn.dispatchEvent("click");
+    await pressRNW(saveBtn);
 
     // Verify the mutation actually ran by polling the API. If the sheet
     // doesn't close we still expect the schedule's lastUpdated to bump.
@@ -679,9 +678,7 @@ test.describe("admin (Serbian)", () => {
     await openSessionEditSheet(page, page.getByTestId(`session-block-${ref.id}`));
 
     await page.getByTestId("session-edit-scope-series").dispatchEvent("click");
-    await expect(page.getByTestId("series-edit-delete-button")).toBeVisible({
-      timeout: 10_000,
-    });
+    await expect(page.getByTestId("series-edit-delete-button")).toBeVisible();
     await page
       .getByTestId("series-edit-delete-button")
       .dispatchEvent("click");
@@ -803,7 +800,7 @@ test.describe("admin (Serbian)", () => {
 
     await expect(
       page.getByText(inviteEmail, { exact: true }).first(),
-    ).toBeVisible({ timeout: 10_000 });
+    ).toBeVisible();
   });
 
   test("32: admin client list shows package status badges", async ({ page }) => {
@@ -815,7 +812,7 @@ test.describe("admin (Serbian)", () => {
     // we can render is visible.
     await expect(
       page.getByText(t.admin.clients.filterActive).first(),
-    ).toBeVisible({ timeout: 10_000 });
+    ).toBeVisible();
     await expect(
       page.getByText(t.admin.clients.filterExpired).first(),
     ).toBeVisible();
@@ -835,7 +832,7 @@ test.describe("admin (Serbian)", () => {
     const firstPencil = page
       .locator('[data-testid^="client-pencil-"]')
       .first();
-    await expect(firstPencil).toBeVisible({ timeout: 10_000 });
+    await expect(firstPencil).toBeVisible();
     await firstPencil.dispatchEvent("click");
 
     await page.getByTestId("client-action-pause").dispatchEvent("click");
@@ -875,7 +872,7 @@ test.describe("admin (Serbian)", () => {
         hasText: "Empty Pack Client",
       })
       .first();
-    await expect(targetRow).toBeVisible({ timeout: 10_000 });
+    await expect(targetRow).toBeVisible();
     await targetRow
       .locator('[data-testid^="client-pencil-"]')
       .dispatchEvent("click");
@@ -940,7 +937,7 @@ test.describe("admin (Serbian)", () => {
     // After the mutation succeeds the new row appears in the list.
     await expect(
       page.locator('[data-testid^="billing-row-"]').first(),
-    ).toBeVisible({ timeout: 10_000 });
+    ).toBeVisible();
   });
 
   test("36: Flow 1 — billing record defaults to CONFIRMED status", async ({
@@ -969,7 +966,7 @@ test.describe("admin (Serbian)", () => {
     // newly-created row.
     await expect(
       page.getByText(t.admin.manage.statusConfirmed).first(),
-    ).toBeVisible({ timeout: 10_000 });
+    ).toBeVisible();
   });
 
   test("37: admin records a drop-in payment with no package", async ({
@@ -998,7 +995,7 @@ test.describe("admin (Serbian)", () => {
     // Some billing-row appears (we verified count growth in 35).
     await expect(
       page.locator('[data-testid^="billing-row-"]').first(),
-    ).toBeVisible({ timeout: 10_000 });
+    ).toBeVisible();
   });
 
   test("38: admin assigns a comp package via the actions sheet (Flow 2)", async ({
@@ -1018,7 +1015,7 @@ test.describe("admin (Serbian)", () => {
         hasText: "Empty Pack Client",
       })
       .first();
-    await expect(targetRow).toBeVisible({ timeout: 10_000 });
+    await expect(targetRow).toBeVisible();
     await targetRow
       .locator('[data-testid^="client-pencil-"]')
       .dispatchEvent("click");
@@ -1036,7 +1033,7 @@ test.describe("admin (Serbian)", () => {
     await page.getByTestId("assign-package-start-picker").dispatchEvent("click");
     await expect(
       page.locator('[data-testid="date-time-picker-calendar"]'),
-    ).toBeVisible({ timeout: 10_000 });
+    ).toBeVisible();
     const today = String(new Date().getDate());
     await page
       .locator('[data-testid="date-time-picker-calendar"] button.rdp-day_button', {
@@ -1066,6 +1063,6 @@ test.describe("admin (Serbian)", () => {
     // present is a strong signal.
     await expect(
       page.getByRole("button", { name: t.admin.manage.sheetNewPayment }),
-    ).toBeVisible({ timeout: 10_000 });
+    ).toBeVisible();
   });
 });

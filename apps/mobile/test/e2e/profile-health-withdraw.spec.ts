@@ -42,9 +42,7 @@ test.describe("profile health — withdraw flow", () => {
     await page.getByTestId("profile-health-row").click();
 
     // Record a minimal intake so the withdraw link is unlocked.
-    await expect(page.getByTestId("health-intake-form")).toBeVisible({
-      timeout: 10_000,
-    });
+    await expect(page.getByTestId("health-intake-form")).toBeVisible();
     await page.getByTestId("pilatesExperience-none").click();
     await page.getByTestId("underMedicalTreatment-no").click();
     await page.getByTestId("activityLevel-moderate").click();
@@ -59,9 +57,7 @@ test.describe("profile health — withdraw flow", () => {
     expect(recordResp.status()).toBe(200);
 
     // Save button hides; withdraw link is revealed at the bottom of the form.
-    await expect(page.getByTestId("profile-health-save")).toHaveCount(0, {
-      timeout: 10_000,
-    });
+    await expect(page.getByTestId("profile-health-save")).toHaveCount(0);
     const withdraw = page.getByTestId("profile-health-withdraw");
     await expect(withdraw).toBeVisible();
 
@@ -84,9 +80,7 @@ test.describe("profile health — withdraw flow", () => {
 
     // After withdrawal: the intake is gone, so the withdraw link hides and
     // the empty-state copy reappears at the top of the form.
-    await expect(page.getByTestId("profile-health-withdraw")).toHaveCount(0, {
-      timeout: 10_000,
-    });
+    await expect(page.getByTestId("profile-health-withdraw")).toHaveCount(0);
     await expect(page.getByTestId("health-intake-form")).toBeVisible();
   });
 });

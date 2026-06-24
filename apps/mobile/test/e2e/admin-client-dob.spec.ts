@@ -51,9 +51,7 @@ test.describe("admin client DOB (Serbian)", () => {
     // Format from lib/date-of-birth.ts:
     //   formatDateOfBirth(parseDateOfBirth("1990-05-11"), "sr")
     //   === "11.05.1990." (note the trailing dot — Serbian convention).
-    await expect(page.getByText("11.05.1990.")).toBeVisible({
-      timeout: 10_000,
-    });
+    await expect(page.getByText("11.05.1990.")).toBeVisible();
 
     // ── 2. Invite flow renders the DOB picker without crashing ───────────
     // Navigate back to Klijenti, switch to the Invites tab, open the
@@ -84,6 +82,6 @@ test.describe("admin client DOB (Serbian)", () => {
     // The new pending invite appears in the Invites tab list.
     await expect(
       page.getByText(inviteEmail, { exact: true }).first(),
-    ).toBeVisible({ timeout: 10_000 });
+    ).toBeVisible();
   });
 });

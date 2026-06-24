@@ -63,7 +63,7 @@ vi.mock("react-native", () => {
 // onEndReached / inspect rendered footer / etc.
 const lastListProps: { current: any } = { current: null };
 
-vi.mock("@legendapp/list", () => {
+vi.mock("@legendapp/list/react-native", () => {
   const RR = require("react");
   return {
     LegendList: (props: any) => {

@@ -12,6 +12,7 @@
  * anything and the test would be a no-op.
  */
 import { test, expect } from "./helpers/fixtures";
+import { waitForStableBoundingBox } from "./helpers/interactions";
 import {
   disconnect,
   resetAndSeed,
@@ -45,9 +46,9 @@ test.describe.serial("naplata sticky header (admin)", () => {
     await page.getByTestId("tab-naplata").click();
 
     const search = page.getByTestId("naplata-search-input");
-    await expect(search).toBeVisible({ timeout: 10_000 });
+    await expect(search).toBeVisible();
     const rows = page.locator('[data-testid^="billing-row-"]');
-    await expect(rows.first()).toBeVisible({ timeout: 10_000 });
+    await expect(rows.first()).toBeVisible();
 
     // Capture the search input's Y coordinate before scrolling.
     const beforeBox = await search.boundingBox();
@@ -72,12 +73,9 @@ test.describe.serial("naplata sticky header (admin)", () => {
       }
     });
 
-    // Allow one rAF for the scroll to settle.
-    await page.waitForTimeout(150);
-
-    const afterBox = await search.boundingBox();
-    expect(afterBox).not.toBeNull();
+    // Wait for the post-scroll reflow to settle (state, not a fixed sleep).
+    const afterBox = await waitForStableBoundingBox(search);
     // 2px slack covers sub-pixel layout rounding on RN-Web.
-    expect(Math.abs(afterBox!.y - beforeBox!.y)).toBeLessThan(2);
+    expect(Math.abs(afterBox.y - beforeBox!.y)).toBeLessThan(2);
   });
 });

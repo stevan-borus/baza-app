@@ -1,5 +1,6 @@
 import { Icon, type IconName } from "@/components/ui/icon";
 import { Tabs } from "expo-router";
+import { type ColorValue } from "react-native";
 import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
 import { useColorScheme } from "@/components/useColorScheme";
@@ -10,7 +11,7 @@ import {
 import { notificationsQueries } from "@/lib/queries/notifications-queries-factory";
 import { ConsentGateRedirect } from "@/components/consent/consent-gate-redirect";
 
-function TabIcon(props: { name: IconName; color: string }) {
+function TabIcon(props: { name: IconName; color: ColorValue }) {
   return <Icon size={22} name={props.name} color={props.color} />;
 }
 

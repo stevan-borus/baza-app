@@ -23,8 +23,18 @@ echo "==> Running expo prebuild --clean"
 pnpm exec expo prebuild --clean
 
 if [ "$PLATFORM" = "ios" ]; then
+  # Pin NODE_BINARY for Xcode's build script phases. Expo's `with-node.sh`
+  # defaults to `command -v node`, but several pod script phases (e.g.
+  # EXConstants' app.config generation) run under a `bash -l` login shell whose
+  # PATH can resolve a stale system node (e.g. an old Homebrew /usr/local/bin
+  # /node) instead of the project's fnm-managed node. SDK 56's `@expo/env`
+  # needs `util.parseEnv` (Node 20.12+), so an old Node 18 makes that phase
+  # crash and the whole Release build fails. Capture the node active here (where
+  # the project's node is on PATH) and write it so build scripts use it.
+  NODE_BINARY="$(command -v node)"
   # Ensure Xcode's bundle phase uses the E2E API env baked into the release JS bundle.
   cat > ios/.xcode.env.local <<EOF
+export NODE_BINARY="${NODE_BINARY}"
 export NODE_OPTIONS="--max-old-space-size=8192"
 export EXPO_PUBLIC_API_URL="${EXPO_PUBLIC_API_URL:-}"
 export APP_WEB_URL="${APP_WEB_URL:-}"

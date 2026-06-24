@@ -39,7 +39,11 @@ appId: ${APP_ID}
       - tapOn: "Not Now"
       - waitForAnimationToEnd
 
+# Wait for the authenticated tab bar to confirm sign-in landed. Use the
+# role-agnostic bar anchor — the first tab's route name differs per role
+# (client=index, trainer=raspored, admin=pregled), so `tab-index` only held
+# for the client flow.
 - extendedWaitUntil:
     visible:
-      id: "tab-index"
+      id: "app-tab-bar"
     timeout: 15000

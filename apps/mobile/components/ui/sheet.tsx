@@ -89,19 +89,63 @@ export function AppSheet({
   // dismiss completes.
   const presentedRef = useRef(false);
   const pendingOpenRef = useRef(false);
+  // Tracks an in-flight dismiss retry timer so we can cancel it once the
+  // modal actually tears down (onDismiss) or is re-presented.
+  const dismissRetryRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const reconcile = useCallback((shouldOpen: boolean) => {
-    if (shouldOpen) {
-      if (!presentedRef.current) {
-        presentedRef.current = true;
-        pendingOpenRef.current = false;
-        ref.current?.present();
-      }
-    } else if (presentedRef.current) {
-      // Mark dismiss in flight; onDismiss flips presentedRef back to false.
-      ref.current?.dismiss();
+  const clearDismissRetry = useCallback(() => {
+    if (dismissRetryRef.current !== null) {
+      clearTimeout(dismissRetryRef.current);
+      dismissRetryRef.current = null;
     }
   }, []);
+
+  // gorhom 5.2.11 rewrote the modal status machine; a dismiss() fired while the
+  // modal is still settling from its present() animation is silently dropped —
+  // onDismiss never fires and the sheet stays stuck open. Calling dismiss()
+  // once is therefore not reliable. We schedule a bounded retry loop: re-issue
+  // dismiss() every frame-ish until onDismiss confirms teardown (which clears
+  // presentedRef and the timer). This self-heals the dropped-dismiss case
+  // without papering over it in callers.
+  const requestDismiss = useCallback(() => {
+    if (!presentedRef.current) return;
+    ref.current?.dismiss();
+    clearDismissRetry();
+    let attempts = 0;
+    const tick = () => {
+      // onDismiss flips presentedRef to false; once that happens, stop.
+      if (!presentedRef.current) {
+        dismissRetryRef.current = null;
+        return;
+      }
+      if (attempts >= 12) {
+        // Give up after ~1.2s of retries; avoids an unbounded loop if the
+        // modal genuinely can't dismiss (e.g. unmounting).
+        dismissRetryRef.current = null;
+        return;
+      }
+      attempts += 1;
+      ref.current?.dismiss();
+      dismissRetryRef.current = setTimeout(tick, 100);
+    };
+    dismissRetryRef.current = setTimeout(tick, 100);
+  }, [clearDismissRetry]);
+
+  const reconcile = useCallback(
+    (shouldOpen: boolean) => {
+      if (shouldOpen) {
+        clearDismissRetry();
+        if (!presentedRef.current) {
+          presentedRef.current = true;
+          pendingOpenRef.current = false;
+          ref.current?.present();
+        }
+      } else if (presentedRef.current) {
+        requestDismiss();
+      }
+    },
+    [clearDismissRetry, requestDismiss],
+  );
 
   useEffect(() => {
     if (open) {
@@ -115,8 +159,12 @@ export function AppSheet({
     }
   }, [open, reconcile]);
 
+  // Stop any retry loop on unmount.
+  useEffect(() => clearDismissRetry, [clearDismissRetry]);
+
   const handleDismiss = useCallback(() => {
     presentedRef.current = false;
+    clearDismissRetry();
     onOpenChange(false);
     // If the parent re-requested open while we were dismissing, present now
     // that the modal is fully torn down.
@@ -127,7 +175,7 @@ export function AppSheet({
         ref.current?.present();
       });
     }
-  }, [onOpenChange]);
+  }, [onOpenChange, clearDismissRetry]);
 
   const renderBackdrop = useCallback(
     (props: BottomSheetBackdropProps) => (

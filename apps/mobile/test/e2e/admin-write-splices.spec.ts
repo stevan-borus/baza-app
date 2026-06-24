@@ -62,15 +62,15 @@ test.describe("admin — list splices on write (no refetch)", () => {
     await page.getByTestId("room-name-input").fill("E2E Splice Room");
     await page.getByTestId("room-capacity-input").fill("7");
     await page.getByTestId("room-create-submit").click();
-    await expect(page.getByText("E2E Splice Room")).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText("E2E Splice Room")).toBeVisible();
 
     // Edit — rename, expect the same row to update in place (replace-by-id).
     await page.getByText("E2E Splice Room").click();
     const nameEdit = page.getByTestId("room-edit-name-input");
-    await expect(nameEdit).toBeVisible({ timeout: 10_000 });
+    await expect(nameEdit).toBeVisible();
     await nameEdit.fill("E2E Splice Room Renamed");
     await page.getByTestId("room-edit-save-button").click();
-    await expect(page.getByText("E2E Splice Room Renamed")).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText("E2E Splice Room Renamed")).toBeVisible();
     await expect(page.getByText("E2E Splice Room", { exact: true })).toHaveCount(0);
   });
 
@@ -84,14 +84,14 @@ test.describe("admin — list splices on write (no refetch)", () => {
     await page.getByTestId("class-type-max-clients-input").fill("6");
     await page.getByTestId("class-type-duration-input").fill("50");
     await page.getByTestId("class-type-create-submit").click();
-    await expect(page.getByText("E2E Splice Class")).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText("E2E Splice Class")).toBeVisible();
 
     await page.getByText("E2E Splice Class").click();
     const nameEdit = page.getByTestId("class-type-edit-name-input");
-    await expect(nameEdit).toBeVisible({ timeout: 10_000 });
+    await expect(nameEdit).toBeVisible();
     await nameEdit.fill("E2E Splice Class Renamed");
     await page.getByTestId("class-type-edit-save-button").click();
-    await expect(page.getByText("E2E Splice Class Renamed")).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText("E2E Splice Class Renamed")).toBeVisible();
   });
 
   // ── Package types (birthday-gift badge rides on the widened response) ────────
@@ -108,17 +108,17 @@ test.describe("admin — list splices on write (no refetch)", () => {
     await page.getByTestId("package-validity-days-input").fill("30");
     await page.getByTestId("package-late-cancel-input").fill("12");
     await page.getByTestId("package-create-submit").click();
-    await expect(page.getByText("E2E Splice Package")).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText("E2E Splice Package")).toBeVisible();
 
     // Edit: flip the birthday-gift flag. The 🎂 badge is computed from
     // isBirthdayGift, which only reaches the list via the widened updateType
     // response — so its appearance proves the server gap is closed AND spliced.
     await page.getByText("E2E Splice Package").click();
     const giftToggle = page.getByTestId("package-edit-birthday-gift");
-    await expect(giftToggle).toBeVisible({ timeout: 10_000 });
+    await expect(giftToggle).toBeVisible();
     await giftToggle.click();
     await page.getByTestId("package-edit-save-button").click();
-    await expect(page.getByText(/🎂/)).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText(/🎂/)).toBeVisible();
   });
 
   // ── Campaigns: create splices into list; send splices SENT status into detail ─
@@ -134,11 +134,11 @@ test.describe("admin — list splices on write (no refetch)", () => {
 
     // Spliced into the list (create) — appears without a refetch.
     const row = page.getByText("E2E Splice Campaign");
-    await expect(row).toBeVisible({ timeout: 10_000 });
+    await expect(row).toBeVisible();
 
     // Open detail, send now → the returned SENT campaign splices into detail.
     await row.click();
-    await expect(page.getByTestId("campaign-detail-send")).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByTestId("campaign-detail-send")).toBeVisible();
     await page.getByTestId("campaign-detail-send").click();
     await page.getByTestId("campaign-detail-confirm").click();
     await expect(page.getByText("Poslato")).toBeVisible({ timeout: 15_000 });
@@ -155,7 +155,7 @@ test.describe("admin — list splices on write (no refetch)", () => {
     await page.getByTestId("campaign-save-draft").click();
 
     const row = page.getByText("E2E Delete Campaign");
-    await expect(row).toBeVisible({ timeout: 10_000 });
+    await expect(row).toBeVisible();
 
     // Delete from the DRAFT detail (SENT is read-only, so deletes only exist here).
     await row.click();
@@ -183,7 +183,7 @@ test.describe("admin — list splices on write (no refetch)", () => {
     await page.getByTestId("admin-clients-tab-invites").click();
 
     // The seeded PENDING invite shows in the list (status "Na čekanju").
-    await expect(page.getByText("E2ESpliceRevoke")).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText("E2ESpliceRevoke")).toBeVisible();
     await expect(page.getByText("Na čekanju")).toBeVisible();
 
     // Revoke: tap the row's "Povuci" action, confirm "Povuci pozivnicu".
@@ -191,6 +191,6 @@ test.describe("admin — list splices on write (no refetch)", () => {
     // to "Povučen" (REVOKED) in place — no refetch.
     await page.getByText("Povuci", { exact: true }).click();
     await page.getByText("Povuci pozivnicu", { exact: true }).click();
-    await expect(page.getByText("Povučen")).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText("Povučen")).toBeVisible();
   });
 });

@@ -34,6 +34,20 @@ const TEST_DATABASE_URL =
   process.env.TEST_DATABASE_URL ??
   "postgresql://postgres:postgres@localhost:5434/baza_app_test?schema=public";
 
+/**
+ * Pin the test-runner process's own DATABASE_URL to the test DB too. Specs
+ * talk to Postgres directly (seed setup, assertions) via their own Prisma
+ * clients, which resolve `process.env.DATABASE_URL ?? <local default>`. If the
+ * runner is launched without DATABASE_URL exported (the bare `playwright test`
+ * script does not set it), a spec with a stray `baza_app` default would write
+ * its setup rows into the DEV database while the server reads `baza_app_test`
+ * — the row is invisible to the server and the spec fails confusingly (e.g.
+ * 404 "session not available"). Worse, its `resetAndSeed()` would wipe the dev
+ * DB. Pinning here makes spec-side Prisma always hit the test DB regardless of
+ * any individual spec's local default.
+ */
+process.env.DATABASE_URL = TEST_DATABASE_URL;
+
 export default defineConfig({
   testDir: "./test/e2e",
   testMatch: "**/*.spec.ts",
