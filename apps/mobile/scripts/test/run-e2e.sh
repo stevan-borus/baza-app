@@ -22,14 +22,7 @@ ANDROID_APP_ID="${APP_ID_ANDROID:-com.steva.borus.bazapilates}"
 ANDROID_APK_PATH="android/app/build/outputs/apk/release/app-release.apk"
 ANDROID_SDK_DIR="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-$HOME/Library/Android/sdk}}"
 ANDROID_EMULATOR_BIN="${ANDROID_SDK_DIR}/emulator/emulator"
-PASSWORD_RESET_EMAIL="${E2E_CLIENT_EMAIL:-client.active.reformer@e2e.test}"
-PASSWORD_RESET_NEW_PASSWORD="${E2E_CLIENT_RESET_PASSWORD:-Password123!Reset1}"
-RESET_TOKEN_CAPTURE_FILE="${E2E_RESET_TOKEN_FILE:-.maestro/.tmp/password-reset-token.json}"
 FORCE_API_SERVER_RESTART="false"
-
-if [ "$FLOW" = "password-reset.yaml" ]; then
-  FORCE_API_SERVER_RESTART="true"
-fi
 
 cleanup() {
   echo "==> Cleaning up background processes"
@@ -140,22 +133,6 @@ install_android_app() {
   adb shell am force-stop "$ANDROID_APP_ID" > /dev/null 2>&1 || true
 }
 
-read_captured_reset_token() {
-  for i in $(seq 1 15); do
-    local token
-    token="$(
-      pnpm exec tsx scripts/test/get-latest-reset-token.ts "$PASSWORD_RESET_EMAIL" 2>/dev/null
-    )" && {
-      printf "%s" "$token"
-      return 0
-    }
-    sleep 1
-  done
-
-  echo "==> ERROR: Failed to read captured reset token"
-  return 1
-}
-
 # Prepare test database and seed data
 echo "==> Preparing test database"
 pnpm test:e2e:prepare
@@ -228,54 +205,27 @@ apply_flow_setup() {
   esac
 }
 
-run_password_reset_pair() {
-  rm -f "$RESET_TOKEN_CAPTURE_FILE"
-
-  # Re-seed so the previous reset doesn't invalidate the user's password.
-  echo "==> Re-seeding DB for password-reset pair"
-  pnpm test:e2e:prepare
-
-  maestro test --config .maestro/config.yaml --platform "$PLATFORM" "${BASE_ENV_ARGS[@]}" ".maestro/password-reset-request.yaml"
-
-  local token
-  token="$(read_captured_reset_token)"
-
-  maestro test \
-    --config .maestro/config.yaml \
-    --platform "$PLATFORM" \
-    "${BASE_ENV_ARGS[@]}" \
-    ".maestro/password-reset.yaml" \
-    -e EMAIL="$PASSWORD_RESET_EMAIL" \
-    -e RESET_TOKEN="$token" \
-    -e RESET_PASSWORD="$PASSWORD_RESET_NEW_PASSWORD"
-}
-
 # Run Maestro tests
 echo "==> Running Maestro E2E tests"
 if [ -n "$FLOW" ]; then
-  if [ "$FLOW" = "password-reset.yaml" ]; then
-    run_password_reset_pair
+  apply_flow_setup "$FLOW"
+  if [ ${#FLOW_ENV_ARGS[@]} -gt 0 ]; then
+    maestro test --config .maestro/config.yaml --platform "$PLATFORM" "${BASE_ENV_ARGS[@]}" "${FLOW_ENV_ARGS[@]}" ".maestro/$FLOW"
   else
-    apply_flow_setup "$FLOW"
-    if [ ${#FLOW_ENV_ARGS[@]} -gt 0 ]; then
-      maestro test --config .maestro/config.yaml --platform "$PLATFORM" "${BASE_ENV_ARGS[@]}" "${FLOW_ENV_ARGS[@]}" ".maestro/$FLOW"
-    else
-      maestro test --config .maestro/config.yaml --platform "$PLATFORM" "${BASE_ENV_ARGS[@]}" ".maestro/$FLOW"
-    fi
+    maestro test --config .maestro/config.yaml --platform "$PLATFORM" "${BASE_ENV_ARGS[@]}" ".maestro/$FLOW"
   fi
 else
-  # Run every flow except the password-reset pair (which needs token capture).
-  # Each flow gets a freshly-seeded DB so flow ordering and prior mutations
-  # never leak in. Mirrors the per-spec-file DB reset used by Phase A
-  # Playwright. Failures are recorded but don't halt the loop, so a full
-  # red/green summary lands at the end.
+  # Run every flow. Each flow gets a freshly-seeded DB so flow ordering and
+  # prior mutations never leak in. Mirrors the per-spec-file DB reset used by
+  # Phase A Playwright. Failures are recorded but don't halt the loop, so a
+  # full red/green summary lands at the end.
   first_flow=1
   failed=()
   passed=()
   for flow in .maestro/*.yaml; do
     name="$(basename "$flow")"
     case "$name" in
-      config.yaml|password-reset.yaml|password-reset-request.yaml)
+      config.yaml)
         continue
         ;;
       android-*)
@@ -302,13 +252,6 @@ else
         && passed+=("$name") || failed+=("$name")
     fi
   done
-
-  echo "==> Running password-reset pair"
-  if run_password_reset_pair; then
-    passed+=("password-reset")
-  else
-    failed+=("password-reset")
-  fi
 
   echo ""
   echo "===== Maestro suite summary ====="
