@@ -30,7 +30,11 @@ import { MotiView } from "@/components/ui/styled";
 import { GlassCard } from "@/components/ui/glass-card";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { ErrorState } from "@/components/ui/states";
-import { SkeletonCard } from "@/components/ui/skeleton";
+import {
+  SkeletonBreakdownRows,
+  SkeletonChart,
+  SkeletonGrid,
+} from "@/components/ui/skeleton";
 import { CapsLabel } from "@/components/ui/studio";
 import { ProgressRing } from "@/components/ui/progress-ring";
 import { useThemeTokens } from "@/components/ui/tokens";
@@ -267,11 +271,7 @@ export default function IzvestajiIskoriscenost() {
               {t("admin.izvestaji.iskoriscenost.trend.title")}
             </CapsLabel>
 
-            {timeSeriesQuery.isLoading ? (
-              <View style={{ paddingTop: 16 }}>
-                <SkeletonCard />
-              </View>
-            ) : null}
+            {timeSeriesQuery.isLoading ? <SkeletonChart /> : null}
             {timeSeriesQuery.isError ? (
               <ErrorState message={t("admin.manage.reportsError")} />
             ) : null}
@@ -371,11 +371,7 @@ export default function IzvestajiIskoriscenost() {
               {t("admin.izvestaji.iskoriscenost.heatmap.title")}
             </CapsLabel>
 
-            {heatmapQuery.isLoading ? (
-              <View style={{ paddingTop: 16 }}>
-                <SkeletonCard />
-              </View>
-            ) : null}
+            {heatmapQuery.isLoading ? <SkeletonGrid /> : null}
             {heatmapQuery.isError ? (
               <ErrorState message={t("admin.manage.reportsError")} />
             ) : null}
@@ -556,7 +552,7 @@ function BreakdownSection({
           {t(titleKey)}
         </CapsLabel>
         <View style={{ paddingTop: 12, gap: 10 }}>
-          {loading ? <SkeletonCard /> : null}
+          {loading ? <SkeletonBreakdownRows /> : null}
           {error ? (
             <ErrorState message={t("admin.manage.reportsError")} />
           ) : null}

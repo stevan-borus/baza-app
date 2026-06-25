@@ -19,7 +19,7 @@
  * (matches client.fullName / notes), same trade-off documented in the
  * Klijenti and ActiveAssignments migrations.
  */
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useDeferredValue } from "react";
 import {
   useMutation,
   useQuery,
@@ -27,7 +27,8 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { Pressable, Text, View } from "react-native";
+import { ActivityIndicator, Pressable, Text, View } from "react-native";
+import { BottomSheetFlatList } from "@gorhom/bottom-sheet";
 import { router } from "expo-router";
 import dayjs from "dayjs";
 import { ReturnToPill } from "@/components/admin/return-to-pill";
@@ -47,6 +48,7 @@ import { EmptyState, ErrorState } from "@/components/ui/states";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { PaginatedList } from "@/components/ui/paginated-list";
+import { SkeletonList } from "@/components/ui/skeleton";
 import { packagesQueries } from "@/lib/queries/packages-queries-factory";
 import {
   billingQueries,
@@ -80,10 +82,15 @@ export default function AdminBilling() {
   const tokens = useThemeTokens();
   const bottomPad = useTabBarBottomPadding();
   const [showCreate, setShowCreate] = useState(false);
+  // Stacked client-picker sheet over the create-payment sheet — replaces the
+  // old inline Select that listed every client. Server-side search +
+  // pagination via ClientPicker means we no longer eagerly drain all pages.
+  const [showClientPicker, setShowClientPicker] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState(() => dayjs());
   const [searchQuery, setSearchQuery] = useState("");
   const [form, setForm] = useState({
     clientUserId: "",
+    clientName: "",
     amount: "",
     method: "CASH",
     notes: "",
@@ -102,21 +109,10 @@ export default function AdminBilling() {
       to: drillWindow?.to ?? monthTo,
     }),
   );
-  // Naplata uses clients in two places: the filter Select and the create-
-  // payment Select. Both render every option upfront — pagination on the
-  // server is still worth it (the API doesn't have to compute packageStatus
-  // for 1000 clients) but here we eagerly drain pages so the dropdown shows
-  // the full set. take=100 hits the server cap and keeps round-trips few.
-  const clientsQuery = useInfiniteQuery(clientsQueries.list({ take: 100 }));
-  useEffect(() => {
-    if (clientsQuery.hasNextPage && !clientsQuery.isFetchingNextPage) {
-      clientsQuery.fetchNextPage();
-    }
-  }, [clientsQuery.hasNextPage, clientsQuery.isFetchingNextPage, clientsQuery]);
-  const allClients = useMemo(
-    () => clientsQuery.data?.pages.flatMap((p) => p.clients) ?? [],
-    [clientsQuery.data],
-  );
+  // The create-payment client is now chosen via a stacked ClientPicker sheet
+  // (server search + pagination), so we no longer eagerly drain every client
+  // page here. (The list's per-client filtering works off the loaded billing
+  // records, not a client roster.)
   const packageTypesQuery = useQuery(packagesQueries.types());
   const records = useMemo(
     () => billingQuery.data?.pages.flatMap((p) => p.records) ?? [],
@@ -192,6 +188,7 @@ export default function AdminBilling() {
       setShowCreate(false);
       setForm({
         clientUserId: "",
+        clientName: "",
         amount: "",
         method: "CASH",
         notes: "",
@@ -390,7 +387,13 @@ export default function AdminBilling() {
 
       {/* Create payment sheet — preserved wholesale (now mounted as a sibling
           of the list, not inside the old ScrollView). */}
-      <AppSheet open={showCreate} onOpenChange={setShowCreate}>
+      {/* push: the client-picker sheet stacks OVER this one (gorhom's default
+          `switch` would flicker this closed→open as the picker opens/closes). */}
+      <AppSheet
+        open={showCreate}
+        onOpenChange={setShowCreate}
+        stackBehavior="push"
+      >
         <View className="flex-col gap-4">
           <Text
             className="text-foreground font-body-bold"
@@ -398,19 +401,26 @@ export default function AdminBilling() {
           >
             {t("admin.manage.sheetNewPayment")}
           </Text>
-          <Select
-            testID="billing-client-select"
-            optionTestIDPrefix="billing-client-option"
-            placeholder={t("admin.manage.client")}
-            value={form.clientUserId}
-            onChange={(v) => setForm((s) => ({ ...s, clientUserId: v }))}
-            emptyText={t("admin.manage.emptyClients")}
-            options={allClients.map((c) => ({
-              value: c.user.id,
-              label: c.user.fullName,
-              hint: c.user.email,
-            }))}
-          />
+          <Pressable
+            testID="billing-client-trigger"
+            onPress={() => setShowClientPicker(true)}
+            className="flex-row items-center justify-between rounded-2xl border border-glass-border bg-glass-surface px-4 py-3.5 active:opacity-70"
+            accessibilityRole="button"
+            accessibilityLabel={t("admin.manage.client")}
+          >
+            <Text
+              className={
+                form.clientName
+                  ? "text-foreground font-body-medium"
+                  : "text-muted font-body-medium"
+              }
+              style={{ fontSize: 15 }}
+              numberOfLines={1}
+            >
+              {form.clientName || t("admin.manage.client")}
+            </Text>
+            <Icon name="chevron-right" size={18} color={tokens.muted} />
+          </Pressable>
           <Input
             testID="billing-amount-input"
             placeholder={t("admin.manage.placeholderAmount")}
@@ -481,7 +491,144 @@ export default function AdminBilling() {
           ) : null}
         </View>
       </AppSheet>
+
+      {/* Stacked over the create sheet — searchable, paginated client picker. */}
+      <AppSheet
+        open={showClientPicker}
+        onOpenChange={setShowClientPicker}
+        stackBehavior="push"
+        snapPoints={["80%"]}
+        rawContent
+      >
+        <BillingClientPickerSheet
+          selectedId={form.clientUserId}
+          onPick={(c) => {
+            setForm((s) => ({
+              ...s,
+              clientUserId: c.userId,
+              clientName: c.fullName,
+            }));
+            setShowClientPicker(false);
+          }}
+        />
+      </AppSheet>
     </ScreenContainerRaw>
+  );
+}
+
+// ─── BillingClientPickerSheet ───────────────────────────────────────────────
+// Searchable, server-paginated client picker shown stacked over the New
+// payment sheet. Mirrors the reservation-mode picker: sticky search header
+// over a BottomSheetFlatList that scrolls in the sheet's own gesture context
+// (rawContent + fixed snapPoint). Selecting a row returns the client to the
+// form and closes this sheet.
+function BillingClientPickerSheet({
+  selectedId,
+  onPick,
+}: {
+  selectedId: string;
+  onPick: (c: { userId: string; fullName: string }) => void;
+}) {
+  const { t } = useTranslation();
+  const tokens = useThemeTokens();
+  const [q, setQ] = useState("");
+  const deferredQ = useDeferredValue(q.trim());
+  const clientsQ = useInfiniteQuery(
+    clientsQueries.list({ q: deferredQ || undefined }),
+  );
+  const rows = useMemo(
+    () => clientsQ.data?.pages.flatMap((p) => p.clients) ?? [],
+    [clientsQ.data],
+  );
+
+  return (
+    <BottomSheetFlatList
+      testID="billing-client-picker"
+      data={rows}
+      keyExtractor={(c) => c.id}
+      keyboardShouldPersistTaps="handled"
+      contentContainerStyle={{
+        paddingHorizontal: 24,
+        paddingTop: 8,
+        paddingBottom: 40,
+      }}
+      ListHeaderComponent={
+        <View className="pb-3 gap-3">
+          <Text
+            className="text-foreground font-body-bold"
+            style={{ fontSize: 20, letterSpacing: -0.3 }}
+          >
+            {t("admin.manage.sheetNewPayment")}
+          </Text>
+          <Input
+            testID="billing-client-picker-search"
+            placeholder={t("admin.clients.searchPlaceholder")}
+            leftIcon="search"
+            value={q}
+            onChangeText={setQ}
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+        </View>
+      }
+      ListEmptyComponent={
+        clientsQ.isLoading ? (
+          <View style={{ paddingTop: 12 }}>
+            <SkeletonList count={4} />
+          </View>
+        ) : (
+          <View style={{ paddingTop: 12 }}>
+            <EmptyState
+              title={
+                deferredQ.length > 0
+                  ? t("admin.clients.filterEmpty")
+                  : t("admin.manage.emptyClients")
+              }
+            />
+          </View>
+        )
+      }
+      ListFooterComponent={
+        clientsQ.isFetchingNextPage ? (
+          <ActivityIndicator style={{ padding: 16 }} />
+        ) : null
+      }
+      onEndReachedThreshold={0.4}
+      onEndReached={() => {
+        if (clientsQ.hasNextPage && !clientsQ.isFetchingNextPage) {
+          clientsQ.fetchNextPage();
+        }
+      }}
+      renderItem={({ item: c }) => {
+        const isSelected = c.user.id === selectedId;
+        return (
+          <Pressable
+            testID={`billing-client-option-${c.user.id}`}
+            onPress={() => onPick({ userId: c.user.id, fullName: c.user.fullName })}
+            android_ripple={null}
+            className="flex-row items-center gap-3 py-3 active:opacity-70"
+            accessibilityRole="button"
+            accessibilityState={{ selected: isSelected }}
+          >
+            <View className="flex-1 gap-0.5">
+              <Text
+                className="text-foreground font-body-semibold"
+                style={{ fontSize: 15 }}
+                numberOfLines={1}
+              >
+                {c.user.fullName}
+              </Text>
+              <Text className="text-muted" style={{ fontSize: 12 }} numberOfLines={1}>
+                {c.user.email}
+              </Text>
+            </View>
+            {isSelected ? (
+              <Icon name="check" size={16} color={tokens.accent} />
+            ) : null}
+          </Pressable>
+        );
+      }}
+    />
   );
 }
 

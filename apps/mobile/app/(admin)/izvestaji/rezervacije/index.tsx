@@ -32,7 +32,7 @@ import { MotiView } from "@/components/ui/styled";
 import { GlassCard } from "@/components/ui/glass-card";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { ErrorState } from "@/components/ui/states";
-import { SkeletonCard } from "@/components/ui/skeleton";
+import { SkeletonChart, SkeletonList } from "@/components/ui/skeleton";
 import { CapsLabel, StatStrip } from "@/components/ui/studio";
 import { useThemeTokens } from "@/components/ui/tokens";
 import { reportsQueries } from "@/lib/queries/reports-queries-factory";
@@ -260,11 +260,7 @@ export default function IzvestajiRezervacije() {
               {t("admin.izvestaji.rezervacije.chart.title")}
             </CapsLabel>
 
-            {detailQuery.isLoading ? (
-              <View style={{ paddingTop: 16 }}>
-                <SkeletonCard />
-              </View>
-            ) : null}
+            {detailQuery.isLoading ? <SkeletonChart /> : null}
             {detailQuery.isError ? (
               <ErrorState message={t("admin.manage.reportsError")} />
             ) : null}
@@ -365,7 +361,7 @@ export default function IzvestajiRezervacije() {
               {t("admin.izvestaji.rezervacije.topSessions.title")}
             </CapsLabel>
             <View style={{ paddingTop: 12, gap: 8 }}>
-              {detailQuery.isLoading ? <SkeletonCard /> : null}
+              {detailQuery.isLoading ? <SkeletonList count={4} /> : null}
               {detailQuery.isError ? (
                 <ErrorState message={t("admin.manage.reportsError")} />
               ) : null}

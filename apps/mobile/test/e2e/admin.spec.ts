@@ -912,11 +912,19 @@ test.describe("admin (Serbian)", () => {
       .getByRole("button", { name: t.admin.manage.sheetNewPayment })
       .click();
 
-    await page.getByTestId("billing-client-select").dispatchEvent("click");
+    // Client is now chosen via a stacked searchable picker sheet (replaced the
+    // old inline dropdown). Tap the trigger → pick the first row in the sheet.
+    await pressRNW(page.getByTestId("billing-client-trigger"));
+    await page.getByTestId("billing-client-picker-search").waitFor({
+      state: "visible",
+      timeout: 10_000,
+    });
+    await pressRNW(
+      page.locator('[data-testid^="billing-client-option-"]').first(),
+    );
     await page
-      .locator('[data-testid^="billing-client-option-"]')
-      .first()
-      .dispatchEvent("click");
+      .getByTestId("billing-client-picker-search")
+      .waitFor({ state: "hidden", timeout: 10_000 });
 
     await page.getByTestId("billing-amount-input").fill("12000");
 
@@ -949,11 +957,19 @@ test.describe("admin (Serbian)", () => {
     await page
       .getByRole("button", { name: t.admin.manage.sheetNewPayment })
       .click();
-    await page.getByTestId("billing-client-select").dispatchEvent("click");
+    // Client is now chosen via a stacked searchable picker sheet (replaced the
+    // old inline dropdown). Tap the trigger → pick the first row in the sheet.
+    await pressRNW(page.getByTestId("billing-client-trigger"));
+    await page.getByTestId("billing-client-picker-search").waitFor({
+      state: "visible",
+      timeout: 10_000,
+    });
+    await pressRNW(
+      page.locator('[data-testid^="billing-client-option-"]').first(),
+    );
     await page
-      .locator('[data-testid^="billing-client-option-"]')
-      .first()
-      .dispatchEvent("click");
+      .getByTestId("billing-client-picker-search")
+      .waitFor({ state: "hidden", timeout: 10_000 });
     await page.getByTestId("billing-amount-input").fill("8000");
     await page.getByTestId("billing-method-select").dispatchEvent("click");
     await page
@@ -978,11 +994,19 @@ test.describe("admin (Serbian)", () => {
     await page
       .getByRole("button", { name: t.admin.manage.sheetNewPayment })
       .click();
-    await page.getByTestId("billing-client-select").dispatchEvent("click");
+    // Client is now chosen via a stacked searchable picker sheet (replaced the
+    // old inline dropdown). Tap the trigger → pick the first row in the sheet.
+    await pressRNW(page.getByTestId("billing-client-trigger"));
+    await page.getByTestId("billing-client-picker-search").waitFor({
+      state: "visible",
+      timeout: 10_000,
+    });
+    await pressRNW(
+      page.locator('[data-testid^="billing-client-option-"]').first(),
+    );
     await page
-      .locator('[data-testid^="billing-client-option-"]')
-      .first()
-      .dispatchEvent("click");
+      .getByTestId("billing-client-picker-search")
+      .waitFor({ state: "hidden", timeout: 10_000 });
     await page.getByTestId("billing-amount-input").fill("3000");
     await page.getByTestId("billing-method-select").dispatchEvent("click");
     await page

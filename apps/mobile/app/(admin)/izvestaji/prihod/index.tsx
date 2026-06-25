@@ -28,7 +28,11 @@ import { MotiView } from "@/components/ui/styled";
 import { GlassCard } from "@/components/ui/glass-card";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { ErrorState, EmptyState } from "@/components/ui/states";
-import { SkeletonCard } from "@/components/ui/skeleton";
+import {
+  SkeletonBreakdownRows,
+  SkeletonChart,
+  SkeletonList,
+} from "@/components/ui/skeleton";
 import { CapsLabel } from "@/components/ui/studio";
 import { NumberRollup } from "@/components/ui/number-rollup";
 import { useThemeTokens } from "@/components/ui/tokens";
@@ -233,11 +237,7 @@ export default function IzvestajiPrihod() {
               {t("admin.izvestaji.prihod.chart.title")}
             </CapsLabel>
 
-            {timeSeriesQuery.isLoading ? (
-              <View style={{ paddingTop: 16 }}>
-                <SkeletonCard />
-              </View>
-            ) : null}
+            {timeSeriesQuery.isLoading ? <SkeletonChart /> : null}
             {timeSeriesQuery.isError ? (
               <ErrorState message={t("admin.manage.reportsError")} />
             ) : null}
@@ -349,7 +349,7 @@ export default function IzvestajiPrihod() {
               {t("admin.izvestaji.prihod.byPackageType")}
             </CapsLabel>
             <View style={{ paddingTop: 12, gap: 10 }}>
-              {byPackageQuery.isLoading ? <SkeletonCard /> : null}
+              {byPackageQuery.isLoading ? <SkeletonBreakdownRows /> : null}
               {byPackageQuery.isError ? (
                 <ErrorState message={t("admin.manage.reportsError")} />
               ) : null}
@@ -421,7 +421,7 @@ export default function IzvestajiPrihod() {
               {t("admin.izvestaji.prihod.byMethod")}
             </CapsLabel>
             <View style={{ paddingTop: 12, gap: 10 }}>
-              {byMethodQuery.isLoading ? <SkeletonCard /> : null}
+              {byMethodQuery.isLoading ? <SkeletonBreakdownRows /> : null}
               {byMethodQuery.isError ? (
                 <ErrorState message={t("admin.manage.reportsError")} />
               ) : null}
@@ -496,7 +496,7 @@ export default function IzvestajiPrihod() {
               {t("admin.izvestaji.prihod.recentPayments")}
             </CapsLabel>
             <View style={{ paddingTop: 12, gap: 8 }}>
-              {recentPaymentsQuery.isLoading ? <SkeletonCard /> : null}
+              {recentPaymentsQuery.isLoading ? <SkeletonList count={4} /> : null}
               {recentPaymentsQuery.isError ? (
                 <ErrorState message={t("admin.manage.billingError")} />
               ) : null}
