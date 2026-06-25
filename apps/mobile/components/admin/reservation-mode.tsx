@@ -238,6 +238,14 @@ export function ReservationMode() {
         clientFullName={clientFullName}
         onPress={() => setShowClientPicker(true)}
         onClear={() => {
+          // Clear the route params too — otherwise the param-sync effect
+          // below sees the still-present ?clientProfileId in the URL and
+          // immediately restores the client, making the clear look dead.
+          router.setParams({
+            clientProfileId: undefined,
+            clientUserId: undefined,
+            clientFullName: undefined,
+          });
           setClientProfileId(null);
           setClientUserId(null);
           setClientFullName(null);
@@ -468,41 +476,62 @@ function ClientBanner({
   const { t } = useTranslation();
   return (
     <View className="px-5 pt-3 pb-2">
-      <Pressable
-        onPress={onPress}
+      {/* The X (clear) must be a SIBLING of the body Pressable, not nested
+          inside it. RN-Web grants the press responder to the outer Pressable,
+          so a nested inner Pressable's onPress never fires from a tap — the
+          clear looked dead. Splitting them into siblings under a plain View
+          row lets each fire independently. */}
+      <View
+        testID="reservation-client-banner"
         className="flex-row items-center gap-3 rounded-2xl border border-glass-border bg-glass-surface px-4 py-3"
       >
-        {clientFullName ? (
-          <InitialsAvatar name={clientFullName} size={32} />
-        ) : (
-          <View
-            className="items-center justify-center rounded-full bg-glass-surface border border-glass-border"
-            style={{ width: 32, height: 32 }}
-          >
-            <Icon name="user" size={14} />
+        <Pressable
+          testID="reservation-client-banner-open"
+          onPress={onPress}
+          className="flex-1 flex-row items-center gap-3 active:opacity-70"
+          accessibilityRole="button"
+        >
+          {clientFullName ? (
+            <InitialsAvatar name={clientFullName} size={32} />
+          ) : (
+            <View
+              className="items-center justify-center rounded-full bg-glass-surface border border-glass-border"
+              style={{ width: 32, height: 32 }}
+            >
+              <Icon name="user" size={14} />
+            </View>
+          )}
+          <View className="flex-1">
+            <CapsLabel size={9} tracking={1.6} className="text-muted">
+              {t("admin.reservations.reservingFor", { defaultValue: "Rezerviše za" })}
+            </CapsLabel>
+            <Text
+              className="text-foreground font-body-semibold"
+              style={{ fontSize: 16, letterSpacing: -0.2 }}
+              numberOfLines={1}
+            >
+              {clientFullName ??
+                t("admin.reservations.pickClient", { defaultValue: "Izaberi klijenta" })}
+            </Text>
           </View>
-        )}
-        <View className="flex-1">
-          <CapsLabel size={9} tracking={1.6} className="text-muted">
-            {t("admin.reservations.reservingFor", { defaultValue: "Rezerviše za" })}
-          </CapsLabel>
-          <Text
-            className="text-foreground font-body-semibold"
-            style={{ fontSize: 16, letterSpacing: -0.2 }}
-            numberOfLines={1}
-          >
-            {clientFullName ??
-              t("admin.reservations.pickClient", { defaultValue: "Izaberi klijenta" })}
-          </Text>
-        </View>
+        </Pressable>
         {clientFullName ? (
-          <Pressable onPress={onClear} hitSlop={8}>
+          <Pressable
+            testID="reservation-client-banner-clear"
+            onPress={onClear}
+            hitSlop={8}
+            className="active:opacity-60"
+            accessibilityRole="button"
+            accessibilityLabel={t("admin.reservations.clearClient", {
+              defaultValue: "Ukloni klijenta",
+            })}
+          >
             <Icon name="x" size={18} />
           </Pressable>
         ) : (
           <Icon name="chevron-right" size={18} />
         )}
-      </Pressable>
+      </View>
     </View>
   );
 }
@@ -760,6 +789,7 @@ function ClientPickerSheet({
       ListHeaderComponent={
         <View className="pb-3">
           <Input
+            testID="reservation-client-picker-search"
             placeholder={t("admin.clients.searchPlaceholder", { defaultValue: "Pretraga..." })}
             value={q}
             onChangeText={setQ}

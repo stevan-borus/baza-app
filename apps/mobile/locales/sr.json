@@ -1028,6 +1028,9 @@
       "noviTerminSub": "Jednokratno ili serija"
     },
     "reservations": {
+      "reservingFor": "Rezerviše za",
+      "pickClient": "Izaberi klijenta",
+      "clearClient": "Ukloni klijenta",
       "waiveChargeLabel": "Ne naplaćuj ovu sesiju",
       "waiveChargeHint": "Klijent neće izgubiti sesiju iz paketa.",
       "cancelTitle_one": "Otkaži termin?",

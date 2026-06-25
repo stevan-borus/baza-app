@@ -1024,6 +1024,9 @@
       "noviTerminSub": "One-time or recurring"
     },
     "reservations": {
+      "reservingFor": "Reserving for",
+      "pickClient": "Pick a client",
+      "clearClient": "Remove client",
       "waiveChargeLabel": "Don't charge this session",
       "waiveChargeHint": "The client won't lose a session from their package.",
       "cancelTitle_one": "Cancel this session?",
