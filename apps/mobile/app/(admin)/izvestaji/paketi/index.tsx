@@ -31,7 +31,7 @@ import { MotiView } from "@/components/ui/styled";
 import { GlassCard } from "@/components/ui/glass-card";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { ErrorState } from "@/components/ui/states";
-import { SkeletonCard } from "@/components/ui/skeleton";
+import { SkeletonBreakdownRows, SkeletonList } from "@/components/ui/skeleton";
 import { CapsLabel, StatStrip } from "@/components/ui/studio";
 import { useThemeTokens } from "@/components/ui/tokens";
 import { reportsQueries } from "@/lib/queries/reports-queries-factory";
@@ -203,7 +203,7 @@ export default function IzvestajiPaketi() {
               {t("admin.izvestaji.paketi.mostSold.title")}
             </CapsLabel>
             <View style={{ paddingTop: 12, gap: 10 }}>
-              {detailQuery.isLoading ? <SkeletonCard /> : null}
+              {detailQuery.isLoading ? <SkeletonBreakdownRows /> : null}
               {detailQuery.isError ? (
                 <ErrorState message={t("admin.manage.reportsError")} />
               ) : null}
@@ -299,7 +299,7 @@ export default function IzvestajiPaketi() {
               {t("admin.izvestaji.paketi.recentActivations.title")}
             </CapsLabel>
             <View style={{ paddingTop: 12, gap: 4 }}>
-              {detailQuery.isLoading ? <SkeletonCard /> : null}
+              {detailQuery.isLoading ? <SkeletonList count={4} /> : null}
               {detailQuery.isError ? (
                 <ErrorState message={t("admin.manage.reportsError")} />
               ) : null}
