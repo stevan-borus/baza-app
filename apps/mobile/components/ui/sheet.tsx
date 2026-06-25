@@ -4,8 +4,10 @@ import {
   BottomSheetBackdrop,
   BottomSheetModal,
   BottomSheetScrollView,
+  useBottomSheetTimingConfigs,
   type BottomSheetBackdropProps,
 } from "@gorhom/bottom-sheet";
+import { Easing } from "react-native-reanimated";
 import { useThemeTokens } from "./tokens";
 
 /**
@@ -74,6 +76,16 @@ export function AppSheet({
 }: AppSheetProps) {
   const ref = useRef<BottomSheetModal>(null);
   const tokens = useThemeTokens();
+
+  // SDK 56 (gorhom 5.2 + reanimated 4.3) made the *default* present/dismiss
+  // animation resolve near-instantly on pan-release — the sheet snaps shut
+  // instead of gliding off-screen. Pass an explicit timing config so both
+  // present and dismiss (including the drag-to-close gesture) animate over a
+  // visible, eased duration.
+  const animationConfigs = useBottomSheetTimingConfigs({
+    duration: 320,
+    easing: Easing.out(Easing.cubic),
+  });
 
   const maxHeight = useMemo(
     () => Dimensions.get("window").height * 0.9,
@@ -197,6 +209,7 @@ export function AppSheet({
       maxDynamicContentSize={maxHeight}
       snapPoints={snapPoints as (string | number)[] | undefined}
       stackBehavior={stackBehavior}
+      animationConfigs={animationConfigs}
       enablePanDownToClose
       keyboardBehavior="interactive"
       keyboardBlurBehavior="restore"
