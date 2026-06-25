@@ -89,5 +89,12 @@ export function usePushRegistration({ isAuthenticated }: PushRegistrationParams)
       cancelled = true;
       if (removeListener) removeListener();
     };
-  }, [i18n.language, isAuthenticated, registerMutation]);
+    // registerMutation is intentionally NOT a dep: useMutation returns a fresh
+    // object every render, and mutateAsync re-renders this component, so
+    // including it makes the effect re-run → re-register → re-render in a tight
+    // loop (a POST /api/notifications/push-token flood that pegged the dev
+    // server at ~100% CPU). We only want to (re)register when auth or locale
+    // changes; the mutation ref is stable enough to call without tracking.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [i18n.language, isAuthenticated]);
 }
