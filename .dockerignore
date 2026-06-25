@@ -5,6 +5,12 @@
 **/.turbo
 **/generated
 **/.git
+# Local dev-tooling dirs — huge (worktrees, caches, transcripts) and never needed in the image.
+**/.claude
+**/.cursor
+**/.playwright-mcp
+**/.github
+**/.vscode
 **/.env
 **/.env.*
 !**/.env.example

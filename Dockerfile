@@ -82,12 +82,19 @@ RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certifi
 
 WORKDIR /repo
 
-# Prod-only deps keep the runtime image lean.
+# Reuse the build stage's fully-installed node_modules (incl. the prisma CLI, its
+# `prisma/config` loader, dotenv and tsx) rather than a `--prod` reinstall. A prod
+# install drops the prisma devDep, and re-adding it afterwards conflicts with the
+# prod-only modules dir (ERR_PNPM_INCLUDED_DEPS_CONFLICT) — and any standalone CLI
+# can't resolve `prisma.config.ts`'s local imports. Copying the build modules keeps
+# `migrate deploy` working with the exact same CLI/client version (7.8.0).
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json .npmrc ./
 COPY apps/mobile/package.json apps/mobile/
 COPY packages/types/package.json packages/types/
 COPY packages/i18n/package.json packages/i18n/
-RUN pnpm install --frozen-lockfile --prod
+COPY --from=build /repo/node_modules ./node_modules
+COPY --from=build /repo/apps/mobile/node_modules ./apps/mobile/node_modules
+COPY --from=build /repo/packages/types/node_modules ./packages/types/node_modules
 
 # Source needed at runtime: the export output, the server entry, the generated
 # Prisma client, the Prisma schema + migrations (for `migrate deploy` on boot),
@@ -102,10 +109,7 @@ COPY packages ./packages
 # The supercronic crontab the `cron` process runs (see fly.toml [processes]).
 COPY --from=build /tmp/crontab /app/crontab
 
-# `prisma` CLI is a devDependency, so a prod install drops it. Pull just the CLI
-# back in (pinned) so the boot step can run `migrate deploy`.
 WORKDIR /repo/apps/mobile
-RUN pnpm add -D prisma@7.4.0 --ignore-scripts
 
 EXPOSE 8081
 

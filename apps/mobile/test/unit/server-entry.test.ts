@@ -26,4 +26,13 @@ describe("resolveServerConfig", () => {
     const config = resolveServerConfig({ env: {}, cwd: "/app" });
     expect(config.buildDir).toBe("/app/dist/server");
   });
+
+  test("points the client dir at the exported static client output under cwd", () => {
+    // The static client output (public/ assets, incl. /.well-known/* universal-link
+    // files) lives in dist/client and must be served by express.static — the Expo
+    // request handler only covers dist/server (API + SSR), so without this every
+    // static asset 404s.
+    const config = resolveServerConfig({ env: {}, cwd: "/app" });
+    expect(config.clientDir).toBe("/app/dist/client");
+  });
 });

@@ -15,6 +15,7 @@ const parsedPort = Number.parseInt(process.env.PORT ?? "", 10);
 const port = Number.isInteger(parsedPort) ? parsedPort : DEFAULT_PORT;
 const host = "0.0.0.0";
 const buildDir = path.join(process.cwd(), "dist", "server");
+const clientDir = path.join(process.cwd(), "dist", "client");
 
 if (!fs.existsSync(buildDir)) {
   process.stderr.write(
@@ -24,6 +25,24 @@ if (!fs.existsSync(buildDir)) {
 }
 
 const app = express();
+
+// Serve the exported static client assets (public/ files, incl. the
+// /.well-known/* universal-link files) before the Expo handler — the handler
+// only covers dist/server (API + SSR), so without this every static asset 404s.
+// apple-app-site-association has no extension, so express.static can't infer its
+// type; force application/json (Apple requires JSON, no .json suffix).
+app.use(
+  express.static(clientDir, {
+    // express.static ignores dot-prefixed paths by default, which would skip the
+    // entire /.well-known/ directory (AASA + assetlinks) and fall through to a 404.
+    dotfiles: "allow",
+    setHeaders: (res, filePath) => {
+      if (path.basename(filePath) === "apple-app-site-association") {
+        res.setHeader("Content-Type", "application/json");
+      }
+    },
+  }),
+);
 
 app.all(
   "/{*all}",

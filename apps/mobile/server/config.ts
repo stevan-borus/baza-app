@@ -4,6 +4,7 @@ export type ServerConfig = {
   port: number;
   host: string;
   buildDir: string;
+  clientDir: string;
 };
 
 const DEFAULT_PORT = 8081;
@@ -31,5 +32,9 @@ export function resolveServerConfig({
     // listener must bind all interfaces, not just loopback.
     host: "0.0.0.0",
     buildDir: path.join(cwd, "dist", "server"),
+    // The exported static client assets (public/ files, incl. /.well-known/*)
+    // live here and are served via express.static — the Expo request handler
+    // only covers the server build.
+    clientDir: path.join(cwd, "dist", "client"),
   };
 }
