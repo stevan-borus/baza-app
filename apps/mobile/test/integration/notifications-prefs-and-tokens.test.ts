@@ -170,6 +170,66 @@ describe("notifications preferences + push-token", () => {
       expect(tokens[0].expoPushToken).toBe("ExpoPushToken[new]");
     });
 
+    it("POST re-registering a token that already belongs to another device reclaims it instead of crashing", async () => {
+      // Regression: SDK 56 removed Constants.installationId, so the same physical
+      // device can re-register the same Expo token under a different deviceId
+      // (e.g. account switch / reinstall). The expoPushToken column is globally
+      // @unique, so a naive upsert keyed on (userId, deviceId) hits a unique-
+      // constraint violation on expoPushToken. The handler must reclaim the token.
+      const user = await makeUser("reclaim@test.local");
+      await POST_TOKEN(
+        jsonRequest("http://test.local/api/notifications/push-token", "POST", {
+          deviceId: "old-device",
+          expoPushToken: "ExpoPushToken[shared]",
+        }),
+      );
+
+      const response = await POST_TOKEN(
+        jsonRequest("http://test.local/api/notifications/push-token", "POST", {
+          deviceId: "new-device",
+          expoPushToken: "ExpoPushToken[shared]",
+        }),
+      );
+
+      expect(response.status).toBe(200);
+      // The token is owned by exactly one row, now bound to the new device.
+      const tokens = await prisma.pushToken.findMany({
+        where: { expoPushToken: "ExpoPushToken[shared]" },
+      });
+      expect(tokens).toHaveLength(1);
+      expect(tokens[0].deviceId).toBe("new-device");
+      expect(tokens[0].userId).toBe(user.id);
+      expect(tokens[0].isActive).toBe(true);
+    });
+
+    it("POST claiming a token registered to a different user moves it to the new owner", async () => {
+      // Same physical phone, account A logs out and account B logs in. The Expo
+      // token follows the device, so it must transfer to the new user.
+      const userA = await makeUser("ownerA@test.local");
+      await POST_TOKEN(
+        jsonRequest("http://test.local/api/notifications/push-token", "POST", {
+          deviceId: "shared-device",
+          expoPushToken: "ExpoPushToken[transfer]",
+        }),
+      );
+
+      const userB = await makeUser("ownerB@test.local");
+      const response = await POST_TOKEN(
+        jsonRequest("http://test.local/api/notifications/push-token", "POST", {
+          deviceId: "shared-device",
+          expoPushToken: "ExpoPushToken[transfer]",
+        }),
+      );
+
+      expect(response.status).toBe(200);
+      const tokens = await prisma.pushToken.findMany({
+        where: { expoPushToken: "ExpoPushToken[transfer]" },
+      });
+      expect(tokens).toHaveLength(1);
+      expect(tokens[0].userId).toBe(userB.id);
+      expect(userA.id).not.toBe(userB.id);
+    });
+
     it("POST with preferredLocale syncs the preferences row to that locale", async () => {
       const user = await makeUser("locale@test.local");
       await POST_TOKEN(
