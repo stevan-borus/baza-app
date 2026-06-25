@@ -2,6 +2,7 @@ import { useMutation } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Platform } from "react-native";
+import { getStableDeviceId } from "@/lib/device-id";
 import { notificationsQueries } from "@/lib/queries/notifications-queries-factory";
 
 type PushRegistrationParams = {
@@ -49,7 +50,7 @@ export function usePushRegistration({ isAuthenticated }: PushRegistrationParams)
         : await Notifications.getExpoPushTokenAsync(
             projectId ? { projectId } : undefined,
           );
-      const deviceId = Constants.installationId ?? "unknown";
+      const deviceId = await getStableDeviceId();
       const preferredLocale = i18n.language?.startsWith("sr") ? "sr" : "en";
 
       await registerMutation.mutateAsync({

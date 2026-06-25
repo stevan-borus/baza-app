@@ -17,33 +17,50 @@ export async function POST(request: Request) {
   const parsed = registerPushTokenInputSchema.safeParse(body);
   if (!parsed.success) return fail("Invalid payload", 400, parsed.error);
 
-  // One token per user+device; updates expo token on re-register.
-  const token = await prisma.pushToken.upsert({
-    where: {
-      userId_deviceId: {
+  // expoPushToken is globally @unique: one physical device's token can only live
+  // on a single row. The same token can arrive under a different (userId, deviceId)
+  // — account switch, reinstall, or an SDK that no longer yields a stable deviceId —
+  // so reclaim it from any other row before upserting, or the @unique constraint
+  // throws. The reclaim + upsert run atomically so the token is never orphaned.
+  const token = await prisma.$transaction(async (tx) => {
+    await tx.pushToken.deleteMany({
+      where: {
+        expoPushToken: parsed.data.expoPushToken,
+        NOT: {
+          userId: guard.user.id,
+          deviceId: parsed.data.deviceId,
+        },
+      },
+    });
+
+    // One token per user+device; updates expo token on re-register.
+    return tx.pushToken.upsert({
+      where: {
+        userId_deviceId: {
+          userId: guard.user.id,
+          deviceId: parsed.data.deviceId,
+        },
+      },
+      create: {
         userId: guard.user.id,
         deviceId: parsed.data.deviceId,
+        expoPushToken: parsed.data.expoPushToken,
+        isActive: true,
+        lastSeenAt: now(),
       },
-    },
-    create: {
-      userId: guard.user.id,
-      deviceId: parsed.data.deviceId,
-      expoPushToken: parsed.data.expoPushToken,
-      isActive: true,
-      lastSeenAt: now(),
-    },
-    update: {
-      expoPushToken: parsed.data.expoPushToken,
-      isActive: true,
-      lastSeenAt: now(),
-    },
-    select: {
-      id: true,
-      deviceId: true,
-      expoPushToken: true,
-      isActive: true,
-      lastSeenAt: true,
-    },
+      update: {
+        expoPushToken: parsed.data.expoPushToken,
+        isActive: true,
+        lastSeenAt: now(),
+      },
+      select: {
+        id: true,
+        deviceId: true,
+        expoPushToken: true,
+        isActive: true,
+        lastSeenAt: true,
+      },
+    });
   });
 
   // Ensure preference row exists; optionally sync app locale for notification language.
