@@ -24,6 +24,13 @@
         "EXPO_PUBLIC_LINK_HOST": "baza-pilates-staging.fly.dev"
       }
     },
+    "preview-ios": {
+      "extends": "preview",
+      "distribution": "store",
+      "ios": {
+        "simulator": false
+      }
+    },
     "production": {
       "autoIncrement": true,
       "channel": "production",
@@ -37,6 +44,11 @@
     }
   },
   "submit": {
+    "preview-ios": {
+      "ios": {
+        "appName": "Baza Pilates"
+      }
+    },
     "production": {}
   }
 }
