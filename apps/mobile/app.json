@@ -20,10 +20,16 @@
       "infoPlist": {
         "CFBundleLocalizations": [
           "sr",
+          "en",
+          "sr",
           "en"
-        ]
+        ],
+        "ITSAppUsesNonExemptEncryption": false
       },
-      "bundleIdentifier": "com.bazapilates.app"
+      "bundleIdentifier": "com.bazapilates.app",
+      "associatedDomains": [
+        "applinks:baza-pilates-staging.fly.dev"
+      ]
     },
     "android": {
       "adaptiveIcon": {
