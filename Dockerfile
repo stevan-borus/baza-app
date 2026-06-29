@@ -22,6 +22,12 @@ COPY pnpm-lock.yaml pnpm-workspace.yaml package.json .npmrc ./
 COPY apps/mobile/package.json apps/mobile/
 COPY packages/types/package.json packages/types/
 COPY packages/i18n/package.json packages/i18n/
+# apps/mobile's `postinstall` runs `prisma generate`, which needs the schema +
+# its config present BEFORE install. Copy them here (not just in the build
+# stage) or the deps-stage install aborts with "Could not find Prisma Schema".
+# Added when #84 introduced the postinstall hook to fix EAS bundling.
+COPY apps/mobile/prisma.config.ts apps/mobile/
+COPY apps/mobile/prisma apps/mobile/prisma
 RUN pnpm install --frozen-lockfile
 
 # ---- build ------------------------------------------------------------------
