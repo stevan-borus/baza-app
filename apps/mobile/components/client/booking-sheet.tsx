@@ -342,9 +342,11 @@ export function BookingSheet({
                     ? t("client.calendar.errorGuardianRequired")
                     : errorCode === "no_package_for_class"
                       ? t("client.calendar.errorNoPackage")
-                      : errorCode === "SESSION_IN_PAST"
-                        ? t("client.calendar.errorSessionPast")
-                        : t("client.calendar.bookingError")}
+                      : errorCode === "PACKAGE_EXHAUSTED"
+                        ? t("client.calendar.errorPackageExhausted")
+                        : errorCode === "SESSION_IN_PAST"
+                          ? t("client.calendar.errorSessionPast")
+                          : t("client.calendar.bookingError")}
                 </Text>
               </View>
             )}

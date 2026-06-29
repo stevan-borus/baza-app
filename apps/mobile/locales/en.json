@@ -391,6 +391,7 @@
       "bookingError": "Booking action failed.",
       "errorGuardianRequired": "Your parent must sign the consent form at the studio before you can book another session.",
       "errorNoPackage": "You don't have an active package for this class type.",
+      "errorPackageExhausted": "No sessions left in your package. Cancel a booking or renew.",
       "errorSessionPast": "This session has already passed.",
       "room": "Room",
       "trainer": "Trainer",

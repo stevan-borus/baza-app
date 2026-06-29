@@ -11,7 +11,9 @@ import { fail, ok } from "@/lib/server/http";
 import { shouldApplyLateCancelPenalty } from "@/lib/server/cancellation-policy";
 import { notifyClient } from "@/lib/server/notify-client";
 import { notifyOperators } from "@/lib/server/notify-operators";
+import { countHeldSessions } from "@/lib/server/booking-hold-count";
 import { findEligibleClientPackage } from "@/lib/server/package-eligibility";
+import { canHoldAnotherBooking } from "@/lib/server/package-hold";
 import { prisma } from "@/lib/server/prisma";
 import { tryCatch } from "@/lib/server/try-catch";
 
@@ -95,53 +97,67 @@ export async function POST(request: Request) {
     if (hasBooking && !hasBooking.canceledAt)
       return ok({ success: true, state: "BOOKED_ALREADY" });
 
-    const [activeBookingsCount, waitlistCount] = await Promise.all([
-      prisma.booking.count({
-        where: { sessionId, canceledAt: null },
-      }),
-      prisma.waitlistEntry.count({
-        where: { sessionId },
-      }),
-    ]);
-
-    if (activeBookingsCount >= session.capacity) {
-      // Full classes: add to waitlist with stable position; idempotent if already waiting.
-      const existingWait = await prisma.waitlistEntry.findUnique({
-        where: { sessionId_clientProfileId: { sessionId, clientProfileId } },
-      });
-      if (!existingWait) {
-        await prisma.waitlistEntry.create({
-          data: {
-            sessionId,
-            clientProfileId,
-            position: waitlistCount + 1,
-          },
-        });
-      }
-      return ok({ success: true, state: "WAITLISTED" });
-    }
-
-    await prisma.booking.upsert({
-      where: { sessionId_clientProfileId: { sessionId, clientProfileId } },
-      create: {
-        sessionId,
+    // Count holds + create the booking/waitlist atomically so two concurrent
+    // requests can't both pass the overuse check on the last remaining session.
+    const result = await prisma.$transaction(async (tx) => {
+      const heldCount = await countHeldSessions(tx, {
         clientProfileId,
+        classTypeId: session.classTypeId,
         clientPackageId: eligiblePackage.id,
-      },
-      update: {
-        canceledAt: null,
-        clientPackageId: eligiblePackage.id,
-      },
+        at: now(),
+      });
+
+      if (
+        !canHoldAnotherBooking({
+          sessionsRemaining: eligiblePackage.sessionsRemaining,
+          heldCount,
+        })
+      ) {
+        return { state: "PACKAGE_EXHAUSTED" as const };
+      }
+
+      const [activeBookingsCount, waitlistCount] = await Promise.all([
+        tx.booking.count({ where: { sessionId, canceledAt: null } }),
+        tx.waitlistEntry.count({ where: { sessionId } }),
+      ]);
+
+      if (activeBookingsCount >= session.capacity) {
+        // Full class: add to waitlist with stable position; idempotent.
+        const existingWait = await tx.waitlistEntry.findUnique({
+          where: { sessionId_clientProfileId: { sessionId, clientProfileId } },
+        });
+        if (!existingWait) {
+          await tx.waitlistEntry.create({
+            data: { sessionId, clientProfileId, position: waitlistCount + 1 },
+          });
+        }
+        return { state: "WAITLISTED" as const };
+      }
+
+      await tx.booking.upsert({
+        where: { sessionId_clientProfileId: { sessionId, clientProfileId } },
+        create: {
+          sessionId,
+          clientProfileId,
+          clientPackageId: eligiblePackage.id,
+        },
+        update: { canceledAt: null, clientPackageId: eligiblePackage.id },
+      });
+      await tx.waitlistEntry.deleteMany({
+        where: { sessionId, clientProfileId },
+      });
+      return { state: "BOOKED" as const };
     });
-    await prisma.waitlistEntry.deleteMany({
-      where: { sessionId, clientProfileId },
-    });
+
+    if (result.state === "PACKAGE_EXHAUSTED") {
+      return fail(BOOKING_ERRORS.PACKAGE_EXHAUSTED, 409);
+    }
     // No in-app notification for self-initiated bookings — the booking sheet
     // shows an immediate inline success block, which is the right UX. We
     // still keep BOOKING_CONFIRMED notifications for spot-opened-from-waitlist
     // promotions (those happen asynchronously and the user needs persistence).
 
-    return ok({ success: true, state: "BOOKED" });
+    return ok({ success: true, state: result.state });
   }
 
   const cancellationTime = now();

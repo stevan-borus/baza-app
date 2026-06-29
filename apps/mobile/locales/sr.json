@@ -392,6 +392,7 @@
       "bookingError": "Akcija zakazivanja nije uspela.",
       "errorGuardianRequired": "Da biste zakazali sledeći termin, roditelj mora prvo potpisati saglasnost u studiju.",
       "errorNoPackage": "Nemate aktivan paket za ovaj tip treninga.",
+      "errorPackageExhausted": "Nemate više termina u paketu. Otkažite zakazani termin ili obnovite paket.",
       "errorSessionPast": "Ovaj termin je već prošao.",
       "room": "Sala",
       "trainer": "Trener",
