@@ -1,6 +1,7 @@
 {
   "cli": {
-    "version": ">= 12.0.0"
+    "version": ">= 12.0.0",
+    "appVersionSource": "remote"
   },
   "build": {
     "development": {
@@ -21,12 +22,14 @@
       },
       "env": {
         "EXPO_PUBLIC_API_URL": "https://baza-pilates-staging.fly.dev",
-        "EXPO_PUBLIC_LINK_HOST": "baza-pilates-staging.fly.dev"
+        "EXPO_PUBLIC_LINK_HOST": "baza-pilates-staging.fly.dev",
+        "NODE_OPTIONS": "--max-old-space-size=4096"
       }
     },
     "preview-ios": {
       "extends": "preview",
       "distribution": "store",
+      "autoIncrement": true,
       "ios": {
         "simulator": false
       }
@@ -39,7 +42,8 @@
       },
       "env": {
         "EXPO_PUBLIC_API_URL": "https://baza-pilates-prod.fly.dev",
-        "EXPO_PUBLIC_LINK_HOST": "baza-pilates-prod.fly.dev"
+        "EXPO_PUBLIC_LINK_HOST": "baza-pilates-prod.fly.dev",
+        "NODE_OPTIONS": "--max-old-space-size=4096"
       }
     }
   },
