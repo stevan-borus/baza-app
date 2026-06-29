@@ -17,7 +17,7 @@
  */
 import type { TFunction } from "i18next";
 import dayjs from "dayjs";
-import { ApiError } from "@/lib/api";
+import { ApiError } from "@/lib/api-error";
 
 type ScheduleConflictDetails = {
   kind: "room" | "trainer";
@@ -81,6 +81,26 @@ function describeConflict(
   return `${subject}${klass} · ${time}`;
 }
 
+/**
+ * A raw Zod validation error serializes its `.message` to a JSON array of issue
+ * objects (`[{ "expected": ..., "code": "invalid_type", "path": [...] }]`). This
+ * happens when a *client-side* response-schema `.parse()` fails — the thrown
+ * `ZodError`'s message is that bracketed blob, and it has no business reaching
+ * the user. Treat any message that parses as a JSON array (or names itself
+ * `ZodError`) as machine noise and fall back to the friendly string.
+ */
+function isRawValidationMessage(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+  if (error.name === "ZodError") return true;
+  const msg = error.message?.trim();
+  if (!msg || msg[0] !== "[") return false;
+  try {
+    return Array.isArray(JSON.parse(msg));
+  } catch {
+    return false;
+  }
+}
+
 export function formatMutationError(
   error: unknown,
   t: TFunction,
@@ -88,6 +108,7 @@ export function formatMutationError(
   fallback: string,
 ): string {
   if (!(error instanceof ApiError)) {
+    if (isRawValidationMessage(error)) return fallback;
     return error instanceof Error ? error.message || fallback : fallback;
   }
   // Recurring series — surface up to 3 occurrences with their reason.
@@ -130,6 +151,8 @@ export function formatMutationError(
   }
   // Other 4xx with a `{ error: string }` body — `ApiError.message` is already
   // the server's text, so return it directly (it may already be human-
-  // readable, e.g. "Invalid payload").
+  // readable, e.g. "Invalid payload"). Guard against the rare case where the
+  // server stuffed a raw Zod issues array into the `error` field.
+  if (isRawValidationMessage(error)) return fallback;
   return error.message || fallback;
 }
