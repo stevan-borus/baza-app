@@ -113,9 +113,11 @@ export function ClientBookingSheet({
       }
       errorCode={
         mutation.isError
-          ? ((mutation.error as Error & { code?: string })?.code ??
-            mutation.error?.message ??
-            "UNKNOWN")
+          ? // Only the structured `code` is meaningful here — BookingSheet maps
+            // known codes to localized copy and shows a generic message for the
+            // rest. Never fall back to `error.message`: it can be a raw Zod blob,
+            // and an unmapped code already lands on the friendly fallback.
+            ((mutation.error as Error & { code?: string })?.code ?? "UNKNOWN")
           : null
       }
     />

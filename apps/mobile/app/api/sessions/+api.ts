@@ -131,6 +131,7 @@ export async function POST(request: Request) {
       classType: { select: { id: true, name: true } },
       roomId: true,
       room: { select: { id: true, name: true } },
+      trainerUserId: true,
     },
   });
 

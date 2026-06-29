@@ -42,6 +42,7 @@ import { sessionsQueries } from "@/lib/queries/sessions-queries-factory";
 import { authQueries } from "@/lib/queries/auth-queries-factory";
 import { TrainerNoteComposeSheet } from "@/components/shared/trainer-note-compose-sheet";
 import { canEditNote, type NotesAudience } from "@/components/shared/notes-edit-policy";
+import { formatMutationError } from "@/lib/admin/format-mutation-error";
 
 export type { NotesAudience };
 
@@ -257,7 +258,8 @@ export function NotesFeed({
   /** "tab" for a tab destination, "detail" for a pushed screen (back button). */
   headerVariant?: "tab" | "detail";
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const lang = i18n.language === "en" ? "en" : "sr";
   const queryClient = useQueryClient();
   const bottomPad = useTabBarBottomPadding();
   const listRef = useRef<LegendListRef>(null);
@@ -645,7 +647,12 @@ export function NotesFeed({
           </Button>
           {updateMutation.isError ? (
             <ErrorState
-              message={(updateMutation.error as Error)?.message ?? t("trainer.notes.saveError")}
+              message={formatMutationError(
+                updateMutation.error,
+                t,
+                lang,
+                t("trainer.notes.saveError"),
+              )}
             />
           ) : null}
         </View>
@@ -660,7 +667,14 @@ export function NotesFeed({
         loading={deleteMutation.isPending}
         testID="note-delete-confirm-button"
         errorMessage={
-          deleteMutation.isError ? (deleteMutation.error as Error)?.message ?? null : null
+          deleteMutation.isError
+            ? formatMutationError(
+                deleteMutation.error,
+                t,
+                lang,
+                t("trainer.notes.saveError"),
+              )
+            : null
         }
         onConfirm={() => {
           if (!editingNote) return;

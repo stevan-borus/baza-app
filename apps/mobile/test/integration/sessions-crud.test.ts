@@ -121,6 +121,7 @@ describe("sessions CRUD", () => {
         classType: { id: string; name: string };
         roomId: string | null;
         room: { id: string; name: string } | null;
+        trainerUserId: string | null;
       };
     };
     expect(body.session.classTypeId).toBe(reformer.id);
@@ -128,6 +129,10 @@ describe("sessions CRUD", () => {
     // No room was assigned, so roomId is null and the room relation is null.
     expect(body.session.roomId).toBeNull();
     expect(body.session.room).toBeNull();
+    // trainerUserId must be present in the response — the client parses it with
+    // a `z.nullable(z.string())` schema, so omitting it (undefined) throws a raw
+    // ZodError that leaks to the UI even though the session was created.
+    expect(body.session.trainerUserId).toBe(trainer.id);
   });
 
   it("POST as trainer assigns the session to themselves regardless of payload trainerUserId", async () => {
