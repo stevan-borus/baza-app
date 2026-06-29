@@ -50,7 +50,8 @@
   "submit": {
     "preview-ios": {
       "ios": {
-        "appName": "Baza Pilates"
+        "appName": "Baza Pilates",
+        "ascAppId": "6784695171"
       }
     },
     "production": {}
