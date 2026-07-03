@@ -87,6 +87,10 @@ _sr_: "Nova uplata" — _en_: "New payment".
 Admin assigns a free / complimentary ClientPackage directly with no BillingRecord — used for family / friends. Reachable as a secondary action on a client row, never from Naplata.
 _sr_: "Poklon paket" — _en_: "Complimentary package". _Avoid_: "komp paket" (colloquial Serbian, was the old label).
 
+**Package activation**:
+The act of materializing a ClientPackage from a PackageType for a Client — the moment the SKU's terms (ClassType scope, late-cancel window, session count, validity window) are snapshotted onto the new ClientPackage. Both **Nova uplata** (Flow 1) and **Poklon paket** (Flow 2, including the birthday gift) end in the same activation; they differ only in whether a BillingRecord accompanies it.
+_Avoid_: "assign a package" (overloads with admin UI copy), "create a package" (ambiguous between PackageType and ClientPackage).
+
 **BillingRecord**:
 A row of money received. Always paired with a ClientPackage in Flow 1 (Nova uplata). Carries `packageTypeId` (nullable — non-null on Flow 1, null on legacy / non-package payments) so revenue-per-PackageType reporting joins cleanly without inferring from timestamps.
 
