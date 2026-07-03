@@ -5,6 +5,7 @@ import { DayPicker } from "react-day-picker";
 import { srLatn, enUS } from "date-fns/locale";
 import "react-day-picker/style.css";
 import "./date-time-picker-web.css";
+import { now } from "@/lib/now";
 import { AppSheet } from "./sheet";
 import { Button } from "./button";
 
@@ -44,16 +45,16 @@ export function WebDateTimeSheet({
   accent,
 }: Props) {
   const { t } = useTranslation();
-  const [draftDate, setDraftDate] = useState<Date | null>(value ?? new Date());
+  const [draftDate, setDraftDate] = useState<Date | null>(value ?? now());
   const [draftTime, setDraftTime] = useState(() => {
-    const v = value ?? new Date();
+    const v = value ?? now();
     return `${pad2(v.getHours())}:${pad2(v.getMinutes())}`;
   });
 
   useEffect(() => {
     if (open) {
-      setDraftDate(value ?? new Date());
-      const v = value ?? new Date();
+      setDraftDate(value ?? now());
+      const v = value ?? now();
       setDraftTime(`${pad2(v.getHours())}:${pad2(v.getMinutes())}`);
     }
   }, [open, value]);
@@ -76,12 +77,12 @@ export function WebDateTimeSheet({
     let result: Date;
     if (showCalendar && showTime) {
       const [h, m] = draftTime.split(":").map(Number);
-      result = combineDateAndTime(draftDate ?? new Date(), h, m);
+      result = combineDateAndTime(draftDate ?? now(), h, m);
     } else if (showCalendar) {
-      result = draftDate ?? new Date();
+      result = draftDate ?? now();
     } else {
       const [h, m] = draftTime.split(":").map(Number);
-      const base = value ?? new Date();
+      const base = value ?? now();
       result = combineDateAndTime(base, h, m);
     }
     onConfirm(result);

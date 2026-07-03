@@ -1077,9 +1077,9 @@ function ConfirmSheet({
   const create = useCreateReservationsMutation();
   const packagesQ = useQuery(packagesQueries.clientPackages(clientProfileId));
   const pkgs = packagesQ.data?.packages ?? [];
-  const nowMs = Date.now();
+  const msNow = nowMs();
   const hasAnyActivePackage = pkgs.some(
-    (p) => new Date(p.expiresAt).getTime() > nowMs && p.sessionsRemaining > 0,
+    (p) => new Date(p.expiresAt).getTime() > msNow && p.sessionsRemaining > 0,
   );
 
   const byClassTypeMap = new Map<string, number>();

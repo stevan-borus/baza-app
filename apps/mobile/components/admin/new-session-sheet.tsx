@@ -10,6 +10,7 @@ import React, { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { formatMutationError } from "@/lib/admin/format-mutation-error";
+import { now } from "@/lib/now";
 import { Pressable, Switch, Text, View } from "react-native";
 import { AppSheet } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
@@ -209,7 +210,7 @@ export function NewSessionSheet({ open, onOpenChange }: NewSessionSheetProps) {
             setNewSession((s) => ({ ...s, startsAt: date }))
           }
           mode="datetime"
-          minimumDate={new Date()}
+          minimumDate={now()}
         />
 
         <Input

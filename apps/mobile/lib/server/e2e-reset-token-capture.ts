@@ -1,5 +1,6 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, isAbsolute, resolve } from "node:path";
+import { now } from "@/lib/now";
 import { tryCatch } from "@/lib/server/try-catch";
 
 export type CapturedResetToken = {
@@ -47,7 +48,7 @@ export async function captureResetTokenForE2E(params: {
         {
           email: params.email,
           token: params.token,
-          capturedAt: new Date().toISOString(),
+          capturedAt: now().toISOString(),
         } satisfies CapturedResetToken,
         null,
         2,

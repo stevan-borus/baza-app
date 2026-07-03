@@ -39,11 +39,16 @@ export function NumberRollup({
       setDisplay(value);
       return;
     }
+    // Elapsed-time measurement for the rAF animation — under a pinned anchor
+    // nowMs() is constant, so progress would stay 0 and the rollup would
+    // never complete. Wall clock is the correct source here.
+    // now-exempt: elapsed-time measurement, not "what time is it"
     const start = Date.now();
     const from = fromRef.current;
     const to = value;
     let raf = 0;
     const step = () => {
+      // now-exempt: same elapsed-time measurement as `start` above.
       const now = Date.now();
       const t = Math.min(1, (now - start) / durationMs);
       const eased = 1 - Math.pow(1 - t, 3);

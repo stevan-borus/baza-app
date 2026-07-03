@@ -29,6 +29,7 @@
  * endpoints).
  */
 import { useMemo, useState } from "react";
+import { now } from "@/lib/now";
 
 export type Period = "month" | "quarter" | "year" | "all";
 
@@ -78,7 +79,7 @@ export function computePeriodWindow(
 export function usePeriodPill(initial: Period = "month"): PeriodPillState {
   const [period, setPeriod] = useState<Period>(initial);
   const window = useMemo<PeriodWindow>(
-    () => computePeriodWindow(period, new Date()),
+    () => computePeriodWindow(period, now()),
     [period],
   );
   return { period, setPeriod, window };

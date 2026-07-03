@@ -23,6 +23,7 @@ import { SectionLabel } from "@/components/ui/typography";
 import { DateTimePicker } from "@/components/ui/date-time-picker";
 import { useThemeTokens } from "@/components/ui/tokens";
 import { getDateLocale } from "@/lib/i18n";
+import { now } from "@/lib/now";
 import { useSpinDelay } from "@/lib/use-spin-delay";
 import { campaignsQueries } from "@/lib/queries/campaigns-queries-factory";
 import { trainingsQueries } from "@/lib/queries/trainings-queries-factory";
@@ -370,7 +371,7 @@ export function CampaignComposeSheetContent({
           testID="campaign-schedule"
           mode="datetime"
           value={scheduledFor}
-          minimumDate={new Date()}
+          minimumDate={now()}
           placeholder={t("campaigns.compose.schedule")}
           onChange={setScheduledFor}
           disabled={busy}
