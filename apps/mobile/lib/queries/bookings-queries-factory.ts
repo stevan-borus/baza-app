@@ -2,34 +2,17 @@ import {
   infiniteQueryOptions,
   mutationOptions,
 } from "@tanstack/react-query";
-import { z } from "zod";
-import { bookingMutationResultSchema } from "@baza/types/bookings";
+import {
+  bookingMutationResultSchema,
+  clientBookingsResponseSchema,
+  type ClientBooking,
+  type ClientBookingsResponse,
+} from "@baza/types/bookings";
 import { ApiError } from "@/lib/api-error";
 import { apiRequest } from "@/lib/api-request";
 
-const clientBookingItemSchema = z.object({
-  id: z.string(),
-  status: z.enum(["CONFIRMED", "CANCELED"]),
-  bookedAt: z.string(),
-  canceledAt: z.nullable(z.string()),
-  session: z.object({
-    id: z.string(),
-    startsAt: z.string(),
-    endsAt: z.string(),
-    classType: z.object({ id: z.string(), name: z.string() }),
-    room: z.nullable(z.object({ id: z.string(), name: z.string() })),
-    trainer: z.nullable(z.object({ id: z.string(), fullName: z.string() })),
-  }),
-});
-
-export const clientBookingsResponseSchema = z.object({
-  success: z.boolean(),
-  bookings: z.array(clientBookingItemSchema),
-  nextCursor: z.nullable(z.string()),
-});
-
-export type ClientBooking = z.infer<typeof clientBookingItemSchema>;
-export type ClientBookingsResponse = z.infer<typeof clientBookingsResponseSchema>;
+export { clientBookingsResponseSchema };
+export type { ClientBooking, ClientBookingsResponse };
 
 function fetchClientBookingsPage(params: {
   clientUserId: string;

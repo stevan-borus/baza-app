@@ -1,7 +1,8 @@
+import { campaignResponseSchema } from "@baza/types/campaigns";
 import { UserRole } from "@/generated/prisma";
 import { requireRole } from "@/lib/server/auth-guards";
 import { dispatchCampaign } from "@/lib/server/campaign-dispatch";
-import { fail, ok, paramFromCtxOrUrl } from "@/lib/server/http";
+import { fail, paramFromCtxOrUrl, respond } from "@/lib/server/http";
 import { prisma } from "@/lib/server/prisma";
 
 type Ctx = { params?: Record<string, string | undefined> };
@@ -20,5 +21,5 @@ export async function POST(request: Request, ctx?: Ctx) {
   // dispatchCampaign claims the row atomically and returns the full
   // CAMPAIGN_SELECT shape — no re-fetch needed.
   const sent = await dispatchCampaign(id);
-  return ok({ campaign: sent });
+  return respond(campaignResponseSchema, { campaign: sent });
 }

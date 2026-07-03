@@ -1,7 +1,7 @@
-import { formatFullName } from "@baza/types/common";
+import { formatFullName, trainersResponseSchema } from "@baza/types/common";
 import { UserRole } from "@/generated/prisma";
 import { requireRole } from "@/lib/server/auth-guards";
-import { ok } from "@/lib/server/http";
+import { respond } from "@/lib/server/http";
 import { prisma } from "@/lib/server/prisma";
 
 export async function GET(request: Request) {
@@ -28,5 +28,5 @@ export async function GET(request: Request) {
     role: u.role,
   }));
 
-  return ok({ success: true, users: shapedUsers });
+  return respond(trainersResponseSchema, { success: true, users: shapedUsers });
 }

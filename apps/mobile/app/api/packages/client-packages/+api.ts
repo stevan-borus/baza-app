@@ -1,11 +1,15 @@
-import { createClientPackageInputSchema } from "@baza/types/packages";
+import {
+  clientPackagesResponseSchema,
+  createClientPackageInputSchema,
+  createClientPackageResponseSchema,
+} from "@baza/types/packages";
 import { formatFullName } from "@baza/types/common";
 import { NOTIFICATION_MESSAGE_KEYS } from "@baza/i18n";
 import { UserRole } from "@/generated/prisma";
 import { now } from "@/lib/now";
 import { requireRole } from "@/lib/server/auth-guards";
 import { linkPackagesToBilling } from "@/lib/server/billing-package-link";
-import { fail, ok } from "@/lib/server/http";
+import { fail, respond } from "@/lib/server/http";
 import { createSystemNotification } from "@/lib/server/notifications";
 import { findEligibleClientPackage } from "@/lib/server/package-eligibility";
 import { prisma } from "@/lib/server/prisma";
@@ -77,7 +81,7 @@ export async function GET(request: Request) {
       return null;
     })();
 
-    return ok({
+    return respond(clientPackagesResponseSchema, {
       success: true,
       packages,
       activePackageId: activePackage?.id ?? null,
@@ -158,7 +162,11 @@ export async function GET(request: Request) {
         ),
       },
     }));
-    return ok({ success: true, packages: shaped, nextCursor });
+    return respond(clientPackagesResponseSchema, {
+      success: true,
+      packages: shaped,
+      nextCursor,
+    });
   }
 
   // Trainers may only view packages for clients they are linked to.
@@ -217,7 +225,10 @@ export async function GET(request: Request) {
     };
   });
 
-  return ok({ success: true, packages: shaped });
+  return respond(clientPackagesResponseSchema, {
+    success: true,
+    packages: shaped,
+  });
 }
 
 export async function POST(request: Request) {
@@ -301,5 +312,9 @@ export async function POST(request: Request) {
     }
   }
 
-  return ok({ success: true, clientPackage }, 201);
+  return respond(
+    createClientPackageResponseSchema,
+    { success: true, clientPackage },
+    201,
+  );
 }

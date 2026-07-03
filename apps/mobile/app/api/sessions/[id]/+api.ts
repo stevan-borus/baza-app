@@ -1,11 +1,16 @@
 import { formatFullName } from "@baza/types/common";
-import { updateSessionInputSchema } from "@baza/types/scheduling";
+import {
+  deleteSessionResponseSchema,
+  sessionDetailResponseSchema,
+  sessionMutationResponseSchema,
+  updateSessionInputSchema,
+} from "@baza/types/scheduling";
 import { UserRole } from "@/generated/prisma";
 import { nowMs } from "@/lib/now";
 import { requireRole } from "@/lib/server/auth-guards";
 import { notifyClient } from "@/lib/server/notify-client";
 import { notifyOperators } from "@/lib/server/notify-operators";
-import { fail, ok } from "@/lib/server/http";
+import { respond, fail } from "@/lib/server/http";
 import { maybeNotifyMinorPaperNeeded } from "@/lib/server/minor-paper-needed";
 import { prisma } from "@/lib/server/prisma";
 import { findScheduleConflict } from "@/lib/server/schedule-conflict";
@@ -234,7 +239,10 @@ export async function GET(request: Request, { id }: RouteParams) {
     })),
   };
 
-  return ok({ success: true, session: shaped });
+  return respond(sessionDetailResponseSchema, {
+    success: true,
+    session: shaped,
+  });
 }
 
 export async function PATCH(request: Request, { id }: RouteParams) {
@@ -421,7 +429,7 @@ export async function PATCH(request: Request, { id }: RouteParams) {
     await maybeNotifyMinorPaperNeeded(session.id);
   }
 
-  return ok({ success: true, session });
+  return respond(sessionMutationResponseSchema, { success: true, session });
 }
 
 export async function DELETE(request: Request, { id }: RouteParams) {
@@ -451,5 +459,5 @@ export async function DELETE(request: Request, { id }: RouteParams) {
   }
 
   await prisma.session.delete({ where: { id } });
-  return ok({ success: true });
+  return respond(deleteSessionResponseSchema, { success: true });
 }

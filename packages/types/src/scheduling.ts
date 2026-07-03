@@ -88,3 +88,149 @@ export const updateRecurringSeriesInputSchema = z.object({
 export type UpdateRecurringSeriesInput = z.infer<
   typeof updateRecurringSeriesInputSchema
 >;
+
+// ── Session wire shapes (GET/POST /api/sessions, GET/PATCH /api/sessions/[id]) ──
+
+export const sessionSchema = z.object({
+  id: z.string(),
+  classTypeId: z.string(),
+  roomId: z.nullable(z.string()),
+  trainerUserId: z.nullable(z.string()),
+  startsAt: z.string(),
+  endsAt: z.string(),
+  capacity: z.number(),
+  status: z.enum(["SCHEDULED", "CANCELED", "COMPLETED"]),
+  classType: z.object({ id: z.string(), name: z.string() }).optional(),
+  room: z.object({ id: z.string(), name: z.string() }).nullable().optional(),
+});
+export type Session = z.infer<typeof sessionSchema>;
+
+export const sessionsListResponseSchema = z.object({
+  success: z.boolean(),
+  sessions: z.array(sessionSchema),
+});
+export type SessionsListResponse = z.infer<typeof sessionsListResponseSchema>;
+
+/** Single-session create/update both return the full session row. */
+export const sessionMutationResponseSchema = z.object({
+  success: z.boolean(),
+  session: sessionSchema,
+});
+export type SessionMutationResponse = z.infer<
+  typeof sessionMutationResponseSchema
+>;
+
+// Shared client + consent shape for both booked and waitlisted clients —
+// the session-detail screen renders them with the same row + consent strip.
+export const sessionClientSchema = z.object({
+  id: z.string(),
+  clientProfileId: z.string(),
+  client: z.object({
+    id: z.string(),
+    fullName: z.string(),
+    email: z.string(),
+  }),
+  consentFlags: z.object({
+    showFirstPilatesHint: z.boolean(),
+    conditions: z.array(z.string()),
+    conditionsOther: z.string().nullable(),
+    additionalNotes: z.string().nullable(),
+    intakeRecorded: z.boolean(),
+    intakeWithdrawn: z.boolean(),
+    socialMediaAccepted: z.boolean().nullable(),
+  }),
+});
+export type SessionClient = z.infer<typeof sessionClientSchema>;
+
+export const sessionDetailSchema = z.object({
+  id: z.string(),
+  startsAt: z.string(),
+  endsAt: z.string(),
+  status: z.enum(["SCHEDULED", "CANCELED", "COMPLETED"]),
+  capacity: z.number(),
+  isActive: z.boolean(),
+  classTypeId: z.string(),
+  roomId: z.nullable(z.string()),
+  trainerUserId: z.nullable(z.string()),
+  recurringScheduleId: z.nullable(z.string()).optional(),
+  classType: z.object({ id: z.string(), name: z.string() }).nullable(),
+  room: z.object({ id: z.string(), name: z.string() }).nullable(),
+  trainer: z.object({ id: z.string(), fullName: z.string() }).nullable(),
+  bookedCount: z.number(),
+  seriesBookedCount: z.number(),
+  bookings: z.array(sessionClientSchema.extend({ createdAt: z.string() })),
+  // Queued clients (capacity full). Empty array when nobody is waiting; the
+  // UI hides the section entirely in that case.
+  waitlist: z.array(sessionClientSchema.extend({ position: z.number() })),
+});
+export type SessionDetail = z.infer<typeof sessionDetailSchema>;
+
+export const sessionDetailResponseSchema = z.object({
+  success: z.boolean(),
+  session: sessionDetailSchema,
+});
+export type SessionDetailResponse = z.infer<typeof sessionDetailResponseSchema>;
+
+export const deleteSessionResponseSchema = z.object({
+  success: z.boolean(),
+});
+export type DeleteSessionResponse = z.infer<typeof deleteSessionResponseSchema>;
+
+// ── Recurring-series wire shapes (/api/sessions/recurring[/[id]]) ──────────
+
+export const recurringScheduleSchema = z.object({
+  id: z.string(),
+  classTypeId: z.string(),
+  roomId: z.nullable(z.string()),
+  trainerUserId: z.string(),
+  weekdays: z.array(z.number()),
+  timeOfDayMins: z.number(),
+  durationMins: z.number(),
+  capacity: z.number(),
+  isActive: z.boolean(),
+});
+export type RecurringSchedule = z.infer<typeof recurringScheduleSchema>;
+
+export const recurringScheduleResponseSchema = z.object({
+  success: z.boolean(),
+  schedule: recurringScheduleSchema,
+  futureBookingsCount: z.number(),
+});
+export type RecurringScheduleResponse = z.infer<
+  typeof recurringScheduleResponseSchema
+>;
+
+export const createRecurringSessionsResponseSchema = z.object({
+  success: z.boolean(),
+  count: z.number(),
+  scheduleId: z.string(),
+  sessions: z.array(
+    z.object({
+      id: z.string(),
+      startsAt: z.string(),
+      endsAt: z.string(),
+      capacity: z.number(),
+      status: z.enum(["SCHEDULED", "CANCELED", "COMPLETED"]),
+      trainerUserId: z.string(),
+      recurringScheduleId: z.nullable(z.string()),
+    }),
+  ),
+});
+export type CreateRecurringSessionsResponse = z.infer<
+  typeof createRecurringSessionsResponseSchema
+>;
+
+export const updateRecurringSeriesResponseSchema = z.object({
+  success: z.boolean(),
+  schedule: recurringScheduleSchema,
+});
+export type UpdateRecurringSeriesResponse = z.infer<
+  typeof updateRecurringSeriesResponseSchema
+>;
+
+export const deleteRecurringSeriesResponseSchema = z.object({
+  success: z.boolean(),
+});
+export type DeleteRecurringSeriesResponse = z.infer<
+  typeof deleteRecurringSeriesResponseSchema
+>;

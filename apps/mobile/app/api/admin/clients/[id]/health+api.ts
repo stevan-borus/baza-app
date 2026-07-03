@@ -1,6 +1,7 @@
 import { UserRole } from "@/generated/prisma";
 import { requireRole } from "@/lib/server/auth-guards";
-import { fail, ok, paramFromCtxOrUrl } from "@/lib/server/http";
+import { fail, paramFromCtxOrUrl, respond } from "@/lib/server/http";
+import { adminClientHealthResponseSchema } from "@baza/types/clients";
 import { latestIntake } from "@/lib/server/health-intake";
 import { prisma } from "@/lib/server/prisma";
 
@@ -28,7 +29,7 @@ export async function GET(
     }),
   ]);
 
-  return ok({
+  return respond(adminClientHealthResponseSchema, {
     success: true,
     intake,
     withdrawnAt: withdrawal?.withdrawnAt ?? null,

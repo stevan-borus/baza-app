@@ -1,7 +1,8 @@
+import { cronCampaignsDispatchResponseSchema } from "@baza/types/cron";
 import { now } from "@/lib/now";
 import { dispatchCampaign } from "@/lib/server/campaign-dispatch";
 import { requireCronAuth } from "@/lib/server/cron-auth";
-import { ok } from "@/lib/server/http";
+import { respond } from "@/lib/server/http";
 import { prisma } from "@/lib/server/prisma";
 
 export async function POST(request: Request) {
@@ -14,11 +15,17 @@ export async function POST(request: Request) {
     select: { id: true },
     orderBy: { scheduledFor: "asc" },
   });
-  if (dryRun) return ok({ success: true, dryRun, dispatched: due.length });
+  if (dryRun) {
+    return respond(cronCampaignsDispatchResponseSchema, {
+      success: true,
+      dryRun,
+      dispatched: due.length,
+    });
+  }
   let dispatched = 0;
   for (const c of due) {
     await dispatchCampaign(c.id);
     dispatched += 1;
   }
-  return ok({ success: true, dryRun, dispatched });
+  return respond(cronCampaignsDispatchResponseSchema, { success: true, dryRun, dispatched });
 }

@@ -1,8 +1,11 @@
 import { formatFullName } from "@baza/types/common";
-import { monthlyAvailabilityQuerySchema } from "@baza/types/scheduling";
+import {
+  availabilityResponseSchema,
+  monthlyAvailabilityQuerySchema,
+} from "@baza/types/scheduling";
 import { UserRole } from "@/generated/prisma";
 import { requireRole } from "@/lib/server/auth-guards";
-import { fail, ok } from "@/lib/server/http";
+import { respond, fail } from "@/lib/server/http";
 import { findEligibleClientPackage } from "@/lib/server/package-eligibility";
 import { prisma } from "@/lib/server/prisma";
 
@@ -138,7 +141,7 @@ export async function GET(request: Request) {
     }
   }
 
-  return ok({
+  return respond(availabilityResponseSchema, {
     success: true,
     month: parsed.data.month,
     sessions: visibleSessions.map((session: (typeof sessions)[number]) => {

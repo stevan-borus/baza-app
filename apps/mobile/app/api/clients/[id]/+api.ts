@@ -1,10 +1,14 @@
 import type { ClientPackageStatus } from "@baza/types/packages";
 import { formatFullName } from "@baza/types/common";
-import { updateClientInputSchema } from "@baza/types/clients";
+import {
+  clientByIdResponseSchema,
+  updateClientInputSchema,
+  updateClientResponseSchema,
+} from "@baza/types/clients";
 import { UserRole } from "@/generated/prisma";
 import { now } from "@/lib/now";
 import { requireRole } from "@/lib/server/auth-guards";
-import { fail, ok } from "@/lib/server/http";
+import { fail, respond } from "@/lib/server/http";
 import { prisma } from "@/lib/server/prisma";
 import { trainerLinkedToClientProfile } from "@/lib/server/trainer-scope";
 import { tryCatch } from "@/lib/server/try-catch";
@@ -84,7 +88,7 @@ export async function GET(request: Request, { id }: RouteParams) {
     if (packageStatus === "none" && hasExpired) packageStatus = "expired";
   }
 
-  return ok({
+  return respond(clientByIdResponseSchema, {
     success: true,
     client: {
       id: clientProfile.id,
@@ -173,7 +177,7 @@ export async function PATCH(request: Request, { id }: RouteParams) {
     },
   });
 
-  return ok({
+  return respond(updateClientResponseSchema, {
     success: true,
     user: { ...user, fullName: formatFullName(user.firstName, user.lastName) },
   });

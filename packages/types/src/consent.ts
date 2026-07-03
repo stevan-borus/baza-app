@@ -53,6 +53,31 @@ export const socialMediaConsentInputSchema = z.object({
 });
 export type SocialMediaConsentInput = z.infer<typeof socialMediaConsentInputSchema>;
 
+// POST /api/consent/accept — echo of the just-created ConsentRecord.
+export const consentAcceptResponseSchema = z.object({
+  success: z.literal(true),
+  record: z.object({
+    id: z.string(),
+    documentKey: consentDocumentKeySchema,
+    version: z.number().int().positive(),
+    acceptedAt: z.string(), // ISO date string when JSON-serialized
+  }),
+});
+export type ConsentAcceptResponse = z.infer<typeof consentAcceptResponseSchema>;
+
+// POST /api/consent/social-media — echo of the recorded Da/Ne decision.
+export const socialMediaConsentResponseSchema = z.object({
+  success: z.literal(true),
+  record: z.object({
+    id: z.string(),
+    accepted: z.boolean(),
+    acceptedAt: z.string(), // ISO date string when JSON-serialized
+  }),
+});
+export type SocialMediaConsentResponse = z.infer<
+  typeof socialMediaConsentResponseSchema
+>;
+
 export const legalDocumentResponseSchema = z.object({
   success: z.literal(true),
   key: consentDocumentKeySchema,

@@ -60,6 +60,23 @@ export const authMeResponseSchema = z.object({
 });
 export type AuthMeResponse = z.infer<typeof authMeResponseSchema>;
 
+// POST /api/auth/complete-invite — the just-created user, plus the derived
+// fullName. The session cookie rides on the response headers, not the body.
+export const completeInviteResponseSchema = z.object({
+  success: z.literal(true),
+  user: z.object({
+    id: z.string(),
+    email: z.string(),
+    role: UserRoleSchema,
+    firstName: z.string(),
+    lastName: z.string(),
+    fullName: z.string(), // derived server-side
+  }),
+});
+export type CompleteInviteResponse = z.infer<
+  typeof completeInviteResponseSchema
+>;
+
 export const signInResponseSchema = z.object({
   token: z.optional(z.string()),
   user: z.object({

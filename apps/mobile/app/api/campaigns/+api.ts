@@ -1,10 +1,14 @@
-import { createCampaignInputSchema } from "@baza/types/campaigns";
+import {
+  campaignResponseSchema,
+  campaignsListResponseSchema,
+  createCampaignInputSchema,
+} from "@baza/types/campaigns";
 import { Prisma, UserRole } from "@/generated/prisma";
 import { now } from "@/lib/now";
 import { requireRole } from "@/lib/server/auth-guards";
 import { dispatchCampaign } from "@/lib/server/campaign-dispatch";
 import { CAMPAIGN_SELECT } from "@/lib/server/campaign-select";
-import { fail, ok } from "@/lib/server/http";
+import { fail, respond } from "@/lib/server/http";
 import { prisma } from "@/lib/server/prisma";
 import { tryCatch } from "@/lib/server/try-catch";
 
@@ -15,7 +19,7 @@ export async function GET(request: Request) {
     orderBy: { createdAt: "desc" },
     select: CAMPAIGN_SELECT,
   });
-  return ok({ campaigns });
+  return respond(campaignsListResponseSchema, { campaigns });
 }
 
 export async function POST(request: Request) {
@@ -46,7 +50,7 @@ export async function POST(request: Request) {
   if (!scheduledFor && sendNow) {
     // dispatchCampaign returns the full CAMPAIGN_SELECT shape, so no re-fetch.
     const sent = await dispatchCampaign(created.id);
-    return ok({ campaign: sent });
+    return respond(campaignResponseSchema, { campaign: sent });
   }
-  return ok({ campaign: created });
+  return respond(campaignResponseSchema, { campaign: created });
 }

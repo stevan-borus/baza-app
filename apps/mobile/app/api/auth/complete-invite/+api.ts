@@ -1,9 +1,12 @@
-import { completeInviteInputSchema } from "@baza/types/auth";
+import {
+  completeInviteInputSchema,
+  completeInviteResponseSchema,
+} from "@baza/types/auth";
 import { formatFullName } from "@baza/types/common";
 import { type Prisma, InviteStatus, UserRole } from "@/generated/prisma";
 import { now } from "@/lib/now";
 import { auth } from "@/lib/server/auth";
-import { fail, ok } from "@/lib/server/http";
+import { fail, respond } from "@/lib/server/http";
 import { hashPassword } from "@/lib/server/password";
 import { prisma } from "@/lib/server/prisma";
 import { hashToken } from "@/lib/server/tokens";
@@ -89,7 +92,7 @@ export async function POST(request: Request) {
     asResponse: true,
   });
 
-  const response = ok({
+  const response = respond(completeInviteResponseSchema, {
     success: true,
     user: { ...user, fullName: formatFullName(user.firstName, user.lastName) },
   });

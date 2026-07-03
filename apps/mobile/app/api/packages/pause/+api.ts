@@ -1,7 +1,10 @@
-import { packagePauseInputSchema } from "@baza/types/packages";
+import {
+  packagePauseInputSchema,
+  packagePauseResponseSchema,
+} from "@baza/types/packages";
 import { UserRole } from "@/generated/prisma";
 import { requireRole } from "@/lib/server/auth-guards";
-import { fail, ok } from "@/lib/server/http";
+import { fail, respond } from "@/lib/server/http";
 import { prisma } from "@/lib/server/prisma";
 import { trainerLinkedToClientProfile } from "@/lib/server/trainer-scope";
 import { tryCatch } from "@/lib/server/try-catch";
@@ -46,5 +49,5 @@ export async function POST(request: Request) {
     },
   });
 
-  return ok({ success: true, pause }, 201);
+  return respond(packagePauseResponseSchema, { success: true, pause }, 201);
 }

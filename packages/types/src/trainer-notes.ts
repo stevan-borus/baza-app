@@ -38,3 +38,69 @@ export const updateTrainerNoteInputSchema = z.object({
   note: z.string().min(1).max(500),
 });
 export type UpdateTrainerNoteInput = z.infer<typeof updateTrainerNoteInputSchema>;
+
+// ─── Trainer-note response schemas ───────────────────────────────────────────
+
+export const trainerNoteSchema = z.object({
+  id: z.string(),
+  sessionId: z.nullable(z.string()),
+  clientProfileId: z.string(),
+  note: z.string(),
+  createdAt: z.string(),
+  trainer: z
+    .object({
+      id: z.string(),
+      fullName: z.string(),
+    })
+    .optional(),
+  clientProfile: z
+    .object({
+      user: z.object({
+        id: z.string(),
+        fullName: z.string(),
+      }),
+    })
+    .optional(),
+});
+export type TrainerNote = z.infer<typeof trainerNoteSchema>;
+
+// GET /api/trainer-notes
+export const trainerNotesResponseSchema = z.object({
+  success: z.boolean(),
+  notes: z.array(trainerNoteSchema),
+  nextCursor: z.nullable(z.string()).optional(),
+});
+export type TrainerNotesResponse = z.infer<typeof trainerNotesResponseSchema>;
+
+// POST /api/trainer-notes — the TrainerNote row as created.
+export const createTrainerNoteResponseSchema = z.object({
+  success: z.boolean(),
+  note: z.object({
+    id: z.string(),
+    sessionId: z.string().nullable(),
+    clientProfileId: z.string(),
+    trainerUserId: z.string(),
+    note: z.string(),
+    createdAt: z.string(),
+  }),
+});
+export type CreateTrainerNoteResponse = z.infer<
+  typeof createTrainerNoteResponseSchema
+>;
+
+// PATCH /api/trainer-notes/[id] — the TrainerNote row as updated.
+export const updateTrainerNoteResponseSchema = z.object({
+  success: z.boolean(),
+  note: z.object({
+    id: z.string(),
+    sessionId: z.string().nullable(),
+    clientProfileId: z.string(),
+    trainerUserId: z.string(),
+    note: z.string(),
+    createdAt: z.string(),
+    updatedAt: z.string(),
+  }),
+});
+export type UpdateTrainerNoteResponse = z.infer<
+  typeof updateTrainerNoteResponseSchema
+>;

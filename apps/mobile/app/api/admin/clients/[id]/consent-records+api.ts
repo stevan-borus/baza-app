@@ -1,6 +1,7 @@
 import { UserRole } from "@/generated/prisma";
 import { requireRole } from "@/lib/server/auth-guards";
-import { fail, ok, paramFromCtxOrUrl } from "@/lib/server/http";
+import { fail, paramFromCtxOrUrl, respond } from "@/lib/server/http";
+import { adminClientConsentRecordsResponseSchema } from "@baza/types/clients";
 import { prisma } from "@/lib/server/prisma";
 
 export async function GET(request: Request, ctx?: { params?: { id?: string } }) {
@@ -38,7 +39,7 @@ export async function GET(request: Request, ctx?: { params?: { id?: string } }) 
     select: { accepted: true, acceptedAt: true },
   });
 
-  return ok({
+  return respond(adminClientConsentRecordsResponseSchema, {
     records,
     socialMedia: socialMedia
       ? {

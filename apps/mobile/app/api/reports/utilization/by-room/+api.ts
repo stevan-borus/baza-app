@@ -1,7 +1,7 @@
-import type { ReportsUtilizationByRoomResponse } from "@baza/types/reports";
+import { reportsUtilizationByRoomResponseSchema, type ReportsUtilizationByRoomResponse } from "@baza/types/reports";
 import { UserRole } from "@/generated/prisma";
 import { requireRole } from "@/lib/server/auth-guards";
-import { fail, ok } from "@/lib/server/http";
+import { fail, respond } from "@/lib/server/http";
 import { prisma } from "@/lib/server/prisma";
 import {
   accumulateByKey,
@@ -65,5 +65,8 @@ export async function GET(request: Request) {
     (row) => row.utilization,
   );
 
-  return ok({ success: true, data } satisfies ReportsUtilizationByRoomResponse);
+  return respond(reportsUtilizationByRoomResponseSchema, {
+    success: true,
+    data,
+  } satisfies ReportsUtilizationByRoomResponse);
 }

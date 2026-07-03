@@ -1,7 +1,7 @@
-import type { ReportsSummaryResponse } from "@baza/types/reports";
+import { reportsSummaryResponseSchema, type ReportsSummaryResponse } from "@baza/types/reports";
 import { UserRole } from "@/generated/prisma";
 import { requireRole } from "@/lib/server/auth-guards";
-import { ok } from "@/lib/server/http";
+import { respond } from "@/lib/server/http";
 import { prisma } from "@/lib/server/prisma";
 import { parseDateInput } from "@/lib/server/reports";
 
@@ -50,7 +50,7 @@ export async function GET(request: Request) {
     }),
   ]);
 
-  return ok({
+  return respond(reportsSummaryResponseSchema, {
     success: true,
     summary: {
       totalClients,

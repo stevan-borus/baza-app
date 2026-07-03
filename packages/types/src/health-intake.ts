@@ -105,3 +105,25 @@ export const healthIntakeResponseSchema = z.object({
   guardianRelation: z.string().nullable(),
 });
 export type HealthIntakeResponse = z.infer<typeof healthIntakeResponseSchema>;
+
+// GET/POST /api/health-intake — the handlers spread the intake row at the
+// top level of the body: `{ success: true, ...row }`.
+export const healthIntakeSuccessResponseSchema =
+  healthIntakeResponseSchema.extend({
+    success: z.literal(true),
+  });
+export type HealthIntakeSuccessResponse = z.infer<
+  typeof healthIntakeSuccessResponseSchema
+>;
+
+// DELETE /api/health-intake — the HealthIntakeWithdrawal audit row, spread
+// at the top level like the other health-intake handlers.
+export const healthIntakeWithdrawalResponseSchema = z.object({
+  success: z.literal(true),
+  id: z.string(),
+  clientProfileId: z.string(),
+  withdrawnAt: z.string(), // ISO date string when JSON-serialized
+});
+export type HealthIntakeWithdrawalResponse = z.infer<
+  typeof healthIntakeWithdrawalResponseSchema
+>;

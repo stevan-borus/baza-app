@@ -1,10 +1,14 @@
 import { formatFullName } from "@baza/types/common";
 import { inviteClientInputSchema } from "@baza/types/auth";
+import {
+  clientsResponseSchema,
+  createClientResponseSchema,
+} from "@baza/types/clients";
 import { type ClientPackageStatus } from "@baza/types/packages";
 import { UserRole } from "@/generated/prisma";
 import { now } from "@/lib/now";
 import { requireRole } from "@/lib/server/auth-guards";
-import { fail, ok } from "@/lib/server/http";
+import { fail, respond } from "@/lib/server/http";
 import { prisma } from "@/lib/server/prisma";
 import { tryCatch } from "@/lib/server/try-catch";
 
@@ -156,7 +160,11 @@ export async function GET(request: Request) {
     return { ...rest, user: userWithName, packageStatus: status };
   });
 
-  return ok({ success: true, clients: withStatus, nextCursor });
+  return respond(clientsResponseSchema, {
+    success: true,
+    clients: withStatus,
+    nextCursor,
+  });
 }
 
 export async function POST(request: Request) {
@@ -194,7 +202,8 @@ export async function POST(request: Request) {
     },
   });
 
-  return ok(
+  return respond(
+    createClientResponseSchema,
     {
       success: true,
       user: { ...user, fullName: formatFullName(user.firstName, user.lastName) },

@@ -4,82 +4,18 @@ import {
   infiniteQueryOptions,
   type QueryClient,
 } from "@tanstack/react-query";
-import { z } from "zod";
+import {
+  packageTypeMutationResponseSchema,
+  packageTypesResponseSchema,
+  type PackageType,
+  type PackageTypeMutationResponse,
+  type PackageTypesResponse,
+} from "@baza/types/catalog";
+import { clientPackagesResponseSchema } from "@baza/types/packages";
 import { apiRequest } from "@/lib/api-request";
 
-const embeddedClassTypeSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-});
-
-const packageTypeSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  sessionCount: z.number(),
-  validityDays: z.number(),
-  lateCancelHours: z.number(),
-  classTypeId: z.string(),
-  classType: embeddedClassTypeSchema.optional(),
-  isBirthdayGift: z.boolean().optional(),
-});
-
-const packageTypesResponseSchema = z.object({
-  success: z.boolean(),
-  packageTypes: z.array(packageTypeSchema),
-});
-
-const packageTypeMutationResponseSchema = z.object({
-  success: z.boolean(),
-  packageType: packageTypeSchema,
-});
-
-const embeddedPackageTypeSchema = z.object({
-  id: z.string().optional(),
-  name: z.string(),
-  sessionCount: z.number(),
-  validityDays: z.number(),
-  lateCancelHours: z.number().optional(),
-});
-
-const embeddedClientSchema = z.object({
-  id: z.string(),
-  fullName: z.string(),
-  email: z.string(),
-});
-
-const embeddedBillingRecordSchema = z.object({
-  amount: z.number(),
-  method: z.string(),
-});
-
-const clientPackageSchema = z.object({
-  id: z.string(),
-  clientProfileId: z.string(),
-  packageTypeId: z.string(),
-  classTypeId: z.string().optional(),
-  startsAt: z.string(),
-  expiresAt: z.string(),
-  sessionsRemaining: z.number(),
-  packageType: embeddedPackageTypeSchema.optional(),
-  client: embeddedClientSchema.optional(),
-  // Per-client GET path attaches the matching CONFIRMED BillingRecord (or
-  // null for comp/gift packages). Admin list-all path omits this field —
-  // it stays optional so both responses validate against the same schema.
-  billingRecord: embeddedBillingRecordSchema.nullable().optional(),
-});
-
-const clientPackagesResponseSchema = z.object({
-  success: z.boolean(),
-  packages: z.array(clientPackageSchema),
-  // Cursor-based pagination: opaque string (clientPackage.id) of the last
-  // row on this page, or null when this is the final page. Optional in the
-  // response shape so the non-paginated branches (per-client list) still
-  // validate against the same schema.
-  nextCursor: z.nullable(z.string()).optional(),
-});
-
-export type PackageType = z.infer<typeof packageTypeSchema>;
-export type ClientPackage = z.infer<typeof clientPackageSchema>;
+export type { PackageType } from "@baza/types/catalog";
+export type { ClientPackage } from "@baza/types/packages";
 
 const packagesAll = ["packages"] as const;
 
@@ -230,8 +166,7 @@ export const packagesQueries = {
 // the Layer 4 server widening), so splice the returned row into the types list
 // cache instead of invalidating. Append on create, replace-by-id on update.
 
-type PackageTypesListData = z.infer<typeof packageTypesResponseSchema>;
-type PackageTypeMutationResponse = z.infer<typeof packageTypeMutationResponseSchema>;
+type PackageTypesListData = PackageTypesResponse;
 const packageTypesListKey = packagesQueries.types().queryKey;
 
 function splicePackageType(queryClient: QueryClient, packageType: PackageType) {

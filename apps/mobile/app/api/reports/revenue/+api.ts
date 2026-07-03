@@ -1,7 +1,7 @@
-import type { ReportsRevenueResponse } from "@baza/types/reports";
+import { reportsRevenueResponseSchema, type ReportsRevenueResponse } from "@baza/types/reports";
 import { UserRole } from "@/generated/prisma";
 import { requireRole } from "@/lib/server/auth-guards";
-import { fail, ok } from "@/lib/server/http";
+import { fail, respond } from "@/lib/server/http";
 import { prisma } from "@/lib/server/prisma";
 import { accumulatePeriodSeries } from "@/lib/server/report-aggregation";
 import { parseReportTimeframe } from "@/lib/server/reports";
@@ -38,7 +38,7 @@ export async function GET(request: Request) {
     },
   );
 
-  return ok({
+  return respond(reportsRevenueResponseSchema, {
     success: true,
     data,
   } satisfies ReportsRevenueResponse);

@@ -1,7 +1,10 @@
 import { UserRole } from "@/generated/prisma";
-import { socialMediaConsentInputSchema } from "@baza/types/consent";
+import {
+  socialMediaConsentInputSchema,
+  socialMediaConsentResponseSchema,
+} from "@baza/types/consent";
 import { requireRole } from "@/lib/server/auth-guards";
-import { fail, ok } from "@/lib/server/http";
+import { fail, respond } from "@/lib/server/http";
 import { extractEvidence } from "@/lib/legal/evidence";
 import { ACTIVE_VERSIONS } from "@/lib/legal/versions";
 import { prisma } from "@/lib/server/prisma";
@@ -34,5 +37,5 @@ export async function POST(request: Request) {
     select: { id: true, accepted: true, acceptedAt: true },
   });
 
-  return ok({ success: true, record });
+  return respond(socialMediaConsentResponseSchema, { success: true, record });
 }

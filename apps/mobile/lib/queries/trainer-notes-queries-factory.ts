@@ -1,37 +1,11 @@
 import { queryOptions, mutationOptions, infiniteQueryOptions } from "@tanstack/react-query";
-import { z } from "zod";
+import {
+  trainerNotesResponseSchema,
+  type TrainerNotesResponse,
+} from "@baza/types/trainer-notes";
 import { apiRequest } from "@/lib/api-request";
 
-const trainerNoteSchema = z.object({
-  id: z.string(),
-  sessionId: z.nullable(z.string()),
-  clientProfileId: z.string(),
-  note: z.string(),
-  createdAt: z.string(),
-  trainer: z
-    .object({
-      id: z.string(),
-      fullName: z.string(),
-    })
-    .optional(),
-  clientProfile: z
-    .object({
-      user: z.object({
-        id: z.string(),
-        fullName: z.string(),
-      }),
-    })
-    .optional(),
-});
-
-const trainerNotesResponseSchema = z.object({
-  success: z.boolean(),
-  notes: z.array(trainerNoteSchema),
-  nextCursor: z.nullable(z.string()).optional(),
-});
-
-export type TrainerNote = z.infer<typeof trainerNoteSchema>;
-type TrainerNotesResponse = z.infer<typeof trainerNotesResponseSchema>;
+export type { TrainerNote } from "@baza/types/trainer-notes";
 
 type NotesListParams = {
   sessionId?: string;

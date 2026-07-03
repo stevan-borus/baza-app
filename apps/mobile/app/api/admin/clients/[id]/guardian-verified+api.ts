@@ -1,6 +1,7 @@
 import { UserRole } from "@/generated/prisma";
 import { requireRole } from "@/lib/server/auth-guards";
-import { fail, ok, paramFromCtxOrUrl } from "@/lib/server/http";
+import { fail, paramFromCtxOrUrl, respond } from "@/lib/server/http";
+import { successResponseSchema } from "@baza/types/common";
 import { now } from "@/lib/now";
 import { prisma } from "@/lib/server/prisma";
 
@@ -33,5 +34,5 @@ export async function POST(
     },
   });
 
-  return ok({ success: true });
+  return respond(successResponseSchema, { success: true });
 }

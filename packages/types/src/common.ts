@@ -60,6 +60,30 @@ export const dateOfBirthSchema = z
     { message: "Not a valid calendar date" },
   );
 
+/**
+ * Bare acknowledgement for routes whose whole success contract is "it
+ * worked" — e.g. password-reset request/confirm and consent refusal.
+ */
+export const successResponseSchema = z.object({
+  success: z.literal(true),
+});
+export type SuccessResponse = z.infer<typeof successResponseSchema>;
+
+// GET /api/users/trainers — active staff (trainers + admins) for the
+// session trainer pickers. `fullName` is derived server-side.
+export const trainerUserSchema = z.object({
+  id: z.string(),
+  fullName: z.string(),
+  role: z.enum(["ADMIN", "TRAINER"]),
+});
+export type TrainerUser = z.infer<typeof trainerUserSchema>;
+
+export const trainersResponseSchema = z.object({
+  success: z.boolean(),
+  users: z.array(trainerUserSchema),
+});
+export type TrainersResponse = z.infer<typeof trainersResponseSchema>;
+
 export const paginationQuerySchema = z.object({
   cursor: z.string().optional(),
   take: z.coerce.number().int().min(1).max(100).default(30),

@@ -1,12 +1,5 @@
 import type { z } from "zod";
 
-export function ok<T extends Record<string, unknown>>(
-  payload: T,
-  status = 200,
-) {
-  return Response.json(payload, { status });
-}
-
 /**
  * The server-side end of the wire contract: every route's success path goes
  * through here with the same `@baza/types` response schema the client parses

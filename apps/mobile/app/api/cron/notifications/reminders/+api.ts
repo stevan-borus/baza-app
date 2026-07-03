@@ -1,6 +1,7 @@
+import { cronRemindersResponseSchema } from "@baza/types/cron";
 import { now } from "@/lib/now";
 import { requireCronAuth } from "@/lib/server/cron-auth";
-import { ok } from "@/lib/server/http";
+import { respond } from "@/lib/server/http";
 import { createSystemNotification } from "@/lib/server/notifications";
 import { NOTIFICATION_MESSAGE_KEYS } from "@baza/i18n";
 import { prisma } from "@/lib/server/prisma";
@@ -77,7 +78,7 @@ export async function POST(request: Request) {
     }
   }
 
-  return ok({
+  return respond(cronRemindersResponseSchema, {
     success: true,
     mode,
     dryRun,

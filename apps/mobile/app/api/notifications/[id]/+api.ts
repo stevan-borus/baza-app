@@ -1,7 +1,8 @@
+import { markNotificationReadResponseSchema } from "@baza/types/notifications";
 import { UserRole } from "@/generated/prisma";
 import { now } from "@/lib/now";
 import { requireRole } from "@/lib/server/auth-guards";
-import { fail, ok } from "@/lib/server/http";
+import { fail, respond } from "@/lib/server/http";
 import { prisma } from "@/lib/server/prisma";
 
 const AUTHENTICATED_ROLES = [UserRole.ADMIN, UserRole.TRAINER, UserRole.CLIENT];
@@ -34,7 +35,7 @@ export async function PATCH(request: Request, { id }: RouteParams) {
     },
   });
 
-  return ok({
+  return respond(markNotificationReadResponseSchema, {
     success: true,
     notification: updated,
   });

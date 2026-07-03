@@ -34,10 +34,10 @@
  * Top sessions: top 10 sessions in the window by **non-canceled** booking
  * count. Ties are broken by capacity (so a fuller-of-two sessions wins).
  */
-import type { ReportsBookingsDetailResponse } from "@baza/types/reports";
+import { reportsBookingsDetailResponseSchema, type ReportsBookingsDetailResponse } from "@baza/types/reports";
 import { UserRole } from "@/generated/prisma";
 import { requireRole } from "@/lib/server/auth-guards";
-import { fail, ok } from "@/lib/server/http";
+import { fail, respond } from "@/lib/server/http";
 import { now } from "@/lib/now";
 import { prisma } from "@/lib/server/prisma";
 import {
@@ -193,7 +193,7 @@ export async function GET(request: Request) {
     },
   });
 
-  return ok({
+  return respond(reportsBookingsDetailResponseSchema, {
     success: true,
     headline: {
       totalBookings: bookings.length,

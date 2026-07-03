@@ -14,10 +14,10 @@
  * The endpoint always returns all 28 cells, even empty ones, so the UI
  * grid layout is stable across periods.
  */
-import type { ReportsUtilizationHeatmapResponse } from "@baza/types/reports";
+import { reportsUtilizationHeatmapResponseSchema, type ReportsUtilizationHeatmapResponse } from "@baza/types/reports";
 import { UserRole } from "@/generated/prisma";
 import { requireRole } from "@/lib/server/auth-guards";
-import { fail, ok } from "@/lib/server/http";
+import { fail, respond } from "@/lib/server/http";
 import { prisma } from "@/lib/server/prisma";
 import {
   accumulateIntoSlots,
@@ -104,5 +104,8 @@ export async function GET(request: Request) {
     cell.utilization = roundedRatio(cell.booked, cell.capacity);
   }
 
-  return ok({ success: true, cells } satisfies ReportsUtilizationHeatmapResponse);
+  return respond(reportsUtilizationHeatmapResponseSchema, {
+    success: true,
+    cells,
+  } satisfies ReportsUtilizationHeatmapResponse);
 }

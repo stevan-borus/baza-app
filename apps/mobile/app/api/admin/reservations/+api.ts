@@ -1,6 +1,7 @@
+import { createReservationsResponseSchema } from "@baza/types/bookings";
 import { UserRole } from "@/generated/prisma";
 import { requireRole } from "@/lib/server/auth-guards";
-import { fail, ok } from "@/lib/server/http";
+import { respond, fail } from "@/lib/server/http";
 import { prisma } from "@/lib/server/prisma";
 
 type CreateReservationsBody = {
@@ -82,7 +83,7 @@ export async function POST(request: Request) {
     return { reserved, skippedFull, skippedAlreadyBooked, skippedMissing };
   });
 
-  return ok({
+  return respond(createReservationsResponseSchema, {
     success: true,
     reserved: result.reserved.length,
     reservedSessionIds: result.reserved,

@@ -1,3 +1,4 @@
+import { cancelReservationsBulkResponseSchema } from "@baza/types/bookings";
 import { formatFullName } from "@baza/types/common";
 import { UserRole } from "@/generated/prisma";
 import { requireRole } from "@/lib/server/auth-guards";
@@ -5,7 +6,7 @@ import {
   applyLateCancelForfeit,
   promoteNextWaitlistEntry,
 } from "@/lib/server/booking-cancellation";
-import { fail, ok } from "@/lib/server/http";
+import { respond, fail } from "@/lib/server/http";
 import { notifyClient } from "@/lib/server/notify-client";
 import {
   coalesceTrainerCancelCounts,
@@ -64,7 +65,15 @@ export async function POST(request: Request) {
       },
     },
   });
-  if (bookings.length === 0) return ok({ success: true, canceled: 0 });
+  // promotedUserIds: [] is load-bearing — the client schema requires the
+  // field, and this early return used to omit it (a silent contract drift
+  // that would have failed the client-side parse).
+  if (bookings.length === 0)
+    return respond(cancelReservationsBulkResponseSchema, {
+      success: true,
+      canceled: 0,
+      promotedUserIds: [],
+    });
 
   const initiatorId = guard.user.id;
 
@@ -174,7 +183,7 @@ export async function POST(request: Request) {
     }
   })();
 
-  return ok({
+  return respond(cancelReservationsBulkResponseSchema, {
     success: true,
     canceled: bookings.length,
     promotedUserIds: [...promotedUserIds],

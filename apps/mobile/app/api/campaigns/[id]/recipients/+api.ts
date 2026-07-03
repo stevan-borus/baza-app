@@ -1,9 +1,12 @@
-import { campaignAudienceSpecSchema } from "@baza/types/campaigns";
+import {
+  campaignAudienceSpecSchema,
+  campaignRecipientsResponseSchema,
+} from "@baza/types/campaigns";
 import { formatFullName } from "@baza/types/common";
 import { UserRole } from "@/generated/prisma";
 import { requireRole } from "@/lib/server/auth-guards";
 import { resolveCampaignAudienceMembers } from "@/lib/server/campaign-audience";
-import { fail, ok, paramFromCtxOrUrl } from "@/lib/server/http";
+import { fail, paramFromCtxOrUrl, respond } from "@/lib/server/http";
 import { prisma } from "@/lib/server/prisma";
 
 type Ctx = { params?: Record<string, string | undefined> };
@@ -46,13 +49,13 @@ export async function GET(request: Request, ctx?: Ctx) {
         email: u.email,
         campaignsEnabled: true,
       }));
-    return ok({ actual: true, clients });
+    return respond(campaignRecipientsResponseSchema, { actual: true, clients });
   }
 
   // Not yet sent — project from the saved spec.
   const spec = campaignAudienceSpecSchema.parse(campaign.audienceSpec);
   const members = await resolveCampaignAudienceMembers(spec);
-  return ok({
+  return respond(campaignRecipientsResponseSchema, {
     actual: false,
     clients: members.map((m) => ({
       id: m.id,

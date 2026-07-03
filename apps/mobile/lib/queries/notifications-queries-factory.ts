@@ -1,49 +1,13 @@
 import { queryOptions, mutationOptions, infiniteQueryOptions, useMutation, useQueryClient, type QueryClient } from "@tanstack/react-query";
-import { z } from "zod";
+import {
+  notificationPreferencesResponseSchema,
+  notificationsResponseSchema,
+  type NotificationPreferencesResponse,
+  type NotificationsResponse,
+} from "@baza/types/notifications";
 import { apiRequest } from "@/lib/api-request";
 
-const jsonValueSchema: z.ZodType<string | number | boolean | null | Record<string, string | number | boolean | null> | Array<string | number | boolean | null>> = z.lazy(() =>
-  z.union([
-    z.string(),
-    z.number(),
-    z.boolean(),
-    z.null(),
-    z.array(z.union([z.string(), z.number(), z.boolean(), z.null()])),
-    z.record(z.string(), z.union([z.string(), z.number(), z.boolean(), z.null()])),
-  ]),
-);
-
-const notificationSchema = z.object({
-  id: z.string(),
-  type: z.string(),
-  title: z.string(),
-  body: z.string(),
-  payload: z.record(z.string(), jsonValueSchema).nullable().optional(),
-  readAt: z.nullable(z.string()),
-  createdAt: z.string(),
-});
-
-const notificationsResponseSchema = z.object({
-  success: z.boolean(),
-  notifications: z.array(notificationSchema),
-  nextCursor: z.nullable(z.string()).optional(),
-});
-
-const preferencesSchema = z.object({
-  pushEnabled: z.boolean(),
-  inAppEnabled: z.boolean(),
-  campaignsEnabled: z.boolean(),
-  bookingEmailsEnabled: z.boolean(),
-  preferredLocale: z.string().nullable().optional(),
-});
-
-const preferencesResponseSchema = z.object({
-  success: z.boolean(),
-  preferences: preferencesSchema,
-});
-
-export type Notification = z.infer<typeof notificationSchema>;
-type NotificationsResponse = z.infer<typeof notificationsResponseSchema>;
+export type { Notification } from "@baza/types/notifications";
 
 function fetchNotificationsPage(cursor?: string | null): Promise<NotificationsResponse> {
   return apiRequest("/api/notifications", {
@@ -104,7 +68,7 @@ export const notificationsQueries = {
       queryKey: [...notificationsAll, "preferences"] as const,
       queryFn: () =>
         apiRequest("/api/notifications/preferences", {
-          schema: preferencesResponseSchema,
+          schema: notificationPreferencesResponseSchema,
           errorMessage: "Unable to load notification preferences",
         }),
       staleTime: 60_000,
@@ -154,7 +118,7 @@ export const notificationsQueries = {
     }),
 };
 
-type PreferencesResponse = z.infer<typeof preferencesResponseSchema>;
+type PreferencesResponse = NotificationPreferencesResponse;
 type UpdatePreferencesInput = {
   pushEnabled?: boolean;
   inAppEnabled?: boolean;

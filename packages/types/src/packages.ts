@@ -63,3 +63,88 @@ export const createClientPackageInputSchema = ClientPackageInputSchema.pick({
 export type CreateClientPackageInput = z.infer<
   typeof createClientPackageInputSchema
 >;
+
+// ─── GET /api/packages/client-packages ───────────────────────────────────────
+// One schema for all three branches (client-own, admin list-all, per-client):
+// the optional fields cover the branch-specific extras.
+
+const embeddedPackageTypeSchema = z.object({
+  id: z.string().optional(),
+  name: z.string(),
+  sessionCount: z.number(),
+  validityDays: z.number(),
+  lateCancelHours: z.number().optional(),
+});
+
+const embeddedClientSchema = z.object({
+  id: z.string(),
+  fullName: z.string(),
+  email: z.string(),
+});
+
+const embeddedBillingRecordSchema = z.object({
+  amount: z.number(),
+  method: z.string(),
+});
+
+export const clientPackageSchema = z.object({
+  id: z.string(),
+  clientProfileId: z.string(),
+  packageTypeId: z.string(),
+  classTypeId: z.string().optional(),
+  startsAt: z.string(),
+  expiresAt: z.string(),
+  sessionsRemaining: z.number(),
+  packageType: embeddedPackageTypeSchema.optional(),
+  client: embeddedClientSchema.optional(),
+  // Per-client GET path attaches the matching CONFIRMED BillingRecord (or
+  // null for comp/gift packages). Admin list-all path omits this field —
+  // it stays optional so both responses validate against the same schema.
+  billingRecord: embeddedBillingRecordSchema.nullable().optional(),
+});
+export type ClientPackage = z.infer<typeof clientPackageSchema>;
+
+export const clientPackagesResponseSchema = z.object({
+  success: z.boolean(),
+  packages: z.array(clientPackageSchema),
+  // Cursor-based pagination: opaque string (clientPackage.id) of the last
+  // row on this page, or null when this is the final page. Optional in the
+  // response shape so the non-paginated branches (per-client list) still
+  // validate against the same schema.
+  nextCursor: z.nullable(z.string()).optional(),
+});
+export type ClientPackagesResponse = z.infer<
+  typeof clientPackagesResponseSchema
+>;
+
+// POST /api/packages/client-packages — the ClientPackage row as selected by
+// the create handler.
+export const createClientPackageResponseSchema = z.object({
+  success: z.boolean(),
+  clientPackage: z.object({
+    id: z.string(),
+    clientProfileId: z.string(),
+    packageTypeId: z.string(),
+    classTypeId: z.string(),
+    lateCancelHours: z.number(),
+    startsAt: z.string(),
+    expiresAt: z.string(),
+    sessionsRemaining: z.number(),
+  }),
+});
+export type CreateClientPackageResponse = z.infer<
+  typeof createClientPackageResponseSchema
+>;
+
+// POST /api/packages/pause — the PackagePause row as selected by the handler.
+export const packagePauseResponseSchema = z.object({
+  success: z.boolean(),
+  pause: z.object({
+    id: z.string(),
+    clientProfileId: z.string(),
+    startsAt: z.string(),
+    endsAt: z.string(),
+    reason: z.string().nullable(),
+  }),
+});
+export type PackagePauseResponse = z.infer<typeof packagePauseResponseSchema>;

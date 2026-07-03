@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { fail, ok } from "@/lib/server/http";
+import { legalDocumentResponseSchema } from "@baza/types/consent";
+import { fail, respond } from "@/lib/server/http";
 import { ACTIVE_VERSIONS } from "@/lib/legal/versions";
 import { LEGAL_DOCUMENT_BUNDLE } from "@/lib/legal/generated";
 import type { ConsentDocumentKey, AppLocale } from "@/generated/prisma";
@@ -29,5 +30,11 @@ export async function GET(
   const body = LEGAL_DOCUMENT_BUNDLE[key]?.[version]?.[locale];
 
   if (!body) return fail("Document not bundled", 500);
-  return ok({ success: true, key, version, locale, body });
+  return respond(legalDocumentResponseSchema, {
+    success: true,
+    key,
+    version,
+    locale,
+    body,
+  });
 }

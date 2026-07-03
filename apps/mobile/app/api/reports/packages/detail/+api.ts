@@ -29,7 +29,7 @@
  * optimization can come later if needed.
  */
 import { formatFullName } from "@baza/types/common";
-import { type ReportsPackagesDetailResponse } from "@baza/types/reports";
+import { reportsPackagesDetailResponseSchema, type ReportsPackagesDetailResponse } from "@baza/types/reports";
 import { UserRole } from "@/generated/prisma";
 import { requireRole } from "@/lib/server/auth-guards";
 import {
@@ -37,7 +37,7 @@ import {
   type BillingForMatch,
   type PackageForMatch,
 } from "@/lib/server/billing-package-link";
-import { fail, ok } from "@/lib/server/http";
+import { fail, respond } from "@/lib/server/http";
 import { now } from "@/lib/now";
 import { prisma } from "@/lib/server/prisma";
 import {
@@ -231,7 +231,7 @@ export async function GET(request: Request) {
       isPaid: paidIds.has(pkg.id),
     }));
 
-  return ok({
+  return respond(reportsPackagesDetailResponseSchema, {
     success: true,
     headline: {
       activePackages,

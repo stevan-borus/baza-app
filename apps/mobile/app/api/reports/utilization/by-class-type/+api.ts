@@ -1,7 +1,7 @@
-import type { ReportsUtilizationByClassTypeResponse } from "@baza/types/reports";
+import { reportsUtilizationByClassTypeResponseSchema, type ReportsUtilizationByClassTypeResponse } from "@baza/types/reports";
 import { UserRole } from "@/generated/prisma";
 import { requireRole } from "@/lib/server/auth-guards";
-import { fail, ok } from "@/lib/server/http";
+import { fail, respond } from "@/lib/server/http";
 import { prisma } from "@/lib/server/prisma";
 import {
   accumulateByKey,
@@ -63,5 +63,8 @@ export async function GET(request: Request) {
     (row) => row.utilization,
   );
 
-  return ok({ success: true, data } satisfies ReportsUtilizationByClassTypeResponse);
+  return respond(reportsUtilizationByClassTypeResponseSchema, {
+    success: true,
+    data,
+  } satisfies ReportsUtilizationByClassTypeResponse);
 }

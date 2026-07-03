@@ -1,10 +1,14 @@
 import { formatFullName } from "@baza/types/common";
 import { inviteClientInputSchema } from "@baza/types/auth";
+import {
+  inviteMutationResponseSchema,
+  invitesResponseSchema,
+} from "@baza/types/clients";
 import { UserRole } from "@/generated/prisma";
 import { now } from "@/lib/now";
 import { requireRole } from "@/lib/server/auth-guards";
 import { env } from "@/lib/server/env";
-import { fail, ok } from "@/lib/server/http";
+import { fail, respond } from "@/lib/server/http";
 import { prisma } from "@/lib/server/prisma";
 import { sendInviteEmail } from "@/lib/server/resend";
 import { addHours, generateRawToken, hashToken } from "@/lib/server/tokens";
@@ -27,7 +31,7 @@ export async function GET(request: Request) {
     },
   });
 
-  return ok({
+  return respond(invitesResponseSchema, {
     success: true,
     invites: invites.map((inv) => ({
       ...inv,
@@ -95,7 +99,7 @@ export async function POST(request: Request) {
     inviteToken: rawToken,
   });
 
-  return ok({
+  return respond(inviteMutationResponseSchema, {
     success: true,
     invite: { ...invite, fullName: formatFullName(invite.firstName, invite.lastName) },
   });

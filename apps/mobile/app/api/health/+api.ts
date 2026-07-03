@@ -1,8 +1,9 @@
+import { healthResponseSchema } from "@baza/types/system";
 import { now } from "@/lib/now";
-import { ok } from "@/lib/server/http";
+import { respond } from "@/lib/server/http";
 
 export async function GET() {
-  return ok({
+  return respond(healthResponseSchema, {
     success: true,
     service: "baza-api",
     status: "ok",
