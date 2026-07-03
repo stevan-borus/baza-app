@@ -2,10 +2,14 @@ import {
   queryOptions,
   mutationOptions,
   infiniteQueryOptions,
+  useMutation,
+  useQueryClient,
+  type QueryClient,
 } from "@tanstack/react-query";
 import { adminClientConsentRecordsResponseSchema, adminClientHealthResponseSchema, clientByIdResponseSchema, clientsResponseSchema } from "@baza/types/clients";
 import { ApiError } from "@/lib/api-error";
 import { apiRequest } from "@/lib/api-request";
+import { reportsQueries } from "@/lib/queries/reports-queries-factory";
 
 export class ClientForbiddenError extends Error {
   constructor() {
@@ -134,3 +138,40 @@ export const clientsQueries = {
       staleTime: 30_000,
     }),
 };
+
+// ── Mutation hooks ──────────────────────────────────────────────────────────
+// Client writes also invalidate ["reports"]: the summary's totalClients /
+// activeClients counts render on the always-mounted Pregled, and create and
+// the isActive toggle (edit + soft-delete) both move those counts.
+
+export function createClientMutationOptions(queryClient: QueryClient) {
+  return {
+    ...clientsQueries.create(),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: clientsQueries.all }),
+        queryClient.invalidateQueries({ queryKey: reportsQueries.all }),
+      ]);
+    },
+  };
+}
+
+export function updateClientMutationOptions(queryClient: QueryClient) {
+  return {
+    ...clientsQueries.update(),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: clientsQueries.all }),
+        queryClient.invalidateQueries({ queryKey: reportsQueries.all }),
+      ]);
+    },
+  };
+}
+
+export function useCreateClientMutation() {
+  return useMutation(createClientMutationOptions(useQueryClient()));
+}
+
+export function useUpdateClientMutation() {
+  return useMutation(updateClientMutationOptions(useQueryClient()));
+}
