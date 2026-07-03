@@ -52,6 +52,7 @@ import { TreninziSubTab } from "@/components/admin/treninzi-sub-tab";
 import { ClientLegalPanel } from "@/components/admin/client-legal-panel";
 import { ClientHealthPanel } from "@/components/admin/client-health-panel";
 import { formatDateOfBirth, parseDateOfBirth } from "@/lib/date-of-birth";
+import { nowMs } from "@/lib/now";
 import {
   ClientDetailTabBar,
   type ClientDetailTab,
@@ -80,10 +81,10 @@ function InitialsAvatar({ name, size = 56 }: { name: string; size?: number }) {
 }
 
 function pickActivePackage(packages: ClientPackage[]): ClientPackage | null {
-  const nowMs = Date.now();
+  const msNow = nowMs();
   for (const p of packages) {
     if (p.sessionsRemaining <= 0) continue;
-    if (new Date(p.expiresAt).getTime() < nowMs) continue;
+    if (new Date(p.expiresAt).getTime() < msNow) continue;
     return p;
   }
   return null;
@@ -608,7 +609,7 @@ function PaketiTab({
       ) : (
         <View className="bg-surface rounded-lg overflow-hidden">
           {allPackages.map((p, idx) => {
-            const expired = new Date(p.expiresAt).getTime() < Date.now();
+            const expired = new Date(p.expiresAt).getTime() < nowMs();
             const usedUp = p.sessionsRemaining <= 0;
             return (
               <React.Fragment key={p.id}>

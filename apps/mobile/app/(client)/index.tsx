@@ -22,6 +22,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useTranslation } from "react-i18next";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
+import { now } from "@/lib/now";
 import { authQueries } from "@/lib/queries/auth-queries-factory";
 import {
   packagesQueries,
@@ -50,8 +51,8 @@ const PHOTO_HERO = require("@/assets/studio/group.webp");      // BAZA neon, 4 w
 const ACCENT_LIGHT = "#9ED6B5"; // sage glow used on dark photo overlays
 
 function currentMonthKey() {
-  const now = new Date();
-  return `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}`;
+  const today = now();
+  return `${today.getUTCFullYear()}-${String(today.getUTCMonth() + 1).padStart(2, "0")}`;
 }
 
 // ────────────────────────────────────────────────────────────────────────
@@ -584,7 +585,7 @@ export default function HomeStudio() {
   const packages = packagesQuery.data?.packages ?? [];
   const activePackage = packages.find(
     (p: ClientPackage) =>
-      p.sessionsRemaining > 0 && new Date(p.expiresAt) > new Date(),
+      p.sessionsRemaining > 0 && new Date(p.expiresAt) > now(),
   );
   const sessions = availabilityQuery.data?.sessions ?? [];
 
@@ -594,12 +595,12 @@ export default function HomeStudio() {
     meQuery.data?.user.firstName ||
     meQuery.data?.user.email?.split("@")[0] ||
     "";
-  const now = new Date();
+  const nowDate = now();
   // The hero is the client's NEXT BOOKED class (it carries DETALJI/OTKAŽI), so
   // it must filter to sessions the client actually reserved — not just the next
   // bookable one. No booking → the "ready for next" empty state shows instead.
   const upcoming = sessions
-    .filter((s) => s.isBookedByMe && new Date(s.startsAt) > now)
+    .filter((s) => s.isBookedByMe && new Date(s.startsAt) > nowDate)
     .sort(
       (a, b) =>
         new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime(),
@@ -631,7 +632,7 @@ export default function HomeStudio() {
   }
 
   const greeting = (() => {
-    const h = new Date().getHours();
+    const h = now().getHours();
     // Before 5am it's still night — "Dobro veče", not morning. Morning runs
     // 5:00–10:59, "Dobar dan" until 18:00 (17:xx still reads daytime), then
     // evening.

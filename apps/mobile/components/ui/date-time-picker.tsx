@@ -6,6 +6,7 @@ import DateTimePickerModal from "react-native-modal-datetime-picker";
 import { useTranslation } from "react-i18next";
 import { useColorScheme } from "@/components/useColorScheme";
 import { getDateLocale } from "@/lib/i18n";
+import { now } from "@/lib/now";
 import { useThemeTokens, ACCENT } from "./tokens";
 import { WebDateTimeSheet } from "./date-time-picker-web";
 
@@ -133,7 +134,7 @@ export function DateTimePicker({
         <DateTimePickerModal
           isVisible={isVisible}
           mode={mode}
-          date={value ?? new Date()}
+          date={value ?? now()}
           onConfirm={handleConfirm}
           onCancel={handleCancel}
           minimumDate={minimumDate}

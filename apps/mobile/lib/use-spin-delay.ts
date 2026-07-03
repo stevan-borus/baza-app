@@ -26,11 +26,16 @@ export function useSpinDelay(
     if (loading) {
       if (!spinning) {
         delayTimer = setTimeout(() => {
+          // Measures how long the spinner has really been visible (paired
+          // with setTimeout, which always runs on wall clock). A pinned
+          // anchor would make shownFor 0 and force the full minDuration wait.
+          // now-exempt: elapsed-time measurement, not "what time is it"
           spinStartRef.current = Date.now();
           setSpinning(true);
         }, delay);
       }
     } else if (spinning) {
+      // now-exempt: elapsed-time measurement — see spinStartRef above.
       const shownFor = spinStartRef.current ? Date.now() - spinStartRef.current : 0;
       const remaining = minDuration - shownFor;
       if (remaining > 0) {

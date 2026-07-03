@@ -37,6 +37,7 @@ import { displayName } from "@baza/types/common";
 import { ScreenContainerRaw, useTabBarBottomPadding } from "@/components/ui/screen-container";
 import { useThemeTokens } from "@/components/ui/tokens";
 import { getDateLocale } from "@/lib/i18n";
+import { now } from "@/lib/now";
 import { authQueries } from "@/lib/queries/auth-queries-factory";
 import { packagesQueries, type ClientPackage } from "@/lib/queries/packages-queries-factory";
 import { ProfilePersonalDataSections } from "@/components/profile/profile-personal-data-sections";
@@ -80,7 +81,7 @@ export default function ClientProfile() {
   // ("Pogledaj sve pakete"). A real client has ~1-2 active, so no cap is needed.
   const activePackages = packages.filter(
     (pkg: ClientPackage) =>
-      pkg.sessionsRemaining > 0 && new Date(pkg.expiresAt) >= new Date(),
+      pkg.sessionsRemaining > 0 && new Date(pkg.expiresAt) >= now(),
   );
   const userEmail = meQuery.data?.user.email ?? "";
   const userName = displayName(meQuery.data?.user);
@@ -92,7 +93,7 @@ export default function ClientProfile() {
   // surfacing notes to clients this proxy had to go anyway.
   const memberSinceYear = meQuery.data?.user.createdAt
     ? new Date(meQuery.data.user.createdAt).getFullYear()
-    : new Date().getFullYear();
+    : now().getFullYear();
 
   async function handleRefresh() {
     setRefreshing(true);
@@ -248,7 +249,7 @@ export default function ClientProfile() {
               const progress = getPackageProgress(pkg);
               const expires = new Date(pkg.expiresAt);
               const expired =
-                pkg.sessionsRemaining <= 0 || expires < new Date();
+                pkg.sessionsRemaining <= 0 || expires < now();
               return (
                 <View key={pkg.id} className="bg-surface rounded-lg p-4 gap-3">
                   <View className="flex-row items-start justify-between">
