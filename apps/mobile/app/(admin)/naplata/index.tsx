@@ -20,12 +20,7 @@
  * Klijenti and ActiveAssignments migrations.
  */
 import { useState, useMemo, useDeferredValue } from "react";
-import {
-  useMutation,
-  useQuery,
-  useInfiniteQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
+import { useQuery, useInfiniteQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { ActivityIndicator, Pressable, Text, View } from "react-native";
 import { BottomSheetFlatList } from "@gorhom/bottom-sheet";
@@ -52,6 +47,7 @@ import { SkeletonList } from "@/components/ui/skeleton";
 import { packagesQueries } from "@/lib/queries/packages-queries-factory";
 import {
   billingQueries,
+  useCreateBillingMutation,
   type BillingRecord,
 } from "@/lib/queries/billing-queries-factory";
 import { clientsQueries } from "@/lib/queries/clients-queries-factory";
@@ -78,7 +74,6 @@ function drillRangeLabel(window: DrillWindow, dateLocale: string): string {
 export default function AdminBilling() {
   const { t, i18n } = useTranslation();
   const lang = i18n.language === "en" ? "en" : "sr";
-  const queryClient = useQueryClient();
   const tokens = useThemeTokens();
   const bottomPad = useTabBarBottomPadding();
   const [showCreate, setShowCreate] = useState(false);
@@ -181,21 +176,10 @@ export default function AdminBilling() {
     setSelectedMonth((m) => m.add(direction, "month"));
   }
 
-  const createMutation = useMutation({
-    ...billingQueries.create(),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: billingQueries.all });
-      setShowCreate(false);
-      setForm({
-        clientUserId: "",
-        clientName: "",
-        amount: "",
-        method: "CASH",
-        notes: "",
-        packageTypeId: "",
-      });
-    },
-  });
+  // Cache upkeep (billing + reports revenue + packages/clients when a package
+  // activates) is baked into the factory hook; the sheet-close side-effects
+  // are passed per-call via mutate(vars, { onSuccess }).
+  const createMutation = useCreateBillingMutation();
 
   const methodLabelKeys = RAW_METHOD_LABEL_KEYS;
   const methods = ["CASH", "CARD", "COMPANY", "MANUAL_ONLINE"] as const;
@@ -473,15 +457,30 @@ export default function AdminBilling() {
               createMutation.isPending || !form.clientUserId || !form.amount
             }
             onPress={() =>
-              createMutation.mutate({
-                clientUserId: form.clientUserId,
-                amount: parseInt(form.amount, 10),
-                method: form.method,
-                status: "CONFIRMED",
-                notes: form.notes || undefined,
-                packageTypeId: form.packageTypeId || undefined,
-                activatePackageOnConfirm: !!form.packageTypeId,
-              })
+              createMutation.mutate(
+                {
+                  clientUserId: form.clientUserId,
+                  amount: parseInt(form.amount, 10),
+                  method: form.method,
+                  status: "CONFIRMED",
+                  notes: form.notes || undefined,
+                  packageTypeId: form.packageTypeId || undefined,
+                  activatePackageOnConfirm: !!form.packageTypeId,
+                },
+                {
+                  onSuccess: () => {
+                    setShowCreate(false);
+                    setForm({
+                      clientUserId: "",
+                      clientName: "",
+                      amount: "",
+                      method: "CASH",
+                      notes: "",
+                      packageTypeId: "",
+                    });
+                  },
+                },
+              )
             }
           >
             {t("admin.manage.create")}
