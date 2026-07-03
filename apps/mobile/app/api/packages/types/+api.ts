@@ -1,7 +1,11 @@
-import { packageTypeInputSchema } from "@baza/types";
+import {
+  packageTypeInputSchema,
+  packageTypeMutationResponseSchema,
+  packageTypesResponseSchema,
+} from "@baza/types/catalog";
 import { UserRole } from "@/generated/prisma";
 import { requireRole } from "@/lib/server/auth-guards";
-import { fail, ok } from "@/lib/server/http";
+import { fail, respond } from "@/lib/server/http";
 import { prisma } from "@/lib/server/prisma";
 import { tryCatch } from "@/lib/server/try-catch";
 
@@ -25,7 +29,7 @@ export async function GET(request: Request) {
     },
   });
 
-  return ok({ success: true, packageTypes });
+  return respond(packageTypesResponseSchema, { success: true, packageTypes });
 }
 
 export async function POST(request: Request) {
@@ -68,5 +72,9 @@ export async function POST(request: Request) {
     },
   });
 
-  return ok({ success: true, packageType }, 201);
+  return respond(
+    packageTypeMutationResponseSchema,
+    { success: true, packageType },
+    201,
+  );
 }

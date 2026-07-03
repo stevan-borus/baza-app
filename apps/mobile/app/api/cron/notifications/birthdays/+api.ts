@@ -1,9 +1,10 @@
+import { cronBirthdaysResponseSchema } from "@baza/types/cron";
 import { now } from "@/lib/now";
 import { requireCronAuth } from "@/lib/server/cron-auth";
-import { ok } from "@/lib/server/http";
+import { respond } from "@/lib/server/http";
 import { notifyOperators } from "@/lib/server/notify-operators";
 import { resolveSuggestedClassType } from "@/lib/server/birthday-suggested-class-type";
-import { formatFullName } from "@baza/types";
+import { formatFullName } from "@baza/types/common";
 import { UserRole, Prisma } from "@/generated/prisma";
 import { prisma } from "@/lib/server/prisma";
 
@@ -49,7 +50,7 @@ export async function POST(request: Request) {
   `);
 
   if (dryRun) {
-    return ok({
+    return respond(cronBirthdaysResponseSchema, {
       success: true,
       dryRun: true,
       today: todayIso,
@@ -86,7 +87,7 @@ export async function POST(request: Request) {
     sent += admins.length;
   }
 
-  return ok({
+  return respond(cronBirthdaysResponseSchema, {
     success: true,
     today: todayIso,
     matchSet,

@@ -1,6 +1,7 @@
-import { resetPasswordInputSchema } from "@baza/types";
+import { resetPasswordInputSchema } from "@baza/types/auth";
+import { successResponseSchema } from "@baza/types/common";
 import { now } from "@/lib/now";
-import { fail, ok } from "@/lib/server/http";
+import { fail, respond } from "@/lib/server/http";
 import { hashPassword } from "@/lib/server/password";
 import { prisma } from "@/lib/server/prisma";
 import { hashToken } from "@/lib/server/tokens";
@@ -47,5 +48,5 @@ export async function POST(request: Request) {
     }),
   ]);
 
-  return ok({ success: true });
+  return respond(successResponseSchema, { success: true });
 }

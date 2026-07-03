@@ -1,8 +1,9 @@
-import { formatFullName } from "@baza/types";
+import { formatFullName } from "@baza/types/common";
+import { cronSessionsConsumptionResponseSchema } from "@baza/types/cron";
 import { now } from "@/lib/now";
 import { chargeNoShowConsumption } from "@/lib/server/booking-cancellation";
 import { requireCronAuth } from "@/lib/server/cron-auth";
-import { ok } from "@/lib/server/http";
+import { respond } from "@/lib/server/http";
 import { notifyOperators } from "@/lib/server/notify-operators";
 import { prisma } from "@/lib/server/prisma";
 import { tryCatch } from "@/lib/server/try-catch";
@@ -140,7 +141,7 @@ export async function POST(request: Request) {
     })();
   }
 
-  return ok({
+  return respond(cronSessionsConsumptionResponseSchema, {
     success: true,
     mode,
     dryRun,

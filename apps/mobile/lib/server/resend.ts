@@ -1,7 +1,7 @@
 import { Resend } from "resend";
 import { render } from "@react-email/render";
 import { createElement } from "react";
-import { formatFullName } from "@baza/types";
+import { formatFullName } from "@baza/types/common";
 import { BookingChangeEmail } from "@/emails/booking-change-email";
 import { CampaignEmail } from "@/emails/campaign-email";
 import { InviteEmail } from "@/emails/invite-email";

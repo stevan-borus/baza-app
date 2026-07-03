@@ -1,4 +1,4 @@
-import { signInInputSchema } from "@baza/types";
+import { signInInputSchema } from "@baza/types/auth";
 import { auth } from "@/lib/server/auth";
 import { fail } from "@/lib/server/http";
 import { prisma } from "@/lib/server/prisma";

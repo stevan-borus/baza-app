@@ -15,7 +15,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ActivityIndicator, Pressable, Text, TextInput, View } from "react-native";
 import { useQuery } from "@tanstack/react-query";
-import type { CampaignAudienceSpec } from "@baza/types";
+import type { CampaignAudienceSpec } from "@baza/types/campaigns";
 import { Icon } from "@/components/ui/icon";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

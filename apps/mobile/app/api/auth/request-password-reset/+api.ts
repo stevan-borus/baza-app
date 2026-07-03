@@ -1,6 +1,7 @@
-import { requestPasswordResetInputSchema } from "@baza/types";
+import { requestPasswordResetInputSchema } from "@baza/types/auth";
+import { successResponseSchema } from "@baza/types/common";
 import { now } from "@/lib/now";
-import { fail, ok } from "@/lib/server/http";
+import { fail, respond } from "@/lib/server/http";
 import { prisma } from "@/lib/server/prisma";
 import { sendResetEmail } from "@/lib/server/resend";
 import { addMinutes, generateRawToken, hashToken } from "@/lib/server/tokens";
@@ -21,7 +22,7 @@ export async function POST(request: Request) {
 
   // Intentionally avoid email-enumeration leaks.
   if (!user || !user.isActive) {
-    return ok({ success: true });
+    return respond(successResponseSchema, { success: true });
   }
 
   const rawToken = generateRawToken();
@@ -41,5 +42,5 @@ export async function POST(request: Request) {
     resetToken: rawToken,
   });
 
-  return ok({ success: true });
+  return respond(successResponseSchema, { success: true });
 }

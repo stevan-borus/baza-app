@@ -1,7 +1,10 @@
-import { createRecurringSessionsInputSchema } from "@baza/types";
+import {
+  createRecurringSessionsInputSchema,
+  createRecurringSessionsResponseSchema,
+} from "@baza/types/scheduling";
 import { UserRole } from "@/generated/prisma";
 import { requireRole } from "@/lib/server/auth-guards";
-import { fail, ok } from "@/lib/server/http";
+import { respond, fail } from "@/lib/server/http";
 import { prisma } from "@/lib/server/prisma";
 import { findScheduleConflict } from "@/lib/server/schedule-conflict";
 import { tryCatch } from "@/lib/server/try-catch";
@@ -112,6 +115,7 @@ export async function POST(request: Request) {
     }
   }
   if (conflicts.length > 0) {
+    // contract-exempt: 409 schedule-conflict payload, not a success contract
     return Response.json(
       {
         success: false,
@@ -158,7 +162,8 @@ export async function POST(request: Request) {
     return { schedule, sessions: created };
   });
 
-  return ok(
+  return respond(
+    createRecurringSessionsResponseSchema,
     {
       success: true,
       count: result.sessions.length,

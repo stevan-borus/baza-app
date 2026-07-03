@@ -20,7 +20,7 @@ import { Button } from "@/components/ui/button";
 import { GlassCard } from "@/components/ui/glass-card";
 import { useThemeTokens } from "@/components/ui/tokens";
 import { Body } from "@/components/ui/studio";
-import type { ConsentDocumentKey } from "@baza/types";
+import type { ConsentDocumentKey } from "@baza/types/consent";
 
 const DOC_LABEL_KEY: Partial<Record<ConsentDocumentKey, string>> = {
   tos: "consent.documentTos",

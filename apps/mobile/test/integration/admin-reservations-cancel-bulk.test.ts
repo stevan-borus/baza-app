@@ -292,6 +292,17 @@ describe("POST /api/admin/reservations/cancel-bulk", () => {
     expect(res.status).toBe(400);
   });
 
+  it("rejects a non-boolean waiveCharge with 400 instead of silently not waiving", async () => {
+    const { admin } = await seedBasics();
+    asAdmin(admin);
+    const res = await POST(
+      buildRequest({ bookingIds: ["some-booking-id"], waiveCharge: "yes" }),
+    );
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as { error: string; details?: unknown };
+    expect(body.details).toBeDefined();
+  });
+
   describe("charge waiver", () => {
     // Builds a late, package-backed booking: session 1h out, lateCancelHours 8 → inside cutoff.
     async function seedLateBackedBooking() {

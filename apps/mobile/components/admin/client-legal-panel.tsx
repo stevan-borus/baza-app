@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Pressable, Text, View } from "react-native";
 import dayjs from "dayjs";
-import type { ConsentDocumentKey } from "@baza/types";
+import type { ConsentDocumentKey } from "@baza/types/consent";
 import { SectionLabel } from "@/components/ui/typography";
 import { SwitchRow } from "@/components/ui/switch-row";
 import { useMarkGuardianVerifiedMutation } from "@/lib/queries/consent-queries-factory";

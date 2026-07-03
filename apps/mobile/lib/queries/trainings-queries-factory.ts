@@ -3,29 +3,18 @@ import {
   mutationOptions,
   type QueryClient,
 } from "@tanstack/react-query";
-import { z } from "zod";
+import {
+  classTypeMutationResponseSchema,
+  classTypesResponseSchema,
+  type ClassType,
+  type ClassTypeMutationResponse,
+  type ClassTypesResponse,
+} from "@baza/types/catalog";
 import { apiFetch, throwIfNotOk } from "@/lib/api";
 import { sharedEnv } from "@/lib/env.shared";
 import { sessionsQueries } from "@/lib/queries/sessions-queries-factory";
 
-const classTypeSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  maxClients: z.number(),
-  durationMins: z.number(),
-});
-
-const classTypesResponseSchema = z.object({
-  success: z.boolean(),
-  classTypes: z.array(classTypeSchema),
-});
-
-const classTypeMutationResponseSchema = z.object({
-  success: z.boolean(),
-  classType: classTypeSchema,
-});
-
-export type ClassType = z.infer<typeof classTypeSchema>;
+export type { ClassType } from "@baza/types/catalog";
 
 const trainingsAll = ["trainings"] as const;
 
@@ -107,8 +96,7 @@ export const trainingsQueries = {
 // create/update return the full ClassType, so splice the returned row into the
 // list cache instead of invalidating. Append on create, replace-by-id on update.
 
-type ClassTypesListData = z.infer<typeof classTypesResponseSchema>;
-type ClassTypeMutationResponse = z.infer<typeof classTypeMutationResponseSchema>;
+type ClassTypesListData = ClassTypesResponse;
 const classTypesListKey = trainingsQueries.classTypes().queryKey;
 
 function spliceClassType(queryClient: QueryClient, classType: ClassType) {

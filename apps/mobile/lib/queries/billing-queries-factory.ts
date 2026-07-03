@@ -6,40 +6,13 @@ import {
   useQueryClient,
   type QueryClient,
 } from "@tanstack/react-query";
-import { z } from "zod";
+import { billingResponseSchema } from "@baza/types/billing";
 import { apiRequest } from "@/lib/api-request";
 import { clientsQueries } from "@/lib/queries/clients-queries-factory";
 import { packagesQueries } from "@/lib/queries/packages-queries-factory";
 import { reportsQueries } from "@/lib/queries/reports-queries-factory";
 
-const billingRecordSchema = z.object({
-  id: z.string(),
-  clientUserId: z.string(),
-  amount: z.number(),
-  method: z.enum(["CASH", "CARD", "COMPANY", "MANUAL_ONLINE"]),
-  status: z.enum(["CONFIRMED"]),
-  notes: z.nullable(z.string()).optional(),
-  createdAt: z.string(),
-  // Client identity for the Naplata list card. Nullable because the GET
-  // endpoint joins in-memory (no FK) and a deleted-user payment would
-  // otherwise drop off the list.
-  client: z
-    .nullable(
-      z.object({
-        fullName: z.string(),
-        email: z.string(),
-      }),
-    )
-    .optional(),
-});
-
-const billingResponseSchema = z.object({
-  success: z.boolean(),
-  records: z.array(billingRecordSchema),
-  nextCursor: z.nullable(z.string()).optional(),
-});
-
-export type BillingRecord = z.infer<typeof billingRecordSchema>;
+export type { BillingRecord } from "@baza/types/billing";
 
 function fetchBillingPage(
   cursor?: string | null,

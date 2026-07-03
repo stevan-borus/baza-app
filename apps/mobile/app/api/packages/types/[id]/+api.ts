@@ -1,7 +1,11 @@
-import { updatePackageTypeInputSchema } from "@baza/types";
+import {
+  packageTypeMutationResponseSchema,
+  updatePackageTypeInputSchema,
+} from "@baza/types/catalog";
+import { successResponseSchema } from "@baza/types/common";
 import { UserRole } from "@/generated/prisma";
 import { requireRole } from "@/lib/server/auth-guards";
-import { fail, ok } from "@/lib/server/http";
+import { fail, respond } from "@/lib/server/http";
 import { prisma } from "@/lib/server/prisma";
 import { tryCatch } from "@/lib/server/try-catch";
 
@@ -43,7 +47,10 @@ export async function PATCH(request: Request, { id }: RouteParams) {
     },
   });
 
-  return ok({ success: true, packageType });
+  return respond(packageTypeMutationResponseSchema, {
+    success: true,
+    packageType,
+  });
 }
 
 export async function DELETE(request: Request, { id }: RouteParams) {
@@ -61,5 +68,5 @@ export async function DELETE(request: Request, { id }: RouteParams) {
     );
   }
   await prisma.packageType.delete({ where: { id } });
-  return ok({ success: true });
+  return respond(successResponseSchema, { success: true });
 }

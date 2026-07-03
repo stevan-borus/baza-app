@@ -6,12 +6,7 @@ import {
   useQueryClient,
   type QueryClient,
 } from "@tanstack/react-query";
-import {
-  adminClientConsentRecordsResponseSchema,
-  adminClientHealthResponseSchema,
-  clientByIdResponseSchema,
-  clientsResponseSchema,
-} from "@baza/types";
+import { adminClientConsentRecordsResponseSchema, adminClientHealthResponseSchema, clientByIdResponseSchema, clientsResponseSchema } from "@baza/types/clients";
 import { ApiError } from "@/lib/api-error";
 import { apiRequest } from "@/lib/api-request";
 import { reportsQueries } from "@/lib/queries/reports-queries-factory";

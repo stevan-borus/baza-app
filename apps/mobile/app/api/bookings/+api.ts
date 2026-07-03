@@ -1,4 +1,9 @@
-import { bookingMutationInputSchema, BOOKING_ERRORS, formatFullName } from "@baza/types";
+import {
+  bookingMutationInputSchema,
+  bookingMutationResultSchema,
+  BOOKING_ERRORS,
+} from "@baza/types/bookings";
+import { formatFullName } from "@baza/types/common";
 import { UserRole } from "@/generated/prisma";
 import { getConsentStatus } from "@/lib/legal/consent-status";
 import { now } from "@/lib/now";
@@ -7,7 +12,7 @@ import {
   applyLateCancelForfeit,
   promoteNextWaitlistEntry,
 } from "@/lib/server/booking-cancellation";
-import { fail, ok } from "@/lib/server/http";
+import { respond, fail } from "@/lib/server/http";
 import { shouldApplyLateCancelPenalty } from "@/lib/server/cancellation-policy";
 import { notifyClient } from "@/lib/server/notify-client";
 import { notifyOperators } from "@/lib/server/notify-operators";
@@ -95,7 +100,10 @@ export async function POST(request: Request) {
     });
     // Idempotent: already booked is success, not an error.
     if (hasBooking && !hasBooking.canceledAt)
-      return ok({ success: true, state: "BOOKED_ALREADY" });
+      return respond(bookingMutationResultSchema, {
+        success: true,
+        state: "BOOKED_ALREADY",
+      });
 
     // Count holds + create the booking/waitlist atomically so two concurrent
     // requests can't both pass the overuse check on the last remaining session.
@@ -157,7 +165,10 @@ export async function POST(request: Request) {
     // still keep BOOKING_CONFIRMED notifications for spot-opened-from-waitlist
     // promotions (those happen asynchronously and the user needs persistence).
 
-    return ok({ success: true, state: result.state });
+    return respond(bookingMutationResultSchema, {
+      success: true,
+      state: result.state,
+    });
   }
 
   const cancellationTime = now();
@@ -237,8 +248,14 @@ export async function POST(request: Request) {
       event: "WAITLIST_PROMOTED",
       vars: { sessionId, state: "WAITLIST_PROMOTED" },
     });
-    return ok({ success: true, state: "WAITLIST_PROMOTED" });
+    return respond(bookingMutationResultSchema, {
+      success: true,
+      state: "WAITLIST_PROMOTED",
+    });
   }
 
-  return ok({ success: true, state: "CANCELED" });
+  return respond(bookingMutationResultSchema, {
+    success: true,
+    state: "CANCELED",
+  });
 }

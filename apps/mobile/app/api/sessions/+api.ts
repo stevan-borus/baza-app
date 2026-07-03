@@ -1,7 +1,11 @@
-import { createSessionInputSchema } from "@baza/types";
+import {
+  createSessionInputSchema,
+  sessionsListResponseSchema,
+  sessionMutationResponseSchema,
+} from "@baza/types/scheduling";
 import { UserRole } from "@/generated/prisma";
 import { requireRole } from "@/lib/server/auth-guards";
-import { fail, ok } from "@/lib/server/http";
+import { respond, fail } from "@/lib/server/http";
 import { prisma } from "@/lib/server/prisma";
 import { findScheduleConflict } from "@/lib/server/schedule-conflict";
 import { tryCatch } from "@/lib/server/try-catch";
@@ -40,7 +44,7 @@ export async function GET(request: Request) {
     },
   });
 
-  return ok({
+  return respond(sessionsListResponseSchema, {
     success: true,
     sessions: sessions.map((item: (typeof sessions)[number]) => ({
       id: item.id,
@@ -100,6 +104,7 @@ export async function POST(request: Request) {
     trainerUserId,
   });
   if (conflict) {
+    // contract-exempt: 409 schedule-conflict payload, not a success contract
     return Response.json(
       {
         success: false,
@@ -135,5 +140,5 @@ export async function POST(request: Request) {
     },
   });
 
-  return ok({ success: true, session }, 201);
+  return respond(sessionMutationResponseSchema, { success: true, session }, 201);
 }

@@ -1,28 +1,20 @@
+import {
+  createReservationsInputSchema,
+  createReservationsResponseSchema,
+} from "@baza/types/bookings";
 import { UserRole } from "@/generated/prisma";
 import { requireRole } from "@/lib/server/auth-guards";
-import { fail, ok } from "@/lib/server/http";
+import { respond, fail } from "@/lib/server/http";
 import { prisma } from "@/lib/server/prisma";
-
-type CreateReservationsBody = {
-  clientProfileId?: unknown;
-  sessionIds?: unknown;
-};
 
 export async function POST(request: Request) {
   const guard = await requireRole(request, [UserRole.ADMIN]);
   if (!guard.ok) return guard.response;
 
-  const raw = (await request.json().catch(() => null)) as CreateReservationsBody | null;
-  if (!raw) return fail("Invalid JSON body", 400);
-
-  const clientProfileId =
-    typeof raw.clientProfileId === "string" ? raw.clientProfileId : null;
-  const sessionIds = Array.isArray(raw.sessionIds)
-    ? raw.sessionIds.filter((id): id is string => typeof id === "string")
-    : [];
-
-  if (!clientProfileId) return fail("Missing clientProfileId", 400);
-  if (sessionIds.length === 0) return fail("Missing sessionIds", 400);
+  const raw: unknown = await request.json().catch(() => null);
+  const parsed = createReservationsInputSchema.safeParse(raw);
+  if (!parsed.success) return fail("Invalid payload", 400, parsed.error);
+  const { clientProfileId, sessionIds } = parsed.data;
 
   const clientProfile = await prisma.clientProfile.findUnique({
     where: { id: clientProfileId },
@@ -82,7 +74,7 @@ export async function POST(request: Request) {
     return { reserved, skippedFull, skippedAlreadyBooked, skippedMissing };
   });
 
-  return ok({
+  return respond(createReservationsResponseSchema, {
     success: true,
     reserved: result.reserved.length,
     reservedSessionIds: result.reserved,

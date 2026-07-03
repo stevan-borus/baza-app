@@ -1,8 +1,13 @@
-import { updateRecurringSeriesInputSchema } from "@baza/types";
+import {
+  deleteRecurringSeriesResponseSchema,
+  recurringScheduleResponseSchema,
+  updateRecurringSeriesInputSchema,
+  updateRecurringSeriesResponseSchema,
+} from "@baza/types/scheduling";
 import { UserRole } from "@/generated/prisma";
 import { now } from "@/lib/now";
 import { requireRole } from "@/lib/server/auth-guards";
-import { fail, ok } from "@/lib/server/http";
+import { respond, fail } from "@/lib/server/http";
 import { prisma } from "@/lib/server/prisma";
 import { tryCatch } from "@/lib/server/try-catch";
 
@@ -24,7 +29,11 @@ export async function GET(_request: Request, { id }: RouteParams) {
       },
     },
   });
-  return ok({ success: true, schedule, futureBookingsCount });
+  return respond(recurringScheduleResponseSchema, {
+    success: true,
+    schedule,
+    futureBookingsCount,
+  });
 }
 
 export async function PATCH(request: Request, { id }: RouteParams) {
@@ -222,7 +231,10 @@ export async function PATCH(request: Request, { id }: RouteParams) {
     return schedule;
   });
 
-  return ok({ success: true, schedule: result });
+  return respond(updateRecurringSeriesResponseSchema, {
+    success: true,
+    schedule: result,
+  });
 }
 
 export async function DELETE(request: Request, { id }: RouteParams) {
@@ -248,5 +260,5 @@ export async function DELETE(request: Request, { id }: RouteParams) {
     await tx.recurringSchedule.delete({ where: { id } });
   });
 
-  return ok({ success: true });
+  return respond(deleteRecurringSeriesResponseSchema, { success: true });
 }

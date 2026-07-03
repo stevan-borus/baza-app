@@ -1,8 +1,9 @@
-import { formatFullName } from "@baza/types";
+import { clientBookingsResponseSchema } from "@baza/types/bookings";
+import { formatFullName } from "@baza/types/common";
 import { UserRole } from "@/generated/prisma";
 import { now } from "@/lib/now";
 import { requireRole } from "@/lib/server/auth-guards";
-import { fail, ok } from "@/lib/server/http";
+import { fail, respond } from "@/lib/server/http";
 import { prisma } from "@/lib/server/prisma";
 import { trainerLinkedToClientProfile } from "@/lib/server/trainer-scope";
 
@@ -179,5 +180,9 @@ export async function GET(request: Request, { id }: RouteParams) {
     },
   }));
 
-  return ok({ success: true, bookings, nextCursor });
+  return respond(clientBookingsResponseSchema, {
+    success: true,
+    bookings,
+    nextCursor,
+  });
 }

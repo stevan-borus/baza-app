@@ -1,5 +1,6 @@
+import { appVersionResponseSchema } from "@baza/types/system";
 import appJson from "@/app.json";
-import { ok } from "@/lib/server/http";
+import { respond } from "@/lib/server/http";
 import { parsePlatformParam, resolveAppVersion } from "@/lib/server/app-version";
 
 /**
@@ -17,5 +18,5 @@ export async function GET(request: Request) {
   );
   const fallback = appJson.expo.version;
   const info = resolveAppVersion(process.env, platform, fallback);
-  return ok({ success: true, platform, ...info });
+  return respond(appVersionResponseSchema, { success: true, platform, ...info });
 }

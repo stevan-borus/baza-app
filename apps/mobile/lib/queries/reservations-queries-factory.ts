@@ -1,5 +1,8 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { z } from "zod";
+import {
+  cancelReservationsBulkResponseSchema,
+  createReservationsResponseSchema,
+} from "@baza/types/bookings";
 import { apiFetch, throwIfNotOk } from "@/lib/api";
 import { sharedEnv } from "@/lib/env.shared";
 import { sessionsQueries } from "@/lib/queries/sessions-queries-factory";
@@ -9,21 +12,6 @@ import { bookingsQueries } from "@/lib/queries/bookings-queries-factory";
 const BASE = `${sharedEnv.EXPO_PUBLIC_API_URL}/api/admin/reservations`;
 
 const reservationsAll = ["reservations"] as const;
-
-const createResponseSchema = z.object({
-  success: z.boolean(),
-  reserved: z.number(),
-  reservedSessionIds: z.array(z.string()),
-  skippedFull: z.array(z.string()),
-  skippedAlreadyBooked: z.array(z.string()),
-  skippedMissing: z.array(z.string()),
-});
-
-const cancelBulkResponseSchema = z.object({
-  success: z.boolean(),
-  canceled: z.number(),
-  promotedUserIds: z.array(z.string()),
-});
 
 export type CreateReservationsInput = {
   clientProfileId: string;
@@ -46,7 +34,7 @@ export async function createReservationsRequest(input: CreateReservationsInput) 
     body: JSON.stringify(input),
   });
   await throwIfNotOk(res, "Unable to create reservations");
-  return createResponseSchema.parse(await res.json());
+  return createReservationsResponseSchema.parse(await res.json());
 }
 
 export async function cancelReservationsBulkRequest(input: CancelReservationsInput) {
@@ -57,7 +45,7 @@ export async function cancelReservationsBulkRequest(input: CancelReservationsInp
     body: JSON.stringify(input),
   });
   await throwIfNotOk(res, "Unable to cancel reservations");
-  return cancelBulkResponseSchema.parse(await res.json());
+  return cancelReservationsBulkResponseSchema.parse(await res.json());
 }
 
 export function useCreateReservationsMutation() {

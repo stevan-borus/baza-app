@@ -1,7 +1,11 @@
-import { updateClassTypeInputSchema } from "@baza/types";
+import {
+  classTypeMutationResponseSchema,
+  updateClassTypeInputSchema,
+} from "@baza/types/catalog";
+import { successResponseSchema } from "@baza/types/common";
 import { UserRole } from "@/generated/prisma";
 import { requireRole } from "@/lib/server/auth-guards";
-import { fail, ok } from "@/lib/server/http";
+import { fail, respond } from "@/lib/server/http";
 import { prisma } from "@/lib/server/prisma";
 import { tryCatch } from "@/lib/server/try-catch";
 
@@ -31,7 +35,10 @@ export async function PATCH(request: Request, { id }: RouteParams) {
     },
   });
 
-  return ok({ success: true, classType });
+  return respond(classTypeMutationResponseSchema, {
+    success: true,
+    classType,
+  });
 }
 
 export async function DELETE(request: Request, { id }: RouteParams) {
@@ -64,5 +71,5 @@ export async function DELETE(request: Request, { id }: RouteParams) {
   if (!existing) return fail("Class type not found", 404);
 
   await prisma.classType.delete({ where: { id } });
-  return ok({ success: true });
+  return respond(successResponseSchema, { success: true });
 }

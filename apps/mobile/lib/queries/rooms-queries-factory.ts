@@ -3,28 +3,18 @@ import {
   mutationOptions,
   type QueryClient,
 } from "@tanstack/react-query";
-import { z } from "zod";
+import {
+  roomMutationResponseSchema,
+  roomsResponseSchema,
+  type Room,
+  type RoomMutationResponse,
+  type RoomsResponse,
+} from "@baza/types/catalog";
 import { apiFetch, throwIfNotOk } from "@/lib/api";
 import { sharedEnv } from "@/lib/env.shared";
 import { sessionsQueries } from "@/lib/queries/sessions-queries-factory";
 
-const roomSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  capacity: z.number(),
-});
-
-const roomsResponseSchema = z.object({
-  success: z.boolean(),
-  rooms: z.array(roomSchema),
-});
-
-const roomMutationResponseSchema = z.object({
-  success: z.boolean(),
-  room: roomSchema,
-});
-
-export type Room = z.infer<typeof roomSchema>;
+export type { Room } from "@baza/types/catalog";
 
 const roomsAll = ["rooms"] as const;
 
@@ -102,8 +92,7 @@ export const roomsQueries = {
 // the returned row into the list cache instead of invalidating (refetching).
 // Append on create (admin list is creation-ordered), replace-by-id on update.
 
-type RoomsListData = z.infer<typeof roomsResponseSchema>;
-type RoomMutationResponse = z.infer<typeof roomMutationResponseSchema>;
+type RoomsListData = RoomsResponse;
 const roomsListKey = roomsQueries.list().queryKey;
 
 function spliceRoom(queryClient: QueryClient, room: Room) {

@@ -59,7 +59,7 @@ import {
 } from "@/lib/queries/invites-queries-factory";
 import { usePausePackageMutation } from "@/lib/queries/packages-queries-factory";
 import { now } from "@/lib/now";
-import type { ClientsResponse } from "@baza/types";
+import type { ClientsResponse } from "@baza/types/clients";
 
 type ClientListItem = ClientsResponse["clients"][number];
 

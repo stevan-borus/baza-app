@@ -4,10 +4,10 @@
  * Only CONFIRMED BillingRecords contribute. Sorted by revenue descending so
  * cash/card (typically the biggest contributors) surface first.
  */
-import type { ReportsRevenueByMethodResponse } from "@baza/types";
+import { reportsRevenueByMethodResponseSchema, type ReportsRevenueByMethodResponse } from "@baza/types/reports";
 import { UserRole } from "@/generated/prisma";
 import { requireRole } from "@/lib/server/auth-guards";
-import { fail, ok } from "@/lib/server/http";
+import { fail, respond } from "@/lib/server/http";
 import { prisma } from "@/lib/server/prisma";
 import {
   parseOptionalWindow,
@@ -48,5 +48,8 @@ export async function GET(request: Request) {
     (row) => row.revenue,
   );
 
-  return ok({ success: true, rows } satisfies ReportsRevenueByMethodResponse);
+  return respond(reportsRevenueByMethodResponseSchema, {
+    success: true,
+    rows,
+  } satisfies ReportsRevenueByMethodResponse);
 }

@@ -1,8 +1,12 @@
-import { campaignAudienceSpecSchema, formatFullName } from "@baza/types";
+import {
+  campaignAudienceClientsResponseSchema,
+  campaignAudienceSpecSchema,
+} from "@baza/types/campaigns";
+import { formatFullName } from "@baza/types/common";
 import { UserRole } from "@/generated/prisma";
 import { requireRole } from "@/lib/server/auth-guards";
 import { resolveCampaignAudienceMembers } from "@/lib/server/campaign-audience";
-import { fail, ok } from "@/lib/server/http";
+import { fail, respond } from "@/lib/server/http";
 import { tryCatch } from "@/lib/server/try-catch";
 
 /**
@@ -19,7 +23,7 @@ export async function POST(request: Request) {
   if (!parsed.success) return fail("Invalid audience spec", 400, parsed.error);
 
   const members = await resolveCampaignAudienceMembers(parsed.data);
-  return ok({
+  return respond(campaignAudienceClientsResponseSchema, {
     clients: members.map((m) => ({
       id: m.id,
       fullName: formatFullName(m.firstName, m.lastName),

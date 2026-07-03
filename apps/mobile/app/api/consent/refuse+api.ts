@@ -1,7 +1,7 @@
-import { formatFullName } from "@baza/types";
+import { formatFullName, successResponseSchema } from "@baza/types/common";
 import { UserRole, NotificationType } from "@/generated/prisma";
 import { requireRole } from "@/lib/server/auth-guards";
-import { ok } from "@/lib/server/http";
+import { respond } from "@/lib/server/http";
 import { createAndDispatchUserNotification } from "@/lib/server/notifications";
 import { prisma } from "@/lib/server/prisma";
 
@@ -42,5 +42,5 @@ export async function POST(request: Request) {
     ),
   );
 
-  return ok({ success: true });
+  return respond(successResponseSchema, { success: true });
 }

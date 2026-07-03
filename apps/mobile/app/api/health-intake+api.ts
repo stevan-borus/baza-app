@@ -1,9 +1,13 @@
 import { UserRole } from "@/generated/prisma";
-import { healthIntakeInputSchema } from "@baza/types";
+import {
+  healthIntakeInputSchema,
+  healthIntakeSuccessResponseSchema,
+  healthIntakeWithdrawalResponseSchema,
+} from "@baza/types/health-intake";
 import { extractEvidence } from "@/lib/legal/evidence";
 import { latestIntake, recordIntake, withdrawIntake } from "@/lib/server/health-intake";
 import { requireRole } from "@/lib/server/auth-guards";
-import { fail, ok } from "@/lib/server/http";
+import { fail, respond } from "@/lib/server/http";
 
 export async function GET(request: Request) {
   const guard = await requireRole(request, [UserRole.CLIENT]);
@@ -13,7 +17,7 @@ export async function GET(request: Request) {
 
   const row = await latestIntake(clientProfileId);
   if (!row) return fail("No intake recorded", 404);
-  return ok({ success: true, ...row });
+  return respond(healthIntakeSuccessResponseSchema, { success: true, ...row });
 }
 
 export async function POST(request: Request) {
@@ -32,7 +36,10 @@ export async function POST(request: Request) {
     input: parsed.data,
     evidence: extractEvidence(request),
   });
-  return ok({ success: true, ...intake });
+  return respond(healthIntakeSuccessResponseSchema, {
+    success: true,
+    ...intake,
+  });
 }
 
 export async function DELETE(request: Request) {
@@ -42,5 +49,8 @@ export async function DELETE(request: Request) {
   if (!clientProfileId) return fail("Client profile not found", 404);
 
   const audit = await withdrawIntake(clientProfileId);
-  return ok({ success: true, ...audit });
+  return respond(healthIntakeWithdrawalResponseSchema, {
+    success: true,
+    ...audit,
+  });
 }

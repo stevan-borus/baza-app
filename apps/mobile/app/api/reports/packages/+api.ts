@@ -1,7 +1,7 @@
-import type { ReportsPackagesResponse } from "@baza/types";
+import { reportsPackagesResponseSchema, type ReportsPackagesResponse } from "@baza/types/reports";
 import { UserRole } from "@/generated/prisma";
 import { requireRole } from "@/lib/server/auth-guards";
-import { fail, ok } from "@/lib/server/http";
+import { fail, respond } from "@/lib/server/http";
 import { prisma } from "@/lib/server/prisma";
 import {
   accumulateByKey,
@@ -88,7 +88,7 @@ export async function GET(request: Request) {
     else comp += 1;
   }
 
-  return ok({
+  return respond(reportsPackagesResponseSchema, {
     success: true,
     mostUsed,
     revenuePerType,

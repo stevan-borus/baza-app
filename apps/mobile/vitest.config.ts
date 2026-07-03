@@ -8,7 +8,7 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "."),
-      "@baza/types": path.resolve(__dirname, "../../packages/types/src/index.ts"),
+      "@baza/types": path.resolve(__dirname, "../../packages/types/src"),
       "@baza/i18n": path.resolve(__dirname, "../../packages/i18n/src/index.ts"),
     },
   },

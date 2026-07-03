@@ -4,7 +4,7 @@
     "strict": true,
     "paths": {
       "@/*": ["./*"],
-      "@baza/types": ["../../packages/types/src/index.ts"]
+      "@baza/types/*": ["../../packages/types/src/*"]
     },
     "resolveJsonModule": true
   },

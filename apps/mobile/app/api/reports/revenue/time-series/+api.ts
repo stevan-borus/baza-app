@@ -14,10 +14,10 @@
  * the (clipped, indexed by createdAt) row range and summing into pre-built
  * bucket slots avoids Prisma's lack of a portable date_trunc.
  */
-import type { ReportsRevenueTimeSeriesResponse } from "@baza/types";
+import { reportsRevenueTimeSeriesResponseSchema, type ReportsRevenueTimeSeriesResponse } from "@baza/types/reports";
 import { UserRole } from "@/generated/prisma";
 import { requireRole } from "@/lib/server/auth-guards";
-import { fail, ok } from "@/lib/server/http";
+import { fail, respond } from "@/lib/server/http";
 import { prisma } from "@/lib/server/prisma";
 import {
   accumulateIntoBucketSeries,
@@ -69,5 +69,8 @@ export async function GET(request: Request) {
     },
   );
 
-  return ok({ success: true, buckets: rows } satisfies ReportsRevenueTimeSeriesResponse);
+  return respond(reportsRevenueTimeSeriesResponseSchema, {
+    success: true,
+    buckets: rows,
+  } satisfies ReportsRevenueTimeSeriesResponse);
 }

@@ -1,7 +1,13 @@
-import { formatFullName, trainerNoteInputSchema, trainerNotesQuerySchema } from "@baza/types";
+import { formatFullName } from "@baza/types/common";
+import {
+  createTrainerNoteResponseSchema,
+  trainerNoteInputSchema,
+  trainerNotesQuerySchema,
+  trainerNotesResponseSchema,
+} from "@baza/types/trainer-notes";
 import { UserRole } from "@/generated/prisma";
 import { requireRole } from "@/lib/server/auth-guards";
-import { fail, ok } from "@/lib/server/http";
+import { fail, respond } from "@/lib/server/http";
 import { prisma } from "@/lib/server/prisma";
 import { trainerOwnsSession } from "@/lib/server/trainer-scope";
 import { tryCatch } from "@/lib/server/try-catch";
@@ -108,7 +114,7 @@ export async function GET(request: Request) {
     },
   }));
 
-  return ok({
+  return respond(trainerNotesResponseSchema, {
     success: true,
     notes: shapedNotes,
     nextCursor:
@@ -205,5 +211,5 @@ export async function POST(request: Request) {
   // a note was left is user-hostile (and admins want pull-not-push for
   // passive context; trainer-note activity isn't a work queue).
 
-  return ok({ success: true, note }, 201);
+  return respond(createTrainerNoteResponseSchema, { success: true, note }, 201);
 }

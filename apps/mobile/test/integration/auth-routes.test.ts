@@ -84,6 +84,9 @@ describe("auth routes", () => {
         lastName: user.lastName,
         fullName: `${user.firstName} ${user.lastName}`,
         isActive: true,
+        // The real getRequestUser selects createdAt; authMeResponseSchema
+        // requires it, so a mock without it fails the respond() contract.
+        createdAt: user.createdAt,
         clientProfile: null,
       });
       const response = await GET_ME(new Request("http://test.local/api/auth/me"));

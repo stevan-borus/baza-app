@@ -1,4 +1,5 @@
-import { ok } from "@/lib/server/http";
+import { legalDocumentsListResponseSchema } from "@baza/types/consent";
+import { respond } from "@/lib/server/http";
 import { ACTIVE_VERSIONS } from "@/lib/legal/versions";
 import type { ConsentDocumentKey, AppLocale } from "@/generated/prisma";
 
@@ -17,5 +18,8 @@ export async function GET(_request: Request) {
       documents.push({ key, version: ACTIVE_VERSIONS[key], locale });
     }
   }
-  return ok({ success: true, documents });
+  return respond(legalDocumentsListResponseSchema, {
+    success: true,
+    documents,
+  });
 }

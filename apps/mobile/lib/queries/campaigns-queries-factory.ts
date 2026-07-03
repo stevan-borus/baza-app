@@ -5,42 +5,24 @@ import {
   useQueryClient,
   type QueryClient,
 } from "@tanstack/react-query";
-import { z } from "zod";
-import type { CampaignAudienceSpec } from "@baza/types";
+import {
+  campaignAudienceClientsResponseSchema as audienceClientsSchema,
+  campaignPreviewResponseSchema as previewSchema,
+  campaignRecipientsResponseSchema as recipientsSchema,
+  campaignResponseSchema as oneSchema,
+  campaignsListResponseSchema as listSchema,
+  type Campaign,
+  type CampaignAudienceSpec,
+  type CampaignsListResponse,
+} from "@baza/types/campaigns";
 import { apiFetch } from "@/lib/api";
 import { sharedEnv } from "@/lib/env.shared";
 
+// The wire schemas live in @baza/types/campaigns — the same objects the API
+// routes validate against via respond(). Re-export the types consumers use.
+export type { AudienceClient, Campaign } from "@baza/types/campaigns";
+
 const base = `${sharedEnv.EXPO_PUBLIC_API_URL}/api/campaigns`;
-
-const campaignSchema = z.object({
-  id: z.string(),
-  title: z.string(),
-  body: z.string(),
-  audienceSpec: z.record(z.string(), z.unknown()),
-  recipientCount: z.number(),
-  status: z.enum(["DRAFT", "SCHEDULED", "SENDING", "SENT"]),
-  scheduledFor: z.nullable(z.string()).optional(),
-  sentAt: z.nullable(z.string()).optional(),
-  createdAt: z.string(),
-});
-export type Campaign = z.infer<typeof campaignSchema>;
-
-const listSchema = z.object({ campaigns: z.array(campaignSchema) });
-const oneSchema = z.object({ campaign: campaignSchema });
-const previewSchema = z.object({ count: z.number() });
-
-const audienceClientSchema = z.object({
-  id: z.string(),
-  fullName: z.string(),
-  email: z.string(),
-  campaignsEnabled: z.boolean(),
-});
-export type AudienceClient = z.infer<typeof audienceClientSchema>;
-const audienceClientsSchema = z.object({ clients: z.array(audienceClientSchema) });
-const recipientsSchema = z.object({
-  actual: z.boolean(),
-  clients: z.array(audienceClientSchema),
-});
 
 const campaignsAll = ["campaigns"] as const;
 
@@ -210,7 +192,7 @@ export const campaignsQueries = {
 // of invalidating — no refetch round-trip. (The preview/audience queries are
 // spec-derived and left to refetch naturally on their own staleTime.)
 
-type ListData = z.infer<typeof listSchema>;
+type ListData = CampaignsListResponse;
 const listKey = campaignsQueries.list().queryKey;
 const oneKey = (id: string) => campaignsQueries.one(id).queryKey;
 

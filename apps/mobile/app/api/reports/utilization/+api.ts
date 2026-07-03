@@ -1,7 +1,7 @@
-import type { ReportsUtilizationResponse } from "@baza/types";
+import { reportsUtilizationResponseSchema, type ReportsUtilizationResponse } from "@baza/types/reports";
 import { UserRole } from "@/generated/prisma";
 import { requireRole } from "@/lib/server/auth-guards";
-import { fail, ok } from "@/lib/server/http";
+import { fail, respond } from "@/lib/server/http";
 import { prisma } from "@/lib/server/prisma";
 import {
   accumulatePeriodSeries,
@@ -51,7 +51,7 @@ export async function GET(request: Request) {
     item.utilization = roundedRatio(item.totalBooked, item.totalCapacity);
   }
 
-  return ok({
+  return respond(reportsUtilizationResponseSchema, {
     success: true,
     data,
   } satisfies ReportsUtilizationResponse);

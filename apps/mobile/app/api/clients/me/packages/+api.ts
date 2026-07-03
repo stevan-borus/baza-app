@@ -1,7 +1,8 @@
+import { clientPackagesTimelineResponseSchema } from "@baza/types/packages";
 import { PaymentMethod, UserRole } from "@/generated/prisma";
 import { requireRole } from "@/lib/server/auth-guards";
 import { linkPackagesToBilling } from "@/lib/server/billing-package-link";
-import { fail, ok } from "@/lib/server/http";
+import { fail, respond } from "@/lib/server/http";
 import type { SoftenedMethod } from "@/lib/payment-method-labels";
 import { prisma } from "@/lib/server/prisma";
 
@@ -96,5 +97,8 @@ export async function GET(request: Request) {
     };
   });
 
-  return ok({ success: true, entries });
+  return respond(clientPackagesTimelineResponseSchema, {
+    success: true,
+    entries,
+  });
 }

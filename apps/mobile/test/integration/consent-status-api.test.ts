@@ -20,7 +20,7 @@ import { GET } from "@/app/api/consent/status+api";
 import { prisma } from "@/lib/server/prisma";
 import { ACTIVE_VERSIONS } from "@/lib/legal/versions";
 import { resetDb } from "./setup-db";
-import { consentStatusResponseSchema } from "@baza/types";
+import { consentStatusResponseSchema } from "@baza/types/consent";
 
 describe("GET /api/consent/status — social-media fields", () => {
   let userId: string;

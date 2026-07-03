@@ -3,32 +3,17 @@ import {
   mutationOptions,
   type QueryClient,
 } from "@tanstack/react-query";
-import { z } from "zod";
+import {
+  invitesResponseSchema,
+  inviteMutationResponseSchema,
+  type Invite,
+  type InvitesResponse,
+  type InviteMutationResponse,
+} from "@baza/types/clients";
 import { apiFetch } from "@/lib/api";
 import { sharedEnv } from "@/lib/env.shared";
 
-const inviteSchema = z.object({
-  id: z.string(),
-  email: z.string(),
-  firstName: z.string(),
-  lastName: z.string(),
-  fullName: z.string(),
-  phone: z.nullable(z.string()).optional(),
-  status: z.enum(["PENDING", "COMPLETED", "REVOKED", "EXPIRED"]),
-  createdAt: z.string(),
-});
-
-const invitesResponseSchema = z.object({
-  success: z.boolean(),
-  invites: z.array(inviteSchema),
-});
-
-const inviteMutationResponseSchema = z.object({
-  success: z.boolean(),
-  invite: inviteSchema,
-});
-
-export type Invite = z.infer<typeof inviteSchema>;
+export type { Invite };
 
 const invitesAll = ["invites"] as const;
 
@@ -95,8 +80,7 @@ export const invitesQueries = {
 // Layer 4), so splice the returned row into the list cache instead of
 // invalidating. Append on create, replace-by-id on revoke/resend.
 
-type InvitesListData = z.infer<typeof invitesResponseSchema>;
-type InviteMutationResponse = z.infer<typeof inviteMutationResponseSchema>;
+type InvitesListData = InvitesResponse;
 const invitesListKey = invitesQueries.list().queryKey;
 
 function spliceInvite(queryClient: QueryClient, invite: Invite) {

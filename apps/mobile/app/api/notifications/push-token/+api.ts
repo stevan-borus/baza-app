@@ -1,8 +1,12 @@
-import { registerPushTokenInputSchema } from "@baza/types";
+import {
+  registerPushTokenInputSchema,
+  registerPushTokenResponseSchema,
+  unregisterPushTokenResponseSchema,
+} from "@baza/types/notifications";
 import { UserRole } from "@/generated/prisma";
 import { now } from "@/lib/now";
 import { requireRole } from "@/lib/server/auth-guards";
-import { fail, ok } from "@/lib/server/http";
+import { fail, respond } from "@/lib/server/http";
 import { prisma } from "@/lib/server/prisma";
 import { tryCatch } from "@/lib/server/try-catch";
 
@@ -73,7 +77,7 @@ export async function POST(request: Request) {
     update: parsed.data.preferredLocale ? { preferredLocale: parsed.data.preferredLocale } : {},
   });
 
-  return ok({
+  return respond(registerPushTokenResponseSchema, {
     success: true,
     token,
   });
@@ -109,7 +113,7 @@ export async function DELETE(request: Request) {
     },
   });
 
-  return ok({
+  return respond(unregisterPushTokenResponseSchema, {
     success: true,
     deactivated: result.count,
   });

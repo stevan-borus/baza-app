@@ -13,7 +13,7 @@ import React, { useState } from "react";
 import * as Haptics from "expo-haptics";
 import { BookingSheet } from "@/components/client/booking-sheet";
 import { useMutateBookingMutation } from "@/lib/queries/bookings-queries-factory";
-import type { AvailabilitySession } from "@baza/types";
+import type { AvailabilitySession } from "@baza/types/scheduling";
 
 /** Which step the sheet opens on. "cancel" jumps a booked session straight to
  * the cancel-confirmation (used by the hero's OTKAŽI button). */

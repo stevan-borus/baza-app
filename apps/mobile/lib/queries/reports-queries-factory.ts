@@ -1,21 +1,5 @@
 import { queryOptions } from "@tanstack/react-query";
-import {
-  reportsBookingsDetailResponseSchema,
-  reportsBookingsResponseSchema,
-  reportsPackagesDetailResponseSchema,
-  reportsPackagesResponseSchema,
-  reportsRevenueByMethodResponseSchema,
-  reportsRevenueByPackageTypeResponseSchema,
-  reportsRevenueResponseSchema,
-  reportsRevenueTimeSeriesResponseSchema,
-  reportsSummaryResponseSchema,
-  reportsUtilizationByClassTypeResponseSchema,
-  reportsUtilizationByRoomResponseSchema,
-  reportsUtilizationByTrainerResponseSchema,
-  reportsUtilizationHeatmapResponseSchema,
-  reportsUtilizationResponseSchema,
-  reportsUtilizationTimeSeriesResponseSchema,
-} from "@baza/types";
+import { reportsBookingsDetailResponseSchema, reportsBookingsResponseSchema, reportsPackagesDetailResponseSchema, reportsPackagesResponseSchema, reportsRevenueByMethodResponseSchema, reportsRevenueByPackageTypeResponseSchema, reportsRevenueResponseSchema, reportsRevenueTimeSeriesResponseSchema, reportsSummaryResponseSchema, reportsUtilizationByClassTypeResponseSchema, reportsUtilizationByRoomResponseSchema, reportsUtilizationByTrainerResponseSchema, reportsUtilizationHeatmapResponseSchema, reportsUtilizationResponseSchema, reportsUtilizationTimeSeriesResponseSchema } from "@baza/types/reports";
 import { apiRequest } from "@/lib/api-request";
 
 const reportsAll = ["reports"] as const;

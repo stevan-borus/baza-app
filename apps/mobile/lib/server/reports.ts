@@ -1,7 +1,7 @@
 /**
  * Report utilities: date parsing, bucket labels (day/week/month), timeframe normalization.
  */
-import type { ReportsPeriod } from "@baza/types";
+import type { ReportsPeriod } from "@baza/types/reports";
 import { now } from "@/lib/now";
 
 const DAY_MS = 24 * 60 * 60 * 1000;

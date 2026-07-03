@@ -1,7 +1,10 @@
-import { notificationPreferenceInputSchema } from "@baza/types";
+import {
+  notificationPreferenceInputSchema,
+  notificationPreferencesResponseSchema,
+} from "@baza/types/notifications";
 import { UserRole } from "@/generated/prisma";
 import { requireRole } from "@/lib/server/auth-guards";
-import { fail, ok } from "@/lib/server/http";
+import { fail, respond } from "@/lib/server/http";
 import { prisma } from "@/lib/server/prisma";
 import { tryCatch } from "@/lib/server/try-catch";
 
@@ -26,7 +29,7 @@ export async function GET(request: Request) {
     },
   });
 
-  return ok({
+  return respond(notificationPreferencesResponseSchema, {
     success: true,
     preferences: preference,
   });
@@ -79,7 +82,7 @@ export async function PATCH(request: Request) {
     },
   });
 
-  return ok({
+  return respond(notificationPreferencesResponseSchema, {
     success: true,
     preferences: preference,
   });

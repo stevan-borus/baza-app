@@ -1,6 +1,6 @@
 import { extractEvidence } from "@/lib/legal/evidence";
 import { ACTIVE_VERSIONS } from "@/lib/legal/versions";
-import type { HealthIntakeInput } from "@baza/types";
+import type { HealthIntakeInput } from "@baza/types/health-intake";
 import { prisma } from "./prisma";
 
 type RecordIntakeArgs = {

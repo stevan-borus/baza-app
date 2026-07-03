@@ -1,15 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { Pressable, View } from "react-native";
 import { Icon } from "@/components/ui/icon";
-import type {
-  ActivityLevelCode,
-  DiscomfortMovementCode,
-  ExerciseFrequencyCode,
-  HealthConditionCode,
-  HealthGoalCode,
-  HealthIntakeInput,
-  PilatesExperienceCode,
-} from "@baza/types";
+import type { ActivityLevelCode, DiscomfortMovementCode, ExerciseFrequencyCode, HealthConditionCode, HealthGoalCode, HealthIntakeInput, PilatesExperienceCode } from "@baza/types/health-intake";
 import { Input } from "@/components/ui/input";
 import { useThemeTokens } from "@/components/ui/tokens";
 import { Body, CapsLabel } from "@/components/ui/studio";

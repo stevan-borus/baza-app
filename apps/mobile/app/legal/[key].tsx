@@ -6,7 +6,7 @@ import { ScrollView, Text, View } from "react-native";
 import { legalQueries } from "@/lib/queries/legal-queries-factory";
 import { LegalDocumentViewer } from "@/components/consent/legal-document-viewer";
 import { ScreenContainerRaw } from "@/components/ui/screen-container";
-import type { ConsentDocumentKey } from "@baza/types";
+import type { ConsentDocumentKey } from "@baza/types/consent";
 
 const ALLOWED_KEYS: ConsentDocumentKey[] = [
   "tos",

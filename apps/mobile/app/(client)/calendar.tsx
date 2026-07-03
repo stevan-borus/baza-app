@@ -31,7 +31,7 @@ import {
 import { SkeletonList } from "@/components/ui/skeleton";
 import { sessionsQueries } from "@/lib/queries/sessions-queries-factory";
 import { useWeekNavigation, weekRangeLabel } from "@/lib/use-week-navigation";
-import type { AvailabilitySession } from "@baza/types";
+import type { AvailabilitySession } from "@baza/types/scheduling";
 
 type ViewTab = "day" | "month";
 

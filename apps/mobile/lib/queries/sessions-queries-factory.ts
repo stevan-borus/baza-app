@@ -5,89 +5,21 @@ import {
   type QueryClient,
 } from "@tanstack/react-query";
 import { z } from "zod";
-// The wire shape (incl. z.coerce.date() on startsAt/endsAt, so dayjs
-// consumers keep receiving Date objects) lives in @baza/types — this factory
-// used to shadow it with a local duplicate.
-import { availabilityResponseSchema } from "@baza/types";
+// The wire shapes (incl. z.coerce.date() on availability startsAt/endsAt, so
+// dayjs consumers keep receiving Date objects) live in @baza/types — the
+// server routes validate against the same schemas via respond().
+import {
+  availabilityResponseSchema,
+  recurringScheduleResponseSchema,
+  sessionsListResponseSchema,
+  sessionMutationResponseSchema,
+  sessionDetailResponseSchema,
+  type Session,
+  type SessionDetail,
+} from "@baza/types/scheduling";
 import { apiRequest } from "@/lib/api-request";
 
-const sessionSchema = z.object({
-  id: z.string(),
-  classTypeId: z.string(),
-  roomId: z.nullable(z.string()),
-  trainerUserId: z.nullable(z.string()),
-  startsAt: z.string(),
-  endsAt: z.string(),
-  capacity: z.number(),
-  status: z.enum(["SCHEDULED", "CANCELED", "COMPLETED"]),
-  classType: z.object({ id: z.string(), name: z.string() }).optional(),
-  room: z.object({ id: z.string(), name: z.string() }).nullable().optional(),
-});
-
-const sessionsListResponseSchema = z.object({
-  success: z.boolean(),
-  sessions: z.array(sessionSchema),
-});
-
-const sessionMutationResponseSchema = z.object({
-  success: z.boolean(),
-  session: sessionSchema,
-});
-
-// Shared client + consent shape for both booked and waitlisted clients —
-// the session-detail screen renders them with the same row + consent strip.
-const sessionClientSchema = z.object({
-  id: z.string(),
-  clientProfileId: z.string(),
-  client: z.object({
-    id: z.string(),
-    fullName: z.string(),
-    email: z.string(),
-  }),
-  consentFlags: z.object({
-    showFirstPilatesHint: z.boolean(),
-    conditions: z.array(z.string()),
-    conditionsOther: z.string().nullable(),
-    additionalNotes: z.string().nullable(),
-    intakeRecorded: z.boolean(),
-    intakeWithdrawn: z.boolean(),
-    socialMediaAccepted: z.boolean().nullable(),
-  }),
-});
-
-const sessionDetailSchema = z.object({
-  id: z.string(),
-  startsAt: z.string(),
-  endsAt: z.string(),
-  status: z.enum(["SCHEDULED", "CANCELED", "COMPLETED"]),
-  capacity: z.number(),
-  isActive: z.boolean(),
-  classTypeId: z.string(),
-  roomId: z.nullable(z.string()),
-  trainerUserId: z.nullable(z.string()),
-  recurringScheduleId: z.nullable(z.string()).optional(),
-  classType: z.object({ id: z.string(), name: z.string() }).nullable(),
-  room: z.object({ id: z.string(), name: z.string() }).nullable(),
-  trainer: z.object({ id: z.string(), fullName: z.string() }).nullable(),
-  bookedCount: z.number(),
-  seriesBookedCount: z.number(),
-  bookings: z.array(
-    sessionClientSchema.extend({ createdAt: z.string() }),
-  ),
-  // Queued clients (capacity full). Empty array when nobody is waiting; the
-  // UI hides the section entirely in that case.
-  waitlist: z.array(
-    sessionClientSchema.extend({ position: z.number() }),
-  ),
-});
-
-const sessionDetailResponseSchema = z.object({
-  success: z.boolean(),
-  session: sessionDetailSchema,
-});
-
-export type Session = z.infer<typeof sessionSchema>;
-export type SessionDetail = z.infer<typeof sessionDetailSchema>;
+export type { Session, SessionDetail };
 
 const sessionsAll = ["sessions"] as const;
 
@@ -201,21 +133,7 @@ export const sessionsQueries = {
       enabled: !!id,
       queryFn: () =>
         apiRequest(`/api/sessions/recurring/${id}`, {
-          schema: z.object({
-            success: z.boolean(),
-            schedule: z.object({
-              id: z.string(),
-              classTypeId: z.string(),
-              roomId: z.nullable(z.string()),
-              trainerUserId: z.string(),
-              weekdays: z.array(z.number()),
-              timeOfDayMins: z.number(),
-              durationMins: z.number(),
-              capacity: z.number(),
-              isActive: z.boolean(),
-            }),
-            futureBookingsCount: z.number(),
-          }),
+          schema: recurringScheduleResponseSchema,
           errorMessage: "Unable to load schedule",
         }),
       staleTime: 30_000,

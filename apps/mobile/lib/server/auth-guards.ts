@@ -1,5 +1,5 @@
 import { UserRole } from "@/generated/prisma";
-import { formatFullName } from "@baza/types";
+import { formatFullName } from "@baza/types/common";
 import { auth } from "@/lib/server/auth";
 import { fail } from "@/lib/server/http";
 import { prisma } from "@/lib/server/prisma";

@@ -17,7 +17,7 @@ import { AppSheet } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useThemeTokens, type ThemeTokens } from "@/components/ui/tokens";
-import type { AvailabilitySession } from "@baza/types";
+import type { AvailabilitySession } from "@baza/types/scheduling";
 
 type BookingStep = "idle" | "confirmBook" | "confirmCancel" | "success" | "error";
 

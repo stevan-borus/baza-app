@@ -1,9 +1,15 @@
 import { z } from "zod";
-import { createNotificationInputSchema, paginationQuerySchema } from "@baza/types";
+import {
+  batchMarkNotificationsReadResponseSchema,
+  createNotificationInputSchema,
+  createNotificationResponseSchema,
+  notificationsResponseSchema,
+} from "@baza/types/notifications";
+import { paginationQuerySchema } from "@baza/types/common";
 import { UserRole } from "@/generated/prisma";
 import { now } from "@/lib/now";
 import { requireRole } from "@/lib/server/auth-guards";
-import { fail, ok } from "@/lib/server/http";
+import { fail, respond } from "@/lib/server/http";
 import { createAndDispatchUserNotification } from "@/lib/server/notifications";
 import { prisma } from "@/lib/server/prisma";
 import { tryCatch } from "@/lib/server/try-catch";
@@ -42,7 +48,7 @@ export async function GET(request: Request) {
     },
   });
 
-  return ok({
+  return respond(notificationsResponseSchema, {
     success: true,
     notifications,
     nextCursor:
@@ -78,7 +84,11 @@ export async function POST(request: Request) {
     payload: parsed.data.payload,
   });
 
-  return ok({ success: true, notification }, 201);
+  return respond(
+    createNotificationResponseSchema,
+    { success: true, notification },
+    201,
+  );
 }
 
 const batchMarkReadSchema = z.object({
@@ -111,5 +121,8 @@ export async function PATCH(request: Request) {
     data: { readAt: now() },
   });
 
-  return ok({ success: true, count: result.count });
+  return respond(batchMarkNotificationsReadResponseSchema, {
+    success: true,
+    count: result.count,
+  });
 }

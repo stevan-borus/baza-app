@@ -1,6 +1,7 @@
+import { cronPackageExpiryResponseSchema } from "@baza/types/cron";
 import { now } from "@/lib/now";
 import { requireCronAuth } from "@/lib/server/cron-auth";
-import { ok } from "@/lib/server/http";
+import { respond } from "@/lib/server/http";
 import { createSystemNotification } from "@/lib/server/notifications";
 import { NOTIFICATION_MESSAGE_KEYS } from "@baza/i18n";
 import { getEffectiveExpiresAt } from "@/lib/server/package-eligibility";
@@ -81,7 +82,7 @@ export async function POST(request: Request) {
     sent += 1;
   }
 
-  return ok({
+  return respond(cronPackageExpiryResponseSchema, {
     success: true,
     mode,
     dryRun,

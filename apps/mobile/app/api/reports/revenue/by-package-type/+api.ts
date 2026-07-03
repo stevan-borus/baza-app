@@ -10,10 +10,10 @@
  * Prisma can't express through groupBy and keeps the index path (createdAt,
  * status, packageTypeId) clean.
  */
-import type { ReportsRevenueByPackageTypeResponse } from "@baza/types";
+import { reportsRevenueByPackageTypeResponseSchema, type ReportsRevenueByPackageTypeResponse } from "@baza/types/reports";
 import { UserRole } from "@/generated/prisma";
 import { requireRole } from "@/lib/server/auth-guards";
-import { fail, ok } from "@/lib/server/http";
+import { fail, respond } from "@/lib/server/http";
 import { prisma } from "@/lib/server/prisma";
 import {
   parseOptionalWindow,
@@ -68,5 +68,8 @@ export async function GET(request: Request) {
     (row) => row.revenue,
   );
 
-  return ok({ success: true, rows } satisfies ReportsRevenueByPackageTypeResponse);
+  return respond(reportsRevenueByPackageTypeResponseSchema, {
+    success: true,
+    rows,
+  } satisfies ReportsRevenueByPackageTypeResponse);
 }
