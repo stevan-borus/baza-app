@@ -15,13 +15,13 @@
  * intercept. The spec sets up a completed session + bookable sessions
  * via direct prisma writes in beforeAll.
  */
-import { test, expect, type Page } from "./helpers/fixtures";
+import { test, expect } from "./helpers/fixtures";
 import { Pool } from "pg";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../../generated/prisma";
+import { signInAs } from "./helpers/auth";
 import { disconnect, resetAndSeed } from "./helpers/db";
 
-const SEED_PASSWORD = "Password123!";
 const MINOR_EMAIL = "client.minor-booking@e2e.test";
 
 const DATABASE_URL =
@@ -52,16 +52,6 @@ async function disconnectSpec() {
     await specPool.end();
     specPool = null;
   }
-}
-
-async function signInAsMinor(page: Page) {
-  await page.goto("/sign-in");
-  await page.getByTestId("auth-email-input").fill(MINOR_EMAIL);
-  await page.getByTestId("auth-password-input").fill(SEED_PASSWORD);
-  await page.getByTestId("auth-submit-button").click();
-  // Minor's consent is pre-seeded so they should land on a client tab,
-  // not /consent.
-  await expect(page.getByTestId("tab-index")).toBeVisible({ timeout: 15_000 });
 }
 
 test.describe("booking — guardian verification gate", () => {
@@ -176,7 +166,8 @@ test.describe("booking — guardian verification gate", () => {
     page,
   }) => {
     await page.setViewportSize({ width: 390, height: 844 });
-    await signInAsMinor(page);
+    // Minor's consent is pre-seeded so they land on a client tab, not /consent.
+    await signInAs(page, MINOR_EMAIL);
 
     // Minor has a completed session AND no guardian verification → the
     // gate returns 409 GUARDIAN_VERIFICATION_REQUIRED. (First booking

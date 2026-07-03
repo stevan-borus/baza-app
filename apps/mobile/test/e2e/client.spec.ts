@@ -1,5 +1,6 @@
-import { test, expect, type Page } from "./helpers/fixtures";
+import { test, expect } from "./helpers/fixtures";
 import { now } from "../../lib/now";
+import { signInAs } from "./helpers/auth";
 import {
   addToWaitlist,
   countActiveBookingsFor,
@@ -10,8 +11,6 @@ import {
   findSessionConsumption,
   resetAndSeed,
 } from "./helpers/db";
-
-const SEED_PASSWORD = "Password123!";
 
 /**
  * Compute the next upcoming Reformer Mon/Wed/Fri date from "today". The
@@ -54,22 +53,10 @@ test.describe("client (Serbian)", () => {
     await disconnect();
   });
 
-  async function signInAsActiveReformer(page: Page) {
-    await page.goto("/sign-in");
-    await page
-      .getByTestId("auth-email-input")
-      .fill("client.active.reformer@e2e.test");
-    await page.getByTestId("auth-password-input").fill(SEED_PASSWORD);
-    await page.getByTestId("auth-submit-button").click();
-    await expect(page.getByTestId("tab-index")).toBeVisible({
-      timeout: 15_000,
-    });
-  }
-
   test("52: home shows the active package's sessions-remaining number", async ({
     page,
   }) => {
-    await signInAsActiveReformer(page);
+    await signInAs(page, "client.active.reformer@e2e.test");
 
     await expect(page.getByTestId("package-sessions-remaining")).toHaveText(
       "8",
@@ -79,7 +66,7 @@ test.describe("client (Serbian)", () => {
   test("53: calendar shows a Reformer session block on the next Reformer day", async ({
     page,
   }) => {
-    await signInAsActiveReformer(page);
+    await signInAs(page, "client.active.reformer@e2e.test");
     await page.goto("/calendar");
 
     const target = nextReformerDate();
@@ -101,7 +88,7 @@ test.describe("client (Serbian)", () => {
   test("54: tap session block opens booking detail with trainer + room", async ({
     page,
   }) => {
-    await signInAsActiveReformer(page);
+    await signInAs(page, "client.active.reformer@e2e.test");
     await page.goto("/calendar");
 
     const target = nextReformerDate();
@@ -129,7 +116,7 @@ test.describe("client (Serbian)", () => {
   test("55: book a session, see confirmation banner, sessions-remaining decrements", async ({
     page,
   }) => {
-    await signInAsActiveReformer(page);
+    await signInAs(page, "client.active.reformer@e2e.test");
     await page.goto("/calendar");
 
     const target = nextReformerDate();
@@ -171,7 +158,7 @@ test.describe("client (Serbian)", () => {
   test("56: cancel a booking before the late-cancel cutoff", async ({
     page,
   }) => {
-    await signInAsActiveReformer(page);
+    await signInAs(page, "client.active.reformer@e2e.test");
     await page.goto("/calendar");
 
     const target = nextReformerDate();
@@ -217,7 +204,7 @@ test.describe("client (Serbian)", () => {
       hoursFromNow: 6,
     });
 
-    await signInAsActiveReformer(page);
+    await signInAs(page, "client.active.reformer@e2e.test");
     await page.goto("/calendar");
 
     // Walk the WeekStrip forward to the day the session is on.
@@ -309,7 +296,7 @@ test.describe("client (Serbian)", () => {
       "client.active.reformer@e2e.test",
     );
 
-    await signInAsActiveReformer(page);
+    await signInAs(page, "client.active.reformer@e2e.test");
     await page.goto("/calendar");
 
     const targetDate = `${session.startsAt.getFullYear()}-${String(
@@ -358,7 +345,7 @@ test.describe("client (Serbian)", () => {
       1,
     );
 
-    await signInAsActiveReformer(page);
+    await signInAs(page, "client.active.reformer@e2e.test");
     await page.goto("/calendar");
 
     const targetDate = `${session.startsAt.getFullYear()}-${String(
@@ -399,7 +386,7 @@ test.describe("client (Serbian)", () => {
   });
 
   test("60: notifications list renders", async ({ page }) => {
-    await signInAsActiveReformer(page);
+    await signInAs(page, "client.active.reformer@e2e.test");
     await page.goto("/notifications");
 
     // The seed leaves no notifications, so we assert the empty state
@@ -412,7 +399,7 @@ test.describe("client (Serbian)", () => {
   test("62: client opens profile sheet, switches to English, switches back", async ({
     page,
   }) => {
-    await signInAsActiveReformer(page);
+    await signInAs(page, "client.active.reformer@e2e.test");
 
     await page.getByTestId("open-profile-sheet").click();
     await page.getByTestId("language-en").dispatchEvent("click");
@@ -428,7 +415,7 @@ test.describe("client (Serbian)", () => {
   });
 
   test("63: client signs out from the profile sheet", async ({ page }) => {
-    await signInAsActiveReformer(page);
+    await signInAs(page, "client.active.reformer@e2e.test");
 
     await page.getByTestId("open-profile-sheet").click();
     await page.getByTestId("profile-sign-out-button").click();
@@ -440,13 +427,7 @@ test.describe("client (Serbian)", () => {
   test("61: empty-pack client cannot see Reformer sessions in the calendar", async ({
     page,
   }) => {
-    await page.goto("/sign-in");
-    await page.getByTestId("auth-email-input").fill("client.empty@e2e.test");
-    await page.getByTestId("auth-password-input").fill(SEED_PASSWORD);
-    await page.getByTestId("auth-submit-button").click();
-    await expect(page.getByTestId("tab-index")).toBeVisible({
-      timeout: 15_000,
-    });
+    await signInAs(page, "client.empty@e2e.test");
 
     await page.goto("/calendar");
     const target = nextReformerDate();
@@ -473,7 +454,7 @@ test.describe("client (Serbian)", () => {
   test("64: tapping a session on the overview opens the booking sheet inline", async ({
     page,
   }) => {
-    await signInAsActiveReformer(page);
+    await signInAs(page, "client.active.reformer@e2e.test");
 
     // Pick a Reformer day in the home week strip, then tap one of that day's
     // session rows. The same booking sheet as the calendar opens right here —

@@ -11,14 +11,13 @@
  * Anchors against names seeded by `seedExtraClients` (Pagi Client 001..).
  */
 import { test, expect } from "./helpers/fixtures";
+import { signInAs } from "./helpers/auth";
 import { waitForStableBoundingBox } from "./helpers/interactions";
 import {
   disconnect,
   resetAndSeed,
   seedExtraClients,
 } from "./helpers/db";
-
-const SEED_PASSWORD = "Password123!";
 
 test.describe.serial("klijenti pagination (admin)", () => {
   test.beforeAll(async () => {
@@ -33,13 +32,7 @@ test.describe.serial("klijenti pagination (admin)", () => {
   test("first page loads, scroll triggers next page, search hits server", async ({
     page,
   }) => {
-    await page.goto("/sign-in");
-    await page.getByTestId("auth-email-input").fill("admin.e2e@example.test");
-    await page.getByTestId("auth-password-input").fill(SEED_PASSWORD);
-    await page.getByTestId("auth-submit-button").click();
-    await expect(page.getByTestId("tab-klijenti")).toBeVisible({
-      timeout: 15_000,
-    });
+    await signInAs(page, "admin", { landing: "tab-klijenti" });
     await page.getByTestId("tab-klijenti").click();
 
     // First page: expect ~20 rows. We can't pin an exact number because the
@@ -107,13 +100,7 @@ test.describe.serial("klijenti pagination (admin)", () => {
   test("search + filter chips stay pinned while the list scrolls", async ({
     page,
   }) => {
-    await page.goto("/sign-in");
-    await page.getByTestId("auth-email-input").fill("admin.e2e@example.test");
-    await page.getByTestId("auth-password-input").fill(SEED_PASSWORD);
-    await page.getByTestId("auth-submit-button").click();
-    await expect(page.getByTestId("tab-klijenti")).toBeVisible({
-      timeout: 15_000,
-    });
+    await signInAs(page, "admin", { landing: "tab-klijenti" });
     await page.getByTestId("tab-klijenti").click();
 
     const search = page.getByTestId("klijenti-search-input");

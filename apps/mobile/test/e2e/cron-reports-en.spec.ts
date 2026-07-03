@@ -8,8 +8,8 @@ import {
 } from "./helpers/db";
 import { navigateWeekStripTo, nextReformerDayKey } from "./helpers/dates";
 import { t, t_en } from "./helpers/locales";
+import { ADMIN_EMAIL, SEED_PASSWORD, signInAs } from "./helpers/auth";
 
-const SEED_PASSWORD = "Password123!";
 const REFORMER_TRAINER_EMAIL = "trainer.reformer@e2e.test";
 const ACTIVE_REFORMER_CLIENT_EMAIL = "client.active.reformer@e2e.test";
 
@@ -37,14 +37,8 @@ test.describe("cron + reports + EN smoke (Serbian + English)", () => {
   // ── Reports ───────────────────────────────────────────────────────────────
 
   test("64: admin reports — attendance section renders", async ({ page }) => {
-    await page.goto("/sign-in");
-    await page.getByTestId("auth-email-input").fill("admin.e2e@example.test");
-    await page.getByTestId("auth-password-input").fill(SEED_PASSWORD);
-    await page.getByTestId("auth-submit-button").click();
-    // Phase 1 admin shell — landing tab is `pregled`; reports moved to `/izvestaji`.
-    await expect(page.getByTestId("tab-pregled")).toBeVisible({
-      timeout: 15_000,
-    });
+    // Phase 1 admin shell — reports moved to `/izvestaji`.
+    await signInAs(page, "admin");
     // Phase 1: reports landing is a hub of 4 cards; the utilization breakdown
     // (the closest analogue of "attendance") lives on its own sub-page.
     await page.goto("/izvestaji/iskoriscenost");
@@ -55,13 +49,7 @@ test.describe("cron + reports + EN smoke (Serbian + English)", () => {
   });
 
   test("65: admin reports — utilization section renders", async ({ page }) => {
-    await page.goto("/sign-in");
-    await page.getByTestId("auth-email-input").fill("admin.e2e@example.test");
-    await page.getByTestId("auth-password-input").fill(SEED_PASSWORD);
-    await page.getByTestId("auth-submit-button").click();
-    await expect(page.getByTestId("tab-pregled")).toBeVisible({
-      timeout: 15_000,
-    });
+    await signInAs(page, "admin");
     // Phase 1: revenue lives on its own sub-page; the headline text
     // ("Ukupan prihod") is the closest analogue to the old strip label.
     await page.goto("/izvestaji/prihod");
@@ -138,14 +126,7 @@ test.describe("cron + reports + EN smoke (Serbian + English)", () => {
   // ── English smoke ─────────────────────────────────────────────────────────
 
   async function setLocaleEn(page: Page) {
-    await page.goto("/sign-in");
-    await page.getByTestId("auth-email-input").fill("admin.e2e@example.test");
-    await page.getByTestId("auth-password-input").fill(SEED_PASSWORD);
-    await page.getByTestId("auth-submit-button").click();
-    // Phase 1 admin shell — landing tab is `pregled`.
-    await expect(page.getByTestId("tab-pregled")).toBeVisible({
-      timeout: 15_000,
-    });
+    await signInAs(page, "admin");
     await page.getByTestId("open-profile-sheet").click();
     await page.getByTestId("language-en").dispatchEvent("click");
     // Confirm the language flipped.
@@ -161,7 +142,9 @@ test.describe("cron + reports + EN smoke (Serbian + English)", () => {
     page,
   }) => {
     await setLocaleEn(page);
-    await page.getByTestId("auth-email-input").fill("admin.e2e@example.test");
+    // Re-login is mid-flow (already on /sign-in after sign-out, no goto) —
+    // kept inline rather than routed through signInAs.
+    await page.getByTestId("auth-email-input").fill(ADMIN_EMAIL);
     await page.getByTestId("auth-password-input").fill(SEED_PASSWORD);
     await page.getByTestId("auth-submit-button").click();
     await expect(page.getByTestId("tab-pregled")).toBeVisible({
@@ -172,15 +155,7 @@ test.describe("cron + reports + EN smoke (Serbian + English)", () => {
   test("EN-2: client sign-in + EN calendar renders the next Reformer session", async ({
     page,
   }) => {
-    await page.goto("/sign-in");
-    await page
-      .getByTestId("auth-email-input")
-      .fill(ACTIVE_REFORMER_CLIENT_EMAIL);
-    await page.getByTestId("auth-password-input").fill(SEED_PASSWORD);
-    await page.getByTestId("auth-submit-button").click();
-    await expect(page.getByTestId("tab-index")).toBeVisible({
-      timeout: 15_000,
-    });
+    await signInAs(page, ACTIVE_REFORMER_CLIENT_EMAIL);
 
     await page.goto("/calendar");
     // Select the next Reformer day so today's weekday doesn't matter.
@@ -191,28 +166,11 @@ test.describe("cron + reports + EN smoke (Serbian + English)", () => {
   });
 
   test("EN-3: trainer sign-in lands on schedule (English)", async ({ page }) => {
-    await page.goto("/sign-in");
-    await page
-      .getByTestId("auth-email-input")
-      .fill(REFORMER_TRAINER_EMAIL);
-    await page.getByTestId("auth-password-input").fill(SEED_PASSWORD);
-    await page.getByTestId("auth-submit-button").click();
-    // Trainer landing tab is "raspored" (schedule), not "index".
-    await expect(page.getByTestId("tab-raspored")).toBeVisible({
-      timeout: 15_000,
-    });
+    await signInAs(page, "trainer");
   });
 
   test("EN-4: client books a session (English)", async ({ page }) => {
-    await page.goto("/sign-in");
-    await page
-      .getByTestId("auth-email-input")
-      .fill(ACTIVE_REFORMER_CLIENT_EMAIL);
-    await page.getByTestId("auth-password-input").fill(SEED_PASSWORD);
-    await page.getByTestId("auth-submit-button").click();
-    await expect(page.getByTestId("tab-index")).toBeVisible({
-      timeout: 15_000,
-    });
+    await signInAs(page, ACTIVE_REFORMER_CLIENT_EMAIL);
     await page.goto("/calendar");
 
     // Pick a Reformer day in the week strip.

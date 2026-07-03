@@ -14,9 +14,9 @@
  * non-legal blocker on this screen.
  */
 import { test, expect } from "./helpers/fixtures";
+import { SEED_PASSWORD } from "./helpers/auth";
 import { disconnect, resetAndSeed } from "./helpers/db";
 
-const SEED_PASSWORD = "Password123!";
 const CLIENT_EMAIL = "client.unconsented@e2e.test";
 
 test.describe("consent gate — social-media", () => {

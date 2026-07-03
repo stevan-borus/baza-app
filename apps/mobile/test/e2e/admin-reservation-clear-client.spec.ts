@@ -9,15 +9,14 @@
  *   1. reverts the banner to the "Izaberi klijenta" placeholder, and
  *   2. does NOT open the client-picker sheet.
  */
-import { test, expect, type Page } from "./helpers/fixtures";
+import { test, expect } from "./helpers/fixtures";
+import { signInAs } from "./helpers/auth";
 import { pressRNW } from "./helpers/interactions";
 import { disconnect, resetAndSeed } from "./helpers/db";
 import { PrismaClient } from "../../generated/prisma";
 import { Pool } from "pg";
 import { PrismaPg } from "@prisma/adapter-pg";
 
-const SEED_PASSWORD = "Password123!";
-const ADMIN_EMAIL = "admin.e2e@example.test";
 const EMPTY_CLIENT_EMAIL = "client.empty@e2e.test";
 
 let _prisma: PrismaClient | null = null;
@@ -34,14 +33,6 @@ function prisma(): PrismaClient {
   return _prisma;
 }
 
-async function signInAsAdmin(page: Page) {
-  await page.goto("/sign-in");
-  await page.getByTestId("auth-email-input").fill(ADMIN_EMAIL);
-  await page.getByTestId("auth-password-input").fill(SEED_PASSWORD);
-  await page.getByTestId("auth-submit-button").click();
-  await expect(page.getByTestId("tab-pregled")).toBeVisible({ timeout: 15_000 });
-}
-
 test.describe("admin reservation — clear bound client", () => {
   test.beforeAll(async () => {
     await resetAndSeed();
@@ -54,7 +45,7 @@ test.describe("admin reservation — clear bound client", () => {
   test("tapping the banner X clears the client without re-opening the picker", async ({
     page,
   }) => {
-    await signInAsAdmin(page);
+    await signInAs(page, "admin");
 
     const emptyClient = await prisma().user.findUniqueOrThrow({
       where: { email: EMPTY_CLIENT_EMAIL },

@@ -16,6 +16,7 @@
  * move anything and the test would be a no-op.
  */
 import { test, expect } from "./helpers/fixtures";
+import { TRAINER_EMAIL, signInAs } from "./helpers/auth";
 import { waitForStableBoundingBox } from "./helpers/interactions";
 import {
   disconnect,
@@ -23,16 +24,13 @@ import {
   seedExtraTrainerLinkedClients,
 } from "./helpers/db";
 
-const SEED_PASSWORD = "Password123!";
-const REFORMER_TRAINER_EMAIL = "trainer.reformer@e2e.test";
-
 test.describe.serial("trainer clients sticky header", () => {
   test.beforeAll(async () => {
     await resetAndSeed();
     // Push enough linked clients into the trainer's roster that the list
     // overflows the viewport. 25 keeps things fast while comfortably
     // exceeding any reasonable desktop list height.
-    await seedExtraTrainerLinkedClients(REFORMER_TRAINER_EMAIL, 25);
+    await seedExtraTrainerLinkedClients(TRAINER_EMAIL, 25);
   });
   test.afterAll(async () => {
     await disconnect();
@@ -41,15 +39,7 @@ test.describe.serial("trainer clients sticky header", () => {
   test("search input stays pinned while the list scrolls", async ({
     page,
   }) => {
-    await page.goto("/sign-in");
-    await page
-      .getByTestId("auth-email-input")
-      .fill(REFORMER_TRAINER_EMAIL);
-    await page.getByTestId("auth-password-input").fill(SEED_PASSWORD);
-    await page.getByTestId("auth-submit-button").click();
-    await expect(page.getByTestId("tab-clients")).toBeVisible({
-      timeout: 15_000,
-    });
+    await signInAs(page, "trainer", { landing: "tab-clients" });
     await page.getByTestId("tab-clients").click();
 
     const search = page.getByTestId("trainer-clients-search-input");

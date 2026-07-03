@@ -17,21 +17,12 @@ import {
   seedBirthdayGiftPackageType,
   setClientBirthdayToToday,
 } from "./helpers/db";
+import { signInAs } from "./helpers/auth";
 
-const SEED_PASSWORD = "Password123!";
-const ADMIN_EMAIL = "admin.e2e@example.test";
 const REFORMER_CLIENT_EMAIL = "client.active.reformer@e2e.test";
 
 const CRON_TOKEN =
   process.env.API_ADMIN_BOOTSTRAP_TOKEN ?? "test-admin-bootstrap-token";
-
-async function signInAsAdmin(page: Page) {
-  await page.goto("/sign-in");
-  await page.getByTestId("auth-email-input").fill(ADMIN_EMAIL);
-  await page.getByTestId("auth-password-input").fill(SEED_PASSWORD);
-  await page.getByTestId("auth-submit-button").click();
-  await expect(page.getByTestId("tab-pregled")).toBeVisible({ timeout: 15_000 });
-}
 
 async function postCron(page: Page, path: string) {
   const apiBase = process.env.E2E_BASE_URL ?? "http://127.0.0.1:8010";
@@ -69,7 +60,7 @@ test.describe("birthday gift — grant flow", () => {
     const cronResponse = await postCron(page, "/api/cron/notifications/birthdays");
     expect(cronResponse.status()).toBe(200);
 
-    await signInAsAdmin(page);
+    await signInAs(page, "admin");
     await page.reload();
     await expect(page.getByTestId("tab-pregled")).toBeVisible({ timeout: 15_000 });
     await page.getByTestId("tab-pregled").click();

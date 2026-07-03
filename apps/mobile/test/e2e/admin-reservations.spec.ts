@@ -13,14 +13,13 @@
  *   4. Switch to cancel mode, tap the same booking, confirm cancel —
  *      assert the Booking row is canceled.
  */
-import { test, expect, type Page } from "./helpers/fixtures";
+import { test, expect } from "./helpers/fixtures";
+import { ADMIN_EMAIL, signInAs } from "./helpers/auth";
 import { disconnect, resetAndSeed } from "./helpers/db";
 import { PrismaClient } from "../../generated/prisma";
 import { Pool } from "pg";
 import { PrismaPg } from "@prisma/adapter-pg";
 
-const SEED_PASSWORD = "Password123!";
-const ADMIN_EMAIL = "admin.e2e@example.test";
 const EMPTY_CLIENT_EMAIL = "client.empty@e2e.test";
 
 let _prisma: PrismaClient | null = null;
@@ -37,14 +36,6 @@ function prisma(): PrismaClient {
   return _prisma;
 }
 
-async function signInAsAdmin(page: Page) {
-  await page.goto("/sign-in");
-  await page.getByTestId("auth-email-input").fill(ADMIN_EMAIL);
-  await page.getByTestId("auth-password-input").fill(SEED_PASSWORD);
-  await page.getByTestId("auth-submit-button").click();
-  await expect(page.getByTestId("tab-pregled")).toBeVisible({ timeout: 15_000 });
-}
-
 test.describe("admin reservations", () => {
   test.beforeAll(async () => {
     await resetAndSeed();
@@ -57,7 +48,7 @@ test.describe("admin reservations", () => {
   test("admin reserves an unbacked session and then bulk-cancels it", async ({
     page,
   }) => {
-    await signInAsAdmin(page);
+    await signInAs(page, "admin");
 
     // Open the empty client's profile via the clients tab.
     const emptyClient = await prisma().user.findUniqueOrThrow({
@@ -160,12 +151,7 @@ test.describe("admin reservations", () => {
 
   test("trainer hitting /klijenti/rezervisi is redirected away", async ({ page }) => {
     // Trainer-lead is a TRAINER per the rich seed.
-    await page.goto("/sign-in");
-    await page.getByTestId("auth-email-input").fill("trainer.reformer@e2e.test");
-    await page.getByTestId("auth-password-input").fill(SEED_PASSWORD);
-    await page.getByTestId("auth-submit-button").click();
-    // Wait for trainer shell.
-    await expect(page.getByTestId("tab-raspored")).toBeVisible({ timeout: 15_000 });
+    await signInAs(page, "trainer");
 
     await page.goto("/klijenti/rezervisi");
     // Should never land on the admin reservation route — redirect kicks in.
@@ -178,7 +164,7 @@ test.describe("admin reservations", () => {
   test("admin reserves via pattern overlay and confirms unbacked-attendance copy", async ({
     page,
   }) => {
-    await signInAsAdmin(page);
+    await signInAs(page, "admin");
 
     const emptyClient = await prisma().user.findUniqueOrThrow({
       where: { email: EMPTY_CLIENT_EMAIL },

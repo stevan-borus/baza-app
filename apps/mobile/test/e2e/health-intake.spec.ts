@@ -16,9 +16,9 @@
  * toHaveAttribute / toHaveCount(0) instead of toBeDisabled / toBeEnabled.
  */
 import { test, expect } from "./helpers/fixtures";
+import { signInAs } from "./helpers/auth";
 import { disconnect, resetAndSeed } from "./helpers/db";
 
-const SEED_PASSWORD = "Password123!";
 // activeReformer is already past the consent gate (seeded ConsentRecord rows)
 // AND has no HealthIntake row, so the inline form is rendered immediately.
 const CLIENT_EMAIL = "client.active.reformer@e2e.test";
@@ -35,13 +35,8 @@ test.describe("health intake — profile flow", () => {
     page,
   }) => {
     await page.setViewportSize({ width: 390, height: 844 });
-    await page.goto("/sign-in");
-    await page.getByTestId("auth-email-input").fill(CLIENT_EMAIL);
-    await page.getByTestId("auth-password-input").fill(SEED_PASSWORD);
-    await page.getByTestId("auth-submit-button").click();
-
     // Lands on the client home tab (already consented).
-    await expect(page.getByTestId("tab-index")).toBeVisible({ timeout: 20_000 });
+    await signInAs(page, CLIENT_EMAIL, { timeout: 20_000 });
 
     // Switch to the profile tab and tap the Zdravstveni podaci row.
     await page.getByTestId("tab-profile").click();

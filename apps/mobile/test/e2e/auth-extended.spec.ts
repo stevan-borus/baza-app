@@ -9,9 +9,9 @@ import {
   resetAndSeed,
 } from "./helpers/db";
 import { t } from "./helpers/locales";
+import { signInAs } from "./helpers/auth";
 import { pickInviteDob } from "./helpers/forms";
 
-const SEED_PASSWORD = "Password123!";
 const NEW_PASSWORD = "NewPassword456!";
 
 /**
@@ -32,14 +32,7 @@ test.describe("auth extended (Serbian)", () => {
   test("signed-in admin signs out and lands back on /sign-in", async ({
     page,
   }) => {
-    await page.goto("/sign-in");
-    await page.getByTestId("auth-email-input").fill("admin.e2e@example.test");
-    await page.getByTestId("auth-password-input").fill(SEED_PASSWORD);
-    await page.getByTestId("auth-submit-button").click();
-    // Phase 1 admin shell — landing tab is `pregled`.
-    await expect(page.getByTestId("tab-pregled")).toBeVisible({
-      timeout: 15_000,
-    });
+    await signInAs(page, "admin");
 
     await page.getByTestId("open-profile-sheet").click();
     await page.getByTestId("profile-sign-out-button").click();
@@ -155,14 +148,8 @@ test.describe("auth extended (Serbian)", () => {
     page,
   }) => {
     const inviteEmail = `invite.smoke.${Date.now()}@e2e.test`;
-    await page.goto("/sign-in");
-    await page.getByTestId("auth-email-input").fill("admin.e2e@example.test");
-    await page.getByTestId("auth-password-input").fill(SEED_PASSWORD);
-    await page.getByTestId("auth-submit-button").click();
     // Phase 1 admin shell — Klijenti tab is the entry point for invites.
-    await expect(page.getByTestId("tab-klijenti")).toBeVisible({
-      timeout: 15_000,
-    });
+    await signInAs(page, "admin", { landing: "tab-klijenti" });
 
     await page.getByTestId("tab-klijenti").click();
 

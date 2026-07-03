@@ -12,14 +12,13 @@
  * anything and the test would be a no-op.
  */
 import { test, expect } from "./helpers/fixtures";
+import { signInAs } from "./helpers/auth";
 import { waitForStableBoundingBox } from "./helpers/interactions";
 import {
   disconnect,
   resetAndSeed,
   seedExtraBillingRecords,
 } from "./helpers/db";
-
-const SEED_PASSWORD = "Password123!";
 
 test.describe.serial("naplata sticky header (admin)", () => {
   test.beforeAll(async () => {
@@ -36,13 +35,7 @@ test.describe.serial("naplata sticky header (admin)", () => {
   test("search input + filter chips stay pinned while the list scrolls", async ({
     page,
   }) => {
-    await page.goto("/sign-in");
-    await page.getByTestId("auth-email-input").fill("admin.e2e@example.test");
-    await page.getByTestId("auth-password-input").fill(SEED_PASSWORD);
-    await page.getByTestId("auth-submit-button").click();
-    await expect(page.getByTestId("tab-naplata")).toBeVisible({
-      timeout: 15_000,
-    });
+    await signInAs(page, "admin", { landing: "tab-naplata" });
     await page.getByTestId("tab-naplata").click();
 
     const search = page.getByTestId("naplata-search-input");

@@ -12,9 +12,9 @@
  * surface the save action, and a no-op refetch must not show it.
  */
 import { test, expect } from "./helpers/fixtures";
+import { signInAs } from "./helpers/auth";
 import { disconnect, resetAndSeed } from "./helpers/db";
 
-const SEED_PASSWORD = "Password123!";
 const CLIENT_EMAIL = "client.active.reformer@e2e.test";
 
 test.describe("profile health — edit-existing flow", () => {
@@ -29,12 +29,7 @@ test.describe("profile health — edit-existing flow", () => {
     page,
   }) => {
     await page.setViewportSize({ width: 390, height: 844 });
-    await page.goto("/sign-in");
-    await page.getByTestId("auth-email-input").fill(CLIENT_EMAIL);
-    await page.getByTestId("auth-password-input").fill(SEED_PASSWORD);
-    await page.getByTestId("auth-submit-button").click();
-
-    await expect(page.getByTestId("tab-index")).toBeVisible({ timeout: 20_000 });
+    await signInAs(page, CLIENT_EMAIL, { timeout: 20_000 });
     await page.getByTestId("tab-profile").click();
     await page.getByTestId("profile-health-row").click();
 
