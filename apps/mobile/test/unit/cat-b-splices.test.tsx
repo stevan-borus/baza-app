@@ -103,6 +103,23 @@ describe("rooms cache splice", () => {
     expect(list?.rooms.find((r) => r.id === "1")).toEqual(updated);
     expect(noInvalidationFor("rooms")).toBe(true);
   });
+
+  it("update invalidates sessions — calendars embed roomName", async () => {
+    // A room rename must refetch the session caches (availability/list/byId
+    // all carry a server-joined roomName), or calendars keep the old name.
+    const observer = new MutationObserver(client, {
+      ...updateRoomMutationOptions(client),
+      mutationFn: async () => ({ success: true, room: room("1", { name: "Renamed" }) }),
+    });
+    await observer.mutate({ id: "1", name: "Renamed", capacity: 10 });
+
+    expect(
+      invalidateSpy.mock.calls.some((args: unknown[]) => {
+        const k = (args[0] as { queryKey?: readonly unknown[] } | undefined)?.queryKey;
+        return k?.[0] === "sessions";
+      }),
+    ).toBe(true);
+  });
 });
 
 // ── trainings (class types) ─────────────────────────────────────────────────
@@ -125,6 +142,27 @@ describe("trainings (class types) cache splice", () => {
     const list = client.getQueryData<{ classTypes: ClassType[] }>(classTypesKey);
     expect(list?.classTypes.map((c) => c.id)).toEqual(["1", "2"]);
     expect(noInvalidationFor("trainings")).toBe(true);
+  });
+
+  it("updateClassType invalidates sessions — calendars embed classTypeName", async () => {
+    // A class-type rename must refetch the session caches (availability/list/
+    // byId all carry a server-joined classTypeName), or calendars keep the
+    // old name and color mapping.
+    const observer = new MutationObserver(client, {
+      ...updateClassTypeMutationOptions(client),
+      mutationFn: async () => ({
+        success: true,
+        classType: classType("1", { name: "Renamed" }),
+      }),
+    });
+    await observer.mutate({ id: "1", name: "Renamed" });
+
+    expect(
+      invalidateSpy.mock.calls.some((args: unknown[]) => {
+        const k = (args[0] as { queryKey?: readonly unknown[] } | undefined)?.queryKey;
+        return k?.[0] === "sessions";
+      }),
+    ).toBe(true);
   });
 
   it("updateClassType replaces by id without invalidating", async () => {
@@ -219,7 +257,7 @@ function session(id: string, over: Partial<Session> = {}): Session {
 }
 
 describe("sessions cache splice", () => {
-  it("create appends the returned session to the list without invalidating", async () => {
+  it("create appends the returned session to the list without refetching it", async () => {
     client.setQueryData(sessionsListKey, { success: true, sessions: [session("1")] });
     const created = session("2");
 
@@ -237,7 +275,39 @@ describe("sessions cache splice", () => {
 
     const list = client.getQueryData<{ sessions: Session[] }>(sessionsListKey);
     expect(list?.sessions.map((s) => s.id)).toEqual(["1", "2"]);
-    expect(noInvalidationFor("sessions")).toBe(true);
+    expect(
+      invalidateSpy.mock.calls.some((args: unknown[]) => {
+        const k = (args[0] as { queryKey?: readonly unknown[] } | undefined)?.queryKey;
+        return k?.[0] === "sessions" && k?.[1] === "list";
+      }),
+    ).toBe(false);
+  });
+
+  it("create invalidates availability so the overview calendar refetches", async () => {
+    // Regression: the Pregled overview renders from ["sessions","availability",month],
+    // not the list cache — a one-off create that only splices the list leaves the
+    // calendar stale until app restart.
+    const availabilityKey = sessionsQueries.availabilityByMonth("2026-01").queryKey;
+    client.setQueryData(availabilityKey, { success: true, month: "2026-01", sessions: [] });
+
+    const observer = new MutationObserver(client, {
+      ...createSessionMutationOptions(client),
+      mutationFn: async () => ({ success: true, session: session("2") }),
+    });
+    await observer.mutate({
+      classTypeId: "ct1",
+      trainerUserId: "t1",
+      startsAt: "2026-01-01T10:00:00.000Z",
+      endsAt: "2026-01-01T11:00:00.000Z",
+      capacity: 8,
+    });
+
+    expect(
+      invalidateSpy.mock.calls.some((args: unknown[]) => {
+        const k = (args[0] as { queryKey?: readonly unknown[] } | undefined)?.queryKey;
+        return k?.[0] === "sessions" && k?.[1] === "availability";
+      }),
+    ).toBe(true);
   });
 
   it("update replaces the session by id in the list; leaves byId detail alone", async () => {

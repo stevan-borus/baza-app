@@ -6,6 +6,7 @@ import {
 import { z } from "zod";
 import { apiFetch, throwIfNotOk } from "@/lib/api";
 import { sharedEnv } from "@/lib/env.shared";
+import { sessionsQueries } from "@/lib/queries/sessions-queries-factory";
 
 const classTypeSchema = z.object({
   id: z.string(),
@@ -132,7 +133,12 @@ export function createClassTypeMutationOptions(queryClient: QueryClient) {
 export function updateClassTypeMutationOptions(queryClient: QueryClient) {
   return {
     ...trainingsQueries.updateClassType(),
-    onSuccess: (data: ClassTypeMutationResponse) =>
-      spliceClassType(queryClient, data.classType),
+    onSuccess: async (data: ClassTypeMutationResponse) => {
+      spliceClassType(queryClient, data.classType);
+      // Session caches (availability/list/byId) embed a server-joined
+      // classTypeName — a rename must refetch them or calendars keep the
+      // old name and color mapping.
+      await queryClient.invalidateQueries({ queryKey: sessionsQueries.all });
+    },
   };
 }

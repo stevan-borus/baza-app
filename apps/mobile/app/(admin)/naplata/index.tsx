@@ -52,6 +52,7 @@ import { SkeletonList } from "@/components/ui/skeleton";
 import { packagesQueries } from "@/lib/queries/packages-queries-factory";
 import {
   billingQueries,
+  createBillingMutationOptions,
   type BillingRecord,
 } from "@/lib/queries/billing-queries-factory";
 import { clientsQueries } from "@/lib/queries/clients-queries-factory";
@@ -181,10 +182,14 @@ export default function AdminBilling() {
     setSelectedMonth((m) => m.add(direction, "month"));
   }
 
+  // Cache upkeep (billing + reports revenue + packages/clients when a package
+  // activates) is baked into the options-builder; we compose the sheet-close
+  // side-effects on top.
+  const createBillingOptions = createBillingMutationOptions(queryClient);
   const createMutation = useMutation({
-    ...billingQueries.create(),
+    ...createBillingOptions,
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: billingQueries.all });
+      await createBillingOptions.onSuccess();
       setShowCreate(false);
       setForm({
         clientUserId: "",

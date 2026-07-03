@@ -2,9 +2,13 @@ import {
   queryOptions,
   mutationOptions,
   infiniteQueryOptions,
+  type QueryClient,
 } from "@tanstack/react-query";
 import { z } from "zod";
 import { apiRequest } from "@/lib/api-request";
+import { clientsQueries } from "@/lib/queries/clients-queries-factory";
+import { packagesQueries } from "@/lib/queries/packages-queries-factory";
+import { reportsQueries } from "@/lib/queries/reports-queries-factory";
 
 const billingRecordSchema = z.object({
   id: z.string(),
@@ -101,4 +105,23 @@ export const billingQueries = {
         }),
     }),
 };
+
+// A payment always changes the revenue figures (reports summary renders on
+// the always-mounted Pregled), and with activatePackageOnConfirm the same
+// transaction creates a ClientPackage — which flips the client's derived
+// packageStatus under ["clients"]. Invalidate the superset unconditionally:
+// billing writes are rare admin actions, the extra refetches are cheap.
+export function createBillingMutationOptions(queryClient: QueryClient) {
+  return {
+    ...billingQueries.create(),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: billingQueries.all }),
+        queryClient.invalidateQueries({ queryKey: reportsQueries.all }),
+        queryClient.invalidateQueries({ queryKey: packagesQueries.all }),
+        queryClient.invalidateQueries({ queryKey: clientsQueries.all }),
+      ]);
+    },
+  };
+}
 

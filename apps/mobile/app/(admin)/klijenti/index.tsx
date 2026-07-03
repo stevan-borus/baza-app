@@ -45,7 +45,11 @@ import { FilterChip } from "@/components/ui/studio";
 import { PaginatedList } from "@/components/ui/paginated-list";
 import { DateTimePicker } from "@/components/ui/date-time-picker";
 import { toIsoDate } from "@/lib/date-of-birth";
-import { clientsQueries } from "@/lib/queries/clients-queries-factory";
+import {
+  clientsQueries,
+  createClientMutationOptions,
+  updateClientMutationOptions,
+} from "@/lib/queries/clients-queries-factory";
 import {
   invitesQueries,
   createInviteMutationOptions,
@@ -53,7 +57,10 @@ import {
   resendInviteMutationOptions,
   type Invite,
 } from "@/lib/queries/invites-queries-factory";
-import { packagesQueries } from "@/lib/queries/packages-queries-factory";
+import {
+  packagesQueries,
+  pausePackageMutationOptions,
+} from "@/lib/queries/packages-queries-factory";
 import { now } from "@/lib/now";
 import type { ClientsResponse } from "@baza/types";
 
@@ -264,25 +271,32 @@ export default function AdminClients() {
   const createInviteMutation = useMutation(createInviteMutationOptions(queryClient));
   const revokeMutation = useMutation(revokeInviteMutationOptions(queryClient));
   const resendMutation = useMutation(resendInviteMutationOptions(queryClient));
+  // Cache upkeep (clients + reports counts) is baked into the options-builders;
+  // we compose the sheet-close side-effects on top.
+  const createClientOptions = createClientMutationOptions(queryClient);
   const createClientMutation = useMutation({
-    ...clientsQueries.create(),
+    ...createClientOptions,
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: clientsQueries.all });
+      await createClientOptions.onSuccess();
       setShowCreateClient(false);
       setClientForm({ email: "", firstName: "", lastName: "", phone: "", dateOfBirth: null });
     },
   });
+  const updateClientOptions = updateClientMutationOptions(queryClient);
   const updateClientMutation = useMutation({
-    ...clientsQueries.update(),
+    ...updateClientOptions,
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: clientsQueries.all });
+      await updateClientOptions.onSuccess();
       setShowEditClient(null);
     },
   });
+  // Cache upkeep (packages + clients packageStatus) is baked into the
+  // options-builder; we compose the sheet-close side-effects on top.
+  const pauseOptions = pausePackageMutationOptions(queryClient);
   const pauseMutation = useMutation({
-    ...packagesQueries.pause(),
+    ...pauseOptions,
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: packagesQueries.all });
+      await pauseOptions.onSuccess();
       setShowPause(null);
       setPauseForm({ startsAt: "", endsAt: "", reason: "" });
     },

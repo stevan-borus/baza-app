@@ -34,8 +34,15 @@ import { useThemeTokens } from "@/components/ui/tokens";
 import { ScreenContainerRaw, useTabBarBottomPadding } from "@/components/ui/screen-container";
 import { HeaderIconButton } from "@/components/ui/app-header";
 import { PaginatedList } from "@/components/ui/paginated-list";
-import { clientsQueries } from "@/lib/queries/clients-queries-factory";
-import { packagesQueries, type ClientPackage } from "@/lib/queries/packages-queries-factory";
+import {
+  clientsQueries,
+  updateClientMutationOptions,
+} from "@/lib/queries/clients-queries-factory";
+import {
+  packagesQueries,
+  pausePackageMutationOptions,
+  type ClientPackage,
+} from "@/lib/queries/packages-queries-factory";
 import { bookingsQueries, type ClientBooking } from "@/lib/queries/bookings-queries-factory";
 import {
   trainerNotesQueries,
@@ -145,17 +152,23 @@ export function ClientDetail({ id }: { id: string }) {
     return pages.flatMap((p) => p.bookings);
   }, [upcomingQuery.data?.pages]);
 
+  // Cache upkeep (clients + reports counts — isActive moves activeClients) is
+  // baked into the options-builder; we compose the sheet-close on top.
+  const updateClientOptions = updateClientMutationOptions(queryClient);
   const updateClientMutation = useMutation({
-    ...clientsQueries.update(),
+    ...updateClientOptions,
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: clientsQueries.all });
+      await updateClientOptions.onSuccess();
       setShowEdit(false);
     },
   });
+  // Cache upkeep (packages + clients packageStatus) is baked into the
+  // options-builder; we compose the sheet-close side-effects on top.
+  const pauseOptions = pausePackageMutationOptions(queryClient);
   const pauseMutation = useMutation({
-    ...packagesQueries.pause(),
+    ...pauseOptions,
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: packagesQueries.all });
+      await pauseOptions.onSuccess();
       setShowPause(false);
       setPauseForm({ startsAt: "", endsAt: "", reason: "" });
     },

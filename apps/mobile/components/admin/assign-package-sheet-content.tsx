@@ -22,8 +22,14 @@ import { Select } from "@/components/ui/select";
 import { ErrorState } from "@/components/ui/states";
 import { SectionLabel } from "@/components/ui/typography";
 import { DateTimePicker } from "@/components/ui/date-time-picker";
-import { packagesQueries } from "@/lib/queries/packages-queries-factory";
-import { billingQueries } from "@/lib/queries/billing-queries-factory";
+import {
+  packagesQueries,
+  assignClientPackageMutationOptions,
+} from "@/lib/queries/packages-queries-factory";
+import {
+  billingQueries,
+  createBillingMutationOptions,
+} from "@/lib/queries/billing-queries-factory";
 import { RAW_METHOD_LABEL_KEYS } from "@/lib/payment-method-labels";
 
 export type AssignPackageMode = "comp" | "paid";
@@ -82,24 +88,12 @@ export function AssignPackageSheetContent({
       ? allPackageTypes.filter((pt) => !pt.isBirthdayGift)
       : allPackageTypes;
 
-  const compMutation = useMutation({
-    ...packagesQueries.createClientPackage(),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: packagesQueries.all });
-      onSuccess();
-    },
-  });
+  // Cache upkeep (packages + clients packageStatus + reports) is baked into
+  // the options-builder; the component-only side-effect (close sheet) is
+  // passed per-call via mutate(vars, { onSuccess }).
+  const compMutation = useMutation(assignClientPackageMutationOptions(queryClient));
 
-  const paidMutation = useMutation({
-    ...billingQueries.create(),
-    onSuccess: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: packagesQueries.all }),
-        queryClient.invalidateQueries({ queryKey: billingQueries.all }),
-      ]);
-      onSuccess();
-    },
-  });
+  const paidMutation = useMutation(createBillingMutationOptions(queryClient));
 
   // Paid-mode validation: amount required + positive integer (RSD has no
   // sub-unit and the API schema requires `z.number().int().positive()`).
@@ -121,21 +115,27 @@ export function AssignPackageSheetContent({
     if (!startsAt) return;
     const startsAtIso = startsAt.toISOString();
     if (mode === "comp") {
-      compMutation.mutate({
-        clientProfileId: client.id,
-        packageTypeId,
-        startsAt: startsAtIso,
-      });
+      compMutation.mutate(
+        {
+          clientProfileId: client.id,
+          packageTypeId,
+          startsAt: startsAtIso,
+        },
+        { onSuccess },
+      );
       return;
     }
     // Paid path: the server transaction creates both rows or neither.
-    paidMutation.mutate({
-      clientUserId: client.user.id,
-      packageTypeId,
-      amount: Math.round(amountNumber),
-      method,
-      activatePackageOnConfirm: true,
-    });
+    paidMutation.mutate(
+      {
+        clientUserId: client.user.id,
+        packageTypeId,
+        amount: Math.round(amountNumber),
+        method,
+        activatePackageOnConfirm: true,
+      },
+      { onSuccess },
+    );
   }
 
   const submitLabel =

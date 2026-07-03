@@ -52,10 +52,13 @@ beforeEach(() => {
   invalidateSpy = vi.spyOn(client, "invalidateQueries");
 });
 
+// The splice contract: list + detail are written via setQueryData, never
+// refetched. The per-campaign recipients cache is the exception — it's
+// status/spec-derived on the server, so every campaign write invalidates it.
 function noCampaignInvalidation() {
   return invalidateSpy.mock.calls.every((args: unknown[]) => {
     const k = (args[0] as { queryKey?: readonly unknown[] } | undefined)?.queryKey;
-    return k?.[0] !== "campaigns";
+    return k?.[0] !== "campaigns" || k?.[1] === "recipients";
   });
 }
 

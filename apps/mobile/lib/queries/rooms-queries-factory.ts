@@ -6,6 +6,7 @@ import {
 import { z } from "zod";
 import { apiFetch, throwIfNotOk } from "@/lib/api";
 import { sharedEnv } from "@/lib/env.shared";
+import { sessionsQueries } from "@/lib/queries/sessions-queries-factory";
 
 const roomSchema = z.object({
   id: z.string(),
@@ -126,6 +127,11 @@ export function createRoomMutationOptions(queryClient: QueryClient) {
 export function updateRoomMutationOptions(queryClient: QueryClient) {
   return {
     ...roomsQueries.update(),
-    onSuccess: (data: RoomMutationResponse) => spliceRoom(queryClient, data.room),
+    onSuccess: async (data: RoomMutationResponse) => {
+      spliceRoom(queryClient, data.room);
+      // Session caches (availability/list/byId) embed a server-joined
+      // roomName — a rename must refetch them or calendars keep the old name.
+      await queryClient.invalidateQueries({ queryKey: sessionsQueries.all });
+    },
   };
 }

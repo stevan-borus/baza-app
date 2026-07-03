@@ -1,11 +1,15 @@
 import {
   infiniteQueryOptions,
   mutationOptions,
+  type QueryClient,
 } from "@tanstack/react-query";
 import { z } from "zod";
 import { bookingMutationResultSchema } from "@baza/types";
 import { ApiError } from "@/lib/api-error";
 import { apiRequest } from "@/lib/api-request";
+import { clientPackagesTimelineQueries } from "@/lib/queries/client-packages-timeline-queries-factory";
+import { packagesQueries } from "@/lib/queries/packages-queries-factory";
+import { sessionsQueries } from "@/lib/queries/sessions-queries-factory";
 
 const clientBookingItemSchema = z.object({
   id: z.string(),
@@ -107,3 +111,22 @@ export const bookingsQueries = {
       staleTime: 30_000,
     }),
 };
+
+// BOOK holds a package session and CANCEL can forfeit one (late-cancel), so
+// beyond availability (["sessions"]) and the admin package caches
+// (["packages"]) this must refetch the client's own surfaces: the Paketi tab
+// timeline (["client-packages"], no pull-to-refresh) and the bookings history
+// (["bookings"]).
+export function mutateBookingMutationOptions(queryClient: QueryClient) {
+  return {
+    ...bookingsQueries.mutateBooking(),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: sessionsQueries.all }),
+        queryClient.invalidateQueries({ queryKey: packagesQueries.all }),
+        queryClient.invalidateQueries({ queryKey: clientPackagesTimelineQueries.all }),
+        queryClient.invalidateQueries({ queryKey: bookingsAll }),
+      ]);
+    },
+  };
+}

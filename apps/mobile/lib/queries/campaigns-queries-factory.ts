@@ -225,6 +225,12 @@ function spliceCampaign(queryClient: QueryClient, campaign: Campaign) {
     return { campaigns };
   });
   queryClient.setQueryData(oneKey(campaign.id), { campaign });
+  // The recipients answer is status/spec-derived (projected audience before
+  // send, frozen NotificationLog rows after; audienceSpec edits change the
+  // projection) — a cached copy must not survive any campaign write.
+  void queryClient.invalidateQueries({
+    queryKey: campaignsQueries.recipients(campaign.id).queryKey,
+  });
 }
 
 export function createCampaignMutationOptions(queryClient: QueryClient) {
