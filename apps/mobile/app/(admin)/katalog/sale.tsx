@@ -7,8 +7,7 @@
  * Each room is rendered as a GlassCard row:
  *   door icon  |  name  |  capacity badge  |  chevron
  */
-import { useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { Icon } from "@/components/ui/icon";
@@ -27,6 +26,7 @@ import {
   createRoomMutationOptions,
   updateRoomMutationOptions,
 } from "@/lib/queries/rooms-queries-factory";
+import { useAdminCrud } from "@/lib/admin/use-admin-crud";
 import { ScreenContainerRaw, useTabBarBottomPadding } from "@/components/ui/screen-container";
 import { HeaderIconButton } from "@/components/ui/app-header";
 
@@ -34,33 +34,25 @@ export default function AdminSettingsRooms() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const bottomPad = useTabBarBottomPadding();
-  const [showCreate, setShowCreate] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [confirmDelete, setConfirmDelete] = useState(false);
-  const [form, setForm] = useState({ name: "", capacity: "" });
-  const [editForm, setEditForm] = useState({ name: "", capacity: "" });
-
   const roomsQuery = useQuery(roomsQueries.list());
 
-  // Cache upkeep (list splice) is baked into the options-builders; the
-  // component-only side-effects (close sheet, reset form) are passed per-call
-  // via mutate(vars, { onSuccess }) so they run in addition to the splice.
-  const createMutation = useMutation(createRoomMutationOptions(queryClient));
-  const updateMutation = useMutation(updateRoomMutationOptions(queryClient));
-
-  const deleteMutation = useMutation({
-    ...roomsQueries.delete(),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: roomsQueries.all });
-      setConfirmDelete(false);
-      setEditingId(null);
+  // Cache upkeep (list splice / invalidation) stays in the factory options;
+  // the sheet choreography (open/close/reset) lives in the CRUD machine.
+  const crud = useAdminCrud({
+    empty: { name: "", capacity: "" },
+    toForm: (room: { id: string; name: string; capacity: number }) => ({
+      name: room.name,
+      capacity: String(room.capacity),
+    }),
+    create: createRoomMutationOptions(queryClient),
+    update: updateRoomMutationOptions(queryClient),
+    remove: {
+      ...roomsQueries.delete(),
+      onSuccess: async () => {
+        await queryClient.invalidateQueries({ queryKey: roomsQueries.all });
+      },
     },
   });
-
-  function openEdit(room: { id: string; name: string; capacity: number }) {
-    setEditForm({ name: room.name, capacity: String(room.capacity) });
-    setEditingId(room.id);
-  }
 
   const rooms = roomsQuery.data?.rooms ?? [];
 
@@ -71,7 +63,7 @@ export default function AdminSettingsRooms() {
       rightSlot={
         <HeaderIconButton
           icon="plus"
-          onPress={() => setShowCreate(true)}
+          onPress={crud.openCreate}
           accessibilityLabel={t("admin.manage.sheetNewRoom")}
           testID="admin-new-room-button"
         />
@@ -117,7 +109,7 @@ export default function AdminSettingsRooms() {
         >
           <Pressable
             testID={`room-row-${room.id}`}
-            onPress={() => openEdit(room)}
+            onPress={() => crud.openEdit(room)}
             android_ripple={null}
             className="active:opacity-70"
           >
@@ -162,7 +154,7 @@ export default function AdminSettingsRooms() {
       )}
 
       {/* Create sheet */}
-      <AppSheet open={showCreate} onOpenChange={setShowCreate}>
+      <AppSheet open={crud.showCreate} onOpenChange={crud.onCreateOpenChange}>
         <View className="flex-col gap-4">
           <Text
             className="text-foreground font-body-bold"
@@ -173,44 +165,36 @@ export default function AdminSettingsRooms() {
           <Input
             testID="room-name-input"
             placeholder={t("admin.manage.placeholderName")}
-            value={form.name}
-            onChangeText={(v) => setForm((s) => ({ ...s, name: v }))}
+            value={crud.form.name}
+            onChangeText={(v) => crud.setForm({ name: v })}
           />
           <Input
             testID="room-capacity-input"
             placeholder={t("admin.manage.placeholderCapacity")}
             keyboardType="numeric"
-            value={form.capacity}
-            onChangeText={(v) => setForm((s) => ({ ...s, capacity: v }))}
+            value={crud.form.capacity}
+            onChangeText={(v) => crud.setForm({ capacity: v })}
           />
           <Button
             testID="room-create-submit"
-            disabled={createMutation.isPending || !form.name}
+            disabled={crud.createMutation.isPending || !crud.form.name}
             onPress={() =>
-              createMutation.mutate(
-                {
-                  name: form.name,
-                  capacity: parseInt(form.capacity, 10) || 10,
-                },
-                {
-                  onSuccess: () => {
-                    setShowCreate(false);
-                    setForm({ name: "", capacity: "" });
-                  },
-                },
-              )
+              crud.submitCreate({
+                name: crud.form.name,
+                capacity: parseInt(crud.form.capacity, 10) || 10,
+              })
             }
           >
             {t("admin.manage.create")}
           </Button>
-          {createMutation.isError ? (
+          {crud.createMutation.isError ? (
             <ErrorState message={t("admin.manage.createError")} />
           ) : null}
         </View>
       </AppSheet>
 
       {/* Edit sheet */}
-      <AppSheet open={!!editingId} onOpenChange={(v) => !v && setEditingId(null)} stackBehavior="push">
+      <AppSheet open={!!crud.editingId} onOpenChange={crud.onEditOpenChange} stackBehavior="push">
         <View className="flex-col gap-4">
           <Text
             className="text-foreground font-body-bold"
@@ -221,29 +205,26 @@ export default function AdminSettingsRooms() {
           <Input
             testID="room-edit-name-input"
             placeholder={t("admin.manage.placeholderName")}
-            value={editForm.name}
-            onChangeText={(v) => setEditForm((s) => ({ ...s, name: v }))}
+            value={crud.editForm.name}
+            onChangeText={(v) => crud.setEditForm({ name: v })}
           />
           <Input
             testID="room-edit-capacity-input"
             placeholder={t("admin.manage.placeholderCapacity")}
             keyboardType="numeric"
-            value={editForm.capacity}
-            onChangeText={(v) => setEditForm((s) => ({ ...s, capacity: v }))}
+            value={crud.editForm.capacity}
+            onChangeText={(v) => crud.setEditForm({ capacity: v })}
           />
           <Button
             testID="room-edit-save-button"
-            disabled={updateMutation.isPending || !editForm.name}
+            disabled={crud.updateMutation.isPending || !crud.editForm.name}
             onPress={() => {
-              if (!editingId) return;
-              updateMutation.mutate(
-                {
-                  id: editingId,
-                  name: editForm.name,
-                  capacity: parseInt(editForm.capacity, 10) || 10,
-                },
-                { onSuccess: () => setEditingId(null) },
-              );
+              if (!crud.editingId) return;
+              crud.submitUpdate({
+                id: crud.editingId,
+                name: crud.editForm.name,
+                capacity: parseInt(crud.editForm.capacity, 10) || 10,
+              });
             }}
           >
             {t("admin.schedule.saveChanges")}
@@ -251,15 +232,15 @@ export default function AdminSettingsRooms() {
           <Button
             testID="room-edit-delete-button"
             variant="danger"
-            disabled={deleteMutation.isPending || !editingId}
-            onPress={() => setConfirmDelete(true)}
+            disabled={crud.removeMutation.isPending || !crud.editingId}
+            onPress={crud.askDelete}
           >
             {t("confirm.deleteRoomConfirm")}
           </Button>
-          {updateMutation.isError ? (
+          {crud.updateMutation.isError ? (
             <ErrorState
               message={
-                (updateMutation.error as Error)?.message ??
+                (crud.updateMutation.error as Error)?.message ??
                 t("admin.manage.createError")
               }
             />
@@ -268,21 +249,21 @@ export default function AdminSettingsRooms() {
       </AppSheet>
       <ConfirmSheet
         stackBehavior="push"
-        open={confirmDelete}
-        onOpenChange={setConfirmDelete}
+        open={crud.confirmDelete}
+        onOpenChange={crud.onDeleteOpenChange}
         title={t("confirm.deleteRoomTitle")}
         message={t("confirm.deleteRoomMessage")}
         confirmLabel={t("confirm.deleteRoomConfirm")}
-        loading={deleteMutation.isPending}
+        loading={crud.removeMutation.isPending}
         testID="room-delete-confirm-button"
         errorMessage={
-          deleteMutation.isError
-            ? (deleteMutation.error as Error)?.message ?? null
+          crud.removeMutation.isError
+            ? (crud.removeMutation.error as Error)?.message ?? null
             : null
         }
         onConfirm={() => {
-          if (!editingId) return;
-          deleteMutation.mutate(editingId);
+          if (!crud.editingId) return;
+          crud.submitDelete(crud.editingId);
         }}
       />
       </ScrollView>
