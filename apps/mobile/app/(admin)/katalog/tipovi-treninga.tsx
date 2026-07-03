@@ -7,8 +7,7 @@
  * Each class type is rendered as a GlassCard row:
  *   colored dot  |  name  |  duration · max  |  chevron / action
  */
-import { useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { Icon } from "@/components/ui/icon";
@@ -26,6 +25,7 @@ import {
   createClassTypeMutationOptions,
   updateClassTypeMutationOptions,
 } from "@/lib/queries/trainings-queries-factory";
+import { useAdminCrud } from "@/lib/admin/use-admin-crud";
 import { ScreenContainerRaw, useTabBarBottomPadding } from "@/components/ui/screen-container";
 import { HeaderIconButton } from "@/components/ui/app-header";
 
@@ -43,45 +43,27 @@ export default function AdminSettingsClassTypes() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const bottomPad = useTabBarBottomPadding();
-  const [showCreate, setShowCreate] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [confirmDelete, setConfirmDelete] = useState(false);
-  const [form, setForm] = useState({
-    name: "",
-    maxClients: "",
-    durationMins: "",
-  });
-  const [editForm, setEditForm] = useState({
-    name: "",
-    maxClients: "",
-    durationMins: "",
-  });
 
   const classTypesQuery = useQuery(trainingsQueries.classTypes());
 
-  // Cache upkeep (list splice) is baked into the options-builders; the
-  // component-only side-effects (close sheet, reset form) are passed per-call
-  // via mutate(vars, { onSuccess }).
-  const createMutation = useMutation(createClassTypeMutationOptions(queryClient));
-  const updateMutation = useMutation(updateClassTypeMutationOptions(queryClient));
-
-  const deleteMutation = useMutation({
-    ...trainingsQueries.deleteClassType(),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: trainingsQueries.all });
-      setConfirmDelete(false);
-      setEditingId(null);
-    },
-  });
-
-  function openEdit(ct: { id: string; name: string; maxClients: number; durationMins: number }) {
-    setEditForm({
+  // Cache upkeep (list splice / invalidation) stays in the factory options;
+  // the sheet choreography (open/close/reset) lives in the CRUD machine.
+  const crud = useAdminCrud({
+    empty: { name: "", maxClients: "", durationMins: "" },
+    toForm: (ct: { id: string; name: string; maxClients: number; durationMins: number }) => ({
       name: ct.name,
       maxClients: String(ct.maxClients),
       durationMins: String(ct.durationMins),
-    });
-    setEditingId(ct.id);
-  }
+    }),
+    create: createClassTypeMutationOptions(queryClient),
+    update: updateClassTypeMutationOptions(queryClient),
+    remove: {
+      ...trainingsQueries.deleteClassType(),
+      onSuccess: async () => {
+        await queryClient.invalidateQueries({ queryKey: trainingsQueries.all });
+      },
+    },
+  });
 
   const classTypes = classTypesQuery.data?.classTypes ?? [];
 
@@ -92,7 +74,7 @@ export default function AdminSettingsClassTypes() {
       rightSlot={
         <HeaderIconButton
           icon="plus"
-          onPress={() => setShowCreate(true)}
+          onPress={crud.openCreate}
           accessibilityLabel={t("admin.manage.sheetNewClassType")}
           testID="admin-new-class-type-button"
         />
@@ -140,7 +122,7 @@ export default function AdminSettingsClassTypes() {
         >
           <Pressable
             testID={`class-type-row-${ct.id}`}
-            onPress={() => openEdit(ct)}
+            onPress={() => crud.openEdit(ct)}
             android_ripple={null}
             className="active:opacity-70"
           >
@@ -192,7 +174,7 @@ export default function AdminSettingsClassTypes() {
       )}
 
       {/* Create sheet */}
-      <AppSheet open={showCreate} onOpenChange={setShowCreate}>
+      <AppSheet open={crud.showCreate} onOpenChange={crud.onCreateOpenChange}>
         <View className="flex-col gap-4">
           <Text
             className="text-foreground font-body-bold"
@@ -203,52 +185,44 @@ export default function AdminSettingsClassTypes() {
           <Input
             testID="class-type-name-input"
             placeholder={t("admin.manage.placeholderName")}
-            value={form.name}
-            onChangeText={(v) => setForm((s) => ({ ...s, name: v }))}
+            value={crud.form.name}
+            onChangeText={(v) => crud.setForm({ name: v })}
           />
           <Input
             testID="class-type-max-clients-input"
             placeholder={t("admin.manage.placeholderMaxClients")}
             keyboardType="numeric"
-            value={form.maxClients}
-            onChangeText={(v) => setForm((s) => ({ ...s, maxClients: v }))}
+            value={crud.form.maxClients}
+            onChangeText={(v) => crud.setForm({ maxClients: v })}
           />
           <Input
             testID="class-type-duration-input"
             placeholder={t("admin.manage.placeholderDurationMins")}
             keyboardType="numeric"
-            value={form.durationMins}
-            onChangeText={(v) => setForm((s) => ({ ...s, durationMins: v }))}
+            value={crud.form.durationMins}
+            onChangeText={(v) => crud.setForm({ durationMins: v })}
           />
           <Button
             testID="class-type-create-submit"
-            disabled={createMutation.isPending || !form.name}
+            disabled={crud.createMutation.isPending || !crud.form.name}
             onPress={() =>
-              createMutation.mutate(
-                {
-                  name: form.name,
-                  maxClients: parseInt(form.maxClients, 10) || 8,
-                  durationMins: parseInt(form.durationMins, 10) || 60,
-                },
-                {
-                  onSuccess: () => {
-                    setShowCreate(false);
-                    setForm({ name: "", maxClients: "", durationMins: "" });
-                  },
-                },
-              )
+              crud.submitCreate({
+                name: crud.form.name,
+                maxClients: parseInt(crud.form.maxClients, 10) || 8,
+                durationMins: parseInt(crud.form.durationMins, 10) || 60,
+              })
             }
           >
             {t("admin.manage.create")}
           </Button>
-          {createMutation.isError ? (
+          {crud.createMutation.isError ? (
             <ErrorState message={t("admin.manage.createError")} />
           ) : null}
         </View>
       </AppSheet>
 
       {/* Edit sheet */}
-      <AppSheet open={!!editingId} onOpenChange={(v) => !v && setEditingId(null)} stackBehavior="push">
+      <AppSheet open={!!crud.editingId} onOpenChange={crud.onEditOpenChange} stackBehavior="push">
         <View className="flex-col gap-4">
           <Text
             className="text-foreground font-body-bold"
@@ -259,37 +233,34 @@ export default function AdminSettingsClassTypes() {
           <Input
             testID="class-type-edit-name-input"
             placeholder={t("admin.manage.placeholderName")}
-            value={editForm.name}
-            onChangeText={(v) => setEditForm((s) => ({ ...s, name: v }))}
+            value={crud.editForm.name}
+            onChangeText={(v) => crud.setEditForm({ name: v })}
           />
           <Input
             testID="class-type-edit-max-clients-input"
             placeholder={t("admin.manage.placeholderMaxClients")}
             keyboardType="numeric"
-            value={editForm.maxClients}
-            onChangeText={(v) => setEditForm((s) => ({ ...s, maxClients: v }))}
+            value={crud.editForm.maxClients}
+            onChangeText={(v) => crud.setEditForm({ maxClients: v })}
           />
           <Input
             testID="class-type-edit-duration-input"
             placeholder={t("admin.manage.placeholderDurationMins")}
             keyboardType="numeric"
-            value={editForm.durationMins}
-            onChangeText={(v) => setEditForm((s) => ({ ...s, durationMins: v }))}
+            value={crud.editForm.durationMins}
+            onChangeText={(v) => crud.setEditForm({ durationMins: v })}
           />
           <Button
             testID="class-type-edit-save-button"
-            disabled={updateMutation.isPending || !editForm.name}
+            disabled={crud.updateMutation.isPending || !crud.editForm.name}
             onPress={() => {
-              if (!editingId) return;
-              updateMutation.mutate(
-                {
-                  id: editingId,
-                  name: editForm.name,
-                  maxClients: parseInt(editForm.maxClients, 10) || 8,
-                  durationMins: parseInt(editForm.durationMins, 10) || 60,
-                },
-                { onSuccess: () => setEditingId(null) },
-              );
+              if (!crud.editingId) return;
+              crud.submitUpdate({
+                id: crud.editingId,
+                name: crud.editForm.name,
+                maxClients: parseInt(crud.editForm.maxClients, 10) || 8,
+                durationMins: parseInt(crud.editForm.durationMins, 10) || 60,
+              });
             }}
           >
             {t("admin.schedule.saveChanges")}
@@ -297,15 +268,15 @@ export default function AdminSettingsClassTypes() {
           <Button
             testID="class-type-edit-delete-button"
             variant="danger"
-            disabled={deleteMutation.isPending || !editingId}
-            onPress={() => setConfirmDelete(true)}
+            disabled={crud.removeMutation.isPending || !crud.editingId}
+            onPress={crud.askDelete}
           >
             {t("confirm.deleteClassTypeConfirm")}
           </Button>
-          {updateMutation.isError ? (
+          {crud.updateMutation.isError ? (
             <ErrorState
               message={
-                (updateMutation.error as Error)?.message ??
+                (crud.updateMutation.error as Error)?.message ??
                 t("admin.manage.createError")
               }
             />
@@ -314,21 +285,21 @@ export default function AdminSettingsClassTypes() {
       </AppSheet>
       <ConfirmSheet
         stackBehavior="push"
-        open={confirmDelete}
-        onOpenChange={setConfirmDelete}
+        open={crud.confirmDelete}
+        onOpenChange={crud.onDeleteOpenChange}
         title={t("confirm.deleteClassTypeTitle")}
         message={t("confirm.deleteClassTypeMessage")}
         confirmLabel={t("confirm.deleteClassTypeConfirm")}
-        loading={deleteMutation.isPending}
+        loading={crud.removeMutation.isPending}
         testID="class-type-delete-confirm-button"
         errorMessage={
-          deleteMutation.isError
-            ? (deleteMutation.error as Error)?.message ?? null
+          crud.removeMutation.isError
+            ? (crud.removeMutation.error as Error)?.message ?? null
             : null
         }
         onConfirm={() => {
-          if (!editingId) return;
-          deleteMutation.mutate(editingId);
+          if (!crud.editingId) return;
+          crud.submitDelete(crud.editingId);
         }}
       />
       </ScrollView>

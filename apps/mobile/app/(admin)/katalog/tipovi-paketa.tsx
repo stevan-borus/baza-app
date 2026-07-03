@@ -4,7 +4,7 @@
 
 import React, { useState } from "react";
 import { Icon } from "@/components/ui/icon";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Pressable, RefreshControl, ScrollView, Switch, Text, View } from "react-native";
 import { MotiView } from "@/components/ui/styled";
@@ -30,6 +30,7 @@ import {
   updatePackageTypeMutationOptions,
 } from "@/lib/queries/packages-queries-factory";
 import { trainingsQueries } from "@/lib/queries/trainings-queries-factory";
+import { useAdminCrud } from "@/lib/admin/use-admin-crud";
 import { fieldErrorsFromApiError } from "@/lib/api-errors";
 
 function FieldError({ message }: { message?: string }) {
@@ -85,27 +86,8 @@ export default function AdminPackages() {
   const queryClient = useQueryClient();
   const tokens = useThemeTokens();
   const bottomPad = useTabBarBottomPadding();
-  const [showCreate, setShowCreate] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [confirmDelete, setConfirmDelete] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [assignmentFilter, setAssignmentFilter] = useState<AssignmentFilter>("all");
-  const [form, setForm] = useState({
-    name: "",
-    sessionCount: "",
-    validityDays: "",
-    lateCancelHours: "8",
-    classTypeId: "",
-    isBirthdayGift: false,
-  });
-  const [editForm, setEditForm] = useState({
-    name: "",
-    sessionCount: "",
-    validityDays: "",
-    lateCancelHours: "8",
-    classTypeId: "",
-    isBirthdayGift: false,
-  });
 
   async function handleRefresh() {
     setRefreshing(true);
@@ -121,43 +103,46 @@ export default function AdminPackages() {
   const typesQuery = useQuery(packagesQueries.types());
   const classTypesQuery = useQuery(trainingsQueries.classTypes());
 
-  // Cache upkeep (types-list splice) is baked into the options-builders; the
-  // component-only side-effects (close sheet, reset form) are passed per-call
-  // via mutate(vars, { onSuccess }).
-  const createMutation = useMutation(createPackageTypeMutationOptions(queryClient));
-  const updateTypeMutation = useMutation(updatePackageTypeMutationOptions(queryClient));
-
-  const deleteTypeMutation = useMutation({
-    ...packagesQueries.deleteType(),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: packagesQueries.types().queryKey });
-      setConfirmDelete(false);
-      setEditingId(null);
+  // Cache upkeep (types-list splice / invalidation) stays in the factory
+  // options; the sheet choreography (open/close/reset) lives in the CRUD
+  // machine.
+  const crud = useAdminCrud({
+    empty: {
+      name: "",
+      sessionCount: "",
+      validityDays: "",
+      lateCancelHours: "8",
+      classTypeId: "",
+      isBirthdayGift: false,
     },
-  });
-
-  const createFieldErrors = fieldErrorsFromApiError(createMutation.error);
-  const editFieldErrors = fieldErrorsFromApiError(updateTypeMutation.error);
-
-  function openEdit(pt: {
-    id: string;
-    name: string;
-    sessionCount: number;
-    validityDays: number;
-    lateCancelHours: number;
-    classTypeId: string;
-    isBirthdayGift?: boolean;
-  }) {
-    setEditForm({
+    toForm: (pt: {
+      id: string;
+      name: string;
+      sessionCount: number;
+      validityDays: number;
+      lateCancelHours: number;
+      classTypeId: string;
+      isBirthdayGift?: boolean;
+    }) => ({
       name: pt.name,
       sessionCount: String(pt.sessionCount),
       validityDays: String(pt.validityDays),
       lateCancelHours: String(pt.lateCancelHours),
       classTypeId: pt.classTypeId,
       isBirthdayGift: pt.isBirthdayGift ?? false,
-    });
-    setEditingId(pt.id);
-  }
+    }),
+    create: createPackageTypeMutationOptions(queryClient),
+    update: updatePackageTypeMutationOptions(queryClient),
+    remove: {
+      ...packagesQueries.deleteType(),
+      onSuccess: async () => {
+        await queryClient.invalidateQueries({ queryKey: packagesQueries.types().queryKey });
+      },
+    },
+  });
+
+  const createFieldErrors = fieldErrorsFromApiError(crud.createMutation.error);
+  const editFieldErrors = fieldErrorsFromApiError(crud.updateMutation.error);
 
   const FILTERS: { key: AssignmentFilter; labelKey: string }[] = [
     { key: "all", labelKey: "admin.manage.filterAll" },
@@ -172,7 +157,7 @@ export default function AdminPackages() {
       rightSlot={
         <HeaderIconButton
           icon="plus"
-          onPress={() => setShowCreate(true)}
+          onPress={crud.openCreate}
           accessibilityLabel={t("admin.manage.sheetNewPackage")}
           testID="admin-new-package-button"
         />
@@ -231,7 +216,7 @@ export default function AdminPackages() {
                   ) : null}
                   <Pressable
                     testID={`package-type-row-${pt.id}`}
-                    onPress={() => openEdit(pt)}
+                    onPress={() => crud.openEdit(pt)}
                     android_ripple={null}
                     className="flex-row items-center gap-3 px-4 py-3 active:opacity-70"
                   >
@@ -324,7 +309,7 @@ export default function AdminPackages() {
         {/* ═══════════════════════════════════════════════════════════════════
             CREATE PACKAGE TYPE SHEET — preserved verbatim
         ═══════════════════════════════════════════════════════════════════ */}
-        <AppSheet open={showCreate} onOpenChange={setShowCreate}>
+        <AppSheet open={crud.showCreate} onOpenChange={crud.onCreateOpenChange}>
           <View className="flex-col gap-4">
             <Text
               className="text-foreground font-body-bold"
@@ -335,16 +320,16 @@ export default function AdminPackages() {
             <Input
               testID="package-name-input"
               placeholder={t("admin.manage.placeholderName")}
-              value={form.name}
-              onChangeText={(v) => setForm((s) => ({ ...s, name: v }))}
+              value={crud.form.name}
+              onChangeText={(v) => crud.setForm({ name: v })}
             />
             <FieldError message={createFieldErrors.name} />
             <Select
               testID="package-class-type-select"
               optionTestIDPrefix="package-class-type-option"
               placeholder={t("admin.packages.classType")}
-              value={form.classTypeId}
-              onChange={(v) => setForm((s) => ({ ...s, classTypeId: v }))}
+              value={crud.form.classTypeId}
+              onChange={(v) => crud.setForm({ classTypeId: v })}
               emptyText={t("admin.schedule.emptyClassTypes")}
               options={(classTypesQuery.data?.classTypes ?? []).map((ct) => ({
                 value: ct.id,
@@ -356,26 +341,24 @@ export default function AdminPackages() {
               testID="package-session-count-input"
               placeholder={t("admin.manage.placeholderSessionCount")}
               keyboardType="numeric"
-              value={form.sessionCount}
-              onChangeText={(v) => setForm((s) => ({ ...s, sessionCount: v }))}
+              value={crud.form.sessionCount}
+              onChangeText={(v) => crud.setForm({ sessionCount: v })}
             />
             <FieldError message={createFieldErrors.sessionCount} />
             <Input
               testID="package-validity-days-input"
               placeholder={t("admin.manage.placeholderValidityDays")}
               keyboardType="numeric"
-              value={form.validityDays}
-              onChangeText={(v) => setForm((s) => ({ ...s, validityDays: v }))}
+              value={crud.form.validityDays}
+              onChangeText={(v) => crud.setForm({ validityDays: v })}
             />
             <FieldError message={createFieldErrors.validityDays} />
             <Input
               testID="package-late-cancel-input"
               placeholder={t("admin.manage.placeholderLateCancel")}
               keyboardType="numeric"
-              value={form.lateCancelHours}
-              onChangeText={(v) =>
-                setForm((s) => ({ ...s, lateCancelHours: v }))
-              }
+              value={crud.form.lateCancelHours}
+              onChangeText={(v) => crud.setForm({ lateCancelHours: v })}
             />
             <FieldError message={createFieldErrors.lateCancelHours} />
             <View className="flex-row items-center justify-between py-2">
@@ -384,13 +367,12 @@ export default function AdminPackages() {
               </Text>
               <Switch
                 testID="package-create-birthday-gift"
-                value={form.isBirthdayGift}
+                value={crud.form.isBirthdayGift}
                 onValueChange={(v) =>
-                  setForm((s) => ({
-                    ...s,
+                  crud.setForm({
                     isBirthdayGift: v,
-                    sessionCount: v ? "1" : s.sessionCount,
-                  }))
+                    ...(v ? { sessionCount: "1" } : null),
+                  })
                 }
                 trackColor={{ false: tokens.glassStrong, true: tokens.accent }}
               />
@@ -398,45 +380,30 @@ export default function AdminPackages() {
             <Button
               testID="package-create-submit"
               disabled={
-                createMutation.isPending ||
-                !form.name ||
-                !form.sessionCount ||
-                !form.validityDays ||
-                !form.classTypeId ||
-                (form.isBirthdayGift && form.sessionCount !== "1")
+                crud.createMutation.isPending ||
+                !crud.form.name ||
+                !crud.form.sessionCount ||
+                !crud.form.validityDays ||
+                !crud.form.classTypeId ||
+                (crud.form.isBirthdayGift && crud.form.sessionCount !== "1")
               }
               onPress={() =>
-                createMutation.mutate(
-                  {
-                    name: form.name,
-                    sessionCount: parseInt(form.sessionCount, 10),
-                    validityDays: parseInt(form.validityDays, 10),
-                    lateCancelHours: parseInt(form.lateCancelHours, 10) || 8,
-                    classTypeId: form.classTypeId,
-                    isBirthdayGift: form.isBirthdayGift,
-                  },
-                  {
-                    onSuccess: () => {
-                      setShowCreate(false);
-                      setForm({
-                        name: "",
-                        sessionCount: "",
-                        validityDays: "",
-                        lateCancelHours: "8",
-                        classTypeId: "",
-                        isBirthdayGift: false,
-                      });
-                    },
-                  },
-                )
+                crud.submitCreate({
+                  name: crud.form.name,
+                  sessionCount: parseInt(crud.form.sessionCount, 10),
+                  validityDays: parseInt(crud.form.validityDays, 10),
+                  lateCancelHours: parseInt(crud.form.lateCancelHours, 10) || 8,
+                  classTypeId: crud.form.classTypeId,
+                  isBirthdayGift: crud.form.isBirthdayGift,
+                })
               }
             >
               {t("admin.manage.create")}
             </Button>
-            {createMutation.isError && Object.keys(createFieldErrors).length === 0 ? (
+            {crud.createMutation.isError && Object.keys(createFieldErrors).length === 0 ? (
               <ErrorState
                 message={
-                  (createMutation.error as Error)?.message ??
+                  (crud.createMutation.error as Error)?.message ??
                   t("admin.manage.createPackageError")
                 }
               />
@@ -447,7 +414,7 @@ export default function AdminPackages() {
         {/* ═══════════════════════════════════════════════════════════════════
             EDIT PACKAGE TYPE SHEET
         ═══════════════════════════════════════════════════════════════════ */}
-        <AppSheet open={!!editingId} onOpenChange={(v) => !v && setEditingId(null)} stackBehavior="push">
+        <AppSheet open={!!crud.editingId} onOpenChange={crud.onEditOpenChange} stackBehavior="push">
           <View className="flex-col gap-4">
             <Text
               className="text-foreground font-body-bold"
@@ -458,18 +425,16 @@ export default function AdminPackages() {
             <Input
               testID="package-edit-name-input"
               placeholder={t("admin.manage.placeholderName")}
-              value={editForm.name}
-              onChangeText={(v) => setEditForm((s) => ({ ...s, name: v }))}
+              value={crud.editForm.name}
+              onChangeText={(v) => crud.setEditForm({ name: v })}
             />
             <FieldError message={editFieldErrors.name} />
             <Select
               testID="package-edit-class-type-select"
               optionTestIDPrefix="package-edit-class-type-option"
               placeholder={t("admin.packages.classType")}
-              value={editForm.classTypeId}
-              onChange={(v) =>
-                setEditForm((s) => ({ ...s, classTypeId: v }))
-              }
+              value={crud.editForm.classTypeId}
+              onChange={(v) => crud.setEditForm({ classTypeId: v })}
               emptyText={t("admin.schedule.emptyClassTypes")}
               options={(classTypesQuery.data?.classTypes ?? []).map((ct) => ({
                 value: ct.id,
@@ -481,30 +446,24 @@ export default function AdminPackages() {
               testID="package-edit-session-count-input"
               placeholder={t("admin.manage.placeholderSessionCount")}
               keyboardType="numeric"
-              value={editForm.sessionCount}
-              onChangeText={(v) =>
-                setEditForm((s) => ({ ...s, sessionCount: v }))
-              }
+              value={crud.editForm.sessionCount}
+              onChangeText={(v) => crud.setEditForm({ sessionCount: v })}
             />
             <FieldError message={editFieldErrors.sessionCount} />
             <Input
               testID="package-edit-validity-days-input"
               placeholder={t("admin.manage.placeholderValidityDays")}
               keyboardType="numeric"
-              value={editForm.validityDays}
-              onChangeText={(v) =>
-                setEditForm((s) => ({ ...s, validityDays: v }))
-              }
+              value={crud.editForm.validityDays}
+              onChangeText={(v) => crud.setEditForm({ validityDays: v })}
             />
             <FieldError message={editFieldErrors.validityDays} />
             <Input
               testID="package-edit-late-cancel-input"
               placeholder={t("admin.manage.placeholderLateCancel")}
               keyboardType="numeric"
-              value={editForm.lateCancelHours}
-              onChangeText={(v) =>
-                setEditForm((s) => ({ ...s, lateCancelHours: v }))
-              }
+              value={crud.editForm.lateCancelHours}
+              onChangeText={(v) => crud.setEditForm({ lateCancelHours: v })}
             />
             <FieldError message={editFieldErrors.lateCancelHours} />
             <View className="flex-row items-center justify-between py-2">
@@ -513,13 +472,12 @@ export default function AdminPackages() {
               </Text>
               <Switch
                 testID="package-edit-birthday-gift"
-                value={editForm.isBirthdayGift}
+                value={crud.editForm.isBirthdayGift}
                 onValueChange={(v) =>
-                  setEditForm((s) => ({
-                    ...s,
+                  crud.setEditForm({
                     isBirthdayGift: v,
-                    sessionCount: v ? "1" : s.sessionCount,
-                  }))
+                    ...(v ? { sessionCount: "1" } : null),
+                  })
                 }
                 trackColor={{ false: tokens.glassStrong, true: tokens.accent }}
               />
@@ -527,27 +485,24 @@ export default function AdminPackages() {
             <Button
               testID="package-edit-save-button"
               disabled={
-                updateTypeMutation.isPending ||
-                !editForm.name ||
-                !editForm.sessionCount ||
-                !editForm.validityDays ||
-                !editForm.classTypeId ||
-                (editForm.isBirthdayGift && editForm.sessionCount !== "1")
+                crud.updateMutation.isPending ||
+                !crud.editForm.name ||
+                !crud.editForm.sessionCount ||
+                !crud.editForm.validityDays ||
+                !crud.editForm.classTypeId ||
+                (crud.editForm.isBirthdayGift && crud.editForm.sessionCount !== "1")
               }
               onPress={() => {
-                if (!editingId) return;
-                updateTypeMutation.mutate(
-                  {
-                    id: editingId,
-                    name: editForm.name,
-                    sessionCount: parseInt(editForm.sessionCount, 10),
-                    validityDays: parseInt(editForm.validityDays, 10),
-                    lateCancelHours: parseInt(editForm.lateCancelHours, 10) || 8,
-                    classTypeId: editForm.classTypeId,
-                    isBirthdayGift: editForm.isBirthdayGift,
-                  },
-                  { onSuccess: () => setEditingId(null) },
-                );
+                if (!crud.editingId) return;
+                crud.submitUpdate({
+                  id: crud.editingId,
+                  name: crud.editForm.name,
+                  sessionCount: parseInt(crud.editForm.sessionCount, 10),
+                  validityDays: parseInt(crud.editForm.validityDays, 10),
+                  lateCancelHours: parseInt(crud.editForm.lateCancelHours, 10) || 8,
+                  classTypeId: crud.editForm.classTypeId,
+                  isBirthdayGift: crud.editForm.isBirthdayGift,
+                });
               }}
             >
               {t("admin.schedule.saveChanges")}
@@ -555,15 +510,15 @@ export default function AdminPackages() {
             <Button
               testID="package-edit-delete-button"
               variant="danger"
-              disabled={deleteTypeMutation.isPending || !editingId}
-              onPress={() => setConfirmDelete(true)}
+              disabled={crud.removeMutation.isPending || !crud.editingId}
+              onPress={crud.askDelete}
             >
               {t("admin.manage.deletePackage")}
             </Button>
-            {updateTypeMutation.isError && Object.keys(editFieldErrors).length === 0 ? (
+            {crud.updateMutation.isError && Object.keys(editFieldErrors).length === 0 ? (
               <ErrorState
                 message={
-                  (updateTypeMutation.error as Error)?.message ??
+                  (crud.updateMutation.error as Error)?.message ??
                   t("admin.manage.createPackageError")
                 }
               />
@@ -573,20 +528,20 @@ export default function AdminPackages() {
         <ConfirmSheet
           stackBehavior="push"
           testID="package-delete-confirm-button"
-          open={confirmDelete}
-          onOpenChange={setConfirmDelete}
+          open={crud.confirmDelete}
+          onOpenChange={crud.onDeleteOpenChange}
           title={t("confirm.deletePackageTitle")}
           message={t("confirm.deletePackageMessage")}
           confirmLabel={t("confirm.deletePackageConfirm")}
-          loading={deleteTypeMutation.isPending}
+          loading={crud.removeMutation.isPending}
           errorMessage={
-            deleteTypeMutation.isError
-              ? (deleteTypeMutation.error as Error)?.message ?? null
+            crud.removeMutation.isError
+              ? (crud.removeMutation.error as Error)?.message ?? null
               : null
           }
           onConfirm={() => {
-            if (!editingId) return;
-            deleteTypeMutation.mutate(editingId);
+            if (!crud.editingId) return;
+            crud.submitDelete(crud.editingId);
           }}
         />
       </View>
