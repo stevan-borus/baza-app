@@ -1,4 +1,7 @@
-import { cancelReservationsBulkResponseSchema } from "@baza/types/bookings";
+import {
+  cancelReservationsBulkInputSchema,
+  cancelReservationsBulkResponseSchema,
+} from "@baza/types/bookings";
 import { formatFullName } from "@baza/types/common";
 import { UserRole } from "@/generated/prisma";
 import { requireRole } from "@/lib/server/auth-guards";
@@ -15,19 +18,14 @@ import {
 import { now } from "@/lib/now";
 import { prisma } from "@/lib/server/prisma";
 
-type CancelBulkBody = { bookingIds?: unknown; waiveCharge?: unknown };
-
 export async function POST(request: Request) {
   const guard = await requireRole(request, [UserRole.ADMIN]);
   if (!guard.ok) return guard.response;
 
-  const raw = (await request.json().catch(() => null)) as CancelBulkBody | null;
-  if (!raw) return fail("Invalid JSON body", 400);
-  const bookingIds = Array.isArray(raw.bookingIds)
-    ? raw.bookingIds.filter((id): id is string => typeof id === "string")
-    : [];
-  if (bookingIds.length === 0) return fail("Missing bookingIds", 400);
-  const waiveCharge = raw.waiveCharge === true;
+  const raw: unknown = await request.json().catch(() => null);
+  const parsed = cancelReservationsBulkInputSchema.safeParse(raw);
+  if (!parsed.success) return fail("Invalid payload", 400, parsed.error);
+  const { bookingIds, waiveCharge } = parsed.data;
 
   const cancellationTime = now();
 

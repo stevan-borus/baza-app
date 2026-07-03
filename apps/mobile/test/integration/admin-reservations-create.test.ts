@@ -226,4 +226,19 @@ describe("POST /api/admin/reservations", () => {
     );
     expect(res.status).toBe(400);
   });
+
+  it("rejects a non-string clientProfileId with 400 and Zod details", async () => {
+    const { admin } = await seedBasics();
+    asAdmin(admin);
+
+    const res = await POST(
+      buildRequest({
+        clientProfileId: 123,
+        sessionIds: ["some-session-id"],
+      }),
+    );
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as { error: string; details?: unknown };
+    expect(body.details).toBeDefined();
+  });
 });
