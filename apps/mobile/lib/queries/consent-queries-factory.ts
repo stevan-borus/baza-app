@@ -1,11 +1,8 @@
 import { queryOptions, useMutation, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { consentStatusResponseSchema, consentAcceptInputSchema, socialMediaConsentInputSchema, type ConsentStatusResponse, type ConsentAcceptInput, type SocialMediaConsentInput } from "@baza/types/consent";
-import { apiFetch } from "@/lib/api";
-import { sharedEnv } from "@/lib/env.shared";
+import { apiRequest } from "@/lib/api-request";
 import { authQueries } from "@/lib/queries/auth-queries-factory";
 import { clientsQueries } from "@/lib/queries/clients-queries-factory";
-
-const BASE = `${sharedEnv.EXPO_PUBLIC_API_URL}/api/consent`;
 
 const consentAll = ["consent"] as const;
 
@@ -14,11 +11,11 @@ export const consentQueries = {
   status: () =>
     queryOptions({
       queryKey: [...consentAll, "status"] as const,
-      queryFn: async (): Promise<ConsentStatusResponse> => {
-        const res = await apiFetch(`${BASE}/status`, { credentials: "include" });
-        if (!res.ok) throw new Error(`Unable to load consent status (${res.status})`);
-        return consentStatusResponseSchema.parse(await res.json());
-      },
+      queryFn: () =>
+        apiRequest("/api/consent/status", {
+          schema: consentStatusResponseSchema,
+          errorMessage: "Unable to load consent status",
+        }),
       staleTime: 0, // always refetch on mount — gate state changes mid-session
     }),
 };
@@ -27,17 +24,12 @@ export function useAcceptConsentMutation() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationKey: [...consentAll, "accept"] as const,
-    mutationFn: async (input: ConsentAcceptInput) => {
-      const parsed = consentAcceptInputSchema.parse(input);
-      const res = await apiFetch(`${BASE}/accept`, {
+    mutationFn: (input: ConsentAcceptInput) =>
+      apiRequest("/api/consent/accept", {
         method: "POST",
-        credentials: "include",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify(parsed),
-      });
-      if (!res.ok) throw new Error(`Accept failed (${res.status})`);
-      return res.json();
-    },
+        body: consentAcceptInputSchema.parse(input),
+        errorMessage: "Accept failed",
+      }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: consentQueries.all });
       queryClient.invalidateQueries({ queryKey: authQueries.me().queryKey });
@@ -48,14 +40,11 @@ export function useAcceptConsentMutation() {
 export function useRefuseConsentMutation() {
   return useMutation({
     mutationKey: [...consentAll, "refuse"] as const,
-    mutationFn: async () => {
-      const res = await apiFetch(`${BASE}/refuse`, {
+    mutationFn: () =>
+      apiRequest("/api/consent/refuse", {
         method: "POST",
-        credentials: "include",
-      });
-      if (!res.ok) throw new Error(`Refuse failed (${res.status})`);
-      return res.json();
-    },
+        errorMessage: "Refuse failed",
+      }),
   });
 }
 
@@ -63,14 +52,11 @@ export function useMarkGuardianVerifiedMutation() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationKey: [...consentAll, "guardian-verified"] as const,
-    mutationFn: async (clientUserId: string) => {
-      const res = await apiFetch(
-        `${sharedEnv.EXPO_PUBLIC_API_URL}/api/admin/clients/${clientUserId}/guardian-verified`,
-        { method: "POST", credentials: "include" },
-      );
-      if (!res.ok) throw new Error(`Guardian-verify failed (${res.status})`);
-      return res.json();
-    },
+    mutationFn: (clientUserId: string) =>
+      apiRequest(`/api/admin/clients/${clientUserId}/guardian-verified`, {
+        method: "POST",
+        errorMessage: "Guardian-verify failed",
+      }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: consentQueries.all });
       queryClient.invalidateQueries({ queryKey: clientsQueries.all });
@@ -90,17 +76,12 @@ export function recordSocialMediaMutationOptions(queryClient: QueryClient) {
   const statusKey = consentQueries.status().queryKey;
   return {
     mutationKey: [...consentAll, "social-media"] as const,
-    mutationFn: async (input: SocialMediaConsentInput) => {
-      const parsed = socialMediaConsentInputSchema.parse(input);
-      const res = await apiFetch(`${BASE}/social-media`, {
+    mutationFn: (input: SocialMediaConsentInput) =>
+      apiRequest("/api/consent/social-media", {
         method: "POST",
-        credentials: "include",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify(parsed),
-      });
-      if (!res.ok) throw new Error(`Record failed (${res.status})`);
-      return res.json();
-    },
+        body: socialMediaConsentInputSchema.parse(input),
+        errorMessage: "Record failed",
+      }),
     onMutate: async (input: SocialMediaConsentInput) => {
       await queryClient.cancelQueries({ queryKey: statusKey });
       const previous = queryClient.getQueryData<ConsentStatusResponse>(statusKey);

@@ -10,8 +10,7 @@ import {
   type RoomMutationResponse,
   type RoomsResponse,
 } from "@baza/types/catalog";
-import { apiFetch, throwIfNotOk } from "@/lib/api";
-import { sharedEnv } from "@/lib/env.shared";
+import { apiRequest } from "@/lib/api-request";
 import { sessionsQueries } from "@/lib/queries/sessions-queries-factory";
 
 export type { Room } from "@baza/types/catalog";
@@ -23,67 +22,53 @@ export const roomsQueries = {
   list: () =>
     queryOptions({
       queryKey: [...roomsAll, "list"] as const,
-      queryFn: async () => {
-        const response = await apiFetch(`${sharedEnv.EXPO_PUBLIC_API_URL}/api/rooms`, {
-          credentials: "include",
-        });
-        if (!response.ok) throw new Error(`Unable to load rooms (${response.status})`);
-        return roomsResponseSchema.parse(await response.json());
-      },
+      queryFn: () =>
+        apiRequest("/api/rooms", {
+          schema: roomsResponseSchema,
+          errorMessage: "Unable to load rooms",
+        }),
       staleTime: 60_000,
     }),
 
   create: () =>
     mutationOptions({
       mutationKey: [...roomsAll, "create"] as const,
-      mutationFn: async (payload: { name: string; capacity: number }) => {
-        const response = await apiFetch(`${sharedEnv.EXPO_PUBLIC_API_URL}/api/rooms`, {
+      mutationFn: (payload: { name: string; capacity: number }) =>
+        apiRequest("/api/rooms", {
           method: "POST",
-          credentials: "include",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify(payload),
-        });
-        if (!response.ok) throw new Error(`Unable to create room (${response.status})`);
-        return roomMutationResponseSchema.parse(await response.json());
-      },
+          body: payload,
+          schema: roomMutationResponseSchema,
+          errorMessage: "Unable to create room",
+        }),
     }),
 
   update: () =>
     mutationOptions({
       mutationKey: [...roomsAll, "update"] as const,
-      mutationFn: async ({
+      mutationFn: ({
         id,
         ...payload
       }: {
         id: string;
         name?: string;
         capacity?: number;
-      }) => {
-        const response = await apiFetch(
-          `${sharedEnv.EXPO_PUBLIC_API_URL}/api/rooms/${id}`,
-          {
-            method: "PATCH",
-            credentials: "include",
-            headers: { "content-type": "application/json" },
-            body: JSON.stringify(payload),
-          },
-        );
-        await throwIfNotOk(response, "Unable to update room");
-        return roomMutationResponseSchema.parse(await response.json());
-      },
+      }) =>
+        apiRequest(`/api/rooms/${id}`, {
+          method: "PATCH",
+          body: payload,
+          schema: roomMutationResponseSchema,
+          errorMessage: "Unable to update room",
+        }),
     }),
 
   delete: () =>
     mutationOptions({
       mutationKey: [...roomsAll, "delete"] as const,
-      mutationFn: async (id: string) => {
-        const response = await apiFetch(
-          `${sharedEnv.EXPO_PUBLIC_API_URL}/api/rooms/${id}`,
-          { method: "DELETE", credentials: "include" },
-        );
-        await throwIfNotOk(response, "Unable to delete room");
-        return response.json();
-      },
+      mutationFn: (id: string) =>
+        apiRequest(`/api/rooms/${id}`, {
+          method: "DELETE",
+          errorMessage: "Unable to delete room",
+        }),
     }),
 };
 

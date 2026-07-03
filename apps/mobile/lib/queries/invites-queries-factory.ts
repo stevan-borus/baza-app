@@ -10,8 +10,7 @@ import {
   type InvitesResponse,
   type InviteMutationResponse,
 } from "@baza/types/clients";
-import { apiFetch } from "@/lib/api";
-import { sharedEnv } from "@/lib/env.shared";
+import { apiRequest } from "@/lib/api-request";
 
 export type { Invite };
 
@@ -23,55 +22,46 @@ export const invitesQueries = {
   list: () =>
     queryOptions({
       queryKey: [...invitesAll, "list"] as const,
-      queryFn: async () => {
-        const response = await apiFetch(`${sharedEnv.EXPO_PUBLIC_API_URL}/api/invites`, {
-          credentials: "include",
-        });
-        if (!response.ok) throw new Error(`Unable to load invites (${response.status})`);
-        return invitesResponseSchema.parse(await response.json());
-      },
+      queryFn: () =>
+        apiRequest("/api/invites", {
+          schema: invitesResponseSchema,
+          errorMessage: "Unable to load invites",
+        }),
       staleTime: 30_000,
     }),
 
   create: () =>
     mutationOptions({
       mutationKey: [...invitesAll, "create"] as const,
-      mutationFn: async (payload: { email: string; firstName: string; lastName: string; phone?: string; dateOfBirth?: string }) => {
-        const response = await apiFetch(`${sharedEnv.EXPO_PUBLIC_API_URL}/api/invites`, {
+      mutationFn: (payload: { email: string; firstName: string; lastName: string; phone?: string; dateOfBirth?: string }) =>
+        apiRequest("/api/invites", {
           method: "POST",
-          credentials: "include",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify(payload),
-        });
-        if (!response.ok) throw new Error(`Unable to create invite (${response.status})`);
-        return inviteMutationResponseSchema.parse(await response.json());
-      },
+          body: payload,
+          schema: inviteMutationResponseSchema,
+          errorMessage: "Unable to create invite",
+        }),
     }),
 
   revoke: () =>
     mutationOptions({
       mutationKey: [...invitesAll, "revoke"] as const,
-      mutationFn: async (id: string) => {
-        const response = await apiFetch(
-          `${sharedEnv.EXPO_PUBLIC_API_URL}/api/invites/${id}/revoke`,
-          { method: "POST", credentials: "include" },
-        );
-        if (!response.ok) throw new Error(`Unable to revoke invite (${response.status})`);
-        return inviteMutationResponseSchema.parse(await response.json());
-      },
+      mutationFn: (id: string) =>
+        apiRequest(`/api/invites/${id}/revoke`, {
+          method: "POST",
+          schema: inviteMutationResponseSchema,
+          errorMessage: "Unable to revoke invite",
+        }),
     }),
 
   resend: () =>
     mutationOptions({
       mutationKey: [...invitesAll, "resend"] as const,
-      mutationFn: async (id: string) => {
-        const response = await apiFetch(
-          `${sharedEnv.EXPO_PUBLIC_API_URL}/api/invites/${id}/resend`,
-          { method: "POST", credentials: "include" },
-        );
-        if (!response.ok) throw new Error(`Unable to resend invite (${response.status})`);
-        return inviteMutationResponseSchema.parse(await response.json());
-      },
+      mutationFn: (id: string) =>
+        apiRequest(`/api/invites/${id}/resend`, {
+          method: "POST",
+          schema: inviteMutationResponseSchema,
+          errorMessage: "Unable to resend invite",
+        }),
     }),
 };
 
