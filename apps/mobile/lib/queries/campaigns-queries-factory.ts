@@ -227,8 +227,10 @@ function spliceCampaign(queryClient: QueryClient, campaign: Campaign) {
   queryClient.setQueryData(oneKey(campaign.id), { campaign });
   // The recipients answer is status/spec-derived (projected audience before
   // send, frozen NotificationLog rows after; audienceSpec edits change the
-  // projection) — a cached copy must not survive any campaign write.
-  void queryClient.invalidateQueries({
+  // projection) — a cached copy must not survive any campaign write. Returned
+  // so onSuccess awaits the refetch: the mutation must not report success
+  // over a still-projected list.
+  return queryClient.invalidateQueries({
     queryKey: campaignsQueries.recipients(campaign.id).queryKey,
   });
 }
@@ -269,6 +271,11 @@ export function removeCampaignMutationOptions(queryClient: QueryClient) {
         prev ? { campaigns: prev.campaigns.filter((c) => c.id !== id) } : prev,
       );
       queryClient.removeQueries({ queryKey: oneKey(id) });
+      // The recipients cache is keyed per campaign — drop it with the
+      // campaign, or a recreate/lingering observer renders the stale list.
+      queryClient.removeQueries({
+        queryKey: campaignsQueries.recipients(id).queryKey,
+      });
     },
   };
 }

@@ -10,10 +10,9 @@
  * user dismisses it.
  */
 import React, { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import * as Haptics from "expo-haptics";
 import { BookingSheet } from "@/components/client/booking-sheet";
-import { mutateBookingMutationOptions } from "@/lib/queries/bookings-queries-factory";
+import { useMutateBookingMutation } from "@/lib/queries/bookings-queries-factory";
 import type { AvailabilitySession } from "@baza/types";
 
 /** Which step the sheet opens on. "cancel" jumps a booked session straight to
@@ -24,30 +23,25 @@ export type BookingSheetController = {
   open: (session: AvailabilitySession, intent?: BookingIntent) => void;
   selectedSession: AvailabilitySession | null;
   intent: BookingIntent;
-  mutation: ReturnType<typeof useBookingMutation>;
+  mutation: ReturnType<typeof useMutateBookingMutation>;
   close: () => void;
 };
 
-function useBookingMutation() {
-  const queryClient = useQueryClient();
-  // Cache upkeep (sessions availability + packages + the client's own
-  // package-timeline and bookings history) is baked into the options-builder;
-  // the haptic is the only component-level side-effect composed on top.
-  const options = mutateBookingMutationOptions(queryClient);
-  return useMutation({
-    ...options,
-    onSuccess: async () => {
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      await options.onSuccess();
-    },
-  });
+// Cache upkeep (sessions availability + packages + the client's own
+// package-timeline and bookings history) is baked into the factory hook; the
+// success haptic is the only component-level side-effect, passed per-call via
+// mutate(vars, { onSuccess }) so it can't clobber the baked-in invalidations.
+// It fires after they settle — i.e. together with the sheet's visible
+// confirmation, which flips on the same boundary.
+function hapticSuccess() {
+  return Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 }
 
 export function useBookingSheet(): BookingSheetController {
   const [selectedSession, setSelectedSession] =
     useState<AvailabilitySession | null>(null);
   const [intent, setIntent] = useState<BookingIntent>("view");
-  const mutation = useBookingMutation();
+  const mutation = useMutateBookingMutation();
 
   return {
     open: (session, nextIntent = "view") => {
@@ -96,8 +90,12 @@ export function ClientBookingSheet({
           : "idle"
       }
       onClose={close}
-      onBook={(id) => mutation.mutate({ sessionId: id, action: "BOOK" })}
-      onCancel={(id) => mutation.mutate({ sessionId: id, action: "CANCEL" })}
+      onBook={(id) =>
+        mutation.mutate({ sessionId: id, action: "BOOK" }, { onSuccess: hapticSuccess })
+      }
+      onCancel={(id) =>
+        mutation.mutate({ sessionId: id, action: "CANCEL" }, { onSuccess: hapticSuccess })
+      }
       pending={mutation.isPending}
       successState={
         mutation.isSuccess

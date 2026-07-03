@@ -2,6 +2,8 @@ import {
   queryOptions,
   mutationOptions,
   infiniteQueryOptions,
+  useMutation,
+  useQueryClient,
   type QueryClient,
 } from "@tanstack/react-query";
 import { z } from "zod";
@@ -292,4 +294,12 @@ export function pausePackageMutationOptions(queryClient: QueryClient) {
       ]);
     },
   };
+}
+
+export function useAssignClientPackageMutation() {
+  return useMutation(assignClientPackageMutationOptions(useQueryClient()));
+}
+
+export function usePausePackageMutation() {
+  return useMutation(pausePackageMutationOptions(useQueryClient()));
 }

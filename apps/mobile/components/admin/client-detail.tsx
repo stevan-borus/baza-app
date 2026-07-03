@@ -36,11 +36,11 @@ import { HeaderIconButton } from "@/components/ui/app-header";
 import { PaginatedList } from "@/components/ui/paginated-list";
 import {
   clientsQueries,
-  updateClientMutationOptions,
+  useUpdateClientMutation,
 } from "@/lib/queries/clients-queries-factory";
 import {
   packagesQueries,
-  pausePackageMutationOptions,
+  usePausePackageMutation,
   type ClientPackage,
 } from "@/lib/queries/packages-queries-factory";
 import { bookingsQueries, type ClientBooking } from "@/lib/queries/bookings-queries-factory";
@@ -95,7 +95,6 @@ function pickActivePackage(packages: ClientPackage[]): ClientPackage | null {
 }
 
 export function ClientDetail({ id }: { id: string }) {
-  const queryClient = useQueryClient();
   const tokens = useThemeTokens();
   const router = useRouter();
   const { t, i18n } = useTranslation();
@@ -152,27 +151,12 @@ export function ClientDetail({ id }: { id: string }) {
     return pages.flatMap((p) => p.bookings);
   }, [upcomingQuery.data?.pages]);
 
-  // Cache upkeep (clients + reports counts — isActive moves activeClients) is
-  // baked into the options-builder; we compose the sheet-close on top.
-  const updateClientOptions = updateClientMutationOptions(queryClient);
-  const updateClientMutation = useMutation({
-    ...updateClientOptions,
-    onSuccess: async () => {
-      await updateClientOptions.onSuccess();
-      setShowEdit(false);
-    },
-  });
-  // Cache upkeep (packages + clients packageStatus) is baked into the
-  // options-builder; we compose the sheet-close side-effects on top.
-  const pauseOptions = pausePackageMutationOptions(queryClient);
-  const pauseMutation = useMutation({
-    ...pauseOptions,
-    onSuccess: async () => {
-      await pauseOptions.onSuccess();
-      setShowPause(false);
-      setPauseForm({ startsAt: "", endsAt: "", reason: "" });
-    },
-  });
+  // Cache upkeep (clients + reports counts — isActive moves activeClients —
+  // and packages + clients packageStatus) is baked into the factory hooks;
+  // the sheet-close side-effects are passed per-call via
+  // mutate(vars, { onSuccess }) so they can't clobber it.
+  const updateClientMutation = useUpdateClientMutation();
+  const pauseMutation = usePausePackageMutation();
 
   const headerTitle = client?.user.fullName ?? t("admin.clientDetail.title");
 
@@ -505,17 +489,20 @@ export function ClientDetail({ id }: { id: string }) {
             disabled={updateClientMutation.isPending || !client}
             onPress={() => {
               if (!client) return;
-              updateClientMutation.mutate({
-                id: client.user.id,
-                firstName: editForm.firstName,
-                lastName: editForm.lastName,
-                phone: editForm.phone || undefined,
-                notes: editForm.notes || undefined,
-                isActive: editForm.isActive,
-                dateOfBirth: editForm.dateOfBirth
-                  ? toIsoDate(editForm.dateOfBirth)
-                  : null,
-              });
+              updateClientMutation.mutate(
+                {
+                  id: client.user.id,
+                  firstName: editForm.firstName,
+                  lastName: editForm.lastName,
+                  phone: editForm.phone || undefined,
+                  notes: editForm.notes || undefined,
+                  isActive: editForm.isActive,
+                  dateOfBirth: editForm.dateOfBirth
+                    ? toIsoDate(editForm.dateOfBirth)
+                    : null,
+                },
+                { onSuccess: () => setShowEdit(false) },
+              );
             }}
           >
             {t("admin.clients.save")}
@@ -584,12 +571,20 @@ export function ClientDetail({ id }: { id: string }) {
             }
             onPress={() => {
               if (!client) return;
-              pauseMutation.mutate({
-                clientProfileId: client.id,
-                startsAt: pauseForm.startsAt,
-                endsAt: pauseForm.endsAt,
-                reason: pauseForm.reason || undefined,
-              });
+              pauseMutation.mutate(
+                {
+                  clientProfileId: client.id,
+                  startsAt: pauseForm.startsAt,
+                  endsAt: pauseForm.endsAt,
+                  reason: pauseForm.reason || undefined,
+                },
+                {
+                  onSuccess: () => {
+                    setShowPause(false);
+                    setPauseForm({ startsAt: "", endsAt: "", reason: "" });
+                  },
+                },
+              );
             }}
           >
             {t("admin.clients.pauseSubmit")}

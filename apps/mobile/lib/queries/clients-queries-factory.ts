@@ -2,6 +2,8 @@ import {
   queryOptions,
   mutationOptions,
   infiniteQueryOptions,
+  useMutation,
+  useQueryClient,
   type QueryClient,
 } from "@tanstack/react-query";
 import {
@@ -169,4 +171,12 @@ export function updateClientMutationOptions(queryClient: QueryClient) {
       ]);
     },
   };
+}
+
+export function useCreateClientMutation() {
+  return useMutation(createClientMutationOptions(useQueryClient()));
+}
+
+export function useUpdateClientMutation() {
+  return useMutation(updateClientMutationOptions(useQueryClient()));
 }

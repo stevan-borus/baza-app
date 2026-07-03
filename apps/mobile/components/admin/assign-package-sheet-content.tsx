@@ -14,7 +14,7 @@
 
 import React, { useState } from "react";
 import { Text, View } from "react-native";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,12 +24,9 @@ import { SectionLabel } from "@/components/ui/typography";
 import { DateTimePicker } from "@/components/ui/date-time-picker";
 import {
   packagesQueries,
-  assignClientPackageMutationOptions,
+  useAssignClientPackageMutation,
 } from "@/lib/queries/packages-queries-factory";
-import {
-  billingQueries,
-  createBillingMutationOptions,
-} from "@/lib/queries/billing-queries-factory";
+import { useCreateBillingMutation } from "@/lib/queries/billing-queries-factory";
 import { RAW_METHOD_LABEL_KEYS } from "@/lib/payment-method-labels";
 
 export type AssignPackageMode = "comp" | "paid";
@@ -69,7 +66,6 @@ export function AssignPackageSheetContent({
   initialPackageTypeId,
 }: AssignPackageSheetContentProps) {
   const { t } = useTranslation();
-  const queryClient = useQueryClient();
 
   // Shared fields.
   const [packageTypeId, setPackageTypeId] = useState(initialPackageTypeId ?? "");
@@ -89,11 +85,11 @@ export function AssignPackageSheetContent({
       : allPackageTypes;
 
   // Cache upkeep (packages + clients packageStatus + reports) is baked into
-  // the options-builder; the component-only side-effect (close sheet) is
+  // the factory hooks; the component-only side-effect (close sheet) is
   // passed per-call via mutate(vars, { onSuccess }).
-  const compMutation = useMutation(assignClientPackageMutationOptions(queryClient));
+  const compMutation = useAssignClientPackageMutation();
 
-  const paidMutation = useMutation(createBillingMutationOptions(queryClient));
+  const paidMutation = useCreateBillingMutation();
 
   // Paid-mode validation: amount required + positive integer (RSD has no
   // sub-unit and the API schema requires `z.number().int().positive()`).

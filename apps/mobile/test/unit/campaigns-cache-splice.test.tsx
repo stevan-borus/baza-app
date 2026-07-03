@@ -43,23 +43,19 @@ function campaign(id: string, over: Partial<Campaign> = {}): Campaign {
 }
 
 let client: QueryClient;
-let invalidateSpy: ReturnType<typeof vi.spyOn>;
 
 beforeEach(() => {
   client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
-  invalidateSpy = vi.spyOn(client, "invalidateQueries");
 });
 
 // The splice contract: list + detail are written via setQueryData, never
-// refetched. The per-campaign recipients cache is the exception — it's
-// status/spec-derived on the server, so every campaign write invalidates it.
-function noCampaignInvalidation() {
-  return invalidateSpy.mock.calls.every((args: unknown[]) => {
-    const k = (args[0] as { queryKey?: readonly unknown[] } | undefined)?.queryKey;
-    return k?.[0] !== "campaigns" || k?.[1] === "recipients";
-  });
+// refetched — so after a mutation neither cache entry may be stale
+// (`isInvalidated`). The per-campaign recipients cache is the exception
+// (status/spec-derived on the server; covered in mutation-invalidations).
+function isStale(key: readonly unknown[]) {
+  return client.getQueryState(key)?.isInvalidated === true;
 }
 
 describe("campaigns cache splice — create", () => {
@@ -76,7 +72,8 @@ describe("campaigns cache splice — create", () => {
     const list = client.getQueryData<{ campaigns: any[] }>(listKey);
     expect(list?.campaigns.map((c) => c.id)).toEqual(["2", "1"]);
     expect(client.getQueryData(oneKey("2"))).toEqual({ campaign: created });
-    expect(noCampaignInvalidation()).toBe(true);
+    expect(isStale(listKey)).toBe(false);
+    expect(isStale(oneKey("2"))).toBe(false);
   });
 });
 
@@ -94,7 +91,8 @@ describe("campaigns cache splice — update/cancel/send", () => {
     const list = client.getQueryData<{ campaigns: any[] }>(listKey);
     expect(list?.campaigns.find((c) => c.id === "1")?.title).toBe("Edited");
     expect(client.getQueryData(oneKey("1"))).toEqual({ campaign: updated });
-    expect(noCampaignInvalidation()).toBe(true);
+    expect(isStale(listKey)).toBe(false);
+    expect(isStale(oneKey("1"))).toBe(false);
   });
 
   it("send replaces status via the returned campaign", async () => {
@@ -109,7 +107,7 @@ describe("campaigns cache splice — update/cancel/send", () => {
 
     const list = client.getQueryData<{ campaigns: any[] }>(listKey);
     expect(list?.campaigns[0].status).toBe("SENT");
-    expect(noCampaignInvalidation()).toBe(true);
+    expect(isStale(listKey)).toBe(false);
   });
 
   it("cancel reverts status to DRAFT via the returned campaign", async () => {
@@ -123,7 +121,7 @@ describe("campaigns cache splice — update/cancel/send", () => {
     await observer.mutate("1");
 
     expect(client.getQueryData<{ campaigns: any[] }>(listKey)?.campaigns[0].status).toBe("DRAFT");
-    expect(noCampaignInvalidation()).toBe(true);
+    expect(isStale(listKey)).toBe(false);
   });
 });
 
@@ -139,6 +137,28 @@ describe("campaigns cache splice — remove", () => {
 
     const list = client.getQueryData<{ campaigns: any[] }>(listKey);
     expect(list?.campaigns.map((c) => c.id)).toEqual(["2"]);
-    expect(noCampaignInvalidation()).toBe(true);
+    expect(isStale(listKey)).toBe(false);
+  });
+
+  it("drops the removed campaign's detail and recipients caches", async () => {
+    // A deleted campaign's recipients answer must not outlive it — a recreate
+    // with the same id (or a lingering observer) would render the stale list.
+    client.setQueryData(listKey, { campaigns: [campaign("1")] });
+    client.setQueryData(oneKey("1"), { campaign: campaign("1") });
+    client.setQueryData(campaignsQueries.recipients("1").queryKey, {
+      actual: false,
+      clients: [],
+    });
+
+    const observer = new MutationObserver(client, {
+      ...removeCampaignMutationOptions(client),
+      mutationFn: async () => ({ success: true }),
+    });
+    await observer.mutate("1");
+
+    expect(client.getQueryState(oneKey("1"))).toBeUndefined();
+    expect(
+      client.getQueryState(campaignsQueries.recipients("1").queryKey),
+    ).toBeUndefined();
   });
 });

@@ -1,6 +1,8 @@
 import {
   infiniteQueryOptions,
   mutationOptions,
+  useMutation,
+  useQueryClient,
   type QueryClient,
 } from "@tanstack/react-query";
 import { z } from "zod";
@@ -129,4 +131,8 @@ export function mutateBookingMutationOptions(queryClient: QueryClient) {
       ]);
     },
   };
+}
+
+export function useMutateBookingMutation() {
+  return useMutation(mutateBookingMutationOptions(useQueryClient()));
 }

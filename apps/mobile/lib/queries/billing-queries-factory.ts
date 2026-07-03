@@ -2,6 +2,8 @@ import {
   queryOptions,
   mutationOptions,
   infiniteQueryOptions,
+  useMutation,
+  useQueryClient,
   type QueryClient,
 } from "@tanstack/react-query";
 import { z } from "zod";
@@ -123,5 +125,9 @@ export function createBillingMutationOptions(queryClient: QueryClient) {
       ]);
     },
   };
+}
+
+export function useCreateBillingMutation() {
+  return useMutation(createBillingMutationOptions(useQueryClient()));
 }
 
