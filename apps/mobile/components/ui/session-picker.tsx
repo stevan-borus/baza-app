@@ -19,7 +19,7 @@ import { BottomSheetFlatList } from "@gorhom/bottom-sheet";
 import { Icon } from "@/components/ui/icon";
 import { useTranslation } from "react-i18next";
 import { GlassCard } from "./glass-card";
-import { WeekStrip } from "./week-strip";
+import { StudioWeekStrip } from "./studio/week-strip";
 import { EmptyState } from "./states";
 import { useThemeTokens } from "./tokens";
 import { getDateLocale } from "@/lib/i18n";
@@ -78,9 +78,10 @@ export function SessionPicker(props: SingleProps | MultiProps) {
   const nav = useWeekNavigation();
   const { selectedDate, weekStart } = nav;
 
-  const activityByDate: Record<string, boolean> = {};
+  const sessionsByDay: Record<string, number> = {};
   for (const s of filtered) {
-    activityByDate[dayjs(s.startsAt).format("YYYY-MM-DD")] = true;
+    const key = dayjs(s.startsAt).format("YYYY-MM-DD");
+    sessionsByDay[key] = (sessionsByDay[key] ?? 0) + 1;
   }
 
   const dayStart = dayjs(selectedDate).startOf("day").valueOf();
@@ -177,13 +178,13 @@ export function SessionPicker(props: SingleProps | MultiProps) {
   }
 
   const weekStrip = (
-    <WeekStrip
-      selectedDate={selectedDate}
-      onSelectDate={(date) => nav.selectDay(dayjs(date))}
+    <StudioWeekStrip
+      selected={dayjs(selectedDate)}
+      onSelect={nav.selectDay}
       weekStart={weekStart}
       onPrevWeek={nav.goToPreviousWeek}
       onNextWeek={nav.goToNextWeek}
-      activity={activityByDate}
+      sessionsByDay={sessionsByDay}
     />
   );
 

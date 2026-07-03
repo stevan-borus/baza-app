@@ -15,7 +15,7 @@ import { Icon } from "@/components/ui/icon";
 import { useTranslation } from "react-i18next";
 import { useThemeTokens } from "./tokens";
 import { CapsLabel } from "./studio";
-import { startOfLocaleWeek } from "./week-strip";
+import { startOfLocaleWeek } from "@/lib/use-week-navigation";
 
 type ActivityValue = boolean | number | string;
 
