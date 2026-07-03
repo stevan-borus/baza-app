@@ -11,6 +11,7 @@ import {
   type RoomsResponse,
 } from "@baza/types/catalog";
 import { apiRequest } from "@/lib/api-request";
+import { sessionsQueries } from "@/lib/queries/sessions-queries-factory";
 
 export type { Room } from "@baza/types/catalog";
 
@@ -100,6 +101,11 @@ export function createRoomMutationOptions(queryClient: QueryClient) {
 export function updateRoomMutationOptions(queryClient: QueryClient) {
   return {
     ...roomsQueries.update(),
-    onSuccess: (data: RoomMutationResponse) => spliceRoom(queryClient, data.room),
+    onSuccess: async (data: RoomMutationResponse) => {
+      spliceRoom(queryClient, data.room);
+      // Session caches (availability/list/byId) embed a server-joined
+      // roomName — a rename must refetch them or calendars keep the old name.
+      await queryClient.invalidateQueries({ queryKey: sessionsQueries.all });
+    },
   };
 }

@@ -48,7 +48,6 @@ describe("Cat A — recordSocialMediaMutationOptions does not refetch on success
   });
 
   it("optimistically flips the value and never invalidates the status query", async () => {
-    const invalidateSpy = vi.spyOn(client, "invalidateQueries");
     const observer = new MutationObserver(client, {
       ...recordSocialMediaMutationOptions(client),
       mutationFn: async () => ({ success: true }),
@@ -58,12 +57,9 @@ describe("Cat A — recordSocialMediaMutationOptions does not refetch on success
 
     const cached = client.getQueryData<{ socialMediaLatestAccepted: boolean | null }>(statusKey);
     expect(cached?.socialMediaLatestAccepted).toBe(true);
-
-    const invalidatedStatus = invalidateSpy.mock.calls.some(([f]) => {
-      const k = (f as { queryKey?: readonly unknown[] } | undefined)?.queryKey;
-      return k?.[0] === "consent" && k?.[1] === "status";
-    });
-    expect(invalidatedStatus).toBe(false);
+    // The optimistic write is authoritative — the status query must not end
+    // up stale (a refetch of a value we already hold).
+    expect(client.getQueryState(statusKey)?.isInvalidated).toBe(false);
   });
 
   it("rolls back on failure", async () => {
@@ -106,7 +102,6 @@ describe("Cat A — updatePreferencesMutationOptions optimistic, no refetch", ()
   });
 
   it("writes the flipped value into the cache and does not invalidate on success", async () => {
-    const invalidateSpy = vi.spyOn(client, "invalidateQueries");
     const observer = new MutationObserver(client, {
       ...updatePreferencesMutationOptions(client),
       mutationFn: async () => ({ success: true }),
@@ -116,12 +111,9 @@ describe("Cat A — updatePreferencesMutationOptions optimistic, no refetch", ()
 
     const cached = client.getQueryData<any>(prefsKey);
     expect(cached?.preferences.campaignsEnabled).toBe(false);
-
-    const invalidatedPrefs = invalidateSpy.mock.calls.some(([f]) => {
-      const k = (f as { queryKey?: readonly unknown[] } | undefined)?.queryKey;
-      return k?.[0] === "notifications" && k?.[1] === "preferences";
-    });
-    expect(invalidatedPrefs).toBe(false);
+    // The optimistic write is authoritative — the preferences query must not
+    // end up stale (a refetch of a value we already hold).
+    expect(client.getQueryState(prefsKey)?.isInvalidated).toBe(false);
   });
 
   it("rolls back the cache on failure", async () => {

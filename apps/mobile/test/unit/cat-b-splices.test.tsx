@@ -6,8 +6,9 @@
  * full row, so no refetch round-trip is warranted.
  *
  * Driven via MutationObserver against a real QueryClient (no RTL in this repo),
- * mirroring campaigns-cache-splice.test.tsx. We spy on `invalidateQueries` and
- * assert the domain is never invalidated by the builder's onSuccess.
+ * mirroring campaigns-cache-splice.test.tsx. Assertions are state-based: the
+ * seeded cache entries must NOT end up stale (`isInvalidated`) after the
+ * builder's onSuccess — the splice is the whole refresh.
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { QueryClient, MutationObserver } from "@tanstack/react-query";
@@ -50,21 +51,16 @@ import {
 } from "@/lib/queries/invites-queries-factory";
 
 let client: QueryClient;
-let invalidateSpy: ReturnType<typeof vi.spyOn>;
 
 beforeEach(() => {
   client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
-  invalidateSpy = vi.spyOn(client, "invalidateQueries");
 });
 
-/** True iff `invalidateQueries` was never called for the given root key. */
-function noInvalidationFor(root: string) {
-  return invalidateSpy.mock.calls.every((args: unknown[]) => {
-    const k = (args[0] as { queryKey?: readonly unknown[] } | undefined)?.queryKey;
-    return k?.[0] !== root;
-  });
+/** The observable contract: is this cache entry stale (would refetch)? */
+function isStale(key: readonly unknown[]) {
+  return client.getQueryState(key)?.isInvalidated === true;
 }
 
 // ── rooms ─────────────────────────────────────────────────────────────────
@@ -86,7 +82,7 @@ describe("rooms cache splice", () => {
 
     const list = client.getQueryData<{ rooms: Room[] }>(roomsListKey);
     expect(list?.rooms.map((r) => r.id)).toEqual(["1", "2"]);
-    expect(noInvalidationFor("rooms")).toBe(true);
+    expect(isStale(roomsListKey)).toBe(false);
   });
 
   it("update replaces the room by id without invalidating", async () => {
@@ -101,7 +97,22 @@ describe("rooms cache splice", () => {
 
     const list = client.getQueryData<{ rooms: Room[] }>(roomsListKey);
     expect(list?.rooms.find((r) => r.id === "1")).toEqual(updated);
-    expect(noInvalidationFor("rooms")).toBe(true);
+    expect(isStale(roomsListKey)).toBe(false);
+  });
+
+  it("update invalidates sessions — calendars embed roomName", async () => {
+    // A room rename must refetch the session caches (availability/list/byId
+    // all carry a server-joined roomName), or calendars keep the old name.
+    const availabilityKey = sessionsQueries.availabilityByMonth("2026-01").queryKey;
+    client.setQueryData(availabilityKey, { success: true, month: "2026-01", sessions: [] });
+
+    const observer = new MutationObserver(client, {
+      ...updateRoomMutationOptions(client),
+      mutationFn: async () => ({ success: true, room: room("1", { name: "Renamed" }) }),
+    });
+    await observer.mutate({ id: "1", name: "Renamed", capacity: 10 });
+
+    expect(isStale(availabilityKey)).toBe(true);
   });
 });
 
@@ -124,7 +135,26 @@ describe("trainings (class types) cache splice", () => {
 
     const list = client.getQueryData<{ classTypes: ClassType[] }>(classTypesKey);
     expect(list?.classTypes.map((c) => c.id)).toEqual(["1", "2"]);
-    expect(noInvalidationFor("trainings")).toBe(true);
+    expect(isStale(classTypesKey)).toBe(false);
+  });
+
+  it("updateClassType invalidates sessions — calendars embed classTypeName", async () => {
+    // A class-type rename must refetch the session caches (availability/list/
+    // byId all carry a server-joined classTypeName), or calendars keep the
+    // old name and color mapping.
+    const availabilityKey = sessionsQueries.availabilityByMonth("2026-01").queryKey;
+    client.setQueryData(availabilityKey, { success: true, month: "2026-01", sessions: [] });
+
+    const observer = new MutationObserver(client, {
+      ...updateClassTypeMutationOptions(client),
+      mutationFn: async () => ({
+        success: true,
+        classType: classType("1", { name: "Renamed" }),
+      }),
+    });
+    await observer.mutate({ id: "1", name: "Renamed" });
+
+    expect(isStale(availabilityKey)).toBe(true);
   });
 
   it("updateClassType replaces by id without invalidating", async () => {
@@ -142,7 +172,7 @@ describe("trainings (class types) cache splice", () => {
 
     const list = client.getQueryData<{ classTypes: ClassType[] }>(classTypesKey);
     expect(list?.classTypes.find((c) => c.id === "1")).toEqual(updated);
-    expect(noInvalidationFor("trainings")).toBe(true);
+    expect(isStale(classTypesKey)).toBe(false);
   });
 });
 
@@ -178,7 +208,7 @@ describe("packages (package types) cache splice", () => {
 
     const list = client.getQueryData<{ packageTypes: PackageType[] }>(packageTypesKey);
     expect(list?.packageTypes.map((p) => p.id)).toEqual(["1", "2"]);
-    expect(noInvalidationFor("packages")).toBe(true);
+    expect(isStale(packageTypesKey)).toBe(false);
   });
 
   it("updateType replaces by id (incl. isBirthdayGift) without invalidating", async () => {
@@ -196,7 +226,7 @@ describe("packages (package types) cache splice", () => {
 
     const list = client.getQueryData<{ packageTypes: PackageType[] }>(packageTypesKey);
     expect(list?.packageTypes.find((p) => p.id === "1")).toEqual(updated);
-    expect(noInvalidationFor("packages")).toBe(true);
+    expect(isStale(packageTypesKey)).toBe(false);
   });
 });
 
@@ -219,7 +249,7 @@ function session(id: string, over: Partial<Session> = {}): Session {
 }
 
 describe("sessions cache splice", () => {
-  it("create appends the returned session to the list without invalidating", async () => {
+  it("create appends the returned session to the list without refetching it", async () => {
     client.setQueryData(sessionsListKey, { success: true, sessions: [session("1")] });
     const created = session("2");
 
@@ -237,7 +267,29 @@ describe("sessions cache splice", () => {
 
     const list = client.getQueryData<{ sessions: Session[] }>(sessionsListKey);
     expect(list?.sessions.map((s) => s.id)).toEqual(["1", "2"]);
-    expect(noInvalidationFor("sessions")).toBe(true);
+    expect(isStale(sessionsListKey)).toBe(false);
+  });
+
+  it("create invalidates availability so the overview calendar refetches", async () => {
+    // Regression: the Pregled overview renders from ["sessions","availability",month],
+    // not the list cache — a one-off create that only splices the list leaves the
+    // calendar stale until app restart.
+    const availabilityKey = sessionsQueries.availabilityByMonth("2026-01").queryKey;
+    client.setQueryData(availabilityKey, { success: true, month: "2026-01", sessions: [] });
+
+    const observer = new MutationObserver(client, {
+      ...createSessionMutationOptions(client),
+      mutationFn: async () => ({ success: true, session: session("2") }),
+    });
+    await observer.mutate({
+      classTypeId: "ct1",
+      trainerUserId: "t1",
+      startsAt: "2026-01-01T10:00:00.000Z",
+      endsAt: "2026-01-01T11:00:00.000Z",
+      capacity: 8,
+    });
+
+    expect(isStale(availabilityKey)).toBe(true);
   });
 
   it("update replaces the session by id in the list; leaves byId detail alone", async () => {
@@ -255,7 +307,7 @@ describe("sessions cache splice", () => {
 
     const list = client.getQueryData<{ sessions: Session[] }>(sessionsListKey);
     expect(list?.sessions.find((s) => s.id === "1")?.capacity).toBe(12);
-    expect(noInvalidationFor("sessions")).toBe(true);
+    expect(isStale(sessionsListKey)).toBe(false);
   });
 });
 
@@ -288,7 +340,7 @@ describe("invites cache splice", () => {
 
     const list = client.getQueryData<{ invites: Invite[] }>(invitesListKey);
     expect(list?.invites.map((i) => i.id)).toEqual(["1", "2"]);
-    expect(noInvalidationFor("invites")).toBe(true);
+    expect(isStale(invitesListKey)).toBe(false);
   });
 
   it("revoke replaces the invite by id (now REVOKED) without invalidating", async () => {
@@ -306,7 +358,7 @@ describe("invites cache splice", () => {
 
     const list = client.getQueryData<{ invites: Invite[] }>(invitesListKey);
     expect(list?.invites.find((i) => i.id === "1")?.status).toBe("REVOKED");
-    expect(noInvalidationFor("invites")).toBe(true);
+    expect(isStale(invitesListKey)).toBe(false);
   });
 
   it("resend replaces the invite by id without invalidating", async () => {
@@ -321,6 +373,6 @@ describe("invites cache splice", () => {
 
     const list = client.getQueryData<{ invites: Invite[] }>(invitesListKey);
     expect(list?.invites.find((i) => i.id === "1")).toEqual(resent);
-    expect(noInvalidationFor("invites")).toBe(true);
+    expect(isStale(invitesListKey)).toBe(false);
   });
 });
