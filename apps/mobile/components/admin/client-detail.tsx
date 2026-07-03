@@ -16,7 +16,7 @@
 import React, { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient, useInfiniteQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { Linking, Pressable, ScrollView, Switch, Text, View } from "react-native";
+import { Linking, Pressable, ScrollView, Text, View } from "react-native";
 import { useRouter, type Href } from "expo-router";
 import dayjs from "dayjs";
 import { Icon, type IconName } from "@/components/ui/icon";
@@ -27,7 +27,6 @@ import { EmptyState, ErrorState } from "@/components/ui/states";
 import { ConfirmSheet } from "@/components/ui/confirm-sheet";
 import { ContactSheet } from "@/components/ui/contact-sheet";
 import { SkeletonCard } from "@/components/ui/skeleton";
-import { Input } from "@/components/ui/input";
 import { SectionLabel } from "@/components/ui/typography";
 import { GlassCard } from "@/components/ui/glass-card";
 import { useThemeTokens } from "@/components/ui/tokens";
@@ -42,14 +41,17 @@ import {
   type TrainerNote,
 } from "@/lib/queries/trainer-notes-queries-factory";
 import { BookingRow } from "@/components/admin/booking-row";
+import {
+  EditClientSheet,
+  type EditClientSheetClient,
+} from "@/components/admin/client-flows/edit-client-sheet";
+import { PauseSheet } from "@/components/admin/client-flows/pause-sheet";
 import { AssignPackageSheetContent } from "@/components/admin/assign-package-sheet-content";
 import { ReturnToPill } from "@/components/admin/return-to-pill";
 import { TreninziSubTab } from "@/components/admin/treninzi-sub-tab";
 import { ClientLegalPanel } from "@/components/admin/client-legal-panel";
 import { ClientHealthPanel } from "@/components/admin/client-health-panel";
-import { DateTimePicker } from "@/components/ui/date-time-picker";
-import { formatDateOfBirth, parseDateOfBirth, toIsoDate } from "@/lib/date-of-birth";
-import { now } from "@/lib/now";
+import { formatDateOfBirth, parseDateOfBirth } from "@/lib/date-of-birth";
 import {
   ClientDetailTabBar,
   type ClientDetailTab,
@@ -89,7 +91,6 @@ function pickActivePackage(packages: ClientPackage[]): ClientPackage | null {
 
 export function ClientDetail({ id }: { id: string }) {
   const queryClient = useQueryClient();
-  const tokens = useThemeTokens();
   const router = useRouter();
   const { t, i18n } = useTranslation();
   const lang = i18n.language === "en" ? "en" : "sr";
@@ -102,22 +103,18 @@ export function ClientDetail({ id }: { id: string }) {
   const [activeTab, setActiveTab] = useState<ClientDetailTab>("pregled");
 
   const [showActions, setShowActions] = useState(false);
-  const [showEdit, setShowEdit] = useState(false);
   const [showAssign, setShowAssign] = useState(false);
   const [showAssignMode, setShowAssignMode] = useState<"comp" | "paid">("comp");
-  const [showPause, setShowPause] = useState(false);
   const [showDelete, setShowDelete] = useState(false);
   const [showContact, setShowContact] = useState(false);
 
-  const [editForm, setEditForm] = useState<{
-    firstName: string;
-    lastName: string;
-    phone: string;
-    notes: string;
-    isActive: boolean;
-    dateOfBirth: Date | null;
-  }>({ firstName: "", lastName: "", phone: "", notes: "", isActive: true, dateOfBirth: null });
-  const [pauseForm, setPauseForm] = useState({ startsAt: "", endsAt: "", reason: "" });
+  // Edit + pause live in the shared client-flows modules (the klijenti list
+  // screen is the other consumer). One state variable per flow: the edit
+  // sheet is open while `editClient` is non-null (a snapshot built at
+  // "Izmeni" press time, same as the old press-time form seeding), the
+  // pause sheet while `pauseClientId` is non-null.
+  const [editClient, setEditClient] = useState<EditClientSheetClient | null>(null);
+  const [pauseClientId, setPauseClientId] = useState<string | null>(null);
 
   const clientQuery = useQuery(clientsQueries.byId(id));
   const client = clientQuery.data?.client;
@@ -145,19 +142,12 @@ export function ClientDetail({ id }: { id: string }) {
     return pages.flatMap((p) => p.bookings);
   }, [upcomingQuery.data?.pages]);
 
+  // Kept for the delete sheet only — edit's copy of this mutation now lives
+  // inside the shared EditClientSheet module.
   const updateClientMutation = useMutation({
     ...clientsQueries.update(),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: clientsQueries.all });
-      setShowEdit(false);
-    },
-  });
-  const pauseMutation = useMutation({
-    ...packagesQueries.pause(),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: packagesQueries.all });
-      setShowPause(false);
-      setPauseForm({ startsAt: "", endsAt: "", reason: "" });
     },
   });
 
@@ -167,16 +157,22 @@ export function ClientDetail({ id }: { id: string }) {
   // Pregled quick-action rows so both surfaces land in identical sheets.
   function openEdit() {
     if (!client) return;
-    setEditForm({
-      firstName: client.user.firstName,
-      lastName: client.user.lastName,
-      phone: client.user.phone ?? "",
-      notes: client.notes ?? "",
-      isActive: client.user.isActive,
-      dateOfBirth: parseDateOfBirth(client.dateOfBirth ?? ""),
-    });
     setShowActions(false);
-    setShowEdit(true);
+    // Snapshot at press time (the old code seeded the form here). The
+    // `dateOfBirth` key and `user.isActive` are what unlock the DOB picker
+    // and the seeded Aktivan switch in the shared sheet; `id` is the User
+    // id because PATCH /api/clients/:id resolves by userId.
+    setEditClient({
+      id: client.user.id,
+      user: {
+        firstName: client.user.firstName,
+        lastName: client.user.lastName,
+        phone: client.user.phone,
+        isActive: client.user.isActive,
+      },
+      notes: client.notes,
+      dateOfBirth: client.dateOfBirth,
+    });
   }
   function openNewPayment() {
     setShowActions(false);
@@ -189,8 +185,9 @@ export function ClientDetail({ id }: { id: string }) {
     setShowAssign(true);
   }
   function openPause() {
+    if (!client) return;
     setShowActions(false);
-    setShowPause(true);
+    setPauseClientId(client.id);
   }
   function openDelete() {
     setShowActions(false);
@@ -419,99 +416,10 @@ export function ClientDetail({ id }: { id: string }) {
         ) : null}
       </AppSheet>
 
-      <AppSheet open={showEdit} onOpenChange={setShowEdit} stackBehavior="push">
-        <View className="flex-col gap-4">
-          <Text
-            className="text-foreground font-body-bold"
-            style={{ fontSize: 20, letterSpacing: -0.3 }}
-          >
-            {t("admin.clients.sheetEdit")}
-          </Text>
-          <SectionLabel>{t("admin.clients.placeholderFirstName")}</SectionLabel>
-          <Input
-            placeholder={t("admin.clients.placeholderFirstName")}
-            value={editForm.firstName}
-            onChangeText={(v) => setEditForm((s) => ({ ...s, firstName: v }))}
-          />
-          <SectionLabel>{t("admin.clients.placeholderLastName")}</SectionLabel>
-          <Input
-            placeholder={t("admin.clients.placeholderLastName")}
-            value={editForm.lastName}
-            onChangeText={(v) => setEditForm((s) => ({ ...s, lastName: v }))}
-          />
-          <SectionLabel>{t("admin.clients.placeholderPhoneRequired")}</SectionLabel>
-          <Input
-            placeholder={t("admin.clients.placeholderPhoneRequired")}
-            keyboardType="phone-pad"
-            value={editForm.phone}
-            onChangeText={(v) => setEditForm((s) => ({ ...s, phone: v }))}
-          />
-          <SectionLabel>{t("admin.clients.labelDateOfBirth")}</SectionLabel>
-          <View className="flex-row items-center gap-2">
-            <View className="flex-1">
-              <DateTimePicker
-                testID="edit-client-dob-input"
-                mode="date"
-                value={editForm.dateOfBirth}
-                onChange={(d) => setEditForm((s) => ({ ...s, dateOfBirth: d }))}
-                placeholder={t("admin.clients.placeholderDateOfBirth")}
-                maximumDate={now()}
-                minimumDate={new Date(Date.UTC(1900, 0, 1))}
-              />
-            </View>
-            {editForm.dateOfBirth ? (
-              <Pressable
-                testID="edit-client-dob-clear"
-                onPress={() => setEditForm((s) => ({ ...s, dateOfBirth: null }))}
-                accessibilityRole="button"
-                accessibilityLabel={t("admin.clients.dateOfBirthEmpty")}
-                style={{ padding: 8 }}
-              >
-                <Text className="text-foreground">×</Text>
-              </Pressable>
-            ) : null}
-          </View>
-          <SectionLabel>{t("admin.clients.placeholderNotes")}</SectionLabel>
-          <Input
-            placeholder={t("admin.clients.placeholderNotes")}
-            multiline
-            value={editForm.notes}
-            onChangeText={(v) => setEditForm((s) => ({ ...s, notes: v }))}
-          />
-          <View className="flex-row items-center gap-3 py-2">
-            <Text className="text-foreground" style={{ fontSize: 15 }}>
-              {t("admin.clients.active")}
-            </Text>
-            <Switch
-              value={editForm.isActive}
-              onValueChange={(v) => setEditForm((s) => ({ ...s, isActive: v }))}
-              trackColor={{ false: tokens.glassStrong, true: tokens.accent }}
-            />
-          </View>
-          <Button
-            disabled={updateClientMutation.isPending || !client}
-            onPress={() => {
-              if (!client) return;
-              updateClientMutation.mutate({
-                id: client.user.id,
-                firstName: editForm.firstName,
-                lastName: editForm.lastName,
-                phone: editForm.phone || undefined,
-                notes: editForm.notes || undefined,
-                isActive: editForm.isActive,
-                dateOfBirth: editForm.dateOfBirth
-                  ? toIsoDate(editForm.dateOfBirth)
-                  : null,
-              });
-            }}
-          >
-            {t("admin.clients.save")}
-          </Button>
-          {updateClientMutation.isError ? (
-            <ErrorState message={t("admin.clients.updateError")} />
-          ) : null}
-        </View>
-      </AppSheet>
+      {/* Shared client-flows module (also used by the klijenti list). No
+          onBack: this screen has no previous sheet step, so the header is
+          the bare title, as before the dedupe. */}
+      <EditClientSheet client={editClient} onClose={() => setEditClient(null)} />
 
       <AppSheet open={showAssign} onOpenChange={setShowAssign} stackBehavior="push">
         {client ? (
@@ -533,59 +441,11 @@ export function ClientDetail({ id }: { id: string }) {
         ) : null}
       </AppSheet>
 
-      <AppSheet open={showPause} onOpenChange={setShowPause} stackBehavior="push">
-        <View className="flex-col gap-4">
-          <Text
-            className="text-foreground font-body-bold"
-            style={{ fontSize: 20, letterSpacing: -0.3 }}
-          >
-            {t("admin.clients.sheetPause")}
-          </Text>
-          <Input
-            testID="pause-start-input"
-            placeholder={t("admin.clients.pauseStart")}
-            value={pauseForm.startsAt}
-            onChangeText={(v) => setPauseForm((s) => ({ ...s, startsAt: v }))}
-          />
-          <Input
-            testID="pause-end-input"
-            placeholder={t("admin.clients.pauseEnd")}
-            value={pauseForm.endsAt}
-            onChangeText={(v) => setPauseForm((s) => ({ ...s, endsAt: v }))}
-          />
-          <Input
-            placeholder={t("admin.clients.pauseReason")}
-            value={pauseForm.reason}
-            onChangeText={(v) => setPauseForm((s) => ({ ...s, reason: v }))}
-            multiline
-            numberOfLines={3}
-            style={{ minHeight: 80, textAlignVertical: "top" }}
-          />
-          <Button
-            testID="pause-submit-button"
-            disabled={
-              pauseMutation.isPending ||
-              !pauseForm.startsAt ||
-              !pauseForm.endsAt ||
-              !client
-            }
-            onPress={() => {
-              if (!client) return;
-              pauseMutation.mutate({
-                clientProfileId: client.id,
-                startsAt: pauseForm.startsAt,
-                endsAt: pauseForm.endsAt,
-                reason: pauseForm.reason || undefined,
-              });
-            }}
-          >
-            {t("admin.clients.pauseSubmit")}
-          </Button>
-          {pauseMutation.isError ? (
-            <ErrorState message={t("admin.clients.pauseError")} />
-          ) : null}
-        </View>
-      </AppSheet>
+      {/* Shared client-flows module (also used by the klijenti list). */}
+      <PauseSheet
+        clientProfileId={pauseClientId}
+        onClose={() => setPauseClientId(null)}
+      />
 
       <AppSheet open={showDelete} onOpenChange={setShowDelete} stackBehavior="push">
         {client ? (

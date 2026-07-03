@@ -1,6 +1,13 @@
 // P2-T9: Admin clients — Linear-style searchable list with filter chips, GlassCard rows,
-// segmented Clients/Invites tabs. All five AppSheets (create, edit, invite, assign-package,
-// pause) are preserved verbatim with their form state and mutations unchanged.
+// segmented Clients/Invites tabs.
+//
+// Flow extraction: the six per-client flows (invite, create, edit, assign
+// comp/paid, pause, actions+delete) each live in their own module under
+// components/admin/client-flows/. Every module owns its form state,
+// validation, and mutations; this screen keeps only the tab/search/filter
+// state, the list rendering, pull-to-refresh, and ONE state variable per
+// flow. Cross-flow choreography (which sheet opens after which) is wired
+// HERE through the modules' callbacks.
 //
 // Migration note: the clients list is rendered through `<PaginatedList>` and the
 // search input + filter chips live in a fixed View ABOVE the list so they no
@@ -21,65 +28,55 @@ import {
   Pressable,
   RefreshControl,
   ScrollView,
-  Switch,
   Text,
   View,
 } from "react-native";
 import { MotiView } from "@/components/ui/styled";
-import { Icon, type IconName } from "@/components/ui/icon";
-import { AppSheet } from "@/components/ui/sheet";
+import { Icon } from "@/components/ui/icon";
 import { ConfirmSheet } from "@/components/ui/confirm-sheet";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { EmptyState, ErrorState } from "@/components/ui/states";
 import { Input } from "@/components/ui/input";
-import { SectionLabel } from "@/components/ui/typography";
 import { GlassCard } from "@/components/ui/glass-card";
 import { SegmentedControl } from "@/components/ui/tabs";
 import { useThemeTokens } from "@/components/ui/tokens";
 import { ScreenContainerRaw, useTabBarBottomPadding } from "@/components/ui/screen-container";
 import { HeaderIconButton } from "@/components/ui/app-header";
 import { AdminTabLeftSlot } from "@/components/admin/admin-tab-left-slot";
-import { AssignPackageSheetContent } from "@/components/admin/assign-package-sheet-content";
+import type { AssignPackageMode } from "@/components/admin/assign-package-sheet-content";
+import { InitialsAvatar } from "@/components/admin/client-flows/initials-avatar";
+import { InviteSheet } from "@/components/admin/client-flows/invite-sheet";
+import { CreateClientSheet } from "@/components/admin/client-flows/create-client-sheet";
+import { EditClientSheet } from "@/components/admin/client-flows/edit-client-sheet";
+import { ClientActionsSheet } from "@/components/admin/client-flows/client-actions-sheet";
+import { AssignPackageSheet } from "@/components/admin/client-flows/assign-package-sheet";
+import { PauseSheet } from "@/components/admin/client-flows/pause-sheet";
 import { FilterChip } from "@/components/ui/studio";
 import { PaginatedList } from "@/components/ui/paginated-list";
-import { DateTimePicker } from "@/components/ui/date-time-picker";
-import { toIsoDate } from "@/lib/date-of-birth";
 import { clientsQueries } from "@/lib/queries/clients-queries-factory";
 import {
   invitesQueries,
-  createInviteMutationOptions,
   revokeInviteMutationOptions,
   resendInviteMutationOptions,
   type Invite,
 } from "@/lib/queries/invites-queries-factory";
-import { packagesQueries } from "@/lib/queries/packages-queries-factory";
-import { now } from "@/lib/now";
 import type { ClientsResponse } from "@baza/types/clients";
 
 type ClientListItem = ClientsResponse["clients"][number];
 
-// ─── InitialsAvatar ───────────────────────────────────────────────────────────
-
-function InitialsAvatar({ name }: { name: string }) {
-  const initials = name
-    .split(" ")
-    .map((w) => w[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2);
-  return (
-    <View className="items-center justify-center w-10 h-10 rounded-full bg-accent-soft">
-      <Text className="text-accent font-body-bold" style={{ fontSize: 14 }}>
-        {initials}
-      </Text>
-    </View>
-  );
-}
-
 // ─── FilterType ───────────────────────────────────────────────────────────────
 
 type FilterType = "all" | "active" | "expiring" | "paused" | "expired";
+
+// ─── AssignFor ────────────────────────────────────────────────────────────────
+// The one state variable of the assign-package flow: which client, comp or
+// paid, and the optional deep-link PackageType pre-selection.
+
+type AssignFor = {
+  clientId: string;
+  mode: AssignPackageMode;
+  initialPackageTypeId: string | null;
+};
 
 // ─── ClientRow / Separator ────────────────────────────────────────────────────
 // Extracted from the inline map so the new <PaginatedList> can hand each item
@@ -178,18 +175,22 @@ export default function AdminClients() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filter, setFilter] = useState<FilterType>("all");
 
-  // ── Sheet open state ─────────────────────────────────────────────────────
-  const [showInviteForm, setShowInviteForm] = useState(false);
-  const [showCreateClient, setShowCreateClient] = useState(false);
-  const [showEditClient, setShowEditClient] = useState<string | null>(null);
-  const [showAssignPackage, setShowAssignPackage] = useState<string | null>(null);
-  // P2-4: when the assign sheet opens, callers pre-arm the mode here.
-  // "comp" = Dodeli paket (existing flow), "paid" = Nova uplata (P2-5 wires
-  // up the actual payment fields). For now the sheet body is comp-only.
-  const [showAssignPackageMode, setShowAssignPackageMode] = useState<"comp" | "paid">("comp");
-  // Pre-selection for the AssignPackage PackageType picker — only used on
-  // the first sheet open after a deep-link, then cleared with the sheet.
-  const [assignPackageInitialId, setAssignPackageInitialId] = useState<string | null>(null);
+  // ── Flow state — ONE variable per flow, everything else lives inside the
+  //    client-flows modules ──────────────────────────────────────────────────
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
+  // Edit takes a SNAPSHOT of the row (the old code copied the row's fields
+  // into the form at "Izmeni" press time — passing the entity preserves that).
+  const [editClient, setEditClient] = useState<ClientListItem | null>(null);
+  const [assignFor, setAssignFor] = useState<AssignFor | null>(null);
+  const [pauseClientId, setPauseClientId] = useState<string | null>(null);
+  // Actions sheet — opened by tapping a client row in the list. Id only;
+  // the row is live-derived from the loaded pages below.
+  const [actionsClientId, setActionsClientId] = useState<string | null>(null);
+  // Revoke confirmation belongs to the invites LIST the screen renders
+  // (triggered from an invite row, not from any client flow), so it stays here.
+  const [confirmRevokeId, setConfirmRevokeId] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   // Translate deep-link params → sheet state, then clear params. Runs on
   // every change in linkParams, not just mount, so a *second* notification
@@ -204,10 +205,12 @@ export default function AdminClients() {
       return;
     }
     if (linkParams.openAssignPackage) {
-      setShowAssignPackage(linkParams.openAssignPackage);
+      setAssignFor({
+        clientId: linkParams.openAssignPackage,
+        mode: linkParams.mode === "paid" ? "paid" : "comp",
+        initialPackageTypeId: linkParams.initialPackageTypeId ?? null,
+      });
     }
-    setShowAssignPackageMode(linkParams.mode === "paid" ? "paid" : "comp");
-    setAssignPackageInitialId(linkParams.initialPackageTypeId ?? null);
     router.setParams({
       openAssignPackage: undefined,
       mode: undefined,
@@ -218,32 +221,6 @@ export default function AdminClients() {
     linkParams.mode,
     linkParams.initialPackageTypeId,
   ]);
-  const [showPause, setShowPause] = useState<string | null>(null);
-  // Actions sheet — opened by tapping a client row in the list.
-  const [showActionsFor, setShowActionsFor] = useState<string | null>(null);
-  // Delete confirmation — separate from the actions sheet so a stray tap
-  // can't soft-delete a client.
-  const [showDeleteFor, setShowDeleteFor] = useState<string | null>(null);
-  const [confirmRevokeId, setConfirmRevokeId] = useState<string | null>(null);
-  const [refreshing, setRefreshing] = useState(false);
-
-  // ── Form state ────────────────────────────────────────────────────────────
-  const [inviteForm, setInviteForm] = useState<{
-    email: string;
-    firstName: string;
-    lastName: string;
-    phone: string;
-    dateOfBirth: Date | null;
-  }>({ email: "", firstName: "", lastName: "", phone: "", dateOfBirth: null });
-  const [clientForm, setClientForm] = useState<{
-    email: string;
-    firstName: string;
-    lastName: string;
-    phone: string;
-    dateOfBirth: Date | null;
-  }>({ email: "", firstName: "", lastName: "", phone: "", dateOfBirth: null });
-  const [editForm, setEditForm] = useState({ firstName: "", lastName: "", phone: "", notes: "", isActive: true });
-  const [pauseForm, setPauseForm] = useState({ startsAt: "", endsAt: "", reason: "" });
 
   // ── Queries ───────────────────────────────────────────────────────────────
   // Server-side search via useDeferredValue: the filter runs in Postgres
@@ -256,37 +233,12 @@ export default function AdminClients() {
   const invitesQuery = useQuery(invitesQueries.list());
 
   // ── Mutations ─────────────────────────────────────────────────────────────
-  // Invite mutations splice their returned row into the invites list cache
-  // (baked into the options-builders). The component-only side-effects (close
-  // sheet, reset form, clear the revoke confirm) are passed per-call via
-  // mutate(vars, { onSuccess }). resend has no extra side-effect — the splice
-  // (now SENT/re-PENDING row) is the whole job.
-  const createInviteMutation = useMutation(createInviteMutationOptions(queryClient));
+  // Only the invites-LIST row actions remain on the screen — every flow
+  // mutation moved into its module. revoke/resend splice their returned row
+  // into the invites list cache (baked into the options-builders); revoke's
+  // component-only side-effect (clear the confirm) is passed per-call.
   const revokeMutation = useMutation(revokeInviteMutationOptions(queryClient));
   const resendMutation = useMutation(resendInviteMutationOptions(queryClient));
-  const createClientMutation = useMutation({
-    ...clientsQueries.create(),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: clientsQueries.all });
-      setShowCreateClient(false);
-      setClientForm({ email: "", firstName: "", lastName: "", phone: "", dateOfBirth: null });
-    },
-  });
-  const updateClientMutation = useMutation({
-    ...clientsQueries.update(),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: clientsQueries.all });
-      setShowEditClient(null);
-    },
-  });
-  const pauseMutation = useMutation({
-    ...packagesQueries.pause(),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: packagesQueries.all });
-      setShowPause(null);
-      setPauseForm({ startsAt: "", endsAt: "", reason: "" });
-    },
-  });
 
   // ── Raw data ──────────────────────────────────────────────────────────────
   const clients = useMemo(
@@ -294,6 +246,15 @@ export default function AdminClients() {
     [clientsQuery.data],
   );
   const invites = invitesQuery.data?.invites ?? [];
+
+  // ── Flow targets derived from the loaded pages ────────────────────────────
+  // Same live `clients.find` the old inline sheets did in their render-props.
+  const actionsClient = actionsClientId
+    ? (clients.find((c) => c.id === actionsClientId) ?? null)
+    : null;
+  const assignClient = assignFor
+    ? (clients.find((c) => c.id === assignFor.clientId) ?? null)
+    : null;
 
   // ── Status filter (q is already server-side) ──────────────────────────────
   // The package-status chip still narrows client-side — applying it as
@@ -349,9 +310,7 @@ export default function AdminClients() {
           <HeaderIconButton
             icon="plus"
             onPress={() =>
-              tab === "clients"
-                ? setShowCreateClient(true)
-                : setShowInviteForm(true)
+              tab === "clients" ? setCreateOpen(true) : setInviteOpen(true)
             }
             testID={
               tab === "clients"
@@ -463,7 +422,7 @@ export default function AdminClients() {
                 onPress={() =>
                   router.push(`/(admin)/klijenti/${item.user.id}`)
                 }
-                onPressActions={() => setShowActionsFor(item.id)}
+                onPressActions={() => setActionsClientId(item.id)}
               />
             )}
             ItemSeparatorComponent={ClientRowSeparator}
@@ -580,485 +539,63 @@ export default function AdminClients() {
       </View>
 
       {/* ═══════════════════════════════════════════════════════════════════
-          ALL FIVE APPSHEETS — preserved verbatim (now mounted as siblings
-          of the list, not inside the old ScrollView).
+          THE SIX CLIENT FLOWS — one module each, one state variable each.
+          The onBack/onEditClient/... wiring below is the ONLY place that
+          decides which sheet opens after which.
       ═══════════════════════════════════════════════════════════════════ */}
 
-        {/* Create Client Sheet */}
-        <AppSheet open={showCreateClient} onOpenChange={setShowCreateClient}>
-          <View className="flex-col gap-4">
-            <Text className="text-foreground font-body-bold" style={{ fontSize: 20, letterSpacing: -0.3 }}>
-              {t("admin.clients.sheetNewClient")}
-            </Text>
-            <Input
-              testID="client-create-email-input"
-              placeholder={t("admin.clients.placeholderEmail")}
-              autoCapitalize="none"
-              keyboardType="email-address"
-              value={clientForm.email}
-              onChangeText={(v) => setClientForm((s) => ({ ...s, email: v }))}
-            />
-            <Input
-              testID="client-create-firstname-input"
-              placeholder={t("admin.clients.placeholderFirstName")}
-              value={clientForm.firstName}
-              onChangeText={(v) => setClientForm((s) => ({ ...s, firstName: v }))}
-            />
-            <Input
-              testID="client-create-lastname-input"
-              placeholder={t("admin.clients.placeholderLastName")}
-              value={clientForm.lastName}
-              onChangeText={(v) => setClientForm((s) => ({ ...s, lastName: v }))}
-            />
-            <Input
-              testID="client-create-phone-input"
-              placeholder={t("admin.clients.placeholderPhone")}
-              keyboardType="phone-pad"
-              value={clientForm.phone}
-              onChangeText={(v) => setClientForm((s) => ({ ...s, phone: v }))}
-            />
-            {/* DOB is required server-side (inviteClientInputSchema) for the
-                minor/guardian waiver logic — collect it here like the invite form. */}
-            <DateTimePicker
-              testID="client-create-dob-input"
-              mode="date"
-              value={clientForm.dateOfBirth}
-              onChange={(d) => setClientForm((s) => ({ ...s, dateOfBirth: d }))}
-              placeholder={t("admin.clients.placeholderDateOfBirth")}
-              maximumDate={now()}
-              minimumDate={new Date(Date.UTC(1900, 0, 1))}
-            />
-            <Button
-              testID="client-create-submit-button"
-              disabled={
-                createClientMutation.isPending ||
-                !clientForm.email ||
-                !clientForm.firstName ||
-                !clientForm.lastName ||
-                !clientForm.dateOfBirth
-              }
-              onPress={() => {
-                if (!clientForm.dateOfBirth) return;
-                createClientMutation.mutate({
-                  email: clientForm.email,
-                  firstName: clientForm.firstName,
-                  lastName: clientForm.lastName,
-                  phone: clientForm.phone || undefined,
-                  dateOfBirth: toIsoDate(clientForm.dateOfBirth),
-                });
-              }}
-            >
-              {t("admin.clients.createClient")}
-            </Button>
-            {createClientMutation.isError ? <ErrorState message={t("admin.clients.createError")} /> : null}
-          </View>
-        </AppSheet>
+      <CreateClientSheet open={createOpen} onOpenChange={setCreateOpen} />
 
-        {/* Edit Client Sheet */}
-        <AppSheet
-          open={!!showEditClient}
-          onOpenChange={() => setShowEditClient(null)}
-          stackBehavior="push"
-        >
-          <View className="flex-col gap-4">
-            <SheetHeader
-              title={t("admin.clients.sheetEdit")}
-              onBack={() => {
-                const id = showEditClient;
-                setShowEditClient(null);
-                if (id) setShowActionsFor(id);
-              }}
-            />
-            <SectionLabel>{t("admin.clients.placeholderFirstName")}</SectionLabel>
-            <Input
-              placeholder={t("admin.clients.placeholderFirstName")}
-              value={editForm.firstName}
-              onChangeText={(v) => setEditForm((s) => ({ ...s, firstName: v }))}
-            />
-            <SectionLabel>{t("admin.clients.placeholderLastName")}</SectionLabel>
-            <Input
-              placeholder={t("admin.clients.placeholderLastName")}
-              value={editForm.lastName}
-              onChangeText={(v) => setEditForm((s) => ({ ...s, lastName: v }))}
-            />
-            <SectionLabel>{t("admin.clients.placeholderPhoneRequired")}</SectionLabel>
-            <Input
-              placeholder={t("admin.clients.placeholderPhoneRequired")}
-              keyboardType="phone-pad"
-              value={editForm.phone}
-              onChangeText={(v) => setEditForm((s) => ({ ...s, phone: v }))}
-            />
-            <SectionLabel>{t("admin.clients.placeholderNotes")}</SectionLabel>
-            <Input
-              placeholder={t("admin.clients.placeholderNotes")}
-              multiline
-              value={editForm.notes}
-              onChangeText={(v) => setEditForm((s) => ({ ...s, notes: v }))}
-            />
-            <View className="flex-row items-center gap-3 py-2">
-              <Text className="text-foreground" style={{ fontSize: 15 }}>
-                {t("admin.clients.active")}
-              </Text>
-              <Switch
-                value={editForm.isActive}
-                onValueChange={(v) => setEditForm((s) => ({ ...s, isActive: v }))}
-                trackColor={{ false: tokens.glassStrong, true: tokens.accent }}
-              />
-            </View>
-            <Button
-              disabled={updateClientMutation.isPending}
-              onPress={() =>
-                showEditClient &&
-                updateClientMutation.mutate({
-                  id: showEditClient,
-                  firstName: editForm.firstName,
-                  lastName: editForm.lastName,
-                  phone: editForm.phone || undefined,
-                  notes: editForm.notes || undefined,
-                  isActive: editForm.isActive,
-                })
-              }
-            >
-              {t("admin.clients.save")}
-            </Button>
-            {updateClientMutation.isError ? <ErrorState message={t("admin.clients.updateError")} /> : null}
-          </View>
-        </AppSheet>
+      <EditClientSheet
+        client={editClient}
+        onClose={() => setEditClient(null)}
+        onBack={() => {
+          const client = editClient;
+          setEditClient(null);
+          if (client) setActionsClientId(client.id);
+        }}
+      />
 
-        {/* Actions sheet — opens when a client row is tapped. Avoids
-            stacking 3+ inline action buttons under every row. */}
-        <AppSheet
-          open={!!showActionsFor}
-          onOpenChange={(o) => !o && setShowActionsFor(null)}
-          stackBehavior="push"
-        >
-          {(() => {
-            const client = clients.find((c) => c.id === showActionsFor);
-            if (!client) return null;
-            return (
-              <View className="flex-col gap-2">
-                <View className="flex-row items-center gap-3 pb-3">
-                  <InitialsAvatar name={client.user.fullName} />
-                  <View className="flex-1 gap-0.5">
-                    <Text
-                      className="text-foreground font-body-semibold"
-                      style={{ fontSize: 16 }}
-                      numberOfLines={1}
-                    >
-                      {client.user.fullName}
-                    </Text>
-                    <Text
-                      className="text-muted"
-                      style={{ fontSize: 12 }}
-                      numberOfLines={1}
-                    >
-                      {client.user.email}
-                    </Text>
-                  </View>
-                </View>
-                <View className="bg-glass-border" style={{ height: 1 }} />
-                <ActionRow
-                  testID="client-action-edit"
-                  icon="edit-2"
-                  label={t("admin.clients.edit")}
-                  onPress={() => {
-                    setEditForm({
-                      firstName: client.user.firstName,
-                      lastName: client.user.lastName,
-                      phone: client.user.phone ?? "",
-                      notes: client.notes ?? "",
-                      isActive: true,
-                    });
-                    setShowActionsFor(null);
-                    setShowEditClient(client.id);
-                  }}
-                />
-                <ActionRow
-                  testID="client-action-new-payment"
-                  icon="dollar-sign"
-                  label={t("admin.clients.newPaymentAction")}
-                  onPress={() => {
-                    setShowActionsFor(null);
-                    setShowAssignPackageMode("paid");
-                    setShowAssignPackage(client.id);
-                  }}
-                />
-                <ActionRow
-                  testID="client-action-assign-package"
-                  icon="gift"
-                  label={t("admin.clients.assignPackage")}
-                  onPress={() => {
-                    setShowActionsFor(null);
-                    setShowAssignPackageMode("comp");
-                    setShowAssignPackage(client.id);
-                  }}
-                />
-                <ActionRow
-                  testID="client-action-pause"
-                  icon="pause"
-                  label={t("admin.clients.pause")}
-                  onPress={() => {
-                    setShowActionsFor(null);
-                    setShowPause(client.id);
-                  }}
-                />
-                <ActionRow
-                  testID="client-action-delete"
-                  icon="trash-2"
-                  label={t("admin.clients.delete")}
-                  destructive
-                  onPress={() => {
-                    setShowActionsFor(null);
-                    setShowDeleteFor(client.id);
-                  }}
-                />
-              </View>
-            );
-          })()}
-        </AppSheet>
+      <ClientActionsSheet
+        open={!!actionsClientId}
+        client={actionsClient}
+        onClose={() => setActionsClientId(null)}
+        onEditClient={(id) =>
+          setEditClient(clients.find((c) => c.id === id) ?? null)
+        }
+        onNewPayment={(id) =>
+          setAssignFor({ clientId: id, mode: "paid", initialPackageTypeId: null })
+        }
+        onAssignPackage={(id) =>
+          setAssignFor({ clientId: id, mode: "comp", initialPackageTypeId: null })
+        }
+        onPause={(id) => setPauseClientId(id)}
+      />
 
-        {/* Delete confirmation sheet — separate from the actions sheet
-            so an accidental tap on "Obriši" doesn't immediately wipe a
-            client. The mutation only runs from the destructive button. */}
-        <AppSheet
-          open={!!showDeleteFor}
-          onOpenChange={(o) => !o && setShowDeleteFor(null)}
-          stackBehavior="push"
-        >
-          {(() => {
-            const client = clients.find((c) => c.id === showDeleteFor);
-            if (!client) return null;
-            return (
-              <View className="flex-col gap-5">
-                <View className="items-center gap-3 pt-1">
-                  <View className="w-12 h-12 rounded-full bg-danger-soft items-center justify-center">
-                    <Icon name="alert-triangle" size={20} color="#dc2626" />
-                  </View>
-                  <Text
-                    className="text-foreground font-body-bold text-center"
-                    style={{ fontSize: 18, letterSpacing: -0.3 }}
-                  >
-                    {client.user.fullName}
-                  </Text>
-                  <Text
-                    className="text-muted text-center"
-                    style={{ fontSize: 14, lineHeight: 20 }}
-                  >
-                    {t("admin.clients.deleteConfirm")}
-                  </Text>
-                </View>
-                <View className="flex-row gap-3">
-                  <Button
-                    variant="secondary"
-                    className="flex-1"
-                    onPress={() => setShowDeleteFor(null)}
-                  >
-                    {t("admin.clients.cancel", { defaultValue: "Otkaži" })}
-                  </Button>
-                  <Button
-                    testID="client-delete-confirm-button"
-                    variant="danger"
-                    className="flex-1"
-                    onPress={() => {
-                      updateClientMutation.mutate({
-                        id: client.user.id,
-                        isActive: false,
-                      });
-                      setShowDeleteFor(null);
-                    }}
-                  >
-                    {t("admin.clients.delete")}
-                  </Button>
-                </View>
-              </View>
-            );
-          })()}
-        </AppSheet>
+      <InviteSheet open={inviteOpen} onOpenChange={setInviteOpen} />
 
-        {/* Invite Sheet */}
-        <AppSheet open={showInviteForm} onOpenChange={setShowInviteForm}>
-          <View className="flex-col gap-4">
-            <Text className="text-foreground font-body-bold" style={{ fontSize: 20, letterSpacing: -0.3 }}>
-              {t("admin.clients.sheetInvite")}
-            </Text>
-            <Input
-              testID="invite-create-email-input"
-              placeholder={t("admin.clients.placeholderEmail")}
-              autoCapitalize="none"
-              keyboardType="email-address"
-              value={inviteForm.email}
-              onChangeText={(v) => setInviteForm((s) => ({ ...s, email: v }))}
-            />
-            <Input
-              testID="invite-create-name-input"
-              placeholder={t("admin.clients.placeholderFirstName")}
-              value={inviteForm.firstName}
-              onChangeText={(v) => setInviteForm((s) => ({ ...s, firstName: v }))}
-            />
-            <Input
-              testID="invite-create-lastname-input"
-              placeholder={t("admin.clients.placeholderLastName")}
-              value={inviteForm.lastName}
-              onChangeText={(v) => setInviteForm((s) => ({ ...s, lastName: v }))}
-            />
-            <Input
-              testID="invite-create-phone-input"
-              placeholder={t("admin.clients.placeholderPhone")}
-              keyboardType="phone-pad"
-              value={inviteForm.phone}
-              onChangeText={(v) => setInviteForm((s) => ({ ...s, phone: v }))}
-            />
-            <DateTimePicker
-              testID="invite-create-dob-input"
-              mode="date"
-              value={inviteForm.dateOfBirth}
-              onChange={(d) => setInviteForm((s) => ({ ...s, dateOfBirth: d }))}
-              placeholder={t("admin.clients.placeholderDateOfBirth")}
-              maximumDate={now()}
-              minimumDate={new Date(Date.UTC(1900, 0, 1))}
-            />
-            <Button
-              testID="invite-create-submit-button"
-              disabled={
-                createInviteMutation.isPending ||
-                !inviteForm.email ||
-                !inviteForm.firstName ||
-                !inviteForm.lastName ||
-                !inviteForm.dateOfBirth
-              }
-              onPress={() => {
-                if (!inviteForm.dateOfBirth) return;
-                createInviteMutation.mutate(
-                  {
-                    email: inviteForm.email,
-                    firstName: inviteForm.firstName,
-                    lastName: inviteForm.lastName,
-                    phone: inviteForm.phone || undefined,
-                    dateOfBirth: toIsoDate(inviteForm.dateOfBirth),
-                  },
-                  {
-                    onSuccess: () => {
-                      setShowInviteForm(false);
-                      setInviteForm({
-                        email: "",
-                        firstName: "",
-                        lastName: "",
-                        phone: "",
-                        dateOfBirth: null,
-                      });
-                    },
-                  },
-                );
-              }}
-            >
-              {t("admin.clients.sendInvite")}
-            </Button>
-            {createInviteMutation.isError ? <ErrorState message={t("admin.clients.inviteError")} /> : null}
-          </View>
-        </AppSheet>
+      <AssignPackageSheet
+        client={assignClient}
+        mode={assignFor?.mode ?? "comp"}
+        initialPackageTypeId={assignFor?.initialPackageTypeId ?? undefined}
+        onClose={() => setAssignFor(null)}
+        onBack={() => {
+          const id = assignFor?.clientId ?? null;
+          setAssignFor(null);
+          if (id) setActionsClientId(id);
+        }}
+      />
 
-        <AppSheet
-          // Keep the sheet closed until the targeted client is in the loaded
-          // page set — opening with a `null` render-prop result leaves the
-          // bottom-sheet's dynamic sizing stuck at ~0 (the "peeking strip"
-          // bug seen when arriving via deep-link before clients had loaded).
-          stackBehavior="push"
-          open={
-            !!showAssignPackage &&
-            !!clients.find((c) => c.id === showAssignPackage)
-          }
-          onOpenChange={(open) => {
-            if (!open) {
-              setShowAssignPackage(null);
-              setAssignPackageInitialId(null);
-            }
-          }}
-        >
-          {(() => {
-            const client = clients.find((c) => c.id === showAssignPackage);
-            if (!client) return null;
-            return (
-              <View className="flex-col gap-4">
-                <SheetHeader
-                  title={
-                    showAssignPackageMode === "paid"
-                      ? t("admin.clients.newPaymentAction")
-                      : t("admin.clients.sheetAssign")
-                  }
-                  onBack={() => {
-                    const id = showAssignPackage;
-                    setShowAssignPackage(null);
-                    setAssignPackageInitialId(null);
-                    if (id) setShowActionsFor(id);
-                  }}
-                />
-                <AssignPackageSheetContent
-                  client={client}
-                  mode={showAssignPackageMode}
-                  initialPackageTypeId={assignPackageInitialId ?? undefined}
-                  onSuccess={() => {
-                    setShowAssignPackage(null);
-                    setAssignPackageInitialId(null);
-                  }}
-                />
-              </View>
-            );
-          })()}
-        </AppSheet>
+      <PauseSheet
+        clientProfileId={pauseClientId}
+        onClose={() => setPauseClientId(null)}
+        onBack={() => {
+          const id = pauseClientId;
+          setPauseClientId(null);
+          if (id) setActionsClientId(id);
+        }}
+      />
 
-        {/* Pause Package Sheet */}
-        <AppSheet
-          open={!!showPause}
-          onOpenChange={() => setShowPause(null)}
-          stackBehavior="push"
-        >
-          <View className="flex-col gap-4">
-            <SheetHeader
-              title={t("admin.clients.sheetPause")}
-              onBack={() => {
-                const id = showPause;
-                setShowPause(null);
-                if (id) setShowActionsFor(id);
-              }}
-            />
-            <Input
-              testID="pause-start-input"
-              placeholder={t("admin.clients.pauseStart")}
-              value={pauseForm.startsAt}
-              onChangeText={(v) => setPauseForm((s) => ({ ...s, startsAt: v }))}
-            />
-            <Input
-              testID="pause-end-input"
-              placeholder={t("admin.clients.pauseEnd")}
-              value={pauseForm.endsAt}
-              onChangeText={(v) => setPauseForm((s) => ({ ...s, endsAt: v }))}
-            />
-            <Input
-              placeholder={t("admin.clients.pauseReason")}
-              value={pauseForm.reason}
-              onChangeText={(v) => setPauseForm((s) => ({ ...s, reason: v }))}
-              multiline
-              numberOfLines={3}
-              style={{ minHeight: 80, textAlignVertical: "top" }}
-            />
-            <Button
-              testID="pause-submit-button"
-              disabled={pauseMutation.isPending || !pauseForm.startsAt || !pauseForm.endsAt}
-              onPress={() =>
-                showPause &&
-                pauseMutation.mutate({
-                  clientProfileId: showPause,
-                  startsAt: pauseForm.startsAt,
-                  endsAt: pauseForm.endsAt,
-                  reason: pauseForm.reason || undefined,
-                })
-              }
-            >
-              {t("admin.clients.pauseSubmit")}
-            </Button>
-            {pauseMutation.isError ? <ErrorState message={t("admin.clients.pauseError")} /> : null}
-          </View>
-        </AppSheet>
       <ConfirmSheet
         open={!!confirmRevokeId}
         onOpenChange={(o) => !o && setConfirmRevokeId(null)}
@@ -1079,87 +616,5 @@ export default function AdminClients() {
         }}
       />
     </ScreenContainerRaw>
-  );
-}
-
-// ─── ActionRow ───────────────────────────────────────────────────────────────
-// Used inside the client-actions sheet. Icon + label + chevron, full
-// width, hairline-divided. Destructive variant tints icon + label red.
-
-/**
- * SheetHeader — back chevron on the left of the sheet title. The chevron
- * goes "back" to the actions sheet (the previous step in the user's flow);
- * the standard sheet swipe-down still dismisses entirely.
- */
-function SheetHeader({
-  title,
-  onBack,
-}: {
-  title: string;
-  onBack: () => void;
-}) {
-  const t = useThemeTokens();
-  return (
-    <View className="flex-row items-center gap-2 -ml-1">
-      <Pressable
-        onPress={onBack}
-        hitSlop={12}
-        android_ripple={null}
-        className="active:opacity-60 w-8 h-8 items-center justify-center"
-        accessibilityRole="button"
-        accessibilityLabel="Back"
-      >
-        <Icon name="chevron-left" size={22} color={t.foreground} />
-      </Pressable>
-      <Text
-        className="text-foreground font-body-bold flex-1"
-        style={{ fontSize: 20, letterSpacing: -0.3 }}
-      >
-        {title}
-      </Text>
-    </View>
-  );
-}
-
-function ActionRow({
-  icon,
-  label,
-  onPress,
-  destructive = false,
-  testID,
-}: {
-  icon: IconName;
-  label: string;
-  onPress: () => void;
-  destructive?: boolean;
-  testID?: string;
-}) {
-  const t = useThemeTokens();
-  return (
-    <Pressable
-      testID={testID}
-      onPress={onPress}
-      android_ripple={null}
-      className="flex-row items-center gap-3 py-3.5 active:opacity-70"
-    >
-      <Icon
-        name={icon}
-        size={18}
-        color={destructive ? "#dc2626" : t.foreground}
-      />
-      <Text
-        className={
-          destructive
-            ? "text-danger font-body-medium flex-1"
-            : "text-foreground font-body-medium flex-1"
-        }
-        style={{ fontSize: 15 }}
-      >
-        {label}
-      </Text>
-      {!destructive ? (
-        <Icon name="chevron-right" size={16} color={t.faint} />
-      ) : null}
-    </Pressable>
   );
 }
