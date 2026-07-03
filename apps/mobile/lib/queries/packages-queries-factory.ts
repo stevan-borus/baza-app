@@ -2,10 +2,14 @@ import {
   queryOptions,
   mutationOptions,
   infiniteQueryOptions,
+  useMutation,
+  useQueryClient,
   type QueryClient,
 } from "@tanstack/react-query";
 import { z } from "zod";
 import { apiRequest } from "@/lib/api-request";
+import { clientsQueries } from "@/lib/queries/clients-queries-factory";
+import { reportsQueries } from "@/lib/queries/reports-queries-factory";
 
 const embeddedClassTypeSchema = z.object({
   id: z.string(),
@@ -259,4 +263,43 @@ export function updatePackageTypeMutationOptions(queryClient: QueryClient) {
     onSuccess: (data: PackageTypeMutationResponse) =>
       splicePackageType(queryClient, data.packageType),
   };
+}
+
+// A new ClientPackage changes the client's derived packageStatus (list chip +
+// detail-header pill live under ["clients"]) and the package report figures —
+// both render on always-mounted screens, so they must be refetched here.
+export function assignClientPackageMutationOptions(queryClient: QueryClient) {
+  return {
+    ...packagesQueries.createClientPackage(),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: packagesQueries.all }),
+        queryClient.invalidateQueries({ queryKey: clientsQueries.all }),
+        queryClient.invalidateQueries({ queryKey: reportsQueries.all }),
+      ]);
+    },
+  };
+}
+
+// A PackagePause row isn't part of any ["packages"] response — its visible
+// effect is the derived packageStatus ("paused") under ["clients"], on the
+// list chip and the detail-header pill.
+export function pausePackageMutationOptions(queryClient: QueryClient) {
+  return {
+    ...packagesQueries.pause(),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: packagesQueries.all }),
+        queryClient.invalidateQueries({ queryKey: clientsQueries.all }),
+      ]);
+    },
+  };
+}
+
+export function useAssignClientPackageMutation() {
+  return useMutation(assignClientPackageMutationOptions(useQueryClient()));
+}
+
+export function usePausePackageMutation() {
+  return useMutation(pausePackageMutationOptions(useQueryClient()));
 }

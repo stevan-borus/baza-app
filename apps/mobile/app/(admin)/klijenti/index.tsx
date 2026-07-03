@@ -45,7 +45,11 @@ import { FilterChip } from "@/components/ui/studio";
 import { PaginatedList } from "@/components/ui/paginated-list";
 import { DateTimePicker } from "@/components/ui/date-time-picker";
 import { toIsoDate } from "@/lib/date-of-birth";
-import { clientsQueries } from "@/lib/queries/clients-queries-factory";
+import {
+  clientsQueries,
+  useCreateClientMutation,
+  useUpdateClientMutation,
+} from "@/lib/queries/clients-queries-factory";
 import {
   invitesQueries,
   createInviteMutationOptions,
@@ -53,7 +57,7 @@ import {
   resendInviteMutationOptions,
   type Invite,
 } from "@/lib/queries/invites-queries-factory";
-import { packagesQueries } from "@/lib/queries/packages-queries-factory";
+import { usePausePackageMutation } from "@/lib/queries/packages-queries-factory";
 import { now } from "@/lib/now";
 import type { ClientsResponse } from "@baza/types";
 
@@ -264,29 +268,12 @@ export default function AdminClients() {
   const createInviteMutation = useMutation(createInviteMutationOptions(queryClient));
   const revokeMutation = useMutation(revokeInviteMutationOptions(queryClient));
   const resendMutation = useMutation(resendInviteMutationOptions(queryClient));
-  const createClientMutation = useMutation({
-    ...clientsQueries.create(),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: clientsQueries.all });
-      setShowCreateClient(false);
-      setClientForm({ email: "", firstName: "", lastName: "", phone: "", dateOfBirth: null });
-    },
-  });
-  const updateClientMutation = useMutation({
-    ...clientsQueries.update(),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: clientsQueries.all });
-      setShowEditClient(null);
-    },
-  });
-  const pauseMutation = useMutation({
-    ...packagesQueries.pause(),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: packagesQueries.all });
-      setShowPause(null);
-      setPauseForm({ startsAt: "", endsAt: "", reason: "" });
-    },
-  });
+  // Cache upkeep (clients + reports counts, packages + clients packageStatus)
+  // is baked into the factory hooks; the sheet-close side-effects are passed
+  // per-call via mutate(vars, { onSuccess }) so they can't clobber it.
+  const createClientMutation = useCreateClientMutation();
+  const updateClientMutation = useUpdateClientMutation();
+  const pauseMutation = usePausePackageMutation();
 
   // ── Raw data ──────────────────────────────────────────────────────────────
   const clients = useMemo(
@@ -639,13 +626,21 @@ export default function AdminClients() {
               }
               onPress={() => {
                 if (!clientForm.dateOfBirth) return;
-                createClientMutation.mutate({
-                  email: clientForm.email,
-                  firstName: clientForm.firstName,
-                  lastName: clientForm.lastName,
-                  phone: clientForm.phone || undefined,
-                  dateOfBirth: toIsoDate(clientForm.dateOfBirth),
-                });
+                createClientMutation.mutate(
+                  {
+                    email: clientForm.email,
+                    firstName: clientForm.firstName,
+                    lastName: clientForm.lastName,
+                    phone: clientForm.phone || undefined,
+                    dateOfBirth: toIsoDate(clientForm.dateOfBirth),
+                  },
+                  {
+                    onSuccess: () => {
+                      setShowCreateClient(false);
+                      setClientForm({ email: "", firstName: "", lastName: "", phone: "", dateOfBirth: null });
+                    },
+                  },
+                );
               }}
             >
               {t("admin.clients.createClient")}
@@ -709,14 +704,17 @@ export default function AdminClients() {
               disabled={updateClientMutation.isPending}
               onPress={() =>
                 showEditClient &&
-                updateClientMutation.mutate({
-                  id: showEditClient,
-                  firstName: editForm.firstName,
-                  lastName: editForm.lastName,
-                  phone: editForm.phone || undefined,
-                  notes: editForm.notes || undefined,
-                  isActive: editForm.isActive,
-                })
+                updateClientMutation.mutate(
+                  {
+                    id: showEditClient,
+                    firstName: editForm.firstName,
+                    lastName: editForm.lastName,
+                    phone: editForm.phone || undefined,
+                    notes: editForm.notes || undefined,
+                    isActive: editForm.isActive,
+                  },
+                  { onSuccess: () => setShowEditClient(null) },
+                )
               }
             >
               {t("admin.clients.save")}
@@ -1046,12 +1044,20 @@ export default function AdminClients() {
               disabled={pauseMutation.isPending || !pauseForm.startsAt || !pauseForm.endsAt}
               onPress={() =>
                 showPause &&
-                pauseMutation.mutate({
-                  clientProfileId: showPause,
-                  startsAt: pauseForm.startsAt,
-                  endsAt: pauseForm.endsAt,
-                  reason: pauseForm.reason || undefined,
-                })
+                pauseMutation.mutate(
+                  {
+                    clientProfileId: showPause,
+                    startsAt: pauseForm.startsAt,
+                    endsAt: pauseForm.endsAt,
+                    reason: pauseForm.reason || undefined,
+                  },
+                  {
+                    onSuccess: () => {
+                      setShowPause(null);
+                      setPauseForm({ startsAt: "", endsAt: "", reason: "" });
+                    },
+                  },
+                )
               }
             >
               {t("admin.clients.pauseSubmit")}
