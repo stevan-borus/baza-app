@@ -12,6 +12,7 @@ import {
 } from "@baza/types/catalog";
 import { apiFetch, throwIfNotOk } from "@/lib/api";
 import { sharedEnv } from "@/lib/env.shared";
+import { sessionsQueries } from "@/lib/queries/sessions-queries-factory";
 
 export type { ClassType } from "@baza/types/catalog";
 
@@ -120,7 +121,12 @@ export function createClassTypeMutationOptions(queryClient: QueryClient) {
 export function updateClassTypeMutationOptions(queryClient: QueryClient) {
   return {
     ...trainingsQueries.updateClassType(),
-    onSuccess: (data: ClassTypeMutationResponse) =>
-      spliceClassType(queryClient, data.classType),
+    onSuccess: async (data: ClassTypeMutationResponse) => {
+      spliceClassType(queryClient, data.classType);
+      // Session caches (availability/list/byId) embed a server-joined
+      // classTypeName — a rename must refetch them or calendars keep the
+      // old name and color mapping.
+      await queryClient.invalidateQueries({ queryKey: sessionsQueries.all });
+    },
   };
 }

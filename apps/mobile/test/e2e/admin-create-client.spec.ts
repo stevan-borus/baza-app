@@ -54,10 +54,11 @@ test.describe("admin — create client with DOB", () => {
 
     await page.getByTestId("client-create-submit-button").click();
 
-    // The created client appears in the list (no 400). Search first — with
-    // uuid ordering + FlatList virtualization, bare row-matching against the
-    // unfiltered list is a per-seed lottery (the row may be virtualized out).
-    // Assert by the unique email to avoid colliding with the sheet title.
+    // The created client appears in the list (no 400). Assert by the unique
+    // email to avoid colliding with the "Novi klijent" sheet title.
+    // Search first: the list is uuid-ordered (random per seed) and the
+    // FlatList virtualizes below-the-fold rows out of the DOM, so the new
+    // row's visibility without narrowing is a seed-order lottery.
     await page.getByTestId("klijenti-search-input").fill("klijent.novi");
     await expect(
       page.getByText("klijent.novi.e2e@example.test"),

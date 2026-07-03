@@ -139,14 +139,8 @@ describe("updatePreferencesMutationOptions — optimistic cache (no jitter)", ()
   });
 
   it("does not re-fetch the preferences query on success — the optimistic write is authoritative", async () => {
-    const invalidateSpy = vi.spyOn(client, "invalidateQueries");
-
     await runMutation({ campaignsEnabled: false }, "success");
 
-    const invalidatedPrefs = invalidateSpy.mock.calls.some(([filters]) => {
-      const key = (filters as { queryKey?: readonly unknown[] } | undefined)?.queryKey;
-      return key?.[0] === "notifications" && key?.[1] === "preferences";
-    });
-    expect(invalidatedPrefs).toBe(false);
+    expect(client.getQueryState(PREFS_KEY)?.isInvalidated).toBe(false);
   });
 });
