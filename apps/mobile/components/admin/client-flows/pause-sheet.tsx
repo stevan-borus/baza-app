@@ -13,14 +13,14 @@
 
 import React, { useState } from "react";
 import { View } from "react-native";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+
 import { useTranslation } from "react-i18next";
 import { AppSheet } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { ErrorState } from "@/components/ui/states";
 import { Input } from "@/components/ui/input";
 import { SheetHeader } from "@/components/admin/client-flows/sheet-header";
-import { packagesQueries } from "@/lib/queries/packages-queries-factory";
+import { usePausePackageMutation } from "@/lib/queries/packages-queries-factory";
 
 export type PauseSheetProps = {
   /**
@@ -40,18 +40,12 @@ const EMPTY_FORM = { startsAt: "", endsAt: "", reason: "" };
 
 export function PauseSheet({ clientProfileId, onClose, onBack }: PauseSheetProps) {
   const { t } = useTranslation();
-  const queryClient = useQueryClient();
 
   const [form, setForm] = useState(EMPTY_FORM);
 
-  const pauseMutation = useMutation({
-    ...packagesQueries.pause(),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: packagesQueries.all });
-      onClose();
-      setForm(EMPTY_FORM);
-    },
-  });
+  // Cache upkeep (packages + clients packageStatus) is baked into the
+  // factory hook; close/reset ride per-call so they can't clobber it.
+  const pauseMutation = usePausePackageMutation();
 
   return (
     <AppSheet
@@ -86,12 +80,20 @@ export function PauseSheet({ clientProfileId, onClose, onBack }: PauseSheetProps
           disabled={pauseMutation.isPending || !form.startsAt || !form.endsAt}
           onPress={() =>
             clientProfileId &&
-            pauseMutation.mutate({
-              clientProfileId,
-              startsAt: form.startsAt,
-              endsAt: form.endsAt,
-              reason: form.reason || undefined,
-            })
+            pauseMutation.mutate(
+              {
+                clientProfileId,
+                startsAt: form.startsAt,
+                endsAt: form.endsAt,
+                reason: form.reason || undefined,
+              },
+              {
+                onSuccess: () => {
+                  onClose();
+                  setForm(EMPTY_FORM);
+                },
+              },
+            )
           }
         >
           {t("admin.clients.pauseSubmit")}

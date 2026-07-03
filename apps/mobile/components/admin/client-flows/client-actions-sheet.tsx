@@ -22,14 +22,14 @@
 
 import React, { useState } from "react";
 import { Pressable, Text, View } from "react-native";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+
 import { useTranslation } from "react-i18next";
 import { AppSheet } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Icon, type IconName } from "@/components/ui/icon";
 import { useThemeTokens } from "@/components/ui/tokens";
 import { InitialsAvatar } from "@/components/admin/client-flows/initials-avatar";
-import { clientsQueries } from "@/lib/queries/clients-queries-factory";
+import { useUpdateClientMutation } from "@/lib/queries/clients-queries-factory";
 
 export type ClientActionsSheetClient = {
   /** ClientProfile id — what the follow-up flows (edit/assign/pause) key on. */
@@ -61,18 +61,13 @@ export function ClientActionsSheet({
   onPause,
 }: ClientActionsSheetProps) {
   const { t } = useTranslation();
-  const queryClient = useQueryClient();
 
   // Delete confirmation — separate from the actions sheet so a stray tap
   // can't soft-delete a client. Snapshot of the row taken at "Obriši" press.
   const [deleteTarget, setDeleteTarget] = useState<ClientActionsSheetClient | null>(null);
 
-  const deactivateMutation = useMutation({
-    ...clientsQueries.update(),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: clientsQueries.all });
-    },
-  });
+  // Cache upkeep (clients + reports counts) is baked into the factory hook.
+  const deactivateMutation = useUpdateClientMutation();
 
   return (
     <>

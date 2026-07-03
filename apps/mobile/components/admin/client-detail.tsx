@@ -33,7 +33,7 @@ import { useThemeTokens } from "@/components/ui/tokens";
 import { ScreenContainerRaw, useTabBarBottomPadding } from "@/components/ui/screen-container";
 import { HeaderIconButton } from "@/components/ui/app-header";
 import { PaginatedList } from "@/components/ui/paginated-list";
-import { clientsQueries } from "@/lib/queries/clients-queries-factory";
+import { clientsQueries, useUpdateClientMutation } from "@/lib/queries/clients-queries-factory";
 import { packagesQueries, type ClientPackage } from "@/lib/queries/packages-queries-factory";
 import { bookingsQueries, type ClientBooking } from "@/lib/queries/bookings-queries-factory";
 import {
@@ -143,13 +143,9 @@ export function ClientDetail({ id }: { id: string }) {
   }, [upcomingQuery.data?.pages]);
 
   // Kept for the delete sheet only — edit's copy of this mutation now lives
-  // inside the shared EditClientSheet module.
-  const updateClientMutation = useMutation({
-    ...clientsQueries.update(),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: clientsQueries.all });
-    },
-  });
+  // inside the shared EditClientSheet module. Cache upkeep (clients + reports
+  // counts) is baked into the factory hook.
+  const updateClientMutation = useUpdateClientMutation();
 
   const headerTitle = client?.user.fullName ?? t("admin.clientDetail.title");
 
