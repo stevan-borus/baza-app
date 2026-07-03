@@ -8,6 +8,7 @@ import { NOTIFICATION_MESSAGE_KEYS } from "@baza/i18n";
 import { UserRole } from "@/generated/prisma";
 import { now } from "@/lib/now";
 import { requireRole } from "@/lib/server/auth-guards";
+import { createClientPackageFromType } from "@/lib/server/client-package-create";
 import { linkPackagesToBilling } from "@/lib/server/billing-package-link";
 import { fail, respond } from "@/lib/server/http";
 import { createSystemNotification } from "@/lib/server/notifications";
@@ -266,30 +267,10 @@ export async function POST(request: Request) {
   });
   if (!packageType) return fail("Package type not found", 404);
 
-  const expiresAt = new Date(
-    startsAt.getTime() + packageType.validityDays * 24 * 60 * 60 * 1000,
-  );
-
-  const clientPackage = await prisma.clientPackage.create({
-    data: {
-      clientProfileId: parsed.data.clientProfileId,
-      packageTypeId: parsed.data.packageTypeId,
-      classTypeId: packageType.classTypeId,
-      lateCancelHours: packageType.lateCancelHours,
-      startsAt,
-      expiresAt,
-      sessionsRemaining: packageType.sessionCount,
-    },
-    select: {
-      id: true,
-      clientProfileId: true,
-      packageTypeId: true,
-      classTypeId: true,
-      lateCancelHours: true,
-      startsAt: true,
-      expiresAt: true,
-      sessionsRemaining: true,
-    },
+  const clientPackage = await createClientPackageFromType(prisma, {
+    clientProfileId: parsed.data.clientProfileId,
+    packageType,
+    startsAt,
   });
 
   if (packageType.isBirthdayGift) {
