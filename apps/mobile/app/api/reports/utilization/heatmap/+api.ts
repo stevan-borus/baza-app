@@ -14,7 +14,7 @@
  * The endpoint always returns all 28 cells, even empty ones, so the UI
  * grid layout is stable across periods.
  */
-import type { ReportsUtilizationHeatmapResponse } from "@baza/types";
+import type { ReportsUtilizationHeatmapResponse } from "@baza/types/reports";
 import { UserRole } from "@/generated/prisma";
 import { requireRole } from "@/lib/server/auth-guards";
 import { fail, ok } from "@/lib/server/http";

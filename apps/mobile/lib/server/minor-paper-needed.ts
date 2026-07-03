@@ -9,7 +9,7 @@
  *   - the client's most recent accepted waiver_minor must have guardianVerifiedAt: null
  */
 import { now } from "@/lib/now";
-import { formatFullName } from "@baza/types";
+import { formatFullName } from "@baza/types/common";
 import { notifyOperators } from "@/lib/server/notify-operators";
 import { prisma } from "@/lib/server/prisma";
 

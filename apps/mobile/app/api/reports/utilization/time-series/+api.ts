@@ -12,7 +12,7 @@
  * canceled-status sessions are dropped (they don't represent real
  * capacity). Empty buckets are emitted so the chart layout stays stable.
  */
-import type { ReportsUtilizationTimeSeriesResponse } from "@baza/types";
+import type { ReportsUtilizationTimeSeriesResponse } from "@baza/types/reports";
 import { UserRole } from "@/generated/prisma";
 import { requireRole } from "@/lib/server/auth-guards";
 import { fail, ok } from "@/lib/server/http";

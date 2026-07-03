@@ -3,7 +3,7 @@ import { requireCronAuth } from "@/lib/server/cron-auth";
 import { ok } from "@/lib/server/http";
 import { notifyOperators } from "@/lib/server/notify-operators";
 import { resolveSuggestedClassType } from "@/lib/server/birthday-suggested-class-type";
-import { formatFullName } from "@baza/types";
+import { formatFullName } from "@baza/types/common";
 import { UserRole, Prisma } from "@/generated/prisma";
 import { prisma } from "@/lib/server/prisma";
 

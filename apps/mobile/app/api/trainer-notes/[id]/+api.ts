@@ -1,4 +1,4 @@
-import { updateTrainerNoteInputSchema } from "@baza/types";
+import { updateTrainerNoteInputSchema } from "@baza/types/trainer-notes";
 import { UserRole } from "@/generated/prisma";
 import { requireRole } from "@/lib/server/auth-guards";
 import { fail, ok } from "@/lib/server/http";

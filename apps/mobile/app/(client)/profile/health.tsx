@@ -30,7 +30,7 @@ import {
   ScreenContainerRaw,
   useTabBarBottomPadding,
 } from "@/components/ui/screen-container";
-import type { HealthIntakeResponse } from "@baza/types";
+import type { HealthIntakeResponse } from "@baza/types/health-intake";
 
 const ARM_TIMEOUT_MS = 3000;
 

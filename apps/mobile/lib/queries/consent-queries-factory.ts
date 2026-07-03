@@ -1,12 +1,5 @@
 import { queryOptions, useMutation, useQueryClient, type QueryClient } from "@tanstack/react-query";
-import {
-  consentStatusResponseSchema,
-  consentAcceptInputSchema,
-  socialMediaConsentInputSchema,
-  type ConsentStatusResponse,
-  type ConsentAcceptInput,
-  type SocialMediaConsentInput,
-} from "@baza/types";
+import { consentStatusResponseSchema, consentAcceptInputSchema, socialMediaConsentInputSchema, type ConsentStatusResponse, type ConsentAcceptInput, type SocialMediaConsentInput } from "@baza/types/consent";
 import { apiFetch } from "@/lib/api";
 import { sharedEnv } from "@/lib/env.shared";
 import { authQueries } from "@/lib/queries/auth-queries-factory";

@@ -1,4 +1,4 @@
-import type { ReportsUtilizationByClassTypeResponse } from "@baza/types";
+import type { ReportsUtilizationByClassTypeResponse } from "@baza/types/reports";
 import { UserRole } from "@/generated/prisma";
 import { requireRole } from "@/lib/server/auth-guards";
 import { fail, ok } from "@/lib/server/http";

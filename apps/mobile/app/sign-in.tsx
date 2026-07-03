@@ -21,7 +21,7 @@ import { LinkText } from "@/components/ui/typography";
 import { StudioButton } from "@/components/ui/studio";
 import { authClient } from "@/lib/auth-client";
 import { authQueries } from "@/lib/queries/auth-queries-factory";
-import { signInInputSchema } from "@baza/types";
+import { signInInputSchema } from "@baza/types/auth";
 import { validateForm, type FormErrors } from "@/lib/zod-form";
 
 export default function SignInScreen() {

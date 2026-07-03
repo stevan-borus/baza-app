@@ -1,5 +1,5 @@
 import { UserRole } from "@/generated/prisma";
-import { healthIntakeInputSchema } from "@baza/types";
+import { healthIntakeInputSchema } from "@baza/types/health-intake";
 import { extractEvidence } from "@/lib/legal/evidence";
 import { latestIntake, recordIntake, withdrawIntake } from "@/lib/server/health-intake";
 import { requireRole } from "@/lib/server/auth-guards";

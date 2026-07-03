@@ -1,4 +1,4 @@
-import { campaignAudienceSpecSchema } from "@baza/types";
+import { campaignAudienceSpecSchema } from "@baza/types/campaigns";
 import { resolveLocale } from "@baza/i18n";
 import { now } from "@/lib/now";
 import { env } from "@/lib/server/env";

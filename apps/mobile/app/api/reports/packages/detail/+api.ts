@@ -28,7 +28,8 @@
  * A match means "paid"; otherwise "comp". O(clients) DB queries for now —
  * optimization can come later if needed.
  */
-import { formatFullName, type ReportsPackagesDetailResponse } from "@baza/types";
+import { formatFullName } from "@baza/types/common";
+import { type ReportsPackagesDetailResponse } from "@baza/types/reports";
 import { UserRole } from "@/generated/prisma";
 import { requireRole } from "@/lib/server/auth-guards";
 import {

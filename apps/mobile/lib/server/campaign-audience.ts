@@ -1,4 +1,4 @@
-import type { CampaignAudienceSpec } from "@baza/types";
+import type { CampaignAudienceSpec } from "@baza/types/campaigns";
 import { Prisma } from "@/generated/prisma";
 import { now } from "@/lib/now";
 import { prisma } from "@/lib/server/prisma";

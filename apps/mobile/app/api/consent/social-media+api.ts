@@ -1,5 +1,5 @@
 import { UserRole } from "@/generated/prisma";
-import { socialMediaConsentInputSchema } from "@baza/types";
+import { socialMediaConsentInputSchema } from "@baza/types/consent";
 import { requireRole } from "@/lib/server/auth-guards";
 import { fail, ok } from "@/lib/server/http";
 import { extractEvidence } from "@/lib/legal/evidence";

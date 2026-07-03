@@ -1,4 +1,5 @@
-import { formatFullName, updateSessionInputSchema } from "@baza/types";
+import { formatFullName } from "@baza/types/common";
+import { updateSessionInputSchema } from "@baza/types/scheduling";
 import { UserRole } from "@/generated/prisma";
 import { nowMs } from "@/lib/now";
 import { requireRole } from "@/lib/server/auth-guards";

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { displayName } from "@baza/types";
+import { displayName } from "@baza/types/common";
 
 describe("displayName", () => {
   it("returns the full name when first and last are present", () => {

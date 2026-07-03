@@ -1,4 +1,4 @@
-import type { ReportsSummaryResponse } from "@baza/types";
+import type { ReportsSummaryResponse } from "@baza/types/reports";
 import { UserRole } from "@/generated/prisma";
 import { requireRole } from "@/lib/server/auth-guards";
 import { ok } from "@/lib/server/http";

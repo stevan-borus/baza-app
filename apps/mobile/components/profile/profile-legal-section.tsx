@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Pressable, Switch, Text, View } from "react-native";
 import { useQuery } from "@tanstack/react-query";
-import type { ConsentDocumentKey } from "@baza/types";
+import type { ConsentDocumentKey } from "@baza/types/consent";
 import { authQueries } from "@/lib/queries/auth-queries-factory";
 import {
   consentQueries,

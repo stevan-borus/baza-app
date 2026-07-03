@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { createNotificationInputSchema, paginationQuerySchema } from "@baza/types";
+import { createNotificationInputSchema } from "@baza/types/notifications";
+import { paginationQuerySchema } from "@baza/types/common";
 import { UserRole } from "@/generated/prisma";
 import { now } from "@/lib/now";
 import { requireRole } from "@/lib/server/auth-guards";

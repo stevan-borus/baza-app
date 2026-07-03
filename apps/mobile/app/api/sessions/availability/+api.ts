@@ -1,4 +1,5 @@
-import { formatFullName, monthlyAvailabilityQuerySchema } from "@baza/types";
+import { formatFullName } from "@baza/types/common";
+import { monthlyAvailabilityQuerySchema } from "@baza/types/scheduling";
 import { UserRole } from "@/generated/prisma";
 import { requireRole } from "@/lib/server/auth-guards";
 import { fail, ok } from "@/lib/server/http";

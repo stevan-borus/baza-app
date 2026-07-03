@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { AppSheet } from "@/components/ui/sheet";
 import { LegalDocumentViewer } from "./legal-document-viewer";
 import { legalQueries } from "@/lib/queries/legal-queries-factory";
-import type { ConsentDocumentKey } from "@baza/types";
+import type { ConsentDocumentKey } from "@baza/types/consent";
 
 type Props = {
   open: boolean;

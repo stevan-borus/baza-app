@@ -1,4 +1,4 @@
-import { campaignAudienceSpecSchema } from "@baza/types";
+import { campaignAudienceSpecSchema } from "@baza/types/campaigns";
 import { UserRole } from "@/generated/prisma";
 import { requireRole } from "@/lib/server/auth-guards";
 import { countCampaignAudience } from "@/lib/server/campaign-audience";

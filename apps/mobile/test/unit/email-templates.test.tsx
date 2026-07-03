@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { render } from "@react-email/render";
-import { formatFullName } from "@baza/types";
+import { formatFullName } from "@baza/types/common";
 import { CampaignEmail } from "@/emails/campaign-email";
 import { InviteEmail } from "@/emails/invite-email";
 import { ResetEmail } from "@/emails/reset-email";

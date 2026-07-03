@@ -1,4 +1,4 @@
-import { packagePauseInputSchema } from "@baza/types";
+import { packagePauseInputSchema } from "@baza/types/packages";
 import { UserRole } from "@/generated/prisma";
 import { requireRole } from "@/lib/server/auth-guards";
 import { fail, ok } from "@/lib/server/http";

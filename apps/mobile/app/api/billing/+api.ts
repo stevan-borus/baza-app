@@ -1,4 +1,5 @@
-import { billingRecordInputSchema, formatFullName, paginationQuerySchema } from "@baza/types";
+import { billingRecordInputSchema } from "@baza/types/billing";
+import { formatFullName, paginationQuerySchema } from "@baza/types/common";
 import { UserRole } from "@/generated/prisma";
 import { now } from "@/lib/now";
 import { requireRole } from "@/lib/server/auth-guards";

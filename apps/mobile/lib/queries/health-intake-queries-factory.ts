@@ -1,10 +1,5 @@
 import { queryOptions, useMutation, useQueryClient } from "@tanstack/react-query";
-import {
-  healthIntakeInputSchema,
-  healthIntakeResponseSchema,
-  type HealthIntakeInput,
-  type HealthIntakeResponse,
-} from "@baza/types";
+import { healthIntakeInputSchema, healthIntakeResponseSchema, type HealthIntakeInput, type HealthIntakeResponse } from "@baza/types/health-intake";
 import { apiFetch } from "@/lib/api";
 import { sharedEnv } from "@/lib/env.shared";
 import { consentQueries } from "@/lib/queries/consent-queries-factory";

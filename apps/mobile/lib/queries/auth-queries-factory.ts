@@ -1,5 +1,5 @@
 import { queryOptions } from "@tanstack/react-query";
-import { authMeResponseSchema } from "@baza/types";
+import { authMeResponseSchema } from "@baza/types/auth";
 import { sharedEnv } from "@/lib/env.shared";
 import { apiFetch } from "@/lib/api";
 

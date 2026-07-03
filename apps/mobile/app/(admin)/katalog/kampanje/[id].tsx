@@ -17,7 +17,7 @@ import { useTranslation } from "react-i18next";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
-import type { CampaignAudienceSpec } from "@baza/types";
+import type { CampaignAudienceSpec } from "@baza/types/campaigns";
 import { Button } from "@/components/ui/button";
 import { ConfirmSheet } from "@/components/ui/confirm-sheet";
 import { AppSheet } from "@/components/ui/sheet";

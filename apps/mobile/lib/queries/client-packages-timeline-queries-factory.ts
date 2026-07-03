@@ -1,8 +1,5 @@
 import { queryOptions } from "@tanstack/react-query";
-import {
-  clientPackagesTimelineResponseSchema,
-  type ClientPackageTimelineEntry,
-} from "@baza/types";
+import { clientPackagesTimelineResponseSchema, type ClientPackageTimelineEntry } from "@baza/types/packages";
 import { apiFetch } from "@/lib/api";
 import { sharedEnv } from "@/lib/env.shared";
 

@@ -33,7 +33,7 @@ import { useLocalAvatar } from "@/lib/use-local-avatar";
 import { Icon } from "@/components/ui/icon";
 import { MotiView } from "@/components/ui/styled";
 import { SectionRow, CapsLabel } from "@/components/ui/studio";
-import { displayName } from "@baza/types";
+import { displayName } from "@baza/types/common";
 import { ScreenContainerRaw, useTabBarBottomPadding } from "@/components/ui/screen-container";
 import { useThemeTokens } from "@/components/ui/tokens";
 import { getDateLocale } from "@/lib/i18n";

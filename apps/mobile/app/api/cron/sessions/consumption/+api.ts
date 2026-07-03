@@ -1,4 +1,4 @@
-import { formatFullName } from "@baza/types";
+import { formatFullName } from "@baza/types/common";
 import { now } from "@/lib/now";
 import { chargeNoShowConsumption } from "@/lib/server/booking-cancellation";
 import { requireCronAuth } from "@/lib/server/cron-auth";

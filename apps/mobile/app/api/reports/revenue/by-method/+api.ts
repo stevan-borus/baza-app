@@ -4,7 +4,7 @@
  * Only CONFIRMED BillingRecords contribute. Sorted by revenue descending so
  * cash/card (typically the biggest contributors) surface first.
  */
-import type { ReportsRevenueByMethodResponse } from "@baza/types";
+import type { ReportsRevenueByMethodResponse } from "@baza/types/reports";
 import { UserRole } from "@/generated/prisma";
 import { requireRole } from "@/lib/server/auth-guards";
 import { fail, ok } from "@/lib/server/http";

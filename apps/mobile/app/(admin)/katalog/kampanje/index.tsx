@@ -21,7 +21,7 @@ import { GlassCard } from "@/components/ui/glass-card";
 import { SkeletonList } from "@/components/ui/skeleton";
 import { EmptyState, ErrorState } from "@/components/ui/states";
 import { useThemeTokens } from "@/components/ui/tokens";
-import type { CampaignAudienceSpec } from "@baza/types";
+import type { CampaignAudienceSpec } from "@baza/types/campaigns";
 import {
   campaignsQueries,
   useCreateCampaignMutation,

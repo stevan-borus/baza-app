@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   campaignAudienceSpecSchema,
   createCampaignInputSchema,
-} from "../src/index";
+} from "../src/campaigns";
 
 describe("campaignAudienceSpecSchema", () => {
   it("accepts everyone alone", () => {

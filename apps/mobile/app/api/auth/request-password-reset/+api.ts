@@ -1,4 +1,4 @@
-import { requestPasswordResetInputSchema } from "@baza/types";
+import { requestPasswordResetInputSchema } from "@baza/types/auth";
 import { now } from "@/lib/now";
 import { fail, ok } from "@/lib/server/http";
 import { prisma } from "@/lib/server/prisma";

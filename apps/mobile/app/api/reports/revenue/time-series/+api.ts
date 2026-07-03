@@ -14,7 +14,7 @@
  * the (clipped, indexed by createdAt) row range and summing into pre-built
  * bucket slots avoids Prisma's lack of a portable date_trunc.
  */
-import type { ReportsRevenueTimeSeriesResponse } from "@baza/types";
+import type { ReportsRevenueTimeSeriesResponse } from "@baza/types/reports";
 import { UserRole } from "@/generated/prisma";
 import { requireRole } from "@/lib/server/auth-guards";
 import { fail, ok } from "@/lib/server/http";

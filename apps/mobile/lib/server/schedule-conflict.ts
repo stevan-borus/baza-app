@@ -7,7 +7,7 @@
  *  human-readable message without the client having to make a second
  *  request to look up what's already booked.
  */
-import { formatFullName } from "@baza/types";
+import { formatFullName } from "@baza/types/common";
 import { prisma } from "@/lib/server/prisma";
 import { SessionStatus } from "@/generated/prisma";
 

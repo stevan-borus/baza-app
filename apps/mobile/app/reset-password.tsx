@@ -17,10 +17,7 @@ import { LinkText } from "@/components/ui/typography";
 import { StudioButton } from "@/components/ui/studio";
 import { useThemeTokens } from "@/components/ui/tokens";
 import { apiRequest } from "@/lib/api-request";
-import {
-  requestPasswordResetInputSchema,
-  resetPasswordInputSchema,
-} from "@baza/types";
+import { requestPasswordResetInputSchema, resetPasswordInputSchema } from "@baza/types/auth";
 import { validateForm, type FormErrors } from "@/lib/zod-form";
 
 type Step = "request" | "reset" | "success";

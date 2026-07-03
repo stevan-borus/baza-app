@@ -1,4 +1,4 @@
-import { resetPasswordInputSchema } from "@baza/types";
+import { resetPasswordInputSchema } from "@baza/types/auth";
 import { now } from "@/lib/now";
 import { fail, ok } from "@/lib/server/http";
 import { hashPassword } from "@/lib/server/password";

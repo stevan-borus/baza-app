@@ -1,4 +1,4 @@
-import { formatFullName } from "@baza/types";
+import { formatFullName } from "@baza/types/common";
 import { UserRole, NotificationType } from "@/generated/prisma";
 import { requireRole } from "@/lib/server/auth-guards";
 import { ok } from "@/lib/server/http";

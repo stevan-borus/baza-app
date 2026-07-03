@@ -1,9 +1,5 @@
 import { queryOptions } from "@tanstack/react-query";
-import {
-  legalDocumentResponseSchema,
-  legalDocumentsListResponseSchema,
-  type ConsentDocumentKey,
-} from "@baza/types";
+import { legalDocumentResponseSchema, legalDocumentsListResponseSchema, type ConsentDocumentKey } from "@baza/types/consent";
 import { apiFetch } from "@/lib/api";
 import { sharedEnv } from "@/lib/env.shared";
 

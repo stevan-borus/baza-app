@@ -8,10 +8,7 @@
  *     (intake is the raw Prisma ClientHealthIntake row, or null)
  */
 import { describe, expect, it } from "vitest";
-import {
-  adminClientConsentRecordsResponseSchema,
-  adminClientHealthResponseSchema,
-} from "@baza/types";
+import { adminClientConsentRecordsResponseSchema, adminClientHealthResponseSchema } from "@baza/types/clients";
 
 describe("adminClientConsentRecordsResponseSchema", () => {
   it("parses the records + socialMedia payload", () => {

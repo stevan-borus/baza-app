@@ -1,4 +1,5 @@
-import { completeInviteInputSchema, formatFullName } from "@baza/types";
+import { completeInviteInputSchema } from "@baza/types/auth";
+import { formatFullName } from "@baza/types/common";
 import { type Prisma, InviteStatus, UserRole } from "@/generated/prisma";
 import { now } from "@/lib/now";
 import { auth } from "@/lib/server/auth";

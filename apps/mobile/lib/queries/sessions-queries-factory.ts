@@ -8,7 +8,7 @@ import { z } from "zod";
 // The wire shape (incl. z.coerce.date() on startsAt/endsAt, so dayjs
 // consumers keep receiving Date objects) lives in @baza/types — this factory
 // used to shadow it with a local duplicate.
-import { availabilityResponseSchema } from "@baza/types";
+import { availabilityResponseSchema } from "@baza/types/scheduling";
 import { apiRequest } from "@/lib/api-request";
 
 const sessionSchema = z.object({

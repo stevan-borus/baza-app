@@ -1,4 +1,5 @@
-import { formatFullName, inviteClientInputSchema } from "@baza/types";
+import { formatFullName } from "@baza/types/common";
+import { inviteClientInputSchema } from "@baza/types/auth";
 import { UserRole } from "@/generated/prisma";
 import { now } from "@/lib/now";
 import { requireRole } from "@/lib/server/auth-guards";

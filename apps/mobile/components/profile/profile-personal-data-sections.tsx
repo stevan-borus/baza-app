@@ -23,7 +23,7 @@ import { healthIntakeQueries } from "@/lib/queries/health-intake-queries-factory
 import { DocumentSheet } from "@/components/consent/document-sheet";
 import { SectionRow } from "@/components/ui/studio";
 import { useThemeTokens } from "@/components/ui/tokens";
-import type { ConsentDocumentKey } from "@baza/types";
+import type { ConsentDocumentKey } from "@baza/types/consent";
 
 const LEGAL_DOC_KEYS: ConsentDocumentKey[] = ["tos", "privacy", "waiver_adult"];
 

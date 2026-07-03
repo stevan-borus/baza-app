@@ -1,4 +1,4 @@
-import { createCampaignInputSchema } from "@baza/types";
+import { createCampaignInputSchema } from "@baza/types/campaigns";
 import { Prisma, UserRole } from "@/generated/prisma";
 import { now } from "@/lib/now";
 import { requireRole } from "@/lib/server/auth-guards";

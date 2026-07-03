@@ -6,7 +6,7 @@ import {
   type QueryClient,
 } from "@tanstack/react-query";
 import { z } from "zod";
-import type { CampaignAudienceSpec } from "@baza/types";
+import type { CampaignAudienceSpec } from "@baza/types/campaigns";
 import { apiFetch } from "@/lib/api";
 import { sharedEnv } from "@/lib/env.shared";
 

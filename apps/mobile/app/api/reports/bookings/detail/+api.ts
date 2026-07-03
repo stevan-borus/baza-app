@@ -34,7 +34,7 @@
  * Top sessions: top 10 sessions in the window by **non-canceled** booking
  * count. Ties are broken by capacity (so a fuller-of-two sessions wins).
  */
-import type { ReportsBookingsDetailResponse } from "@baza/types";
+import type { ReportsBookingsDetailResponse } from "@baza/types/reports";
 import { UserRole } from "@/generated/prisma";
 import { requireRole } from "@/lib/server/auth-guards";
 import { fail, ok } from "@/lib/server/http";

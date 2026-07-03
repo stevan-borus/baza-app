@@ -1,4 +1,5 @@
-import { createClientPackageInputSchema, formatFullName } from "@baza/types";
+import { createClientPackageInputSchema } from "@baza/types/packages";
+import { formatFullName } from "@baza/types/common";
 import { NOTIFICATION_MESSAGE_KEYS } from "@baza/i18n";
 import { UserRole } from "@/generated/prisma";
 import { now } from "@/lib/now";

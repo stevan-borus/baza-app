@@ -3,12 +3,7 @@ import {
   mutationOptions,
   infiniteQueryOptions,
 } from "@tanstack/react-query";
-import {
-  adminClientConsentRecordsResponseSchema,
-  adminClientHealthResponseSchema,
-  clientByIdResponseSchema,
-  clientsResponseSchema,
-} from "@baza/types";
+import { adminClientConsentRecordsResponseSchema, adminClientHealthResponseSchema, clientByIdResponseSchema, clientsResponseSchema } from "@baza/types/clients";
 import { ApiError } from "@/lib/api-error";
 import { apiRequest } from "@/lib/api-request";
 

@@ -3,7 +3,7 @@ import {
   mutationOptions,
 } from "@tanstack/react-query";
 import { z } from "zod";
-import { bookingMutationResultSchema } from "@baza/types";
+import { bookingMutationResultSchema } from "@baza/types/bookings";
 import { ApiError } from "@/lib/api-error";
 import { apiRequest } from "@/lib/api-request";
 

@@ -1,4 +1,5 @@
-import { bookingMutationInputSchema, BOOKING_ERRORS, formatFullName } from "@baza/types";
+import { bookingMutationInputSchema, BOOKING_ERRORS } from "@baza/types/bookings";
+import { formatFullName } from "@baza/types/common";
 import { UserRole } from "@/generated/prisma";
 import { getConsentStatus } from "@/lib/legal/consent-status";
 import { now } from "@/lib/now";

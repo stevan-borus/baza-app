@@ -7,7 +7,7 @@
  * *mechanics* here: timeframe window resolution, period bucketing, and
  * group-by-key accumulation.
  */
-import type { ReportsPeriod } from "@baza/types";
+import type { ReportsPeriod } from "@baza/types/reports";
 import {
   bucketSizeForPeriod,
   buildPeriodBuckets,
