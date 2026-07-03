@@ -14,17 +14,8 @@
  *   - a list not updating after a write (splice missed).
  */
 import { test, expect, type Page } from "./helpers/fixtures";
+import { signInAs } from "./helpers/auth";
 import { createInvite, disconnect, resetAndSeed } from "./helpers/db";
-
-const SEED_PASSWORD = "Password123!";
-
-async function signInAsAdmin(page: Page) {
-  await page.goto("/sign-in");
-  await page.getByTestId("auth-email-input").fill("admin.e2e@example.test");
-  await page.getByTestId("auth-password-input").fill(SEED_PASSWORD);
-  await page.getByTestId("auth-submit-button").click();
-  await expect(page.getByTestId("tab-pregled")).toBeVisible({ timeout: 15_000 });
-}
 
 async function openKatalogRow(page: Page, rowTestId: string, urlRe: RegExp) {
   await page.getByTestId("tab-katalog").click();
@@ -54,7 +45,7 @@ test.describe("admin — list splices on write (no refetch)", () => {
 
   // ── Rooms ─────────────────────────────────────────────────────────────────
   test("room: create appears in the list, edit updates the row in place", async ({ page }) => {
-    await signInAsAdmin(page);
+    await signInAs(page, "admin");
     await openKatalogRow(page, "katalog-row-rooms", /\/katalog\/sale$/);
 
     // Create — the new row should splice into the list without a reload.
@@ -76,7 +67,7 @@ test.describe("admin — list splices on write (no refetch)", () => {
 
   // ── Class types ─────────────────────────────────────────────────────────────
   test("class type: create appears, edit updates in place", async ({ page }) => {
-    await signInAsAdmin(page);
+    await signInAs(page, "admin");
     await openKatalogRow(page, "katalog-row-class-types", /\/katalog\/tipovi-treninga$/);
 
     await page.getByTestId("admin-new-class-type-button").dispatchEvent("click");
@@ -96,7 +87,7 @@ test.describe("admin — list splices on write (no refetch)", () => {
 
   // ── Package types (birthday-gift badge rides on the widened response) ────────
   test("package type: create appears, edit toggles birthday-gift badge in place", async ({ page }) => {
-    await signInAsAdmin(page);
+    await signInAs(page, "admin");
     await openKatalogRow(page, "katalog-row-package-types", /\/katalog\/tipovi-paketa$/);
 
     await page.getByTestId("admin-new-package-button").dispatchEvent("click");
@@ -123,7 +114,7 @@ test.describe("admin — list splices on write (no refetch)", () => {
 
   // ── Campaigns: create splices into list; send splices SENT status into detail ─
   test("campaign: create lands in the list, send flips status to Poslato", async ({ page }) => {
-    await signInAsAdmin(page);
+    await signInAs(page, "admin");
     await openKatalogRow(page, "katalog-row-campaigns", /\/katalog\/kampanje$/);
     await page.getByTestId("campaign-new-button").dispatchEvent("click");
 
@@ -146,7 +137,7 @@ test.describe("admin — list splices on write (no refetch)", () => {
 
   // ── Campaigns: delete filters the row out of the list (remove splice) ────────
   test("campaign: deleting a draft removes its row from the list", async ({ page }) => {
-    await signInAsAdmin(page);
+    await signInAs(page, "admin");
     await openKatalogRow(page, "katalog-row-campaigns", /\/katalog\/kampanje$/);
     await page.getByTestId("campaign-new-button").dispatchEvent("click");
     await page.getByTestId("campaign-title-input").fill("E2E Delete Campaign");
@@ -178,7 +169,7 @@ test.describe("admin — list splices on write (no refetch)", () => {
       status: "PENDING",
     });
 
-    await signInAsAdmin(page);
+    await signInAs(page, "admin");
     await page.getByTestId("tab-klijenti").click();
     await page.getByTestId("admin-clients-tab-invites").click();
 

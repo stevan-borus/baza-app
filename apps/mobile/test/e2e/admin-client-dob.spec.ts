@@ -1,8 +1,7 @@
-import { test, expect, type Page } from "./helpers/fixtures";
+import { test, expect } from "./helpers/fixtures";
+import { signInAs } from "./helpers/auth";
 import { disconnect, resetAndSeed } from "./helpers/db";
 import { pickInviteDob } from "./helpers/forms";
-
-const SEED_PASSWORD = "Password123!";
 
 /**
  * PR 1 of "Client Date of Birth Capture": e2e smoke.
@@ -27,20 +26,10 @@ test.describe("admin client DOB (Serbian)", () => {
     await disconnect();
   });
 
-  async function signInAsAdmin(page: Page) {
-    await page.goto("/sign-in");
-    await page.getByTestId("auth-email-input").fill("admin.e2e@example.test");
-    await page.getByTestId("auth-password-input").fill(SEED_PASSWORD);
-    await page.getByTestId("auth-submit-button").click();
-    await expect(page.getByTestId("tab-pregled")).toBeVisible({
-      timeout: 15_000,
-    });
-  }
-
   test("admin sees a seeded client's DOB on the detail screen and can open the invite DOB picker without crashing", async ({
     page,
   }) => {
-    await signInAsAdmin(page);
+    await signInAs(page, "admin");
 
     // ── 1. DOB renders on the admin client-detail header ─────────────────
     await page.getByTestId("tab-klijenti").click();

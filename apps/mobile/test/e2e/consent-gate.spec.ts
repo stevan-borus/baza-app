@@ -28,10 +28,9 @@ import {
   resetAndSeed,
 } from "./helpers/db";
 import { t, t_en } from "./helpers/locales";
+import { ADMIN_EMAIL, SEED_PASSWORD } from "./helpers/auth";
 
-const SEED_PASSWORD = "Password123!";
 const CLIENT_EMAIL = "client.unconsented@e2e.test";
-const ADMIN_EMAIL = "admin.e2e@example.test";
 
 /**
  * Sign in as the unconsented client. Waits for the redirect to /consent rather

@@ -2,19 +2,7 @@ import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { setMockUser } from "./auth-mock";
 import { resetDb } from "./setup-db";
 
-vi.mock("@/lib/server/auth-guards", async () => {
-  const { fail } = await import("@/lib/server/http");
-  const mod = await import("./auth-mock");
-  return {
-    requireRole: async (_req: Request, allowed: string[]) => {
-      const user = mod.getMockUser();
-      if (!user) return { ok: false as const, response: fail("Unauthorized", 401) };
-      if (!allowed.includes(user.role)) return { ok: false as const, response: fail("Forbidden", 403) };
-      return { ok: true as const, user };
-    },
-    getRequestUser: async () => mod.getMockUser(),
-  };
-});
+vi.mock("@/lib/server/auth-guards", async () => (await import("./auth-mock")).authGuardsMock());
 
 import { GET } from "@/app/api/reports/packages/+api";
 import { prisma } from "@/lib/server/prisma";

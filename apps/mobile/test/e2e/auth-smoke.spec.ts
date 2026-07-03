@@ -1,11 +1,13 @@
 import { test, expect } from "./helpers/fixtures";
+import { SEED_PASSWORD } from "./helpers/auth";
 import { resetAndSeed } from "./helpers/db";
 import { t } from "./helpers/locales";
 
-const SEED_PASSWORD = "Password123!";
-
 /**
  * Auth smoke (Serbian).
+ *
+ * The sign-in flow IS the subject under test here, so each test drives the
+ * form explicitly instead of going through helpers/auth.ts:signInAs.
  *
  * The auth-form testIDs (auth-email-input, auth-password-input,
  * auth-submit-button) and tab testIDs (tab-pregled for admin, tab-raspored

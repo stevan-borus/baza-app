@@ -1,8 +1,7 @@
 import { test, expect } from "./helpers/fixtures";
 import { now } from "../../lib/now";
+import { signInAs } from "./helpers/auth";
 import { resetAndSeed, disconnect } from "./helpers/db";
-
-const SEED_PASSWORD = "Password123!";
 
 /**
  * Smoke for the web DateTimePicker rebuild. Boots the admin schedule,
@@ -23,14 +22,7 @@ test.describe("DateTimePicker web smoke", () => {
   test("admin opens new-session sheet → calendar + time inputs render", async ({
     page,
   }) => {
-    await page.goto("/sign-in");
-    await page.getByTestId("auth-email-input").fill("admin.e2e@example.test");
-    await page.getByTestId("auth-password-input").fill(SEED_PASSWORD);
-    await page.getByTestId("auth-submit-button").click();
-    // Phase 1: admin landing tab is `pregled`.
-    await expect(page.getByTestId("tab-pregled")).toBeVisible({
-      timeout: 15_000,
-    });
+    await signInAs(page, "admin");
 
     // "Novi termin" hero row lives on the katalog tab (admin nav rewire in #28).
     await page.getByTestId("tab-katalog").click();

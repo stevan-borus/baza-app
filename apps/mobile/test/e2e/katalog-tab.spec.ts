@@ -3,10 +3,9 @@
  * Klijenti · Naplata · Izveštaji), the Katalog landing's test-ID contract,
  * row navigation, and the hero row opening the new-session sheet.
  */
-import { test, expect, type Page } from "./helpers/fixtures";
+import { test, expect } from "./helpers/fixtures";
+import { signInAs } from "./helpers/auth";
 import { disconnect, resetAndSeed } from "./helpers/db";
-
-const SEED_PASSWORD = "Password123!";
 
 test.describe("admin (Serbian) — katalog tab", () => {
   test.beforeAll(async () => {
@@ -16,20 +15,10 @@ test.describe("admin (Serbian) — katalog tab", () => {
     await disconnect();
   });
 
-  async function signInAsAdmin(page: Page) {
-    await page.goto("/sign-in");
-    await page.getByTestId("auth-email-input").fill("admin.e2e@example.test");
-    await page.getByTestId("auth-password-input").fill(SEED_PASSWORD);
-    await page.getByTestId("auth-submit-button").click();
-    await expect(page.getByTestId("tab-pregled")).toBeVisible({
-      timeout: 15_000,
-    });
-  }
-
   test("admin tab bar shows five tabs with Katalog in position 2", async ({
     page,
   }) => {
-    await signInAsAdmin(page);
+    await signInAs(page, "admin");
 
     // All five tabs render and are arranged in the documented order. The
     // FloatingTabBar gives every tab a testID of `tab-${routeName}`, so
@@ -54,7 +43,7 @@ test.describe("admin (Serbian) — katalog tab", () => {
   test("Katalog landing exposes the hero row and three catalog rows", async ({
     page,
   }) => {
-    await signInAsAdmin(page);
+    await signInAs(page, "admin");
     await page.getByTestId("tab-katalog").click();
 
     await expect(page.getByTestId("katalog-novi-termin")).toBeVisible();
@@ -66,14 +55,14 @@ test.describe("admin (Serbian) — katalog tab", () => {
   test("tapping Tipovi treninga row pushes /katalog/tipovi-treninga", async ({
     page,
   }) => {
-    await signInAsAdmin(page);
+    await signInAs(page, "admin");
     await page.getByTestId("tab-katalog").click();
     await page.getByTestId("katalog-row-class-types").dispatchEvent("click");
     await page.waitForURL(/\/katalog\/tipovi-treninga$/, { timeout: 10_000 });
   });
 
   test("tapping Sale row pushes /katalog/sale", async ({ page }) => {
-    await signInAsAdmin(page);
+    await signInAs(page, "admin");
     await page.getByTestId("tab-katalog").click();
     await page.getByTestId("katalog-row-rooms").dispatchEvent("click");
     await page.waitForURL(/\/katalog\/sale$/, { timeout: 10_000 });
@@ -82,7 +71,7 @@ test.describe("admin (Serbian) — katalog tab", () => {
   test("tapping Tipovi paketa row pushes /katalog/tipovi-paketa", async ({
     page,
   }) => {
-    await signInAsAdmin(page);
+    await signInAs(page, "admin");
     await page.getByTestId("tab-katalog").click();
     await page
       .getByTestId("katalog-row-package-types")
@@ -91,7 +80,7 @@ test.describe("admin (Serbian) — katalog tab", () => {
   });
 
   test("tapping Novi termin opens the new-session sheet", async ({ page }) => {
-    await signInAsAdmin(page);
+    await signInAs(page, "admin");
     await page.getByTestId("tab-katalog").click();
     await page.getByTestId("katalog-novi-termin").dispatchEvent("click");
 

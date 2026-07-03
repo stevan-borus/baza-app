@@ -1,5 +1,6 @@
-import { test, expect, type Page } from "./helpers/fixtures";
+import { test, expect } from "./helpers/fixtures";
 import { now } from "../../lib/now";
+import { signInAs } from "./helpers/auth";
 import {
   countTrainerNotesFor,
   disconnect,
@@ -10,7 +11,6 @@ import {
 import { navigateWeekStripTo } from "./helpers/dates";
 import { t } from "./helpers/locales";
 
-const SEED_PASSWORD = "Password123!";
 const REFORMER_TRAINER_EMAIL = "trainer.reformer@e2e.test";
 const ENERGY_TRAINER_EMAIL = "trainer.energy@e2e.test";
 const ACTIVE_REFORMER_CLIENT_EMAIL = "client.active.reformer@e2e.test";
@@ -41,23 +41,10 @@ test.describe("trainer (Serbian)", () => {
     await disconnect();
   });
 
-  async function signInAsReformerTrainer(page: Page) {
-    await page.goto("/sign-in");
-    await page
-      .getByTestId("auth-email-input")
-      .fill(REFORMER_TRAINER_EMAIL);
-    await page.getByTestId("auth-password-input").fill(SEED_PASSWORD);
-    await page.getByTestId("auth-submit-button").click();
-    // The trainer landing tab is "raspored" (schedule), not "index".
-    await expect(page.getByTestId("tab-raspored")).toBeVisible({
-      timeout: 15_000,
-    });
-  }
-
   test("40: trainer's schedule shows their assigned sessions only", async ({
     page,
   }) => {
-    await signInAsReformerTrainer(page);
+    await signInAs(page, "trainer");
 
     // Reformer is scheduled Mon/Wed/Fri. Pick the next Reformer day
     // explicitly so the assertion is independent of weekday-of-test-run.
@@ -74,7 +61,7 @@ test.describe("trainer (Serbian)", () => {
   test("41: trainer's clients list reflects link-by-booking scoping", async ({
     page,
   }) => {
-    await signInAsReformerTrainer(page);
+    await signInAs(page, "trainer");
     await page.getByTestId("tab-clients").click();
 
     // The seed now creates one booking on the Reformer trainer's first
@@ -100,7 +87,7 @@ test.describe("trainer (Serbian)", () => {
       ACTIVE_REFORMER_CLIENT_EMAIL,
     );
 
-    await signInAsReformerTrainer(page);
+    await signInAs(page, "trainer");
     await page.getByTestId("tab-notes").click();
     await page
       .getByRole("button", { name: t.trainer.notes.newNote })
@@ -147,7 +134,7 @@ test.describe("trainer (Serbian)", () => {
       ACTIVE_REFORMER_CLIENT_EMAIL,
     );
 
-    await signInAsReformerTrainer(page);
+    await signInAs(page, "trainer");
     await page.getByTestId("tab-notes").click();
 
     // Open the first existing note row (spec 42 left at least one).
@@ -170,7 +157,7 @@ test.describe("trainer (Serbian)", () => {
       ACTIVE_REFORMER_CLIENT_EMAIL,
     );
 
-    await signInAsReformerTrainer(page);
+    await signInAs(page, "trainer");
     await page.getByTestId("tab-notes").click();
 
     const before = await countTrainerNotesFor(ACTIVE_REFORMER_CLIENT_EMAIL);
@@ -237,7 +224,7 @@ test.describe("trainer (Serbian)", () => {
     // round-trip from the *form* path is impossible — that's an
     // intentional defense-in-depth gap. We assert via a direct API call
     // using cookies persisted by the page context.
-    await signInAsReformerTrainer(page);
+    await signInAs(page, "trainer");
 
     // Find an unlinked client profile id (any client other than the linked one).
     const apiBase =
@@ -275,7 +262,7 @@ test.describe("trainer (Serbian)", () => {
     // forbidden error card and must NOT leak the client's identity.
     const unlinkedUserId = await getUserIdByEmail("client.empty@e2e.test");
 
-    await signInAsReformerTrainer(page);
+    await signInAs(page, "trainer");
     await page.goto(`/(trainer)/clients/${unlinkedUserId}`);
 
     await expect(
@@ -294,7 +281,7 @@ test.describe("trainer (Serbian)", () => {
       ACTIVE_REFORMER_CLIENT_EMAIL,
     );
 
-    await signInAsReformerTrainer(page);
+    await signInAs(page, "trainer");
     await page.getByTestId("tab-notes").click();
 
     // Tap the "By client" chip → opens the client filter sheet.
@@ -325,7 +312,7 @@ test.describe("trainer (Serbian)", () => {
       ACTIVE_REFORMER_CLIENT_EMAIL,
     );
 
-    await signInAsReformerTrainer(page);
+    await signInAs(page, "trainer");
     await page.getByTestId("tab-notes").click();
 
     if ((await countTrainerNotesFor(ACTIVE_REFORMER_CLIENT_EMAIL)) === 0) {
@@ -395,7 +382,7 @@ test.describe("trainer (Serbian)", () => {
     );
     const before = await countTrainerNotesFor(ACTIVE_REFORMER_CLIENT_EMAIL);
 
-    await signInAsReformerTrainer(page);
+    await signInAs(page, "trainer");
     await page.getByTestId("tab-notes").click();
     await page
       .getByRole("button", { name: t.trainer.notes.newNote })
@@ -441,7 +428,7 @@ test.describe("trainer (Serbian)", () => {
       ACTIVE_REFORMER_CLIENT_EMAIL,
     );
 
-    await signInAsReformerTrainer(page);
+    await signInAs(page, "trainer");
     await page.getByTestId("tab-clients").click();
 
     await page

@@ -7,19 +7,10 @@
  * This drives the full form including the DOB picker and asserts the new client
  * lands in the list.
  */
-import { test, expect, type Page } from "./helpers/fixtures";
+import { test, expect } from "./helpers/fixtures";
+import { signInAs } from "./helpers/auth";
 import { disconnect, resetAndSeed } from "./helpers/db";
 import { pickDob } from "./helpers/forms";
-
-const SEED_PASSWORD = "Password123!";
-
-async function signInAsAdmin(page: Page) {
-  await page.goto("/sign-in");
-  await page.getByTestId("auth-email-input").fill("admin.e2e@example.test");
-  await page.getByTestId("auth-password-input").fill(SEED_PASSWORD);
-  await page.getByTestId("auth-submit-button").click();
-  await expect(page.getByTestId("tab-pregled")).toBeVisible({ timeout: 15_000 });
-}
 
 test.describe("admin — create client with DOB", () => {
   test.beforeAll(async ({ browser }) => {
@@ -39,7 +30,7 @@ test.describe("admin — create client with DOB", () => {
   });
 
   test("creates a client through the form including dateOfBirth", async ({ page }) => {
-    await signInAsAdmin(page);
+    await signInAs(page, "admin");
     await page.getByTestId("tab-klijenti").click();
 
     // Clients tab is the default; open the "Novi klijent" sheet.

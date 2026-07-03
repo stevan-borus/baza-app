@@ -13,19 +13,7 @@ import { setMockUser } from "./auth-mock";
 import { resetDb } from "./setup-db";
 import { now } from "@/lib/now";
 
-vi.mock("@/lib/server/auth-guards", async () => {
-  const { fail } = await import("@/lib/server/http");
-  const mod = await import("./auth-mock");
-  return {
-    requireRole: async (_req: Request, allowed: string[]) => {
-      const user = mod.getMockUser();
-      if (!user) return { ok: false as const, response: fail("Unauthorized", 401) };
-      if (!allowed.includes(user.role)) return { ok: false as const, response: fail("Forbidden", 403) };
-      return { ok: true as const, user };
-    },
-    getRequestUser: async () => mod.getMockUser(),
-  };
-});
+vi.mock("@/lib/server/auth-guards", async () => (await import("./auth-mock")).authGuardsMock());
 
 import { POST } from "@/app/api/billing/+api";
 import { GET as GET_CLIENT_PACKAGES, POST as POST_CLIENT_PACKAGE } from "@/app/api/packages/client-packages/+api";

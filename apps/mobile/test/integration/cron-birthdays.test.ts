@@ -5,9 +5,7 @@ vi.mock("@/lib/server/cron-auth", () => ({
   requireCronAuth: () => ({ ok: true as const }),
 }));
 
-vi.mock("@/lib/server/notifications", () => ({
-  createSystemNotification: vi.fn(async () => undefined),
-}));
+vi.mock("@/lib/server/notifications", async () => (await import("./notifications-mock")).notificationsMock());
 
 import { POST as POST_BIRTHDAYS } from "@/app/api/cron/notifications/birthdays/+api";
 import { createSystemNotification } from "@/lib/server/notifications";

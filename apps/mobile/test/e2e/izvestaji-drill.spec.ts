@@ -17,18 +17,9 @@
  * `test.fixme`-guarded and switches on automatically once #57 merges.
  */
 import { test, expect } from "./helpers/fixtures";
+import { signInAs } from "./helpers/auth";
 import { disconnect, resetAndSeed } from "./helpers/db";
 import { t } from "./helpers/locales";
-
-const SEED_PASSWORD = "Password123!";
-
-async function signInAsAdmin(page: import("@playwright/test").Page) {
-  await page.goto("/sign-in");
-  await page.getByTestId("auth-email-input").fill("admin.e2e@example.test");
-  await page.getByTestId("auth-password-input").fill(SEED_PASSWORD);
-  await page.getByTestId("auth-submit-button").click();
-  await expect(page.getByTestId("tab-pregled")).toBeVisible({ timeout: 15_000 });
-}
 
 test.describe.serial("izveštaji → naplata drill (admin)", () => {
   test.beforeAll(async () => {
@@ -41,7 +32,7 @@ test.describe.serial("izveštaji → naplata drill (admin)", () => {
   test("tapping a revenue row drills to Naplata, shows the return pill, and the pill returns to Izveštaji", async ({
     page,
   }) => {
-    await signInAsAdmin(page);
+    await signInAs(page, "admin");
     await page.goto("/izvestaji/prihod");
 
     // The recent-payments list renders one full-width Pressable per payment
@@ -73,7 +64,7 @@ test.describe.serial("izveštaji → naplata drill (admin)", () => {
   test.fixme(
     "drilled Naplata list is pre-filtered to the tapped bucket's date range",
     async ({ page }) => {
-      await signInAsAdmin(page);
+      await signInAs(page, "admin");
       await page.goto("/izvestaji/prihod");
 
       // Tap a FUNDED bucket bar (aria-label not "0 RSD ...") so the drilled

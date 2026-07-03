@@ -17,10 +17,9 @@ import {
   openSessionEditSheet,
 } from "./helpers/dates";
 import { t } from "./helpers/locales";
+import { signInAs } from "./helpers/auth";
 import { pickInviteDob } from "./helpers/forms";
 import { pressRNW } from "./helpers/interactions";
-
-const SEED_PASSWORD = "Password123!";
 
 /**
  * Admin (Serbian). Test-plan items 12-39.
@@ -38,19 +37,6 @@ test.describe("admin (Serbian)", () => {
   test.afterAll(async () => {
     await disconnect();
   });
-
-  async function signInAsAdmin(page: Page) {
-    await page.goto("/sign-in");
-    await page.getByTestId("auth-email-input").fill("admin.e2e@example.test");
-    await page.getByTestId("auth-password-input").fill(SEED_PASSWORD);
-    await page.getByTestId("auth-submit-button").click();
-    // Phase 1 collapsed the admin tab bar to four tabs (Pregled / Klijenti /
-    // Naplata / Izveštaji); the leftmost is `pregled`, which is the admin
-    // landing tab.
-    await expect(page.getByTestId("tab-pregled")).toBeVisible({
-      timeout: 15_000,
-    });
-  }
 
   /**
    * Open a catalog screen via the Katalog tab. The Katalog tab is the
@@ -97,7 +83,7 @@ test.describe("admin (Serbian)", () => {
   test("Pregled header no longer renders the '+' new-session button", async ({
     page,
   }) => {
-    await signInAsAdmin(page);
+    await signInAs(page, "admin");
     await expect(
       page.getByTestId("admin-new-session-button"),
     ).toHaveCount(0);
@@ -106,7 +92,7 @@ test.describe("admin (Serbian)", () => {
   test("no admin screen mounts the legacy catalog avatar menu", async ({
     page,
   }) => {
-    await signInAsAdmin(page);
+    await signInAs(page, "admin");
     for (const tabId of [
       "tab-pregled",
       "tab-katalog",
@@ -122,7 +108,7 @@ test.describe("admin (Serbian)", () => {
   test("Pregled does not show the legacy quick-action rows", async ({
     page,
   }) => {
-    await signInAsAdmin(page);
+    await signInAs(page, "admin");
     await page.getByTestId("tab-pregled").click();
     await expect(page.getByTestId("admin-quick-class-types")).toHaveCount(0);
     await expect(page.getByTestId("admin-quick-rooms")).toHaveCount(0);
@@ -131,7 +117,7 @@ test.describe("admin (Serbian)", () => {
   // ── Catalog ───────────────────────────────────────────────────────────────
 
   test("12: admin creates a new ClassType", async ({ page }) => {
-    await signInAsAdmin(page);
+    await signInAs(page, "admin");
     await openCatalog(page, "classTypes");
 
     // dispatchEvent bypasses pointer-events checks — the gorhom backdrop
@@ -149,7 +135,7 @@ test.describe("admin (Serbian)", () => {
   });
 
   test("13: admin edits a ClassType", async ({ page }) => {
-    await signInAsAdmin(page);
+    await signInAs(page, "admin");
     await openCatalog(page, "classTypes");
 
     // Pick the first row, edit the name, save, assert the new name renders.
@@ -168,7 +154,7 @@ test.describe("admin (Serbian)", () => {
   });
 
   test("14: admin deletes a ClassType (no dependents)", async ({ page }) => {
-    await signInAsAdmin(page);
+    await signInAs(page, "admin");
     await openCatalog(page, "classTypes");
 
     // Create a disposable ClassType, then delete it.
@@ -199,7 +185,7 @@ test.describe("admin (Serbian)", () => {
   test("15: admin creates a PackageType (with required ClassType picker)", async ({
     page,
   }) => {
-    await signInAsAdmin(page);
+    await signInAs(page, "admin");
     await openCatalog(page, "packageTypes");
 
     await page
@@ -225,7 +211,7 @@ test.describe("admin (Serbian)", () => {
   });
 
   test("16: admin edits a PackageType", async ({ page }) => {
-    await signInAsAdmin(page);
+    await signInAs(page, "admin");
     await openCatalog(page, "packageTypes");
 
     // Pick the first package row, edit its name, save.
@@ -246,7 +232,7 @@ test.describe("admin (Serbian)", () => {
   test("17: admin deletes a PackageType (no dependents)", async ({ page }) => {
     // First create a brand-new package with no dependents — guaranteed safe
     // to delete.
-    await signInAsAdmin(page);
+    await signInAs(page, "admin");
     await openCatalog(page, "packageTypes");
 
     const name = `Disposable Package ${Date.now()}`;
@@ -285,7 +271,7 @@ test.describe("admin (Serbian)", () => {
   });
 
   test("18: admin creates a new StudioRoom", async ({ page }) => {
-    await signInAsAdmin(page);
+    await signInAs(page, "admin");
     await openCatalog(page, "rooms");
 
     // dispatchEvent bypasses pointer-events checks; the gorhom backdrop from
@@ -303,7 +289,7 @@ test.describe("admin (Serbian)", () => {
   });
 
   test("19: admin edits a StudioRoom", async ({ page }) => {
-    await signInAsAdmin(page);
+    await signInAs(page, "admin");
     await openCatalog(page, "rooms");
 
     await page
@@ -319,7 +305,7 @@ test.describe("admin (Serbian)", () => {
   });
 
   test("20: admin deletes a StudioRoom (no dependents)", async ({ page }) => {
-    await signInAsAdmin(page);
+    await signInAs(page, "admin");
     await openCatalog(page, "rooms");
 
     const name = `Disposable Room ${Date.now()}`;
@@ -350,7 +336,7 @@ test.describe("admin (Serbian)", () => {
   }) => {
     const sessionsBefore = await countSessions();
 
-    await signInAsAdmin(page);
+    await signInAs(page, "admin");
     // The "+" button on Pregled has been removed; Novi termin lives on
     // the Katalog tab's hero row.
     await openNewSessionSheet(page);
@@ -416,7 +402,7 @@ test.describe("admin (Serbian)", () => {
   test("22: admin edits a single session (cancel via danger button)", async ({
     page,
   }) => {
-    await signInAsAdmin(page);
+    await signInAs(page, "admin");
 
     // Tap any session-card on today/this-week and open the edit sheet.
     // Pick the first Reformer day from the seed so a session exists to tap.
@@ -440,7 +426,7 @@ test.describe("admin (Serbian)", () => {
   }) => {
     const cancelledBefore = await countSessionsByStatus("CANCELED");
 
-    await signInAsAdmin(page);
+    await signInAs(page, "admin");
     await navigateWeekStripTo(page, nextReformerDayKey());
 
     const card = page.locator('[data-testid^="session-block-"]').first();
@@ -473,7 +459,7 @@ test.describe("admin (Serbian)", () => {
     const seriesBefore = await countRecurringSchedules();
     const sessionsBefore = await countSessions();
 
-    await signInAsAdmin(page);
+    await signInAs(page, "admin");
     await openNewSessionSheet(page);
 
     // Toggle to recurring mode.
@@ -548,7 +534,7 @@ test.describe("admin (Serbian)", () => {
     const ref = await findFutureSeriesSession("Reformer");
     if (!ref) throw new Error("Need a seeded recurring Reformer session");
 
-    await signInAsAdmin(page);
+    await signInAs(page, "admin");
     // Navigate to that session's day — the WeekStrip only shows 7 days,
     // and prior specs in this file may have canceled sessions in the
     // current week, pushing `findFutureSeriesSession`'s result into a
@@ -586,7 +572,7 @@ test.describe("admin (Serbian)", () => {
       await cancelBookingsOnRecurringSchedule(ref.recurringScheduleId);
     }
 
-    await signInAsAdmin(page);
+    await signInAs(page, "admin");
     await navigateWeekStripTo(page, dateKeyFromDate(ref.startsAt));
 
     await openSessionEditSheet(page, page.getByTestId(`session-block-${ref.id}`));
@@ -637,7 +623,7 @@ test.describe("admin (Serbian)", () => {
 
     const cancelledBefore = await countSessionsByStatus("CANCELED");
 
-    await signInAsAdmin(page);
+    await signInAs(page, "admin");
     await navigateWeekStripTo(page, dateKeyFromDate(ref.startsAt));
 
     await openSessionEditSheet(page, page.getByTestId(`session-block-${ref.id}`));
@@ -672,7 +658,7 @@ test.describe("admin (Serbian)", () => {
 
     const seriesBefore = await countRecurringSchedules();
 
-    await signInAsAdmin(page);
+    await signInAs(page, "admin");
     await navigateWeekStripTo(page, dateKeyFromDate(ref.startsAt));
 
     await openSessionEditSheet(page, page.getByTestId(`session-block-${ref.id}`));
@@ -700,7 +686,7 @@ test.describe("admin (Serbian)", () => {
     // both 21 and 22 prove the happy path. To verify the conflict path
     // without a brittle UI race, hit the API directly with two overlapping
     // sessions on the same room.
-    await signInAsAdmin(page);
+    await signInAs(page, "admin");
 
     const apiBase = process.env.E2E_BASE_URL ?? "http://127.0.0.1:8010";
     const cookies = await page.context().cookies();
@@ -739,7 +725,7 @@ test.describe("admin (Serbian)", () => {
 
   test("30: trainer double-book is rejected at the API", async ({ page }) => {
     // Same shape as 29, but using a different room with the same trainer.
-    await signInAsAdmin(page);
+    await signInAs(page, "admin");
 
     const apiBase = process.env.E2E_BASE_URL ?? "http://127.0.0.1:8010";
     const cookies = await page.context().cookies();
@@ -786,7 +772,7 @@ test.describe("admin (Serbian)", () => {
     // grouping to keep the plan inventory complete and confirm cross-tab
     // navigation continues to work.
     const inviteEmail = `admin-invite.${Date.now()}@e2e.test`;
-    await signInAsAdmin(page);
+    await signInAs(page, "admin");
     await page.getByTestId("tab-klijenti").click();
     await page.getByTestId("admin-clients-tab-invites").click();
     await page
@@ -804,7 +790,7 @@ test.describe("admin (Serbian)", () => {
   });
 
   test("32: admin client list shows package status badges", async ({ page }) => {
-    await signInAsAdmin(page);
+    await signInAs(page, "admin");
     await page.getByTestId("tab-klijenti").click();
 
     // The seed produces six clients with different package statuses. The
@@ -822,7 +808,7 @@ test.describe("admin (Serbian)", () => {
   });
 
   test("33: admin pauses a client's package", async ({ page }) => {
-    await signInAsAdmin(page);
+    await signInAs(page, "admin");
     await page.getByTestId("tab-klijenti").click();
 
     // Phase 1 split the row: tapping the row navigates to /klijenti/[id];
@@ -859,7 +845,7 @@ test.describe("admin (Serbian)", () => {
   });
 
   test("34: admin deactivates a client", async ({ page }) => {
-    await signInAsAdmin(page);
+    await signInAs(page, "admin");
     await page.getByTestId("tab-klijenti").click();
 
     // Pick a row whose deactivation won't ripple into other tests' assumptions
@@ -909,7 +895,7 @@ test.describe("admin (Serbian)", () => {
   test("35: admin records a payment with auto-assigned package (Flow 1)", async ({
     page,
   }) => {
-    await signInAsAdmin(page);
+    await signInAs(page, "admin");
     await page.goto("/naplata");
 
     await page
@@ -955,7 +941,7 @@ test.describe("admin (Serbian)", () => {
   test("36: Flow 1 — billing record defaults to CONFIRMED status", async ({
     page,
   }) => {
-    await signInAsAdmin(page);
+    await signInAs(page, "admin");
     await page.goto("/naplata");
 
     await page
@@ -992,7 +978,7 @@ test.describe("admin (Serbian)", () => {
   test("37: admin records a drop-in payment with no package", async ({
     page,
   }) => {
-    await signInAsAdmin(page);
+    await signInAs(page, "admin");
     await page.goto("/naplata");
 
     await page
@@ -1033,7 +1019,7 @@ test.describe("admin (Serbian)", () => {
     // ordering (which deactivates that user).
     await resetAndSeed();
 
-    await signInAsAdmin(page);
+    await signInAs(page, "admin");
     await page.getByTestId("tab-klijenti").click();
 
     // Open the actions sheet via the pencil button (Phase 1: row tap goes
@@ -1084,7 +1070,7 @@ test.describe("admin (Serbian)", () => {
   });
 
   test("39: admin sees billing history", async ({ page }) => {
-    await signInAsAdmin(page);
+    await signInAs(page, "admin");
     await page.goto("/naplata");
 
     // The seed has no billing records yet, so the screen renders the

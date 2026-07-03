@@ -3,19 +3,7 @@ import type { Prisma } from "@/generated/prisma";
 import { setMockUser } from "./auth-mock";
 import { resetDb } from "./setup-db";
 
-vi.mock("@/lib/server/auth-guards", async () => {
-  const { fail } = await import("@/lib/server/http");
-  const mod = await import("./auth-mock");
-  return {
-    requireRole: async (_req: Request, allowed: string[]) => {
-      const user = mod.getMockUser();
-      if (!user) return { ok: false as const, response: fail("Unauthorized", 401) };
-      if (!allowed.includes(user.role)) return { ok: false as const, response: fail("Forbidden", 403) };
-      return { ok: true as const, user };
-    },
-    getRequestUser: async () => mod.getMockUser(),
-  };
-});
+vi.mock("@/lib/server/auth-guards", async () => (await import("./auth-mock")).authGuardsMock());
 
 // Stub out push dispatch so the route just records to the DB.
 vi.mock("@/lib/server/notifications", async () => {

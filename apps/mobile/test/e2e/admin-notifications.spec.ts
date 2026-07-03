@@ -8,24 +8,15 @@
  * Both tests exercise the bell + its leftSlot wiring in the admin header. If
  * either fails, the bell wiring for a specific screen is likely incomplete.
  */
-import { test, expect, type Page } from "./helpers/fixtures";
+import { test, expect } from "./helpers/fixtures";
+import { ADMIN_EMAIL, signInAs } from "./helpers/auth";
 import {
   createNotificationFor,
   disconnect,
   resetAndSeed,
 } from "./helpers/db";
 
-const SEED_PASSWORD = "Password123!";
-const ADMIN_EMAIL = "admin.e2e@example.test";
 const SEEDED_TITLE = "E2E bell test notification";
-
-async function signInAsAdmin(page: Page) {
-  await page.goto("/sign-in");
-  await page.getByTestId("auth-email-input").fill(ADMIN_EMAIL);
-  await page.getByTestId("auth-password-input").fill(SEED_PASSWORD);
-  await page.getByTestId("auth-submit-button").click();
-  await expect(page.getByTestId("tab-pregled")).toBeVisible({ timeout: 15_000 });
-}
 
 test.describe("admin notifications bell", () => {
   test.beforeAll(async () => {
@@ -48,7 +39,7 @@ test.describe("admin notifications bell", () => {
       body: "This is the body of the E2E test notification.",
     });
 
-    await signInAsAdmin(page);
+    await signInAs(page, "admin");
 
     // Reload so the bell's query refetches with the newly-seeded notification.
     await page.reload();
@@ -82,7 +73,7 @@ test.describe("admin notifications bell", () => {
     // Fresh DB — no notifications, so dot must be absent.
     await resetAndSeed();
 
-    await signInAsAdmin(page);
+    await signInAs(page, "admin");
     await page.getByTestId("tab-pregled").click();
 
     // `not.toBeVisible()` is unreliable when the element doesn't exist at all;
