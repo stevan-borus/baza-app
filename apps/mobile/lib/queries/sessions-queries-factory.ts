@@ -181,8 +181,9 @@ export const sessionsQueries = {
 // update. The byId DETAIL is deliberately left alone here — its shape carries
 // extra nested bookings/waitlist this mutation doesn't return, so the caller
 // invalidates just that one id's detail key as a separate side-effect.
-// (availabilityByMonth and recurring writes are not spliced — they're left to
-// the component's own invalidation, which the builders no longer touch.)
+// (availabilityByMonth is never spliced — create invalidates it so the Pregled
+// overview refetches; update relies on the edit sheet's composed invalidation.
+// Recurring writes are left entirely to the component's own invalidation.)
 
 type SessionsListData = z.infer<typeof sessionsListResponseSchema>;
 type SessionMutationResponse = z.infer<typeof sessionMutationResponseSchema>;
@@ -202,7 +203,15 @@ function spliceSession(queryClient: QueryClient, session: Session) {
 export function createSessionMutationOptions(queryClient: QueryClient) {
   return {
     ...sessionsQueries.create(),
-    onSuccess: (data: SessionMutationResponse) => spliceSession(queryClient, data.session),
+    onSuccess: async (data: SessionMutationResponse) => {
+      spliceSession(queryClient, data.session);
+      // The Pregled overview calendar renders from availabilityByMonth, not
+      // the list cache — without this invalidation a new one-off termin stays
+      // invisible until app restart (no focus-refetch wiring in RN).
+      await queryClient.invalidateQueries({
+        queryKey: [...sessionsAll, "availability"],
+      });
+    },
   };
 }
 
