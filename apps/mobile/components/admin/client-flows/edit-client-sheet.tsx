@@ -35,7 +35,7 @@
 
 import React, { useState } from "react";
 import { Pressable, Switch, Text, View } from "react-native";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+
 import { useTranslation } from "react-i18next";
 import { AppSheet } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
@@ -45,7 +45,7 @@ import { SectionLabel } from "@/components/ui/typography";
 import { useThemeTokens } from "@/components/ui/tokens";
 import { DateTimePicker } from "@/components/ui/date-time-picker";
 import { SheetHeader } from "@/components/admin/client-flows/sheet-header";
-import { clientsQueries } from "@/lib/queries/clients-queries-factory";
+import { useUpdateClientMutation } from "@/lib/queries/clients-queries-factory";
 import { parseDateOfBirth, toIsoDate } from "@/lib/date-of-birth";
 import { now } from "@/lib/now";
 
@@ -92,7 +92,6 @@ type EditClientForm = {
 export function EditClientSheet({ client, onClose, onBack }: EditClientSheetProps) {
   const { t } = useTranslation();
   const tokens = useThemeTokens();
-  const queryClient = useQueryClient();
 
   const open = client !== null;
 
@@ -131,13 +130,9 @@ export function EditClientSheet({ client, onClose, onBack }: EditClientSheetProp
     }
   }
 
-  const updateClientMutation = useMutation({
-    ...clientsQueries.update(),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: clientsQueries.all });
-      onClose();
-    },
-  });
+  // Cache upkeep (clients list + byId + reports counts) is baked into the
+  // factory hook; onClose rides per-call so it can't clobber it.
+  const updateClientMutation = useUpdateClientMutation();
 
   return (
     <AppSheet
@@ -216,7 +211,8 @@ export function EditClientSheet({ client, onClose, onBack }: EditClientSheetProp
           disabled={updateClientMutation.isPending}
           onPress={() =>
             client &&
-            updateClientMutation.mutate({
+            updateClientMutation.mutate(
+              {
               id: client.id,
               firstName: form.firstName,
               lastName: form.lastName,
@@ -233,7 +229,9 @@ export function EditClientSheet({ client, onClose, onBack }: EditClientSheetProp
                       : null,
                   }
                 : {}),
-            })
+              },
+              { onSuccess: onClose },
+            )
           }
         >
           {t("admin.clients.save")}

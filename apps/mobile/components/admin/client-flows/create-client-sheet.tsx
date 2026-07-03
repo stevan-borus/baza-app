@@ -10,7 +10,7 @@
 
 import React, { useState } from "react";
 import { Text, View } from "react-native";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+
 import { useTranslation } from "react-i18next";
 import { AppSheet } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
@@ -18,7 +18,7 @@ import { ErrorState } from "@/components/ui/states";
 import { Input } from "@/components/ui/input";
 import { DateTimePicker } from "@/components/ui/date-time-picker";
 import { toIsoDate } from "@/lib/date-of-birth";
-import { clientsQueries } from "@/lib/queries/clients-queries-factory";
+import { useCreateClientMutation } from "@/lib/queries/clients-queries-factory";
 import { now } from "@/lib/now";
 
 export type CreateClientSheetProps = {
@@ -44,18 +44,13 @@ const EMPTY_FORM: CreateClientForm = {
 
 export function CreateClientSheet({ open, onOpenChange }: CreateClientSheetProps) {
   const { t } = useTranslation();
-  const queryClient = useQueryClient();
 
   const [form, setForm] = useState<CreateClientForm>(EMPTY_FORM);
 
-  const createClientMutation = useMutation({
-    ...clientsQueries.create(),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: clientsQueries.all });
-      onOpenChange(false);
-      setForm(EMPTY_FORM);
-    },
-  });
+  // Cache upkeep (clients + reports counts) is baked into the factory hook;
+  // the sheet-close/reset side-effects are passed per-call via
+  // mutate(vars, { onSuccess }) so they can't clobber it.
+  const createClientMutation = useCreateClientMutation();
 
   return (
     <AppSheet open={open} onOpenChange={onOpenChange}>
@@ -112,13 +107,21 @@ export function CreateClientSheet({ open, onOpenChange }: CreateClientSheetProps
           }
           onPress={() => {
             if (!form.dateOfBirth) return;
-            createClientMutation.mutate({
-              email: form.email,
-              firstName: form.firstName,
-              lastName: form.lastName,
-              phone: form.phone || undefined,
-              dateOfBirth: toIsoDate(form.dateOfBirth),
-            });
+            createClientMutation.mutate(
+              {
+                email: form.email,
+                firstName: form.firstName,
+                lastName: form.lastName,
+                phone: form.phone || undefined,
+                dateOfBirth: toIsoDate(form.dateOfBirth),
+              },
+              {
+                onSuccess: () => {
+                  onOpenChange(false);
+                  setForm(EMPTY_FORM);
+                },
+              },
+            );
           }}
         >
           {t("admin.clients.createClient")}

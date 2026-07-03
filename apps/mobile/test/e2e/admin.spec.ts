@@ -853,6 +853,10 @@ test.describe("admin (Serbian)", () => {
     // and is safe to deactivate. Phase 1: row tap navigates to the detail
     // page — the actions sheet opens via the pencil button. Scope the pencil
     // to the matching row by its name text.
+    // Search first: the list is ordered by uuid (random per seed) and the
+    // FlatList virtualizes rows below the fold out of the DOM, so matching
+    // by name without narrowing is a seed-order lottery.
+    await page.getByTestId("klijenti-search-input").fill("Empty Pack");
     const targetRow = page
       .locator('[data-testid^="client-row-"]', {
         hasText: "Empty Pack Client",
@@ -1019,7 +1023,9 @@ test.describe("admin (Serbian)", () => {
     await page.getByTestId("tab-klijenti").click();
 
     // Open the actions sheet via the pencil button (Phase 1: row tap goes
-    // to the detail page).
+    // to the detail page). Search first — uuid ordering + FlatList
+    // virtualization make unnarrowed name matching a seed-order lottery.
+    await page.getByTestId("klijenti-search-input").fill("Empty Pack");
     const targetRow = page
       .locator('[data-testid^="client-row-"]', {
         hasText: "Empty Pack Client",
