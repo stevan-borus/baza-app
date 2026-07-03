@@ -11,6 +11,7 @@ type MockUser = {
   firstName?: string;
   lastName?: string;
   fullName?: string;
+  createdAt?: Date;
 };
 
 let currentMockUser: MockUser | null = null;

@@ -104,6 +104,7 @@ export async function POST(request: Request) {
     trainerUserId,
   });
   if (conflict) {
+    // contract-exempt: 409 schedule-conflict payload, not a success contract
     return Response.json(
       {
         success: false,

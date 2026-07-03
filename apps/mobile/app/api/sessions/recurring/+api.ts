@@ -115,6 +115,7 @@ export async function POST(request: Request) {
     }
   }
   if (conflicts.length > 0) {
+    // contract-exempt: 409 schedule-conflict payload, not a success contract
     return Response.json(
       {
         success: false,

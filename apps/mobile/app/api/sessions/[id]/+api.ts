@@ -338,6 +338,7 @@ export async function PATCH(request: Request, { id }: RouteParams) {
     excludeSessionId: id,
   });
   if (conflict) {
+    // contract-exempt: 409 schedule-conflict payload, not a success contract
     return Response.json(
       {
         success: false,
