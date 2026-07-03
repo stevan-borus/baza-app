@@ -1,7 +1,6 @@
 import { queryOptions } from "@tanstack/react-query";
 import { authMeResponseSchema } from "@baza/types/auth";
-import { sharedEnv } from "@/lib/env.shared";
-import { apiFetch } from "@/lib/api";
+import { apiRequest } from "@/lib/api-request";
 
 const authAll = ["auth"] as const;
 
@@ -10,14 +9,11 @@ export const authQueries = {
   me: () =>
     queryOptions({
       queryKey: [...authAll, "me"] as const,
-      queryFn: async () => {
-        const response = await apiFetch(`${sharedEnv.EXPO_PUBLIC_API_URL}/api/auth/me`);
-        if (!response.ok) {
-          throw new Error(`Unable to load session (${response.status})`);
-        }
-        const payload = await response.json();
-        return authMeResponseSchema.parse(payload);
-      },
+      queryFn: () =>
+        apiRequest("/api/auth/me", {
+          schema: authMeResponseSchema,
+          errorMessage: "Unable to load session",
+        }),
       staleTime: 60_000,
     }),
 };

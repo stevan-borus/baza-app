@@ -3,13 +3,12 @@ import {
   cancelReservationsBulkResponseSchema,
   createReservationsResponseSchema,
 } from "@baza/types/bookings";
-import { apiFetch, throwIfNotOk } from "@/lib/api";
-import { sharedEnv } from "@/lib/env.shared";
+import { apiRequest } from "@/lib/api-request";
 import { sessionsQueries } from "@/lib/queries/sessions-queries-factory";
 import { clientsQueries } from "@/lib/queries/clients-queries-factory";
 import { bookingsQueries } from "@/lib/queries/bookings-queries-factory";
 
-const BASE = `${sharedEnv.EXPO_PUBLIC_API_URL}/api/admin/reservations`;
+const BASE = "/api/admin/reservations";
 
 const reservationsAll = ["reservations"] as const;
 
@@ -26,26 +25,22 @@ export type CancelReservationsInput = {
 
 // Exported so unit tests can exercise the request/response contract without
 // the React tree. The hooks below wrap these for invalidation behavior.
-export async function createReservationsRequest(input: CreateReservationsInput) {
-  const res = await apiFetch(BASE, {
+export function createReservationsRequest(input: CreateReservationsInput) {
+  return apiRequest(BASE, {
     method: "POST",
-    credentials: "include",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(input),
+    body: input,
+    schema: createReservationsResponseSchema,
+    errorMessage: "Unable to create reservations",
   });
-  await throwIfNotOk(res, "Unable to create reservations");
-  return createReservationsResponseSchema.parse(await res.json());
 }
 
-export async function cancelReservationsBulkRequest(input: CancelReservationsInput) {
-  const res = await apiFetch(`${BASE}/cancel-bulk`, {
+export function cancelReservationsBulkRequest(input: CancelReservationsInput) {
+  return apiRequest(`${BASE}/cancel-bulk`, {
     method: "POST",
-    credentials: "include",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(input),
+    body: input,
+    schema: cancelReservationsBulkResponseSchema,
+    errorMessage: "Unable to cancel reservations",
   });
-  await throwIfNotOk(res, "Unable to cancel reservations");
-  return cancelReservationsBulkResponseSchema.parse(await res.json());
 }
 
 export function useCreateReservationsMutation() {

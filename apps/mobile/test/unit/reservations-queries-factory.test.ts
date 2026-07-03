@@ -11,11 +11,10 @@ vi.mock("@/lib/env.shared", () => ({
 }));
 
 const fetchMock = vi.fn();
+// apiRequest (the seam under the factory) imports only the transport from
+// @/lib/api — error shaping now lives in apiRequest itself, not throwIfNotOk.
 vi.mock("@/lib/api", () => ({
   apiFetch: (...args: unknown[]) => fetchMock(...args),
-  throwIfNotOk: async (res: { ok: boolean; status: number }) => {
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  },
 }));
 
 import {
@@ -69,7 +68,7 @@ describe("createReservationsRequest", () => {
         clientProfileId: "c",
         sessionIds: ["s"],
       }),
-    ).rejects.toThrow(/HTTP 500/);
+    ).rejects.toThrow(/Unable to create reservations \(500\)/);
   });
 
   it("rejects when the response is missing required keys (schema parse)", async () => {

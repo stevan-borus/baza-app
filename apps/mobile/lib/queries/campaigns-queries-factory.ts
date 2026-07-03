@@ -15,14 +15,11 @@ import {
   type CampaignAudienceSpec,
   type CampaignsListResponse,
 } from "@baza/types/campaigns";
-import { apiFetch } from "@/lib/api";
-import { sharedEnv } from "@/lib/env.shared";
+import { apiRequest } from "@/lib/api-request";
 
 // The wire schemas live in @baza/types/campaigns — the same objects the API
 // routes validate against via respond(). Re-export the types consumers use.
 export type { AudienceClient, Campaign } from "@baza/types/campaigns";
-
-const base = `${sharedEnv.EXPO_PUBLIC_API_URL}/api/campaigns`;
 
 const campaignsAll = ["campaigns"] as const;
 
@@ -32,22 +29,22 @@ export const campaignsQueries = {
   list: () =>
     queryOptions({
       queryKey: [...campaignsAll, "list"] as const,
-      queryFn: async () => {
-        const res = await apiFetch(base, { credentials: "include" });
-        if (!res.ok) throw new Error(`Unable to load campaigns (${res.status})`);
-        return listSchema.parse(await res.json());
-      },
+      queryFn: () =>
+        apiRequest("/api/campaigns", {
+          schema: listSchema,
+          errorMessage: "Unable to load campaigns",
+        }),
       staleTime: 30_000,
     }),
 
   one: (id: string) =>
     queryOptions({
       queryKey: [...campaignsAll, "one", id] as const,
-      queryFn: async () => {
-        const res = await apiFetch(`${base}/${id}`, { credentials: "include" });
-        if (!res.ok) throw new Error(`Unable to load campaign (${res.status})`);
-        return oneSchema.parse(await res.json());
-      },
+      queryFn: () =>
+        apiRequest(`/api/campaigns/${id}`, {
+          schema: oneSchema,
+          errorMessage: "Unable to load campaign",
+        }),
       staleTime: 30_000,
     }),
 
@@ -56,16 +53,13 @@ export const campaignsQueries = {
     queryOptions({
       queryKey: [...campaignsAll, "preview", JSON.stringify(spec ?? {})] as const,
       enabled: spec !== null,
-      queryFn: async () => {
-        const res = await apiFetch(`${base}/preview`, {
+      queryFn: () =>
+        apiRequest("/api/campaigns/preview", {
           method: "POST",
-          credentials: "include",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify(spec),
-        });
-        if (!res.ok) throw new Error(`Unable to preview audience (${res.status})`);
-        return previewSchema.parse(await res.json());
-      },
+          body: spec,
+          schema: previewSchema,
+          errorMessage: "Unable to preview audience",
+        }),
       staleTime: 10_000,
     }),
 
@@ -74,16 +68,13 @@ export const campaignsQueries = {
     queryOptions({
       queryKey: [...campaignsAll, "audience-clients", JSON.stringify(spec ?? {})] as const,
       enabled: spec !== null,
-      queryFn: async () => {
-        const res = await apiFetch(`${base}/preview/clients`, {
+      queryFn: () =>
+        apiRequest("/api/campaigns/preview/clients", {
           method: "POST",
-          credentials: "include",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify(spec),
-        });
-        if (!res.ok) throw new Error(`Unable to load audience (${res.status})`);
-        return audienceClientsSchema.parse(await res.json());
-      },
+          body: spec,
+          schema: audienceClientsSchema,
+          errorMessage: "Unable to load audience",
+        }),
       staleTime: 10_000,
     }),
 
@@ -92,39 +83,36 @@ export const campaignsQueries = {
     queryOptions({
       queryKey: [...campaignsAll, "recipients", id] as const,
       enabled,
-      queryFn: async () => {
-        const res = await apiFetch(`${base}/${id}/recipients`, { credentials: "include" });
-        if (!res.ok) throw new Error(`Unable to load recipients (${res.status})`);
-        return recipientsSchema.parse(await res.json());
-      },
+      queryFn: () =>
+        apiRequest(`/api/campaigns/${id}/recipients`, {
+          schema: recipientsSchema,
+          errorMessage: "Unable to load recipients",
+        }),
       staleTime: 10_000,
     }),
 
   create: () =>
     mutationOptions({
       mutationKey: [...campaignsAll, "create"] as const,
-      mutationFn: async (payload: {
+      mutationFn: (payload: {
         title: string;
         body: string;
         audienceSpec: CampaignAudienceSpec;
         scheduledFor?: string;
         sendNow?: boolean;
-      }) => {
-        const res = await apiFetch(base, {
+      }) =>
+        apiRequest("/api/campaigns", {
           method: "POST",
-          credentials: "include",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify(payload),
-        });
-        if (!res.ok) throw new Error(`Unable to create campaign (${res.status})`);
-        return oneSchema.parse(await res.json());
-      },
+          body: payload,
+          schema: oneSchema,
+          errorMessage: "Unable to create campaign",
+        }),
     }),
 
   update: () =>
     mutationOptions({
       mutationKey: [...campaignsAll, "update"] as const,
-      mutationFn: async (vars: {
+      mutationFn: (vars: {
         id: string;
         title?: string;
         body?: string;
@@ -133,50 +121,46 @@ export const campaignsQueries = {
         status?: "DRAFT" | "SCHEDULED";
       }) => {
         const { id, ...patch } = vars;
-        const res = await apiFetch(`${base}/${id}`, {
+        return apiRequest(`/api/campaigns/${id}`, {
           method: "PATCH",
-          credentials: "include",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify(patch),
+          body: patch,
+          schema: oneSchema,
+          errorMessage: "Unable to update campaign",
         });
-        if (!res.ok) throw new Error(`Unable to update campaign (${res.status})`);
-        return oneSchema.parse(await res.json());
       },
     }),
 
   cancel: () =>
     mutationOptions({
       mutationKey: [...campaignsAll, "cancel"] as const,
-      mutationFn: async (id: string) => {
-        const res = await apiFetch(`${base}/${id}`, {
+      mutationFn: (id: string) =>
+        apiRequest(`/api/campaigns/${id}`, {
           method: "PATCH",
-          credentials: "include",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ status: "DRAFT" }),
-        });
-        if (!res.ok) throw new Error(`Unable to cancel campaign (${res.status})`);
-        return oneSchema.parse(await res.json());
-      },
+          body: { status: "DRAFT" },
+          schema: oneSchema,
+          errorMessage: "Unable to cancel campaign",
+        }),
     }),
 
   remove: () =>
     mutationOptions({
       mutationKey: [...campaignsAll, "remove"] as const,
-      mutationFn: async (id: string) => {
-        const res = await apiFetch(`${base}/${id}`, { method: "DELETE", credentials: "include" });
-        if (!res.ok) throw new Error(`Unable to delete campaign (${res.status})`);
-        return res.json();
-      },
+      mutationFn: (id: string) =>
+        apiRequest(`/api/campaigns/${id}`, {
+          method: "DELETE",
+          errorMessage: "Unable to delete campaign",
+        }),
     }),
 
   send: () =>
     mutationOptions({
       mutationKey: [...campaignsAll, "send"] as const,
-      mutationFn: async (id: string) => {
-        const res = await apiFetch(`${base}/${id}/send`, { method: "POST", credentials: "include" });
-        if (!res.ok) throw new Error(`Unable to send campaign (${res.status})`);
-        return oneSchema.parse(await res.json());
-      },
+      mutationFn: (id: string) =>
+        apiRequest(`/api/campaigns/${id}/send`, {
+          method: "POST",
+          schema: oneSchema,
+          errorMessage: "Unable to send campaign",
+        }),
     }),
 };
 

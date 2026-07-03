@@ -10,8 +10,7 @@ import {
   type ClassTypeMutationResponse,
   type ClassTypesResponse,
 } from "@baza/types/catalog";
-import { apiFetch, throwIfNotOk } from "@/lib/api";
-import { sharedEnv } from "@/lib/env.shared";
+import { apiRequest } from "@/lib/api-request";
 
 export type { ClassType } from "@baza/types/catalog";
 
@@ -22,39 +21,30 @@ export const trainingsQueries = {
   classTypes: () =>
     queryOptions({
       queryKey: [...trainingsAll, "class-types"] as const,
-      queryFn: async () => {
-        const response = await apiFetch(
-          `${sharedEnv.EXPO_PUBLIC_API_URL}/api/trainings/class-types`,
-          { credentials: "include" },
-        );
-        if (!response.ok) throw new Error(`Unable to load class types (${response.status})`);
-        return classTypesResponseSchema.parse(await response.json());
-      },
+      queryFn: () =>
+        apiRequest("/api/trainings/class-types", {
+          schema: classTypesResponseSchema,
+          errorMessage: "Unable to load class types",
+        }),
       staleTime: 60_000,
     }),
 
   createClassType: () =>
     mutationOptions({
       mutationKey: [...trainingsAll, "class-types", "create"] as const,
-      mutationFn: async (payload: { name: string; maxClients: number; durationMins: number }) => {
-        const response = await apiFetch(
-          `${sharedEnv.EXPO_PUBLIC_API_URL}/api/trainings/class-types`,
-          {
-            method: "POST",
-            credentials: "include",
-            headers: { "content-type": "application/json" },
-            body: JSON.stringify(payload),
-          },
-        );
-        if (!response.ok) throw new Error(`Unable to create class type (${response.status})`);
-        return classTypeMutationResponseSchema.parse(await response.json());
-      },
+      mutationFn: (payload: { name: string; maxClients: number; durationMins: number }) =>
+        apiRequest("/api/trainings/class-types", {
+          method: "POST",
+          body: payload,
+          schema: classTypeMutationResponseSchema,
+          errorMessage: "Unable to create class type",
+        }),
     }),
 
   updateClassType: () =>
     mutationOptions({
       mutationKey: [...trainingsAll, "class-types", "update"] as const,
-      mutationFn: async ({
+      mutationFn: ({
         id,
         ...payload
       }: {
@@ -62,32 +52,23 @@ export const trainingsQueries = {
         name?: string;
         maxClients?: number;
         durationMins?: number;
-      }) => {
-        const response = await apiFetch(
-          `${sharedEnv.EXPO_PUBLIC_API_URL}/api/trainings/class-types/${id}`,
-          {
-            method: "PATCH",
-            credentials: "include",
-            headers: { "content-type": "application/json" },
-            body: JSON.stringify(payload),
-          },
-        );
-        await throwIfNotOk(response, "Unable to update class type");
-        return classTypeMutationResponseSchema.parse(await response.json());
-      },
+      }) =>
+        apiRequest(`/api/trainings/class-types/${id}`, {
+          method: "PATCH",
+          body: payload,
+          schema: classTypeMutationResponseSchema,
+          errorMessage: "Unable to update class type",
+        }),
     }),
 
   deleteClassType: () =>
     mutationOptions({
       mutationKey: [...trainingsAll, "class-types", "delete"] as const,
-      mutationFn: async (id: string) => {
-        const response = await apiFetch(
-          `${sharedEnv.EXPO_PUBLIC_API_URL}/api/trainings/class-types/${id}`,
-          { method: "DELETE", credentials: "include" },
-        );
-        await throwIfNotOk(response, "Unable to delete class type");
-        return response.json();
-      },
+      mutationFn: (id: string) =>
+        apiRequest(`/api/trainings/class-types/${id}`, {
+          method: "DELETE",
+          errorMessage: "Unable to delete class type",
+        }),
     }),
 };
 
