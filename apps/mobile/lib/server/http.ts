@@ -1,8 +1,41 @@
+import type { z } from "zod";
+
 export function ok<T extends Record<string, unknown>>(
   payload: T,
   status = 200,
 ) {
   return Response.json(payload, { status });
+}
+
+/**
+ * The server-side end of the wire contract: every route's success path goes
+ * through here with the same `@baza/types` response schema the client parses
+ * against, so select↔schema drift fails loudly at the route (dev + the
+ * integration suite) instead of surfacing as a raw ZodError in the client UI.
+ *
+ * Validation runs on the JSON-serialized form — exactly what the client will
+ * see — so Prisma `Date` fields satisfy string-dated schemas, and the mixed
+ * `z.coerce.date()` / `z.string()` date styles across schemas both work.
+ *
+ * Two deliberate scope decisions:
+ * - Production skips validation entirely; this seam exists for dev and tests.
+ * - Under-selection only, permanently: fields the schema does not declare
+ *   pass through unchecked. Over-selection (a route returning more than its
+ *   schema) is owned by code review, not this seam.
+ */
+export function respond<S extends z.ZodType>(
+  schema: S,
+  payload: unknown,
+  status = 200,
+) {
+  if (process.env.NODE_ENV !== "production") {
+    const wire: unknown = JSON.parse(JSON.stringify(payload));
+    const result = schema.safeParse(wire);
+    if (!result.success) {
+      throw new Error(`Response contract violation: ${result.error.message}`);
+    }
+  }
+  return Response.json(payload as Record<string, unknown>, { status });
 }
 
 export function fail(message: string, status = 400, details?: unknown) {
