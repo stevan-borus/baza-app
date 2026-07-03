@@ -7,6 +7,7 @@ import { formatFullName, paginationQuerySchema } from "@baza/types/common";
 import { UserRole } from "@/generated/prisma";
 import { now } from "@/lib/now";
 import { requireRole } from "@/lib/server/auth-guards";
+import { createClientPackageFromType } from "@/lib/server/client-package-create";
 import { fail, respond } from "@/lib/server/http";
 import { prisma } from "@/lib/server/prisma";
 import { tryCatch } from "@/lib/server/try-catch";
@@ -135,11 +136,6 @@ export async function POST(request: Request) {
   }
 
   const startsAt = now();
-  const expiresAt = packageTypeRow
-    ? new Date(
-        startsAt.getTime() + packageTypeRow.validityDays * 24 * 60 * 60 * 1000,
-      )
-    : null;
 
   const result = await prisma.$transaction(async (tx) => {
     const payment = await tx.billingRecord.create({
@@ -153,36 +149,14 @@ export async function POST(request: Request) {
       },
     });
 
-    let clientPackage: {
-      id: string;
-      classTypeId: string;
-      startsAt: Date;
-      expiresAt: Date;
-      sessionsRemaining: number;
-    } | null = null;
-    if (
-      shouldActivatePackage &&
-      clientProfileId &&
-      packageTypeRow &&
-      expiresAt
-    ) {
-      clientPackage = await tx.clientPackage.create({
-        data: {
-          clientProfileId,
-          packageTypeId: packageTypeRow.id,
-          classTypeId: packageTypeRow.classTypeId,
-          lateCancelHours: packageTypeRow.lateCancelHours,
-          startsAt,
-          expiresAt,
-          sessionsRemaining: packageTypeRow.sessionCount,
-        },
-        select: {
-          id: true,
-          classTypeId: true,
-          startsAt: true,
-          expiresAt: true,
-          sessionsRemaining: true,
-        },
+    let clientPackage: Awaited<
+      ReturnType<typeof createClientPackageFromType>
+    > | null = null;
+    if (shouldActivatePackage && clientProfileId && packageTypeRow) {
+      clientPackage = await createClientPackageFromType(tx, {
+        clientProfileId,
+        packageType: packageTypeRow,
+        startsAt,
       });
 
       // Wire the FK from the BillingRecord to the ClientPackage it activated.
