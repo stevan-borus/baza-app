@@ -18,6 +18,11 @@ const serverSchema = z.object({
   BAZA_CONSENT_GATE_ENABLED: z
     .preprocess((v) => v === "true", z.boolean())
     .default(false),
+  // Server-side Sentry DSN (baza-server project). OPTIONAL — unset disables
+  // reporting. The Express server (server/index.js) reads process.env directly
+  // and inits before this schema loads; declared here so API-route code can
+  // reference it too and so it's documented as a known server var.
+  SENTRY_DSN: z.string().optional(),
 });
 
 const source = {
@@ -31,6 +36,7 @@ const source = {
   BASE_URL: process.env.BASE_URL,
   BETTER_AUTH_SECRET: process.env.BETTER_AUTH_SECRET,
   BAZA_CONSENT_GATE_ENABLED: process.env.BAZA_CONSENT_GATE_ENABLED,
+  SENTRY_DSN: process.env.SENTRY_DSN,
 };
 
 export const serverEnv = serverSchema.parse(source);
