@@ -4,7 +4,7 @@ import { resetDb } from "./setup-db";
 
 vi.mock("@/lib/server/auth-guards", async () => (await import("./auth-mock")).authGuardsMock());
 
-import { GET, POST } from "@/app/api/clients/+api";
+import { GET } from "@/app/api/clients/+api";
 import { GET as GET_BY_ID, PATCH } from "@/app/api/clients/[id]/+api";
 import { prisma } from "@/lib/server/prisma";
 import { now, nowMs } from "@/lib/now";
@@ -164,69 +164,6 @@ describe("clients API", () => {
     expect(body.clients.map((c) => c.user.email)).not.toContain(
       "stranger@test.local",
     );
-  });
-
-  it("POST creates a client user + clientProfile (admin-only)", async () => {
-    asAdmin();
-    const response = await POST(
-      new Request("http://test.local/api/clients", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          email: "fresh@test.local",
-          firstName: "Fresh",
-          lastName: "Client",
-          dateOfBirth: "1990-01-01",
-        }),
-      }),
-    );
-    expect(response.status).toBe(201);
-    const persisted = await prisma.user.findUnique({
-      where: { email: "fresh@test.local" },
-      include: { clientProfile: true },
-    });
-    expect(persisted?.role).toBe("CLIENT");
-    expect(persisted?.clientProfile).not.toBeNull();
-  });
-
-  it("POST trims surrounding whitespace from first/last name before persisting", async () => {
-    asAdmin();
-    const response = await POST(
-      new Request("http://test.local/api/clients", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          email: "spaced@test.local",
-          firstName: "  Ana  ",
-          lastName: "  Petrović ",
-          dateOfBirth: "1990-01-01",
-        }),
-      }),
-    );
-    expect(response.status).toBe(201);
-    const persisted = await prisma.user.findUnique({
-      where: { email: "spaced@test.local" },
-    });
-    // Trimmed inputs keep the derived fullName free of double spaces.
-    expect(persisted?.firstName).toBe("Ana");
-    expect(persisted?.lastName).toBe("Petrović");
-  });
-
-  it("POST rejects a blank (whitespace-only) name field", async () => {
-    asAdmin();
-    const response = await POST(
-      new Request("http://test.local/api/clients", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          email: "blank@test.local",
-          firstName: "   ",
-          lastName: "Petrović",
-          dateOfBirth: "1990-01-01",
-        }),
-      }),
-    );
-    expect(response.status).toBe(400);
   });
 
   it("PATCH as admin can deactivate a client (isActive=false)", async () => {

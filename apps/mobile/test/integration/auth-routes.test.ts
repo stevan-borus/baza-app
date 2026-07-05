@@ -249,6 +249,22 @@ describe("auth routes", () => {
       expect(tokenAfter?.usedAt).not.toBeNull();
     });
 
+    it("accepts a token with surrounding whitespace (trims before hashing)", async () => {
+      // Pasting a token from an email on mobile commonly appends a trailing
+      // space/newline; the server must trim it so the hash still matches.
+      const { user, rawToken } = await seedUserWithResetToken();
+      const response = await POST_RESET(
+        jsonRequest("http://test.local/api/auth/reset-password", {
+          token: `  ${rawToken}\n`,
+          password: "NewPassword456!",
+        }),
+      );
+      expect(response.status).toBe(200);
+
+      const updated = await prisma.user.findUnique({ where: { id: user.id } });
+      expect(updated?.passwordHash).not.toBe(user.passwordHash);
+    });
+
     it("returns 410 and leaves the password unchanged when the token has expired", async () => {
       const { user, rawToken } = await seedUserWithResetToken({ expiresInMs: -1000 });
       const before = (await prisma.user.findUnique({ where: { id: user.id } }))!.passwordHash;

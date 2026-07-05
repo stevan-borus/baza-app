@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { dateOfBirthSchema, nameFieldSchema, roleSchema } from "./common";
+import { dateOfBirthSchema, nameFieldSchema } from "./common";
 import { consentDocumentKeySchema } from "./consent";
 import { healthIntakeResponseSchema } from "./health-intake";
 import { clientPackageStatusSchema } from "./packages";
@@ -42,22 +42,6 @@ export const clientsResponseSchema = z.object({
   nextCursor: z.nullable(z.string()).optional(),
 });
 export type ClientsResponse = z.infer<typeof clientsResponseSchema>;
-
-// POST /api/clients — the created user + linked clientProfile (admin-only).
-export const createClientResponseSchema = z.object({
-  success: z.literal(true),
-  user: z.object({
-    id: z.string(),
-    email: z.email(),
-    firstName: z.string(),
-    lastName: z.string(),
-    fullName: z.string(), // derived
-    phone: z.nullable(z.string()),
-    role: roleSchema,
-    clientProfile: z.nullable(z.object({ id: z.string() })),
-  }),
-});
-export type CreateClientResponse = z.infer<typeof createClientResponseSchema>;
 
 // PATCH /api/clients/[id] — the updated user row, clientProfile included.
 // `dateOfBirth` is the raw DateTime serialization here (full ISO string),

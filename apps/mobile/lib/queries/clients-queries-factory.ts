@@ -75,25 +75,6 @@ export const clientsQueries = {
       staleTime: 60_000,
     }),
 
-  create: () =>
-    mutationOptions({
-      mutationKey: [...clientsAll, "create"] as const,
-      mutationFn: async (payload: {
-        email: string;
-        firstName: string;
-        lastName: string;
-        phone?: string;
-        // Required by the server (inviteClientInputSchema) for the
-        // minor/guardian waiver logic; ISO yyyy-mm-dd.
-        dateOfBirth: string;
-      }) =>
-        apiRequest("/api/clients", {
-          method: "POST",
-          body: payload,
-          errorMessage: "Unable to create client",
-        }),
-    }),
-
   update: () =>
     mutationOptions({
       mutationKey: [...clientsAll, "update"] as const,
@@ -141,20 +122,8 @@ export const clientsQueries = {
 
 // ── Mutation hooks ──────────────────────────────────────────────────────────
 // Client writes also invalidate ["reports"]: the summary's totalClients /
-// activeClients counts render on the always-mounted Pregled, and create and
-// the isActive toggle (edit + soft-delete) both move those counts.
-
-export function createClientMutationOptions(queryClient: QueryClient) {
-  return {
-    ...clientsQueries.create(),
-    onSuccess: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: clientsQueries.all }),
-        queryClient.invalidateQueries({ queryKey: reportsQueries.all }),
-      ]);
-    },
-  };
-}
+// activeClients counts render on the always-mounted Pregled, and the isActive
+// toggle (edit + soft-delete) moves those counts.
 
 export function updateClientMutationOptions(queryClient: QueryClient) {
   return {
@@ -166,10 +135,6 @@ export function updateClientMutationOptions(queryClient: QueryClient) {
       ]);
     },
   };
-}
-
-export function useCreateClientMutation() {
-  return useMutation(createClientMutationOptions(useQueryClient()));
 }
 
 export function useUpdateClientMutation() {

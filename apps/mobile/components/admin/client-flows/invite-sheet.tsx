@@ -25,6 +25,9 @@ import { now } from "@/lib/now";
 export type InviteSheetProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** Fired after a successful invite — lets the screen switch to the
+   *  invites tab so the admin sees the just-added client land there. */
+  onInvited?: () => void;
 };
 
 type InviteForm = {
@@ -43,7 +46,7 @@ const EMPTY_FORM: InviteForm = {
   dateOfBirth: null,
 };
 
-export function InviteSheet({ open, onOpenChange }: InviteSheetProps) {
+export function InviteSheet({ open, onOpenChange, onInvited }: InviteSheetProps) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
 
@@ -118,6 +121,7 @@ export function InviteSheet({ open, onOpenChange }: InviteSheetProps) {
                 onSuccess: () => {
                   onOpenChange(false);
                   setForm(EMPTY_FORM);
+                  onInvited?.();
                 },
               },
             );

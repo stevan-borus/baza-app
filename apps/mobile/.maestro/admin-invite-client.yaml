@@ -23,21 +23,16 @@ env:
 
 - waitForAnimationToEnd
 
-- tapOn:
-    id: "admin-clients-tab-invites"
-
-- waitForAnimationToEnd
-
 # The invite sheet (gorhom BottomSheetModal) is not reachable through
-# Maestro's iOS hierarchy reader. We verify the trigger button mounts
-# on the Invites segment; sheet-internal flow is covered by Phase A
-# Playwright (`admin.spec.ts` spec 31).
+# Maestro's iOS hierarchy reader. We verify the add-client trigger button
+# mounts (the "+" now always opens the invite flow, on any tab); the
+# sheet-internal flow is covered by Phase A Playwright (`admin.spec.ts`).
 - extendedWaitUntil:
     visible:
-      id: "admin-new-invite-button"
+      id: "admin-new-client-button"
     timeout: 15000
 
 - tapOn:
-    id: "admin-new-invite-button"
+    id: "admin-new-client-button"
 
 - waitForAnimationToEnd

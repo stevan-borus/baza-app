@@ -153,11 +153,8 @@ test.describe("auth extended (Serbian)", () => {
 
     await page.getByTestId("tab-klijenti").click();
 
-    // Switch to "Invites" tab and open the invite-create header button.
-    await page.getByTestId("admin-clients-tab-invites").click();
-    await page
-      .getByRole("button", { name: t.admin.clients.sheetInvite })
-      .click();
+    // The "+" opens the add-client (invite) sheet directly on any tab.
+    await page.getByTestId("admin-new-client-button").click();
 
     const emailField = page.getByTestId("invite-create-email-input");
     await emailField.fill(inviteEmail);
@@ -181,7 +178,7 @@ test.describe("auth extended (Serbian)", () => {
       .toBe("PENDING");
   });
 
-  test("password reset request creates a token row for the user", async ({
+  test("password reset request creates a token row and confirms via email", async ({
     page,
   }) => {
     await page.goto("/reset-password");
@@ -190,27 +187,45 @@ test.describe("auth extended (Serbian)", () => {
       .fill("client.active.reformer@e2e.test");
     await page.getByTestId("reset-send-link-button").click();
 
-    // Step 2 (token + new password) is now visible — that's the success
-    // signal from the request side.
-    await expect(page.getByTestId("reset-token-input")).toBeVisible();
+    // Success signal is the "check your email" confirmation — the token is
+    // never shown; it arrives only via the emailed deep link.
+    await expect(page.getByText(t.auth.checkEmail)).toBeVisible();
+    await expect(page.getByTestId("reset-token-input")).toHaveCount(0);
 
-    // And a row exists in the DB.
     const tokenRow = await findLatestResetTokenFor(
       "client.active.reformer@e2e.test",
     );
     expect(tokenRow).not.toBeNull();
   });
 
-  test("expired reset token shows error UI on submit", async ({ page }) => {
+  test("opening the reset deep link shows the new-password step (no token field)", async ({
+    page,
+  }) => {
+    const { rawToken } = await createPasswordResetToken({
+      userEmail: "client.active.reformer@e2e.test",
+      expiresAt: new Date(nowMs() + 30 * 60 * 1000),
+    });
+
+    // The token rides in the URL; the screen consumes it and jumps straight to
+    // the password step — the user never sees or types the token.
+    await page.goto(`/reset-password?token=${rawToken}`);
+    await expect(page.getByTestId("reset-token-input")).toHaveCount(0);
+
+    await page.getByTestId("reset-new-password-input").fill(NEW_PASSWORD);
+    await page.getByTestId("reset-submit-button").click();
+
+    await expect(page.getByText(t.auth.passwordUpdated)).toBeVisible();
+  });
+
+  test("expired reset token from the deep link shows error UI on submit", async ({
+    page,
+  }) => {
     const { rawToken } = await createPasswordResetToken({
       userEmail: "client.active.reformer@e2e.test",
       expiresAt: new Date(nowMs() - 60 * 60 * 1000),
     });
 
-    await page.goto("/reset-password");
-    // Skip from "request" to "reset" step via the haveToken link.
-    await page.getByText(t.auth.haveToken).click();
-    await page.getByTestId("reset-token-input").fill(rawToken);
+    await page.goto(`/reset-password?token=${rawToken}`);
     await page.getByTestId("reset-new-password-input").fill(NEW_PASSWORD);
     await page.getByTestId("reset-submit-button").click();
 

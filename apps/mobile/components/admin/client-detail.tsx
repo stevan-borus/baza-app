@@ -464,16 +464,22 @@ export function ClientDetail({ id }: { id: string }) {
                 {t("admin.clients.deleteConfirm")}
               </Text>
             </View>
+            {updateClientMutation.isError ? (
+              <ErrorState message={t("admin.clients.deleteError")} />
+            ) : null}
             <View className="flex-col gap-2">
               <Button
                 testID="client-delete-confirm-button"
                 variant="danger"
+                disabled={updateClientMutation.isPending}
                 onPress={() => {
-                  updateClientMutation.mutate({
-                    id: client.user.id,
-                    isActive: false,
-                  });
-                  setShowDelete(false);
+                  // Close only on success — a failed soft-delete keeps the
+                  // sheet open and surfaces the error instead of silently
+                  // dismissing (which read as "delete did nothing").
+                  updateClientMutation.mutate(
+                    { id: client.user.id, isActive: false },
+                    { onSuccess: () => setShowDelete(false) },
+                  );
                 }}
               >
                 {t("admin.clients.delete")}
