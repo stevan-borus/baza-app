@@ -1,16 +1,11 @@
 import { formatFullName } from "@baza/types/common";
-import { inviteClientInputSchema } from "@baza/types/auth";
-import {
-  clientsResponseSchema,
-  createClientResponseSchema,
-} from "@baza/types/clients";
+import { clientsResponseSchema } from "@baza/types/clients";
 import { type ClientPackageStatus } from "@baza/types/packages";
 import { UserRole } from "@/generated/prisma";
 import { now } from "@/lib/now";
 import { requireRole } from "@/lib/server/auth-guards";
-import { fail, respond } from "@/lib/server/http";
+import { respond } from "@/lib/server/http";
 import { prisma } from "@/lib/server/prisma";
-import { tryCatch } from "@/lib/server/try-catch";
 
 const EXPIRING_WINDOW_DAYS = 14;
 
@@ -72,10 +67,14 @@ export async function GET(request: Request) {
         }
       : undefined;
 
-  const where =
-    baseWhere && searchWhere
-      ? { AND: [baseWhere, searchWhere] }
-      : (baseWhere ?? searchWhere);
+  // Soft-deleted clients (isActive:false) are hidden from every list — the
+  // admin "delete" action is a soft-delete that flips this flag, so without
+  // this filter a "deleted" client keeps showing and delete looks like a no-op.
+  const activeWhere = { user: { isActive: true } };
+
+  const where = {
+    AND: [activeWhere, ...(baseWhere ? [baseWhere] : []), ...(searchWhere ? [searchWhere] : [])],
+  };
 
   // Fetch take+1 so we can tell whether there's another page without a
   // separate count query.
@@ -167,47 +166,8 @@ export async function GET(request: Request) {
   });
 }
 
-export async function POST(request: Request) {
-  const guard = await requireRole(request, [UserRole.ADMIN]);
-  if (!guard.ok) return guard.response;
-
-  const bodyResult = await tryCatch(request.json());
-  const body = bodyResult.error ? null : bodyResult.data;
-  const parsed = inviteClientInputSchema.safeParse(body);
-  if (!parsed.success) return fail("Invalid payload", 400, parsed.error);
-
-  const { email, firstName, lastName, phone, dateOfBirth } = parsed.data;
-  const normalizedEmail = email.toLowerCase().trim();
-  // Creates user and linked clientProfile; admin-only.
-  const user = await prisma.user.create({
-    data: {
-      email: normalizedEmail,
-      firstName,
-      lastName,
-      phone,
-      role: "CLIENT",
-      isActive: true,
-      clientProfile: {
-        create: { dateOfBirth: new Date(dateOfBirth) },
-      },
-    },
-    select: {
-      id: true,
-      email: true,
-      firstName: true,
-      lastName: true,
-      phone: true,
-      role: true,
-      clientProfile: { select: { id: true } },
-    },
-  });
-
-  return respond(
-    createClientResponseSchema,
-    {
-      success: true,
-      user: { ...user, fullName: formatFullName(user.firstName, user.lastName) },
-    },
-    201,
-  );
-}
+// Adding a client is done exclusively through the invite flow (POST /api/invites),
+// which creates a UserInvite + sends the activation email. There is deliberately
+// no direct create route: a directly-created User has no password and no way to
+// be notified, which stranded clients (they showed up as "active" but could
+// never sign in). See invite-sheet.tsx / accept-invite.tsx for the real path.

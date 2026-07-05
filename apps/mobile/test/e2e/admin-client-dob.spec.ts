@@ -43,11 +43,10 @@ test.describe("admin client DOB (Serbian)", () => {
     await expect(page.getByText("11.05.1990.")).toBeVisible();
 
     // ── 2. Invite flow renders the DOB picker without crashing ───────────
-    // Navigate back to Klijenti, switch to the Invites tab, open the
-    // invite-create sheet.
+    // Navigate back to Klijenti and open the add-client (invite) sheet — the
+    // "+" always opens the invite flow now, regardless of the active tab.
     await page.getByTestId("tab-klijenti").click();
-    await page.getByTestId("admin-clients-tab-invites").click();
-    await page.getByTestId("admin-new-invite-button").click();
+    await page.getByTestId("admin-new-client-button").click();
 
     const inviteEmail = `e2e-dob-${Date.now()}@test.local`;
     await page.getByTestId("invite-create-email-input").fill(inviteEmail);

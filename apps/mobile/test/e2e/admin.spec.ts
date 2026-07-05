@@ -774,10 +774,9 @@ test.describe("admin (Serbian)", () => {
     const inviteEmail = `admin-invite.${Date.now()}@e2e.test`;
     await signInAs(page, "admin");
     await page.getByTestId("tab-klijenti").click();
-    await page.getByTestId("admin-clients-tab-invites").click();
-    await page
-      .getByRole("button", { name: t.admin.clients.sheetInvite })
-      .click();
+    // The "+" always opens the add-client (invite) sheet now — no need to be
+    // on the invites tab first; a successful invite auto-switches to it.
+    await page.getByTestId("admin-new-client-button").click();
     await page.getByTestId("invite-create-email-input").fill(inviteEmail);
     await page.getByTestId("invite-create-name-input").fill("Admin Invite");
     await page.getByTestId("invite-create-lastname-input").fill("Smoke");
@@ -881,13 +880,21 @@ test.describe("admin (Serbian)", () => {
       .first()
       .dispatchEvent("click");
 
-    // The list doesn't filter by isActive on the frontend — verify the
-    // server-side flag flipped instead.
+    // Server-side: the isActive flag flipped to false.
     await expect
       .poll(async () => getUserActive("client.empty@e2e.test"), {
         timeout: 10_000,
       })
       .toBe(false);
+
+    // User-visible: the deactivated client drops out of the admin list (the
+    // list now filters on isActive, so a soft-delete actually removes the row
+    // instead of silently doing nothing). The search term is still "Empty Pack".
+    await expect(
+      page.locator('[data-testid^="client-row-"]', {
+        hasText: "Empty Pack Client",
+      }),
+    ).toHaveCount(0, { timeout: 10_000 });
   });
 
   // ── Billing ───────────────────────────────────────────────────────────────

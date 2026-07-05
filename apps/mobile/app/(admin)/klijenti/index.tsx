@@ -46,7 +46,6 @@ import { AdminTabLeftSlot } from "@/components/admin/admin-tab-left-slot";
 import type { AssignPackageMode } from "@/components/admin/assign-package-sheet-content";
 import { InitialsAvatar } from "@/components/admin/client-flows/initials-avatar";
 import { InviteSheet } from "@/components/admin/client-flows/invite-sheet";
-import { CreateClientSheet } from "@/components/admin/client-flows/create-client-sheet";
 import { EditClientSheet } from "@/components/admin/client-flows/edit-client-sheet";
 import { ClientActionsSheet } from "@/components/admin/client-flows/client-actions-sheet";
 import { AssignPackageSheet } from "@/components/admin/client-flows/assign-package-sheet";
@@ -178,7 +177,6 @@ export default function AdminClients() {
   // ── Flow state — ONE variable per flow, everything else lives inside the
   //    client-flows modules ──────────────────────────────────────────────────
   const [inviteOpen, setInviteOpen] = useState(false);
-  const [createOpen, setCreateOpen] = useState(false);
   // Edit takes a SNAPSHOT of the row (the old code copied the row's fields
   // into the form at "Izmeni" press time — passing the entity preserves that).
   const [editClient, setEditClient] = useState<ClientListItem | null>(null);
@@ -309,19 +307,9 @@ export default function AdminClients() {
           />
           <HeaderIconButton
             icon="plus"
-            onPress={() =>
-              tab === "clients" ? setCreateOpen(true) : setInviteOpen(true)
-            }
-            testID={
-              tab === "clients"
-                ? "admin-new-client-button"
-                : "admin-new-invite-button"
-            }
-            accessibilityLabel={
-              tab === "clients"
-                ? t("admin.clients.sheetNewClient")
-                : t("admin.clients.sheetInvite")
-            }
+            onPress={() => setInviteOpen(true)}
+            testID="admin-new-client-button"
+            accessibilityLabel={t("admin.clients.sheetInvite")}
           />
         </View>
       }
@@ -544,7 +532,6 @@ export default function AdminClients() {
           decides which sheet opens after which.
       ═══════════════════════════════════════════════════════════════════ */}
 
-      <CreateClientSheet open={createOpen} onOpenChange={setCreateOpen} />
 
       <EditClientSheet
         client={editClient}
@@ -572,7 +559,11 @@ export default function AdminClients() {
         onPause={(id) => setPauseClientId(id)}
       />
 
-      <InviteSheet open={inviteOpen} onOpenChange={setInviteOpen} />
+      <InviteSheet
+        open={inviteOpen}
+        onOpenChange={setInviteOpen}
+        onInvited={() => setTab("invites")}
+      />
 
       <AssignPackageSheet
         client={assignClient}

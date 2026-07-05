@@ -13,7 +13,10 @@ export async function POST(request: Request) {
   const parsed = resetPasswordInputSchema.safeParse(body);
   if (!parsed.success) return fail("Invalid payload", 400, parsed.error);
 
-  const tokenHash = hashToken(parsed.data.token);
+  // Trim before hashing: a token pasted from an email on mobile often carries
+  // a leading/trailing space or newline, which would otherwise change the hash
+  // and fail the lookup with a misleading "token expired".
+  const tokenHash = hashToken(parsed.data.token.trim());
 
   const resetToken = await prisma.passwordResetToken.findUnique({
     where: { tokenHash },

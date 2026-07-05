@@ -33,7 +33,6 @@ import {
 } from "@/lib/queries/billing-queries-factory";
 import {
   clientsQueries,
-  createClientMutationOptions,
   updateClientMutationOptions,
 } from "@/lib/queries/clients-queries-factory";
 import {
@@ -142,24 +141,7 @@ describe("billing create", () => {
   });
 });
 
-describe("client create/update", () => {
-  it("create marks clients + reports stale (totalClients on Pregled)", async () => {
-    seed(clientsListKey, reportsSummaryKey);
-    const observer = new MutationObserver(client, {
-      ...createClientMutationOptions(client),
-      mutationFn: async () => ({ success: true }),
-    });
-    await observer.mutate({
-      email: "novi@x.com",
-      firstName: "Novi",
-      lastName: "Klijent",
-      dateOfBirth: "1990-01-01",
-    });
-
-    expect(isStale(clientsListKey)).toBe(true);
-    expect(isStale(reportsSummaryKey)).toBe(true);
-  });
-
+describe("client update", () => {
   it("update marks clients + reports stale (isActive drives activeClients)", async () => {
     seed(clientsListKey, reportsSummaryKey);
     const observer = new MutationObserver(client, {

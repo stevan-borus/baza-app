@@ -3,7 +3,7 @@
  */
 
 import { useMutation } from "@tanstack/react-query";
-import { Link, useRouter } from "expo-router";
+import { Link, useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Pressable, Text, View } from "react-native";
@@ -55,15 +55,19 @@ export default function ResetPasswordScreen() {
   const { t } = useTranslation();
   const router = useRouter();
   const tokens = useThemeTokens();
-  const [step, setStep] = useState<Step>("request");
+  const params = useLocalSearchParams<{ token?: string }>();
+  // The token arrives only via the emailed deep link (?token=...); the user
+  // never sees or types it. Its presence is also what puts us on the reset
+  // step directly — no manual "I have a token" detour.
+  const token = typeof params.token === "string" ? params.token.trim() : "";
+  const [step, setStep] = useState<Step>(token ? "reset" : "request");
   const [email, setEmail] = useState("");
-  const [token, setToken] = useState("");
   const [password, setPassword] = useState("");
+  const [requestSent, setRequestSent] = useState(false);
   const [requestErrors, setRequestErrors] = useState<FormErrors<{
     email: string;
   }>>({});
   const [resetErrors, setResetErrors] = useState<FormErrors<{
-    token: string;
     password: string;
   }>>({});
 
@@ -88,7 +92,9 @@ export default function ResetPasswordScreen() {
       t,
     );
     if (!result.ok) {
-      setResetErrors(result.errors);
+      // Token comes from the URL, not a field — only the password is
+      // user-editable here, so surface only its error.
+      setResetErrors({ password: result.errors.password });
       return;
     }
     setResetErrors({});
@@ -105,7 +111,9 @@ export default function ResetPasswordScreen() {
         body: { email },
         errorMessage: "Request failed",
       }),
-    onSuccess: () => setStep("reset"),
+    // No token in hand here — the user proceeds by opening the emailed link,
+    // which lands them back on this screen with ?token=... on the reset step.
+    onSuccess: () => setRequestSent(true),
   });
 
   const resetMutation = useMutation({
@@ -158,8 +166,8 @@ export default function ResetPasswordScreen() {
             animate={{ opacity: 1 }}
             transition={{ type: "timing", duration: 300 }}
           >
-            {/* Step 1: request */}
-            {step === "request" ? (
+            {/* Step 1: request — enter email to receive the reset link. */}
+            {step === "request" && !requestSent ? (
               <View className="gap-3.5">
                 <View className="items-center gap-1 mb-1.5">
                   <Text
@@ -203,14 +211,7 @@ export default function ResetPasswordScreen() {
                   block
                 />
 
-                <View className="flex-row items-center justify-center gap-3 mt-1.5">
-                  <LinkText
-                    className="text-muted"
-                    onPress={() => setStep("reset")}
-                  >
-                    {t("auth.haveToken")}
-                  </LinkText>
-                  <Text className="text-faint text-xs">·</Text>
+                <View className="items-center mt-1.5">
                   <LinkText
                     className="text-muted"
                     onPress={() => router.back()}
@@ -221,8 +222,8 @@ export default function ResetPasswordScreen() {
               </View>
             ) : null}
 
-            {/* Step 2: reset */}
-            {step === "reset" ? (
+            {/* Request sent — "check your email"; the link carries the token. */}
+            {step === "request" && requestSent ? (
               <View className="gap-3.5">
                 <View className="items-center gap-1 mb-1.5">
                   <Text
@@ -237,23 +238,37 @@ export default function ResetPasswordScreen() {
                     </Text>
                   ) : null}
                   <Text className="font-sans text-muted text-sm text-center">
-                    {t("auth.resetTokenIntro")}
+                    {t("auth.resetLinkSentIntro")}
                   </Text>
                 </View>
 
-                <Input
-                  testID="reset-token-input"
-                  label={t("auth.tokenPlaceholder")}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  value={token}
-                  onChangeText={(v) => {
-                    setToken(v);
-                    if (resetErrors.token)
-                      setResetErrors((e) => ({ ...e, token: undefined }));
-                  }}
-                  error={resetErrors.token}
-                />
+                <View className="items-center mt-1.5">
+                  <LinkText
+                    className="text-muted"
+                    onPress={() => router.back()}
+                  >
+                    {t("auth.backToSignIn")}
+                  </LinkText>
+                </View>
+              </View>
+            ) : null}
+
+            {/* Step 2: reset — reached via the emailed deep link (?token=...).
+                The token is taken from the URL, so only the new password is
+                asked for here. */}
+            {step === "reset" ? (
+              <View className="gap-3.5">
+                <View className="items-center gap-1 mb-1.5">
+                  <Text
+                    className="font-body-bold text-foreground text-center"
+                    style={{ fontSize: 22, letterSpacing: -0.4 }}
+                  >
+                    {t("auth.newPasswordTitle")}
+                  </Text>
+                  <Text className="font-sans text-muted text-sm text-center">
+                    {t("auth.newPasswordIntro")}
+                  </Text>
+                </View>
 
                 <PasswordInput
                   testID="reset-new-password-input"
@@ -286,9 +301,9 @@ export default function ResetPasswordScreen() {
                 <View className="items-center mt-1.5">
                   <LinkText
                     className="text-muted"
-                    onPress={() => setStep("request")}
+                    onPress={() => router.replace("/sign-in")}
                   >
-                    {t("auth.backToRequest")}
+                    {t("auth.backToSignIn")}
                   </LinkText>
                 </View>
               </View>

@@ -26,6 +26,7 @@ import { Pressable, Text, View } from "react-native";
 import { useTranslation } from "react-i18next";
 import { AppSheet } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
+import { ErrorState } from "@/components/ui/states";
 import { Icon, type IconName } from "@/components/ui/icon";
 import { useThemeTokens } from "@/components/ui/tokens";
 import { InitialsAvatar } from "@/components/admin/client-flows/initials-avatar";
@@ -177,6 +178,9 @@ export function ClientActionsSheet({
                 {t("admin.clients.deleteConfirm")}
               </Text>
             </View>
+            {deactivateMutation.isError ? (
+              <ErrorState message={t("admin.clients.deleteError")} />
+            ) : null}
             <View className="flex-row gap-3">
               <Button
                 variant="secondary"
@@ -189,12 +193,15 @@ export function ClientActionsSheet({
                 testID="client-delete-confirm-button"
                 variant="danger"
                 className="flex-1"
+                disabled={deactivateMutation.isPending}
                 onPress={() => {
-                  deactivateMutation.mutate({
-                    id: deleteTarget.user.id,
-                    isActive: false,
-                  });
-                  setDeleteTarget(null);
+                  // Close only on success — a failed soft-delete keeps the
+                  // confirm sheet open and shows the error, instead of
+                  // dismissing silently (which read as "nothing happened").
+                  deactivateMutation.mutate(
+                    { id: deleteTarget.user.id, isActive: false },
+                    { onSuccess: () => setDeleteTarget(null) },
+                  );
                 }}
               >
                 {t("admin.clients.delete")}
