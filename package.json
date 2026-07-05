@@ -20,7 +20,10 @@
   "pnpm": {
     "overrides": {
       "oxlint": "1.48.0"
-    }
+    },
+    "onlyBuiltDependencies": [
+      "@sentry/cli"
+    ]
   },
   "engines": {
     "node": ">=22"
