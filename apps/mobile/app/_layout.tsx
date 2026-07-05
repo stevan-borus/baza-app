@@ -15,8 +15,11 @@ import { KeyboardProvider, KeyboardToolbar } from "react-native-keyboard-control
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import "react-native-reanimated";
 
+import * as Sentry from "@sentry/react-native";
+
 import "@/lib/i18n";
 import { loadStoredLocale } from "@/lib/i18n";
+import { initSentry } from "@/lib/sentry";
 import { usePushRegistration } from "@/lib/push-registration";
 import { usePushTapListener } from "@/lib/push-tap-listener";
 import { Providers } from "@/lib/providers";
@@ -27,6 +30,10 @@ import { ProfileSheetProvider } from "@/components/ui/profile-sheet";
 import { AppUpdateGate } from "@/components/ui/app-update-gate";
 
 export { ErrorBoundary } from "expo-router";
+
+// Initialize Sentry as early as possible — before the root component renders —
+// so init-time errors are captured. No-ops when EXPO_PUBLIC_SENTRY_DSN is unset.
+initSentry();
 
 SplashScreen.preventAutoHideAsync();
 
@@ -56,7 +63,7 @@ const CustomLightTheme = {
   },
 };
 
-export default function RootLayout() {
+function RootLayout() {
   const [loaded, error] = useFonts({
     SpaceMono: require("../assets/fonts/SpaceMono-Regular.ttf"),
     // Display: Fraunces — refined wedge serif (variable). Used for screen
@@ -106,6 +113,11 @@ export default function RootLayout() {
     </Providers>
   );
 }
+
+// Sentry.wrap adds the touch/navigation instrumentation and the error
+// boundary that feeds captured render errors upstream. It's a no-op-safe
+// wrapper even when init() didn't run (no DSN).
+export default Sentry.wrap(RootLayout);
 
 function RootLayoutNav() {
   const colorScheme = useColorScheme();

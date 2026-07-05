@@ -94,6 +94,14 @@
             "deploymentTarget": "16.4"
           }
         }
+      ],
+      [
+        "@sentry/react-native/expo",
+        {
+          "url": "https://sentry.io/",
+          "organization": "baza-pilates",
+          "project": "baza-mobile"
+        }
       ]
     ],
     "experiments": {

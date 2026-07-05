@@ -1,4 +1,8 @@
-const { getDefaultConfig } = require("expo/metro-config");
+// Sentry's getSentryExpoConfig is a drop-in for Expo's getDefaultConfig — it
+// returns the same config plus the Sentry Metro serializer needed to generate
+// source maps for symbolicated stack traces. All the SDK-56 / tslib / punycode /
+// uniwind customization below is applied on top, unchanged.
+const { getSentryExpoConfig } = require("@sentry/react-native/metro");
 const { withUniwindConfig } = require("uniwind/metro");
 
 // SDK 56 native-boot fix. React Compiler (experiments.reactCompiler) forces
@@ -15,7 +19,7 @@ const { withUniwindConfig } = require("uniwind/metro");
 // `transform.liveBindings=false` in the bundle URL).
 process.env.EXPO_UNSTABLE_LIVE_BINDINGS = "false";
 
-const config = getDefaultConfig(__dirname);
+const config = getSentryExpoConfig(__dirname);
 config.resolver.unstable_enablePackageExports = true;
 
 // tslib's package.json exports map routes the `node` import condition (which

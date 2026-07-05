@@ -23,6 +23,7 @@
       "env": {
         "EXPO_PUBLIC_API_URL": "https://baza-pilates-staging.fly.dev",
         "EXPO_PUBLIC_LINK_HOST": "baza-pilates-staging.fly.dev",
+        "EXPO_PUBLIC_SENTRY_DSN": "https://8f9d652ca9979e1d2f64f4fa908eebee@o4511682894036992.ingest.de.sentry.io/4511682919661648",
         "NODE_OPTIONS": "--max-old-space-size=4096"
       }
     },
@@ -43,6 +44,7 @@
       "env": {
         "EXPO_PUBLIC_API_URL": "https://baza-pilates-prod.fly.dev",
         "EXPO_PUBLIC_LINK_HOST": "baza-pilates-prod.fly.dev",
+        "EXPO_PUBLIC_SENTRY_DSN": "https://8f9d652ca9979e1d2f64f4fa908eebee@o4511682894036992.ingest.de.sentry.io/4511682919661648",
         "NODE_OPTIONS": "--max-old-space-size=4096"
       }
     }

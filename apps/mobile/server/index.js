@@ -3,7 +3,26 @@
 // See https://docs.expo.dev/router/web/api-routes/#deployment for the pattern.
 //
 // Plain JS (not TS) so it runs under Node directly with no build step in the
-// container. The testable config lives in ./config.ts and is mirrored here.
+// container. The testable config lives in ./config.ts and ./sentry.ts, mirrored
+// here.
+
+// Sentry MUST be initialized before Express is required/used so its auto
+// instrumentation can patch the framework. Disabled (no-op) when SENTRY_DSN is
+// unset — local/dev/CI report nothing. Mirrors resolveSentryConfig in
+// ./sentry.ts (kept in sync by test/unit/server-sentry.test.ts).
+const Sentry = require("@sentry/node");
+const sentryDsn = (process.env.SENTRY_DSN || "").trim();
+if (sentryDsn) {
+  const environment = (process.env.NODE_ENV || "").trim() || "production";
+  Sentry.init({
+    dsn: sentryDsn,
+    environment,
+    tracesSampleRate: environment === "development" ? 1.0 : 0.2,
+    enableLogs: true,
+    sendDefaultPii: false,
+  });
+}
+
 const path = require("node:path");
 const fs = require("node:fs");
 const express = require("express");
@@ -50,6 +69,12 @@ app.all(
     build: buildDir,
   }),
 );
+
+// Must be registered AFTER all routes/controllers so it sees their errors. No-op
+// when Sentry wasn't initialized (no DSN).
+if (sentryDsn) {
+  Sentry.setupExpressErrorHandler(app);
+}
 
 app.listen(port, host, () => {
   process.stdout.write(`[server] baza-api listening on ${host}:${port}\n`);
