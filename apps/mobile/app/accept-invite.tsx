@@ -2,7 +2,7 @@
  * accept-invite.tsx — Studio look, vertically centered.
  */
 
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Icon } from "@/components/ui/icon";
 import { Link, useRouter, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
@@ -17,6 +17,9 @@ import { Input, PasswordInput } from "@/components/ui/input";
 import { LinkText } from "@/components/ui/typography";
 import { StudioButton } from "@/components/ui/studio";
 import { apiRequest } from "@/lib/api-request";
+import { authClient } from "@/lib/auth-client";
+import { authQueries } from "@/lib/queries/auth-queries-factory";
+import { completeInviteResponseSchema } from "@baza/types/auth";
 import { validateForm, type FormErrors } from "@/lib/zod-form";
 
 function InviterBadge({ name }: { name: string }) {
@@ -33,6 +36,7 @@ function InviterBadge({ name }: { name: string }) {
 export default function AcceptInviteScreen() {
   const { t } = useTranslation();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const params = useLocalSearchParams<{
     token?: string;
     email?: string;
@@ -90,9 +94,29 @@ export default function AcceptInviteScreen() {
       apiRequest("/api/auth/complete-invite", {
         method: "POST",
         body: { token, password, name },
+        schema: completeInviteResponseSchema,
         errorMessage: "Failed",
       }),
-    onSuccess: () => router.replace("/sign-in"),
+    onSuccess: async (data) => {
+      // The account exists and the user just chose these credentials — sign
+      // them in through authClient (the only path that persists the session
+      // cookie on native) instead of bouncing to /sign-in to retype them.
+      // The invite email comes from the response, not URL params, so it is
+      // the server-authoritative address the account was created with.
+      const signIn = await authClient.signIn.email({
+        email: data.user.email,
+        password,
+      });
+      if (signIn.error) {
+        // Account creation succeeded but sign-in didn't — fall back to the
+        // sign-in screen rather than surfacing a misleading invite error
+        // (retrying the invite would 410 on the consumed token).
+        router.replace("/sign-in");
+        return;
+      }
+      await queryClient.refetchQueries({ queryKey: authQueries.me().queryKey });
+      router.replace("/");
+    },
   });
 
 

@@ -41,7 +41,7 @@ test.describe("auth extended (Serbian)", () => {
     await expect(page.getByTestId("auth-email-input")).toBeVisible();
   });
 
-  test("client opens invite token URL, creates account, and can sign in", async ({
+  test("client opens invite token URL, creates account, and is signed in automatically", async ({
     page,
   }) => {
     const inviteEmail = "new.client.invited@e2e.test";
@@ -62,16 +62,12 @@ test.describe("auth extended (Serbian)", () => {
     await page.getByTestId("invite-confirm-password-input").fill(NEW_PASSWORD);
     await page.getByTestId("invite-submit-button").click();
 
-    // Successful redemption sends the user to /sign-in.
-    await expect(page).toHaveURL(/\/sign-in/, { timeout: 15_000 });
-
-    // Now sign in with the freshly-created credentials.
-    await page.getByTestId("auth-email-input").fill(inviteEmail);
-    await page.getByTestId("auth-password-input").fill(NEW_PASSWORD);
-    await page.getByTestId("auth-submit-button").click();
+    // Successful redemption signs the user in and lands them in the app —
+    // no detour through /sign-in with the credentials they just created.
     await expect(page.getByTestId("tab-index")).toBeVisible({
       timeout: 15_000,
     });
+    expect(page.url()).not.toMatch(/\/sign-in/);
   });
 
   test("invited client's first+last name carries through to the profile after activation", async ({
@@ -94,10 +90,7 @@ test.describe("auth extended (Serbian)", () => {
     await page.getByTestId("invite-confirm-password-input").fill(NEW_PASSWORD);
     await page.getByTestId("invite-submit-button").click();
 
-    await expect(page).toHaveURL(/\/sign-in/, { timeout: 15_000 });
-    await page.getByTestId("auth-email-input").fill(inviteEmail);
-    await page.getByTestId("auth-password-input").fill(NEW_PASSWORD);
-    await page.getByTestId("auth-submit-button").click();
+    // Redemption auto-signs-in and lands in the app.
     await expect(page.getByTestId("tab-index")).toBeVisible({ timeout: 15_000 });
 
     // The profile sheet renders the derived full name — not the email-local
