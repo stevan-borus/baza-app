@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/session-edit-sheet";
 import { sessionsQueries } from "@/lib/queries/sessions-queries-factory";
 import { reportsQueries } from "@/lib/queries/reports-queries-factory";
+import { activeClientRate } from "@/lib/format";
 import { useWeekNavigation, weekRangeLabel } from "@/lib/use-week-navigation";
 
 /**
@@ -83,10 +84,9 @@ export default function AdminSchedule() {
   }
 
   const revenueValue = summary?.revenue ?? 0;
-  const attendanceRate =
-    summary && summary.totalSessions > 0
-      ? Math.round((summary.activeClients / summary.totalClients) * 100)
-      : 0;
+  const attendanceRate = summary
+    ? activeClientRate(summary.activeClients, summary.totalClients)
+    : undefined;
 
   const isDashboardLoading =
     summaryQuery.isLoading || availabilityQuery.isLoading;
@@ -176,7 +176,10 @@ export default function AdminSchedule() {
               },
               {
                 label: t("admin.dashboard.attendanceRate"),
-                value: summary ? `${attendanceRate}%` : undefined,
+                value:
+                  attendanceRate === undefined
+                    ? undefined
+                    : `${attendanceRate}%`,
                 accent: true,
               },
             ]}

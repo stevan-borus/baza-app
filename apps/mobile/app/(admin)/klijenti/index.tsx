@@ -498,22 +498,20 @@ export default function AdminClients() {
                       <Pressable
                         onPress={() => resendMutation.mutate(invite.id)}
                         disabled={resendMutation.isPending}
-                        className="flex-1 flex-row items-center justify-center gap-1.5 py-2 rounded-lg"
-                        style={{ backgroundColor: "rgba(255,255,255,0.06)" }}
+                        className="flex-1 flex-row items-center justify-center gap-1.5 py-2 rounded-lg border border-glass-border bg-glass active:opacity-70"
                       >
-                        <Icon name="refresh" size={12} color="#a1a1aa" />
-                        <Text className="text-muted" style={{ fontSize: 12, fontWeight: "600" }}>
+                        <Icon name="refresh" size={12} color={tokens.muted} />
+                        <Text className="text-foreground" style={{ fontSize: 12, fontWeight: "600" }}>
                           {t("admin.clients.resend")}
                         </Text>
                       </Pressable>
                       <Pressable
                         onPress={() => setConfirmRevokeId(invite.id)}
                         disabled={revokeMutation.isPending}
-                        className="flex-1 flex-row items-center justify-center gap-1.5 py-2 rounded-lg"
-                        style={{ backgroundColor: "rgba(255,0,0,0.08)" }}
+                        className="flex-1 flex-row items-center justify-center gap-1.5 py-2 rounded-lg border border-danger-soft bg-danger-soft active:opacity-70"
                       >
-                        <Icon name="ban" size={12} color="#ef4444" />
-                        <Text style={{ fontSize: 12, fontWeight: "600", color: "#ef4444" }}>
+                        <Icon name="ban" size={12} color={tokens.danger} />
+                        <Text className="text-danger" style={{ fontSize: 12, fontWeight: "600" }}>
                           {t("admin.clients.revoke")}
                         </Text>
                       </Pressable>
