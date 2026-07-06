@@ -5,7 +5,6 @@ import {
 import { formatFullName } from "@baza/types/common";
 import { type Prisma, InviteStatus, UserRole } from "@/generated/prisma";
 import { now } from "@/lib/now";
-import { auth } from "@/lib/server/auth";
 import { fail, respond } from "@/lib/server/http";
 import { hashPassword } from "@/lib/server/password";
 import { prisma } from "@/lib/server/prisma";
@@ -83,23 +82,11 @@ export async function POST(request: Request) {
     return created;
   });
 
-  const signInResponse = await auth.api.signInEmail({
-    body: {
-      email: user.email,
-      password: parsed.data.password,
-    },
-    headers: request.headers,
-    asResponse: true,
-  });
-
-  const response = respond(completeInviteResponseSchema, {
+  // No session is minted here — the client signs in through authClient with
+  // the just-created credentials, which is the only path that persists the
+  // session cookie on native (the plain-fetch seam drops response cookies).
+  return respond(completeInviteResponseSchema, {
     success: true,
     user: { ...user, fullName: formatFullName(user.firstName, user.lastName) },
   });
-  const sessionCookie = signInResponse.headers.get("set-cookie");
-  if (sessionCookie) {
-    response.headers.set("set-cookie", sessionCookie);
-  }
-
-  return response;
 }

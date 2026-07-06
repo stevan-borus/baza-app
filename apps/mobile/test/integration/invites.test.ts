@@ -137,6 +137,9 @@ describe("invites API", () => {
       }),
     );
     expect(response.status).toBe(200);
+    // Session issuance is the client's job (authClient sign-in after
+    // redemption) — the invite endpoint itself must not mint one.
+    expect(response.headers.get("set-cookie")).toBeNull();
 
     const invite = await prisma.userInvite.findFirst({
       where: { email: "redeemer@test.local" },
