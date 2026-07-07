@@ -14,11 +14,31 @@ const Sentry = require("@sentry/node");
 const sentryDsn = (process.env.SENTRY_DSN || "").trim();
 if (sentryDsn) {
   const environment = (process.env.NODE_ENV || "").trim() || "production";
+  const isDev = environment === "development";
+  // Mirrors resolveSentryConfig in ./sentry.ts (kept in sync by
+  // test/unit/server-sentry.test.ts). Production keeps ERROR reporting but
+  // drops performance tracing. tracesSampleRate:0 alone is NOT enough — the
+  // OTel Http instrumentation still wraps every request (creating spans and
+  // stacking per-response close listeners → MaxListenersExceededWarning), which
+  // was the bulk of the server's ~344MB idle RSS on the 512MB Fly box and made
+  // it OOM-abort (exit 134) under load. So in prod we also:
+  //   - swap to getDefaultIntegrationsWithoutPerformance() (drops the perf set), and
+  //   - re-add httpIntegration with spans:false so request isolation + error
+  //     capture stay but no incoming-request spans are generated.
+  // Dev keeps full tracing where the footprint is irrelevant.
   Sentry.init({
     dsn: sentryDsn,
     environment,
-    tracesSampleRate: environment === "development" ? 1.0 : 0.2,
-    enableLogs: true,
+    tracesSampleRate: isDev ? 1.0 : 0,
+    defaultIntegrations: isDev
+      ? undefined
+      : [
+          ...Sentry.getDefaultIntegrationsWithoutPerformance().filter(
+            (integration) => integration.name !== "Http",
+          ),
+          Sentry.httpIntegration({ spans: false }),
+        ],
+    enableLogs: false,
     sendDefaultPii: false,
   });
 }

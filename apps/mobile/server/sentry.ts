@@ -12,6 +12,18 @@ export type SentryServerConfig = {
   dsn: string | undefined;
   environment: string;
   tracesSampleRate: number;
+  /**
+   * Whether to load Sentry's performance/OpenTelemetry instrumentation set
+   * (http, express, fs, all the DB integrations). `false` selects
+   * `getDefaultIntegrationsWithoutPerformance()` in index.js — error reporting
+   * stays, tracing spans go away. Off in prod: that instrumentation was the
+   * bulk of the server's ~344MB idle RSS on a 512MB Fly box, tipping it into
+   * exit-134 aborts under any burst. On in dev where the footprint is
+   * irrelevant and traces are useful.
+   */
+  performanceInstrumentation: boolean;
+  /** Sentry log buffering — off on the server (memory cost, no pilot value). */
+  enableLogs: boolean;
 };
 
 export function resolveSentryConfig({
@@ -21,14 +33,19 @@ export function resolveSentryConfig({
 }): SentryServerConfig {
   const dsn = env.SENTRY_DSN?.trim() || undefined;
   const environment = env.NODE_ENV?.trim() || "production";
-  // 5M spans/mo on the free plan is generous, but sample down in prod anyway;
-  // full sampling in dev where volume is tiny and traces are most useful.
-  const tracesSampleRate = environment === "development" ? 1.0 : 0.2;
+  const isDev = environment === "development";
+  // Production keeps ERROR reporting but drops performance tracing entirely:
+  // the OTel instrumentation Sentry loads for tracing dominated the server's
+  // RSS and, on the 512MB staging box, made it OOM-abort under load. Dev keeps
+  // full tracing where volume is tiny and traces are most useful.
+  const tracesSampleRate = isDev ? 1.0 : 0;
 
   return {
     enabled: Boolean(dsn),
     dsn,
     environment,
     tracesSampleRate,
+    performanceInstrumentation: isDev,
+    enableLogs: false,
   };
 }

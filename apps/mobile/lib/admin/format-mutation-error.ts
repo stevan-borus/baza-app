@@ -1,19 +1,21 @@
 /**
  * Turn a mutation error into a user-facing message.
  *
- * Generic mutation rejections used to fall back to "Kreiranje termina nije
- * uspelo" — the admin had no way to tell whether the cause was a schedule
- * conflict, a missing field, or a server crash. This helper unwraps the
- * `ApiError` body shapes the API actually returns and produces a specific
- * message; if the body is unknown it falls back to the caller's generic
- * `t(...)` string.
+ * This helper unwraps the structured `ApiError` bodies the API returns and
+ * builds a specific, LOCALIZED message from `t(...)` keys. For anything it does
+ * not recognize — a bare 4xx like "Invalid payload", a 502/5xx gateway failure,
+ * a network drop, a client-side ZodError — it returns the caller's localized
+ * `t(...)` fallback. It NEVER surfaces the server's or an exception's raw
+ * English `.message`: doing so leaked English into a Serbian UI (the reported
+ * "502 in English" bug). The language shown always matches the app's language.
  *
- * Currently handles:
+ * Currently produces a specific message for:
  *  - Schedule conflict (single occurrence) — POST/PATCH /sessions
  *  - Schedule conflict (recurring, list of occurrences) — POST /sessions/recurring
- *  - Generic structured `{ error: string }` from `lib/server/http.fail()`
  *
- * Extend as more 4xx response shapes appear across the admin surface.
+ * Everything else → the localized fallback. To give another failure its own
+ * localized copy, add a recognizer + `t(...)` mapping here (like the conflict
+ * bodies), never by returning `error.message`.
  */
 import type { TFunction } from "i18next";
 import dayjs from "dayjs";
@@ -81,26 +83,6 @@ function describeConflict(
   return `${subject}${klass} · ${time}`;
 }
 
-/**
- * A raw Zod validation error serializes its `.message` to a JSON array of issue
- * objects (`[{ "expected": ..., "code": "invalid_type", "path": [...] }]`). This
- * happens when a *client-side* response-schema `.parse()` fails — the thrown
- * `ZodError`'s message is that bracketed blob, and it has no business reaching
- * the user. Treat any message that parses as a JSON array (or names itself
- * `ZodError`) as machine noise and fall back to the friendly string.
- */
-function isRawValidationMessage(error: unknown): boolean {
-  if (!(error instanceof Error)) return false;
-  if (error.name === "ZodError") return true;
-  const msg = error.message?.trim();
-  if (!msg || msg[0] !== "[") return false;
-  try {
-    return Array.isArray(JSON.parse(msg));
-  } catch {
-    return false;
-  }
-}
-
 export function formatMutationError(
   error: unknown,
   t: TFunction,
@@ -108,8 +90,11 @@ export function formatMutationError(
   fallback: string,
 ): string {
   if (!(error instanceof ApiError)) {
-    if (isRawValidationMessage(error)) return fallback;
-    return error instanceof Error ? error.message || fallback : fallback;
+    // A non-ApiError carries only raw English (a fetch failure, a client-side
+    // ZodError, a thrown string). None of it is localized, so it must never
+    // reach the user under a non-English UI — return the caller's localized
+    // fallback instead of leaking `error.message`.
+    return fallback;
   }
   // Recurring series — surface up to 3 occurrences with their reason.
   if (isRecurringConflictBody(error.body)) {
@@ -149,10 +134,11 @@ export function formatMutationError(
       ? t("admin.errors.scheduleConflict.trainerBusyShort", { detail })
       : t("admin.errors.scheduleConflict.roomBusyShort", { detail });
   }
-  // Other 4xx with a `{ error: string }` body — `ApiError.message` is already
-  // the server's text, so return it directly (it may already be human-
-  // readable, e.g. "Invalid payload"). Guard against the rare case where the
-  // server stuffed a raw Zod issues array into the `error` field.
-  if (isRawValidationMessage(error)) return fallback;
-  return error.message || fallback;
+  // Any other error (unrecognized 4xx like "Invalid payload"/"Invalid startsAt
+  // date", a 5xx/502 gateway failure whose body couldn't be parsed, a network
+  // drop) carries only the server's hardcoded English in `error.message`. That
+  // English must not surface under a Serbian UI — return the caller's localized
+  // fallback. Structured, already-localized messages are handled above; only
+  // machine/English noise reaches here.
+  return fallback;
 }
