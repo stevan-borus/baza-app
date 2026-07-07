@@ -15,19 +15,57 @@ describe("formatMutationError", () => {
     expect(formatMutationError(new Error(""), t, "sr", FALLBACK)).toBe(FALLBACK);
   });
 
-  it("returns a non-ApiError Error's own message when it is human-readable", () => {
-    expect(
-      formatMutationError(new Error("Network request failed"), t, "sr", FALLBACK),
-    ).toBe("Network request failed");
+  // A non-ApiError's own `.message` is raw English (e.g. a fetch failure). It must
+  // NOT reach the user under a Serbian UI — the caller's localized fallback wins.
+  it("returns the fallback for a non-ApiError Error, never its raw message", () => {
+    const result = formatMutationError(
+      new Error("Network request failed"),
+      t,
+      "sr",
+      FALLBACK,
+    );
+    expect(result).toBe(FALLBACK);
+    expect(result).not.toContain("Network request failed");
   });
 
-  it("returns the server's `error` string for a generic 4xx ApiError", () => {
+  // The server's `error` string is hardcoded English ("Invalid payload",
+  // "Invalid startsAt date", …). Showing it verbatim is the i18n leak — an
+  // unrecognized 4xx falls back to the localized message instead.
+  it("returns the fallback for a generic 4xx ApiError, not the server's English", () => {
     const err = new ApiError(
       400,
       { success: false, error: "Invalid payload" },
       FALLBACK,
     );
-    expect(formatMutationError(err, t, "sr", FALLBACK)).toBe("Invalid payload");
+    const result = formatMutationError(err, t, "sr", FALLBACK);
+    expect(result).toBe(FALLBACK);
+    expect(result).not.toContain("Invalid payload");
+  });
+
+  it("returns the fallback for an 'Invalid startsAt date' 4xx, not the server's English", () => {
+    const err = new ApiError(
+      400,
+      { success: false, error: "Invalid startsAt date" },
+      FALLBACK,
+    );
+    expect(formatMutationError(err, t, "sr", FALLBACK)).toBe(FALLBACK);
+  });
+
+  // The reported bug: adding a repeating session returned a 502. `apiRequest`
+  // can't parse the gateway's non-JSON body, so it throws an ApiError with a
+  // null body and the English fallback message baked into `.message`
+  // ("Unable to create recurring sessions (502)"). That English string must
+  // NEVER surface under a Serbian UI — the localized fallback wins.
+  it("returns the fallback for a 502 with an unparseable body (the repeating-session bug)", () => {
+    const err = new ApiError(
+      502,
+      null,
+      "Unable to create recurring sessions (502)",
+    );
+    const result = formatMutationError(err, t, "sr", FALLBACK);
+    expect(result).toBe(FALLBACK);
+    expect(result).not.toContain("502");
+    expect(result).not.toContain("Unable to create");
   });
 
   // The bug from the screenshot: a client-side response-schema `.parse()` throws
@@ -60,5 +98,37 @@ describe("formatMutationError", () => {
     );
     const result = formatMutationError(err, t, "sr", FALLBACK);
     expect(result).toBe(FALLBACK);
+  });
+
+  // The good path must survive the fallback tightening: a recognized recurring
+  // schedule-conflict body is already built from `t(...)` keys, so it still
+  // produces the detailed localized message (not the generic fallback).
+  it("still returns the detailed localized message for a recurring schedule-conflict body", () => {
+    const err = new ApiError(
+      409,
+      {
+        success: false,
+        error: "Schedule conflict",
+        conflicts: [
+          {
+            occurrenceStartsAt: "2026-07-13T09:00:00.000Z",
+            occurrenceEndsAt: "2026-07-13T10:00:00.000Z",
+            kind: "trainer",
+            existingStartsAt: "2026-07-13T09:00:00.000Z",
+            existingEndsAt: "2026-07-13T10:00:00.000Z",
+            existingRoomName: null,
+            existingTrainerName: "Ana",
+            existingClassTypeName: "Reformer",
+          },
+        ],
+        conflictCount: 1,
+        totalOccurrences: 4,
+      },
+      FALLBACK,
+    );
+    const result = formatMutationError(err, t, "sr", FALLBACK);
+    expect(result).not.toBe(FALLBACK);
+    // Built from the localized conflict keys (the stub echoes the key).
+    expect(result).toContain("admin.errors.scheduleConflict");
   });
 });
