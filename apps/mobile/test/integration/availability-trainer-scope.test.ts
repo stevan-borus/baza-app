@@ -4,7 +4,7 @@ import { resetDb } from "./setup-db";
 
 vi.mock("@/lib/server/auth-guards", async () => (await import("./auth-mock")).authGuardsMock());
 
-import { GET } from "@/app/api/sessions/availability/+api";
+import { GET } from "@/server/routes/sessions/availability";
 import { prisma } from "@/lib/server/prisma";
 
 async function seed() {

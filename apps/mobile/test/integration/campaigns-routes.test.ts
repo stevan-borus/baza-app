@@ -6,12 +6,12 @@ vi.mock("@/lib/server/auth-guards", async () => (await import("./auth-mock")).au
 
 vi.mock("@/lib/server/resend", () => ({ sendCampaignEmail: vi.fn(async () => undefined) }));
 
-import { POST as PREVIEW } from "@/app/api/campaigns/preview/+api";
-import { POST as PREVIEW_CLIENTS } from "@/app/api/campaigns/preview/clients/+api";
-import { GET as LIST, POST as CREATE } from "@/app/api/campaigns/+api";
-import { GET as GET_ONE, PATCH, DELETE } from "@/app/api/campaigns/[id]/+api";
-import { POST as SEND } from "@/app/api/campaigns/[id]/send/+api";
-import { GET as RECIPIENTS } from "@/app/api/campaigns/[id]/recipients/+api";
+import { POST as PREVIEW } from "@/server/routes/campaigns/preview";
+import { POST as PREVIEW_CLIENTS } from "@/server/routes/campaigns/preview/clients";
+import { GET as LIST, POST as CREATE } from "@/server/routes/campaigns";
+import { GET as GET_ONE, PATCH, DELETE } from "@/server/routes/campaigns/[id]";
+import { POST as SEND } from "@/server/routes/campaigns/[id]/send";
+import { GET as RECIPIENTS } from "@/server/routes/campaigns/[id]/recipients";
 import { prisma } from "@/lib/server/prisma";
 
 async function seedAdminAndClients() {

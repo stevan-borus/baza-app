@@ -11,6 +11,7 @@
     "ios": "expo run:ios --port 8090",
     "web": "expo start --web --port 8090",
     "legal:bundle": "tsx scripts/generate-legal-bundle.ts",
+    "gen:api-registry": "tsx scripts/gen-api-registry.ts",
     "prisma:generate": "DATABASE_URL=\"postgresql://build:build@localhost:5432/build\" prisma generate",
     "postinstall": "pnpm prisma:generate",
     "lint": "oxlint .",

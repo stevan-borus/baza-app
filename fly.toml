@@ -24,7 +24,9 @@ primary_region = "fra"
   PORT = "8081"
 
 [processes]
-  app = "sh -c 'pnpm exec prisma migrate deploy && pnpm run start:server'"
+  # `exec node` (not `pnpm run start:server`): pnpm's wrapper process stays
+  # resident (~85MB) for the life of the machine — a real cost on a small box.
+  app = "sh -c 'pnpm exec prisma migrate deploy && exec node server/index.js'"
   cron = "supercronic /app/crontab"
 
 # Only the web process serves HTTP; the cron process has no public listener.

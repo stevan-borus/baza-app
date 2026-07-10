@@ -3,7 +3,7 @@ import { setMockUser } from "./auth-mock";
 
 vi.mock("@/lib/server/auth-guards", async () => (await import("./auth-mock")).authGuardsMock());
 
-import { POST } from "@/app/api/consent/accept+api";
+import { POST } from "@/server/routes/consent/accept";
 import { prisma } from "@/lib/server/prisma";
 import { resetDb } from "./setup-db";
 

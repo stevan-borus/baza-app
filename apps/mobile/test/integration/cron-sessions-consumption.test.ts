@@ -1,7 +1,7 @@
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { resetDb } from "./setup-db";
 
-import { POST } from "@/app/api/cron/sessions/consumption/+api";
+import { POST } from "@/server/routes/cron/sessions/consumption";
 import { prisma } from "@/lib/server/prisma";
 import { now, nowMs } from "@/lib/now";
 

@@ -19,7 +19,7 @@ vi.mock("@/lib/server/notifications", () => ({
     createSystemNotificationMock(...args),
 }));
 
-import { POST } from "@/app/api/admin/reservations/cancel-bulk/+api";
+import { POST } from "@/server/routes/admin/reservations/cancel-bulk";
 import { prisma } from "@/lib/server/prisma";
 import { nowMs } from "@/lib/now";
 

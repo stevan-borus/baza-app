@@ -4,8 +4,8 @@ import { resetDb } from "./setup-db";
 
 vi.mock("@/lib/server/auth-guards", async () => (await import("./auth-mock")).authGuardsMock());
 
-import { GET as GET_PREFS, PATCH as PATCH_PREFS } from "@/app/api/notifications/preferences/+api";
-import { POST as POST_TOKEN, DELETE as DELETE_TOKEN } from "@/app/api/notifications/push-token/+api";
+import { GET as GET_PREFS, PATCH as PATCH_PREFS } from "@/server/routes/notifications/preferences";
+import { POST as POST_TOKEN, DELETE as DELETE_TOKEN } from "@/server/routes/notifications/push-token";
 import { prisma } from "@/lib/server/prisma";
 
 async function makeUser(email: string) {

@@ -6,7 +6,7 @@ vi.mock("@/lib/server/auth-guards", async () => (await import("./auth-mock")).au
 
 vi.mock("@/lib/server/notifications", async () => (await import("./notifications-mock")).notificationsMock());
 
-import { DELETE } from "@/app/api/sessions/[id]/+api";
+import { DELETE } from "@/server/routes/sessions/[id]";
 import { prisma } from "@/lib/server/prisma";
 import { now, nowMs } from "@/lib/now";
 

@@ -58,7 +58,7 @@ vi.mock("@/lib/server/notifications", async () => {
   };
 });
 
-import { PATCH } from "@/app/api/sessions/[id]/+api";
+import { PATCH } from "@/server/routes/sessions/[id]";
 import { prisma } from "@/lib/server/prisma";
 import { now } from "@/lib/now";
 

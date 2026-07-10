@@ -1,7 +1,7 @@
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { resetDb } from "./setup-db";
 import { signUnsubscribeToken } from "@/lib/server/campaign-unsubscribe-token";
-import { GET as UNSUB_GET, POST as UNSUB_POST } from "@/app/api/unsubscribe/+api";
+import { GET as UNSUB_GET, POST as UNSUB_POST } from "@/server/routes/unsubscribe";
 import { prisma } from "@/lib/server/prisma";
 
 function url(userId: string, lang?: string) {

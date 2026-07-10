@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { GET } from "@/app/api/legal/documents/[key]+api";
+import { GET } from "@/server/routes/legal/documents/[key]";
 
 function request(key: string, locale: string): Request {
   return new Request(`https://t.local/api/legal/documents/${key}?locale=${locale}`);

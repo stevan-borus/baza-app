@@ -20,9 +20,9 @@ vi.mock("@/lib/server/cron-auth", () => ({
 
 vi.mock("@/lib/server/notifications", async () => (await import("./notifications-mock")).notificationsMock());
 
-import { POST as createPost } from "@/app/api/admin/reservations/+api";
-import { POST as cancelPost } from "@/app/api/admin/reservations/cancel-bulk/+api";
-import { POST as cronPost } from "@/app/api/cron/sessions/consumption/+api";
+import { POST as createPost } from "@/server/routes/admin/reservations";
+import { POST as cancelPost } from "@/server/routes/admin/reservations/cancel-bulk";
+import { POST as cronPost } from "@/server/routes/cron/sessions/consumption";
 import { prisma } from "@/lib/server/prisma";
 import { nowMs } from "@/lib/now";
 

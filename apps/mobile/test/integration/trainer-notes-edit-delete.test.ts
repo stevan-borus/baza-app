@@ -4,7 +4,7 @@ import { resetDb } from "./setup-db";
 
 vi.mock("@/lib/server/auth-guards", async () => (await import("./auth-mock")).authGuardsMock());
 
-import { PATCH, DELETE } from "@/app/api/trainer-notes/[id]/+api";
+import { PATCH, DELETE } from "@/server/routes/trainer-notes/[id]";
 import { prisma } from "@/lib/server/prisma";
 
 async function seedNoteByTrainer(opts: { trainerEmail: string }) {

@@ -2,7 +2,7 @@ import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { now } from "@/lib/now";
 import { resetDb } from "./setup-db";
 vi.mock("@/lib/server/resend", () => ({ sendCampaignEmail: vi.fn(async () => undefined) }));
-import { POST as CRON } from "@/app/api/cron/campaigns/dispatch/+api";
+import { POST as CRON } from "@/server/routes/cron/campaigns/dispatch";
 import { prisma } from "@/lib/server/prisma";
 
 const TOKEN = process.env.API_ADMIN_BOOTSTRAP_TOKEN ?? "test-bootstrap-token";

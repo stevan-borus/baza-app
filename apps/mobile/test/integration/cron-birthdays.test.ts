@@ -7,7 +7,7 @@ vi.mock("@/lib/server/cron-auth", () => ({
 
 vi.mock("@/lib/server/notifications", async () => (await import("./notifications-mock")).notificationsMock());
 
-import { POST as POST_BIRTHDAYS } from "@/app/api/cron/notifications/birthdays/+api";
+import { POST as POST_BIRTHDAYS } from "@/server/routes/cron/notifications/birthdays";
 import { createSystemNotification } from "@/lib/server/notifications";
 import { prisma } from "@/lib/server/prisma";
 import { now } from "@/lib/now";
