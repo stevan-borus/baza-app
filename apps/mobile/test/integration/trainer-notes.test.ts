@@ -11,7 +11,7 @@ vi.mock("@/lib/server/notifications", () => ({
     createSystemNotificationMock(...args),
 }));
 
-import { GET, POST } from "@/app/api/trainer-notes/+api";
+import { GET, POST } from "@/server/routes/trainer-notes";
 import { prisma } from "@/lib/server/prisma";
 import { now, nowMs } from "@/lib/now";
 

@@ -4,9 +4,9 @@ import { resetDb } from "./setup-db";
 
 vi.mock("@/lib/server/auth-guards", async () => (await import("./auth-mock")).authGuardsMock());
 
-import { GET as GET_TIME_SERIES } from "@/app/api/reports/revenue/time-series/+api";
-import { GET as GET_BY_PACKAGE_TYPE } from "@/app/api/reports/revenue/by-package-type/+api";
-import { GET as GET_BY_METHOD } from "@/app/api/reports/revenue/by-method/+api";
+import { GET as GET_TIME_SERIES } from "@/server/routes/reports/revenue/time-series";
+import { GET as GET_BY_PACKAGE_TYPE } from "@/server/routes/reports/revenue/by-package-type";
+import { GET as GET_BY_METHOD } from "@/server/routes/reports/revenue/by-method";
 import { prisma } from "@/lib/server/prisma";
 
 function asAdmin() {

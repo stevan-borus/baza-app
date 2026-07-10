@@ -7,8 +7,8 @@ vi.mock("@/lib/server/notifications", () => ({
   getPreferredLocale: async () => "en",
 }));
 
-import { POST as REMINDERS } from "@/app/api/cron/notifications/reminders/+api";
-import { POST as EXPIRY } from "@/app/api/cron/notifications/package-expiry/+api";
+import { POST as REMINDERS } from "@/server/routes/cron/notifications/reminders";
+import { POST as EXPIRY } from "@/server/routes/cron/notifications/package-expiry";
 import { now, nowMs } from "@/lib/now";
 import { createSystemNotification } from "@/lib/server/notifications";
 import { prisma } from "@/lib/server/prisma";

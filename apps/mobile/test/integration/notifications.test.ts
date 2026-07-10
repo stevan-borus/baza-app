@@ -41,8 +41,8 @@ import {
   GET,
   POST,
   PATCH as PATCH_COLLECTION,
-} from "@/app/api/notifications/+api";
-import { PATCH } from "@/app/api/notifications/[id]/+api";
+} from "@/server/routes/notifications";
+import { PATCH } from "@/server/routes/notifications/[id]";
 import { prisma } from "@/lib/server/prisma";
 import { now, nowMs } from "@/lib/now";
 

@@ -4,8 +4,8 @@ import { resetDb } from "./setup-db";
 
 vi.mock("@/lib/server/auth-guards", async () => (await import("./auth-mock")).authGuardsMock());
 
-import { GET } from "@/app/api/clients/+api";
-import { GET as GET_BY_ID, PATCH } from "@/app/api/clients/[id]/+api";
+import { GET } from "@/server/routes/clients";
+import { GET as GET_BY_ID, PATCH } from "@/server/routes/clients/[id]";
 import { prisma } from "@/lib/server/prisma";
 import { now, nowMs } from "@/lib/now";
 

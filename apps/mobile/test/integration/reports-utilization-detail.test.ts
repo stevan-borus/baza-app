@@ -4,8 +4,8 @@ import { resetDb } from "./setup-db";
 
 vi.mock("@/lib/server/auth-guards", async () => (await import("./auth-mock")).authGuardsMock());
 
-import { GET as GET_HEATMAP } from "@/app/api/reports/utilization/heatmap/+api";
-import { GET as GET_TIME_SERIES } from "@/app/api/reports/utilization/time-series/+api";
+import { GET as GET_HEATMAP } from "@/server/routes/reports/utilization/heatmap";
+import { GET as GET_TIME_SERIES } from "@/server/routes/reports/utilization/time-series";
 import { prisma } from "@/lib/server/prisma";
 
 function asAdmin() {

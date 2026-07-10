@@ -12,9 +12,9 @@ import { setMockUser } from "./auth-mock";
 vi.mock("@/lib/server/auth-guards", async () => (await import("./auth-mock")).authGuardsMock());
 
 import { prisma } from "@/lib/server/prisma";
-import { POST as cancelBulkPOST } from "@/app/api/admin/reservations/cancel-bulk/+api";
-import { PATCH as sessionPATCH } from "@/app/api/sessions/[id]/+api";
-import { POST as bookingsPOST } from "@/app/api/bookings/+api";
+import { POST as cancelBulkPOST } from "@/server/routes/admin/reservations/cancel-bulk";
+import { PATCH as sessionPATCH } from "@/server/routes/sessions/[id]";
+import { POST as bookingsPOST } from "@/server/routes/bookings";
 import { nowMs } from "@/lib/now";
 
 // The email gate's own contract (flag-off suppression, locale resolution,

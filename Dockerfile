@@ -125,4 +125,6 @@ EXPOSE 8081
 
 # Boot: apply pending migrations (never push/reset — repo rule), then serve.
 # A failed migrate aborts boot so a bad release can't run against a stale schema.
-CMD ["sh", "-c", "pnpm exec prisma migrate deploy && pnpm run start:server"]
+# `exec node` rather than `pnpm run start:server`: pnpm's wrapper process would
+# stay resident (~85MB) for the machine's lifetime alongside the server.
+CMD ["sh", "-c", "pnpm exec prisma migrate deploy && exec node server/index.js"]

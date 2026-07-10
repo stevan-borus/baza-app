@@ -4,7 +4,7 @@ import { resetDb } from "./setup-db";
 
 vi.mock("@/lib/server/auth-guards", async () => (await import("./auth-mock")).authGuardsMock());
 
-import { GET as GET_DETAIL } from "@/app/api/reports/packages/detail/+api";
+import { GET as GET_DETAIL } from "@/server/routes/reports/packages/detail";
 import { prisma } from "@/lib/server/prisma";
 
 const DAY_MS = 24 * 60 * 60 * 1000;

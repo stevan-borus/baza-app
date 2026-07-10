@@ -4,7 +4,7 @@ import { resetDb } from "./setup-db";
 
 vi.mock("@/lib/server/auth-guards", async () => (await import("./auth-mock")).authGuardsMock());
 
-import { GET } from "@/app/api/reports/utilization/by-class-type/+api";
+import { GET } from "@/server/routes/reports/utilization/by-class-type";
 import { prisma } from "@/lib/server/prisma";
 
 async function seedSessionsAcrossClassTypes() {

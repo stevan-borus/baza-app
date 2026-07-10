@@ -6,8 +6,8 @@ vi.mock("@/lib/server/auth-guards", async () => (await import("./auth-mock")).au
 
 vi.mock("@/lib/server/notifications", async () => (await import("./notifications-mock")).notificationsMock());
 
-import { POST } from "@/app/api/sessions/+api";
-import { PATCH } from "@/app/api/sessions/[id]/+api";
+import { POST } from "@/server/routes/sessions";
+import { PATCH } from "@/server/routes/sessions/[id]";
 import { prisma } from "@/lib/server/prisma";
 import { now, nowMs } from "@/lib/now";
 

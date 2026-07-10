@@ -5,7 +5,7 @@ vi.mock("@/lib/server/auth-guards", async () => (await import("./auth-mock")).au
 
 vi.mock("@/lib/server/notifications", async () => (await import("./notifications-mock")).notificationsMock());
 
-import { POST as bookingsPOST } from "@/app/api/bookings/+api";
+import { POST as bookingsPOST } from "@/server/routes/bookings";
 import { prisma } from "@/lib/server/prisma";
 import { nowMs } from "@/lib/now";
 import { resetDb } from "./setup-db";

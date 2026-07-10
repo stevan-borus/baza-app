@@ -18,10 +18,10 @@ vi.mock("@/lib/server/auth", () => ({
   },
 }));
 
-import { POST as POST_INVITE } from "@/app/api/invites/+api";
-import { POST as POST_RESEND } from "@/app/api/invites/[id]/resend/+api";
-import { POST as POST_REVOKE } from "@/app/api/invites/[id]/revoke/+api";
-import { POST as POST_COMPLETE } from "@/app/api/auth/complete-invite/+api";
+import { POST as POST_INVITE } from "@/server/routes/invites";
+import { POST as POST_RESEND } from "@/server/routes/invites/[id]/resend";
+import { POST as POST_REVOKE } from "@/server/routes/invites/[id]/revoke";
+import { POST as POST_COMPLETE } from "@/server/routes/auth/complete-invite";
 import { generateRawToken, hashToken } from "@/lib/server/tokens";
 import { now, nowMs } from "@/lib/now";
 import { prisma } from "@/lib/server/prisma";

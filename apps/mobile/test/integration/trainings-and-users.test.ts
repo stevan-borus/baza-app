@@ -4,8 +4,8 @@ import { resetDb } from "./setup-db";
 
 vi.mock("@/lib/server/auth-guards", async () => (await import("./auth-mock")).authGuardsMock());
 
-import { GET as GET_CLASS_TYPES, POST as POST_CLASS_TYPE } from "@/app/api/trainings/class-types/+api";
-import { GET as GET_TRAINERS } from "@/app/api/users/trainers/+api";
+import { GET as GET_CLASS_TYPES, POST as POST_CLASS_TYPE } from "@/server/routes/trainings/class-types";
+import { GET as GET_TRAINERS } from "@/server/routes/users/trainers";
 import { prisma } from "@/lib/server/prisma";
 
 function asRole(role: "ADMIN" | "TRAINER" | "CLIENT", id = "u-1") {

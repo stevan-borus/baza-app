@@ -6,9 +6,9 @@ vi.mock("@/lib/server/auth-guards", async () => (await import("./auth-mock")).au
 
 vi.mock("@/lib/server/notifications", async () => (await import("./notifications-mock")).notificationsMock());
 
-import { POST as POST_SESSION } from "@/app/api/sessions/+api";
-import { PATCH as PATCH_SESSION } from "@/app/api/sessions/[id]/+api";
-import { POST as POST_RECURRING } from "@/app/api/sessions/recurring/+api";
+import { POST as POST_SESSION } from "@/server/routes/sessions";
+import { PATCH as PATCH_SESSION } from "@/server/routes/sessions/[id]";
+import { POST as POST_RECURRING } from "@/server/routes/sessions/recurring";
 import { prisma } from "@/lib/server/prisma";
 import { now, nowMs } from "@/lib/now";
 

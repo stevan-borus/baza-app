@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach } from "vitest";
-import { GET } from "@/app/api/app-version+api";
+import { GET } from "@/server/routes/app-version";
 import appJson from "@/app.json";
 
 /**

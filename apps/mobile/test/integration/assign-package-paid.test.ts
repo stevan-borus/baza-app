@@ -15,8 +15,8 @@ import { now } from "@/lib/now";
 
 vi.mock("@/lib/server/auth-guards", async () => (await import("./auth-mock")).authGuardsMock());
 
-import { POST } from "@/app/api/billing/+api";
-import { GET as GET_CLIENT_PACKAGES, POST as POST_CLIENT_PACKAGE } from "@/app/api/packages/client-packages/+api";
+import { POST } from "@/server/routes/billing";
+import { GET as GET_CLIENT_PACKAGES, POST as POST_CLIENT_PACKAGE } from "@/server/routes/packages/client-packages";
 import { prisma } from "@/lib/server/prisma";
 
 async function seed() {

@@ -4,8 +4,8 @@ import { resetDb } from "./setup-db";
 
 vi.mock("@/lib/server/auth-guards", async () => (await import("./auth-mock")).authGuardsMock());
 
-import { GET as GET_REVENUE } from "@/app/api/reports/revenue/+api";
-import { GET as GET_SUMMARY } from "@/app/api/reports/summary/+api";
+import { GET as GET_REVENUE } from "@/server/routes/reports/revenue";
+import { GET as GET_SUMMARY } from "@/server/routes/reports/summary";
 import { prisma } from "@/lib/server/prisma";
 
 function asAdmin() {

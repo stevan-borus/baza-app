@@ -20,7 +20,7 @@ vi.mock("@/lib/server/notifications", () => ({
     createSystemNotificationMock(...args),
 }));
 
-import { POST } from "@/app/api/cron/sessions/consumption/+api";
+import { POST } from "@/server/routes/cron/sessions/consumption";
 import { prisma } from "@/lib/server/prisma";
 import { nowMs } from "@/lib/now";
 

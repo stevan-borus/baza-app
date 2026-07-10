@@ -18,10 +18,10 @@ vi.mock("@/lib/server/auth", () => ({
   },
 }));
 
-import { GET as GET_ME } from "@/app/api/auth/me/+api";
-import { POST as POST_SIGN_OUT } from "@/app/api/auth/sign-out/+api";
-import { POST as POST_REQ_RESET } from "@/app/api/auth/request-password-reset/+api";
-import { POST as POST_RESET } from "@/app/api/auth/reset-password/+api";
+import { GET as GET_ME } from "@/server/routes/auth/me";
+import { POST as POST_SIGN_OUT } from "@/server/routes/auth/sign-out";
+import { POST as POST_REQ_RESET } from "@/server/routes/auth/request-password-reset";
+import { POST as POST_RESET } from "@/server/routes/auth/reset-password";
 import { hashPassword } from "@/lib/server/password";
 import { now, nowMs } from "@/lib/now";
 import { generateRawToken, hashToken } from "@/lib/server/tokens";

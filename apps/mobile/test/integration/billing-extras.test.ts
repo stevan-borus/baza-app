@@ -4,8 +4,8 @@ import { resetDb } from "./setup-db";
 
 vi.mock("@/lib/server/auth-guards", async () => (await import("./auth-mock")).authGuardsMock());
 
-import { GET, POST } from "@/app/api/billing/+api";
-import { POST as POST_CLIENT_PACK } from "@/app/api/packages/client-packages/+api";
+import { GET, POST } from "@/server/routes/billing";
+import { POST as POST_CLIENT_PACK } from "@/server/routes/packages/client-packages";
 import { prisma } from "@/lib/server/prisma";
 import { now, nowMs } from "@/lib/now";
 
