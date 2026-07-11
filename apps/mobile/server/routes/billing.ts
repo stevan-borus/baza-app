@@ -11,6 +11,57 @@ import { createClientPackageFromType } from "@/lib/server/client-package-create"
 import { fail, respond } from "@/lib/server/http";
 import { prisma } from "@/lib/server/prisma";
 import { tryCatch } from "@/lib/server/try-catch";
+import type { Prisma } from "@/generated/prisma";
+
+// Shared filter builder for the Naplata list AND its summary aggregate, so the
+// two never drift: the hero/count/avg span exactly the rows the list shows.
+//
+// `q` is tokenized on whitespace; each token must match the paying client's
+// firstName/lastName OR the record's notes (case-insensitive), tokens ANDed so
+// "First Last" narrows to one person. BillingRecord has no FK to User, so name
+// matching resolves the token to matching user ids first, then filters
+// clientUserId ∈ that set — one extra round-trip per request, acceptable for an
+// admin-only screen. A token with no user match still matches via notes.
+export async function buildBillingWhere(opts: {
+  clientUserId?: string;
+  from?: Date;
+  to?: Date;
+  q?: string;
+}): Promise<Prisma.BillingRecordWhereInput> {
+  const and: Prisma.BillingRecordWhereInput[] = [];
+
+  if (opts.clientUserId) and.push({ clientUserId: opts.clientUserId });
+
+  const fromValid = opts.from && !Number.isNaN(opts.from.getTime());
+  const toValid = opts.to && !Number.isNaN(opts.to.getTime());
+  if (fromValid || toValid) {
+    const range: Prisma.DateTimeFilter = {};
+    if (fromValid) range.gte = opts.from!;
+    if (toValid) range.lt = opts.to!;
+    and.push({ createdAt: range });
+  }
+
+  const tokens = opts.q ? opts.q.split(/\s+/).filter(Boolean) : [];
+  for (const token of tokens) {
+    const matchingUsers = await prisma.user.findMany({
+      where: {
+        OR: [
+          { firstName: { contains: token, mode: "insensitive" } },
+          { lastName: { contains: token, mode: "insensitive" } },
+        ],
+      },
+      select: { id: true },
+    });
+    and.push({
+      OR: [
+        { clientUserId: { in: matchingUsers.map((u) => u.id) } },
+        { notes: { contains: token, mode: "insensitive" } },
+      ],
+    });
+  }
+
+  return and.length > 0 ? { AND: and } : {};
+}
 
 export async function GET(request: Request) {
   const guard = await requireRole(request, [UserRole.ADMIN]);
@@ -26,23 +77,15 @@ export async function GET(request: Request) {
   const clientUserId = url.searchParams.get("clientUserId") ?? undefined;
   const fromParam = url.searchParams.get("from");
   const toParam = url.searchParams.get("to");
+  const q = url.searchParams.get("q")?.trim() || undefined;
   const from = fromParam ? new Date(fromParam) : undefined;
   const to = toParam ? new Date(toParam) : undefined;
 
-  const where: Record<string, unknown> = {};
-  if (clientUserId) where.clientUserId = clientUserId;
-  const fromValid = from && !Number.isNaN(from.getTime());
-  const toValid = to && !Number.isNaN(to.getTime());
-  if (fromValid || toValid) {
-    const range: Record<string, Date> = {};
-    if (fromValid) range.gte = from!;
-    if (toValid) range.lt = to!;
-    where.createdAt = range;
-  }
+  const where = await buildBillingWhere({ clientUserId, from, to, q });
 
   // Cursor-based pagination: skip 1 after cursor to avoid duplicate.
   const payments = await prisma.billingRecord.findMany({
-    where: Object.keys(where).length > 0 ? where : undefined,
+    where,
     orderBy: { createdAt: "desc" },
     ...(parsedQuery.data.cursor
       ? { cursor: { id: parsedQuery.data.cursor }, skip: 1 }

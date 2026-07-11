@@ -17,6 +17,8 @@ export type StatItem = {
   value: number | string | undefined | null;
   /** Paint the value (and label) in accent green. */
   accent?: boolean;
+  /** testID for the value Text — lets tests read a specific stat's number. */
+  testID?: string;
 };
 
 export function StatStrip({
@@ -56,6 +58,7 @@ export function StatStrip({
                   label={item.label}
                   value={item.value}
                   accent={item.accent}
+                  testID={item.testID}
                 />
               </React.Fragment>
             ))}
@@ -73,7 +76,7 @@ export function StatStrip({
   );
 }
 
-function StatColumn({ label, value, accent = false }: StatItem) {
+function StatColumn({ label, value, accent = false, testID }: StatItem) {
   const display =
     value === undefined || value === null
       ? "—"
@@ -105,6 +108,7 @@ function StatColumn({ label, value, accent = false }: StatItem) {
         </Text>
       </View>
       <Text
+        testID={testID}
         className={accent ? "text-accent" : "text-foreground"}
         style={{
           fontFamily: "AlbertSans-Bold",

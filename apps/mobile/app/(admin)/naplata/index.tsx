@@ -98,12 +98,21 @@ export default function AdminBilling() {
   const drillWindow = useDrillWindow();
   const monthFrom = selectedMonth.startOf("month").toISOString();
   const monthTo = selectedMonth.endOf("month").toISOString();
+  // Search now runs in Postgres (matches client name / notes), so it feeds the
+  // list AND the summary. useDeferredValue batches keystrokes like Klijenti.
+  const deferredSearch = useDeferredValue(searchQuery.trim());
+  const billingFilters = {
+    from: drillWindow?.from ?? monthFrom,
+    to: drillWindow?.to ?? monthTo,
+    q: deferredSearch || undefined,
+  };
   const billingQuery = useInfiniteQuery(
-    billingQueries.listInfinite({
-      from: drillWindow?.from ?? monthFrom,
-      to: drillWindow?.to ?? monthTo,
-    }),
+    billingQueries.listInfinite(billingFilters),
   );
+  // Filter-wide totals for the hero + StatStrip. Spans the whole month (or the
+  // whole search), not the loaded pages — the old summed-in-memory stats
+  // understated every figure until the admin scrolled.
+  const summaryQuery = useQuery(billingQueries.summary(billingFilters));
   // The create-payment client is now chosen via a stacked ClientPicker sheet
   // (server search + pagination), so we no longer eagerly drain every client
   // page here. (The list's per-client filtering works off the loaded billing
@@ -114,53 +123,37 @@ export default function AdminBilling() {
     [billingQuery.data],
   );
 
-  // Pre-pagination behavior preserved: StatStrip's totals sum the records
-  // currently in memory, not a server-side aggregate over the whole month.
-  // Today that's all-loaded-pages, which matches what it summed before the
-  // listInfinite migration (the old non-paginated endpoint returned the same
-  // set in one go). Worth tightening to a server aggregate later — out of
-  // scope for this UI-migration PR.
+  // Hero + StatStrip totals come from the server summary (filter-wide), not a
+  // sum over loaded pages. `avg` keeps its per-client meaning (matching the
+  // "Avg per client" label): totalRevenue / distinctClients.
   //
-  // PR β note: BillingStatus is now a single-value enum (CONFIRMED), so the
-  // status filter is a no-op kept here for clarity in case the enum ever
-  // grows again. Today every record satisfies it.
-  const summaryStats = useMemo(() => {
-    const confirmed = records.filter((r) => r.status === "CONFIRMED");
-    const totalRevenue = confirmed.reduce((sum, r) => sum + r.amount, 0);
-    const count = confirmed.length;
-    const uniqueClients = new Set(confirmed.map((r) => r.clientUserId)).size;
-    const avg = uniqueClients > 0 ? Math.round(totalRevenue / uniqueClients) : 0;
-    return { totalRevenue, count, avg };
-  }, [records]);
+  // BillingStatus is a single-value enum (CONFIRMED); the summary endpoint
+  // filters on it server-side, mirroring the old client-side confirmed filter.
+  const summaryStats = {
+    totalRevenue: summaryQuery.data?.totalRevenue ?? 0,
+    count: summaryQuery.data?.count ?? 0,
+    avg:
+      summaryQuery.data && summaryQuery.data.distinctClients > 0
+        ? Math.round(
+            summaryQuery.data.totalRevenue / summaryQuery.data.distinctClients,
+          )
+        : 0,
+  };
 
-  // Search input narrows client-side over already-loaded pages — same
-  // trade-off as Klijenti and ActiveAssignments. The status filter chip
-  // strip (PR β) is gone because the studio's workflow only ever produced
-  // CONFIRMED rows in practice, so the chips for PENDING / CANCELED were
-  // dead UX.
-  const filteredRecords = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase();
-    let out: BillingRecord[] = records;
-    if (q) {
-      out = out.filter((r) => {
-        const name = r.client?.fullName?.toLowerCase() ?? "";
-        const notes = r.notes?.toLowerCase() ?? "";
-        return name.includes(q) || notes.includes(q);
-      });
-    }
-    return out;
-  }, [records, searchQuery]);
+  // The list is server-filtered now (the search runs in Postgres and feeds
+  // both the list and the summary), so the visible rows already reflect the
+  // search — no client-side narrowing needed. The status filter chip strip
+  // (PR β) is gone because the studio's workflow only ever produced CONFIRMED
+  // rows in practice.
+  const filteredRecords = records;
 
-  // Filtered-totals subtitle (P4-2). "Filters active" here means the user
-  // has narrowed the list below the default month view by typing a search.
-  // The month chooser always has a value, so we don't count from/to as a
-  // "filter" for this UI cue.
-  const filtersActive = searchQuery.trim() !== "";
-  const filteredCount = filteredRecords.length;
-  const filteredAmount = useMemo(
-    () => filteredRecords.reduce((sum, r) => sum + r.amount, 0),
-    [filteredRecords],
-  );
+  // Filtered-totals subtitle (P4-2). "Filters active" means the user has
+  // typed a search; the month chooser always has a value so from/to isn't a
+  // "filter" for this cue. Count + amount come from the summary, so they're
+  // filter-wide (accurate under search), not a loaded-pages tally.
+  const filtersActive = deferredSearch !== "";
+  const filteredCount = summaryStats.count;
+  const filteredAmount = summaryStats.totalRevenue;
 
   function navigateBillingMonth(direction: -1 | 1) {
     if (drillWindow) {
@@ -292,6 +285,7 @@ export default function AdminBilling() {
                 {
                   label: t("admin.manage.transactionCount"),
                   value: summaryStats.count,
+                  testID: "naplata-transaction-count",
                 },
                 {
                   label: t("admin.manage.avgPerClient"),
