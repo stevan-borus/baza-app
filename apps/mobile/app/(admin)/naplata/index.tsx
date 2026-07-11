@@ -19,7 +19,7 @@
  * (matches client.fullName / notes), same trade-off documented in the
  * Klijenti and ActiveAssignments migrations.
  */
-import { useState, useMemo, useDeferredValue } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useInfiniteQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { ActivityIndicator, Pressable, Text, View } from "react-native";
@@ -51,6 +51,7 @@ import {
   type BillingRecord,
 } from "@/lib/queries/billing-queries-factory";
 import { clientsQueries } from "@/lib/queries/clients-queries-factory";
+import { useDebouncedValue } from "@/lib/use-debounced-value";
 import { ScreenContainerRaw, useTabBarBottomPadding } from "@/components/ui/screen-container";
 import { HeaderIconButton } from "@/components/ui/app-header";
 import { AdminTabLeftSlot } from "@/components/admin/admin-tab-left-slot";
@@ -99,8 +100,9 @@ export default function AdminBilling() {
   const monthFrom = selectedMonth.startOf("month").toISOString();
   const monthTo = selectedMonth.endOf("month").toISOString();
   // Search now runs in Postgres (matches client name / notes), so it feeds the
-  // list AND the summary. useDeferredValue batches keystrokes like Klijenti.
-  const deferredSearch = useDeferredValue(searchQuery.trim());
+  // list AND the summary. Debounced so a keystroke burst fires ONE request pair
+  // after the user pauses, not one list + one summary request per letter.
+  const deferredSearch = useDebouncedValue(searchQuery.trim());
   const billingFilters = {
     from: drillWindow?.from ?? monthFrom,
     to: drillWindow?.to ?? monthTo,
@@ -525,7 +527,7 @@ function BillingClientPickerSheet({
   const { t } = useTranslation();
   const tokens = useThemeTokens();
   const [q, setQ] = useState("");
-  const deferredQ = useDeferredValue(q.trim());
+  const deferredQ = useDebouncedValue(q.trim());
   const clientsQ = useInfiniteQuery(
     clientsQueries.list({ q: deferredQ || undefined }),
   );

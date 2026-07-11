@@ -15,7 +15,7 @@
 // `ScrollView + onScroll → fetchNextPage` plumbing and the ActivityIndicator
 // footer are gone — the wrapper owns both.
 
-import React, { useDeferredValue, useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   useInfiniteQuery,
   useMutation,
@@ -53,6 +53,7 @@ import { PauseSheet } from "@/components/admin/client-flows/pause-sheet";
 import { FilterChip } from "@/components/ui/studio";
 import { PaginatedList } from "@/components/ui/paginated-list";
 import { clientsQueries } from "@/lib/queries/clients-queries-factory";
+import { useDebouncedValue } from "@/lib/use-debounced-value";
 import {
   invitesQueries,
   revokeInviteMutationOptions,
@@ -221,10 +222,11 @@ export default function AdminClients() {
   ]);
 
   // ── Queries ───────────────────────────────────────────────────────────────
-  // Server-side search via useDeferredValue: the filter runs in Postgres
-  // rather than over a 1000-row in-memory array, and the deferred value
-  // batches keystrokes so we don't hammer the API on every character.
-  const deferredSearch = useDeferredValue(searchQuery.trim());
+  // Server-side search: the filter runs in Postgres rather than over a
+  // 1000-row in-memory array. Debounced so a keystroke burst fires ONE request
+  // after the user pauses, not one per character (useDeferredValue only defers
+  // renders — it still hits the API every letter).
+  const deferredSearch = useDebouncedValue(searchQuery.trim());
   const clientsQuery = useInfiniteQuery(
     clientsQueries.list({ q: deferredSearch || undefined }),
   );

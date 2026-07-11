@@ -5,7 +5,7 @@
 // footer, and the skeleton/empty/error fallbacks are gone — the wrapper owns
 // all of them.
 
-import React, { useDeferredValue, useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { ScrollView, Text, View } from "react-native";
@@ -21,6 +21,7 @@ import { FilterChip } from "@/components/ui/studio";
 import { PaginatedList } from "@/components/ui/paginated-list";
 import { AssignPackageFlow } from "@/components/admin/assign-package-flow";
 import { packagesQueries } from "@/lib/queries/packages-queries-factory";
+import { useDebouncedValue } from "@/lib/use-debounced-value";
 import { now } from "@/lib/now";
 
 type AssignmentFilter = "all" | "expiring" | "expired";
@@ -55,9 +56,9 @@ export function ActiveAssignments() {
   const [search, setSearch] = useState("");
   const [showAssignFlow, setShowAssignFlow] = useState(false);
 
-  // useDeferredValue batches keystrokes into a single server query — same
-  // pattern as the ClientPickerStep in assign-package-flow.
-  const deferredSearch = useDeferredValue(search.trim());
+  // Debounced so typing fires one server query after the pause, not one per
+  // letter — same pattern as the ClientPickerStep in assign-package-flow.
+  const deferredSearch = useDebouncedValue(search.trim());
   const query = useInfiniteQuery(
     packagesQueries.clientPackagesAdminList({
       search: deferredSearch || undefined,
