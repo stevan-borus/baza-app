@@ -97,6 +97,53 @@ test.describe.serial("klijenti pagination (admin)", () => {
     await expect(page.getByText("Pagi Client 007").first()).toBeVisible();
   });
 
+  test("clients tab count shows the full total on first load, not the page size", async ({
+    page,
+  }) => {
+    await signInAs(page, "admin", { landing: "tab-klijenti" });
+    await page.getByTestId("tab-klijenti").click();
+
+    const rows = page.locator('[data-testid^="client-row-"]');
+    await expect(rows.first()).toBeVisible();
+    const firstPageCount = await rows.count();
+    // The seed (base + seedExtraClients(25)) exceeds one page, so the total
+    // is strictly larger than what's rendered before any scroll.
+    expect(firstPageCount).toBeLessThanOrEqual(20);
+
+    // Read the parenthesized count off the "Clients (N)" / "Klijenti (N)"
+    // segment label. The regression this guards: N used to equal the loaded-
+    // pages length, so on first load it read the page size (20) and only grew
+    // as the admin scrolled. It must instead be the server's full total.
+    const clientsTab = page.getByTestId("admin-clients-tab-clients");
+    const parseCount = async () => {
+      const label = (await clientsTab.textContent()) ?? "";
+      const m = label.match(/\((\d+)\)/);
+      return m ? parseInt(m[1], 10) : null;
+    };
+
+    await expect.poll(parseCount).toBeGreaterThan(firstPageCount);
+    const totalBeforeScroll = await parseCount();
+
+    // Scroll to load more pages — the count must NOT change (it was already
+    // the true total, not a running tally of loaded rows).
+    await page.evaluate(() => {
+      const row = document.querySelector('[data-testid^="client-row-"]');
+      if (!row) return;
+      let node: HTMLElement | null = row as HTMLElement;
+      while (node && node !== document.body) {
+        const cs = getComputedStyle(node);
+        if (/(auto|scroll)/.test(cs.overflowY) && node.scrollHeight > node.clientHeight) {
+          node.scrollTop = node.scrollHeight;
+          return;
+        }
+        node = node.parentElement;
+      }
+    });
+    await expect.poll(() => rows.count()).toBeGreaterThan(firstPageCount);
+    // Same total after more rows loaded.
+    expect(await parseCount()).toBe(totalBeforeScroll);
+  });
+
   test("search + filter chips stay pinned while the list scrolls", async ({
     page,
   }) => {

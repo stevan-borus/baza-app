@@ -15,7 +15,7 @@
 // backdrop, swipe-down, or onSuccess) resets the flow so the next open
 // starts fresh at step "pickClient".
 
-import React, { useDeferredValue, useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Pressable, Text, View } from "react-native";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -32,6 +32,7 @@ import {
   type AssignPackageMode,
 } from "@/components/admin/assign-package-sheet-content";
 import { clientsQueries } from "@/lib/queries/clients-queries-factory";
+import { useDebouncedValue } from "@/lib/use-debounced-value";
 
 type PickedClient = {
   id: string;
@@ -127,11 +128,11 @@ function ClientPickerStep({
 }) {
   const { t } = useTranslation();
   const [search, setSearch] = useState("");
-  // useDeferredValue batches keystrokes into a single server query. The
-  // sheet is a small surface so we keep the page modest and rely on the
-  // search to surface clients further down the list. Scrolling to the
+  // Debounced so typing fires one server query after the pause, not one per
+  // letter. The sheet is a small surface so we keep the page modest and rely
+  // on the search to surface clients further down the list. Scrolling to the
   // bottom fetches the next page automatically.
-  const deferredSearch = useDeferredValue(search.trim());
+  const deferredSearch = useDebouncedValue(search.trim());
   const clientsQuery = useInfiniteQuery(
     clientsQueries.list({ q: deferredSearch || undefined }),
   );

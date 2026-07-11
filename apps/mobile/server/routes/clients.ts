@@ -77,42 +77,49 @@ export async function GET(request: Request) {
   };
 
   // Fetch take+1 so we can tell whether there's another page without a
-  // separate count query.
-  const clients = await prisma.clientProfile.findMany({
-    where,
-    select: {
-      id: true,
-      notes: true,
-      user: {
-        select: {
-          id: true,
-          firstName: true,
-          lastName: true,
-          email: true,
-          phone: true,
-          isActive: true,
-          createdAt: true,
+  // separate count query, and count the full matching set for the tab badge.
+  // `total` uses the SAME `where`, so it follows the q-search and trainer
+  // scope — the badge shows "matches for the current view", not the loaded
+  // page count (which used to sit at the page size until the admin scrolled).
+  // Both hit Postgres, so run them concurrently rather than back-to-back.
+  const [clients, total] = await Promise.all([
+    prisma.clientProfile.findMany({
+      where,
+      select: {
+        id: true,
+        notes: true,
+        user: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            phone: true,
+            isActive: true,
+            createdAt: true,
+          },
+        },
+        packages: {
+          select: {
+            sessionsRemaining: true,
+            expiresAt: true,
+          },
+        },
+        packagePauses: {
+          where: {
+            startsAt: { lte: currentInstant },
+            endsAt: { gte: currentInstant },
+          },
+          select: { id: true },
+          take: 1,
         },
       },
-      packages: {
-        select: {
-          sessionsRemaining: true,
-          expiresAt: true,
-        },
-      },
-      packagePauses: {
-        where: {
-          startsAt: { lte: currentInstant },
-          endsAt: { gte: currentInstant },
-        },
-        select: { id: true },
-        take: 1,
-      },
-    },
-    take: take + 1,
-    ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
-    orderBy: { id: "asc" },
-  });
+      take: take + 1,
+      ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+      orderBy: { id: "asc" },
+    }),
+    prisma.clientProfile.count({ where }),
+  ]);
 
   const hasMore = clients.length > take;
   const pageClients = hasMore ? clients.slice(0, take) : clients;
@@ -163,6 +170,7 @@ export async function GET(request: Request) {
     success: true,
     clients: withStatus,
     nextCursor,
+    total,
   });
 }
 
