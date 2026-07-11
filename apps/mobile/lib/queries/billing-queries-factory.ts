@@ -2,6 +2,7 @@ import {
   queryOptions,
   mutationOptions,
   infiniteQueryOptions,
+  keepPreviousData,
   useMutation,
   useQueryClient,
   type QueryClient,
@@ -68,6 +69,10 @@ export const billingQueries = {
       initialPageParam: null as string | null,
       getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
       staleTime: 30_000,
+      // Keep the current rows on screen while a new search/month loads (see
+      // clients-queries-factory) — stops the list blanking out + the
+      // "Refreshing…" band on each filter change.
+      placeholderData: keepPreviousData,
     }),
 
   // Filter-wide totals for the Naplata hero + StatStrip. Same filters as
@@ -95,6 +100,9 @@ export const billingQueries = {
           errorMessage: "Unable to load billing summary",
         }),
       staleTime: 30_000,
+      // Keep the last totals showing while a new filter loads, so the hero /
+      // StatStrip numbers don't flash to zero between searches.
+      placeholderData: keepPreviousData,
     }),
 
   create: () =>
