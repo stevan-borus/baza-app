@@ -40,6 +40,12 @@ export const clientsResponseSchema = z.object({
   // the response shape so older non-paginated callers (and the existing
   // integration tests that assert specific badge content) still type-check.
   nextCursor: z.nullable(z.string()).optional(),
+  // Total number of clients matching the SAME filter as this list (the
+  // active-only + trainer-scope + q-search where clause). The Klijenti tab
+  // badge reads this so it shows the real total instead of the loaded-pages
+  // length, which only ever reached the page size until the admin scrolled.
+  // Optional so non-paginated callers still type-check.
+  total: z.number().optional(),
 });
 export type ClientsResponse = z.infer<typeof clientsResponseSchema>;
 

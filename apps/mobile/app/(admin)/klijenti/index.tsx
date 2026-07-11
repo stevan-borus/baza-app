@@ -243,6 +243,12 @@ export default function AdminClients() {
     () => clientsQuery.data?.pages.flatMap((p) => p.clients) ?? [],
     [clientsQuery.data],
   );
+  // The tab badge shows the server's full matching count, not clients.length —
+  // that only counted the pages loaded so far, so it read the page size (20)
+  // until the admin scrolled. `total` follows the same q-search filter, so it
+  // stays in sync with the visible list as the search narrows. Every page
+  // carries the same total; the first is always present.
+  const clientsTotal = clientsQuery.data?.pages[0]?.total ?? clients.length;
   const invites = invitesQuery.data?.invites ?? [];
 
   // ── Flow targets derived from the loaded pages ────────────────────────────
@@ -353,7 +359,7 @@ export default function AdminClients() {
               segments={[
                 {
                   value: "clients" as const,
-                  label: t("admin.clients.tabClients", { count: clients.length }),
+                  label: t("admin.clients.tabClients", { count: clientsTotal }),
                   testID: "admin-clients-tab-clients",
                 },
                 {
