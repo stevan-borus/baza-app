@@ -423,6 +423,7 @@ export default function AdminBilling() {
             testID="billing-amount-input"
             placeholder={t("admin.manage.placeholderAmount")}
             keyboardType="numeric"
+            inputMode="numeric"
             value={form.amount}
             onChangeText={(v) => setForm((s) => ({ ...s, amount: v }))}
           />

@@ -347,6 +347,7 @@ export default function AdminPackages() {
               testID="package-session-count-input"
               placeholder={t("admin.manage.placeholderSessionCount")}
               keyboardType="numeric"
+              inputMode="numeric"
               value={crud.form.sessionCount}
               onChangeText={(v) => crud.setForm({ sessionCount: v })}
             />
@@ -355,6 +356,7 @@ export default function AdminPackages() {
               testID="package-validity-days-input"
               placeholder={t("admin.manage.placeholderValidityDays")}
               keyboardType="numeric"
+              inputMode="numeric"
               value={crud.form.validityDays}
               onChangeText={(v) => crud.setForm({ validityDays: v })}
             />
@@ -363,6 +365,7 @@ export default function AdminPackages() {
               testID="package-late-cancel-input"
               placeholder={t("admin.manage.placeholderLateCancel")}
               keyboardType="numeric"
+              inputMode="numeric"
               value={crud.form.lateCancelHours}
               onChangeText={(v) => crud.setForm({ lateCancelHours: v })}
             />
@@ -371,6 +374,7 @@ export default function AdminPackages() {
               testID="package-price-input"
               placeholder={t("admin.manage.placeholderPrice")}
               keyboardType="numeric"
+              inputMode="numeric"
               value={crud.form.price}
               onChangeText={(v) => crud.setForm({ price: v })}
             />
@@ -468,6 +472,7 @@ export default function AdminPackages() {
               testID="package-edit-session-count-input"
               placeholder={t("admin.manage.placeholderSessionCount")}
               keyboardType="numeric"
+              inputMode="numeric"
               value={crud.editForm.sessionCount}
               onChangeText={(v) => crud.setEditForm({ sessionCount: v })}
             />
@@ -476,6 +481,7 @@ export default function AdminPackages() {
               testID="package-edit-validity-days-input"
               placeholder={t("admin.manage.placeholderValidityDays")}
               keyboardType="numeric"
+              inputMode="numeric"
               value={crud.editForm.validityDays}
               onChangeText={(v) => crud.setEditForm({ validityDays: v })}
             />
@@ -484,6 +490,7 @@ export default function AdminPackages() {
               testID="package-edit-late-cancel-input"
               placeholder={t("admin.manage.placeholderLateCancel")}
               keyboardType="numeric"
+              inputMode="numeric"
               value={crud.editForm.lateCancelHours}
               onChangeText={(v) => crud.setEditForm({ lateCancelHours: v })}
             />
@@ -492,6 +499,7 @@ export default function AdminPackages() {
               testID="package-edit-price-input"
               placeholder={t("admin.manage.placeholderPrice")}
               keyboardType="numeric"
+              inputMode="numeric"
               value={crud.editForm.price}
               onChangeText={(v) => crud.setEditForm({ price: v })}
             />

@@ -200,6 +200,7 @@ export function AssignPackageSheetContent({
             testID="assign-package-amount-input"
             placeholder={t("admin.clients.paymentAmount")}
             keyboardType="numeric"
+            inputMode="numeric"
             value={amount}
             onChangeText={(v) => {
               setAmountTouched(true);
