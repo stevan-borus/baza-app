@@ -76,6 +76,18 @@ export default function AdminSettingsClassTypes() {
     classTypes.map((ct) => ct.name),
   );
 
+  // Same guard on the EDIT sheet — a rename can create the duplicate just as
+  // easily as a create. Exclude the class type being edited from the
+  // comparison set so its own current name never self-matches.
+  const similarEditClassTypeName = crud.editingId
+    ? findSimilarClassTypeName(
+        crud.editForm.name,
+        classTypes
+          .filter((ct) => ct.id !== crud.editingId)
+          .map((ct) => ct.name),
+      )
+    : null;
+
   return (
     <ScreenContainerRaw
       title={t("admin.manage.classTypes")}
@@ -263,6 +275,19 @@ export default function AdminSettingsClassTypes() {
             value={crud.editForm.name}
             onChangeText={(v) => crud.setEditForm({ name: v })}
           />
+          {similarEditClassTypeName ? (
+            <View
+              testID="class-type-edit-similar-warning"
+              className="flex-row items-start gap-2 px-3 py-3 rounded-xl border border-warning/40 bg-warning-soft"
+            >
+              <Icon name="exclamation-circle" size={16} color="#a17d3a" />
+              <Text className="flex-1 text-warning font-body-medium" style={{ fontSize: 13, lineHeight: 18 }}>
+                {t("admin.manage.classTypeSimilarWarning", {
+                  name: similarEditClassTypeName,
+                })}
+              </Text>
+            </View>
+          ) : null}
           <Input
             testID="class-type-edit-max-clients-input"
             placeholder={t("admin.manage.placeholderMaxClients")}
