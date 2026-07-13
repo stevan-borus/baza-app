@@ -1,4 +1,24 @@
-/** Home PackageCard hint predicate. */
+/** Shared package-card math: fully-booked predicate + progress-bar fraction. */
+
+/**
+ * Fraction (0..1) the package progress bar should fill on BOTH the home card
+ * and the profile "Moji paketi" row.
+ *
+ * The bar is CREDITS-driven: `sessionsRemaining / sessionCount` — "how much of
+ * the package is still left", depleting only as sessions are actually consumed
+ * (attendance / forfeit). It is deliberately NOT bookable-driven: a fully-booked
+ * but active package (bookable === 0, credits still remaining) must NOT read as
+ * an empty bar — the credits are still there, just held by future bookings. The
+ * displayed NUMBER stays "bookable / total"; only the bar uses this fraction.
+ */
+export function packageCreditsRemainingFraction(
+  sessionsRemaining: number,
+  sessionCount: number,
+): number {
+  if (sessionCount <= 0) return 0;
+  const clamped = Math.max(0, Math.min(sessionsRemaining, sessionCount));
+  return clamped / sessionCount;
+}
 
 /**
  * Returns whether the active package is fully RESERVED but not lapsed — i.e.

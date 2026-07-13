@@ -23,7 +23,10 @@ import { useTranslation } from "react-i18next";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import { now } from "@/lib/now";
-import { isFullyBookedActivePackage } from "@/lib/package-fully-booked";
+import {
+  isFullyBookedActivePackage,
+  packageCreditsRemainingFraction,
+} from "@/lib/package-fully-booked";
 import { authQueries } from "@/lib/queries/auth-queries-factory";
 import {
   packagesQueries,
@@ -427,8 +430,10 @@ function PackageCard({
   // bookings + waitlist seats), computed server-side. Raw sessionsRemaining
   // is consumed-at-attendance credits, which clients misread as bookable.
   const left = pkg.bookable ?? pkg.sessionsRemaining;
-  const used = Math.max(0, total - left);
-  const pct = total ? used / total : 0;
+  // Bar is credits-driven (sessionsRemaining / total), NOT bookable-driven: a
+  // fully-booked active package still has its credits, so the bar must not read
+  // empty. The NUMBER below stays "bookable / total".
+  const pct = packageCreditsRemainingFraction(pkg.sessionsRemaining, total);
   const expires = dayjs(pkg.expiresAt);
   const daysLeft = expires.diff(dayjs(), "day");
   const expiringSoon = daysLeft <= 14;

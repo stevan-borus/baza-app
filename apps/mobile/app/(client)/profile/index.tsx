@@ -40,6 +40,7 @@ import { getDateLocale } from "@/lib/i18n";
 import { now } from "@/lib/now";
 import { authQueries } from "@/lib/queries/auth-queries-factory";
 import { packagesQueries, type ClientPackage } from "@/lib/queries/packages-queries-factory";
+import { packageCreditsRemainingFraction } from "@/lib/package-fully-booked";
 import { ProfilePersonalDataSections } from "@/components/profile/profile-personal-data-sections";
 
 // ─── helpers ────────────────────────────────────────────────────────────────
@@ -51,15 +52,6 @@ function getInitials(email: string): string {
     return `${parts[0].charAt(0)}${parts[1].charAt(0)}`.toUpperCase();
   }
   return prefix.slice(0, 2).toUpperCase();
-}
-
-function getPackageProgress(pkg: ClientPackage): number {
-  const total = pkg.packageType?.sessionCount ?? 0;
-  if (total <= 0) return 0;
-  // Bar tracks what's still bookable (credits minus held bookings/waitlist),
-  // matching the big number next to it. Falls back to raw credits when the
-  // server response predates the `bookable` field.
-  return (pkg.bookable ?? pkg.sessionsRemaining) / total;
 }
 
 // ─── main component ──────────────────────────────────────────────────────────
@@ -259,7 +251,13 @@ export default function ClientProfile() {
           <View className="gap-3 px-4">
             {activePackages.map((pkg: ClientPackage) => {
               const total = pkg.packageType?.sessionCount ?? 0;
-              const progress = getPackageProgress(pkg);
+              // Bar is credits-driven (sessionsRemaining / total) to match the
+              // home card — a fully-booked active package still has its credits,
+              // so it must not read empty. The NUMBER stays "bookable / total".
+              const progress = packageCreditsRemainingFraction(
+                pkg.sessionsRemaining,
+                total,
+              );
               const expires = new Date(pkg.expiresAt);
               const expired =
                 pkg.sessionsRemaining <= 0 || expires < now();
