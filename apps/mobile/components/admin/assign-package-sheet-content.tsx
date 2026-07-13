@@ -28,6 +28,7 @@ import {
 } from "@/lib/queries/packages-queries-factory";
 import { useCreateBillingMutation } from "@/lib/queries/billing-queries-factory";
 import { RAW_METHOD_LABEL_KEYS } from "@/lib/payment-method-labels";
+import { assignedSamePackageToday } from "@/lib/same-day-package-assignment";
 
 export type AssignPackageMode = "comp" | "paid";
 
@@ -86,6 +87,19 @@ export function AssignPackageSheetContent({
 
   const packageTypesQuery = useQuery(packagesQueries.types());
   const allPackageTypes = packageTypesQuery.data?.packageTypes ?? [];
+
+  // Non-blocking duplicate hint: if this client already got the SAME package
+  // type on the SAME day, show a note so an accidental repeat is noticed.
+  // Stacking is fully supported (two cycles paid up front) — this NEVER
+  // blocks the submit. The pilot saw four identical rows in two pairs; that
+  // was intentional, but the note makes any future accident visible.
+  const existingPackagesQuery = useQuery(packagesQueries.clientPackages(client.id));
+  const existingPackages = existingPackagesQuery.data?.packages ?? [];
+  const alreadyAssignedToday = assignedSamePackageToday(
+    existingPackages,
+    packageTypeId,
+    startsAt,
+  );
   const packageTypes =
     mode === "paid"
       ? allPackageTypes.filter((pt) => !pt.isBirthdayGift)
@@ -255,6 +269,16 @@ export function AssignPackageSheetContent({
             </Text>
           ) : null}
         </>
+      ) : null}
+
+      {alreadyAssignedToday ? (
+        <Text
+          testID="assign-package-duplicate-hint"
+          className="text-muted"
+          style={{ fontSize: 12 }}
+        >
+          {t("admin.clients.duplicateSameDayHint")}
+        </Text>
       ) : null}
 
       <Button

@@ -656,6 +656,7 @@
       "placeholderStart": "Start",
       "assign": "Assign",
       "assignError": "Assigning package failed.",
+      "duplicateSameDayHint": "This client already received the same package today.",
       "sheetPause": "Pause package",
       "pauseStart": "Pause start",
       "pauseEnd": "Pause end",
