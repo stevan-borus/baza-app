@@ -246,30 +246,25 @@ export function BookingSheet({
                 // No book/waitlist actions — the client can't book this one.
                 // The server's 409 stays as the backstop if a stale sheet
                 // slips through. Plain informational block, not a disabled
-                // button. FULLY_HELD (eligible package, but every remaining
-                // session already committed to holds) gets its own copy —
-                // telling that client to "renew" would be wrong and confusing.
-                session.lockReason === "FULLY_HELD" ? (
-                  <View
-                    testID="booking-fully-held-message"
-                    className="flex-row items-start gap-2 px-3 py-3 rounded-xl border border-warning/40 bg-warning-soft"
-                  >
-                    <Icon name="info-circle" size={18} color="#a17d3a" />
-                    <Text className="flex-1 text-[14px] text-warning font-body-semibold">
-                      {t("client.renewal.fullyHeldMessage")}
-                    </Text>
-                  </View>
-                ) : (
-                  <View
-                    testID="booking-renewal-message"
-                    className="flex-row items-start gap-2 px-3 py-3 rounded-xl border border-warning/40 bg-warning-soft"
-                  >
-                    <Icon name="info-circle" size={18} color="#a17d3a" />
-                    <Text className="flex-1 text-[14px] text-warning font-body-semibold">
-                      {t("client.renewal.message")}
-                    </Text>
-                  </View>
-                )
+                // button. Each lock reason gets its own copy + testID:
+                // FULLY_HELD / PAUSED / NOT_STARTED each need a distinct,
+                // truthful message — telling a paused or not-yet-started client
+                // to "renew" would be wrong and confusing. RENEW is the
+                // fallback (also covers older payloads with no lockReason).
+                (() => {
+                  const lock = renewalLockCopy(session.lockReason);
+                  return (
+                    <View
+                      testID={lock.testID}
+                      className="flex-row items-start gap-2 px-3 py-3 rounded-xl border border-warning/40 bg-warning-soft"
+                    >
+                      <Icon name="info-circle" size={18} color="#a17d3a" />
+                      <Text className="flex-1 text-[14px] text-warning font-body-semibold">
+                        {t(lock.messageKey)}
+                      </Text>
+                    </View>
+                  );
+                })()
               ) : isFull ? (
                 <Button
                   testID="booking-waitlist-button"
@@ -459,6 +454,40 @@ export function BookingSheet({
       ) : null}
     </AppSheet>
   );
+}
+
+/**
+ * Copy + testID for the renewal-lock informational block, one per lockReason.
+ * RENEW is the fallback and also covers older payloads that carry no reason.
+ * testIDs for RENEW and FULLY_HELD are unchanged so existing specs keep
+ * matching; PAUSED / NOT_STARTED get their own.
+ */
+function renewalLockCopy(lockReason: AvailabilitySession["lockReason"]): {
+  testID: string;
+  messageKey: string;
+} {
+  switch (lockReason) {
+    case "FULLY_HELD":
+      return {
+        testID: "booking-fully-held-message",
+        messageKey: "client.renewal.fullyHeldMessage",
+      };
+    case "PAUSED":
+      return {
+        testID: "booking-paused-message",
+        messageKey: "client.renewal.pausedMessage",
+      };
+    case "NOT_STARTED":
+      return {
+        testID: "booking-not-started-message",
+        messageKey: "client.renewal.notStartedMessage",
+      };
+    default:
+      return {
+        testID: "booking-renewal-message",
+        messageKey: "client.renewal.message",
+      };
+  }
 }
 
 /**

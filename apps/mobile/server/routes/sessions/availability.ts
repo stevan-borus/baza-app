@@ -9,6 +9,7 @@ import { requireRole } from "@/lib/server/auth-guards";
 import { countHeldSessions } from "@/lib/server/booking-hold-count";
 import { respond, fail } from "@/lib/server/http";
 import {
+  classifyRenewalLockReason,
   clientOwnsPackageForClass,
   findEligibleClientPackage,
 } from "@/lib/server/package-eligibility";
@@ -89,7 +90,7 @@ export async function GET(request: Request) {
     string,
     {
       bookable: boolean;
-      lockReason?: "RENEW" | "FULLY_HELD";
+      lockReason?: "RENEW" | "PAUSED" | "NOT_STARTED" | "FULLY_HELD";
       lastBookableSlot: boolean;
     }
   >();
@@ -166,9 +167,17 @@ export async function GET(request: Request) {
           session.classTypeId,
         );
         if (!eligible) {
+          // Owned but no eligible pack — classify the real cause so the UI can
+          // say the truthful thing: PAUSED (paused on purpose) / NOT_STARTED
+          // (pack starts later) / RENEW (expired or used up).
           sessionBookingFlags.set(session.id, {
             bookable: false,
-            lockReason: "RENEW",
+            lockReason: classifyRenewalLockReason(
+              clientPackages,
+              packagePauses,
+              at,
+              session.classTypeId,
+            ),
             lastBookableSlot: false,
           });
           continue;

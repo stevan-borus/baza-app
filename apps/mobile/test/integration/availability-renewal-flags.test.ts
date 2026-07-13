@@ -83,6 +83,20 @@ async function makePackage(opts: {
   });
 }
 
+async function makePause(opts: {
+  clientProfileId: string;
+  startsAt: Date;
+  endsAt: Date;
+}) {
+  return prisma.packagePause.create({
+    data: {
+      clientProfileId: opts.clientProfileId,
+      startsAt: opts.startsAt,
+      endsAt: opts.endsAt,
+    },
+  });
+}
+
 function buildRequest(month: string) {
   return new Request(
     `http://test.local/api/sessions/availability?month=${encodeURIComponent(month)}`,
@@ -309,6 +323,63 @@ describe("GET /api/sessions/availability renewal flags", () => {
     expect(energyOut).toMatchObject({ bookable: true, lastBookableSlot: false });
     // Bookable sessions carry no lock reason at all.
     expect(energyOut.lockReason).toBeUndefined();
+  });
+
+  it("locks sessions as PAUSED when the client owns a live pack but is inside an active pause window", async () => {
+    // The client paused on purpose — the pack is otherwise fully bookable
+    // (started, has sessions, unexpired). Saying "renew" here would be wrong;
+    // the row must read PAUSED so the sheet can explain the pause.
+    const { client, clientProfile, trainer, reformer } = await baseFixtures();
+    const session = await makeSession(reformer.id, trainer.id, SESSION_DATE);
+    await makePackage({
+      clientProfileId: clientProfile.id,
+      classTypeId: reformer.id,
+      sessionsRemaining: 8,
+    });
+    // Anchor is 2026-05-09T10:00:00Z — this window is active "now".
+    await makePause({
+      clientProfileId: clientProfile.id,
+      startsAt: new Date("2026-05-01T00:00:00Z"),
+      endsAt: new Date("2026-06-30T00:00:00Z"),
+    });
+
+    asClient(client, clientProfile.id);
+
+    const res = await GET(buildRequest(MONTH));
+    const json = await res.json();
+    expect(json.sessions).toHaveLength(1);
+    expect(json.sessions[0]).toMatchObject({
+      id: session.id,
+      bookable: false,
+      lockReason: "PAUSED",
+      lastBookableSlot: false,
+    });
+  });
+
+  it("locks sessions as NOT_STARTED when the client owns a matching pack that hasn't started yet", async () => {
+    // The pack is funded and has sessions, but its startsAt is in the future
+    // (relative to the 2026-05-09 anchor) — booking opens then, not a renewal.
+    const { client, clientProfile, trainer, reformer } = await baseFixtures();
+    const session = await makeSession(reformer.id, trainer.id, SESSION_DATE);
+    await makePackage({
+      clientProfileId: clientProfile.id,
+      classTypeId: reformer.id,
+      sessionsRemaining: 10,
+      startsAt: new Date("2026-06-01T00:00:00Z"),
+      expiresAt: new Date("2026-09-01T00:00:00Z"),
+    });
+
+    asClient(client, clientProfile.id);
+
+    const res = await GET(buildRequest(MONTH));
+    const json = await res.json();
+    expect(json.sessions).toHaveLength(1);
+    expect(json.sessions[0]).toMatchObject({
+      id: session.id,
+      bookable: false,
+      lockReason: "NOT_STARTED",
+      lastBookableSlot: false,
+    });
   });
 
   it("keeps trainer sessions always bookable with no warnings", async () => {

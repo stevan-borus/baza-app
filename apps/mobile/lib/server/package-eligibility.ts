@@ -86,3 +86,56 @@ export function findEligibleClientPackage(
   }
   return null;
 }
+
+/**
+ * Why a client can't book despite OWNING a matching-class pack — the specific
+ * cause behind a `lockReason: "RENEW"`-style lock. Call this ONLY once
+ * `findEligibleClientPackage` has returned null but `clientOwnsPackageForClass`
+ * is true; it picks the most truthful, most actionable reason among the owned
+ * matching packs.
+ *
+ * Priority — PAUSED > NOT_STARTED > RENEW:
+ * - PAUSED: the client is inside an active pause window AND owns a matching
+ *   pack that would otherwise be bookable (started, has sessions, not expired,
+ *   not revoked). They paused on purpose — telling them to "renew" is wrong.
+ *   Gated on a genuinely-live pack so a used-up/expired pack that merely
+ *   overlaps a pause doesn't masquerade as paused.
+ * - NOT_STARTED: they own a matching pack (has sessions, not expired, not
+ *   revoked) whose `startsAt` is in the future — a real, funded pack that
+ *   simply hasn't begun. Ranked below PAUSED because an active pause is the
+ *   more immediate explanation.
+ * - RENEW: catch-all — every matching pack is used up, expired, or revoked.
+ */
+export function classifyRenewalLockReason(
+  packages: Pick<
+    ClientPackage,
+    "id" | "classTypeId" | "startsAt" | "expiresAt" | "sessionsRemaining" | "revokedAt"
+  >[],
+  pauses: Pick<PackagePause, "startsAt" | "endsAt">[],
+  at: Date,
+  classTypeId: string,
+): "PAUSED" | "NOT_STARTED" | "RENEW" {
+  const matching = packages.filter(
+    (pkg) => pkg.classTypeId === classTypeId && !pkg.revokedAt,
+  );
+
+  // A "would-be-bookable" pack: has sessions and its pause-extended expiry is
+  // still in the future. (Pause state itself is handled separately below.)
+  const hasLivePack = matching.some(
+    (pkg) =>
+      pkg.sessionsRemaining > 0 &&
+      getEffectiveExpiresAt(pkg, pauses, at) >= at,
+  );
+  if (hasLivePack && isInPauseWindow(pauses, at)) {
+    return "PAUSED";
+  }
+
+  const hasFuturePack = matching.some(
+    (pkg) => pkg.sessionsRemaining > 0 && pkg.startsAt > at,
+  );
+  if (hasFuturePack) {
+    return "NOT_STARTED";
+  }
+
+  return "RENEW";
+}
