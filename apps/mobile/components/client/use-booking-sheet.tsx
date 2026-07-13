@@ -12,6 +12,7 @@
 import React, { useState } from "react";
 import * as Haptics from "expo-haptics";
 import { BookingSheet } from "@/components/client/booking-sheet";
+import { mapResultStateToSuccessState } from "@/lib/booking-success-state";
 import { useMutateBookingMutation } from "@/lib/queries/bookings-queries-factory";
 import type { AvailabilitySession } from "@baza/types/scheduling";
 
@@ -98,15 +99,7 @@ export function ClientBookingSheet({
       }
       pending={mutation.isPending}
       successState={
-        mutation.isSuccess
-          ? resultState === "BOOKED" || resultState === "BOOKED_ALREADY"
-            ? "BOOKED"
-            : resultState === "WAITLISTED"
-              ? "WAITLISTED"
-              : resultState === "CANCELED"
-                ? "CANCELED"
-                : null
-          : null
+        mutation.isSuccess ? mapResultStateToSuccessState(resultState) : null
       }
       errorCode={
         mutation.isError
