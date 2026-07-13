@@ -258,9 +258,18 @@
       "validUntil": "Valid until",
       "error": "Unable to load package.",
       "noActive": "No active package.",
+      "noActiveContact": "To buy or renew a package, get in touch with us.",
       "allPackages": "All packages",
       "packageName": "Package",
       "sessionsUntil": "Sessions: {{count}} | Until: {{date}}"
+    },
+    "renewal": {
+      "message": "Your package is used up or has expired. Get in touch to renew it and keep training.",
+      "fullyHeldMessage": "You've used all the available sessions in your package. Cancel one of your booked sessions to be able to book a new one.",
+      "lastSessionWarning": "This booking spends the last session in your package. Renew it so you can book your next one.",
+      "homeTitle": "Renew your package",
+      "rowAction": "Renew",
+      "rowActionFullyHeld": "No sessions left"
     },
     "clientPackages": {
       "title": "My packages",
@@ -318,6 +327,7 @@
       "bookableLabel": "Left to book",
       "expiresOn": "Expires {{date}}",
       "expiresWithCountdown": "Expires {{date}} · {{days}} days left",
+      "fullyBookedHint": "You've booked all your remaining sessions. Want more? Get in touch to renew your package.",
       "noClassesToday": "No classes today",
       "noClassesThisDay": "No classes on this day",
       "tryAnotherDay": "Try another day.",
@@ -807,6 +817,8 @@
       "sheetEditPackage": "Edit package type",
       "deletePackage": "Delete package type",
       "placeholderName": "Name",
+      "classTypeNameHelper": "A class type is what appears on the schedule. For the same class sold with a different session count, create a new package type, not a new class type.",
+      "classTypeSimilarWarning": "A similar class type already exists ({{name}}). If they differ only by session count, create a new package type instead.",
       "placeholderSessionCount": "Session count",
       "placeholderValidityDays": "Validity (days)",
       "placeholderLateCancel": "Late cancellation (hours)",

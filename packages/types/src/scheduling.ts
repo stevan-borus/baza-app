@@ -26,6 +26,30 @@ export const availabilitySessionSchema = SessionResultSchema.pick({
   isActive: z.boolean().optional(),
   isBookedByMe: z.boolean().optional(),
   lateCancelHours: z.nullable(z.number()).optional(),
+  /**
+   * False when the client owns a (lapsed/used-up/paused) package for this
+   * class but has no ELIGIBLE package to book with — the session renders
+   * greyed out with a renewal CTA instead of disappearing. Staff always get
+   * true. Absent (old cached payloads) means bookable.
+   */
+  bookable: z.boolean().optional(),
+  /**
+   * Why the session is not bookable. Present only when `bookable` is false
+   * (same optional-field pattern as `bookable` — staff payloads and older
+   * cached responses omit it):
+   * - "RENEW"      — the client owns a package for this class but none is
+   *                  eligible (expired / used up / paused / not started).
+   * - "FULLY_HELD" — an eligible package exists, but every remaining session
+   *                  is already committed to future bookings/waitlist holds;
+   *                  booking would 409 until one of them is canceled.
+   */
+  lockReason: z.enum(["RENEW", "FULLY_HELD"]).optional(),
+  /**
+   * True when booking this session would take the client's LAST bookable
+   * slot on their eligible package (sessionsRemaining − held slots === 1).
+   * Drives the "renew to keep training" warning at confirm time.
+   */
+  lastBookableSlot: z.boolean().optional(),
 });
 export type AvailabilitySession = z.infer<typeof availabilitySessionSchema>;
 

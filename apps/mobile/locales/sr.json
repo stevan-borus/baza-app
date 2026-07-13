@@ -258,9 +258,18 @@
       "validUntil": "Važi do",
       "error": "Nije moguće učitati paket.",
       "noActive": "Nema aktivnog paketa.",
+      "noActiveContact": "Za kupovinu ili obnovu paketa javite nam se.",
       "allPackages": "Svi paketi",
       "packageName": "Paket",
       "sessionsUntil": "Termini: {{count}} | Do: {{date}}"
+    },
+    "renewal": {
+      "message": "Vaš paket je iskorišćen ili je istekao. Javite nam se da obnovite paket i nastavite sa treninzima.",
+      "fullyHeldMessage": "Iskoristili ste sve dostupne termine iz paketa. Otkažite neki od zakazanih termina kako biste mogli da zakažete novi.",
+      "lastSessionWarning": "Ovim treningom trošite poslednji termin iz paketa. Obnovite ga kako biste mogli da zakažete naredni trening.",
+      "homeTitle": "Obnovite paket",
+      "rowAction": "Obnovite",
+      "rowActionFullyHeld": "Bez termina"
     },
     "clientPackages": {
       "title": "Moji paketi",
@@ -319,6 +328,7 @@
       "bookableLabel": "Za zakazivanje",
       "expiresOn": "Ističe {{date}}",
       "expiresWithCountdown": "Ističe {{date}} · još {{days}} dana",
+      "fullyBookedHint": "Rezervisali ste sve preostale termine. Ako želite još termina, javite nam se da obnovite paket.",
       "noClassesToday": "Nema treninga danas",
       "noClassesThisDay": "Nema treninga ovog dana",
       "tryAnotherDay": "Probaj drugi dan.",
@@ -810,6 +820,8 @@
       "sheetEditPackage": "Uredi tip paketa",
       "deletePackage": "Obriši tip paketa",
       "placeholderName": "Naziv",
+      "classTypeNameHelper": "Tip treninga je ono što stoji na rasporedu. Za isti trening sa drugačijim brojem termina napravite novi tip paketa, ne novi tip treninga.",
+      "classTypeSimilarWarning": "Sličan tip treninga već postoji ({{name}}). Ako se razlikuju samo po broju termina, dovoljno je da napravite novi tip paketa.",
       "placeholderSessionCount": "Broj termina",
       "placeholderValidityDays": "Važi dana",
       "placeholderLateCancel": "Kasno otkazivanje (sati)",

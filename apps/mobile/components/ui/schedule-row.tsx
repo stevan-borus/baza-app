@@ -49,6 +49,13 @@ export type ScheduleRowSession = {
   availableSlots: number;
   capacity: number;
   isBookedByMe?: boolean;
+  /** False = the client can't book this session: the row renders muted
+   * (still tappable — the sheet explains why). */
+  bookable?: boolean;
+  /** Present when bookable is false: "RENEW" = no eligible package (renew
+   * CTA); "FULLY_HELD" = eligible package but every remaining session is
+   * already committed to future bookings/waitlist holds. */
+  lockReason?: "RENEW" | "FULLY_HELD";
 };
 
 export function ScheduleRow({
@@ -64,6 +71,10 @@ export function ScheduleRow({
   const end = dayjs(session.endsAt);
   const full = session.availableSlots === 0;
   const bookedByMe = !!session.isBookedByMe;
+  // Undefined means bookable — staff payloads and older cached responses
+  // don't carry the flag.
+  const renewalLocked = session.bookable === false;
+  const fullyHeld = renewalLocked && session.lockReason === "FULLY_HELD";
   const photo = photoForClassType(session.classTypeName);
 
   return (
@@ -75,6 +86,11 @@ export function ScheduleRow({
           paddingVertical: 12,
           paddingHorizontal: 20,
           gap: 14,
+          // Muted, not hidden: a lapsed client should still SEE the schedule
+          // they used to book, with the sheet explaining how to renew. Their
+          // OWN booked sessions stay full-strength — the booking is real and
+          // cancellable regardless of the package's current state.
+          opacity: renewalLocked && !bookedByMe ? 0.45 : 1,
         }}
       >
         {/* Photo tile */}
@@ -140,12 +156,22 @@ export function ScheduleRow({
           style={{
             fontFamily: "AlbertSans-SemiBold",
             fontSize: 11,
-            color: bookedByMe ? tokens.accentLight : tokens.foreground,
+            color: bookedByMe
+              ? tokens.accentLight
+              : renewalLocked
+                ? tokens.faint
+                : tokens.foreground,
             letterSpacing: 1.4,
             textTransform: "uppercase",
           }}
         >
-          {bookedByMe ? t("client.home.booked") : t("client.home.book")}
+          {bookedByMe
+            ? t("client.home.booked")
+            : fullyHeld
+              ? t("client.renewal.rowActionFullyHeld")
+              : renewalLocked
+                ? t("client.renewal.rowAction")
+                : t("client.home.book")}
         </Text>
       </View>
     </Pressable>

@@ -1,6 +1,7 @@
 import { test, expect } from "./helpers/fixtures";
 import { now } from "../../lib/now";
 import { signInAs } from "./helpers/auth";
+import { navigateWeekStripTo, nextReformerDayKey } from "./helpers/dates";
 import {
   addToWaitlist,
   countActiveBookingsFor,
@@ -480,6 +481,45 @@ test.describe("client (Serbian)", () => {
     await expect(page.getByTestId("booking-detail-trainer")).toHaveText(
       "Trainer Reformer Lead",
     );
+  });
+
+  test("65: lapsed client sees locked greyed rows and the renewal sheet with no book button", async ({
+    page,
+  }) => {
+    // client.expired@e2e.test's Reformer pack expired 7 days before the
+    // anchor instant (rich seed), so every Reformer session must render
+    // renewal-locked: muted row with the "Obnovite" action label, and a
+    // booking sheet that explains renewal instead of offering to book.
+    await signInAs(page, "client.expired@e2e.test");
+    await page.goto("/calendar");
+
+    // WeekStrip specs must navigate — the target Reformer day is not
+    // guaranteed to sit in the initially visible week.
+    await navigateWeekStripTo(page, nextReformerDayKey());
+
+    const row = page.locator('[data-testid^="schedule-row-"]').first();
+    await expect(row).toBeVisible();
+
+    // Locked rendering, part 1: the action label is the renewal CTA (the
+    // uppercase styling is CSS text-transform; the DOM text stays "Obnovite").
+    await expect(row.getByText("Obnovite", { exact: true })).toBeVisible();
+    // Locked rendering, part 2: the row body is muted — opacity 0.45 on the
+    // card view directly under the schedule-row pressable.
+    await expect
+      .poll(async () =>
+        row.evaluate((el) => {
+          const inner = el.firstElementChild as HTMLElement | null;
+          return inner ? getComputedStyle(inner).opacity : null;
+        }),
+      )
+      .toBe("0.45");
+
+    // Tapping the locked row still opens the sheet, which swaps its actions
+    // for the renewal explanation — no book or waitlist button anywhere.
+    await row.dispatchEvent("click");
+    await expect(page.getByTestId("booking-renewal-message")).toBeVisible();
+    await expect(page.getByTestId("booking-book-button")).toHaveCount(0);
+    await expect(page.getByTestId("booking-waitlist-button")).toHaveCount(0);
   });
 
 });

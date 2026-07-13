@@ -40,6 +40,7 @@ import { getDateLocale } from "@/lib/i18n";
 import { now } from "@/lib/now";
 import { authQueries } from "@/lib/queries/auth-queries-factory";
 import { packagesQueries, type ClientPackage } from "@/lib/queries/packages-queries-factory";
+import { packageUsedFraction } from "@/lib/package-fully-booked";
 import { ProfilePersonalDataSections } from "@/components/profile/profile-personal-data-sections";
 
 // ─── helpers ────────────────────────────────────────────────────────────────
@@ -51,15 +52,6 @@ function getInitials(email: string): string {
     return `${parts[0].charAt(0)}${parts[1].charAt(0)}`.toUpperCase();
   }
   return prefix.slice(0, 2).toUpperCase();
-}
-
-function getPackageProgress(pkg: ClientPackage): number {
-  const total = pkg.packageType?.sessionCount ?? 0;
-  if (total <= 0) return 0;
-  // Bar tracks what's still bookable (credits minus held bookings/waitlist),
-  // matching the big number next to it. Falls back to raw credits when the
-  // server response predates the `bookable` field.
-  return (pkg.bookable ?? pkg.sessionsRemaining) / total;
 }
 
 // ─── main component ──────────────────────────────────────────────────────────
@@ -235,21 +227,39 @@ export default function ClientProfile() {
           ) : null}
           {activePackages.length === 0 && !packagesQuery.isLoading ? (
             <View className="mx-4">
-              <View className="flex-row items-center justify-between py-4">
+              <View className="flex-col gap-1 py-4" testID="profile-no-active-package">
+                <View className="flex-row items-center justify-between">
+                  <Text
+                    className="font-body-medium text-foreground"
+                    style={{ fontSize: 15, letterSpacing: -0.1 }}
+                  >
+                    {t("client.package.noActive")}
+                  </Text>
+                  <Text className="text-faint text-[13px]">—</Text>
+                </View>
+                {/* How to fix it, not just the fact — the studio sells
+                    packages in person, so "contact us" IS the purchase CTA. */}
                 <Text
-                  className="font-body-medium text-foreground"
-                  style={{ fontSize: 15, letterSpacing: -0.1 }}
+                  className="text-muted text-[13px]"
+                  style={{ lineHeight: 19 }}
                 >
-                  {t("client.package.noActive")}
+                  {t("client.package.noActiveContact")}
                 </Text>
-                <Text className="text-faint text-[13px]">—</Text>
               </View>
             </View>
           ) : null}
           <View className="gap-3 px-4">
             {activePackages.map((pkg: ClientPackage) => {
               const total = pkg.packageType?.sessionCount ?? 0;
-              const progress = getPackageProgress(pkg);
+              // Bar is usage-driven (owner decision) to match the home card: it
+              // FILLS UP as sessions are booked/attended — used / total, using
+              // bookable (falling back to sessionsRemaining). A fully-booked
+              // package reads full; a fresh one, empty. The NUMBER stays
+              // "bookable / total".
+              const progress = packageUsedFraction(
+                pkg.bookable ?? pkg.sessionsRemaining,
+                total,
+              );
               const expires = new Date(pkg.expiresAt);
               const expired =
                 pkg.sessionsRemaining <= 0 || expires < now();
