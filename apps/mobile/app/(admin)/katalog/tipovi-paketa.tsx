@@ -241,13 +241,15 @@ export default function AdminPackages() {
                           </Badge>
                         ) : null}
                       </View>
+                      {/* Class-type name dropped from this subtitle: it
+                          duplicated the package name right above ("Reformer
+                          12-pack") and truncated the price. The class type
+                          stays load-bearing in the edit sheet's picker. */}
                       <Text
                         className="text-muted"
                         style={{ fontSize: 12 }}
                         numberOfLines={1}
                       >
-                        {pt.classType?.name ?? "—"}
-                        {" · "}
                         {t("admin.manage.sessionsDays", {
                           count: pt.sessionCount,
                           days: pt.validityDays,
