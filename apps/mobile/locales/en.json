@@ -258,9 +258,16 @@
       "validUntil": "Valid until",
       "error": "Unable to load package.",
       "noActive": "No active package.",
+      "noActiveContact": "To buy or renew a package, contact us.",
       "allPackages": "All packages",
       "packageName": "Package",
       "sessionsUntil": "Sessions: {{count}} | Until: {{date}}"
+    },
+    "renewal": {
+      "message": "Your package has expired or is used up. To book a session, renew your package — contact us.",
+      "lastSessionWarning": "This session uses up your package. Renew it so you can keep booking your next sessions.",
+      "homeTitle": "Renew your package",
+      "rowAction": "Renew"
     },
     "clientPackages": {
       "title": "My packages",

@@ -232,14 +232,24 @@ export default function ClientProfile() {
           ) : null}
           {activePackages.length === 0 && !packagesQuery.isLoading ? (
             <View className="mx-4">
-              <View className="flex-row items-center justify-between py-4">
+              <View className="flex-col gap-1 py-4" testID="profile-no-active-package">
+                <View className="flex-row items-center justify-between">
+                  <Text
+                    className="font-body-medium text-foreground"
+                    style={{ fontSize: 15, letterSpacing: -0.1 }}
+                  >
+                    {t("client.package.noActive")}
+                  </Text>
+                  <Text className="text-faint text-[13px]">—</Text>
+                </View>
+                {/* How to fix it, not just the fact — the studio sells
+                    packages in person, so "contact us" IS the purchase CTA. */}
                 <Text
-                  className="font-body-medium text-foreground"
-                  style={{ fontSize: 15, letterSpacing: -0.1 }}
+                  className="text-muted text-[13px]"
+                  style={{ lineHeight: 19 }}
                 >
-                  {t("client.package.noActive")}
+                  {t("client.package.noActiveContact")}
                 </Text>
-                <Text className="text-faint text-[13px]">—</Text>
               </View>
             </View>
           ) : null}

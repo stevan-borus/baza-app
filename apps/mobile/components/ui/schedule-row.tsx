@@ -49,6 +49,9 @@ export type ScheduleRowSession = {
   availableSlots: number;
   capacity: number;
   isBookedByMe?: boolean;
+  /** False = the client has no eligible package for this class: the row
+   * renders muted (still tappable — the sheet explains how to renew). */
+  bookable?: boolean;
 };
 
 export function ScheduleRow({
@@ -64,6 +67,9 @@ export function ScheduleRow({
   const end = dayjs(session.endsAt);
   const full = session.availableSlots === 0;
   const bookedByMe = !!session.isBookedByMe;
+  // Undefined means bookable — staff payloads and older cached responses
+  // don't carry the flag.
+  const renewalLocked = session.bookable === false;
   const photo = photoForClassType(session.classTypeName);
 
   return (
@@ -75,6 +81,9 @@ export function ScheduleRow({
           paddingVertical: 12,
           paddingHorizontal: 20,
           gap: 14,
+          // Muted, not hidden: a lapsed client should still SEE the schedule
+          // they used to book, with the sheet explaining how to renew.
+          opacity: renewalLocked ? 0.45 : 1,
         }}
       >
         {/* Photo tile */}
@@ -140,12 +149,20 @@ export function ScheduleRow({
           style={{
             fontFamily: "AlbertSans-SemiBold",
             fontSize: 11,
-            color: bookedByMe ? tokens.accentLight : tokens.foreground,
+            color: bookedByMe
+              ? tokens.accentLight
+              : renewalLocked
+                ? tokens.faint
+                : tokens.foreground,
             letterSpacing: 1.4,
             textTransform: "uppercase",
           }}
         >
-          {bookedByMe ? t("client.home.booked") : t("client.home.book")}
+          {bookedByMe
+            ? t("client.home.booked")
+            : renewalLocked
+              ? t("client.renewal.rowAction")
+              : t("client.home.book")}
         </Text>
       </View>
     </Pressable>

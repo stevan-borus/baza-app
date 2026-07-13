@@ -51,15 +51,23 @@ export function BookingSheet({
   const lang = i18n.language === "en" ? "en" : "sr";
   const [step, setStep] = useState<BookingStep>(initialStep);
 
+  // Snapshot of `lastBookableSlot` taken when the user fires the booking
+  // mutation. The success block can't read the live flag: the availability
+  // refetch that lands with the success flips it to false (the new booking
+  // now counts as a hold), which is exactly when we still owe the warning.
+  const bookedLastSlotRef = useRef(false);
+
   // Seed the step when a new session opens (id changes) — render-time state
   // adjustment, not an effect. After that the user drives `step` via taps.
   const openedId = useRef<string | null>(null);
   if (session && session.id !== openedId.current) {
     openedId.current = session.id;
+    bookedLastSlotRef.current = false;
     if (step !== initialStep) setStep(initialStep);
   }
   if (!session && openedId.current !== null) {
     openedId.current = null;
+    bookedLastSlotRef.current = false;
   }
 
   function handleClose() {
@@ -68,6 +76,11 @@ export function BookingSheet({
   }
 
   const isFull = !!session && session.availableSlots <= 0;
+  // No eligible package for this class (expired / used up / paused): the
+  // session is visible but not bookable — the sheet swaps its actions for a
+  // renewal message. Undefined counts as bookable (staff / older payloads).
+  const renewalLocked = !!session && session.bookable === false;
+  const isLastSlot = !!session?.lastBookableSlot;
   // A waitlist only makes sense once the class is full — only then can someone
   // actually be waiting for a seat. Gate on isFull so a stray/seed waitlist
   // count never surfaces on a class that still has open spots.
@@ -212,11 +225,27 @@ export function BookingSheet({
                     {t("client.dayView.sessionPast")}
                   </Text>
                 </View>
+              ) : renewalLocked ? (
+                // No book/waitlist actions — the client must renew first. The
+                // server's 409 stays as the backstop if a stale sheet slips
+                // through. Plain informational block, not a disabled button.
+                <View
+                  testID="booking-renewal-message"
+                  className="flex-row items-start gap-2 px-3 py-3 rounded-xl border border-warning/40 bg-warning-soft"
+                >
+                  <Icon name="info-circle" size={18} color="#a17d3a" />
+                  <Text className="flex-1 text-[14px] text-warning font-body-semibold">
+                    {t("client.renewal.message")}
+                  </Text>
+                </View>
               ) : isFull ? (
                 <Button
                   testID="booking-waitlist-button"
                   variant="secondary"
-                  onPress={() => onBook(session.id)}
+                  onPress={() => {
+                    bookedLastSlotRef.current = isLastSlot;
+                    onBook(session.id);
+                  }}
                   disabled={pending}
                 >
                   {t("client.dayView.joinWaitlist")}
@@ -241,11 +270,23 @@ export function BookingSheet({
                 >
                   {t("client.dayView.confirmBook")}
                 </Text>
+                {isLastSlot ? (
+                  <View
+                    testID="booking-last-slot-warning"
+                    className="flex-row items-start gap-2 px-3 py-3 rounded-xl border border-warning/40 bg-warning-soft"
+                  >
+                    <Icon name="info-circle" size={16} color="#a17d3a" />
+                    <Text className="flex-1 text-[13px] text-warning font-body-medium">
+                      {t("client.renewal.lastSessionWarning")}
+                    </Text>
+                  </View>
+                ) : null}
                 <View className="flex-col gap-2">
                   <Button
                     testID="booking-confirm-book-button"
                     onPress={() => {
                       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+                      bookedLastSlotRef.current = isLastSlot;
                       onBook(session.id);
                     }}
                     disabled={pending}
@@ -305,27 +346,45 @@ export function BookingSheet({
                 );
               })()
             ) : effectiveStep === "success" ? (
-              <View className="flex-row items-center justify-center gap-2 py-3">
-                <Icon
-                  name={successState === "CANCELED" ? "info-circle" : "check-circle"}
-                  size={18}
-                  color={successState === "CANCELED" ? "#a17d3a" : tokens.accent}
-                />
-                <Text
-                  testID="booking-success-message"
-                  className="font-body-semibold text-[15px]"
-                  style={{
-                    color: successState === "CANCELED" ? "#a17d3a" : "#2e5b42",
-                  }}
-                >
-                  {successState === "BOOKED"
-                    ? t("client.calendar.bookingBooked")
-                    : successState === "WAITLISTED"
-                      ? t("client.calendar.bookingWaitlisted")
-                      : successState === "CANCELED"
-                        ? t("client.calendar.bookingCanceled")
-                        : ""}
-                </Text>
+              <View className="flex-col gap-2">
+                <View className="flex-row items-center justify-center gap-2 py-3">
+                  <Icon
+                    name={successState === "CANCELED" ? "info-circle" : "check-circle"}
+                    size={18}
+                    color={successState === "CANCELED" ? "#a17d3a" : tokens.accent}
+                  />
+                  <Text
+                    testID="booking-success-message"
+                    className="font-body-semibold text-[15px]"
+                    style={{
+                      color: successState === "CANCELED" ? "#a17d3a" : "#2e5b42",
+                    }}
+                  >
+                    {successState === "BOOKED"
+                      ? t("client.calendar.bookingBooked")
+                      : successState === "WAITLISTED"
+                        ? t("client.calendar.bookingWaitlisted")
+                        : successState === "CANCELED"
+                          ? t("client.calendar.bookingCanceled")
+                          : ""}
+                  </Text>
+                </View>
+                {/* The snapshot (not the live flag) drives this: after the
+                    refetch the just-booked hold flips lastBookableSlot off,
+                    but the client still needs to hear "that was your last
+                    one — renew". */}
+                {bookedLastSlotRef.current &&
+                (successState === "BOOKED" || successState === "WAITLISTED") ? (
+                  <View
+                    testID="booking-success-last-slot-warning"
+                    className="flex-row items-start gap-2 px-3 py-3 rounded-xl border border-warning/40 bg-warning-soft"
+                  >
+                    <Icon name="info-circle" size={16} color="#a17d3a" />
+                    <Text className="flex-1 text-[13px] text-warning font-body-medium">
+                      {t("client.renewal.lastSessionWarning")}
+                    </Text>
+                  </View>
+                ) : null}
               </View>
             ) : (
               <View className="flex-row items-start gap-2 px-3 py-3 rounded-xl border border-danger/40 bg-danger-soft">

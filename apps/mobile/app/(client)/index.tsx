@@ -545,6 +545,54 @@ function PackageCard({
 }
 
 // ────────────────────────────────────────────────────────────────────────
+// Package — renewal state: the client HAD a package but it lapsed. The card
+// stays on the home screen (instead of silently disappearing) and tells them
+// exactly how to get back on the schedule.
+
+function RenewalCard({ pkg }: { pkg: ClientPackage }) {
+  const { t } = useTranslation();
+  const tokens = useThemeTokens();
+  return (
+    <View style={{ paddingHorizontal: 16 }}>
+      <View
+        testID="home-renewal-card"
+        style={{
+          backgroundColor: tokens.surface,
+          borderRadius: 8,
+          padding: 22,
+          gap: 10,
+        }}
+      >
+        <CapsLabel size={10} color="#a17d3a" tracking={2.2}>
+          {t("client.renewal.homeTitle")}
+        </CapsLabel>
+        <Text
+          style={{
+            fontFamily: "AlbertSans-SemiBold",
+            fontSize: 16,
+            color: tokens.foreground,
+            letterSpacing: -0.2,
+          }}
+        >
+          {pkg.packageType?.name ?? t("client.home.package")}
+        </Text>
+        <Text
+          style={{
+            fontFamily: "AlbertSans-Regular",
+            fontSize: 13,
+            lineHeight: 19,
+            color: tokens.muted,
+            letterSpacing: 0.1,
+          }}
+        >
+          {t("client.renewal.message")}
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+// ────────────────────────────────────────────────────────────────────────
 // Screen
 
 export default function HomeStudio() {
@@ -587,6 +635,14 @@ export default function HomeStudio() {
     (p: ClientPackage) =>
       p.sessionsRemaining > 0 && new Date(p.expiresAt) > now(),
   );
+  // No active package but a purchase history → renewal state. The most
+  // recently expiring package names what the client would be renewing.
+  const lastLapsedPackage = activePackage
+    ? null
+    : ([...packages].sort(
+        (a: ClientPackage, b: ClientPackage) =>
+          new Date(b.expiresAt).getTime() - new Date(a.expiresAt).getTime(),
+      )[0] ?? null);
   const sessions = availabilityQuery.data?.sessions ?? [];
 
   // First name only. Fall back to the email local-part if the profile has no
@@ -806,6 +862,11 @@ export default function HomeStudio() {
               lang={lang}
               onPress={() => router.push("/(client)/profile")}
             />
+          </View>
+        ) : lastLapsedPackage ? (
+          <View>
+            <SectionRow title={t("client.home.yourPackage")} />
+            <RenewalCard pkg={lastLapsedPackage} />
           </View>
         ) : null}
 
