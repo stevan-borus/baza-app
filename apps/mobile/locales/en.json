@@ -372,7 +372,7 @@
       "confirmBook": "Confirm booking?",
       "confirm": "Confirm",
       "cancelWarning": "Are you sure you want to cancel?",
-      "cancelWarningLate": "You're canceling less than {{hours}}h before the session — one session will be deducted from your package. Continue?",
+      "cancelWarningLate": "Canceling less than {{hours}} hours before the session uses one session from your package. Continue?",
       "joinWaitlist": "Join waitlist",
       "leaveWaitlist": "Leave waitlist",
       "alreadyBooked": "You already have a booking"
@@ -386,6 +386,7 @@
       "bookingWaitlisted": "You were added to the waitlist",
       "bookingWaitlistPromoted": "Promoted from waitlist!",
       "bookingCanceled": "Session was canceled",
+      "bookingCanceledLate": "Session was canceled. Because it was a late cancellation, one session was used from your package.",
       "waitlistNote": "We'll notify you when a spot opens.",
       "bookingError": "Booking action failed.",
       "errorGuardianRequired": "Your parent must sign the consent form at the studio before you can book another session.",

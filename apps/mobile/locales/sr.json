@@ -373,7 +373,7 @@
       "confirmBook": "Potvrdite rezervaciju?",
       "confirm": "Potvrdi",
       "cancelWarning": "Da li ste sigurni da želite da otkažete?",
-      "cancelWarningLate": "Otkazujete manje od {{hours}}h pre termina — jedan termin će biti oduzet iz paketa. Da li želite da nastavite?",
+      "cancelWarningLate": "Otkazivanje manje od {{hours}} sati pre termina troši jedan termin iz paketa. Da li želite da nastavite?",
       "joinWaitlist": "Pridruži se listi čekanja",
       "leaveWaitlist": "Napusti listu čekanja",
       "alreadyBooked": "Već imate rezervaciju"
@@ -387,6 +387,7 @@
       "bookingWaitlisted": "Dodati ste na listu čekanja",
       "bookingWaitlistPromoted": "Promovisani sa liste čekanja!",
       "bookingCanceled": "Termin je otkazan",
+      "bookingCanceledLate": "Termin je otkazan. Pošto je otkazan kasno, jedan termin je potrošen iz paketa.",
       "waitlistNote": "Obavestićemo vas kad se oslobodi mesto.",
       "bookingError": "Akcija zakazivanja nije uspela.",
       "errorGuardianRequired": "Da biste zakazali sledeći termin, roditelj mora prvo potpisati saglasnost u studiju.",
