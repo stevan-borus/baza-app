@@ -22,10 +22,15 @@ import { nowMs } from "@/lib/now";
 
 vi.mock("@/lib/server/auth-guards", async () => (await import("./auth-mock")).authGuardsMock());
 
+vi.mock("@/lib/server/notifications", async () => (await import("./notifications-mock")).notificationsMock());
+
 import { POST as POST_REVOKE } from "@/server/routes/packages/client-packages/[id]/revoke";
 import { GET as GET_CLIENT_PACKAGES } from "@/server/routes/packages/client-packages";
 import { POST as POST_BOOKINGS } from "@/server/routes/bookings";
 import { prisma } from "@/lib/server/prisma";
+import { createSystemNotification } from "@/lib/server/notifications";
+
+const createSystemNotificationMock = vi.mocked(createSystemNotification);
 
 const HOUR = 60 * 60 * 1000;
 const DAY = 24 * HOUR;
@@ -135,6 +140,7 @@ function asClient(seeded: Awaited<ReturnType<typeof seed>>) {
 describe("POST /api/packages/client-packages/[id]/revoke", () => {
   beforeEach(async () => {
     await resetDb();
+    createSystemNotificationMock.mockClear();
   });
   afterAll(async () => {
     await resetDb();
@@ -430,5 +436,42 @@ describe("POST /api/packages/client-packages/[id]/revoke", () => {
     expect(row).toBeTruthy();
     expect(typeof row.revokedAt).toBe("string");
     expect(row.billingRecord?.status).toBe("VOIDED");
+  });
+
+  it("notifies the revoked client that their package was revoked and future sessions canceled", async () => {
+    // The accepted ship-time gap: the revoked client's bookings just vanished
+    // with no signal. Post-commit, best-effort, the revoke now sends the client
+    // a PACKAGE_REVOKED system notification (neutral copy, GENERAL type — same
+    // decoupled type/message-key pattern the package-expiry cron uses).
+    const seeded = await seed();
+    const { pkg } = await createPackageWithPendingBilling(seeded);
+    const futureSession = await createSession(seeded, new Date(nowMs() + 2 * DAY));
+    await prisma.booking.create({
+      data: {
+        sessionId: futureSession.id,
+        clientProfileId: seeded.clientProfile.id,
+        clientPackageId: pkg.id,
+      },
+    });
+
+    asAdmin(seeded);
+    const res = await POST_REVOKE(revokeRequest(pkg.id), { id: pkg.id });
+    expect(res.status).toBe(200);
+
+    // Targeted at the CLIENT (not the admin who revoked), with the revoke's
+    // message key + generic type, carrying the cancelled-booking count.
+    const clientCalls = createSystemNotificationMock.mock.calls.filter(
+      (call) => call[0] === seeded.clientUser.id && call[1] === "PACKAGE_REVOKED",
+    );
+    expect(clientCalls).toHaveLength(1);
+    expect(clientCalls[0][2]).toBe("GENERAL");
+    expect(clientCalls[0][3]).toMatchObject({
+      clientPackageId: pkg.id,
+      canceledFutureBookings: 1,
+    });
+    // The admin who performed the revoke is never notified.
+    expect(
+      createSystemNotificationMock.mock.calls.filter((call) => call[0] === seeded.adminUser.id),
+    ).toEqual([]);
   });
 });

@@ -24,6 +24,10 @@
       "title": "Package expiring",
       "body": "Your package is expiring soon."
     },
+    "package_revoked": {
+      "title": "Package revoked",
+      "body": "Your package has been revoked and your upcoming sessions were canceled. Contact us for more information."
+    },
     "session_reminder": {
       "title": "Session reminder",
       "body": "You have an upcoming session."
