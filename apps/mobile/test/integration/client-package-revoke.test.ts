@@ -1,0 +1,293 @@
+/**
+ * Keep-the-trace package revoke (POST /api/packages/client-packages/[id]/revoke).
+ *
+ * Product decision under test: when a pay-later client never shows up to
+ * pay, the admin revokes the package. One transaction must:
+ *   - stamp ClientPackage.revokedAt (row survives — no delete),
+ *   - cancel FUTURE bookings backed by the package WITHOUT a late-cancel
+ *     forfeit (no SessionConsumption, no sessionsRemaining decrement),
+ *   - leave PAST bookings/attendance untouched ("attended N, never paid"),
+ *   - release the client's waitlist seats for future sessions of the class
+ *     type UNLESS another live package still backs them,
+ *   - flip the linked BillingRecord to VOIDED but keep the row.
+ * Afterwards the package grants nothing: booking against it must 409.
+ */
+import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { setMockUser } from "./auth-mock";
+import { resetDb } from "./setup-db";
+import { nowMs } from "@/lib/now";
+
+vi.mock("@/lib/server/auth-guards", async () => (await import("./auth-mock")).authGuardsMock());
+
+import { POST as POST_REVOKE } from "@/server/routes/packages/client-packages/[id]/revoke";
+import { GET as GET_CLIENT_PACKAGES } from "@/server/routes/packages/client-packages";
+import { POST as POST_BOOKINGS } from "@/server/routes/bookings";
+import { prisma } from "@/lib/server/prisma";
+
+const HOUR = 60 * 60 * 1000;
+const DAY = 24 * HOUR;
+
+async function seed() {
+  const adminUser = await prisma.user.create({
+    data: { email: "admin@test.local", firstName: "Admin", lastName: "User", role: "ADMIN" },
+  });
+  const trainerUser = await prisma.user.create({
+    data: { email: "trainer@test.local", firstName: "Trainer", lastName: "User", role: "TRAINER" },
+  });
+  const clientUser = await prisma.user.create({
+    data: { email: "client@test.local", firstName: "Client", lastName: "User", role: "CLIENT" },
+  });
+  const clientProfile = await prisma.clientProfile.create({
+    data: { userId: clientUser.id, dateOfBirth: new Date("1990-01-01") },
+  });
+  const classType = await prisma.classType.create({
+    data: { name: "Reformer", maxClients: 6, durationMins: 60 },
+  });
+  const packageType = await prisma.packageType.create({
+    data: {
+      name: "Reformer 8",
+      sessionCount: 8,
+      validityDays: 60,
+      lateCancelHours: 12,
+      price: 24000,
+      classTypeId: classType.id,
+    },
+  });
+  return { adminUser, trainerUser, clientUser, clientProfile, classType, packageType };
+}
+
+async function createPackageWithPendingBilling(
+  seeded: Awaited<ReturnType<typeof seed>>,
+  opts?: { sessionsRemaining?: number },
+) {
+  const pkg = await prisma.clientPackage.create({
+    data: {
+      clientProfileId: seeded.clientProfile.id,
+      packageTypeId: seeded.packageType.id,
+      classTypeId: seeded.classType.id,
+      lateCancelHours: 12,
+      startsAt: new Date(nowMs() - DAY),
+      expiresAt: new Date(nowMs() + 60 * DAY),
+      sessionsRemaining: opts?.sessionsRemaining ?? 6,
+    },
+  });
+  const billing = await prisma.billingRecord.create({
+    data: {
+      clientUserId: seeded.clientUser.id,
+      amount: 24000,
+      method: "CASH",
+      status: "PENDING",
+      packageTypeId: seeded.packageType.id,
+      clientPackageId: pkg.id,
+    },
+  });
+  return { pkg, billing };
+}
+
+async function createSession(
+  seeded: Awaited<ReturnType<typeof seed>>,
+  startsAt: Date,
+  capacity = 6,
+) {
+  return prisma.session.create({
+    data: {
+      classTypeId: seeded.classType.id,
+      trainerUserId: seeded.trainerUser.id,
+      startsAt,
+      endsAt: new Date(startsAt.getTime() + HOUR),
+      capacity,
+      isActive: true,
+      status: "SCHEDULED",
+    },
+  });
+}
+
+function revokeRequest(id: string) {
+  return new Request(
+    `http://test.local/api/packages/client-packages/${id}/revoke`,
+    { method: "POST" },
+  );
+}
+
+function asAdmin(seeded: Awaited<ReturnType<typeof seed>>) {
+  setMockUser({
+    id: seeded.adminUser.id,
+    role: "ADMIN",
+    email: seeded.adminUser.email,
+    isActive: true,
+    clientProfile: null,
+  });
+}
+
+function asClient(seeded: Awaited<ReturnType<typeof seed>>) {
+  setMockUser({
+    id: seeded.clientUser.id,
+    role: "CLIENT",
+    email: seeded.clientUser.email,
+    isActive: true,
+    clientProfile: { id: seeded.clientProfile.id },
+  });
+}
+
+describe("POST /api/packages/client-packages/[id]/revoke", () => {
+  beforeEach(async () => {
+    await resetDb();
+  });
+  afterAll(async () => {
+    await resetDb();
+    await prisma.$disconnect();
+  });
+
+  it("cancels only FUTURE bookings, voids billing, keeps past attendance and the session counter", async () => {
+    const seeded = await seed();
+    const { pkg, billing } = await createPackageWithPendingBilling(seeded);
+
+    const pastSession = await createSession(seeded, new Date(nowMs() - 2 * DAY));
+    const futureSession = await createSession(seeded, new Date(nowMs() + 2 * DAY));
+    const pastBooking = await prisma.booking.create({
+      data: {
+        sessionId: pastSession.id,
+        clientProfileId: seeded.clientProfile.id,
+        clientPackageId: pkg.id,
+      },
+    });
+    const futureBooking = await prisma.booking.create({
+      data: {
+        sessionId: futureSession.id,
+        clientProfileId: seeded.clientProfile.id,
+        clientPackageId: pkg.id,
+      },
+    });
+    // Waitlist seat on another future session of the same class type, with
+    // no other package to back it — must be released.
+    const waitlistSession = await createSession(seeded, new Date(nowMs() + 3 * DAY));
+    await prisma.waitlistEntry.create({
+      data: {
+        sessionId: waitlistSession.id,
+        clientProfileId: seeded.clientProfile.id,
+        position: 1,
+      },
+    });
+
+    asAdmin(seeded);
+    const res = await POST_REVOKE(revokeRequest(pkg.id), { id: pkg.id });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.canceledFutureBookings).toBe(1);
+    expect(body.removedWaitlistEntries).toBe(1);
+    expect(body.billingRecordVoided).toBe(true);
+    expect(body.clientPackage.revokedAt).toBeTruthy();
+
+    const [pkgAfter, pastAfter, futureAfter, billingAfter, consumptions, waitlistAfter] =
+      await Promise.all([
+        prisma.clientPackage.findUnique({ where: { id: pkg.id } }),
+        prisma.booking.findUnique({ where: { id: pastBooking.id } }),
+        prisma.booking.findUnique({ where: { id: futureBooking.id } }),
+        prisma.billingRecord.findUnique({ where: { id: billing.id } }),
+        prisma.sessionConsumption.count({
+          where: { clientProfileId: seeded.clientProfile.id },
+        }),
+        prisma.waitlistEntry.count({
+          where: { clientProfileId: seeded.clientProfile.id },
+        }),
+      ]);
+
+    expect(pkgAfter?.revokedAt).not.toBeNull();
+    // Keep the trace: the row survives with its counter frozen.
+    expect(pkgAfter?.sessionsRemaining).toBe(6);
+    // Past attendance untouched; future booking canceled without forfeit.
+    expect(pastAfter?.canceledAt).toBeNull();
+    expect(futureAfter?.canceledAt).not.toBeNull();
+    expect(consumptions).toBe(0);
+    // Billing row kept, just voided.
+    expect(billingAfter?.status).toBe("VOIDED");
+    expect(waitlistAfter).toBe(0);
+  });
+
+  it("a revoked package no longer grants booking rights", async () => {
+    const seeded = await seed();
+    const { pkg } = await createPackageWithPendingBilling(seeded);
+    asAdmin(seeded);
+    await POST_REVOKE(revokeRequest(pkg.id), { id: pkg.id });
+
+    const session = await createSession(seeded, new Date(nowMs() + DAY));
+    asClient(seeded);
+    const bookRes = await POST_BOOKINGS(
+      new Request("http://test.local/api/bookings", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ sessionId: session.id, action: "BOOK" }),
+      }),
+    );
+    expect(bookRes.status).toBe(409);
+    const bookBody = await bookRes.json();
+    expect(bookBody.error).toBe("no_package_for_class");
+  });
+
+  it("keeps a waitlist seat that another live package still backs", async () => {
+    const seeded = await seed();
+    const { pkg } = await createPackageWithPendingBilling(seeded);
+    // Second, independent live package for the same class type.
+    await prisma.clientPackage.create({
+      data: {
+        clientProfileId: seeded.clientProfile.id,
+        packageTypeId: seeded.packageType.id,
+        classTypeId: seeded.classType.id,
+        lateCancelHours: 12,
+        startsAt: new Date(nowMs() - DAY),
+        expiresAt: new Date(nowMs() + 60 * DAY),
+        sessionsRemaining: 4,
+      },
+    });
+    const waitlistSession = await createSession(seeded, new Date(nowMs() + 2 * DAY));
+    await prisma.waitlistEntry.create({
+      data: {
+        sessionId: waitlistSession.id,
+        clientProfileId: seeded.clientProfile.id,
+        position: 1,
+      },
+    });
+
+    asAdmin(seeded);
+    const res = await POST_REVOKE(revokeRequest(pkg.id), { id: pkg.id });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.removedWaitlistEntries).toBe(0);
+    expect(
+      await prisma.waitlistEntry.count({
+        where: { clientProfileId: seeded.clientProfile.id },
+      }),
+    ).toBe(1);
+  });
+
+  it("refuses a second revoke (409) and unknown ids (404)", async () => {
+    const seeded = await seed();
+    const { pkg } = await createPackageWithPendingBilling(seeded);
+    asAdmin(seeded);
+
+    expect((await POST_REVOKE(revokeRequest(pkg.id), { id: pkg.id })).status).toBe(200);
+    expect((await POST_REVOKE(revokeRequest(pkg.id), { id: pkg.id })).status).toBe(409);
+
+    const missing = "00000000-0000-0000-0000-000000000000";
+    expect((await POST_REVOKE(revokeRequest(missing), { id: missing })).status).toBe(404);
+  });
+
+  it("per-client admin list marks the package revoked with its VOIDED billing record", async () => {
+    const seeded = await seed();
+    const { pkg } = await createPackageWithPendingBilling(seeded);
+    asAdmin(seeded);
+    await POST_REVOKE(revokeRequest(pkg.id), { id: pkg.id });
+
+    const res = await GET_CLIENT_PACKAGES(
+      new Request(
+        `http://test.local/api/packages/client-packages?clientProfileId=${seeded.clientProfile.id}`,
+      ),
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    const row = body.packages.find((p: { id: string }) => p.id === pkg.id);
+    expect(row).toBeTruthy();
+    expect(typeof row.revokedAt).toBe("string");
+    expect(row.billingRecord?.status).toBe("VOIDED");
+  });
+});

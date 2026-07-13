@@ -52,17 +52,17 @@ export type BillingForMatch = {
  * matched record are simply absent from the map (caller treats those as
  * comp / gift).
  */
-export function matchBillingToPackages(
+export function matchBillingToPackages<B extends BillingForMatch>(
   packages: PackageForMatch[],
-  billingRecords: BillingForMatch[],
-): Map<string, BillingForMatch> {
+  billingRecords: B[],
+): Map<string, B> {
   const packagesByType = new Map<string, PackageForMatch[]>();
   for (const p of packages) {
     const list = packagesByType.get(p.packageTypeId) ?? [];
     list.push(p);
     packagesByType.set(p.packageTypeId, list);
   }
-  const billingByType = new Map<string, BillingForMatch[]>();
+  const billingByType = new Map<string, B[]>();
   for (const b of billingRecords) {
     if (!b.packageTypeId) continue;
     const list = billingByType.get(b.packageTypeId) ?? [];
@@ -70,7 +70,7 @@ export function matchBillingToPackages(
     billingByType.set(b.packageTypeId, list);
   }
 
-  const linkMap = new Map<string, BillingForMatch>();
+  const linkMap = new Map<string, B>();
   for (const [typeId, pkgs] of packagesByType) {
     const sortedPkgs = [...pkgs].sort(
       (a, b) => a.startsAt.getTime() - b.startsAt.getTime(),
@@ -97,15 +97,15 @@ export function matchBillingToPackages(
  *
  * Drop-in replacement for `matchBillingToPackages` — same return shape.
  */
-export function linkPackagesToBilling(
+export function linkPackagesToBilling<B extends BillingForMatch>(
   packages: PackageForMatch[],
-  billingRecords: BillingForMatch[],
-): Map<string, BillingForMatch> {
-  const linkMap = new Map<string, BillingForMatch>();
+  billingRecords: B[],
+): Map<string, B> {
+  const linkMap = new Map<string, B>();
   const claimedBillingIds = new Set<string>();
 
   // FK pass — index by clientPackageId.
-  const billingByPackageId = new Map<string, BillingForMatch>();
+  const billingByPackageId = new Map<string, B>();
   for (const b of billingRecords) {
     if (b.clientPackageId) billingByPackageId.set(b.clientPackageId, b);
   }

@@ -66,12 +66,14 @@ export async function GET(request: Request) {
             startsAt: Date;
             expiresAt: Date;
             sessionsRemaining: number;
+            revokedAt: Date | null;
           }) => ({
             id: item.id,
             classTypeId: item.classTypeId,
             startsAt: item.startsAt,
             expiresAt: item.expiresAt,
             sessionsRemaining: item.sessionsRemaining,
+            revokedAt: item.revokedAt,
           })),
           pauses,
           currentInstant,
@@ -194,15 +196,18 @@ export async function GET(request: Request) {
         },
       },
     }),
+    // All statuses on purpose: PENDING must surface as "Nije plaćeno" and
+    // VOIDED as "Stornirano" on the admin package rows — filtering to
+    // CONFIRMED here would render a pay-later package as a comp/gift.
     prisma.billingRecord.findMany({
       where: {
         clientUserId: clientProfile.userId,
-        status: "CONFIRMED",
       },
       select: {
         id: true,
         amount: true,
         method: true,
+        status: true,
         packageTypeId: true,
         clientPackageId: true,
         createdAt: true,
@@ -221,7 +226,12 @@ export async function GET(request: Request) {
     return {
       ...p,
       billingRecord: match
-        ? { amount: match.amount, method: match.method }
+        ? {
+            id: match.id,
+            amount: match.amount,
+            method: match.method,
+            status: match.status,
+          }
         : null,
     };
   });

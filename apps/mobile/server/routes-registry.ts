@@ -19,6 +19,7 @@ import * as route_auth_reset_password from "@/server/routes/auth/reset-password"
 import * as route_auth_sign_in from "@/server/routes/auth/sign-in";
 import * as route_auth_sign_out from "@/server/routes/auth/sign-out";
 import * as route_billing from "@/server/routes/billing";
+import * as route_billing_id from "@/server/routes/billing/[id]";
 import * as route_bookings from "@/server/routes/bookings";
 import * as route_campaigns from "@/server/routes/campaigns";
 import * as route_campaigns_id from "@/server/routes/campaigns/[id]";
@@ -51,6 +52,7 @@ import * as route_notifications_id from "@/server/routes/notifications/[id]";
 import * as route_notifications_preferences from "@/server/routes/notifications/preferences";
 import * as route_notifications_push_token from "@/server/routes/notifications/push-token";
 import * as route_packages_client_packages from "@/server/routes/packages/client-packages";
+import * as route_packages_client_packages_id_revoke from "@/server/routes/packages/client-packages/[id]/revoke";
 import * as route_packages_pause from "@/server/routes/packages/pause";
 import * as route_packages_types from "@/server/routes/packages/types";
 import * as route_packages_types_id from "@/server/routes/packages/types/[id]";
@@ -98,6 +100,7 @@ export const routesRegistry: Record<string, RouteModule> = {
   "auth/sign-in": route_auth_sign_in,
   "auth/sign-out": route_auth_sign_out,
   billing: route_billing,
+  "billing/[id]": route_billing_id,
   bookings: route_bookings,
   campaigns: route_campaigns,
   "campaigns/[id]": route_campaigns_id,
@@ -130,6 +133,7 @@ export const routesRegistry: Record<string, RouteModule> = {
   "notifications/preferences": route_notifications_preferences,
   "notifications/push-token": route_notifications_push_token,
   "packages/client-packages": route_packages_client_packages,
+  "packages/client-packages/[id]/revoke": route_packages_client_packages_id_revoke,
   "packages/pause": route_packages_pause,
   "packages/types": route_packages_types,
   "packages/types/[id]": route_packages_types_id,

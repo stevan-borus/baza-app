@@ -40,6 +40,7 @@ export async function PATCH(request: Request, { id }: RouteParams) {
       sessionCount: true,
       validityDays: true,
       lateCancelHours: true,
+      price: true,
       classTypeId: true,
       classType: { select: { id: true, name: true } },
       isBirthdayGift: true,

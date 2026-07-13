@@ -165,10 +165,14 @@ export async function resolveCampaignAudience(
     const cutoff = new Date(current.getTime() - spec.lapsedDays * DAY_MS);
     const users = await prisma.user.findMany({ where, select: { id: true } });
     if (users.length === 0) return [];
+    // PENDING counts as engagement (a pay-later assign means the client just
+    // re-committed), but VOIDED is a revoked never-paid package — that client
+    // IS lapsed and should stay in the audience.
     const recentlyPaid = await prisma.billingRecord.findMany({
       where: {
         clientUserId: { in: users.map((u) => u.id) },
         createdAt: { gte: cutoff },
+        status: { not: "VOIDED" },
       },
       select: { clientUserId: true },
       distinct: ["clientUserId"],

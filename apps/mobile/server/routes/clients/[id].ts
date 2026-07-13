@@ -40,7 +40,12 @@ export async function GET(request: Request, { id }: RouteParams) {
           isActive: true,
         },
       },
-      packages: { select: { sessionsRemaining: true, expiresAt: true } },
+      // Same rule as the list endpoint: revoked packages don't drive the
+      // derived packageStatus in any direction.
+      packages: {
+        where: { revokedAt: null },
+        select: { sessionsRemaining: true, expiresAt: true },
+      },
       packagePauses: {
         where: {
           startsAt: { lte: currentInstant },

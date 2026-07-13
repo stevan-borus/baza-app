@@ -95,6 +95,10 @@ export async function GET(request: Request) {
         },
       },
       packages: {
+        // Revoked packages grant nothing — they must not paint the client
+        // chip "active" (or even "expired": the studio pulled the package,
+        // the client didn't run it down).
+        where: { revokedAt: null },
         select: {
           sessionsRemaining: true,
           expiresAt: true,

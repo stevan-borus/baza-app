@@ -33,7 +33,7 @@ export function isInPauseWindow(
 
 export type EligiblePackage = Pick<
   ClientPackage,
-  "id" | "classTypeId" | "startsAt" | "expiresAt" | "sessionsRemaining"
+  "id" | "classTypeId" | "startsAt" | "expiresAt" | "sessionsRemaining" | "revokedAt"
 > & {
   effectiveExpiresAt: Date;
 };
@@ -41,12 +41,15 @@ export type EligiblePackage = Pick<
 /**
  * Returns the newest pack the client could spend on a session at `at` whose
  * class is `classTypeId`. Eligible = matching class, started, has sessions,
- * effective expiry (pause-extended) in the future, and `at` not in a pause.
+ * effective expiry (pause-extended) in the future, `at` not in a pause, and
+ * not revoked. `revokedAt` is a REQUIRED input field on purpose — every call
+ * site must select it, so a new query can't silently treat a revoked package
+ * as bookable.
  */
 export function findEligibleClientPackage(
   packages: Pick<
     ClientPackage,
-    "id" | "classTypeId" | "startsAt" | "expiresAt" | "sessionsRemaining"
+    "id" | "classTypeId" | "startsAt" | "expiresAt" | "sessionsRemaining" | "revokedAt"
   >[],
   pauses: Pick<PackagePause, "startsAt" | "endsAt">[],
   at: Date,
@@ -56,6 +59,7 @@ export function findEligibleClientPackage(
     .filter((pkg) => pkg.classTypeId === classTypeId)
     .sort((a, b) => b.startsAt.getTime() - a.startsAt.getTime());
   for (const pkg of sortedPackages) {
+    if (pkg.revokedAt) continue;
     if (pkg.sessionsRemaining <= 0) continue;
     if (pkg.startsAt > at) continue;
     const effectiveExpiresAt = getEffectiveExpiresAt(pkg, pauses, at);

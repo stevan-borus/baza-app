@@ -12,6 +12,7 @@ function makePackage(overrides: Partial<{
   startsAt: Date;
   expiresAt: Date;
   sessionsRemaining: number;
+  revokedAt: Date | null;
 }>) {
   return {
     id: overrides.id ?? "pkg-1",
@@ -19,6 +20,7 @@ function makePackage(overrides: Partial<{
     startsAt: overrides.startsAt ?? new Date("2026-05-01T00:00:00Z"),
     expiresAt: overrides.expiresAt ?? new Date("2026-06-01T00:00:00Z"),
     sessionsRemaining: overrides.sessionsRemaining ?? 5,
+    revokedAt: overrides.revokedAt ?? null,
   };
 }
 
@@ -119,6 +121,38 @@ describe("findEligibleClientPackage class-scoped behaviour", () => {
       REFORMER_CLASS_TYPE_ID,
     );
     expect(result?.id).toBe("newer");
+  });
+
+  it("ignores revoked packs even when otherwise valid", () => {
+    const pkg = makePackage({ revokedAt: new Date("2026-05-14T00:00:00Z") });
+    const result = findEligibleClientPackage(
+      [pkg],
+      [],
+      baseAt,
+      REFORMER_CLASS_TYPE_ID,
+    );
+    expect(result).toBeNull();
+  });
+
+  it("falls back to an older non-revoked pack when the newest is revoked", () => {
+    const older = makePackage({
+      id: "older",
+      startsAt: new Date("2026-04-01T00:00:00Z"),
+      expiresAt: new Date("2026-06-01T00:00:00Z"),
+    });
+    const revokedNewer = makePackage({
+      id: "revoked-newer",
+      startsAt: new Date("2026-05-10T00:00:00Z"),
+      expiresAt: new Date("2026-06-10T00:00:00Z"),
+      revokedAt: new Date("2026-05-14T00:00:00Z"),
+    });
+    const result = findEligibleClientPackage(
+      [older, revokedNewer],
+      [],
+      baseAt,
+      REFORMER_CLASS_TYPE_ID,
+    );
+    expect(result?.id).toBe("older");
   });
 
   it("picks a same-class pack when other-class packs are mixed in", () => {

@@ -53,8 +53,12 @@ export async function GET(request: Request) {
   if (!profile) return fail("Client profile not found", 404);
 
   const [packages, billingRecords] = await Promise.all([
+    // Revoked packages are excluded from the client-facing timeline: the
+    // package was pulled back by the studio, so listing it would only invite
+    // "why does my app still show this pack?" questions. The admin surfaces
+    // keep the full trace.
     prisma.clientPackage.findMany({
-      where: { clientProfileId: profile.id },
+      where: { clientProfileId: profile.id, revokedAt: null },
       orderBy: { createdAt: "desc" },
       select: {
         id: true,

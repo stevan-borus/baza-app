@@ -73,6 +73,7 @@ export async function POST(request: Request) {
           startsAt: true,
           expiresAt: true,
           sessionsRemaining: true,
+          revokedAt: true,
         },
       }),
       prisma.packagePause.findMany({
