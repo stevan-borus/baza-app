@@ -23,6 +23,7 @@ import { useTranslation } from "react-i18next";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import { now } from "@/lib/now";
+import { isFullyBookedActivePackage } from "@/lib/package-fully-booked";
 import { authQueries } from "@/lib/queries/auth-queries-factory";
 import {
   packagesQueries,
@@ -431,6 +432,11 @@ function PackageCard({
   const expires = dayjs(pkg.expiresAt);
   const daysLeft = expires.diff(dayjs(), "day");
   const expiringSoon = daysLeft <= 14;
+  // Active-but-fully-reserved ("0 / 12"): a real owner read this as broken.
+  // Show a one-line explanation of why it's 0 and where renewal happens. This
+  // is NOT the lapsed case (that routes to RenewalCard), so the normal card
+  // and its count logic stay intact.
+  const fullyBooked = isFullyBookedActivePackage(left, pkg.sessionsRemaining);
 
   return (
     <View style={{ paddingHorizontal: 16 }}>
@@ -542,6 +548,21 @@ function PackageCard({
                 date: expires.locale(lang).format("D MMMM"),
               })}
         </Text>
+
+        {fullyBooked ? (
+          <Text
+            testID="package-fully-booked-hint"
+            style={{
+              fontFamily: "AlbertSans-Regular",
+              fontSize: 12,
+              color: "rgba(255,255,255,0.65)",
+              letterSpacing: 0.2,
+              lineHeight: 18,
+            }}
+          >
+            {t("client.home.fullyBookedHint")}
+          </Text>
+        ) : null}
       </Pressable>
     </View>
   );
