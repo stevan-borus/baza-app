@@ -9,7 +9,10 @@
  *   - leave PAST bookings/attendance untouched ("attended N, never paid"),
  *   - release the client's waitlist seats for future sessions of the class
  *     type UNLESS another live package still backs them,
- *   - flip the linked BillingRecord to VOIDED but keep the row.
+ *   - flip the linked BillingRecord to VOIDED (only while PENDING — money
+ *     already CONFIRMED stays in the books) but keep the row.
+ * After the transaction, freed seats promote the next waitlisted client —
+ * same post-commit promotion the normal cancel path runs.
  * Afterwards the package grants nothing: booking against it must 409.
  */
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
@@ -138,7 +141,7 @@ describe("POST /api/packages/client-packages/[id]/revoke", () => {
     await prisma.$disconnect();
   });
 
-  it("cancels only FUTURE bookings, voids billing, keeps past attendance and the session counter", async () => {
+  it("cancels only FUTURE bookings, voids PENDING billing, keeps past attendance and the session counter", async () => {
     const seeded = await seed();
     const { pkg, billing } = await createPackageWithPendingBilling(seeded);
 
@@ -202,6 +205,113 @@ describe("POST /api/packages/client-packages/[id]/revoke", () => {
     // Billing row kept, just voided.
     expect(billingAfter?.status).toBe("VOIDED");
     expect(waitlistAfter).toBe(0);
+  });
+
+  it("keeps a CONFIRMED billing record CONFIRMED — revoke must not rewrite received money", async () => {
+    const seeded = await seed();
+    const { pkg, billing } = await createPackageWithPendingBilling(seeded);
+    await prisma.billingRecord.update({
+      where: { id: billing.id },
+      data: { status: "CONFIRMED" },
+    });
+    const futureSession = await createSession(seeded, new Date(nowMs() + 2 * DAY));
+    const futureBooking = await prisma.booking.create({
+      data: {
+        sessionId: futureSession.id,
+        clientProfileId: seeded.clientProfile.id,
+        clientPackageId: pkg.id,
+      },
+    });
+
+    asAdmin(seeded);
+    const res = await POST_REVOKE(revokeRequest(pkg.id), { id: pkg.id });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.billingRecordVoided).toBe(false);
+    expect(body.canceledFutureBookings).toBe(1);
+
+    const [pkgAfter, bookingAfter, billingAfter] = await Promise.all([
+      prisma.clientPackage.findUnique({ where: { id: pkg.id } }),
+      prisma.booking.findUnique({ where: { id: futureBooking.id } }),
+      prisma.billingRecord.findUnique({ where: { id: billing.id } }),
+    ]);
+    expect(pkgAfter?.revokedAt).not.toBeNull();
+    expect(bookingAfter?.canceledAt).not.toBeNull();
+    // The money was actually received — it stays in the books.
+    expect(billingAfter?.status).toBe("CONFIRMED");
+  });
+
+  it("promotes the next waitlisted client on a session freed by the revoke", async () => {
+    const seeded = await seed();
+    const { pkg } = await createPackageWithPendingBilling(seeded);
+
+    // A second client, waitlisted on the session the revoked client will
+    // vacate, holding their own live package to back the promotion.
+    const otherUser = await prisma.user.create({
+      data: { email: "other@test.local", firstName: "Other", lastName: "Client", role: "CLIENT" },
+    });
+    const otherProfile = await prisma.clientProfile.create({
+      data: { userId: otherUser.id, dateOfBirth: new Date("1992-01-01") },
+    });
+    await prisma.clientPackage.create({
+      data: {
+        clientProfileId: otherProfile.id,
+        packageTypeId: seeded.packageType.id,
+        classTypeId: seeded.classType.id,
+        lateCancelHours: 12,
+        startsAt: new Date(nowMs() - DAY),
+        expiresAt: new Date(nowMs() + 60 * DAY),
+        sessionsRemaining: 5,
+      },
+    });
+
+    // Full session: revoked client holds the only seat, other client waits.
+    const fullSession = await createSession(seeded, new Date(nowMs() + 2 * DAY), 1);
+    await prisma.booking.create({
+      data: {
+        sessionId: fullSession.id,
+        clientProfileId: seeded.clientProfile.id,
+        clientPackageId: pkg.id,
+      },
+    });
+    await prisma.waitlistEntry.create({
+      data: {
+        sessionId: fullSession.id,
+        clientProfileId: otherProfile.id,
+        position: 1,
+      },
+    });
+
+    asAdmin(seeded);
+    const res = await POST_REVOKE(revokeRequest(pkg.id), { id: pkg.id });
+    expect(res.status).toBe(200);
+
+    // The freed seat goes to the waitlisted client, not to nobody.
+    const promotedBooking = await prisma.booking.findUnique({
+      where: {
+        sessionId_clientProfileId: {
+          sessionId: fullSession.id,
+          clientProfileId: otherProfile.id,
+        },
+      },
+    });
+    expect(promotedBooking).not.toBeNull();
+    expect(promotedBooking?.canceledAt).toBeNull();
+    expect(
+      await prisma.waitlistEntry.count({ where: { sessionId: fullSession.id } }),
+    ).toBe(0);
+  });
+
+  it("refuses a CLIENT-role caller (403)", async () => {
+    const seeded = await seed();
+    const { pkg } = await createPackageWithPendingBilling(seeded);
+    asClient(seeded);
+
+    const res = await POST_REVOKE(revokeRequest(pkg.id), { id: pkg.id });
+    expect(res.status).toBe(403);
+
+    const after = await prisma.clientPackage.findUnique({ where: { id: pkg.id } });
+    expect(after?.revokedAt).toBeNull();
   });
 
   it("a revoked package no longer grants booking rights", async () => {

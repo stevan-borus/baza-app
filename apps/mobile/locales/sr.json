@@ -483,7 +483,7 @@
     "deletePackageMessage": "Tip paketa će biti uklonjen. Postojeći klijentski paketi neće biti dirnuti.",
     "deletePackageConfirm": "Obriši tip paketa",
     "revokePackageTitle": "Opozvati paket?",
-    "revokePackageMessage": "Paket se trajno deaktivira: budući termini ovog paketa se otkazuju bez penala, mesta na listi čekanja se oslobađaju, a povezana uplata se stornira. Održani treninzi i istorija ostaju zabeleženi.",
+    "revokePackageMessage": "Paket se trajno deaktivira: budući termini ovog paketa se otkazuju bez penala, a mesta na listi čekanja se oslobađaju. Neplaćena uplata se stornira; već primljena uplata ostaje u evidenciji. Održani treninzi i istorija ostaju zabeleženi.",
     "revokePackageConfirm": "Opozovi paket",
     "deleteSeriesTitle": "Obrisati seriju?",
     "deleteSeriesMessage": "Svi budući termini bez rezervacija u ovoj seriji biće uklonjeni.",

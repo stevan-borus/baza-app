@@ -13,14 +13,22 @@
 //      package of the same class type would back them at their session's
 //      start — same class-type-scoped model booking-hold-count uses.
 //   4. The funding BillingRecord (clientPackageId FK) flips to VOIDED but
-//      keeps its row: Naplata still shows the amount, struck through.
+//      keeps its row — ONLY while it is still PENDING. A CONFIRMED record is
+//      money actually received: revoking must not rewrite confirmed revenue
+//      history (a refund concept can come later).
 //
 // sessionsRemaining is deliberately NOT refunded for the canceled future
 // bookings — the counter freezes as the trace of how much was actually used.
+//
+// After the transaction commits, each session freed by a canceled booking
+// promotes its next waitlisted client — the same post-commit promotion the
+// normal cancel path runs. The revoked client's own waitlist entries were
+// already deleted in-tx, so they can never be promoted into a freed seat.
 import { revokeClientPackageResponseSchema } from "@baza/types/packages";
 import { UserRole } from "@/generated/prisma";
 import { now } from "@/lib/now";
 import { requireRole } from "@/lib/server/auth-guards";
+import { promoteNextWaitlistEntry } from "@/lib/server/booking-cancellation";
 import { fail, respond } from "@/lib/server/http";
 import { findEligibleClientPackage } from "@/lib/server/package-eligibility";
 import { prisma } from "@/lib/server/prisma";
@@ -57,12 +65,18 @@ export async function POST(request: Request, { id }: RouteParams) {
       return { alreadyRevoked: true as const };
     }
 
-    const canceledFutureBookings = await tx.booking.updateMany({
+    // Fetch before canceling: the freed sessions feed post-commit waitlist
+    // promotion (one booking per session per client, so ids are unique).
+    const futureBookings = await tx.booking.findMany({
       where: {
         clientPackageId: pkg.id,
         canceledAt: null,
         session: { startsAt: { gt: revokedAt } },
       },
+      select: { id: true, sessionId: true },
+    });
+    const canceledFutureBookings = await tx.booking.updateMany({
+      where: { id: { in: futureBookings.map((b) => b.id) } },
       data: { canceledAt: revokedAt },
     });
 
@@ -126,14 +140,17 @@ export async function POST(request: Request, { id }: RouteParams) {
       }
     }
 
+    // Void only what was never paid. A CONFIRMED record is received money —
+    // it stays CONFIRMED so revenue history survives the revoke.
     const voided = await tx.billingRecord.updateMany({
-      where: { clientPackageId: pkg.id },
+      where: { clientPackageId: pkg.id, status: "PENDING" },
       data: { status: "VOIDED" },
     });
 
     return {
       alreadyRevoked: false as const,
       canceledFutureBookings: canceledFutureBookings.count,
+      canceledSessionIds: futureBookings.map((b) => b.sessionId),
       removedWaitlistEntries,
       billingRecordVoided: voided.count > 0,
     };
@@ -141,6 +158,12 @@ export async function POST(request: Request, { id }: RouteParams) {
 
   if (result.alreadyRevoked) {
     return fail("Package is already revoked", 409);
+  }
+
+  // Waitlist promotion per freed session — post-commit, exactly like the
+  // normal cancel path, so a promotion failure can't roll back the revoke.
+  for (const sessionId of result.canceledSessionIds) {
+    await prisma.$transaction((tx) => promoteNextWaitlistEntry(tx, sessionId));
   }
 
   return respond(revokeClientPackageResponseSchema, {
