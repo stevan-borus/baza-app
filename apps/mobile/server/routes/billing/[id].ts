@@ -26,21 +26,28 @@ export async function PATCH(request: Request, { id }: RouteParams) {
   const parsed = updateBillingRecordInputSchema.safeParse(body);
   if (!parsed.success) return fail("Invalid payload", 400, parsed.error);
 
-  const existing = await prisma.billingRecord.findUnique({
-    where: { id },
-    select: { id: true, status: true },
-  });
-  if (!existing) return fail("Billing record not found", 404);
-  if (existing.status !== "PENDING") {
-    return fail("Only pending payments can be confirmed", 409);
-  }
-
-  const payment = await prisma.billingRecord.update({
-    where: { id },
+  // Atomic claim (same pattern as the revoke route): the status guard lives
+  // inside the UPDATE's WHERE so a concurrent revoke can't lose its VOIDED
+  // stamp to this confirm — a check-then-update window would let a voided
+  // record re-enter revenue.
+  const claimed = await prisma.billingRecord.updateMany({
+    where: { id, status: "PENDING" },
     data: {
       status: "CONFIRMED",
       ...(parsed.data.method ? { method: parsed.data.method } : {}),
     },
+  });
+  if (claimed.count === 0) {
+    const existing = await prisma.billingRecord.findUnique({
+      where: { id },
+      select: { id: true },
+    });
+    if (!existing) return fail("Billing record not found", 404);
+    return fail("Only pending payments can be confirmed", 409);
+  }
+
+  const payment = await prisma.billingRecord.findUniqueOrThrow({
+    where: { id },
   });
 
   return respond(updateBillingRecordResponseSchema, {

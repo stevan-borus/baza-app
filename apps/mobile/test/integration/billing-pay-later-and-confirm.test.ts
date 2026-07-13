@@ -246,6 +246,57 @@ describe("pay-later billing (PENDING) + confirm", () => {
     expect(summary.totalPayments).toBe(1);
   });
 
+  it("PATCH refuses a VOIDED record (409) — a revoked payment must never re-enter revenue", async () => {
+    const seeded = await seed();
+    asAdmin(seeded);
+
+    // VOIDED rows are only ever written by the revoke transaction — seed
+    // directly, as the summary test does.
+    const voided = await prisma.billingRecord.create({
+      data: {
+        clientUserId: seeded.clientUser.id,
+        amount: 9000,
+        method: "CASH",
+        status: "VOIDED",
+      },
+    });
+
+    const res = await PATCH_BILLING(
+      patchRequest(voided.id, { status: "CONFIRMED" }),
+      { id: voided.id },
+    );
+    expect(res.status).toBe(409);
+
+    const after = await prisma.billingRecord.findUnique({ where: { id: voided.id } });
+    expect(after?.status).toBe("VOIDED");
+  });
+
+  it("PATCH refuses a CLIENT-role caller (403)", async () => {
+    const seeded = await seed();
+    asAdmin(seeded);
+    const createRes = await POST_BILLING(
+      billingRequest({
+        clientUserId: seeded.clientUser.id,
+        amount: 5000,
+        method: "CASH",
+        status: "PENDING",
+      }),
+    );
+    const created = await createRes.json();
+
+    asClient(seeded);
+    const res = await PATCH_BILLING(
+      patchRequest(created.payment.id, { status: "CONFIRMED" }),
+      { id: created.payment.id },
+    );
+    expect(res.status).toBe(403);
+
+    const after = await prisma.billingRecord.findUnique({
+      where: { id: created.payment.id },
+    });
+    expect(after?.status).toBe("PENDING");
+  });
+
   it("PATCH refuses non-PENDING records (409) and unknown ids (404)", async () => {
     const seeded = await seed();
     asAdmin(seeded);
