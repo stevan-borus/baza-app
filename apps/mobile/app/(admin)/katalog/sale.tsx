@@ -180,7 +180,7 @@ export default function AdminSettingsRooms() {
             disabled={crud.createMutation.isPending || !crud.form.name}
             onPress={() =>
               crud.submitCreate({
-                name: crud.form.name,
+                name: crud.form.name.trim(),
                 capacity: parseInt(crud.form.capacity, 10) || 10,
               })
             }
@@ -222,7 +222,7 @@ export default function AdminSettingsRooms() {
               if (!crud.editingId) return;
               crud.submitUpdate({
                 id: crud.editingId,
-                name: crud.editForm.name,
+                name: crud.editForm.name.trim(),
                 capacity: parseInt(crud.editForm.capacity, 10) || 10,
               });
             }}

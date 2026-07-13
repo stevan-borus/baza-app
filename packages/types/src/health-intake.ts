@@ -69,7 +69,7 @@ export const healthIntakeInputSchema = z
     goalsOther: z.string().min(1).max(500).optional(),
     discomfortDuring: z.array(discomfortMovementCodeSchema).max(6),
     additionalNotes: z.string().min(1).max(2000).optional(),
-    guardianName: z.string().min(1).max(120).optional(),
+    guardianName: z.string().trim().min(1).max(120).optional(),
     guardianRelation: z.enum(["roditelj", "staratelj"]).optional(),
   })
   .refine(

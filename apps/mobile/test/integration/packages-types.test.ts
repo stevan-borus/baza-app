@@ -79,6 +79,33 @@ describe("packages/types CRUD", () => {
     expect(persisted?.name).toBe("Reformer 12-pack");
   });
 
+  it("POST trims a padded name before persisting (the 'Energy ' incident)", async () => {
+    // A PackageType named "Energy " (trailing space) was saved through the
+    // admin catalog form on staging and later broke a name-based lookup. The
+    // schema now trims at parse, so the route can never persist a padded name
+    // regardless of what the client sends.
+    const { admin, reformer } = await seedAdminAndClassType();
+    asAdmin(admin);
+
+    const response = await POST(
+      jsonRequest({
+        name: " Energy ",
+        sessionCount: 10,
+        validityDays: 30,
+        lateCancelHours: 12,
+        classTypeId: reformer.id,
+      }),
+    );
+    expect(response.status).toBe(201);
+    const body = (await response.json()) as { packageType: { id: string; name: string } };
+    expect(body.packageType.name).toBe("Energy");
+
+    const persisted = await prisma.packageType.findUnique({
+      where: { id: body.packageType.id },
+    });
+    expect(persisted?.name).toBe("Energy");
+  });
+
   it("POST persists isBirthdayGift=true and returns it in the response", async () => {
     const { admin, reformer } = await seedAdminAndClassType();
     asAdmin(admin);

@@ -416,7 +416,7 @@ export default function AdminPackages() {
               }
               onPress={() =>
                 crud.submitCreate({
-                  name: crud.form.name,
+                  name: crud.form.name.trim(),
                   sessionCount: parseInt(crud.form.sessionCount, 10),
                   validityDays: parseInt(crud.form.validityDays, 10),
                   lateCancelHours: parseInt(crud.form.lateCancelHours, 10) || 8,
@@ -543,7 +543,7 @@ export default function AdminPackages() {
                 if (!crud.editingId) return;
                 crud.submitUpdate({
                   id: crud.editingId,
-                  name: crud.editForm.name,
+                  name: crud.editForm.name.trim(),
                   sessionCount: parseInt(crud.editForm.sessionCount, 10),
                   validityDays: parseInt(crud.editForm.validityDays, 10),
                   lateCancelHours: parseInt(crud.editForm.lateCancelHours, 10) || 8,

@@ -9,7 +9,11 @@ export const packageTypeInputSchema = PackageTypeInputSchema.pick({
   validityDays: true,
   lateCancelHours: true,
 }).extend({
-  name: z.string().min(2).max(100),
+  // .trim() before the length check: whitespace is never meaningful in a
+  // catalog name, and a padded name (the staging "Energy " incident) later
+  // broke a name-based lookup. Trimming at parse means no client can persist
+  // a padded name regardless of the form.
+  name: z.string().trim().min(2).max(100),
   sessionCount: z.number().int().positive(),
   validityDays: z.number().int().positive(),
   lateCancelHours: z.number().int().nonnegative().default(12),
@@ -28,7 +32,7 @@ export const packageTypeInputSchema = PackageTypeInputSchema.pick({
 export type PackageTypeInput = z.infer<typeof packageTypeInputSchema>;
 
 export const updatePackageTypeInputSchema = z.object({
-  name: z.string().min(2).max(100).optional(),
+  name: z.string().trim().min(2).max(100).optional(),
   sessionCount: z.number().int().positive().optional(),
   validityDays: z.number().int().positive().optional(),
   lateCancelHours: z.number().int().nonnegative().optional(),
@@ -50,7 +54,7 @@ export const classTypeInputSchema = ClassTypeInputSchema.pick({
   maxClients: true,
   durationMins: true,
 }).extend({
-  name: z.string().min(2).max(100),
+  name: z.string().trim().min(2).max(100),
   maxClients: z.number().int().positive(),
   durationMins: z.number().int().positive(),
 });
@@ -60,7 +64,7 @@ export const studioRoomInputSchema = StudioRoomInputSchema.pick({
   name: true,
   capacity: true,
 }).extend({
-  name: z.string().min(2).max(100),
+  name: z.string().trim().min(2).max(100),
   capacity: z.number().int().positive(),
 });
 export type StudioRoomInput = z.infer<typeof studioRoomInputSchema>;
