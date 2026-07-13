@@ -258,13 +258,13 @@
       "validUntil": "Valid until",
       "error": "Unable to load package.",
       "noActive": "No active package.",
-      "noActiveContact": "To buy or renew a package, contact us.",
+      "noActiveContact": "To buy or renew a package, get in touch with us.",
       "allPackages": "All packages",
       "packageName": "Package",
       "sessionsUntil": "Sessions: {{count}} | Until: {{date}}"
     },
     "renewal": {
-      "message": "Your package has expired or is used up. To book a session, renew your package — contact us.",
+      "message": "Your package is used up or has expired. Get in touch to renew it and keep training.",
       "fullyHeldMessage": "You've used all the available sessions in your package. Cancel one of your booked sessions to be able to book a new one.",
       "lastSessionWarning": "This booking spends the last session in your package. Renew it so you can book your next one.",
       "homeTitle": "Renew your package",

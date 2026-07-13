@@ -258,13 +258,13 @@
       "validUntil": "Važi do",
       "error": "Nije moguće učitati paket.",
       "noActive": "Nema aktivnog paketa.",
-      "noActiveContact": "Za kupovinu ili obnovu paketa kontaktirajte nas.",
+      "noActiveContact": "Za kupovinu ili obnovu paketa javite nam se.",
       "allPackages": "Svi paketi",
       "packageName": "Paket",
       "sessionsUntil": "Termini: {{count}} | Do: {{date}}"
     },
     "renewal": {
-      "message": "Vaš paket je istekao ili je iskorišćen. Da biste zakazali trening, obnovite paket — kontaktirajte nas.",
+      "message": "Vaš paket je iskorišćen ili je istekao. Javite nam se da obnovite paket i nastavite sa treninzima.",
       "fullyHeldMessage": "Iskoristili ste sve dostupne termine iz paketa. Otkažite neki od zakazanih termina kako biste mogli da zakažete novi.",
       "lastSessionWarning": "Ovim treningom trošite poslednji termin iz paketa. Obnovite ga kako biste mogli da zakažete naredni trening.",
       "homeTitle": "Obnovite paket",
