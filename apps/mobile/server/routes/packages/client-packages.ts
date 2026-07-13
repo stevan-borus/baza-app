@@ -60,6 +60,11 @@ export async function GET(request: Request) {
     const currentInstant = now();
     const packagesWithHolds = await Promise.all(
       packages.map(async (pkg) => {
+        // NOTE: waitlist entries are counted per CLASS TYPE — they carry no
+        // package FK — so with two packages of the same class each package's
+        // heldCount includes the same waitlist entries. Mirrors the booking
+        // gate's math (intentional), but any future UI that SUMS bookable
+        // across packages would double-count those waitlist holds.
         const heldCount = await countHeldSessions(prisma, {
           clientProfileId: ownClientProfileId,
           classTypeId: pkg.classTypeId,

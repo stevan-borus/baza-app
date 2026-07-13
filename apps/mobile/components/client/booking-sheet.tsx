@@ -14,6 +14,7 @@ import { useTranslation } from "react-i18next";
 import { Icon, type IconName } from "@/components/ui/icon";
 import * as Haptics from "expo-haptics";
 import { AppSheet } from "@/components/ui/sheet";
+import { isInLateCancelWindow } from "@/lib/late-cancel";
 import { nowMs } from "@/lib/now";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -90,15 +91,21 @@ export function BookingSheet({
   const durationMin = session
     ? dayjs(session.endsAt).diff(dayjs(session.startsAt), "minute")
     : 0;
-  // Late-cancel predicate mirroring the server policy (cancellation-policy):
-  // a cancel inside the lateCancelHours window forfeits one package session.
-  // Drives BOTH the confirm-step warning and the post-cancel result copy, so
-  // an early cancel never sees the scary forfeit text.
+  // Late-cancel predicate mirroring BOTH halves of the server policy
+  // (cancellation-policy): a cancel forfeits one package session only inside
+  // the lateCancelHours window AND before the session starts — the server
+  // never forfeits post-start, and cancel stays reachable after start. Drives
+  // BOTH the confirm-step warning and the post-cancel result copy, so an
+  // early or post-start cancel never sees the scary forfeit text.
   const lateCancelHours = session?.lateCancelHours;
   const isLateCancel =
     !!session &&
     lateCancelHours != null &&
-    dayjs(session.startsAt).diff(dayjs(nowMs()), "hour", true) < lateCancelHours;
+    isInLateCancelWindow(
+      dayjs(session.startsAt).valueOf(),
+      nowMs(),
+      lateCancelHours,
+    );
 
   return (
     <AppSheet open={!!session} onOpenChange={(v) => !v && handleClose()}>
