@@ -95,6 +95,13 @@ export const clientPackageSchema = z.object({
   startsAt: z.string(),
   expiresAt: z.string(),
   sessionsRemaining: z.number(),
+  // CLIENT branch only: `heldCount` = future uncancelled bookings backed by
+  // this package + waitlist seats for its class type; `bookable` =
+  // max(0, sessionsRemaining - heldCount) — the number the client-facing UI
+  // shows as "left to book". Admin/trainer branches omit both on purpose:
+  // admin surfaces speak the raw-credit (sessionsRemaining) language.
+  heldCount: z.number().optional(),
+  bookable: z.number().optional(),
   packageType: embeddedPackageTypeSchema.optional(),
   client: embeddedClientSchema.optional(),
   // Per-client GET path attaches the matching CONFIRMED BillingRecord (or

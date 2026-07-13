@@ -6,7 +6,7 @@
  * don't manage renewals.
  */
 
-import { useDeferredValue, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { useRouter } from "expo-router";
@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/screen-container";
 import { PaginatedList } from "@/components/ui/paginated-list";
 import { clientsQueries } from "@/lib/queries/clients-queries-factory";
+import { useDebouncedValue } from "@/lib/use-debounced-value";
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -105,11 +106,10 @@ export default function TrainerClients() {
   const bottomPad = useTabBarBottomPadding(24);
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  // useDeferredValue gives a "good-enough" debounce without the timer
-  // overhead — React keeps the previous result visible until the next
-  // render after the keystroke settles. The server-side q-filter does the
-  // heavy lifting; this just avoids hammering the API on every keystroke.
-  const deferredQuery = useDeferredValue(searchQuery.trim());
+  // Debounced so a keystroke burst fires ONE request after the user pauses,
+  // not one per letter. The server-side q-filter does the heavy lifting;
+  // useDeferredValue only defers renders, so it still hit the API per keystroke.
+  const deferredQuery = useDebouncedValue(searchQuery.trim());
 
   const clientsQuery = useInfiniteQuery(
     clientsQueries.list({ q: deferredQuery || undefined }),

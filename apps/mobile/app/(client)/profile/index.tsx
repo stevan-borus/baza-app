@@ -56,7 +56,10 @@ function getInitials(email: string): string {
 function getPackageProgress(pkg: ClientPackage): number {
   const total = pkg.packageType?.sessionCount ?? 0;
   if (total <= 0) return 0;
-  return pkg.sessionsRemaining / total;
+  // Bar tracks what's still bookable (credits minus held bookings/waitlist),
+  // matching the big number next to it. Falls back to raw credits when the
+  // server response predates the `bookable` field.
+  return (pkg.bookable ?? pkg.sessionsRemaining) / total;
 }
 
 // ─── main component ──────────────────────────────────────────────────────────
@@ -290,7 +293,11 @@ export default function ClientProfile() {
                           lineHeight: 32,
                         }}
                       >
-                        {pkg.sessionsRemaining}
+                        {/* Bookable, not raw credits — same semantics as the
+                            home card. The active/expired gates above stay on
+                            sessionsRemaining: a fully-booked package is still
+                            active. */}
+                        {pkg.bookable ?? pkg.sessionsRemaining}
                       </Text>
                       <Text className="text-muted text-[13px] ml-1">
                         / {total > 0 ? total : "—"}

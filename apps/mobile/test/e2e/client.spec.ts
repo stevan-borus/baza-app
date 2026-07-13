@@ -54,13 +54,15 @@ test.describe("client (Serbian)", () => {
     await disconnect();
   });
 
-  test("52: home shows the active package's sessions-remaining number", async ({
+  test("52: home shows the active package's BOOKABLE number (credits minus holds)", async ({
     page,
   }) => {
     await signInAs(page, "client.active.reformer@e2e.test");
 
+    // Seed: 8 credits remaining, 1 future package-backed booking → 7 bookable.
+    // The card shows "left to book", not raw consumed-at-attendance credits.
     await expect(page.getByTestId("package-sessions-remaining")).toHaveText(
-      "8",
+      "7",
     );
   });
 
@@ -114,7 +116,7 @@ test.describe("client (Serbian)", () => {
     );
   });
 
-  test("55: book a session, see confirmation banner, sessions-remaining decrements", async ({
+  test("55: book a session, see confirmation banner, booking persists", async ({
     page,
   }) => {
     await signInAs(page, "client.active.reformer@e2e.test");
@@ -144,9 +146,10 @@ test.describe("client (Serbian)", () => {
       page.getByTestId("booking-success-message"),
     ).toBeVisible();
 
-    // sessionsRemaining is decremented by the consumption cron after the
-    // session ends, not at booking time. The booking counter is the
-    // ground-truth signal that the action persisted.
+    // Raw credits (sessionsRemaining) are decremented by the consumption cron
+    // after the session ends, not at booking time; the home card's BOOKABLE
+    // number drops immediately (new hold), but this spec stays on /calendar.
+    // The booking counter is the ground-truth signal that the action persisted.
     await expect
       .poll(
         async () =>
