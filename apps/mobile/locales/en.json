@@ -327,7 +327,7 @@
       "bookableLabel": "Left to book",
       "expiresOn": "Expires {{date}}",
       "expiresWithCountdown": "Expires {{date}} · {{days}} days left",
-      "fullyBookedHint": "You've booked all your remaining sessions. You renew your package at your last training.",
+      "fullyBookedHint": "You've booked all your remaining sessions. Want more? Get in touch to renew your package.",
       "noClassesToday": "No classes today",
       "noClassesThisDay": "No classes on this day",
       "tryAnotherDay": "Try another day.",
