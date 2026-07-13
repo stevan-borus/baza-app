@@ -34,6 +34,12 @@ enum PaymentMethod {
 
 enum BillingStatus {
   CONFIRMED
+  // Pay-later assign: the package is active and bookable immediately, the
+  // client pays in person later. Excluded from revenue until confirmed.
+  PENDING
+  // Revoked package's payment record, kept for the audit trail ("attended N,
+  // never paid"). Never counted as revenue.
+  VOIDED
 }
 
 enum SessionStatus {
@@ -322,6 +328,9 @@ model PackageType {
   sessionCount        Int
   validityDays        Int
   lateCancelHours     Int      @default(8)
+  // Optional list price in RSD. Prefills the amount on paid assigns; the
+  // admin can still override per payment, so it is advisory, not enforced.
+  price               Int?
   isBirthdayGift      Boolean  @default(false)
   classTypeId         String
   createdAt           DateTime @default(now())
@@ -342,6 +351,9 @@ model ClientPackage {
   startsAt          DateTime
   expiresAt         DateTime
   sessionsRemaining Int
+  // Keep-the-trace revoke: a revoked package stops granting booking rights,
+  // but the row (and its past bookings/consumption) stays for the record.
+  revokedAt         DateTime?
   createdAt         DateTime            @default(now())
   updatedAt         DateTime            @updatedAt
   clientProfile     ClientProfile       @relation(fields: [clientProfileId], references: [id], onDelete: Cascade)

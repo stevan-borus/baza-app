@@ -83,8 +83,13 @@ const embeddedClientSchema = z.object({
 });
 
 const embeddedBillingRecordSchema = z.object({
+  id: z.string().optional(),
   amount: z.number(),
   method: z.string(),
+  // PENDING drives the "Nije plaćeno" tag on admin package rows; VOIDED
+  // shows as "Stornirano". Optional so the pre-status responses (and the
+  // admin list-all branch) keep validating.
+  status: z.enum(["CONFIRMED", "PENDING", "VOIDED"]).optional(),
 });
 
 export const clientPackageSchema = z.object({
@@ -95,6 +100,9 @@ export const clientPackageSchema = z.object({
   startsAt: z.string(),
   expiresAt: z.string(),
   sessionsRemaining: z.number(),
+  // Set when an admin revoked the package (keep-the-trace semantics): the
+  // row stays visible in history, marked "Opozvan", but grants no rights.
+  revokedAt: z.string().nullable().optional(),
   packageType: embeddedPackageTypeSchema.optional(),
   client: embeddedClientSchema.optional(),
   // Per-client GET path attaches the matching CONFIRMED BillingRecord (or
@@ -134,6 +142,24 @@ export const createClientPackageResponseSchema = z.object({
 });
 export type CreateClientPackageResponse = z.infer<
   typeof createClientPackageResponseSchema
+>;
+
+// POST /api/packages/client-packages/[id]/revoke — outcome summary of a
+// keep-the-trace revoke: the package is dead (revokedAt set), its FUTURE
+// bookings are canceled without late-cancel forfeit, unbacked waitlist seats
+// are released, and the funding BillingRecord (if any) is VOIDED.
+export const revokeClientPackageResponseSchema = z.object({
+  success: z.boolean(),
+  clientPackage: z.object({
+    id: z.string(),
+    revokedAt: z.string(),
+  }),
+  canceledFutureBookings: z.number(),
+  removedWaitlistEntries: z.number(),
+  billingRecordVoided: z.boolean(),
+});
+export type RevokeClientPackageResponse = z.infer<
+  typeof revokeClientPackageResponseSchema
 >;
 
 // POST /api/packages/pause — the PackagePause row as selected by the handler.

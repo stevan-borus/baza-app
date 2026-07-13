@@ -13,6 +13,9 @@ export const packageTypeInputSchema = PackageTypeInputSchema.pick({
   sessionCount: z.number().int().positive(),
   validityDays: z.number().int().positive(),
   lateCancelHours: z.number().int().nonnegative().default(12),
+  // Optional list price in RSD — prefills the paid-assign amount, editable
+  // per payment. Null/omitted = no price on file.
+  price: z.number().int().positive().nullable().optional(),
   classTypeId: z.uuid(),
   isBirthdayGift: z.boolean().optional().default(false),
 }).refine(
@@ -29,6 +32,7 @@ export const updatePackageTypeInputSchema = z.object({
   sessionCount: z.number().int().positive().optional(),
   validityDays: z.number().int().positive().optional(),
   lateCancelHours: z.number().int().nonnegative().optional(),
+  price: z.number().int().positive().nullable().optional(),
   classTypeId: z.uuid().optional(),
   isBirthdayGift: z.boolean().optional(),
 }).refine(
@@ -80,6 +84,7 @@ export const packageTypeSchema = z.object({
   sessionCount: z.number(),
   validityDays: z.number(),
   lateCancelHours: z.number(),
+  price: z.number().nullable().optional(),
   classTypeId: z.string(),
   classType: embeddedClassTypeSchema.optional(),
   isBirthdayGift: z.boolean().optional(),

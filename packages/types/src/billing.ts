@@ -9,11 +9,25 @@ export const billingRecordInputSchema = BillingRecordInputSchema.pick({
 }).extend({
   amount: z.number().int().positive(),
   notes: z.string().max(500).optional(),
-  status: z.enum(["CONFIRMED"]).optional(),
+  // Only CONFIRMED (paid now) and PENDING (pay-later assign) are creatable.
+  // VOIDED exists solely as the outcome of a package revoke — it can never
+  // be written directly through the API.
+  status: z.enum(["CONFIRMED", "PENDING"]).optional(),
   packageTypeId: z.uuid().optional(),
   activatePackageOnConfirm: z.boolean().default(true),
 });
 export type BillingRecordInput = z.infer<typeof billingRecordInputSchema>;
+
+// PATCH /api/billing/[id] — confirm a pay-later record once the client pays
+// in person. Method may be corrected at confirm time (they may have promised
+// cash but paid by card).
+export const updateBillingRecordInputSchema = z.object({
+  status: z.literal("CONFIRMED"),
+  method: z.enum(["CASH", "CARD", "COMPANY", "MANUAL_ONLINE"]).optional(),
+});
+export type UpdateBillingRecordInput = z.infer<
+  typeof updateBillingRecordInputSchema
+>;
 
 // GET /api/billing — admin Naplata list. Serialized BillingRecord rows joined
 // in-memory with the paying client's identity.
@@ -22,7 +36,7 @@ export const billingRecordSchema = z.object({
   clientUserId: z.string(),
   amount: z.number(),
   method: z.enum(["CASH", "CARD", "COMPANY", "MANUAL_ONLINE"]),
-  status: z.enum(["CONFIRMED"]),
+  status: z.enum(["CONFIRMED", "PENDING", "VOIDED"]),
   notes: z.nullable(z.string()).optional(),
   createdAt: z.string(),
   // Client identity for the Naplata list card. Nullable because the GET
@@ -58,7 +72,7 @@ export const createBillingRecordResponseSchema = z.object({
     clientUserId: z.string(),
     amount: z.number(),
     method: z.enum(["CASH", "CARD", "COMPANY", "MANUAL_ONLINE"]),
-    status: z.enum(["CONFIRMED"]),
+    status: z.enum(["CONFIRMED", "PENDING", "VOIDED"]),
     notes: z.string().nullable(),
     packageTypeId: z.string().nullable(),
     clientPackageId: z.string().nullable(),
@@ -77,4 +91,24 @@ export const createBillingRecordResponseSchema = z.object({
 });
 export type CreateBillingRecordResponse = z.infer<
   typeof createBillingRecordResponseSchema
+>;
+
+// PATCH /api/billing/[id] — the record after a PENDING → CONFIRMED flip.
+export const updateBillingRecordResponseSchema = z.object({
+  success: z.boolean(),
+  payment: z.object({
+    id: z.string(),
+    clientUserId: z.string(),
+    amount: z.number(),
+    method: z.enum(["CASH", "CARD", "COMPANY", "MANUAL_ONLINE"]),
+    status: z.enum(["CONFIRMED", "PENDING", "VOIDED"]),
+    notes: z.string().nullable(),
+    packageTypeId: z.string().nullable(),
+    clientPackageId: z.string().nullable(),
+    createdAt: z.string(),
+    updatedAt: z.string(),
+  }),
+});
+export type UpdateBillingRecordResponse = z.infer<
+  typeof updateBillingRecordResponseSchema
 >;
