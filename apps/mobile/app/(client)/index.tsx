@@ -570,6 +570,24 @@ function PackageCard({
             {t("client.home.fullyBookedHint")}
           </Text>
         ) : null}
+
+        {/* Pay-later: the package activated but is unpaid. Amber so it reads
+            as an action-needed notice, not just muted info. Coexists with the
+            fully-booked hint above — both are independent trailing lines. */}
+        {pkg.paymentPending ? (
+          <Text
+            testID="package-payment-pending"
+            style={{
+              fontFamily: "AlbertSans-Regular",
+              fontSize: 12,
+              color: "#FFD79A",
+              letterSpacing: 0.2,
+              lineHeight: 18,
+            }}
+          >
+            {t("client.home.paymentPendingHint")}
+          </Text>
+        ) : null}
       </Pressable>
     </View>
   );

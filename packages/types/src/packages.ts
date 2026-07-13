@@ -18,6 +18,13 @@ export type ClientPackageStatus = z.infer<typeof clientPackageStatusSchema>;
 //   - kind COMP: a Poklon paket (no BillingRecord) — no amount, no method.
 // `method` is softened: COMPANY -> "PAID" (the raw chip is never shown to the
 // client), MANUAL_ONLINE -> "ONLINE". A comp leaves no gap.
+//
+// `paymentPending`: a pay-later package IS funded by a BillingRecord (so it is
+// PAID lineage, not a comp/gift), but the record is still PENDING. Reading only
+// CONFIRMED billing rendered it as COMP ("Poklon") — a lie the client saw in
+// their own history. It now classifies as PAID with this marker set, and the
+// UI shows "Nije plaćeno" instead of amount/method. Optional so confirmed and
+// comp entries keep validating.
 export const clientPackageTimelineEntrySchema = z.object({
   id: z.string(),
   packageTypeName: z.string(),
@@ -28,6 +35,7 @@ export const clientPackageTimelineEntrySchema = z.object({
   kind: z.enum(["PAID", "COMP"]),
   amount: z.nullable(z.number()),
   method: z.nullable(z.enum(["CASH", "CARD", "ONLINE", "PAID"])),
+  paymentPending: z.boolean().optional(),
 });
 export type ClientPackageTimelineEntry = z.infer<
   typeof clientPackageTimelineEntrySchema
@@ -110,6 +118,11 @@ export const clientPackageSchema = z.object({
   // admin surfaces speak the raw-credit (sessionsRemaining) language.
   heldCount: z.number().optional(),
   bookable: z.number().optional(),
+  // CLIENT branch only: true when this package's funding BillingRecord is
+  // still PENDING (a pay-later assignment). The studio's whole flow is
+  // pay-on-arrival, so the client must see they still owe payment. Absent /
+  // false once the payment is confirmed. Same optional pattern as bookable.
+  paymentPending: z.boolean().optional(),
   packageType: embeddedPackageTypeSchema.optional(),
   client: embeddedClientSchema.optional(),
   // Per-client GET path attaches the matching CONFIRMED BillingRecord (or

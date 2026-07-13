@@ -108,8 +108,13 @@ export default function ClientPackagesTimeline() {
           const usedUp = entry.sessionsRemaining <= 0;
           const dateExpired = expires < now();
           const isInactive = usedUp || dateExpired;
-          const chip =
-            entry.kind === "COMP"
+          // A pay-later package is PAID lineage but not yet paid: show
+          // "Nije plaćeno" in place of the method chip. Reading only CONFIRMED
+          // billing used to render it as COMP ("Poklon") — a lie in the
+          // client's own history.
+          const chip = entry.paymentPending
+            ? t("client.clientPackages.notPaid")
+            : entry.kind === "COMP"
               ? t("client.clientPackages.comp")
               : methodLabel(entry.method, t);
           return (
@@ -129,7 +134,11 @@ export default function ClientPackagesTimeline() {
                       size={10}
                       tracking={1.6}
                       className={
-                        entry.kind === "COMP" ? "text-accent" : "text-muted"
+                        entry.paymentPending
+                          ? "text-warning"
+                          : entry.kind === "COMP"
+                            ? "text-accent"
+                            : "text-muted"
                       }
                     >
                       {chip}

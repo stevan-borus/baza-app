@@ -70,12 +70,21 @@ export async function GET(request: Request) {
         packageType: { select: { name: true } },
       },
     }),
+    // CONFIRMED *and* PENDING: a pay-later package IS funded (PAID lineage),
+    // it just isn't paid yet. Filtering to CONFIRMED made the FK-linked
+    // PENDING package fall through to COMP and render "Poklon" — a lie in the
+    // client's own history. We now link both, then mark the PENDING ones.
+    // VOIDED stays out (the revoke path already hides revoked packages here).
     prisma.billingRecord.findMany({
-      where: { clientUserId: guard.user.id, status: "CONFIRMED" },
+      where: {
+        clientUserId: guard.user.id,
+        status: { in: ["CONFIRMED", "PENDING"] },
+      },
       select: {
         id: true,
         amount: true,
         method: true,
+        status: true,
         packageTypeId: true,
         clientPackageId: true,
         createdAt: true,
@@ -88,6 +97,7 @@ export async function GET(request: Request) {
 
   const entries = packages.map((pkg) => {
     const billing = linkMap.get(pkg.id) ?? null;
+    const paymentPending = billing?.status === "PENDING";
     return {
       id: pkg.id,
       packageTypeName: pkg.packageType.name,
@@ -96,8 +106,11 @@ export async function GET(request: Request) {
       startsAt: pkg.startsAt.toISOString(),
       createdAt: pkg.createdAt.toISOString(),
       kind: billing ? ("PAID" as const) : ("COMP" as const),
-      amount: billing ? billing.amount : null,
-      method: billing ? softenMethod(billing.method) : null,
+      // A pending package has no confirmed amount/method yet — the UI shows
+      // "Nije plaćeno" in place of them, so leave both null.
+      amount: billing && !paymentPending ? billing.amount : null,
+      method: billing && !paymentPending ? softenMethod(billing.method) : null,
+      paymentPending,
     };
   });
 

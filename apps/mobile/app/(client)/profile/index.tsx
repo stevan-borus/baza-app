@@ -323,6 +323,19 @@ export default function ClientProfile() {
                       date: expires.toLocaleDateString(dateLocale),
                     })}
                   </Text>
+                  {/* Pay-later: activated but unpaid. Amber warning so the
+                      client knows they still owe — the studio flow is
+                      pay-on-arrival. Sits below the expiry line, its own
+                      trailing row. */}
+                  {pkg.paymentPending ? (
+                    <Text
+                      testID="profile-package-payment-pending"
+                      className="text-warning text-[12px]"
+                      style={{ lineHeight: 18 }}
+                    >
+                      {t("client.home.paymentPendingHint")}
+                    </Text>
+                  ) : null}
                 </View>
               );
             })}

@@ -24,6 +24,7 @@ import { POST as POST_BILLING } from "@/server/routes/billing";
 import { PATCH as PATCH_BILLING } from "@/server/routes/billing/[id]";
 import { GET as GET_SUMMARY } from "@/server/routes/reports/summary";
 import { POST as POST_BOOKINGS } from "@/server/routes/bookings";
+import { GET as GET_CLIENT_PACKAGES } from "@/server/routes/packages/client-packages";
 import { prisma } from "@/lib/server/prisma";
 
 async function seed() {
@@ -77,6 +78,12 @@ function bookingRequest(body: unknown) {
     headers: { "content-type": "application/json" },
     body: JSON.stringify(body),
   });
+}
+
+// Client-own branch: no clientProfileId param — the handler reads the mocked
+// CLIENT guard's own profile.
+function clientPackagesRequest() {
+  return new Request("http://test.local/api/packages/client-packages");
 }
 
 function asAdmin(seeded: Awaited<ReturnType<typeof seed>>) {
@@ -152,6 +159,47 @@ describe("pay-later billing (PENDING) + confirm", () => {
     expect(bookRes.status).toBe(200);
     const bookBody = await bookRes.json();
     expect(bookBody.state).toBe("BOOKED");
+  });
+
+  it("client-packages payload flags paymentPending true pre-confirm, and clears it once confirmed", async () => {
+    const seeded = await seed();
+    asAdmin(seeded);
+
+    const createRes = await POST_BILLING(
+      billingRequest({
+        clientUserId: seeded.clientUser.id,
+        amount: 24000,
+        method: "CASH",
+        status: "PENDING",
+        packageTypeId: seeded.packageType.id,
+        activatePackageOnConfirm: true,
+      }),
+    );
+    expect(createRes.status).toBe(201);
+    const created = await createRes.json();
+
+    // Pre-confirm: the client's own packages payload must advertise the debt.
+    asClient(seeded);
+    const beforeRes = await GET_CLIENT_PACKAGES(clientPackagesRequest());
+    expect(beforeRes.status).toBe(200);
+    const before = await beforeRes.json();
+    expect(before.packages).toHaveLength(1);
+    expect(before.packages[0].paymentPending).toBe(true);
+
+    // Confirm the payment (paid at the first visit).
+    asAdmin(seeded);
+    const patchRes = await PATCH_BILLING(
+      patchRequest(created.payment.id, { status: "CONFIRMED" }),
+      { id: created.payment.id },
+    );
+    expect(patchRes.status).toBe(200);
+
+    // Post-confirm: paymentPending is false/absent — the debt is settled.
+    asClient(seeded);
+    const afterRes = await GET_CLIENT_PACKAGES(clientPackagesRequest());
+    const after = await afterRes.json();
+    expect(after.packages).toHaveLength(1);
+    expect(after.packages[0].paymentPending ?? false).toBe(false);
   });
 
   it("reports summary counts ONLY CONFIRMED — PENDING and VOIDED are excluded", async () => {
