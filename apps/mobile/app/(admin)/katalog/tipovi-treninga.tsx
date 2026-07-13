@@ -25,6 +25,7 @@ import {
   createClassTypeMutationOptions,
   updateClassTypeMutationOptions,
 } from "@/lib/queries/trainings-queries-factory";
+import { findSimilarClassTypeName } from "@/lib/admin/class-type-name-similarity";
 import { useAdminCrud } from "@/lib/admin/use-admin-crud";
 import { ScreenContainerRaw, useTabBarBottomPadding } from "@/components/ui/screen-container";
 import { HeaderIconButton } from "@/components/ui/app-header";
@@ -66,6 +67,14 @@ export default function AdminSettingsClassTypes() {
   });
 
   const classTypes = classTypesQuery.data?.classTypes ?? [];
+
+  // Non-blocking duplicate guard: "Reformer pilates 8" next to "Reformer
+  // pilates 12" fences 8-pack clients out of the shared schedule (a real
+  // staging incident). Warn while typing; the admin can still create.
+  const similarClassTypeName = findSimilarClassTypeName(
+    crud.form.name,
+    classTypes.map((ct) => ct.name),
+  );
 
   return (
     <ScreenContainerRaw
@@ -188,6 +197,24 @@ export default function AdminSettingsClassTypes() {
             value={crud.form.name}
             onChangeText={(v) => crud.setForm({ name: v })}
           />
+          {/* The structure rule, right where names get typed: class type =
+              what's on the schedule; product size/price = package type. */}
+          <Text className="text-muted" style={{ fontSize: 12, lineHeight: 17, marginTop: -8 }}>
+            {t("admin.manage.classTypeNameHelper")}
+          </Text>
+          {similarClassTypeName ? (
+            <View
+              testID="class-type-similar-warning"
+              className="flex-row items-start gap-2 px-3 py-3 rounded-xl border border-warning/40 bg-warning-soft"
+            >
+              <Icon name="exclamation-circle" size={16} color="#a17d3a" />
+              <Text className="flex-1 text-warning font-body-medium" style={{ fontSize: 13, lineHeight: 18 }}>
+                {t("admin.manage.classTypeSimilarWarning", {
+                  name: similarClassTypeName,
+                })}
+              </Text>
+            </View>
+          ) : null}
           <Input
             testID="class-type-max-clients-input"
             placeholder={t("admin.manage.placeholderMaxClients")}

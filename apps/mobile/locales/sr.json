@@ -816,6 +816,8 @@
       "sheetEditPackage": "Uredi tip paketa",
       "deletePackage": "Obriši tip paketa",
       "placeholderName": "Naziv",
+      "classTypeNameHelper": "Tip treninga je ono što stoji na rasporedu. Za isti trening sa drugačijim brojem termina napravite novi tip paketa, ne novi tip treninga.",
+      "classTypeSimilarWarning": "Sličan tip treninga već postoji ({{name}}). Ako se razlikuju samo po broju termina, napravite novi tip paketa umesto toga.",
       "placeholderSessionCount": "Broj termina",
       "placeholderValidityDays": "Važi dana",
       "placeholderLateCancel": "Kasno otkazivanje (sati)",

@@ -813,6 +813,8 @@
       "sheetEditPackage": "Edit package type",
       "deletePackage": "Delete package type",
       "placeholderName": "Name",
+      "classTypeNameHelper": "A class type is what appears on the schedule. For the same class sold with a different session count, create a new package type, not a new class type.",
+      "classTypeSimilarWarning": "A similar class type already exists ({{name}}). If they differ only by session count, create a new package type instead.",
       "placeholderSessionCount": "Session count",
       "placeholderValidityDays": "Validity (days)",
       "placeholderLateCancel": "Late cancellation (hours)",
