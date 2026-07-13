@@ -12,7 +12,7 @@ import {
   clientOwnsPackageForClass,
   findEligibleClientPackage,
 } from "@/lib/server/package-eligibility";
-import { isLastBookableSlot } from "@/lib/server/package-hold";
+import { canHoldAnotherBooking, isLastBookableSlot } from "@/lib/server/package-hold";
 import { prisma } from "@/lib/server/prisma";
 
 function getMonthRange(month: string) {
@@ -87,7 +87,11 @@ export async function GET(request: Request) {
   // bookable (no entry in the map). Keyed by session id.
   const sessionBookingFlags = new Map<
     string,
-    { bookable: boolean; lastBookableSlot: boolean }
+    {
+      bookable: boolean;
+      lockReason?: "RENEW" | "FULLY_HELD";
+      lastBookableSlot: boolean;
+    }
   >();
   // Per-session late-cancel-hours pulled from the booking's package. Used
   // by the BookingSheet's cancel confirmation to warn the client when the
@@ -163,6 +167,7 @@ export async function GET(request: Request) {
         if (!eligible) {
           sessionBookingFlags.set(session.id, {
             bookable: false,
+            lockReason: "RENEW",
             lastBookableSlot: false,
           });
           continue;
@@ -176,6 +181,24 @@ export async function GET(request: Request) {
             at,
           });
           heldCountByPackageId.set(eligible.id, heldCount);
+        }
+        // Eligible on paper, but every remaining session is already committed
+        // to a future booking/waitlist hold — the book call would 409. Mark it
+        // locked with its own reason so the UI can explain (the pilot incident:
+        // a client at her hold limit saw normal bookable rows, got rejected,
+        // and had no idea why).
+        if (
+          !canHoldAnotherBooking({
+            sessionsRemaining: eligible.sessionsRemaining,
+            heldCount,
+          })
+        ) {
+          sessionBookingFlags.set(session.id, {
+            bookable: false,
+            lockReason: "FULLY_HELD",
+            lastBookableSlot: false,
+          });
+          continue;
         }
         sessionBookingFlags.set(session.id, {
           bookable: true,
@@ -217,6 +240,7 @@ export async function GET(request: Request) {
         lateCancelHours: myBookingLateCancelHours.get(session.id) ?? null,
         // Staff (no map entry) are always bookable and never warned.
         bookable: sessionBookingFlags.get(session.id)?.bookable ?? true,
+        lockReason: sessionBookingFlags.get(session.id)?.lockReason,
         lastBookableSlot:
           sessionBookingFlags.get(session.id)?.lastBookableSlot ?? false,
       };

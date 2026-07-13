@@ -226,18 +226,33 @@ export function BookingSheet({
                   </Text>
                 </View>
               ) : renewalLocked ? (
-                // No book/waitlist actions — the client must renew first. The
-                // server's 409 stays as the backstop if a stale sheet slips
-                // through. Plain informational block, not a disabled button.
-                <View
-                  testID="booking-renewal-message"
-                  className="flex-row items-start gap-2 px-3 py-3 rounded-xl border border-warning/40 bg-warning-soft"
-                >
-                  <Icon name="info-circle" size={18} color="#a17d3a" />
-                  <Text className="flex-1 text-[14px] text-warning font-body-semibold">
-                    {t("client.renewal.message")}
-                  </Text>
-                </View>
+                // No book/waitlist actions — the client can't book this one.
+                // The server's 409 stays as the backstop if a stale sheet
+                // slips through. Plain informational block, not a disabled
+                // button. FULLY_HELD (eligible package, but every remaining
+                // session already committed to holds) gets its own copy —
+                // telling that client to "renew" would be wrong and confusing.
+                session.lockReason === "FULLY_HELD" ? (
+                  <View
+                    testID="booking-fully-held-message"
+                    className="flex-row items-start gap-2 px-3 py-3 rounded-xl border border-warning/40 bg-warning-soft"
+                  >
+                    <Icon name="info-circle" size={18} color="#a17d3a" />
+                    <Text className="flex-1 text-[14px] text-warning font-body-semibold">
+                      {t("client.renewal.fullyHeldMessage")}
+                    </Text>
+                  </View>
+                ) : (
+                  <View
+                    testID="booking-renewal-message"
+                    className="flex-row items-start gap-2 px-3 py-3 rounded-xl border border-warning/40 bg-warning-soft"
+                  >
+                    <Icon name="info-circle" size={18} color="#a17d3a" />
+                    <Text className="flex-1 text-[14px] text-warning font-body-semibold">
+                      {t("client.renewal.message")}
+                    </Text>
+                  </View>
+                )
               ) : isFull ? (
                 <Button
                   testID="booking-waitlist-button"

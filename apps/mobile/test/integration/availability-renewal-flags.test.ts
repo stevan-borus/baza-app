@@ -1,7 +1,11 @@
 /**
  * Per-session renewal flags on GET /api/sessions/availability:
- * - `bookable`  — false when the client owns a pack for the class but none is
- *                 eligible (expired / used up / paused / not started).
+ * - `bookable`  — false when the client owns a pack for the class but can't
+ *                 book: no eligible package (expired / used up / paused /
+ *                 not started), or the eligible package is fully held.
+ * - `lockReason` — why bookable is false: "RENEW" (no eligible package) or
+ *                 "FULLY_HELD" (remaining − holds === 0: every remaining
+ *                 session is already committed to future bookings/waitlist).
  * - `lastBookableSlot` — true when confirming a booking would take the LAST
  *                 free slot on the eligible package (remaining − holds === 1).
  *
@@ -212,6 +216,53 @@ describe("GET /api/sessions/availability renewal flags", () => {
     expect(open).toMatchObject({ bookable: true, lastBookableSlot: true });
   });
 
+  it("locks sessions as FULLY_HELD when every remaining session is already held", async () => {
+    // The pilot incident shape: the package still has sessions remaining, but
+    // ALL of them are committed to future holds — the rows must stop looking
+    // bookable (the book call would 409) and carry a reason the UI can show.
+    const { client, clientProfile, trainer, reformer } = await baseFixtures();
+    const bookedSession = await makeSession(reformer.id, trainer.id, SESSION_DATE);
+    const openSession = await makeSession(
+      reformer.id,
+      trainer.id,
+      OTHER_SESSION_DATE,
+    );
+    const pkg = await makePackage({
+      clientProfileId: clientProfile.id,
+      classTypeId: reformer.id,
+      sessionsRemaining: 1,
+    });
+    await prisma.booking.create({
+      data: {
+        sessionId: bookedSession.id,
+        clientProfileId: clientProfile.id,
+        clientPackageId: pkg.id,
+      },
+    });
+
+    asClient(client, clientProfile.id);
+
+    const res = await GET(buildRequest(MONTH));
+    const json = await res.json();
+    // 1 remaining − 1 held booking = 0 free slots → locked, NOT a renewal case.
+    const open = json.sessions.find((s: { id: string }) => s.id === openSession.id);
+    expect(open).toMatchObject({
+      bookable: false,
+      lockReason: "FULLY_HELD",
+      lastBookableSlot: false,
+    });
+    // The session holding the booking reports the same lock, but stays marked
+    // as the client's own booking (the UI renders it as booked, not greyed).
+    const booked = json.sessions.find(
+      (s: { id: string }) => s.id === bookedSession.id,
+    );
+    expect(booked).toMatchObject({
+      bookable: false,
+      lockReason: "FULLY_HELD",
+      isBookedByMe: true,
+    });
+  });
+
   it("mixes greyed-out and bookable sessions per class type for the same client", async () => {
     const { client, clientProfile, trainer, reformer, energy } =
       await baseFixtures();
@@ -249,8 +300,15 @@ describe("GET /api/sessions/availability renewal flags", () => {
     const energyOut = json.sessions.find(
       (s: { id: string }) => s.id === energySession.id,
     );
-    expect(reformerOut).toMatchObject({ bookable: false, lastBookableSlot: false });
+    // Owned-but-ineligible (used up) is the renewal case, not FULLY_HELD.
+    expect(reformerOut).toMatchObject({
+      bookable: false,
+      lockReason: "RENEW",
+      lastBookableSlot: false,
+    });
     expect(energyOut).toMatchObject({ bookable: true, lastBookableSlot: false });
+    // Bookable sessions carry no lock reason at all.
+    expect(energyOut.lockReason).toBeUndefined();
   });
 
   it("keeps trainer sessions always bookable with no warnings", async () => {

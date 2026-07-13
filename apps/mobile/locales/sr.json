@@ -265,9 +265,11 @@
     },
     "renewal": {
       "message": "Vaš paket je istekao ili je iskorišćen. Da biste zakazali trening, obnovite paket — kontaktirajte nas.",
-      "lastSessionWarning": "Ovim treningom vam ističe paket. Obnovite ga kako biste mogli da zakažete naredni trening.",
+      "fullyHeldMessage": "Iskoristili ste sve dostupne termine iz paketa. Otkažite neki od zakazanih termina kako biste mogli da zakažete novi.",
+      "lastSessionWarning": "Ovim treningom trošite poslednji termin iz paketa. Obnovite ga kako biste mogli da zakažete naredni trening.",
       "homeTitle": "Obnovite paket",
-      "rowAction": "Obnovite"
+      "rowAction": "Obnovite",
+      "rowActionFullyHeld": "Bez termina"
     },
     "clientPackages": {
       "title": "Moji paketi",

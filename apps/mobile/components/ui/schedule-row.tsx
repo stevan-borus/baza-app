@@ -49,9 +49,13 @@ export type ScheduleRowSession = {
   availableSlots: number;
   capacity: number;
   isBookedByMe?: boolean;
-  /** False = the client has no eligible package for this class: the row
-   * renders muted (still tappable — the sheet explains how to renew). */
+  /** False = the client can't book this session: the row renders muted
+   * (still tappable — the sheet explains why). */
   bookable?: boolean;
+  /** Present when bookable is false: "RENEW" = no eligible package (renew
+   * CTA); "FULLY_HELD" = eligible package but every remaining session is
+   * already committed to future bookings/waitlist holds. */
+  lockReason?: "RENEW" | "FULLY_HELD";
 };
 
 export function ScheduleRow({
@@ -70,6 +74,7 @@ export function ScheduleRow({
   // Undefined means bookable — staff payloads and older cached responses
   // don't carry the flag.
   const renewalLocked = session.bookable === false;
+  const fullyHeld = renewalLocked && session.lockReason === "FULLY_HELD";
   const photo = photoForClassType(session.classTypeName);
 
   return (
@@ -82,8 +87,10 @@ export function ScheduleRow({
           paddingHorizontal: 20,
           gap: 14,
           // Muted, not hidden: a lapsed client should still SEE the schedule
-          // they used to book, with the sheet explaining how to renew.
-          opacity: renewalLocked ? 0.45 : 1,
+          // they used to book, with the sheet explaining how to renew. Their
+          // OWN booked sessions stay full-strength — the booking is real and
+          // cancellable regardless of the package's current state.
+          opacity: renewalLocked && !bookedByMe ? 0.45 : 1,
         }}
       >
         {/* Photo tile */}
@@ -160,9 +167,11 @@ export function ScheduleRow({
         >
           {bookedByMe
             ? t("client.home.booked")
-            : renewalLocked
-              ? t("client.renewal.rowAction")
-              : t("client.home.book")}
+            : fullyHeld
+              ? t("client.renewal.rowActionFullyHeld")
+              : renewalLocked
+                ? t("client.renewal.rowAction")
+                : t("client.home.book")}
         </Text>
       </View>
     </Pressable>
