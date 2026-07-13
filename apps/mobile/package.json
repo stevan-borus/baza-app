@@ -133,6 +133,7 @@
     "@types/react-test-renderer": "19.1.0",
     "@vitest/expect": "^4.1.9",
     "babel-plugin-react-compiler": "^1.0.0",
+    "dotenv": "17.4.2",
     "babel-preset-expo": "^56.0.15",
     "prisma": "^7.8.0",
     "prisma-zod-generator": "^2.1.4",
