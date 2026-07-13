@@ -40,7 +40,7 @@ import { getDateLocale } from "@/lib/i18n";
 import { now } from "@/lib/now";
 import { authQueries } from "@/lib/queries/auth-queries-factory";
 import { packagesQueries, type ClientPackage } from "@/lib/queries/packages-queries-factory";
-import { packageCreditsRemainingFraction } from "@/lib/package-fully-booked";
+import { packageUsedFraction } from "@/lib/package-fully-booked";
 import { ProfilePersonalDataSections } from "@/components/profile/profile-personal-data-sections";
 
 // ─── helpers ────────────────────────────────────────────────────────────────
@@ -251,11 +251,13 @@ export default function ClientProfile() {
           <View className="gap-3 px-4">
             {activePackages.map((pkg: ClientPackage) => {
               const total = pkg.packageType?.sessionCount ?? 0;
-              // Bar is credits-driven (sessionsRemaining / total) to match the
-              // home card — a fully-booked active package still has its credits,
-              // so it must not read empty. The NUMBER stays "bookable / total".
-              const progress = packageCreditsRemainingFraction(
-                pkg.sessionsRemaining,
+              // Bar is usage-driven (owner decision) to match the home card: it
+              // FILLS UP as sessions are booked/attended — used / total, using
+              // bookable (falling back to sessionsRemaining). A fully-booked
+              // package reads full; a fresh one, empty. The NUMBER stays
+              // "bookable / total".
+              const progress = packageUsedFraction(
+                pkg.bookable ?? pkg.sessionsRemaining,
                 total,
               );
               const expires = new Date(pkg.expiresAt);

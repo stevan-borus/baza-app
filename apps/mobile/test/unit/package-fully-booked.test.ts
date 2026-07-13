@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   isFullyBookedActivePackage,
-  packageCreditsRemainingFraction,
+  packageUsedFraction,
 } from "@/lib/package-fully-booked";
 
 describe("isFullyBookedActivePackage", () => {
@@ -22,28 +22,31 @@ describe("isFullyBookedActivePackage", () => {
   });
 });
 
-describe("packageCreditsRemainingFraction", () => {
-  it("is FULL for a fully-booked but active package (the '0 / 12' bug)", () => {
-    // bookable is 0, but all 12 credits still remain until attended — the bar
-    // must be full, not the empty nub the profile row used to show.
-    expect(packageCreditsRemainingFraction(12, 12)).toBe(1);
+describe("packageUsedFraction", () => {
+  it("is FULL when bookable is 0 (every session booked/consumed)", () => {
+    // Usage bar fills up: nothing left to book means the whole package is used,
+    // so the bar is full.
+    expect(packageUsedFraction(0, 12)).toBe(1);
   });
 
-  it("tracks remaining credits, not bookable count", () => {
-    // 8 credits left of 12 → 2/3 full, regardless of how many are held/bookable.
-    expect(packageCreditsRemainingFraction(8, 12)).toBeCloseTo(8 / 12);
+  it("is EMPTY for a fresh, untouched package (bookable === total)", () => {
+    // No sessions booked yet → nothing used → empty bar.
+    expect(packageUsedFraction(12, 12)).toBe(0);
   });
 
-  it("is empty when all credits are consumed", () => {
-    expect(packageCreditsRemainingFraction(0, 12)).toBe(0);
+  it("tracks usage: 4 of 12 booked → 1/3 full", () => {
+    // bookable 8 of 12 → 4 used → 4/12.
+    expect(packageUsedFraction(8, 12)).toBeCloseTo(4 / 12);
   });
 
   it("returns 0 for a zero/absent session count (no divide-by-zero)", () => {
-    expect(packageCreditsRemainingFraction(5, 0)).toBe(0);
+    expect(packageUsedFraction(5, 0)).toBe(0);
   });
 
-  it("clamps out-of-range credits into 0..1", () => {
-    expect(packageCreditsRemainingFraction(-3, 12)).toBe(0);
-    expect(packageCreditsRemainingFraction(15, 12)).toBe(1);
+  it("clamps out-of-range usage into 0..1", () => {
+    // bookable > total → negative used → clamp to empty.
+    expect(packageUsedFraction(15, 12)).toBe(0);
+    // bookable < 0 → used > total → clamp to full.
+    expect(packageUsedFraction(-3, 12)).toBe(1);
   });
 });

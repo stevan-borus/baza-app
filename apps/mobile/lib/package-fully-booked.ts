@@ -4,19 +4,23 @@
  * Fraction (0..1) the package progress bar should fill on BOTH the home card
  * and the profile "Moji paketi" row.
  *
- * The bar is CREDITS-driven: `sessionsRemaining / sessionCount` — "how much of
- * the package is still left", depleting only as sessions are actually consumed
- * (attendance / forfeit). It is deliberately NOT bookable-driven: a fully-booked
- * but active package (bookable === 0, credits still remaining) must NOT read as
- * an empty bar — the credits are still there, just held by future bookings. The
- * displayed NUMBER stays "bookable / total"; only the bar uses this fraction.
+ * The bar is USAGE-driven (owner decision): it FILLS UP as sessions are booked
+ * and consumed — `used / total`, where `used = total − bookableOrRemaining`.
+ * Callers pass `bookable ?? sessionsRemaining` so bookable takes precedence when
+ * present. A fully-booked package (bookable === 0) reads as a FULL bar; a fresh,
+ * untouched package reads as EMPTY. The displayed NUMBER stays "bookable / total";
+ * only the bar uses this fraction.
+ *
+ * (Supersedes the earlier credits-remaining/draining bar, which the owner read
+ * as backwards.)
  */
-export function packageCreditsRemainingFraction(
-  sessionsRemaining: number,
+export function packageUsedFraction(
+  bookableOrRemaining: number,
   sessionCount: number,
 ): number {
   if (sessionCount <= 0) return 0;
-  const clamped = Math.max(0, Math.min(sessionsRemaining, sessionCount));
+  const used = sessionCount - bookableOrRemaining;
+  const clamped = Math.max(0, Math.min(used, sessionCount));
   return clamped / sessionCount;
 }
 
