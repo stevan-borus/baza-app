@@ -79,6 +79,19 @@ export const billingQueries = {
           errorMessage: "Unable to create billing record",
         }),
     }),
+
+  confirm: () =>
+    mutationOptions({
+      mutationKey: [...billingAll, "confirm"] as const,
+      // PENDING → CONFIRMED once the client pays in person. Method may be
+      // corrected at confirm time (promised cash, paid by card).
+      mutationFn: async (payload: { id: string; method?: string }) =>
+        apiRequest(`/api/billing/${payload.id}`, {
+          method: "PATCH",
+          body: { status: "CONFIRMED", method: payload.method },
+          errorMessage: "Unable to confirm payment",
+        }),
+    }),
 };
 
 // A payment always changes the revenue figures (reports summary renders on
@@ -102,5 +115,26 @@ export function createBillingMutationOptions(queryClient: QueryClient) {
 
 export function useCreateBillingMutation() {
   return useMutation(createBillingMutationOptions(useQueryClient()));
+}
+
+// Confirming a pay-later payment moves revenue (reports), flips the row's
+// badge (billing) and clears the "Nije plaćeno" tag on the client's package
+// row (packages) — same superset as create, and just as rare an action.
+export function confirmBillingMutationOptions(queryClient: QueryClient) {
+  return {
+    ...billingQueries.confirm(),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: billingQueries.all }),
+        queryClient.invalidateQueries({ queryKey: reportsQueries.all }),
+        queryClient.invalidateQueries({ queryKey: packagesQueries.all }),
+        queryClient.invalidateQueries({ queryKey: clientsQueries.all }),
+      ]);
+    },
+  };
+}
+
+export function useConfirmBillingMutation() {
+  return useMutation(confirmBillingMutationOptions(useQueryClient()));
 }
 

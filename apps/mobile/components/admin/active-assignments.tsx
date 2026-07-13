@@ -161,6 +161,7 @@ export function ActiveAssignments() {
           renderItem={({ item: pkg }) => {
             const expiresAt = new Date(pkg.expiresAt);
             const today = now();
+            const isRevoked = !!pkg.revokedAt;
             const isExpired = expiresAt <= today;
             const isExpiring =
               !isExpired &&
@@ -195,14 +196,22 @@ export function ActiveAssignments() {
                     </View>
                     <Badge
                       status={
-                        isExpired ? "danger" : isExpiring ? "warning" : "success"
+                        isRevoked
+                          ? "neutral"
+                          : isExpired
+                            ? "danger"
+                            : isExpiring
+                              ? "warning"
+                              : "success"
                       }
                     >
-                      {isExpired
-                        ? t("client.profileTab.expired")
-                        : isExpiring
-                          ? t("admin.manage.filterExpiring")
-                          : t("client.package.active")}
+                      {isRevoked
+                        ? t("admin.clientDetail.status.revoked")
+                        : isExpired
+                          ? t("client.profileTab.expired")
+                          : isExpiring
+                            ? t("admin.manage.filterExpiring")
+                            : t("client.package.active")}
                     </Badge>
                   </View>
                 </GlassCard>

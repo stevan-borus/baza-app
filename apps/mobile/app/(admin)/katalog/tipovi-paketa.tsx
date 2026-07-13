@@ -32,6 +32,7 @@ import {
 import { trainingsQueries } from "@/lib/queries/trainings-queries-factory";
 import { useAdminCrud } from "@/lib/admin/use-admin-crud";
 import { fieldErrorsFromApiError } from "@/lib/api-errors";
+import { formatRsd } from "@/lib/format";
 
 function FieldError({ message }: { message?: string }) {
   if (!message) return null;
@@ -112,6 +113,7 @@ export default function AdminPackages() {
       sessionCount: "",
       validityDays: "",
       lateCancelHours: "8",
+      price: "",
       classTypeId: "",
       isBirthdayGift: false,
     },
@@ -121,6 +123,7 @@ export default function AdminPackages() {
       sessionCount: number;
       validityDays: number;
       lateCancelHours: number;
+      price?: number | null;
       classTypeId: string;
       isBirthdayGift?: boolean;
     }) => ({
@@ -128,6 +131,7 @@ export default function AdminPackages() {
       sessionCount: String(pt.sessionCount),
       validityDays: String(pt.validityDays),
       lateCancelHours: String(pt.lateCancelHours),
+      price: pt.price != null ? String(pt.price) : "",
       classTypeId: pt.classTypeId,
       isBirthdayGift: pt.isBirthdayGift ?? false,
     }),
@@ -247,6 +251,7 @@ export default function AdminPackages() {
                           count: pt.sessionCount,
                           days: pt.validityDays,
                         })}
+                        {pt.price != null ? ` · ${formatRsd(pt.price)}` : ""}
                       </Text>
                       <Text
                         className="text-faint"
@@ -361,6 +366,14 @@ export default function AdminPackages() {
               onChangeText={(v) => crud.setForm({ lateCancelHours: v })}
             />
             <FieldError message={createFieldErrors.lateCancelHours} />
+            <Input
+              testID="package-price-input"
+              placeholder={t("admin.manage.placeholderPrice")}
+              keyboardType="numeric"
+              value={crud.form.price}
+              onChangeText={(v) => crud.setForm({ price: v })}
+            />
+            <FieldError message={createFieldErrors.price} />
             <View className="flex-row items-center justify-between py-2">
               <Text className="text-foreground" style={{ fontSize: 15 }}>
                 {t("admin.manage.isBirthdayGiftLabel")}
@@ -393,6 +406,7 @@ export default function AdminPackages() {
                   sessionCount: parseInt(crud.form.sessionCount, 10),
                   validityDays: parseInt(crud.form.validityDays, 10),
                   lateCancelHours: parseInt(crud.form.lateCancelHours, 10) || 8,
+                  price: crud.form.price ? parseInt(crud.form.price, 10) : null,
                   classTypeId: crud.form.classTypeId,
                   isBirthdayGift: crud.form.isBirthdayGift,
                 })
@@ -466,6 +480,14 @@ export default function AdminPackages() {
               onChangeText={(v) => crud.setEditForm({ lateCancelHours: v })}
             />
             <FieldError message={editFieldErrors.lateCancelHours} />
+            <Input
+              testID="package-edit-price-input"
+              placeholder={t("admin.manage.placeholderPrice")}
+              keyboardType="numeric"
+              value={crud.editForm.price}
+              onChangeText={(v) => crud.setEditForm({ price: v })}
+            />
+            <FieldError message={editFieldErrors.price} />
             <View className="flex-row items-center justify-between py-2">
               <Text className="text-foreground" style={{ fontSize: 15 }}>
                 {t("admin.manage.isBirthdayGiftLabel")}
@@ -500,6 +522,9 @@ export default function AdminPackages() {
                   sessionCount: parseInt(crud.editForm.sessionCount, 10),
                   validityDays: parseInt(crud.editForm.validityDays, 10),
                   lateCancelHours: parseInt(crud.editForm.lateCancelHours, 10) || 8,
+                  price: crud.editForm.price
+                    ? parseInt(crud.editForm.price, 10)
+                    : null,
                   classTypeId: crud.editForm.classTypeId,
                   isBirthdayGift: crud.editForm.isBirthdayGift,
                 });

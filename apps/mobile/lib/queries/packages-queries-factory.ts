@@ -89,6 +89,7 @@ export const packagesQueries = {
         sessionCount: number;
         validityDays: number;
         lateCancelHours?: number;
+        price?: number | null;
         classTypeId: string;
         isBirthdayGift?: boolean;
       }) =>
@@ -112,6 +113,7 @@ export const packagesQueries = {
         sessionCount?: number;
         validityDays?: number;
         lateCancelHours?: number;
+        price?: number | null;
         classTypeId?: string;
         isBirthdayGift?: boolean;
       }) =>
@@ -145,6 +147,16 @@ export const packagesQueries = {
           method: "POST",
           body: payload,
           errorMessage: "Unable to create package",
+        }),
+    }),
+
+  revokeClientPackage: () =>
+    mutationOptions({
+      mutationKey: [...packagesAll, "client-packages", "revoke"] as const,
+      mutationFn: (id: string) =>
+        apiRequest(`/api/packages/client-packages/${id}/revoke`, {
+          method: "POST",
+          errorMessage: "Unable to revoke package",
         }),
     }),
 
@@ -231,8 +243,31 @@ export function pausePackageMutationOptions(queryClient: QueryClient) {
   };
 }
 
+// Revoking touches every derived surface at once: the package rows and
+// history ("Opozvan"), the client's derived packageStatus chip, the billing
+// list (linked record goes VOIDED) and the report figures. billing invalidation
+// is imported lazily via key literal to avoid a factory-to-factory cycle
+// (billing-queries-factory already imports this module).
+export function revokeClientPackageMutationOptions(queryClient: QueryClient) {
+  return {
+    ...packagesQueries.revokeClientPackage(),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: packagesQueries.all }),
+        queryClient.invalidateQueries({ queryKey: clientsQueries.all }),
+        queryClient.invalidateQueries({ queryKey: reportsQueries.all }),
+        queryClient.invalidateQueries({ queryKey: ["billing"] }),
+      ]);
+    },
+  };
+}
+
 export function useAssignClientPackageMutation() {
   return useMutation(assignClientPackageMutationOptions(useQueryClient()));
+}
+
+export function useRevokeClientPackageMutation() {
+  return useMutation(revokeClientPackageMutationOptions(useQueryClient()));
 }
 
 export function usePausePackageMutation() {
