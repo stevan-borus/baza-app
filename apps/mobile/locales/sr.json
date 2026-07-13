@@ -658,6 +658,7 @@
       "placeholderStart": "Početak",
       "assign": "Dodeli",
       "assignError": "Dodela paketa nije uspela.",
+      "duplicateSameDayHint": "Ovaj klijent je danas već dobio isti paket.",
       "sheetPause": "Pauziraj paket",
       "pauseStart": "Početak pauze",
       "pauseEnd": "Kraj pauze",
