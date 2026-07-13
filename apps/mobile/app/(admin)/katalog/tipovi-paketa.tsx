@@ -33,6 +33,7 @@ import { trainingsQueries } from "@/lib/queries/trainings-queries-factory";
 import { useAdminCrud } from "@/lib/admin/use-admin-crud";
 import { fieldErrorsFromApiError } from "@/lib/api-errors";
 import { formatRsd } from "@/lib/format";
+import { isPriceInputValid, parsePriceInput } from "@/lib/price-input";
 
 function FieldError({ message }: { message?: string }) {
   if (!message) return null;
@@ -373,7 +374,13 @@ export default function AdminPackages() {
               value={crud.form.price}
               onChangeText={(v) => crud.setForm({ price: v })}
             />
-            <FieldError message={createFieldErrors.price} />
+            <FieldError
+              message={
+                !isPriceInputValid(crud.form.price)
+                  ? t("admin.manage.priceInvalid")
+                  : createFieldErrors.price
+              }
+            />
             <View className="flex-row items-center justify-between py-2">
               <Text className="text-foreground" style={{ fontSize: 15 }}>
                 {t("admin.manage.isBirthdayGiftLabel")}
@@ -398,6 +405,7 @@ export default function AdminPackages() {
                 !crud.form.sessionCount ||
                 !crud.form.validityDays ||
                 !crud.form.classTypeId ||
+                !isPriceInputValid(crud.form.price) ||
                 (crud.form.isBirthdayGift && crud.form.sessionCount !== "1")
               }
               onPress={() =>
@@ -406,7 +414,7 @@ export default function AdminPackages() {
                   sessionCount: parseInt(crud.form.sessionCount, 10),
                   validityDays: parseInt(crud.form.validityDays, 10),
                   lateCancelHours: parseInt(crud.form.lateCancelHours, 10) || 8,
-                  price: crud.form.price ? parseInt(crud.form.price, 10) : null,
+                  price: parsePriceInput(crud.form.price),
                   classTypeId: crud.form.classTypeId,
                   isBirthdayGift: crud.form.isBirthdayGift,
                 })
@@ -487,7 +495,13 @@ export default function AdminPackages() {
               value={crud.editForm.price}
               onChangeText={(v) => crud.setEditForm({ price: v })}
             />
-            <FieldError message={editFieldErrors.price} />
+            <FieldError
+              message={
+                !isPriceInputValid(crud.editForm.price)
+                  ? t("admin.manage.priceInvalid")
+                  : editFieldErrors.price
+              }
+            />
             <View className="flex-row items-center justify-between py-2">
               <Text className="text-foreground" style={{ fontSize: 15 }}>
                 {t("admin.manage.isBirthdayGiftLabel")}
@@ -512,6 +526,7 @@ export default function AdminPackages() {
                 !crud.editForm.sessionCount ||
                 !crud.editForm.validityDays ||
                 !crud.editForm.classTypeId ||
+                !isPriceInputValid(crud.editForm.price) ||
                 (crud.editForm.isBirthdayGift && crud.editForm.sessionCount !== "1")
               }
               onPress={() => {
@@ -522,9 +537,7 @@ export default function AdminPackages() {
                   sessionCount: parseInt(crud.editForm.sessionCount, 10),
                   validityDays: parseInt(crud.editForm.validityDays, 10),
                   lateCancelHours: parseInt(crud.editForm.lateCancelHours, 10) || 8,
-                  price: crud.editForm.price
-                    ? parseInt(crud.editForm.price, 10)
-                    : null,
+                  price: parsePriceInput(crud.editForm.price),
                   classTypeId: crud.editForm.classTypeId,
                   isBirthdayGift: crud.editForm.isBirthdayGift,
                 });

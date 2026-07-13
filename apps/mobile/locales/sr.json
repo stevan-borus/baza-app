@@ -825,6 +825,7 @@
       "placeholderValidityDays": "Važi dana",
       "placeholderLateCancel": "Kasno otkazivanje (sati)",
       "placeholderPrice": "Cena (RSD, opciono)",
+      "priceInvalid": "Cena mora biti ceo broj dinara",
       "create": "Kreiraj",
       "createPackageError": "Kreiranje paketa nije uspelo.",
       "billingError": "Nije moguće učitati naplatu.",

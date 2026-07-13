@@ -822,6 +822,7 @@
       "placeholderValidityDays": "Validity (days)",
       "placeholderLateCancel": "Late cancellation (hours)",
       "placeholderPrice": "Price (RSD, optional)",
+      "priceInvalid": "Price must be a whole number of dinars",
       "create": "Create",
       "createPackageError": "Creating package failed.",
       "billingError": "Unable to load billing.",
