@@ -315,7 +315,7 @@
       "booked": "Booked",
       "package": "Package",
       "onAccount": "On account",
-      "sessionsRemaining": "Sessions left",
+      "bookableLabel": "Left to book",
       "expiresOn": "Expires {{date}}",
       "expiresWithCountdown": "Expires {{date}} · {{days}} days left",
       "noClassesToday": "No classes today",

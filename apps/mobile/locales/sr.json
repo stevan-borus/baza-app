@@ -316,7 +316,7 @@
       "booked": "Rezervisano",
       "package": "Paket",
       "onAccount": "Na nalogu",
-      "sessionsRemaining": "Preostalo termina",
+      "bookableLabel": "Za zakazivanje",
       "expiresOn": "Ističe {{date}}",
       "expiresWithCountdown": "Ističe {{date}} · još {{days}} dana",
       "noClassesToday": "Nema treninga danas",

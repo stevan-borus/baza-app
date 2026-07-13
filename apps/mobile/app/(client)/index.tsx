@@ -422,7 +422,10 @@ function PackageCard({
 }) {
   const { t } = useTranslation();
   const total = pkg.packageType?.sessionCount ?? 0;
-  const left = pkg.sessionsRemaining;
+  // "Left to book" — remaining credits minus sessions already held (future
+  // bookings + waitlist seats), computed server-side. Raw sessionsRemaining
+  // is consumed-at-attendance credits, which clients misread as bookable.
+  const left = pkg.bookable ?? pkg.sessionsRemaining;
   const used = Math.max(0, total - left);
   const pct = total ? used / total : 0;
   const expires = dayjs(pkg.expiresAt);
@@ -500,7 +503,7 @@ function PackageCard({
                 marginTop: 2,
               }}
             >
-              {t("client.home.sessionsRemaining")}
+              {t("client.home.bookableLabel")}
             </Text>
           </View>
         </View>
