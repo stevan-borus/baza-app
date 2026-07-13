@@ -246,7 +246,7 @@ export default function AdminSettingsClassTypes() {
             disabled={crud.createMutation.isPending || !crud.form.name}
             onPress={() =>
               crud.submitCreate({
-                name: crud.form.name,
+                name: crud.form.name.trim(),
                 maxClients: parseInt(crud.form.maxClients, 10) || 8,
                 durationMins: parseInt(crud.form.durationMins, 10) || 60,
               })
@@ -309,7 +309,7 @@ export default function AdminSettingsClassTypes() {
               if (!crud.editingId) return;
               crud.submitUpdate({
                 id: crud.editingId,
-                name: crud.editForm.name,
+                name: crud.editForm.name.trim(),
                 maxClients: parseInt(crud.editForm.maxClients, 10) || 8,
                 durationMins: parseInt(crud.editForm.durationMins, 10) || 60,
               });
