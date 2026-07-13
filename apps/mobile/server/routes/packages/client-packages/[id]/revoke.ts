@@ -24,14 +24,17 @@
 // promotes its next waitlisted client — the same post-commit promotion the
 // normal cancel path runs. The revoked client's own waitlist entries were
 // already deleted in-tx, so they can never be promoted into a freed seat.
+import { NOTIFICATION_MESSAGE_KEYS } from "@baza/i18n";
 import { revokeClientPackageResponseSchema } from "@baza/types/packages";
 import { UserRole } from "@/generated/prisma";
 import { now } from "@/lib/now";
 import { requireRole } from "@/lib/server/auth-guards";
 import { promoteNextWaitlistEntry } from "@/lib/server/booking-cancellation";
 import { fail, respond } from "@/lib/server/http";
+import { createSystemNotification } from "@/lib/server/notifications";
 import { findEligibleClientPackage } from "@/lib/server/package-eligibility";
 import { prisma } from "@/lib/server/prisma";
+import { tryCatch } from "@/lib/server/try-catch";
 
 type RouteParams = Record<string, string>;
 
@@ -164,6 +167,31 @@ export async function POST(request: Request, { id }: RouteParams) {
   // normal cancel path, so a promotion failure can't roll back the revoke.
   for (const sessionId of result.canceledSessionIds) {
     await prisma.$transaction((tx) => promoteNextWaitlistEntry(tx, sessionId));
+  }
+
+  // Tell the revoked client — their future bookings just vanished, and the
+  // accepted gap at ship time was that they got no signal. Neutral, static
+  // copy: no reason is stated, the studio owns the follow-up conversation.
+  // Post-commit and best-effort — matched to waitlist promotion, so a failing
+  // notification (or a client with no push token) can never fail the revoke
+  // the admin already committed. The cancelled-booking count rides in the
+  // payload for the app, but the rendered body stays static per the copy.
+  const client = await prisma.clientProfile.findUnique({
+    where: { id: pkg.clientProfileId },
+    select: { userId: true },
+  });
+  if (client) {
+    await tryCatch(
+      createSystemNotification(
+        client.userId,
+        NOTIFICATION_MESSAGE_KEYS.PACKAGE_REVOKED,
+        "GENERAL",
+        {
+          clientPackageId: pkg.id,
+          canceledFutureBookings: result.canceledFutureBookings,
+        },
+      ),
+    );
   }
 
   return respond(revokeClientPackageResponseSchema, {

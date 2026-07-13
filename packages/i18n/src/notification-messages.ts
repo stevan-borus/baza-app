@@ -19,6 +19,7 @@ export type NotificationMessageKey =
   | "GENERAL"
   | "SPOT_OPENED_FROM_WAITLIST"
   | "PACKAGE_EXPIRING_SOON"
+  | "PACKAGE_REVOKED"
   | "SESSION_REMINDER"
   | "BOOKING_CANCELED_ADMIN"
   | "BOOKING_CANCELED_TRAINER"
@@ -36,6 +37,7 @@ export const NOTIFICATION_MESSAGE_KEYS = {
   GENERAL: "GENERAL",
   SPOT_OPENED_FROM_WAITLIST: "SPOT_OPENED_FROM_WAITLIST",
   PACKAGE_EXPIRING_SOON: "PACKAGE_EXPIRING_SOON",
+  PACKAGE_REVOKED: "PACKAGE_REVOKED",
   SESSION_REMINDER: "SESSION_REMINDER",
   BOOKING_CANCELED_ADMIN: "BOOKING_CANCELED_ADMIN",
   BOOKING_CANCELED_TRAINER: "BOOKING_CANCELED_TRAINER",
@@ -74,6 +76,19 @@ const messages: Record<
   PACKAGE_EXPIRING_SOON: {
     sr: { title: "Paket ističe", body: "Vaš paket uskoro ističe." },
     en: { title: "Package expiring", body: "Your package is expiring soon." },
+  },
+  // Neutral, static copy: no reason is stated — the studio handles the
+  // conversation about WHY. Kept placeholder-free so it can never leak an
+  // unfilled {{var}} into the client's inbox.
+  PACKAGE_REVOKED: {
+    sr: {
+      title: "Paket je opozvan",
+      body: "Vaš paket je opozvan i budući termini su otkazani. Za više informacija javite nam se.",
+    },
+    en: {
+      title: "Package revoked",
+      body: "Your package has been revoked and your upcoming sessions were canceled. Contact us for more information.",
+    },
   },
   SESSION_REMINDER: {
     sr: { title: "Podsetnik", body: "Imate zakazan termin uskoro." },

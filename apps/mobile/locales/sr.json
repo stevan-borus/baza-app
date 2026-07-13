@@ -24,6 +24,10 @@
       "title": "Paket ističe",
       "body": "Vaš paket uskoro ističe."
     },
+    "package_revoked": {
+      "title": "Paket je opozvan",
+      "body": "Vaš paket je opozvan i budući termini su otkazani. Za više informacija javite nam se."
+    },
     "session_reminder": {
       "title": "Podsetnik",
       "body": "Imate zakazan termin uskoro."

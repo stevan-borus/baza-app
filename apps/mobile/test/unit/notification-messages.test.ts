@@ -38,4 +38,22 @@ describe("getNotificationMessage — interpolation", () => {
     const { body } = getNotificationMessage("BIRTHDAY_ADMIN_PROMPT", "sr");
     expect(body).toContain("{{clientFullName}}");
   });
+
+  it("PACKAGE_REVOKED is neutral, static copy in both locales (no reason, no placeholders)", () => {
+    // The studio owns the conversation about WHY — the notification stays
+    // neutral and static so it never leaks a reason or an unfilled {{var}}.
+    const sr = getNotificationMessage("PACKAGE_REVOKED", "sr");
+    expect(sr.title).toBe("Paket je opozvan");
+    expect(sr.body).toBe(
+      "Vaš paket je opozvan i budući termini su otkazani. Za više informacija javite nam se.",
+    );
+    expect(sr.body).not.toContain("{{");
+
+    const en = getNotificationMessage("PACKAGE_REVOKED", "en");
+    expect(en.title).toBe("Package revoked");
+    expect(en.body).toBe(
+      "Your package has been revoked and your upcoming sessions were canceled. Contact us for more information.",
+    );
+    expect(en.body).not.toContain("{{");
+  });
 });
