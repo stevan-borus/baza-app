@@ -44,10 +44,15 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { PaginatedList } from "@/components/ui/paginated-list";
 import { SkeletonList } from "@/components/ui/skeleton";
-import { packagesQueries } from "@/lib/queries/packages-queries-factory";
+import {
+  packagesQueries,
+  useRevokeClientPackageMutation,
+} from "@/lib/queries/packages-queries-factory";
+import { ConfirmSheet } from "@/components/ui/confirm-sheet";
 import {
   billingQueries,
   useCreateBillingMutation,
+  useConfirmBillingMutation,
   type BillingRecord,
 } from "@/lib/queries/billing-queries-factory";
 import { clientsQueries } from "@/lib/queries/clients-queries-factory";
@@ -129,8 +134,13 @@ export default function AdminBilling() {
   // sum over loaded pages. `avg` keeps its per-client meaning (matching the
   // "Avg per client" label): totalRevenue / distinctClients.
   //
-  // BillingStatus is a single-value enum (CONFIRMED); the summary endpoint
-  // filters on it server-side, mirroring the old client-side confirmed filter.
+  // Revenue integrity under pay-later: PENDING (not yet money) and VOIDED
+  // (revoked) rows stay visible in the list — they carry a loud "Nije
+  // plaćeno" / "Stornirano" badge the studio scans for — but must never
+  // count as revenue. The summary endpoint enforces `status: "CONFIRMED"`
+  // server-side (see server/routes/billing/summary.ts), so these totals are
+  // both filter-wide AND already exclude PENDING/VOIDED. That server filter
+  // replaces the old client-side `records.filter(r => r.status === ...)`.
   const summaryStats = {
     totalRevenue: summaryQuery.data?.totalRevenue ?? 0,
     count: summaryQuery.data?.count ?? 0,
@@ -144,15 +154,16 @@ export default function AdminBilling() {
 
   // The list is server-filtered now (the search runs in Postgres and feeds
   // both the list and the summary), so the visible rows already reflect the
-  // search — no client-side narrowing needed. The status filter chip strip
-  // (PR β) is gone because the studio's workflow only ever produced CONFIRMED
-  // rows in practice.
+  // search — no client-side narrowing needed. The list endpoint returns ALL
+  // statuses (buildBillingWhere has no status constraint), so PENDING/VOIDED
+  // rows show here with their badges even though the summary excludes them.
   const filteredRecords = records;
 
   // Filtered-totals subtitle (P4-2). "Filters active" means the user has
   // typed a search; the month chooser always has a value so from/to isn't a
   // "filter" for this cue. Count + amount come from the summary, so they're
-  // filter-wide (accurate under search), not a loaded-pages tally.
+  // filter-wide (accurate under search) AND CONFIRMED-only, not a loaded-
+  // pages tally.
   const filtersActive = deferredSearch !== "";
   const filteredCount = summaryStats.count;
   const filteredAmount = summaryStats.totalRevenue;
@@ -175,6 +186,24 @@ export default function AdminBilling() {
   // activates) is baked into the factory hook; the sheet-close side-effects
   // are passed per-call via mutate(vars, { onSuccess }).
   const createMutation = useCreateBillingMutation();
+
+  // Confirm-payment sheet for pay-later (PENDING) rows: tapping such a row
+  // opens it; the method can be corrected at confirm time (promised cash,
+  // paid by card).
+  const [confirmTarget, setConfirmTarget] = useState<BillingRecord | null>(null);
+  const [confirmMethod, setConfirmMethod] = useState("CASH");
+  const confirmMutation = useConfirmBillingMutation();
+
+  // Void path (owner feedback): the pending sheet only ever offered "confirm".
+  // A client who never paid needs the OPPOSITE action, and the void must live
+  // where the debt is visible — here, not buried on the client-detail package
+  // row. This reuses the exact revoke transaction (cancels future bookings,
+  // voids the unpaid record) and its confirm.revokePackage* copy. Two states:
+  // `confirmTarget` drives the pending sheet, `revokeTarget` the nested
+  // destructive confirm opened from it (stacked "push" so the sheet under it
+  // stays visible).
+  const [revokeTarget, setRevokeTarget] = useState<BillingRecord | null>(null);
+  const revokeMutation = useRevokeClientPackageMutation();
 
   const methodLabelKeys = RAW_METHOD_LABEL_KEYS;
   const methods = ["CASH", "CARD", "COMPANY", "MANUAL_ONLINE"] as const;
@@ -353,6 +382,10 @@ export default function AdminBilling() {
               t={t}
               dateLocale={dateLocale}
               methodLabelKeys={methodLabelKeys}
+              onPressPending={(record) => {
+                setConfirmMethod(record.method);
+                setConfirmTarget(record);
+              }}
             />
           )}
           ItemSeparatorComponent={BillingRowSeparator}
@@ -405,6 +438,7 @@ export default function AdminBilling() {
             testID="billing-amount-input"
             placeholder={t("admin.manage.placeholderAmount")}
             keyboardType="numeric"
+            inputMode="numeric"
             value={form.amount}
             onChangeText={(v) => setForm((s) => ({ ...s, amount: v }))}
           />
@@ -424,12 +458,25 @@ export default function AdminBilling() {
             optionTestIDPrefix="billing-package-option"
             placeholder={t("admin.manage.packageOptional")}
             value={form.packageTypeId}
-            onChange={(v) =>
+            onChange={(v) => {
+              const deselecting = form.packageTypeId === v;
+              // Prefill the amount from the catalog price when picking a
+              // package and the amount field is still empty. Never clobber
+              // a typed amount.
+              const picked = deselecting
+                ? undefined
+                : (packageTypesQuery.data?.packageTypes ?? []).find(
+                    (pt) => pt.id === v,
+                  );
               setForm((s) => ({
                 ...s,
-                packageTypeId: form.packageTypeId === v ? "" : v,
-              }))
-            }
+                packageTypeId: deselecting ? "" : v,
+                amount:
+                  !deselecting && picked?.price != null && s.amount === ""
+                    ? String(picked.price)
+                    : s.amount,
+              }));
+            }}
             emptyText={t("admin.manage.packagesEmpty")}
             options={(packageTypesQuery.data?.packageTypes ?? [])
               .filter((pt) => !pt.isBirthdayGift)
@@ -486,6 +533,121 @@ export default function AdminBilling() {
           ) : null}
         </View>
       </AppSheet>
+
+      {/* Confirm-payment sheet — a PENDING (pay-later) row was tapped. */}
+      <AppSheet
+        open={!!confirmTarget}
+        onOpenChange={(open) => {
+          if (!open) setConfirmTarget(null);
+        }}
+      >
+        {confirmTarget ? (
+          <View className="flex-col gap-4">
+            <Text
+              className="text-foreground font-body-bold"
+              style={{ fontSize: 20, letterSpacing: -0.3 }}
+            >
+              {t("admin.manage.confirmPaymentTitle")}
+            </Text>
+            <Text className="text-muted" style={{ fontSize: 13 }}>
+              {t("admin.manage.confirmPaymentMessage")}
+            </Text>
+            <View className="flex-row items-center justify-between">
+              <Text
+                className="text-foreground font-body-semibold"
+                style={{ fontSize: 15 }}
+                numberOfLines={1}
+              >
+                {confirmTarget.client?.fullName ?? "—"}
+              </Text>
+              <Text
+                className="text-foreground font-body-bold"
+                style={{ fontSize: 16 }}
+              >
+                {formatRsd(confirmTarget.amount)}
+              </Text>
+            </View>
+            <Select
+              testID="billing-confirm-method-select"
+              optionTestIDPrefix="billing-confirm-method-option"
+              placeholder={t("admin.manage.paymentMethod")}
+              value={confirmMethod}
+              onChange={(v) => setConfirmMethod(v)}
+              options={methods.map((m) => ({
+                value: m,
+                label: t(methodLabelKeys[m]),
+              }))}
+            />
+            <Button
+              testID="billing-confirm-submit"
+              disabled={confirmMutation.isPending}
+              onPress={() =>
+                confirmMutation.mutate(
+                  { id: confirmTarget.id, method: confirmMethod },
+                  { onSuccess: () => setConfirmTarget(null) },
+                )
+              }
+            >
+              {t("admin.manage.confirmPaymentSubmit")}
+            </Button>
+            {confirmMutation.isError ? (
+              <ErrorState message={t("admin.manage.confirmPaymentError")} />
+            ) : null}
+            {/* Void path — only when the record backs a package. A
+                payment-only PENDING row (no clientPackageId) has nothing to
+                revoke, so the destructive action is hidden there. */}
+            {confirmTarget.clientPackageId ? (
+              <View className="gap-1.5 mt-1">
+                <Button
+                  testID="billing-confirm-revoke-button"
+                  variant="danger"
+                  disabled={confirmMutation.isPending || revokeMutation.isPending}
+                  onPress={() => setRevokeTarget(confirmTarget)}
+                >
+                  {t("admin.manage.revokePackageAction")}
+                </Button>
+                <Text
+                  className="text-muted text-center"
+                  style={{ fontSize: 12, lineHeight: 16 }}
+                >
+                  {t("admin.manage.revokePackageCaption")}
+                </Text>
+              </View>
+            ) : null}
+          </View>
+        ) : null}
+      </AppSheet>
+
+      {/* Destructive confirm for the void path — reuses the SAME copy keys as
+          the client-detail package-row revoke, so the consequences the admin
+          sees are identical wherever the revoke is triggered. Stacked "push"
+          over the pending sheet. On success both sheets close and the row
+          re-renders as "Stornirano" (revoke mutation invalidates ["billing"]). */}
+      <ConfirmSheet
+        testID="billing-revoke-confirm-button"
+        open={!!revokeTarget}
+        onOpenChange={(open) => {
+          if (!open) setRevokeTarget(null);
+        }}
+        stackBehavior="push"
+        title={t("confirm.revokePackageTitle")}
+        message={t("confirm.revokePackageMessage")}
+        confirmLabel={t("confirm.revokePackageConfirm")}
+        loading={revokeMutation.isPending}
+        errorMessage={
+          revokeMutation.isError ? t("admin.clientDetail.revokeError") : null
+        }
+        onConfirm={() => {
+          const packageId = revokeTarget?.clientPackageId;
+          if (!packageId) return;
+          revokeMutation.mutate(packageId, {
+            onSuccess: () => {
+              setRevokeTarget(null);
+              setConfirmTarget(null);
+            },
+          });
+        }}
+      />
 
       {/* Stacked over the create sheet — searchable, paginated client picker. */}
       <AppSheet
@@ -638,20 +800,25 @@ function BillingRow({
   t,
   dateLocale,
   methodLabelKeys,
+  onPressPending,
 }: {
   item: BillingRecord;
   t: (key: string, opts?: Record<string, unknown>) => string;
   dateLocale: ReturnType<typeof getDateLocale>;
   methodLabelKeys: Record<string, string>;
+  onPressPending: (record: BillingRecord) => void;
 }) {
   const methodLabel = methodLabelKeys[item.method]
     ? t(methodLabelKeys[item.method])
     : item.method;
   const dateLabel = new Date(item.createdAt).toLocaleDateString(dateLocale);
-  return (
+  const isVoided = item.status === "VOIDED";
+  const isPending = item.status === "PENDING";
+  const row = (
     <View
       testID={`billing-row-${item.id}`}
       className="flex-row items-center gap-3 py-3"
+      style={isVoided ? { opacity: 0.55 } : undefined}
     >
       <View className="flex-1 gap-0.5">
         {item.client?.fullName ? (
@@ -674,15 +841,40 @@ function BillingRow({
       </View>
       <View className="items-end gap-1">
         <Text
-          className="text-foreground font-body-semibold"
-          style={{ fontSize: 15 }}
+          className={
+            isVoided ? "text-muted font-body-semibold" : "text-foreground font-body-semibold"
+          }
+          style={{
+            fontSize: 15,
+            ...(isVoided ? { textDecorationLine: "line-through" as const } : {}),
+          }}
           numberOfLines={1}
         >
           {formatRsd(item.amount)}
         </Text>
-        <Badge status="success">{t("admin.manage.statusConfirmed")}</Badge>
+        {isPending ? (
+          <Badge status="warning">{t("admin.manage.statusPending")}</Badge>
+        ) : isVoided ? (
+          <Badge status="neutral">{t("admin.manage.statusVoided")}</Badge>
+        ) : (
+          <Badge status="success">{t("admin.manage.statusConfirmed")}</Badge>
+        )}
       </View>
     </View>
+  );
+  // Only PENDING rows act as a button — they open the confirm-payment sheet.
+  if (!isPending) return row;
+  return (
+    <Pressable
+      testID={`billing-row-pending-${item.id}`}
+      onPress={() => onPressPending(item)}
+      android_ripple={null}
+      className="active:opacity-70"
+      accessibilityRole="button"
+      accessibilityLabel={t("admin.manage.confirmPaymentTitle")}
+    >
+      {row}
+    </Pressable>
   );
 }
 

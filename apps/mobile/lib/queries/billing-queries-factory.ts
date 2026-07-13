@@ -123,6 +123,19 @@ export const billingQueries = {
           errorMessage: "Unable to create billing record",
         }),
     }),
+
+  confirm: () =>
+    mutationOptions({
+      mutationKey: [...billingAll, "confirm"] as const,
+      // PENDING → CONFIRMED once the client pays in person. Method may be
+      // corrected at confirm time (promised cash, paid by card).
+      mutationFn: async (payload: { id: string; method?: string }) =>
+        apiRequest(`/api/billing/${payload.id}`, {
+          method: "PATCH",
+          body: { status: "CONFIRMED", method: payload.method },
+          errorMessage: "Unable to confirm payment",
+        }),
+    }),
 };
 
 // A payment always changes the revenue figures (reports summary renders on
@@ -146,5 +159,40 @@ export function createBillingMutationOptions(queryClient: QueryClient) {
 
 export function useCreateBillingMutation() {
   return useMutation(createBillingMutationOptions(useQueryClient()));
+}
+
+// Confirming a pay-later payment settles a debt — it moves NO bookings, so
+// (unlike revoke) it never touches ["bookings"]/["sessions"]. What it DOES
+// change:
+//   ["billing"]         → the Naplata row flips PENDING → CONFIRMED, and
+//                         /billing/summary revenue now includes it
+//   ["reports"]         → izveštaji revenue figures pick up the confirmed money
+//   ["packages"]        → the admin package-history "Nije plaćeno" tag clears
+//                         (ClientPackage.paymentPending is derived from the
+//                         linked record's status) + clients packageStatus src
+//   ["clients"]         → clients-list badge / detail-header derivation
+//   ["client-packages"] → the client-facing /clients/me/packages timeline also
+//                         advertises paymentPending — it must clear there too,
+//                         which the old set MISSED (the client still saw the
+//                         debt banner after the admin confirmed).
+// ["client-packages"] is a literal for the same cycle reason documented in
+// packages-queries-factory's revoke options.
+export function confirmBillingMutationOptions(queryClient: QueryClient) {
+  return {
+    ...billingQueries.confirm(),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: billingQueries.all }),
+        queryClient.invalidateQueries({ queryKey: reportsQueries.all }),
+        queryClient.invalidateQueries({ queryKey: packagesQueries.all }),
+        queryClient.invalidateQueries({ queryKey: clientsQueries.all }),
+        queryClient.invalidateQueries({ queryKey: ["client-packages"] }),
+      ]);
+    },
+  };
+}
+
+export function useConfirmBillingMutation() {
+  return useMutation(confirmBillingMutationOptions(useQueryClient()));
 }
 

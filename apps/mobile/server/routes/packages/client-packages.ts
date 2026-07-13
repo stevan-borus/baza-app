@@ -52,6 +52,27 @@ export async function GET(request: Request) {
       }),
     ]);
 
+    // Which of these packages are funded by a still-PENDING BillingRecord (a
+    // pay-later assignment)? The studio's flow is pay-on-arrival, so the client
+    // must see they still owe. One query over the funding FK — clientPackageId
+    // is @unique on BillingRecord, so a set of the ids that have a PENDING row
+    // is all we need to flag `paymentPending` on the payload below.
+    const pendingBilling =
+      packages.length > 0
+        ? await prisma.billingRecord.findMany({
+            where: {
+              clientPackageId: { in: packages.map((p) => p.id) },
+              status: "PENDING",
+            },
+            select: { clientPackageId: true },
+          })
+        : [];
+    const pendingPackageIds = new Set(
+      pendingBilling
+        .map((b) => b.clientPackageId)
+        .filter((id): id is string => id !== null),
+    );
+
     // Per package: how many of the remaining sessions the client already
     // holds (future uncancelled bookings + waitlist seats — the same count
     // the booking gate uses) and how many they can still book. The UI shows
@@ -60,6 +81,16 @@ export async function GET(request: Request) {
     const currentInstant = now();
     const packagesWithHolds = await Promise.all(
       packages.map(async (pkg) => {
+        // Revoked packages grant nothing (booking 409s), so they must never
+        // present a positive `bookable`. Force both counts to 0 — the client
+        // screens additionally hide revoked rows, but pinning the payload here
+        // is the primary defense so no client-facing surface can advertise a
+        // revoked package as bookable. The row itself is still returned (admin
+        // history relies on the per-client branch, not this one).
+        if (pkg.revokedAt) {
+          return { ...pkg, heldCount: 0, bookable: 0 };
+        }
+        const paymentPending = pendingPackageIds.has(pkg.id);
         // NOTE: waitlist entries are counted per CLASS TYPE — they carry no
         // package FK — so with two packages of the same class each package's
         // heldCount includes the same waitlist entries. Mirrors the booking
@@ -78,6 +109,7 @@ export async function GET(request: Request) {
             sessionsRemaining: pkg.sessionsRemaining,
             heldCount,
           }),
+          paymentPending,
         };
       }),
     );
@@ -99,12 +131,14 @@ export async function GET(request: Request) {
             startsAt: Date;
             expiresAt: Date;
             sessionsRemaining: number;
+            revokedAt: Date | null;
           }) => ({
             id: item.id,
             classTypeId: item.classTypeId,
             startsAt: item.startsAt,
             expiresAt: item.expiresAt,
             sessionsRemaining: item.sessionsRemaining,
+            revokedAt: item.revokedAt,
           })),
           pauses,
           currentInstant,
@@ -227,15 +261,18 @@ export async function GET(request: Request) {
         },
       },
     }),
+    // All statuses on purpose: PENDING must surface as "Nije plaćeno" and
+    // VOIDED as "Stornirano" on the admin package rows — filtering to
+    // CONFIRMED here would render a pay-later package as a comp/gift.
     prisma.billingRecord.findMany({
       where: {
         clientUserId: clientProfile.userId,
-        status: "CONFIRMED",
       },
       select: {
         id: true,
         amount: true,
         method: true,
+        status: true,
         packageTypeId: true,
         clientPackageId: true,
         createdAt: true,
@@ -254,7 +291,12 @@ export async function GET(request: Request) {
     return {
       ...p,
       billingRecord: match
-        ? { amount: match.amount, method: match.method }
+        ? {
+            id: match.id,
+            amount: match.amount,
+            method: match.method,
+            status: match.status,
+          }
         : null,
     };
   });

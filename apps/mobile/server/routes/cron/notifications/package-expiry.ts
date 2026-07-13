@@ -25,11 +25,13 @@ export async function POST(request: Request) {
   const currentInstant = now();
   const soon = new Date(currentInstant.getTime() + windowDays * 24 * 60 * 60 * 1000);
 
-  // Only active packages that have started and have sessions left.
+  // Only active packages that have started and have sessions left. Revoked
+  // packages can't expire in any way the client should hear about.
   const packages = await prisma.clientPackage.findMany({
     where: {
       sessionsRemaining: { gt: 0 },
       startsAt: { lte: currentInstant },
+      revokedAt: null,
     },
     select: {
       id: true,

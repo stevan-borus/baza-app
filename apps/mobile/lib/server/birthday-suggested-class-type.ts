@@ -27,6 +27,9 @@ export async function resolveSuggestedClassType(
       startsAt: { lte: currentInstant },
       expiresAt: { gte: currentInstant },
       sessionsRemaining: { gt: 0 },
+      // A revoked package is not "what the client trains" anymore — fall
+      // through to the recent-booking heuristic instead.
+      revokedAt: null,
     },
     orderBy: { startsAt: "desc" },
     select: { classTypeId: true },

@@ -132,6 +132,41 @@ describe("GET /api/clients/me/packages", () => {
     expect(body.entries[0].packageTypeName).toBe("Poklon paket");
   });
 
+  it("PENDING-funded (pay-later) package is NOT a Poklon — kind PAID, paymentPending true, amount/method withheld", async () => {
+    const ct = await makeClassType();
+    const pt = await makePackageType(ct.id, "Pay-later 10");
+    const { user, profile } = await makeClient("paylater@test.local");
+    const pkg = await makeClientPackage({
+      clientProfileId: profile.id,
+      packageTypeId: pt.id,
+      classTypeId: ct.id,
+    });
+    // The funding record exists but is still PENDING (assigned "Plaća
+    // kasnije"). Filtering the timeline to CONFIRMED made this fall through to
+    // COMP and render "Poklon" — a lie. It must now read PAID + pending.
+    await prisma.billingRecord.create({
+      data: {
+        clientUserId: user.id,
+        amount: 24000,
+        method: "CASH",
+        status: "PENDING",
+        packageTypeId: pt.id,
+        clientPackageId: pkg.id,
+      },
+    });
+
+    asClient({ id: user.id, clientProfileId: profile.id });
+    const res = await GET(buildRequest());
+    const body = await res.json();
+    expect(body.entries).toHaveLength(1);
+    expect(body.entries[0].kind).toBe("PAID");
+    expect(body.entries[0].kind).not.toBe("COMP");
+    expect(body.entries[0].paymentPending).toBe(true);
+    // No confirmed amount/method yet — the UI shows "Nije plaćeno" instead.
+    expect(body.entries[0].amount).toBeNull();
+    expect(body.entries[0].method).toBeNull();
+  });
+
   it("legacy un-backfilled row (no FK) is still classified PAID via the chronological-zip fallback — matching admin", async () => {
     const ct = await makeClassType();
     const pt = await makePackageType(ct.id, "Legacy 10");

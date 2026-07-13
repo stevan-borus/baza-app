@@ -142,8 +142,13 @@ export async function POST(request: Request) {
 
   // TODO(billing): `activatePackageOnConfirm: false` is dead today — keep the
   // flag for a future "activate later" endpoint we haven't built yet.
+  //
+  // PENDING (pay-later) activates the package immediately by design: the
+  // whole point of the workflow is that a client can book their return
+  // sessions from vacation and settle the bill in person at the first
+  // session back. Revenue reports ignore the record until it's CONFIRMED.
   const shouldActivatePackage =
-    status === "CONFIRMED" &&
+    (status === "CONFIRMED" || status === "PENDING") &&
     !!parsed.data.packageTypeId &&
     parsed.data.activatePackageOnConfirm;
 

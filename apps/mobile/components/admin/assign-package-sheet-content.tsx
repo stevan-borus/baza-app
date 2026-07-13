@@ -75,7 +75,14 @@ export function AssignPackageSheetContent({
   // stable across mode flips (the parent always remounts on sheet open, but
   // a future caller might toggle mode without unmounting).
   const [amount, setAmount] = useState("");
+  // Once the admin types an amount, package-price prefills stop overriding
+  // it — the manual value wins for the rest of the sheet's life.
+  const [amountTouched, setAmountTouched] = useState(false);
   const [method, setMethod] = useState<PaymentMethod>("CASH");
+  // Pay-later ("Plaća kasnije"): the package still activates immediately so
+  // the client can book right away; the BillingRecord lands as PENDING and
+  // stays out of revenue until the admin confirms it in Naplata.
+  const [payLater, setPayLater] = useState(false);
 
   const packageTypesQuery = useQuery(packagesQueries.types());
   const allPackageTypes = packageTypesQuery.data?.packageTypes ?? [];
@@ -121,13 +128,16 @@ export function AssignPackageSheetContent({
       );
       return;
     }
-    // Paid path: the server transaction creates both rows or neither.
+    // Paid path: the server transaction creates both rows or neither. With
+    // pay-later the record lands as PENDING but the package activates
+    // immediately — that's the whole point of the workflow.
     paidMutation.mutate(
       {
         clientUserId: client.user.id,
         packageTypeId,
         amount: Math.round(amountNumber),
         method,
+        status: payLater ? "PENDING" : "CONFIRMED",
         activatePackageOnConfirm: true,
       },
       { onSuccess },
@@ -162,7 +172,14 @@ export function AssignPackageSheetContent({
           testID={`assign-package-option-${pt.id}`}
           size="small"
           variant={packageTypeId === pt.id ? "primary" : "secondary"}
-          onPress={() => setPackageTypeId(pt.id)}
+          onPress={() => {
+            setPackageTypeId(pt.id);
+            // Prefill from the catalog price (still editable). Never
+            // clobber an amount the admin already typed by hand.
+            if (mode === "paid" && pt.price != null && !amountTouched) {
+              setAmount(String(pt.price));
+            }
+          }}
         >
           {t("admin.clients.sessionsCount", { name: pt.name, count: pt.sessionCount })}
         </Button>
@@ -183,8 +200,12 @@ export function AssignPackageSheetContent({
             testID="assign-package-amount-input"
             placeholder={t("admin.clients.paymentAmount")}
             keyboardType="numeric"
+            inputMode="numeric"
             value={amount}
-            onChangeText={setAmount}
+            onChangeText={(v) => {
+              setAmountTouched(true);
+              setAmount(v);
+            }}
           />
           {amountError ? (
             <Text className="text-danger" style={{ fontSize: 12 }}>
@@ -204,6 +225,35 @@ export function AssignPackageSheetContent({
               label: t(METHOD_LABEL_KEY[m]),
             }))}
           />
+
+          <SectionLabel>{t("admin.clients.paymentTimingLabel")}</SectionLabel>
+          <View className="flex-row gap-2">
+            <View className="flex-1">
+              <Button
+                testID="assign-package-pay-now"
+                size="small"
+                variant={payLater ? "secondary" : "primary"}
+                onPress={() => setPayLater(false)}
+              >
+                {t("admin.clients.payNow")}
+              </Button>
+            </View>
+            <View className="flex-1">
+              <Button
+                testID="assign-package-pay-later"
+                size="small"
+                variant={payLater ? "primary" : "secondary"}
+                onPress={() => setPayLater(true)}
+              >
+                {t("admin.clients.payLater")}
+              </Button>
+            </View>
+          </View>
+          {payLater ? (
+            <Text className="text-muted" style={{ fontSize: 12 }}>
+              {t("admin.clients.payLaterHint")}
+            </Text>
+          ) : null}
         </>
       ) : null}
 

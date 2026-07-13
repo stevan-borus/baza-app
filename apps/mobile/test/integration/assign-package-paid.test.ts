@@ -179,7 +179,11 @@ describe("assign-package paid mode (POST /api/billing)", () => {
       success: boolean;
       packages: Array<{
         id: string;
-        billingRecord: { amount: number; method: string } | null;
+        billingRecord: {
+          amount: number;
+          method: string;
+          status?: string;
+        } | null;
       }>;
     };
     expect(body.success).toBe(true);
@@ -187,9 +191,12 @@ describe("assign-package paid mode (POST /api/billing)", () => {
 
     const byId = new Map(body.packages.map((p) => [p.id, p]));
     expect(byId.get(compPackId)?.billingRecord).toBeNull();
-    expect(byId.get(paidPackId)?.billingRecord).toEqual({
+    // The pay-later branch widened the embedded record with id + status; a
+    // regular paid activation reads CONFIRMED.
+    expect(byId.get(paidPackId)?.billingRecord).toMatchObject({
       amount: 32000,
       method: "CARD",
+      status: "CONFIRMED",
     });
   });
 

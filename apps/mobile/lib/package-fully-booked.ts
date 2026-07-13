@@ -41,3 +41,29 @@ export function isFullyBookedActivePackage(
 ): boolean {
   return bookable === 0 && sessionsRemaining > 0;
 }
+
+/**
+ * Whether a package should present as the client's ACTIVE package on the home
+ * card and the profile "Moji paketi" list — credits remaining, not past expiry,
+ * and NOT revoked.
+ *
+ * `revokedAt` is the load-bearing addition: a revoked package keeps its credits
+ * and future expiry (keep-the-trace semantics), so the old `sessionsRemaining >
+ * 0 && expiresAt > now` test rendered it as the bookable active card while the
+ * server 409'd every booking it invited. A revoked-only client must fall
+ * through to the RenewalCard / "no active package" state exactly like a lapsed
+ * client. The greyed-calendar visibility path deliberately still shows revoked
+ * packages and is unaffected.
+ */
+export function isActiveClientPackage(
+  pkg: {
+    sessionsRemaining: number;
+    expiresAt: string;
+    revokedAt?: string | null;
+  },
+  now: Date,
+): boolean {
+  if (pkg.revokedAt) return false;
+  if (pkg.sessionsRemaining <= 0) return false;
+  return new Date(pkg.expiresAt) > now;
+}

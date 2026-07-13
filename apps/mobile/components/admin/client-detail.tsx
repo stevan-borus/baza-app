@@ -34,7 +34,11 @@ import { ScreenContainerRaw, useTabBarBottomPadding } from "@/components/ui/scre
 import { HeaderIconButton } from "@/components/ui/app-header";
 import { PaginatedList } from "@/components/ui/paginated-list";
 import { clientsQueries, useUpdateClientMutation } from "@/lib/queries/clients-queries-factory";
-import { packagesQueries, type ClientPackage } from "@/lib/queries/packages-queries-factory";
+import {
+  packagesQueries,
+  useRevokeClientPackageMutation,
+  type ClientPackage,
+} from "@/lib/queries/packages-queries-factory";
 import { bookingsQueries, type ClientBooking } from "@/lib/queries/bookings-queries-factory";
 import {
   trainerNotesQueries,
@@ -83,6 +87,7 @@ function InitialsAvatar({ name, size = 56 }: { name: string; size?: number }) {
 function pickActivePackage(packages: ClientPackage[]): ClientPackage | null {
   const msNow = nowMs();
   for (const p of packages) {
+    if (p.revokedAt) continue;
     if (p.sessionsRemaining <= 0) continue;
     if (new Date(p.expiresAt).getTime() < msNow) continue;
     return p;
@@ -595,6 +600,12 @@ function PaketiTab({
   bottomPad: number;
 }) {
   const { t } = useTranslation();
+  const tokens = useThemeTokens();
+  // Keep-the-trace revoke: destructive confirm first, then the server
+  // cancels future bookings, releases unbacked waitlist seats and voids the
+  // linked payment in one transaction. Cache upkeep lives in the factory.
+  const [revokeTarget, setRevokeTarget] = useState<ClientPackage | null>(null);
+  const revokeMutation = useRevokeClientPackageMutation();
   return (
     <ScrollView
       testID="client-detail-tab-content-paketi"
@@ -615,8 +626,10 @@ function PaketiTab({
       ) : (
         <View className="bg-surface rounded-lg overflow-hidden">
           {allPackages.map((p, idx) => {
+            const revoked = !!p.revokedAt;
             const expired = new Date(p.expiresAt).getTime() < nowMs();
             const usedUp = p.sessionsRemaining <= 0;
+            const billingStatus = p.billingRecord?.status ?? "CONFIRMED";
             return (
               <React.Fragment key={p.id}>
                 {idx > 0 ? (
@@ -628,6 +641,7 @@ function PaketiTab({
                 <View
                   testID={`package-history-row-${p.id}`}
                   className="flex-col gap-1 px-4 py-3"
+                  style={revoked ? { opacity: 0.6 } : undefined}
                 >
                   <View className="flex-row items-center justify-between gap-3">
                     <Text
@@ -637,7 +651,11 @@ function PaketiTab({
                     >
                       {p.packageType?.name ?? "—"}
                     </Text>
-                    {expired ? (
+                    {revoked ? (
+                      <Badge status="neutral">
+                        {t("admin.clientDetail.status.revoked")}
+                      </Badge>
+                    ) : expired ? (
                       <Badge status="danger">
                         {t("admin.clientDetail.status.expired")}
                       </Badge>
@@ -650,6 +668,19 @@ function PaketiTab({
                         {t("admin.clientDetail.status.active")}
                       </Badge>
                     )}
+                    {!revoked ? (
+                      <Pressable
+                        testID={`package-history-row-${p.id}-revoke`}
+                        onPress={() => setRevokeTarget(p)}
+                        hitSlop={8}
+                        android_ripple={null}
+                        className="active:opacity-60"
+                        accessibilityRole="button"
+                        accessibilityLabel={t("admin.clientDetail.revokeAction")}
+                      >
+                        <Icon name="ban" size={16} color={tokens.danger} />
+                      </Pressable>
+                    ) : null}
                   </View>
                   <Text className="text-muted" style={{ fontSize: 12 }}>
                     {`${dayjs(p.startsAt).locale(lang).format("D.M.YYYY.")} — ${dayjs(p.expiresAt).locale(lang).format("D.M.YYYY.")}`}
@@ -663,13 +694,21 @@ function PaketiTab({
                     </Text>
                     <Text
                       testID={`package-history-row-${p.id}-billing-tag`}
-                      className="text-muted font-body-medium"
+                      className={
+                        p.billingRecord && billingStatus === "PENDING"
+                          ? "text-warning font-body-medium"
+                          : "text-muted font-body-medium"
+                      }
                       style={{ fontSize: 12 }}
                     >
                       {p.billingRecord
-                        ? t("admin.clientDetail.paid", {
-                            amount: p.billingRecord.amount,
-                          })
+                        ? billingStatus === "PENDING"
+                          ? t("admin.clientDetail.notPaid")
+                          : billingStatus === "VOIDED"
+                            ? t("admin.clientDetail.voided")
+                            : t("admin.clientDetail.paid", {
+                                amount: p.billingRecord.amount,
+                              })
                         : t("admin.clientDetail.comp")}
                     </Text>
                   </View>
@@ -679,6 +718,26 @@ function PaketiTab({
           })}
         </View>
       )}
+      <ConfirmSheet
+        testID="package-revoke-confirm-button"
+        open={!!revokeTarget}
+        onOpenChange={(open) => {
+          if (!open) setRevokeTarget(null);
+        }}
+        title={t("confirm.revokePackageTitle")}
+        message={t("confirm.revokePackageMessage")}
+        confirmLabel={t("confirm.revokePackageConfirm")}
+        loading={revokeMutation.isPending}
+        errorMessage={
+          revokeMutation.isError ? t("admin.clientDetail.revokeError") : null
+        }
+        onConfirm={() => {
+          if (!revokeTarget) return;
+          revokeMutation.mutate(revokeTarget.id, {
+            onSuccess: () => setRevokeTarget(null),
+          });
+        }}
+      />
     </ScrollView>
   );
 }

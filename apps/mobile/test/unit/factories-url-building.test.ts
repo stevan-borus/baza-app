@@ -145,4 +145,37 @@ describe("billing factory URLs", () => {
       "http://test.local/api/billing?cursor=cur-2&clientUserId=u-1&from=2026-06-01&to=2026-06-30",
     );
   });
+
+  it("confirm PATCHes /api/billing/:id with status CONFIRMED + edited method", async () => {
+    fetchMock.mockReturnValueOnce(
+      jsonResponse({ success: true, payment: { id: "b-1" } }),
+    );
+    await billingQueries
+      .confirm()
+      .mutationFn!({ id: "b-1", method: "CARD" }, {} as never);
+    expect(calledUrl()).toBe("http://test.local/api/billing/b-1");
+    const init = fetchMock.mock.calls[0][1] as RequestInit;
+    expect(init.method).toBe("PATCH");
+    expect(JSON.parse(init.body as string)).toEqual({
+      status: "CONFIRMED",
+      method: "CARD",
+    });
+  });
+});
+
+describe("packages factory URLs — revoke", () => {
+  it("revokeClientPackage POSTs to /api/packages/client-packages/:id/revoke", async () => {
+    fetchMock.mockReturnValueOnce(jsonResponse({ success: true }));
+    const { packagesQueries } = await import(
+      "@/lib/queries/packages-queries-factory"
+    );
+    await packagesQueries
+      .revokeClientPackage()
+      .mutationFn!("pkg-9", {} as never);
+    expect(calledUrl()).toBe(
+      "http://test.local/api/packages/client-packages/pkg-9/revoke",
+    );
+    const init = fetchMock.mock.calls[0][1] as RequestInit;
+    expect(init.method).toBe("POST");
+  });
 });

@@ -53,6 +53,7 @@ async function resolveEligiblePackageId(
         startsAt: true,
         expiresAt: true,
         sessionsRemaining: true,
+        revokedAt: true,
       },
     }),
     db.packagePause.findMany({

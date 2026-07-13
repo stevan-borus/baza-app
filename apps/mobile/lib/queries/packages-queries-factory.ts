@@ -89,6 +89,7 @@ export const packagesQueries = {
         sessionCount: number;
         validityDays: number;
         lateCancelHours?: number;
+        price?: number | null;
         classTypeId: string;
         isBirthdayGift?: boolean;
       }) =>
@@ -112,6 +113,7 @@ export const packagesQueries = {
         sessionCount?: number;
         validityDays?: number;
         lateCancelHours?: number;
+        price?: number | null;
         classTypeId?: string;
         isBirthdayGift?: boolean;
       }) =>
@@ -145,6 +147,16 @@ export const packagesQueries = {
           method: "POST",
           body: payload,
           errorMessage: "Unable to create package",
+        }),
+    }),
+
+  revokeClientPackage: () =>
+    mutationOptions({
+      mutationKey: [...packagesAll, "client-packages", "revoke"] as const,
+      mutationFn: (id: string) =>
+        apiRequest(`/api/packages/client-packages/${id}/revoke`, {
+          method: "POST",
+          errorMessage: "Unable to revoke package",
         }),
     }),
 
@@ -231,8 +243,53 @@ export function pausePackageMutationOptions(queryClient: QueryClient) {
   };
 }
 
+// Revoking is the widest-reaching admin write in the app: ONE transaction
+// revokes the package, cancels every FUTURE booking it backed, deletes the
+// client's waitlist entries (firing promotions for other clients on the
+// freed seats), and voids the linked PENDING billing record. So it must
+// invalidate the SUPERSET of every derived surface those effects feed —
+// under-invalidating is exactly what left stale bookedCount / spots, client
+// bookings lists and the client-facing package timeline on live devices:
+//
+//   ["packages"]        → admin package history/rows, active-assignments list,
+//                         client packageStatus source, packages report detail
+//   ["clients"]         → clients-list badge + detail-header packageStatus pill
+//   ["reports"]         → revenue + package report figures (izveštaji)
+//   ["billing"]         → Naplata list row → "Stornirano", /billing/summary
+//   ["bookings"]        → client bookings lists + home "upcoming" hero (future
+//                         bookings were canceled) + any promoted client's list
+//   ["sessions"]        → availability bookedCount/spots + session-detail
+//                         attendee lists (a seat freed, a waitlister promoted)
+//   ["client-packages"] → the client-facing /clients/me/packages timeline
+//                         (the revoked package must drop off it)
+//
+// bookings / sessions / client-packages are invalidated via key literals (not
+// their factory `.all`) to avoid a factory-to-factory import cycle:
+// bookings-queries-factory already imports THIS module, so importing it back
+// here would be circular — same reason ["billing"] was already a literal.
+export function revokeClientPackageMutationOptions(queryClient: QueryClient) {
+  return {
+    ...packagesQueries.revokeClientPackage(),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: packagesQueries.all }),
+        queryClient.invalidateQueries({ queryKey: clientsQueries.all }),
+        queryClient.invalidateQueries({ queryKey: reportsQueries.all }),
+        queryClient.invalidateQueries({ queryKey: ["billing"] }),
+        queryClient.invalidateQueries({ queryKey: ["bookings"] }),
+        queryClient.invalidateQueries({ queryKey: ["sessions"] }),
+        queryClient.invalidateQueries({ queryKey: ["client-packages"] }),
+      ]);
+    },
+  };
+}
+
 export function useAssignClientPackageMutation() {
   return useMutation(assignClientPackageMutationOptions(useQueryClient()));
+}
+
+export function useRevokeClientPackageMutation() {
+  return useMutation(revokeClientPackageMutationOptions(useQueryClient()));
 }
 
 export function usePausePackageMutation() {

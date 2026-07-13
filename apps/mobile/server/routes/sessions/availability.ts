@@ -133,6 +133,7 @@ export async function GET(request: Request) {
             startsAt: true,
             expiresAt: true,
             sessionsRemaining: true,
+            revokedAt: true,
           },
         }),
         prisma.packagePause.findMany({
