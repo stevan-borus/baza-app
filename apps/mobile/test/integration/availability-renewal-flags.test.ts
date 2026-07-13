@@ -356,10 +356,46 @@ describe("GET /api/sessions/availability renewal flags", () => {
     });
   });
 
-  it("locks sessions as NOT_STARTED when the client owns a matching pack that hasn't started yet", async () => {
-    // The pack is funded and has sessions, but its startsAt is in the future
-    // (relative to the 2026-05-09 anchor) — booking opens then, not a renewal.
+  it("locks sessions as NOT_STARTED for sessions before the pack's window opens", async () => {
+    // The pack is funded and has sessions, but its startsAt is AFTER this
+    // session — the session falls before the pack's window opens, so there is
+    // no eligible pack to spend at the session date. Booking opens once the
+    // pack's window begins; this is a NOT_STARTED lock, not a renewal.
     const { client, clientProfile, trainer, reformer } = await baseFixtures();
+    // SESSION_DATE is 2026-06-15; pack opens 2026-06-20 → session precedes it.
+    const session = await makeSession(reformer.id, trainer.id, SESSION_DATE);
+    await makePackage({
+      clientProfileId: clientProfile.id,
+      classTypeId: reformer.id,
+      sessionsRemaining: 10,
+      startsAt: new Date("2026-06-20T00:00:00Z"),
+      expiresAt: new Date("2026-09-01T00:00:00Z"),
+    });
+
+    asClient(client, clientProfile.id);
+
+    const res = await GET(buildRequest(MONTH));
+    const json = await res.json();
+    expect(json.sessions).toHaveLength(1);
+    expect(json.sessions[0]).toMatchObject({
+      id: session.id,
+      bookable: false,
+      lockReason: "NOT_STARTED",
+      lastBookableSlot: false,
+    });
+  });
+
+  it("keeps a session INSIDE a future pack's window bookable (pre-booking a funded window is allowed)", async () => {
+    // Companion to the NOT_STARTED case, pinning the intended positive
+    // semantic: eligibility is evaluated at the session's date, not at "now".
+    // A pack that starts in the future is still eligible for sessions that fall
+    // WITHIN its window — the client may pre-book a funded window. Both the
+    // availability route and the booking gate agree on this; this case guards
+    // against a future "fix" that locks these rows backwards.
+    const { client, clientProfile, trainer, reformer } = await baseFixtures();
+    // SESSION_DATE is 2026-06-15; pack window is 2026-06-01 → 2026-09-01, so the
+    // session falls inside the funded window even though the pack hasn't started
+    // relative to the 2026-05-09 anchor.
     const session = await makeSession(reformer.id, trainer.id, SESSION_DATE);
     await makePackage({
       clientProfileId: clientProfile.id,
@@ -376,10 +412,10 @@ describe("GET /api/sessions/availability renewal flags", () => {
     expect(json.sessions).toHaveLength(1);
     expect(json.sessions[0]).toMatchObject({
       id: session.id,
-      bookable: false,
-      lockReason: "NOT_STARTED",
+      bookable: true,
       lastBookableSlot: false,
     });
+    expect(json.sessions[0].lockReason).toBeUndefined();
   });
 
   it("keeps trainer sessions always bookable with no warnings", async () => {
