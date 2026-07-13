@@ -24,6 +24,7 @@ import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import { now } from "@/lib/now";
 import {
+  isActiveClientPackage,
   isFullyBookedActivePackage,
   packageUsedFraction,
 } from "@/lib/package-fully-booked";
@@ -661,9 +662,12 @@ export default function HomeStudio() {
   const booking = useBookingSheet();
 
   const packages = packagesQuery.data?.packages ?? [];
-  const activePackage = packages.find(
-    (p: ClientPackage) =>
-      p.sessionsRemaining > 0 && new Date(p.expiresAt) > now(),
+  // A revoked package keeps its credits and future expiry (keep-the-trace),
+  // so it must be excluded here too — otherwise it renders as the bookable
+  // active card while the server 409s every booking. A revoked-only client
+  // falls through to the RenewalCard, same as a lapsed client.
+  const activePackage = packages.find((p: ClientPackage) =>
+    isActiveClientPackage(p, now()),
   );
   // No active package but a purchase history → renewal state. The most
   // recently expiring package names what the client would be renewing.

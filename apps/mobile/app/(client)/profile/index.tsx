@@ -40,7 +40,10 @@ import { getDateLocale } from "@/lib/i18n";
 import { now } from "@/lib/now";
 import { authQueries } from "@/lib/queries/auth-queries-factory";
 import { packagesQueries, type ClientPackage } from "@/lib/queries/packages-queries-factory";
-import { packageUsedFraction } from "@/lib/package-fully-booked";
+import {
+  isActiveClientPackage,
+  packageUsedFraction,
+} from "@/lib/package-fully-booked";
 import { ProfilePersonalDataSections } from "@/components/profile/profile-personal-data-sections";
 
 // ─── helpers ────────────────────────────────────────────────────────────────
@@ -72,11 +75,13 @@ export default function ClientProfile() {
 
   const packages = packagesQuery.data?.packages ?? [];
   // The profile shows the client's CURRENTLY ACTIVE packages only (sessions
-  // left AND not past expiry). Expired/used-up ones live in the full timeline
-  // ("Pogledaj sve pakete"). A real client has ~1-2 active, so no cap is needed.
-  const activePackages = packages.filter(
-    (pkg: ClientPackage) =>
-      pkg.sessionsRemaining > 0 && new Date(pkg.expiresAt) >= now(),
+  // left, not past expiry, AND not revoked). Expired/used-up ones live in the
+  // full timeline ("Pogledaj sve pakete"); revoked ones are hidden client-side
+  // entirely (they show as "Opozvan" only on the admin surfaces). A revoked
+  // package would otherwise render here as active while the server 409s every
+  // booking. A real client has ~1-2 active, so no cap is needed.
+  const activePackages = packages.filter((pkg: ClientPackage) =>
+    isActiveClientPackage(pkg, now()),
   );
   const userEmail = meQuery.data?.user.email ?? "";
   const userName = displayName(meQuery.data?.user);

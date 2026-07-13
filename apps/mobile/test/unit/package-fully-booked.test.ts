@@ -1,8 +1,68 @@
 import { describe, expect, it } from "vitest";
 import {
+  isActiveClientPackage,
   isFullyBookedActivePackage,
   packageUsedFraction,
 } from "@/lib/package-fully-booked";
+
+describe("isActiveClientPackage", () => {
+  // now is the shared reference instant the client screens pass in.
+  const now = new Date("2026-07-13T12:00:00.000Z");
+  const future = "2026-08-13T12:00:00.000Z";
+  const past = "2026-06-13T12:00:00.000Z";
+
+  it("is active with remaining credits, unexpired, and not revoked", () => {
+    expect(
+      isActiveClientPackage(
+        { sessionsRemaining: 4, expiresAt: future, revokedAt: null },
+        now,
+      ),
+    ).toBe(true);
+  });
+
+  it("is NOT active when revoked, even if credits remain and not expired", () => {
+    // The bug this fixes: a revoked package still had credits and a future
+    // expiry, so it presented as the bookable active card while the server
+    // 409'd every booking. Revoked must read as lapsed on the client.
+    expect(
+      isActiveClientPackage(
+        {
+          sessionsRemaining: 4,
+          expiresAt: future,
+          revokedAt: "2026-07-01T00:00:00.000Z",
+        },
+        now,
+      ),
+    ).toBe(false);
+  });
+
+  it("is NOT active when no credits remain", () => {
+    expect(
+      isActiveClientPackage(
+        { sessionsRemaining: 0, expiresAt: future, revokedAt: null },
+        now,
+      ),
+    ).toBe(false);
+  });
+
+  it("is NOT active when expired", () => {
+    expect(
+      isActiveClientPackage(
+        { sessionsRemaining: 4, expiresAt: past, revokedAt: null },
+        now,
+      ),
+    ).toBe(false);
+  });
+
+  it("treats an absent revokedAt field as not revoked", () => {
+    expect(
+      isActiveClientPackage(
+        { sessionsRemaining: 4, expiresAt: future },
+        now,
+      ),
+    ).toBe(true);
+  });
+});
 
 describe("isFullyBookedActivePackage", () => {
   it("returns true when bookable is 0 but raw credits remain (active, fully reserved)", () => {

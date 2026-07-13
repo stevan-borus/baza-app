@@ -382,6 +382,37 @@ describe("POST /api/packages/client-packages/[id]/revoke", () => {
     expect((await POST_REVOKE(revokeRequest(missing), { id: missing })).status).toBe(404);
   });
 
+  it("the CLIENT-branch payload never advertises a revoked package as bookable", async () => {
+    // The bug: the client home/profile picked the active package purely on
+    // sessionsRemaining/expiresAt, and the endpoint returned a positive
+    // `bookable` for the revoked (but still credited, unexpired) row — so the
+    // card invited taps that the booking gate always 409'd. Post-revoke the
+    // CLIENT branch must pin heldCount/bookable to 0 and report no active
+    // package, so a revoked-only client reads as lapsed.
+    const seeded = await seed();
+    const { pkg } = await createPackageWithPendingBilling(seeded);
+    asAdmin(seeded);
+    await POST_REVOKE(revokeRequest(pkg.id), { id: pkg.id });
+
+    asClient(seeded);
+    const res = await GET_CLIENT_PACKAGES(
+      new Request("http://test.local/api/packages/client-packages"),
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json();
+
+    // Keep-the-trace: the revoked row is still present in the payload...
+    const row = body.packages.find((p: { id: string }) => p.id === pkg.id);
+    expect(row).toBeTruthy();
+    expect(typeof row.revokedAt).toBe("string");
+    // ...but it grants nothing bookable, even though credits remain unexpired.
+    expect(row.sessionsRemaining).toBe(6);
+    expect(row.heldCount).toBe(0);
+    expect(row.bookable).toBe(0);
+    // And it is NOT the active package — a revoked-only client is lapsed.
+    expect(body.activePackageId).toBeNull();
+  });
+
   it("per-client admin list marks the package revoked with its VOIDED billing record", async () => {
     const seeded = await seed();
     const { pkg } = await createPackageWithPendingBilling(seeded);

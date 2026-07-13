@@ -60,6 +60,15 @@ export async function GET(request: Request) {
     const currentInstant = now();
     const packagesWithHolds = await Promise.all(
       packages.map(async (pkg) => {
+        // Revoked packages grant nothing (booking 409s), so they must never
+        // present a positive `bookable`. Force both counts to 0 — the client
+        // screens additionally hide revoked rows, but pinning the payload here
+        // is the primary defense so no client-facing surface can advertise a
+        // revoked package as bookable. The row itself is still returned (admin
+        // history relies on the per-client branch, not this one).
+        if (pkg.revokedAt) {
+          return { ...pkg, heldCount: 0, bookable: 0 };
+        }
         // NOTE: waitlist entries are counted per CLASS TYPE — they carry no
         // package FK — so with two packages of the same class each package's
         // heldCount includes the same waitlist entries. Mirrors the booking
