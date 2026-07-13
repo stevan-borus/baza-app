@@ -329,7 +329,7 @@
       "expiresOn": "Expires {{date}}",
       "expiresWithCountdown": "Expires {{date}} · {{days}} days left",
       "fullyBookedHint": "You've booked all your remaining sessions. Want more? Get in touch to renew your package.",
-      "paymentPendingHint": "Package not paid yet — payment on your first visit.",
+      "paymentPendingHint": "Package not paid yet — pay on your first visit.",
       "noClassesToday": "No classes today",
       "noClassesThisDay": "No classes on this day",
       "tryAnotherDay": "Try another day.",

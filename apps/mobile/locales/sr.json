@@ -330,7 +330,7 @@
       "expiresOn": "Ističe {{date}}",
       "expiresWithCountdown": "Ističe {{date}} · još {{days}} dana",
       "fullyBookedHint": "Rezervisali ste sve preostale termine. Ako želite još termina, javite nam se da obnovite paket.",
-      "paymentPendingHint": "Paket još nije plaćen — plaćanje pri prvom dolasku.",
+      "paymentPendingHint": "Paket još nije plaćen — platite pri prvom dolasku.",
       "noClassesToday": "Nema treninga danas",
       "noClassesThisDay": "Nema treninga ovog dana",
       "tryAnotherDay": "Probaj drugi dan.",
