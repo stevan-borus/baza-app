@@ -14,3 +14,17 @@ export function canHoldAnotherBooking(input: {
 }): boolean {
   return input.heldCount < input.sessionsRemaining;
 }
+
+/**
+ * How many MORE sessions the client can reserve right now — the number the
+ * client-facing UI shows. `sessionsRemaining` is "not yet consumed" (credits),
+ * which users misread as "still bookable"; the difference is the held count
+ * (future uncancelled bookings + waitlist seats). Clamped at zero because
+ * admin-side reservations can legitimately push holds past remaining.
+ */
+export function bookableSessions(input: {
+  sessionsRemaining: number;
+  heldCount: number;
+}): number {
+  return Math.max(0, input.sessionsRemaining - input.heldCount);
+}

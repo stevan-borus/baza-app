@@ -165,6 +165,12 @@ describe("POST /api/bookings cancel", () => {
       where: { sessionId: session.id, clientProfileId: clientProfile.id },
     });
     expect(consumption).not.toBeNull();
+    // Cancel + forfeit commit as one transaction: the booking flip and the
+    // penalty must land together, never one without the other.
+    const booking = await prisma.booking.findFirst({
+      where: { sessionId: session.id, clientProfileId: clientProfile.id },
+    });
+    expect(booking?.canceledAt).not.toBeNull();
   });
 
   it("does not double-debit the pack on a repeated late-cancel call (idempotent)", async () => {
