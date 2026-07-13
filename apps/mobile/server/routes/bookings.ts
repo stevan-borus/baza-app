@@ -191,22 +191,29 @@ export async function POST(request: Request) {
     },
   });
 
-  await prisma.booking.updateMany({
-    where: { sessionId, clientProfileId, canceledAt: null },
-    data: { canceledAt: cancellationTime },
-  });
-
-  if (activeBooking && !activeBooking.canceledAt) {
-    // Late cancellations (within policy window) consume one package session as penalty.
-    await applyLateCancelForfeit(prisma, {
-      clientProfileId,
-      sessionId,
-      clientPackageId: activeBooking.clientPackageId,
-      sessionStartsAt: session.startsAt,
-      canceledAt: cancellationTime,
-      lateCancelHours: activeBooking.clientPackage?.lateCancelHours ?? 0,
+  // Cancel + forfeit are ONE atomic unit: previously these ran as two
+  // sequential root-client calls, so a crash between them could leave a
+  // cancelled booking whose late-cancel penalty never landed. The forfeit's
+  // SessionConsumption unique guard keeps retries idempotent inside the
+  // transaction too. Waitlist promotion stays its own transaction, as before.
+  await prisma.$transaction(async (tx) => {
+    await tx.booking.updateMany({
+      where: { sessionId, clientProfileId, canceledAt: null },
+      data: { canceledAt: cancellationTime },
     });
-  }
+
+    if (activeBooking && !activeBooking.canceledAt) {
+      // Late cancellations (within policy window) consume one package session as penalty.
+      await applyLateCancelForfeit(tx, {
+        clientProfileId,
+        sessionId,
+        clientPackageId: activeBooking.clientPackageId,
+        sessionStartsAt: session.startsAt,
+        canceledAt: cancellationTime,
+        lateCancelHours: activeBooking.clientPackage?.lateCancelHours ?? 0,
+      });
+    }
+  });
 
   const promoted = await prisma.$transaction((tx) =>
     promoteNextWaitlistEntry(tx, sessionId),

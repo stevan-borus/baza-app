@@ -130,9 +130,9 @@ describe("GET /api/sessions/availability class-scoped client filtering", () => {
     ]);
   });
 
-  it("hides sessions when the matching pack has 0 sessions remaining", async () => {
+  it("greys out (bookable=false) sessions when the matching pack has 0 sessions remaining", async () => {
     const { client, clientProfile, trainer, reformer } = await baseFixtures();
-    await makeSession(reformer.id, trainer.id, SESSION_DATE);
+    const session = await makeSession(reformer.id, trainer.id, SESSION_DATE);
     await makePackage({
       clientProfileId: clientProfile.id,
       classTypeId: reformer.id,
@@ -149,12 +149,17 @@ describe("GET /api/sessions/availability class-scoped client filtering", () => {
 
     const res = await GET(buildRequest(MONTH));
     const json = await res.json();
-    expect(json.sessions).toEqual([]);
+    expect(json.sessions).toHaveLength(1);
+    expect(json.sessions[0]).toMatchObject({
+      id: session.id,
+      bookable: false,
+      lastBookableSlot: false,
+    });
   });
 
-  it("hides sessions whose startsAt falls after the matching pack expires", async () => {
+  it("greys out sessions whose startsAt falls after the matching pack expires", async () => {
     const { client, clientProfile, trainer, reformer } = await baseFixtures();
-    await makeSession(reformer.id, trainer.id, SESSION_DATE);
+    const session = await makeSession(reformer.id, trainer.id, SESSION_DATE);
     await makePackage({
       clientProfileId: clientProfile.id,
       classTypeId: reformer.id,
@@ -172,12 +177,13 @@ describe("GET /api/sessions/availability class-scoped client filtering", () => {
 
     const res = await GET(buildRequest(MONTH));
     const json = await res.json();
-    expect(json.sessions).toEqual([]);
+    expect(json.sessions).toHaveLength(1);
+    expect(json.sessions[0]).toMatchObject({ id: session.id, bookable: false });
   });
 
-  it("hides sessions before a future-dated pack startsAt", async () => {
+  it("greys out sessions before a future-dated pack startsAt", async () => {
     const { client, clientProfile, trainer, reformer } = await baseFixtures();
-    await makeSession(reformer.id, trainer.id, SESSION_DATE);
+    const session = await makeSession(reformer.id, trainer.id, SESSION_DATE);
     await makePackage({
       clientProfileId: clientProfile.id,
       classTypeId: reformer.id,
@@ -195,12 +201,13 @@ describe("GET /api/sessions/availability class-scoped client filtering", () => {
 
     const res = await GET(buildRequest(MONTH));
     const json = await res.json();
-    expect(json.sessions).toEqual([]);
+    expect(json.sessions).toHaveLength(1);
+    expect(json.sessions[0]).toMatchObject({ id: session.id, bookable: false });
   });
 
-  it("hides sessions inside a pause window even if the pack matches the class", async () => {
+  it("greys out sessions inside a pause window even if the pack matches the class", async () => {
     const { client, clientProfile, trainer, reformer } = await baseFixtures();
-    await makeSession(reformer.id, trainer.id, SESSION_DATE);
+    const session = await makeSession(reformer.id, trainer.id, SESSION_DATE);
     await makePackage({
       clientProfileId: clientProfile.id,
       classTypeId: reformer.id,
@@ -223,7 +230,8 @@ describe("GET /api/sessions/availability class-scoped client filtering", () => {
 
     const res = await GET(buildRequest(MONTH));
     const json = await res.json();
-    expect(json.sessions).toEqual([]);
+    expect(json.sessions).toHaveLength(1);
+    expect(json.sessions[0]).toMatchObject({ id: session.id, bookable: false });
   });
 
   it("admins see everything regardless of pack scope", async () => {
@@ -245,5 +253,9 @@ describe("GET /api/sessions/availability class-scoped client filtering", () => {
     const res = await GET(buildRequest(MONTH));
     const json = await res.json();
     expect(json.sessions).toHaveLength(2);
+    for (const s of json.sessions) {
+      expect(s.bookable).toBe(true);
+      expect(s.lastBookableSlot).toBe(false);
+    }
   });
 });

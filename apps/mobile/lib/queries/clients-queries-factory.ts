@@ -2,6 +2,7 @@ import {
   queryOptions,
   mutationOptions,
   infiniteQueryOptions,
+  keepPreviousData,
   useMutation,
   useQueryClient,
   type QueryClient,
@@ -53,6 +54,13 @@ export const clientsQueries = {
       initialPageParam: null as string | null,
       getNextPageParam: (last) => last.nextCursor ?? null,
       staleTime: 60_000,
+      // Keep the previous page's rows on screen while a new search (`q` change)
+      // loads. Without this, changing the query key drops `data` to empty until
+      // the request returns — the list blanks out and the RefreshControl draws
+      // its "Refreshing…" band. The debounce made that empty gap long enough to
+      // see; keepPreviousData removes it so the old rows stay until the new
+      // results arrive.
+      placeholderData: keepPreviousData,
     }),
 
   byId: (id: string) =>

@@ -11,8 +11,10 @@ import { requireRole } from "@/lib/server/auth-guards";
 import { createClientPackageFromType } from "@/lib/server/client-package-create";
 import { linkPackagesToBilling } from "@/lib/server/billing-package-link";
 import { fail, respond } from "@/lib/server/http";
+import { countHeldSessions } from "@/lib/server/booking-hold-count";
 import { createSystemNotification } from "@/lib/server/notifications";
 import { findEligibleClientPackage } from "@/lib/server/package-eligibility";
+import { bookableSessions } from "@/lib/server/package-hold";
 import { prisma } from "@/lib/server/prisma";
 import { trainerLinkedToClientProfile } from "@/lib/server/trainer-scope";
 import { tryCatch } from "@/lib/server/try-catch";
@@ -50,10 +52,41 @@ export async function GET(request: Request) {
       }),
     ]);
 
+    // Per package: how many of the remaining sessions the client already
+    // holds (future uncancelled bookings + waitlist seats — the same count
+    // the booking gate uses) and how many they can still book. The UI shows
+    // `bookable`; raw `sessionsRemaining` is consumed-at-attendance credits,
+    // which clients misread as "still bookable" (the pilot rebook report).
+    const currentInstant = now();
+    const packagesWithHolds = await Promise.all(
+      packages.map(async (pkg) => {
+        // NOTE: waitlist entries are counted per CLASS TYPE — they carry no
+        // package FK — so with two packages of the same class each package's
+        // heldCount includes the same waitlist entries. Mirrors the booking
+        // gate's math (intentional), but any future UI that SUMS bookable
+        // across packages would double-count those waitlist holds.
+        const heldCount = await countHeldSessions(prisma, {
+          clientProfileId: ownClientProfileId,
+          classTypeId: pkg.classTypeId,
+          clientPackageId: pkg.id,
+          at: currentInstant,
+        });
+        return {
+          ...pkg,
+          heldCount,
+          bookable: bookableSessions({
+            sessionsRemaining: pkg.sessionsRemaining,
+            heldCount,
+          }),
+        };
+      }),
+    );
+
     // Dashboard "active package" is class-agnostic on purpose — drives the
     // home/profile pill, not the bookable calendar. Class scope is enforced at
     // booking + availability time. Here we just look for ANY eligible pack.
-    const currentInstant = now();
+    // NOTE: eligibility deliberately stays on sessionsRemaining/expiresAt —
+    // a fully-booked package (bookable 0, remaining > 0) is still ACTIVE.
     const activePackage = (() => {
       const distinctClassTypeIds = Array.from(
         new Set(packages.map((p: { classTypeId: string }) => p.classTypeId)),
@@ -86,7 +119,7 @@ export async function GET(request: Request) {
 
     return respond(clientPackagesResponseSchema, {
       success: true,
-      packages,
+      packages: packagesWithHolds,
       activePackageId: activePackage?.id ?? null,
     });
   }

@@ -72,6 +72,7 @@ type ClientResponse = {
     user: { email: string; fullName: string };
   }>;
   nextCursor: string | null;
+  total: number;
 };
 
 describe("clients API — pagination & search", () => {
@@ -314,6 +315,135 @@ describe("clients API — pagination & search", () => {
     const body = (await res.json()) as ClientResponse;
     expect(body.clients).toHaveLength(1);
     expect(body.clients[0].user.fullName).toBe("Active Reformer");
+  });
+
+  // ── total-count badge ──────────────────────────────────────────────────
+  // The Klijenti tab badge must show the FULL matching count, not the number
+  // of rows on the current page. Before this field existed the UI derived the
+  // count from the loaded pages' length, so it read the page size (20) until
+  // the admin scrolled. `total` is a server-side count over the SAME where
+  // clause the list uses, so it also follows the q-search filter.
+
+  it("returns total = full matching count, independent of take (page size)", async () => {
+    await seedClients(25);
+    asAdmin();
+
+    const res = await GET(
+      new Request("http://test.local/api/clients?take=10"),
+    );
+    const body = (await res.json()) as ClientResponse;
+    // Only 10 rows come back on this page…
+    expect(body.clients).toHaveLength(10);
+    // …but the total reflects all 25 matching clients.
+    expect(body.total).toBe(25);
+  });
+
+  it("total counts remaining pages the same (stable across cursor navigation)", async () => {
+    await seedClients(25);
+    asAdmin();
+
+    const r1 = await GET(new Request("http://test.local/api/clients?take=10"));
+    const b1 = (await r1.json()) as ClientResponse;
+    const r2 = await GET(
+      new Request(`http://test.local/api/clients?take=10&cursor=${b1.nextCursor}`),
+    );
+    const b2 = (await r2.json()) as ClientResponse;
+    // The badge shouldn't change as the user pages through the list.
+    expect(b1.total).toBe(25);
+    expect(b2.total).toBe(25);
+  });
+
+  it("total follows the ?q= search filter", async () => {
+    await seedClients(25);
+    const targetUser = await prisma.user.create({
+      data: {
+        email: "zebra@test.local",
+        firstName: "Zebra",
+        lastName: "Special",
+        role: "CLIENT",
+        isActive: true,
+      },
+    });
+    await prisma.clientProfile.create({ data: { userId: targetUser.id } });
+    asAdmin();
+
+    const res = await GET(
+      new Request("http://test.local/api/clients?q=zebra"),
+    );
+    const body = (await res.json()) as ClientResponse;
+    expect(body.clients).toHaveLength(1);
+    // Not 26 — the count respects the active search, matching the visible list.
+    expect(body.total).toBe(1);
+  });
+
+  it("total excludes soft-deleted (isActive:false) clients", async () => {
+    await seedClients(5);
+    // Soft-delete one — flips the user's isActive flag, which the list's
+    // activeWhere hides. The count must hide it too.
+    const inactiveUser = await prisma.user.create({
+      data: {
+        email: "deleted@test.local",
+        firstName: "Deleted",
+        lastName: "Client",
+        role: "CLIENT",
+        isActive: false,
+      },
+    });
+    await prisma.clientProfile.create({ data: { userId: inactiveUser.id } });
+    asAdmin();
+
+    const res = await GET(new Request("http://test.local/api/clients"));
+    const body = (await res.json()) as ClientResponse;
+    expect(body.total).toBe(5);
+  });
+
+  it("total is trainer-scoped (only clients linked to the trainer)", async () => {
+    const trainer = await prisma.user.create({
+      data: {
+        email: "trainer-total@test.local",
+        firstName: "Trainer",
+        lastName: "Total",
+        role: "TRAINER",
+      },
+    });
+    const classType = await prisma.classType.create({
+      data: { name: "Reformer Total", maxClients: 6, durationMins: 60 },
+    });
+    const linked = await seedNamedClient({
+      email: "linked-total@test.local",
+      firstName: "Linked",
+      lastName: "Total",
+    });
+    // Two strangers not linked to this trainer.
+    await seedClients(2);
+    const session = await prisma.session.create({
+      data: {
+        classTypeId: classType.id,
+        trainerUserId: trainer.id,
+        startsAt: new Date("2026-05-10T10:00:00Z"),
+        endsAt: new Date("2026-05-10T11:00:00Z"),
+        capacity: 6,
+        isActive: true,
+        status: "SCHEDULED",
+      },
+    });
+    await prisma.booking.create({
+      data: { sessionId: session.id, clientProfileId: linked.profile.id },
+    });
+
+    setMockUser({
+      id: trainer.id,
+      role: "TRAINER",
+      email: trainer.email,
+      isActive: true,
+      clientProfile: null,
+    });
+
+    const res = await GET(new Request("http://test.local/api/clients"));
+    const body = (await res.json()) as ClientResponse;
+    expect(body.clients).toHaveLength(1);
+    // Strangers don't inflate the count.
+    expect(body.total).toBe(1);
   });
 
   it("trainer-scope still ANDs with a multi-word search (no cross-trainer leak)", async () => {

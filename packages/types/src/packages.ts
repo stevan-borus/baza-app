@@ -103,6 +103,13 @@ export const clientPackageSchema = z.object({
   // Set when an admin revoked the package (keep-the-trace semantics): the
   // row stays visible in history, marked "Opozvan", but grants no rights.
   revokedAt: z.string().nullable().optional(),
+  // CLIENT branch only: `heldCount` = future uncancelled bookings backed by
+  // this package + waitlist seats for its class type; `bookable` =
+  // max(0, sessionsRemaining - heldCount) — the number the client-facing UI
+  // shows as "left to book". Admin/trainer branches omit both on purpose:
+  // admin surfaces speak the raw-credit (sessionsRemaining) language.
+  heldCount: z.number().optional(),
+  bookable: z.number().optional(),
   packageType: embeddedPackageTypeSchema.optional(),
   client: embeddedClientSchema.optional(),
   // Per-client GET path attaches the matching CONFIRMED BillingRecord (or

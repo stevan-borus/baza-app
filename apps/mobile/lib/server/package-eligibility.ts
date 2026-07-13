@@ -31,6 +31,20 @@ export function isInPauseWindow(
   return pauses.some((pause) => pause.startsAt <= at && pause.endsAt > at);
 }
 
+/**
+ * True when the client owns ANY pack for this class type, regardless of
+ * expiry / remaining sessions / pauses. Drives session VISIBILITY on the
+ * client calendar: a lapsed Reformer client still sees Reformer sessions
+ * (greyed out, with a renewal CTA) instead of an unexplained empty calendar,
+ * while classes they never bought stay hidden.
+ */
+export function clientOwnsPackageForClass(
+  packages: Pick<ClientPackage, "classTypeId">[],
+  classTypeId: string,
+): boolean {
+  return packages.some((pkg) => pkg.classTypeId === classTypeId);
+}
+
 export type EligiblePackage = Pick<
   ClientPackage,
   "id" | "classTypeId" | "startsAt" | "expiresAt" | "sessionsRemaining" | "revokedAt"

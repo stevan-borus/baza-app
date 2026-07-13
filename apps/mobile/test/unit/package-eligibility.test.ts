@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { findEligibleClientPackage } from "@/lib/server/package-eligibility";
+import {
+  clientOwnsPackageForClass,
+  findEligibleClientPackage,
+} from "@/lib/server/package-eligibility";
 
 const REFORMER_CLASS_TYPE_ID = "11111111-1111-1111-1111-111111111111";
 const ENERGY_CLASS_TYPE_ID = "22222222-2222-2222-2222-222222222222";
@@ -173,5 +176,29 @@ describe("findEligibleClientPackage class-scoped behaviour", () => {
       REFORMER_CLASS_TYPE_ID,
     );
     expect(result?.id).toBe("reformer");
+  });
+});
+
+describe("clientOwnsPackageForClass session-visibility behaviour", () => {
+  it("counts an expired matching-class pack as owned (session stays visible, greyed)", () => {
+    const expired = makePackage({
+      startsAt: new Date("2026-03-01T00:00:00Z"),
+      expiresAt: new Date("2026-04-01T00:00:00Z"),
+    });
+    expect(clientOwnsPackageForClass([expired], REFORMER_CLASS_TYPE_ID)).toBe(true);
+  });
+
+  it("counts a used-up matching-class pack as owned", () => {
+    const usedUp = makePackage({ sessionsRemaining: 0 });
+    expect(clientOwnsPackageForClass([usedUp], REFORMER_CLASS_TYPE_ID)).toBe(true);
+  });
+
+  it("does not count packs of other class types (keeps fenced classes hidden)", () => {
+    const energyOnly = makePackage({ classTypeId: ENERGY_CLASS_TYPE_ID });
+    expect(clientOwnsPackageForClass([energyOnly], REFORMER_CLASS_TYPE_ID)).toBe(false);
+  });
+
+  it("is false with no packs at all", () => {
+    expect(clientOwnsPackageForClass([], REFORMER_CLASS_TYPE_ID)).toBe(false);
   });
 });

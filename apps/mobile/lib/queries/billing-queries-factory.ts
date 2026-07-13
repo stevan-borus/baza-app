@@ -2,11 +2,15 @@ import {
   queryOptions,
   mutationOptions,
   infiniteQueryOptions,
+  keepPreviousData,
   useMutation,
   useQueryClient,
   type QueryClient,
 } from "@tanstack/react-query";
-import { billingResponseSchema } from "@baza/types/billing";
+import {
+  billingResponseSchema,
+  billingSummaryResponseSchema,
+} from "@baza/types/billing";
 import { apiRequest } from "@/lib/api-request";
 import { clientsQueries } from "@/lib/queries/clients-queries-factory";
 import { packagesQueries } from "@/lib/queries/packages-queries-factory";
@@ -14,16 +18,21 @@ import { reportsQueries } from "@/lib/queries/reports-queries-factory";
 
 export type { BillingRecord } from "@baza/types/billing";
 
-function fetchBillingPage(
-  cursor?: string | null,
-  filters?: { clientUserId?: string; from?: string; to?: string },
-) {
+type BillingFilters = {
+  clientUserId?: string;
+  from?: string;
+  to?: string;
+  q?: string;
+};
+
+function fetchBillingPage(cursor?: string | null, filters?: BillingFilters) {
   return apiRequest("/api/billing", {
     params: {
       cursor,
       clientUserId: filters?.clientUserId,
       from: filters?.from,
       to: filters?.to,
+      q: filters?.q,
     },
     schema: billingResponseSchema,
     errorMessage: "Unable to load billing",
@@ -42,7 +51,7 @@ export const billingQueries = {
       staleTime: 30_000,
     }),
 
-  listInfinite: (filters?: { clientUserId?: string; from?: string; to?: string }) =>
+  listInfinite: (filters?: BillingFilters) =>
     infiniteQueryOptions({
       // Spread into the key as primitives so React Query's deep-equal cache
       // lookup compares strings, not object references — avoids the bug where
@@ -54,11 +63,46 @@ export const billingQueries = {
         filters?.clientUserId ?? "",
         filters?.from ?? "",
         filters?.to ?? "",
+        filters?.q ?? "",
       ] as const,
       queryFn: ({ pageParam }) => fetchBillingPage(pageParam, filters),
       initialPageParam: null as string | null,
       getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
       staleTime: 30_000,
+      // Keep the current rows on screen while a new search/month loads (see
+      // clients-queries-factory) — stops the list blanking out + the
+      // "Refreshing…" band on each filter change.
+      placeholderData: keepPreviousData,
+    }),
+
+  // Filter-wide totals for the Naplata hero + StatStrip. Same filters as
+  // listInfinite so hero/count/avg stay in sync with the visible rows — but
+  // spans the whole matching set, not the loaded pages.
+  summary: (filters?: BillingFilters) =>
+    queryOptions({
+      queryKey: [
+        ...billingAll,
+        "summary",
+        filters?.clientUserId ?? "",
+        filters?.from ?? "",
+        filters?.to ?? "",
+        filters?.q ?? "",
+      ] as const,
+      queryFn: () =>
+        apiRequest("/api/billing/summary", {
+          params: {
+            clientUserId: filters?.clientUserId,
+            from: filters?.from,
+            to: filters?.to,
+            q: filters?.q,
+          },
+          schema: billingSummaryResponseSchema,
+          errorMessage: "Unable to load billing summary",
+        }),
+      staleTime: 30_000,
+      // Keep the last totals showing while a new filter loads, so the hero /
+      // StatStrip numbers don't flash to zero between searches.
+      placeholderData: keepPreviousData,
     }),
 
   create: () =>

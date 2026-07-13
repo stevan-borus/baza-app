@@ -20,6 +20,7 @@ import * as route_auth_sign_in from "@/server/routes/auth/sign-in";
 import * as route_auth_sign_out from "@/server/routes/auth/sign-out";
 import * as route_billing from "@/server/routes/billing";
 import * as route_billing_id from "@/server/routes/billing/[id]";
+import * as route_billing_summary from "@/server/routes/billing/summary";
 import * as route_bookings from "@/server/routes/bookings";
 import * as route_campaigns from "@/server/routes/campaigns";
 import * as route_campaigns_id from "@/server/routes/campaigns/[id]";
@@ -101,6 +102,7 @@ export const routesRegistry: Record<string, RouteModule> = {
   "auth/sign-out": route_auth_sign_out,
   billing: route_billing,
   "billing/[id]": route_billing_id,
+  "billing/summary": route_billing_summary,
   bookings: route_bookings,
   campaigns: route_campaigns,
   "campaigns/[id]": route_campaigns_id,

@@ -60,6 +60,25 @@ export const billingResponseSchema = z.object({
 });
 export type BillingResponse = z.infer<typeof billingResponseSchema>;
 
+// GET /api/billing/summary — filter-wide aggregate for the Naplata hero +
+// StatStrip. Separate from the paginated list because these totals must span
+// the WHOLE matching set (the whole month, or the whole search), not the
+// pages loaded so far — deriving them from loaded records understated every
+// figure until the admin scrolled. Takes the SAME filters as the list
+// (clientUserId, from, to, q) so hero/count/avg stay in sync with the rows.
+// `distinctClients` is the denominator for the client-side "avg per client"
+// (totalRevenue / distinctClients) — kept server-computed so it too is
+// filter-wide, not per-page.
+export const billingSummaryResponseSchema = z.object({
+  success: z.boolean(),
+  totalRevenue: z.number(),
+  count: z.number(),
+  distinctClients: z.number(),
+});
+export type BillingSummaryResponse = z.infer<
+  typeof billingSummaryResponseSchema
+>;
+
 // POST /api/billing — the payment row as created (full row, no select), plus
 // the ClientPackage the payment activated. `clientPackage` is null when the
 // record doesn't activate a package; `payment.clientPackageId` is null even

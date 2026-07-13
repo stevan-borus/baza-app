@@ -14,7 +14,7 @@
  *                `selectedIds` + `onToggle` (multi). Multi rows render a
  *                checkbox affordance and do not auto-close the parent sheet.
  */
-import { type ReactNode, useDeferredValue, useEffect, useMemo, useState } from "react";
+import { type ReactNode, useEffect, useMemo, useState } from "react";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import {
@@ -31,6 +31,7 @@ import { Input } from "./input";
 import { EmptyState } from "./states";
 import { useThemeTokens } from "./tokens";
 import { clientsQueries } from "@/lib/queries/clients-queries-factory";
+import { useDebouncedValue } from "@/lib/use-debounced-value";
 
 export type ClientPickerItem = {
   id: string;
@@ -147,7 +148,8 @@ function FreePicker(props: FreeProps) {
   const { t } = useTranslation();
   const isMulti = "selectedIds" in props && props.selectedIds !== undefined;
   const [search, setSearch] = useState("");
-  const deferred = useDeferredValue(search.trim());
+  // Debounced so typing fires one search after the pause, not one per letter.
+  const deferred = useDebouncedValue(search.trim());
 
   const query = useInfiniteQuery(
     clientsQueries.list({ q: deferred || undefined, take: 20 }),

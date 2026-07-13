@@ -4,9 +4,15 @@ import {
   monthlyAvailabilityQuerySchema,
 } from "@baza/types/scheduling";
 import { UserRole } from "@/generated/prisma";
+import { now } from "@/lib/now";
 import { requireRole } from "@/lib/server/auth-guards";
+import { countHeldSessions } from "@/lib/server/booking-hold-count";
 import { respond, fail } from "@/lib/server/http";
-import { findEligibleClientPackage } from "@/lib/server/package-eligibility";
+import {
+  clientOwnsPackageForClass,
+  findEligibleClientPackage,
+} from "@/lib/server/package-eligibility";
+import { canHoldAnotherBooking, isLastBookableSlot } from "@/lib/server/package-hold";
 import { prisma } from "@/lib/server/prisma";
 
 function getMonthRange(month: string) {
@@ -77,6 +83,16 @@ export async function GET(request: Request) {
 
   let visibleSessions = sessions;
   let myBookedSessionIds = new Set<string>();
+  // CLIENT-only per-session booking flags. Staff sessions default to
+  // bookable (no entry in the map). Keyed by session id.
+  const sessionBookingFlags = new Map<
+    string,
+    {
+      bookable: boolean;
+      lockReason?: "RENEW" | "FULLY_HELD";
+      lastBookableSlot: boolean;
+    }
+  >();
   // Per-session late-cancel-hours pulled from the booking's package. Used
   // by the BookingSheet's cancel confirmation to warn the client when the
   // cancellation would consume a session.
@@ -129,16 +145,70 @@ export async function GET(request: Request) {
         }),
       ]);
 
+      // Visibility: any session of a class the client has EVER owned a pack
+      // for stays on the calendar — lapsed clients see a greyed-out schedule
+      // with a renewal CTA instead of an unexplained blank. Classes they
+      // never bought stay hidden (keeps fenced class types invisible).
       visibleSessions = sessions.filter((session: (typeof sessions)[number]) =>
-        Boolean(
-          findEligibleClientPackage(
-            clientPackages,
-            packagePauses,
-            session.startsAt,
-            session.classTypeId,
-          ),
-        ),
+        clientOwnsPackageForClass(clientPackages, session.classTypeId),
       );
+
+      // Bookability + last-slot flag per session. Held-slot counts are
+      // memoized per package: a month of sessions typically resolves to the
+      // same one or two packages.
+      const heldCountByPackageId = new Map<string, number>();
+      const at = now();
+      for (const session of visibleSessions) {
+        const eligible = findEligibleClientPackage(
+          clientPackages,
+          packagePauses,
+          session.startsAt,
+          session.classTypeId,
+        );
+        if (!eligible) {
+          sessionBookingFlags.set(session.id, {
+            bookable: false,
+            lockReason: "RENEW",
+            lastBookableSlot: false,
+          });
+          continue;
+        }
+        let heldCount = heldCountByPackageId.get(eligible.id);
+        if (heldCount === undefined) {
+          heldCount = await countHeldSessions(prisma, {
+            clientProfileId,
+            classTypeId: session.classTypeId,
+            clientPackageId: eligible.id,
+            at,
+          });
+          heldCountByPackageId.set(eligible.id, heldCount);
+        }
+        // Eligible on paper, but every remaining session is already committed
+        // to a future booking/waitlist hold — the book call would 409. Mark it
+        // locked with its own reason so the UI can explain (the pilot incident:
+        // a client at her hold limit saw normal bookable rows, got rejected,
+        // and had no idea why).
+        if (
+          !canHoldAnotherBooking({
+            sessionsRemaining: eligible.sessionsRemaining,
+            heldCount,
+          })
+        ) {
+          sessionBookingFlags.set(session.id, {
+            bookable: false,
+            lockReason: "FULLY_HELD",
+            lastBookableSlot: false,
+          });
+          continue;
+        }
+        sessionBookingFlags.set(session.id, {
+          bookable: true,
+          lastBookableSlot: isLastBookableSlot({
+            sessionsRemaining: eligible.sessionsRemaining,
+            heldCount,
+          }),
+        });
+      }
     }
   }
 
@@ -169,6 +239,11 @@ export async function GET(request: Request) {
         isActive: visibleToClients,
         isBookedByMe: myBookedSessionIds.has(session.id),
         lateCancelHours: myBookingLateCancelHours.get(session.id) ?? null,
+        // Staff (no map entry) are always bookable and never warned.
+        bookable: sessionBookingFlags.get(session.id)?.bookable ?? true,
+        lockReason: sessionBookingFlags.get(session.id)?.lockReason,
+        lastBookableSlot:
+          sessionBookingFlags.get(session.id)?.lastBookableSlot ?? false,
       };
     }),
   });

@@ -14,6 +14,8 @@ import { useTranslation } from "react-i18next";
 import { Icon, type IconName } from "@/components/ui/icon";
 import * as Haptics from "expo-haptics";
 import { AppSheet } from "@/components/ui/sheet";
+import { isInLateCancelWindow } from "@/lib/late-cancel";
+import { nowMs } from "@/lib/now";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useThemeTokens, type ThemeTokens } from "@/components/ui/tokens";
@@ -51,15 +53,23 @@ export function BookingSheet({
   const lang = i18n.language === "en" ? "en" : "sr";
   const [step, setStep] = useState<BookingStep>(initialStep);
 
+  // Snapshot of `lastBookableSlot` taken when the user fires the booking
+  // mutation. The success block can't read the live flag: the availability
+  // refetch that lands with the success flips it to false (the new booking
+  // now counts as a hold), which is exactly when we still owe the warning.
+  const bookedLastSlotRef = useRef(false);
+
   // Seed the step when a new session opens (id changes) — render-time state
   // adjustment, not an effect. After that the user drives `step` via taps.
   const openedId = useRef<string | null>(null);
   if (session && session.id !== openedId.current) {
     openedId.current = session.id;
+    bookedLastSlotRef.current = false;
     if (step !== initialStep) setStep(initialStep);
   }
   if (!session && openedId.current !== null) {
     openedId.current = null;
+    bookedLastSlotRef.current = false;
   }
 
   function handleClose() {
@@ -68,6 +78,11 @@ export function BookingSheet({
   }
 
   const isFull = !!session && session.availableSlots <= 0;
+  // No eligible package for this class (expired / used up / paused): the
+  // session is visible but not bookable — the sheet swaps its actions for a
+  // renewal message. Undefined counts as bookable (staff / older payloads).
+  const renewalLocked = !!session && session.bookable === false;
+  const isLastSlot = !!session?.lastBookableSlot;
   // A waitlist only makes sense once the class is full — only then can someone
   // actually be waiting for a seat. Gate on isFull so a stray/seed waitlist
   // count never surfaces on a class that still has open spots.
@@ -89,6 +104,21 @@ export function BookingSheet({
   const durationMin = session
     ? dayjs(session.endsAt).diff(dayjs(session.startsAt), "minute")
     : 0;
+  // Late-cancel predicate mirroring BOTH halves of the server policy
+  // (cancellation-policy): a cancel forfeits one package session only inside
+  // the lateCancelHours window AND before the session starts — the server
+  // never forfeits post-start, and cancel stays reachable after start. Drives
+  // BOTH the confirm-step warning and the post-cancel result copy, so an
+  // early or post-start cancel never sees the scary forfeit text.
+  const lateCancelHours = session?.lateCancelHours;
+  const isLateCancel =
+    !!session &&
+    lateCancelHours != null &&
+    isInLateCancelWindow(
+      dayjs(session.startsAt).valueOf(),
+      nowMs(),
+      lateCancelHours,
+    );
 
   return (
     <AppSheet open={!!session} onOpenChange={(v) => !v && handleClose()}>
@@ -212,11 +242,42 @@ export function BookingSheet({
                     {t("client.dayView.sessionPast")}
                   </Text>
                 </View>
+              ) : renewalLocked ? (
+                // No book/waitlist actions — the client can't book this one.
+                // The server's 409 stays as the backstop if a stale sheet
+                // slips through. Plain informational block, not a disabled
+                // button. FULLY_HELD (eligible package, but every remaining
+                // session already committed to holds) gets its own copy —
+                // telling that client to "renew" would be wrong and confusing.
+                session.lockReason === "FULLY_HELD" ? (
+                  <View
+                    testID="booking-fully-held-message"
+                    className="flex-row items-start gap-2 px-3 py-3 rounded-xl border border-warning/40 bg-warning-soft"
+                  >
+                    <Icon name="info-circle" size={18} color="#a17d3a" />
+                    <Text className="flex-1 text-[14px] text-warning font-body-semibold">
+                      {t("client.renewal.fullyHeldMessage")}
+                    </Text>
+                  </View>
+                ) : (
+                  <View
+                    testID="booking-renewal-message"
+                    className="flex-row items-start gap-2 px-3 py-3 rounded-xl border border-warning/40 bg-warning-soft"
+                  >
+                    <Icon name="info-circle" size={18} color="#a17d3a" />
+                    <Text className="flex-1 text-[14px] text-warning font-body-semibold">
+                      {t("client.renewal.message")}
+                    </Text>
+                  </View>
+                )
               ) : isFull ? (
                 <Button
                   testID="booking-waitlist-button"
                   variant="secondary"
-                  onPress={() => onBook(session.id)}
+                  onPress={() => {
+                    bookedLastSlotRef.current = isLastSlot;
+                    onBook(session.id);
+                  }}
                   disabled={pending}
                 >
                   {t("client.dayView.joinWaitlist")}
@@ -241,11 +302,23 @@ export function BookingSheet({
                 >
                   {t("client.dayView.confirmBook")}
                 </Text>
+                {isLastSlot ? (
+                  <View
+                    testID="booking-last-slot-warning"
+                    className="flex-row items-start gap-2 px-3 py-3 rounded-xl border border-warning/40 bg-warning-soft"
+                  >
+                    <Icon name="info-circle" size={16} color="#a17d3a" />
+                    <Text className="flex-1 text-[13px] text-warning font-body-medium">
+                      {t("client.renewal.lastSessionWarning")}
+                    </Text>
+                  </View>
+                ) : null}
                 <View className="flex-col gap-2">
                   <Button
                     testID="booking-confirm-book-button"
                     onPress={() => {
                       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+                      bookedLastSlotRef.current = isLastSlot;
                       onBook(session.id);
                     }}
                     disabled={pending}
@@ -267,19 +340,20 @@ export function BookingSheet({
                 // late-cancel window, one session from the package is
                 // deducted — warn explicitly so the client makes an informed
                 // decision before tapping Potvrdi.
-                const hours = session.lateCancelHours;
-                const isLate =
-                  hours != null &&
-                  dayjs(session.startsAt).diff(dayjs(), "hour", true) < hours;
+                const warningText = isLateCancel
+                  ? t("client.dayView.cancelWarningLate", {
+                      hours: lateCancelHours,
+                    })
+                  : t("client.dayView.cancelWarning");
                 return (
                   <View className="flex-col gap-3">
                     <Text
+                      testID="booking-cancel-warning"
+                      accessibilityLabel={warningText}
                       className="text-foreground font-body-semibold text-[15px]"
                       style={{ textAlign: "center" }}
                     >
-                      {isLate
-                        ? t("client.dayView.cancelWarningLate", { hours })
-                        : t("client.dayView.cancelWarning")}
+                      {warningText}
                     </Text>
                     <View className="flex-col gap-2">
                       <Button
@@ -305,28 +379,58 @@ export function BookingSheet({
                 );
               })()
             ) : effectiveStep === "success" ? (
-              <View className="flex-row items-center justify-center gap-2 py-3">
-                <Icon
-                  name={successState === "CANCELED" ? "info-circle" : "check-circle"}
-                  size={18}
-                  color={successState === "CANCELED" ? "#a17d3a" : tokens.accent}
-                />
-                <Text
-                  testID="booking-success-message"
-                  className="font-body-semibold text-[15px]"
-                  style={{
-                    color: successState === "CANCELED" ? "#a17d3a" : "#2e5b42",
-                  }}
-                >
-                  {successState === "BOOKED"
+              (() => {
+                // A LATE cancel forfeited one package session — say so in the
+                // result, not just in the pre-confirm warning. Early cancels
+                // keep the neutral copy.
+                const successText =
+                  successState === "BOOKED"
                     ? t("client.calendar.bookingBooked")
                     : successState === "WAITLISTED"
                       ? t("client.calendar.bookingWaitlisted")
                       : successState === "CANCELED"
-                        ? t("client.calendar.bookingCanceled")
-                        : ""}
-                </Text>
-              </View>
+                        ? isLateCancel
+                          ? t("client.calendar.bookingCanceledLate")
+                          : t("client.calendar.bookingCanceled")
+                        : "";
+                return (
+                  <View className="flex-col gap-2">
+                    <View className="flex-row items-center justify-center gap-2 py-3">
+                      <Icon
+                        name={successState === "CANCELED" ? "info-circle" : "check-circle"}
+                        size={18}
+                        color={successState === "CANCELED" ? "#a17d3a" : tokens.accent}
+                      />
+                      <Text
+                        testID="booking-success-message"
+                        accessibilityLabel={successText}
+                        className="font-body-semibold text-[15px] flex-shrink"
+                        style={{
+                          color: successState === "CANCELED" ? "#a17d3a" : "#2e5b42",
+                        }}
+                      >
+                        {successText}
+                      </Text>
+                    </View>
+                    {/* The snapshot (not the live flag) drives this: after the
+                        refetch the just-booked hold flips lastBookableSlot off,
+                        but the client still needs to hear "that was your last
+                        one — renew". */}
+                    {bookedLastSlotRef.current &&
+                    (successState === "BOOKED" || successState === "WAITLISTED") ? (
+                      <View
+                        testID="booking-success-last-slot-warning"
+                        className="flex-row items-start gap-2 px-3 py-3 rounded-xl border border-warning/40 bg-warning-soft"
+                      >
+                        <Icon name="info-circle" size={16} color="#a17d3a" />
+                        <Text className="flex-1 text-[13px] text-warning font-body-medium">
+                          {t("client.renewal.lastSessionWarning")}
+                        </Text>
+                      </View>
+                    ) : null}
+                  </View>
+                );
+              })()
             ) : (
               <View className="flex-row items-start gap-2 px-3 py-3 rounded-xl border border-danger/40 bg-danger-soft">
                 <Icon

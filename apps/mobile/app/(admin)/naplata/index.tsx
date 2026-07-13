@@ -19,7 +19,7 @@
  * (matches client.fullName / notes), same trade-off documented in the
  * Klijenti and ActiveAssignments migrations.
  */
-import { useState, useMemo, useDeferredValue } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useInfiniteQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { ActivityIndicator, Pressable, Text, View } from "react-native";
@@ -52,6 +52,7 @@ import {
   type BillingRecord,
 } from "@/lib/queries/billing-queries-factory";
 import { clientsQueries } from "@/lib/queries/clients-queries-factory";
+import { useDebouncedValue } from "@/lib/use-debounced-value";
 import { ScreenContainerRaw, useTabBarBottomPadding } from "@/components/ui/screen-container";
 import { HeaderIconButton } from "@/components/ui/app-header";
 import { AdminTabLeftSlot } from "@/components/admin/admin-tab-left-slot";
@@ -99,12 +100,22 @@ export default function AdminBilling() {
   const drillWindow = useDrillWindow();
   const monthFrom = selectedMonth.startOf("month").toISOString();
   const monthTo = selectedMonth.endOf("month").toISOString();
+  // Search now runs in Postgres (matches client name / notes), so it feeds the
+  // list AND the summary. Debounced so a keystroke burst fires ONE request pair
+  // after the user pauses, not one list + one summary request per letter.
+  const deferredSearch = useDebouncedValue(searchQuery.trim());
+  const billingFilters = {
+    from: drillWindow?.from ?? monthFrom,
+    to: drillWindow?.to ?? monthTo,
+    q: deferredSearch || undefined,
+  };
   const billingQuery = useInfiniteQuery(
-    billingQueries.listInfinite({
-      from: drillWindow?.from ?? monthFrom,
-      to: drillWindow?.to ?? monthTo,
-    }),
+    billingQueries.listInfinite(billingFilters),
   );
+  // Filter-wide totals for the hero + StatStrip. Spans the whole month (or the
+  // whole search), not the loaded pages — the old summed-in-memory stats
+  // understated every figure until the admin scrolled.
+  const summaryQuery = useQuery(billingQueries.summary(billingFilters));
   // The create-payment client is now chosen via a stacked ClientPicker sheet
   // (server search + pagination), so we no longer eagerly drain every client
   // page here. (The list's per-client filtering works off the loaded billing
@@ -115,58 +126,43 @@ export default function AdminBilling() {
     [billingQuery.data],
   );
 
-  // Pre-pagination behavior preserved: StatStrip's totals sum the records
-  // currently in memory, not a server-side aggregate over the whole month.
-  // Today that's all-loaded-pages, which matches what it summed before the
-  // listInfinite migration (the old non-paginated endpoint returned the same
-  // set in one go). Worth tightening to a server aggregate later — out of
-  // scope for this UI-migration PR.
+  // Hero + StatStrip totals come from the server summary (filter-wide), not a
+  // sum over loaded pages. `avg` keeps its per-client meaning (matching the
+  // "Avg per client" label): totalRevenue / distinctClients.
   //
-  // Revenue integrity (pay-later branch): the CONFIRMED filter is load-
-  // bearing again — PENDING (pay-later, not yet money) and VOIDED (revoked)
-  // rows are visible in the list but must never count as revenue.
-  const summaryStats = useMemo(() => {
-    const confirmed = records.filter((r) => r.status === "CONFIRMED");
-    const totalRevenue = confirmed.reduce((sum, r) => sum + r.amount, 0);
-    const count = confirmed.length;
-    const uniqueClients = new Set(confirmed.map((r) => r.clientUserId)).size;
-    const avg = uniqueClients > 0 ? Math.round(totalRevenue / uniqueClients) : 0;
-    return { totalRevenue, count, avg };
-  }, [records]);
+  // Revenue integrity under pay-later: PENDING (not yet money) and VOIDED
+  // (revoked) rows stay visible in the list — they carry a loud "Nije
+  // plaćeno" / "Stornirano" badge the studio scans for — but must never
+  // count as revenue. The summary endpoint enforces `status: "CONFIRMED"`
+  // server-side (see server/routes/billing/summary.ts), so these totals are
+  // both filter-wide AND already exclude PENDING/VOIDED. That server filter
+  // replaces the old client-side `records.filter(r => r.status === ...)`.
+  const summaryStats = {
+    totalRevenue: summaryQuery.data?.totalRevenue ?? 0,
+    count: summaryQuery.data?.count ?? 0,
+    avg:
+      summaryQuery.data && summaryQuery.data.distinctClients > 0
+        ? Math.round(
+            summaryQuery.data.totalRevenue / summaryQuery.data.distinctClients,
+          )
+        : 0,
+  };
 
-  // Search input narrows client-side over already-loaded pages — same
-  // trade-off as Klijenti and ActiveAssignments. The status filter chip
-  // strip (PR β) stays gone even now that PENDING is back: pay-later rows
-  // carry a loud "Nije plaćeno" badge instead, which the studio scans for.
-  const filteredRecords = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase();
-    let out: BillingRecord[] = records;
-    if (q) {
-      out = out.filter((r) => {
-        const name = r.client?.fullName?.toLowerCase() ?? "";
-        const notes = r.notes?.toLowerCase() ?? "";
-        return name.includes(q) || notes.includes(q);
-      });
-    }
-    return out;
-  }, [records, searchQuery]);
+  // The list is server-filtered now (the search runs in Postgres and feeds
+  // both the list and the summary), so the visible rows already reflect the
+  // search — no client-side narrowing needed. The list endpoint returns ALL
+  // statuses (buildBillingWhere has no status constraint), so PENDING/VOIDED
+  // rows show here with their badges even though the summary excludes them.
+  const filteredRecords = records;
 
-  // Filtered-totals subtitle (P4-2). "Filters active" here means the user
-  // has narrowed the list below the default month view by typing a search.
-  // The month chooser always has a value, so we don't count from/to as a
-  // "filter" for this UI cue.
-  const filtersActive = searchQuery.trim() !== "";
-  const filteredCount = filteredRecords.length;
-  // Same revenue-integrity rule as the hero: only CONFIRMED money counts.
-  // PENDING (not yet paid) and VOIDED (revoked) rows stay visible in the
-  // list but never inflate a sum.
-  const filteredAmount = useMemo(
-    () =>
-      filteredRecords
-        .filter((r) => r.status === "CONFIRMED")
-        .reduce((sum, r) => sum + r.amount, 0),
-    [filteredRecords],
-  );
+  // Filtered-totals subtitle (P4-2). "Filters active" means the user has
+  // typed a search; the month chooser always has a value so from/to isn't a
+  // "filter" for this cue. Count + amount come from the summary, so they're
+  // filter-wide (accurate under search) AND CONFIRMED-only, not a loaded-
+  // pages tally.
+  const filtersActive = deferredSearch !== "";
+  const filteredCount = summaryStats.count;
+  const filteredAmount = summaryStats.totalRevenue;
 
   function navigateBillingMonth(direction: -1 | 1) {
     if (drillWindow) {
@@ -305,6 +301,7 @@ export default function AdminBilling() {
                 {
                   label: t("admin.manage.transactionCount"),
                   value: summaryStats.count,
+                  testID: "naplata-transaction-count",
                 },
                 {
                   label: t("admin.manage.avgPerClient"),
@@ -624,7 +621,7 @@ function BillingClientPickerSheet({
   const { t } = useTranslation();
   const tokens = useThemeTokens();
   const [q, setQ] = useState("");
-  const deferredQ = useDeferredValue(q.trim());
+  const deferredQ = useDebouncedValue(q.trim());
   const clientsQ = useInfiniteQuery(
     clientsQueries.list({ q: deferredQ || undefined }),
   );
