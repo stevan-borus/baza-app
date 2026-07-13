@@ -44,7 +44,11 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { PaginatedList } from "@/components/ui/paginated-list";
 import { SkeletonList } from "@/components/ui/skeleton";
-import { packagesQueries } from "@/lib/queries/packages-queries-factory";
+import {
+  packagesQueries,
+  useRevokeClientPackageMutation,
+} from "@/lib/queries/packages-queries-factory";
+import { ConfirmSheet } from "@/components/ui/confirm-sheet";
 import {
   billingQueries,
   useCreateBillingMutation,
@@ -189,6 +193,17 @@ export default function AdminBilling() {
   const [confirmTarget, setConfirmTarget] = useState<BillingRecord | null>(null);
   const [confirmMethod, setConfirmMethod] = useState("CASH");
   const confirmMutation = useConfirmBillingMutation();
+
+  // Void path (owner feedback): the pending sheet only ever offered "confirm".
+  // A client who never paid needs the OPPOSITE action, and the void must live
+  // where the debt is visible — here, not buried on the client-detail package
+  // row. This reuses the exact revoke transaction (cancels future bookings,
+  // voids the unpaid record) and its confirm.revokePackage* copy. Two states:
+  // `confirmTarget` drives the pending sheet, `revokeTarget` the nested
+  // destructive confirm opened from it (stacked "push" so the sheet under it
+  // stays visible).
+  const [revokeTarget, setRevokeTarget] = useState<BillingRecord | null>(null);
+  const revokeMutation = useRevokeClientPackageMutation();
 
   const methodLabelKeys = RAW_METHOD_LABEL_KEYS;
   const methods = ["CASH", "CARD", "COMPANY", "MANUAL_ONLINE"] as const;
@@ -578,9 +593,61 @@ export default function AdminBilling() {
             {confirmMutation.isError ? (
               <ErrorState message={t("admin.manage.confirmPaymentError")} />
             ) : null}
+            {/* Void path — only when the record backs a package. A
+                payment-only PENDING row (no clientPackageId) has nothing to
+                revoke, so the destructive action is hidden there. */}
+            {confirmTarget.clientPackageId ? (
+              <View className="gap-1.5 mt-1">
+                <Button
+                  testID="billing-confirm-revoke-button"
+                  variant="danger"
+                  disabled={confirmMutation.isPending || revokeMutation.isPending}
+                  onPress={() => setRevokeTarget(confirmTarget)}
+                >
+                  {t("admin.manage.revokePackageAction")}
+                </Button>
+                <Text
+                  className="text-muted text-center"
+                  style={{ fontSize: 12, lineHeight: 16 }}
+                >
+                  {t("admin.manage.revokePackageCaption")}
+                </Text>
+              </View>
+            ) : null}
           </View>
         ) : null}
       </AppSheet>
+
+      {/* Destructive confirm for the void path — reuses the SAME copy keys as
+          the client-detail package-row revoke, so the consequences the admin
+          sees are identical wherever the revoke is triggered. Stacked "push"
+          over the pending sheet. On success both sheets close and the row
+          re-renders as "Stornirano" (revoke mutation invalidates ["billing"]). */}
+      <ConfirmSheet
+        testID="billing-revoke-confirm-button"
+        open={!!revokeTarget}
+        onOpenChange={(open) => {
+          if (!open) setRevokeTarget(null);
+        }}
+        stackBehavior="push"
+        title={t("confirm.revokePackageTitle")}
+        message={t("confirm.revokePackageMessage")}
+        confirmLabel={t("confirm.revokePackageConfirm")}
+        loading={revokeMutation.isPending}
+        errorMessage={
+          revokeMutation.isError ? t("admin.clientDetail.revokeError") : null
+        }
+        onConfirm={() => {
+          const packageId = revokeTarget?.clientPackageId;
+          if (!packageId) return;
+          revokeMutation.mutate(packageId, {
+            onSuccess: () => {
+              setRevokeTarget(null);
+              setConfirmTarget(null);
+            },
+          });
+        }}
+      />
 
       {/* Stacked over the create sheet — searchable, paginated client picker. */}
       <AppSheet

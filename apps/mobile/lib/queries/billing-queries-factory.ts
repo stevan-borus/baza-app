@@ -161,9 +161,22 @@ export function useCreateBillingMutation() {
   return useMutation(createBillingMutationOptions(useQueryClient()));
 }
 
-// Confirming a pay-later payment moves revenue (reports), flips the row's
-// badge (billing) and clears the "Nije plaćeno" tag on the client's package
-// row (packages) — same superset as create, and just as rare an action.
+// Confirming a pay-later payment settles a debt — it moves NO bookings, so
+// (unlike revoke) it never touches ["bookings"]/["sessions"]. What it DOES
+// change:
+//   ["billing"]         → the Naplata row flips PENDING → CONFIRMED, and
+//                         /billing/summary revenue now includes it
+//   ["reports"]         → izveštaji revenue figures pick up the confirmed money
+//   ["packages"]        → the admin package-history "Nije plaćeno" tag clears
+//                         (ClientPackage.paymentPending is derived from the
+//                         linked record's status) + clients packageStatus src
+//   ["clients"]         → clients-list badge / detail-header derivation
+//   ["client-packages"] → the client-facing /clients/me/packages timeline also
+//                         advertises paymentPending — it must clear there too,
+//                         which the old set MISSED (the client still saw the
+//                         debt banner after the admin confirmed).
+// ["client-packages"] is a literal for the same cycle reason documented in
+// packages-queries-factory's revoke options.
 export function confirmBillingMutationOptions(queryClient: QueryClient) {
   return {
     ...billingQueries.confirm(),
@@ -173,6 +186,7 @@ export function confirmBillingMutationOptions(queryClient: QueryClient) {
         queryClient.invalidateQueries({ queryKey: reportsQueries.all }),
         queryClient.invalidateQueries({ queryKey: packagesQueries.all }),
         queryClient.invalidateQueries({ queryKey: clientsQueries.all }),
+        queryClient.invalidateQueries({ queryKey: ["client-packages"] }),
       ]);
     },
   };

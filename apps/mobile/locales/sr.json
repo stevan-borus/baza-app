@@ -856,6 +856,8 @@
       "confirmPaymentMessage": "Označi uplatu kao naplaćenu. Ako je klijent platio drugačije nego što je dogovoreno, izmeni način plaćanja ispod.",
       "confirmPaymentSubmit": "Potvrdi uplatu",
       "confirmPaymentError": "Potvrda uplate nije uspela. Pokušaj ponovo.",
+      "revokePackageAction": "Klijent nije platio — opozovi paket",
+      "revokePackageCaption": "Budući termini se otkazuju, a neplaćena uplata se stornira.",
       "filterAll": "Sve",
       "filterClientPlaceholder": "Filter po klijentu",
       "filterClientEmpty": "Nema klijenata",

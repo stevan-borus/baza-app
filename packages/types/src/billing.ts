@@ -39,6 +39,11 @@ export const billingRecordSchema = z.object({
   status: z.enum(["CONFIRMED", "PENDING", "VOIDED"]),
   notes: z.nullable(z.string()).optional(),
   createdAt: z.string(),
+  // FK back-link to the ClientPackage this payment activated (null for a
+  // payment-only row). Surfaced so the Naplata pending sheet can offer the
+  // package-revoke ("void") path in place of confirm when the client never
+  // paid — the void action needs this id to hit the revoke endpoint.
+  clientPackageId: z.nullable(z.string()).optional(),
   // Client identity for the Naplata list card. Nullable because the GET
   // endpoint joins in-memory (no FK) and a deleted-user payment would
   // otherwise drop off the list.

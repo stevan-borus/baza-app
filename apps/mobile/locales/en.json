@@ -853,6 +853,8 @@
       "confirmPaymentMessage": "Mark this payment as collected. If the client paid differently than agreed, adjust the payment method below.",
       "confirmPaymentSubmit": "Confirm payment",
       "confirmPaymentError": "Could not confirm the payment. Try again.",
+      "revokePackageAction": "Client didn't pay — revoke package",
+      "revokePackageCaption": "Future bookings are canceled and the unpaid payment is voided.",
       "filterAll": "All",
       "filterClientPlaceholder": "Filter by client",
       "filterClientEmpty": "No clients",

@@ -26,10 +26,12 @@ import {
   packagesQueries,
   assignClientPackageMutationOptions,
   pausePackageMutationOptions,
+  revokeClientPackageMutationOptions,
 } from "@/lib/queries/packages-queries-factory";
 import {
   billingQueries,
   createBillingMutationOptions,
+  confirmBillingMutationOptions,
 } from "@/lib/queries/billing-queries-factory";
 import {
   clientsQueries,
@@ -57,6 +59,9 @@ const billingListKey = [...billingQueries.all, "list"];
 const availabilityKey = [...sessionsQueries.all, "availability", "2026-01"];
 const timelineKey = [...clientPackagesTimelineQueries.all, "timeline"];
 const bookingsHistoryKey = [...bookingsQueries.all, "by-client", "u1"];
+// Upcoming bookings hero / client list — revoke cancels the FUTURE bookings a
+// package backed, so these must refetch (they don't self-heal, no focus refetch).
+const bookingsUpcomingKey = [...bookingsQueries.all, "by-client", "u1", "upcoming"];
 // Control: a domain none of these mutations should ever touch.
 const unrelatedKey = ["auth", "me"];
 
@@ -138,6 +143,73 @@ describe("billing create", () => {
     expect(isStale(reportsSummaryKey)).toBe(true);
     expect(isStale(packageTypesKey)).toBe(true);
     expect(isStale(clientsListKey)).toBe(true);
+  });
+});
+
+describe("billing confirm (PENDING → CONFIRMED)", () => {
+  it("marks billing + reports + packages + clients + client-packages timeline stale", async () => {
+    // Confirming settles the debt: the Naplata row flips, revenue moves, and
+    // the paymentPending banner must clear on BOTH the admin package rows
+    // (["packages"]) AND the client-facing timeline (["client-packages"]) —
+    // the timeline was the surface the old, narrower set left stale.
+    seed(
+      billingListKey,
+      reportsSummaryKey,
+      packageTypesKey,
+      clientsListKey,
+      timelineKey,
+      bookingsUpcomingKey,
+      unrelatedKey,
+    );
+    const observer = new MutationObserver(client, {
+      ...confirmBillingMutationOptions(client),
+      mutationFn: async () => ({ success: true }),
+    });
+    await observer.mutate({ id: "b1", method: "CARD" });
+
+    expect(isStale(billingListKey)).toBe(true);
+    expect(isStale(reportsSummaryKey)).toBe(true);
+    expect(isStale(packageTypesKey)).toBe(true);
+    expect(isStale(clientsListKey)).toBe(true);
+    expect(isStale(timelineKey)).toBe(true);
+    // Confirm moves NO bookings — the upcoming list must NOT be invalidated.
+    expect(isStale(bookingsUpcomingKey)).toBe(false);
+    expect(isStale(unrelatedKey)).toBe(false);
+  });
+});
+
+describe("client package revoke", () => {
+  it("marks the FULL superset stale — packages, clients, reports, billing, bookings, sessions, timeline", async () => {
+    // The widest write in the app: one transaction revokes the package,
+    // cancels future bookings, deletes waitlist entries (firing promotions),
+    // and voids the linked PENDING billing record. Under-invalidating here is
+    // exactly what left stale bookedCount/spots (["sessions"]), the client's
+    // upcoming bookings (["bookings"]) and the package timeline
+    // (["client-packages"]) on live devices.
+    seed(
+      packageTypesKey,
+      clientsListKey,
+      reportsSummaryKey,
+      billingListKey,
+      bookingsUpcomingKey,
+      availabilityKey,
+      timelineKey,
+      unrelatedKey,
+    );
+    const observer = new MutationObserver(client, {
+      ...revokeClientPackageMutationOptions(client),
+      mutationFn: async () => ({ success: true }),
+    });
+    await observer.mutate("pkg1");
+
+    expect(isStale(packageTypesKey)).toBe(true);
+    expect(isStale(clientsListKey)).toBe(true);
+    expect(isStale(reportsSummaryKey)).toBe(true);
+    expect(isStale(billingListKey)).toBe(true);
+    expect(isStale(bookingsUpcomingKey)).toBe(true);
+    expect(isStale(availabilityKey)).toBe(true);
+    expect(isStale(timelineKey)).toBe(true);
+    expect(isStale(unrelatedKey)).toBe(false);
   });
 });
 

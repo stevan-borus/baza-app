@@ -20,7 +20,7 @@ import { nowMs } from "@/lib/now";
 
 vi.mock("@/lib/server/auth-guards", async () => (await import("./auth-mock")).authGuardsMock());
 
-import { POST as POST_BILLING } from "@/server/routes/billing";
+import { GET as GET_BILLING, POST as POST_BILLING } from "@/server/routes/billing";
 import { PATCH as PATCH_BILLING } from "@/server/routes/billing/[id]";
 import { GET as GET_SUMMARY } from "@/server/routes/reports/summary";
 import { POST as POST_BOOKINGS } from "@/server/routes/bookings";
@@ -159,6 +159,53 @@ describe("pay-later billing (PENDING) + confirm", () => {
     expect(bookRes.status).toBe(200);
     const bookBody = await bookRes.json();
     expect(bookBody.state).toBe("BOOKED");
+  });
+
+  it("GET /api/billing exposes clientPackageId on a package-backed PENDING row — the Naplata void path needs it", async () => {
+    // The pending sheet offers "Opozovi paket" only for records that back a
+    // package, and hits the revoke endpoint with that package id. So the list
+    // payload MUST carry clientPackageId (billingRecordSchema): a package-
+    // backed row exposes it, a payment-only row leaves it null.
+    const seeded = await seed();
+    asAdmin(seeded);
+
+    // Package-backed pay-later row → clientPackageId wired in the same tx.
+    const backedRes = await POST_BILLING(
+      billingRequest({
+        clientUserId: seeded.clientUser.id,
+        amount: 24000,
+        method: "CASH",
+        status: "PENDING",
+        packageTypeId: seeded.packageType.id,
+        activatePackageOnConfirm: true,
+      }),
+    );
+    const backed = await backedRes.json();
+
+    // Payment-only confirmed row → no package → clientPackageId null.
+    const bareRes = await POST_BILLING(
+      billingRequest({
+        clientUserId: seeded.clientUser.id,
+        amount: 3000,
+        method: "CASH",
+      }),
+    );
+    const bare = await bareRes.json();
+
+    const listRes = await GET_BILLING(
+      new Request("http://test.local/api/billing"),
+    );
+    expect(listRes.status).toBe(200);
+    const list = await listRes.json();
+
+    const backedRow = list.records.find(
+      (r: { id: string }) => r.id === backed.payment.id,
+    );
+    const bareRow = list.records.find(
+      (r: { id: string }) => r.id === bare.payment.id,
+    );
+    expect(backedRow.clientPackageId).toBe(backed.clientPackage.id);
+    expect(bareRow.clientPackageId ?? null).toBeNull();
   });
 
   it("client-packages payload flags paymentPending true pre-confirm, and clears it once confirmed", async () => {
