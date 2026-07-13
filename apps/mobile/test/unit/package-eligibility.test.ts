@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  classifyRenewalLockReason,
   clientOwnsPackageForClass,
   findEligibleClientPackage,
 } from "@/lib/server/package-eligibility";
@@ -200,5 +201,168 @@ describe("clientOwnsPackageForClass session-visibility behaviour", () => {
 
   it("is false with no packs at all", () => {
     expect(clientOwnsPackageForClass([], REFORMER_CLASS_TYPE_ID)).toBe(false);
+  });
+});
+
+describe("classifyRenewalLockReason cause classification", () => {
+  // Only ever called when findEligibleClientPackage returned null but the
+  // client owns a matching-class pack — so its job is to pick the BEST reason
+  // among the owned matching packs, with priority PAUSED > NOT_STARTED > RENEW.
+
+  it("returns PAUSED when a live matching pack exists and the client is inside a pause window", () => {
+    // Pack is otherwise bookable (started, has sessions, unexpired) — the only
+    // thing blocking it is the active pause the client chose. Telling this
+    // client to "renew" would be wrong.
+    const pkg = makePackage({});
+    const pauses = [
+      {
+        startsAt: new Date("2026-05-10T00:00:00Z"),
+        endsAt: new Date("2026-05-20T00:00:00Z"),
+      },
+    ];
+    expect(
+      classifyRenewalLockReason([pkg], pauses, baseAt, REFORMER_CLASS_TYPE_ID),
+    ).toBe("PAUSED");
+  });
+
+  it("returns NOT_STARTED when the client owns a matching pack whose startsAt is in the future", () => {
+    const future = makePackage({
+      startsAt: new Date("2026-06-01T00:00:00Z"),
+      expiresAt: new Date("2026-07-01T00:00:00Z"),
+    });
+    expect(
+      classifyRenewalLockReason([future], [], baseAt, REFORMER_CLASS_TYPE_ID),
+    ).toBe("NOT_STARTED");
+  });
+
+  it("returns RENEW when the only matching pack is used up", () => {
+    const usedUp = makePackage({ sessionsRemaining: 0 });
+    expect(
+      classifyRenewalLockReason([usedUp], [], baseAt, REFORMER_CLASS_TYPE_ID),
+    ).toBe("RENEW");
+  });
+
+  it("returns RENEW when the only matching pack has expired", () => {
+    const expired = makePackage({
+      startsAt: new Date("2026-04-01T00:00:00Z"),
+      expiresAt: new Date("2026-05-01T00:00:00Z"),
+    });
+    expect(
+      classifyRenewalLockReason([expired], [], baseAt, REFORMER_CLASS_TYPE_ID),
+    ).toBe("RENEW");
+  });
+
+  it("does NOT report PAUSED for a used-up pack even inside a pause window (renew is the real cause)", () => {
+    // A pause window is active, but the only matching pack has no sessions
+    // left — the pause is irrelevant, the client genuinely needs to renew.
+    const usedUp = makePackage({ sessionsRemaining: 0 });
+    const pauses = [
+      {
+        startsAt: new Date("2026-05-10T00:00:00Z"),
+        endsAt: new Date("2026-05-20T00:00:00Z"),
+      },
+    ];
+    expect(
+      classifyRenewalLockReason([usedUp], pauses, baseAt, REFORMER_CLASS_TYPE_ID),
+    ).toBe("RENEW");
+  });
+
+  it("does NOT report PAUSED for an expired pack even inside a pause window", () => {
+    const expired = makePackage({
+      startsAt: new Date("2026-04-01T00:00:00Z"),
+      expiresAt: new Date("2026-05-01T00:00:00Z"),
+    });
+    const pauses = [
+      {
+        startsAt: new Date("2026-05-10T00:00:00Z"),
+        endsAt: new Date("2026-05-20T00:00:00Z"),
+      },
+    ];
+    expect(
+      classifyRenewalLockReason([expired], pauses, baseAt, REFORMER_CLASS_TYPE_ID),
+    ).toBe("RENEW");
+  });
+
+  it("prefers PAUSED over NOT_STARTED when both a live-but-paused and a future pack are owned", () => {
+    const live = makePackage({ id: "live" });
+    const future = makePackage({
+      id: "future",
+      startsAt: new Date("2026-06-01T00:00:00Z"),
+      expiresAt: new Date("2026-07-01T00:00:00Z"),
+    });
+    const pauses = [
+      {
+        startsAt: new Date("2026-05-10T00:00:00Z"),
+        endsAt: new Date("2026-05-20T00:00:00Z"),
+      },
+    ];
+    expect(
+      classifyRenewalLockReason(
+        [live, future],
+        pauses,
+        baseAt,
+        REFORMER_CLASS_TYPE_ID,
+      ),
+    ).toBe("PAUSED");
+  });
+
+  it("prefers NOT_STARTED over RENEW when both a future and an expired pack are owned", () => {
+    const expired = makePackage({
+      id: "expired",
+      startsAt: new Date("2026-04-01T00:00:00Z"),
+      expiresAt: new Date("2026-05-01T00:00:00Z"),
+    });
+    const future = makePackage({
+      id: "future",
+      startsAt: new Date("2026-06-01T00:00:00Z"),
+      expiresAt: new Date("2026-07-01T00:00:00Z"),
+    });
+    expect(
+      classifyRenewalLockReason(
+        [expired, future],
+        [],
+        baseAt,
+        REFORMER_CLASS_TYPE_ID,
+      ),
+    ).toBe("NOT_STARTED");
+  });
+
+  it("ignores packs of other class types when classifying", () => {
+    // A future Energy pack shouldn't make the Reformer lock read NOT_STARTED.
+    const otherClassFuture = makePackage({
+      id: "energy-future",
+      classTypeId: ENERGY_CLASS_TYPE_ID,
+      startsAt: new Date("2026-06-01T00:00:00Z"),
+      expiresAt: new Date("2026-07-01T00:00:00Z"),
+    });
+    const reformerUsedUp = makePackage({
+      id: "reformer-used",
+      sessionsRemaining: 0,
+    });
+    expect(
+      classifyRenewalLockReason(
+        [otherClassFuture, reformerUsedUp],
+        [],
+        baseAt,
+        REFORMER_CLASS_TYPE_ID,
+      ),
+    ).toBe("RENEW");
+  });
+
+  it("ignores revoked packs when classifying NOT_STARTED", () => {
+    // A revoked future pack is not a real reason to say "starts soon".
+    const revokedFuture = makePackage({
+      startsAt: new Date("2026-06-01T00:00:00Z"),
+      expiresAt: new Date("2026-07-01T00:00:00Z"),
+      revokedAt: new Date("2026-05-14T00:00:00Z"),
+    });
+    expect(
+      classifyRenewalLockReason(
+        [revokedFuture],
+        [],
+        baseAt,
+        REFORMER_CLASS_TYPE_ID,
+      ),
+    ).toBe("RENEW");
   });
 });

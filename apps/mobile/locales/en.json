@@ -269,10 +269,14 @@
     },
     "renewal": {
       "message": "Your package is used up or has expired. Get in touch to renew it and keep training.",
+      "pausedMessage": "Your package is currently paused. Booking will be available again once the pause ends.",
+      "notStartedMessage": "Your package hasn't started yet. Booking will be available from your package's start date.",
       "fullyHeldMessage": "You've used all the available sessions in your package. Cancel one of your booked sessions to be able to book a new one.",
       "lastSessionWarning": "This booking spends the last session in your package. Renew it so you can book your next one.",
       "homeTitle": "Renew your package",
       "rowAction": "Renew",
+      "rowActionPaused": "Paused",
+      "rowActionNotStarted": "Soon",
       "rowActionFullyHeld": "No sessions left"
     },
     "clientPackages": {

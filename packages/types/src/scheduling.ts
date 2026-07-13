@@ -37,13 +37,22 @@ export const availabilitySessionSchema = SessionResultSchema.pick({
    * Why the session is not bookable. Present only when `bookable` is false
    * (same optional-field pattern as `bookable` — staff payloads and older
    * cached responses omit it):
-   * - "RENEW"      — the client owns a package for this class but none is
-   *                  eligible (expired / used up / paused / not started).
-   * - "FULLY_HELD" — an eligible package exists, but every remaining session
-   *                  is already committed to future bookings/waitlist holds;
-   *                  booking would 409 until one of them is canceled.
+   * - "RENEW"       — the client owns a package for this class but every one is
+   *                   expired / used up (the true "renew me" case).
+   * - "PAUSED"      — the client owns a live matching package but is inside an
+   *                   active pause window they set on purpose; booking resumes
+   *                   when the pause ends.
+   * - "NOT_STARTED" — the client owns a matching package (with sessions) whose
+   *                   start date is in the future; booking opens then.
+   * - "FULLY_HELD"  — an eligible package exists, but every remaining session
+   *                   is already committed to future bookings/waitlist holds;
+   *                   booking would 409 until one of them is canceled.
+   * PAUSED / NOT_STARTED are additive (older clients that only know RENEW /
+   * FULLY_HELD fall back to the generic renewal copy).
    */
-  lockReason: z.enum(["RENEW", "FULLY_HELD"]).optional(),
+  lockReason: z
+    .enum(["RENEW", "PAUSED", "NOT_STARTED", "FULLY_HELD"])
+    .optional(),
   /**
    * True when booking this session would take the client's LAST bookable
    * slot on their eligible package (sessionsRemaining − held slots === 1).

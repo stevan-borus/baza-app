@@ -269,10 +269,14 @@
     },
     "renewal": {
       "message": "Vaš paket je iskorišćen ili je istekao. Javite nam se da obnovite paket i nastavite sa treninzima.",
+      "pausedMessage": "Vaš paket je trenutno pauziran. Zakazivanje će ponovo biti moguće kada se pauza završi.",
+      "notStartedMessage": "Vaš paket još nije počeo. Zakazivanje će biti moguće od datuma početka paketa.",
       "fullyHeldMessage": "Iskoristili ste sve dostupne termine iz paketa. Otkažite neki od zakazanih termina kako biste mogli da zakažete novi.",
       "lastSessionWarning": "Ovim treningom trošite poslednji termin iz paketa. Obnovite ga kako biste mogli da zakažete naredni trening.",
       "homeTitle": "Obnovite paket",
       "rowAction": "Obnovite",
+      "rowActionPaused": "Pauzirano",
+      "rowActionNotStarted": "Uskoro",
       "rowActionFullyHeld": "Bez termina"
     },
     "clientPackages": {

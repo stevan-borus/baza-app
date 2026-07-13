@@ -52,10 +52,11 @@ export type ScheduleRowSession = {
   /** False = the client can't book this session: the row renders muted
    * (still tappable — the sheet explains why). */
   bookable?: boolean;
-  /** Present when bookable is false: "RENEW" = no eligible package (renew
-   * CTA); "FULLY_HELD" = eligible package but every remaining session is
-   * already committed to future bookings/waitlist holds. */
-  lockReason?: "RENEW" | "FULLY_HELD";
+  /** Present when bookable is false: "RENEW" = expired/used-up package (renew
+   * CTA); "PAUSED" = live package inside an active pause window; "NOT_STARTED"
+   * = package starts in the future; "FULLY_HELD" = eligible package but every
+   * remaining session is already committed to future bookings/waitlist holds. */
+  lockReason?: "RENEW" | "PAUSED" | "NOT_STARTED" | "FULLY_HELD";
 };
 
 export function ScheduleRow({
@@ -74,8 +75,17 @@ export function ScheduleRow({
   // Undefined means bookable — staff payloads and older cached responses
   // don't carry the flag.
   const renewalLocked = session.bookable === false;
-  const fullyHeld = renewalLocked && session.lockReason === "FULLY_HELD";
   const photo = photoForClassType(session.classTypeName);
+  // Per-reason row action label. RENEW is the fallback (also covers older
+  // payloads that carry no lockReason).
+  const lockedActionKey =
+    session.lockReason === "FULLY_HELD"
+      ? "client.renewal.rowActionFullyHeld"
+      : session.lockReason === "PAUSED"
+        ? "client.renewal.rowActionPaused"
+        : session.lockReason === "NOT_STARTED"
+          ? "client.renewal.rowActionNotStarted"
+          : "client.renewal.rowAction";
 
   return (
     <Pressable onPress={onPress} testID={`schedule-row-${session.id}`}>
@@ -167,11 +177,9 @@ export function ScheduleRow({
         >
           {bookedByMe
             ? t("client.home.booked")
-            : fullyHeld
-              ? t("client.renewal.rowActionFullyHeld")
-              : renewalLocked
-                ? t("client.renewal.rowAction")
-                : t("client.home.book")}
+            : renewalLocked
+              ? t(lockedActionKey)
+              : t("client.home.book")}
         </Text>
       </View>
     </Pressable>
