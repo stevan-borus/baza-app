@@ -356,8 +356,10 @@
       "myPackages": "Moji paketi",
       "sessions": "{{remaining}}/{{total}} termina",
       "expires": "Ističe {{date}}",
+      "sessionsSection": "Moji treninzi",
+      "viewUpcoming": "Pogledaj predstojeće treninge",
       "trainingHistory": "Istorija treninga",
-      "viewHistory": "Pogledaj prošle termine",
+      "viewHistory": "Pogledaj prošle treninge",
       "preferences": "Podešavanja",
       "language": "Jezik",
       "notificationSettings": "Podešavanja obaveštenja",
@@ -380,6 +382,15 @@
     "history": {
       "empty": "Još nema završenih treninga.",
       "error": "Nije moguće učitati istoriju."
+    },
+    "upcoming": {
+      "title": "Predstojeći termini",
+      "empty": "Još nemaš predstojećih termina.",
+      "error": "Nije moguće učitati predstojeće termine.",
+      "cancelTitle": "Otkazati ovaj termin?",
+      "cancelMessage": "Oslobodićeš svoje mesto za {{session}} u terminu {{date}}.",
+      "cancelConfirm": "Otkaži rezervaciju",
+      "rowHint": "Dodirni da otkažeš {{session}}"
     },
     "dayView": {
       "noSessions": "Nema termina ovog dana",

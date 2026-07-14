@@ -6,28 +6,37 @@
 // case needs a visual marker — completed past trainings render plain).
 
 import React from "react";
-import { Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import { useTranslation } from "react-i18next";
 import dayjs from "dayjs";
 import { Badge } from "@/components/ui/badge";
+import { Icon } from "@/components/ui/icon";
+import { useThemeTokens } from "@/components/ui/tokens";
 import type { ClientBooking } from "@/lib/queries/bookings-queries-factory";
 
 export function BookingRow({
   booking,
   showCanceledTag = false,
+  onPress,
+  accessibilityLabel,
 }: {
   booking: ClientBooking;
   showCanceledTag?: boolean;
+  /**
+   * When set the whole row becomes pressable (used by the upcoming-sessions
+   * screen to open the cancel flow). History rows leave it undefined so they
+   * stay static — same layout, no touch affordance.
+   */
+  onPress?: () => void;
+  accessibilityLabel?: string;
 }) {
   const { t, i18n } = useTranslation();
+  const tokens = useThemeTokens();
   const lang = i18n.language === "en" ? "en" : "sr";
   const canceled = booking.status === "CANCELED";
 
-  return (
-    <View
-      testID={`booking-row-${booking.id}`}
-      className="flex-row items-start gap-3 px-4 py-3"
-    >
+  const inner = (
+    <>
       <View className="flex-1 flex-col gap-0.5">
         <Text
           className="text-foreground font-body-semibold"
@@ -48,6 +57,35 @@ export function BookingRow({
       {showCanceledTag && canceled ? (
         <Badge status="danger">{t("admin.clientDetail.canceledTag")}</Badge>
       ) : null}
+      {onPress ? (
+        <View className="self-center">
+          <Icon name="chevron-right" size={16} color={tokens.faint} />
+        </View>
+      ) : null}
+    </>
+  );
+
+  if (onPress) {
+    return (
+      <Pressable
+        testID={`booking-row-${booking.id}`}
+        onPress={onPress}
+        android_ripple={null}
+        accessibilityRole="button"
+        accessibilityLabel={accessibilityLabel}
+        className="flex-row items-start gap-3 px-4 py-3 active:opacity-60"
+      >
+        {inner}
+      </Pressable>
+    );
+  }
+
+  return (
+    <View
+      testID={`booking-row-${booking.id}`}
+      className="flex-row items-start gap-3 px-4 py-3"
+    >
+      {inner}
     </View>
   );
 }

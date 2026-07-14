@@ -360,19 +360,34 @@ export default function ClientProfile() {
           </View>
         </MotiView>
 
-        {/* ── ISTORIJA TRENINGA — hairline list row, no card chrome ── */}
+        {/* ── TERMINI — one section header, two hairline rows:
+            upcoming (actionable/cancelable) above the past record. ── */}
         <MotiView
           from={{ opacity: 0, translateY: 8 }}
           animate={{ opacity: 1, translateY: 0 }}
-          transition={{ type: "timing", duration: 400, delay: 260 }}
+          transition={{ type: "timing", duration: 400, delay: 250 }}
         >
-          <SectionRow title={t("client.profileTab.trainingHistory")} />
+          <SectionRow title={t("client.profileTab.sessionsSection")} />
           <View className="mx-4 border-t border-glass-border">
+            <Pressable
+              testID="client-profile-upcoming-row"
+              onPress={() => router.push("/(client)/profile/upcoming")}
+              android_ripple={null}
+              className="flex-row items-center justify-between py-4 active:opacity-60"
+            >
+              <Text
+                className="font-body-medium text-foreground"
+                style={{ fontSize: 15, letterSpacing: -0.1 }}
+              >
+                {t("client.profileTab.viewUpcoming")}
+              </Text>
+              <Icon name="chevron-right" size={16} color={tokens.faint} />
+            </Pressable>
             <Pressable
               testID="client-profile-history-row"
               onPress={() => router.push("/(client)/profile/history")}
               android_ripple={null}
-              className="flex-row items-center justify-between py-4 active:opacity-60"
+              className="flex-row items-center justify-between border-t border-glass-border py-4 active:opacity-60"
             >
               <Text
                 className="font-body-medium text-foreground"

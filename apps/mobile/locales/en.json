@@ -355,6 +355,8 @@
       "myPackages": "My packages",
       "sessions": "{{remaining}}/{{total}} sessions",
       "expires": "Expires {{date}}",
+      "sessionsSection": "My sessions",
+      "viewUpcoming": "View upcoming sessions",
       "trainingHistory": "Training history",
       "viewHistory": "View past sessions",
       "preferences": "Preferences",
@@ -379,6 +381,15 @@
     "history": {
       "empty": "No past sessions yet.",
       "error": "Unable to load history."
+    },
+    "upcoming": {
+      "title": "Upcoming sessions",
+      "empty": "No upcoming sessions yet.",
+      "error": "Unable to load upcoming sessions.",
+      "cancelTitle": "Cancel this session?",
+      "cancelMessage": "You'll release your spot for {{session}} on {{date}}.",
+      "cancelConfirm": "Cancel booking",
+      "rowHint": "Tap to cancel {{session}}"
     },
     "dayView": {
       "noSessions": "No sessions on this day",
