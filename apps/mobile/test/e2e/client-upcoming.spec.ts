@@ -10,9 +10,10 @@ import { signInAs } from "./helpers/auth";
  *
  * The reformer client has seeded upcoming Reformer bookings, so the list is
  * non-empty and at least one BookingRow renders. Tapping a row opens the
- * booking sheet on its cancel step (the same forfeit-warning sheet as the
- * calendar) — we assert the sheet's cancel affordance appears rather than
- * actually forfeiting a spot, keeping the spec side-effect free.
+ * booking sheet on its overview (the same sheet as the calendar) — a single
+ * "Otkaži" button that only reveals the Potvrdi / Nazad confirmation once
+ * tapped. We drive that two-step flow up to (but not through) the final
+ * Potvrdi, keeping the spec side-effect free.
  */
 test.describe("client upcoming sessions", () => {
   test("70: client opens upcoming sessions from profile and sees a booking", async ({
@@ -26,18 +27,16 @@ test.describe("client upcoming sessions", () => {
       .getByTestId("client-profile-upcoming-row")
       .dispatchEvent("click");
 
-    // The detail header renders the localized title.
-    await expect(
-      page.getByText("Predstojeći termini", { exact: true }),
-    ).toBeVisible({ timeout: 10_000 });
-
-    // At least one seeded upcoming booking row is present.
+    // The detail header shows the BAZA logo lockup, not the title text
+    // (AppHeader keeps `title` for API compatibility but renders the logo),
+    // so the screen-loaded signal is the seeded upcoming booking row itself:
+    // at least one must be present.
     await expect(
       page.locator('[data-testid^="booking-row-"]').first(),
     ).toBeVisible({ timeout: 10_000 });
   });
 
-  test("71: tapping an upcoming booking opens the cancel sheet", async ({
+  test("71: tapping an upcoming booking opens the overview, then confirm", async ({
     page,
   }) => {
     await signInAs(page, "client.active.reformer@e2e.test");
@@ -51,10 +50,19 @@ test.describe("client upcoming sessions", () => {
     await firstRow.waitFor({ state: "visible", timeout: 10_000 });
     await firstRow.dispatchEvent("click");
 
-    // The booking sheet opens on the cancel-confirm step for a booked session.
-    // Its confirm CTA carries the cancel copy — assert it becomes visible.
+    // The sheet opens on its OVERVIEW — a single "Otkaži" button — NOT straight
+    // on the two-button confirmation. The Potvrdi confirm CTA must be absent
+    // until the client taps Otkaži, matching the calendar's cancel flow.
+    const cancelButton = page.getByTestId("booking-cancel-button");
+    await expect(cancelButton).toBeVisible({ timeout: 10_000 });
     await expect(
-      page.getByText("Otkaži", { exact: false }).first(),
+      page.getByTestId("booking-confirm-cancel-button"),
+    ).toHaveCount(0);
+
+    // Tapping Otkaži reveals the Potvrdi / Nazad confirmation.
+    await cancelButton.dispatchEvent("click");
+    await expect(
+      page.getByTestId("booking-confirm-cancel-button"),
     ).toBeVisible({ timeout: 10_000 });
   });
 });
