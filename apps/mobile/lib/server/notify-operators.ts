@@ -10,8 +10,8 @@
  *     (`excludeUserId`);
  *   - a Trainer who is also an Admin receives only the Trainer-flavored
  *     notification;
- *   - push-vs-silent is an event rule carried by the registry (late cancels
- *     push, early cancels are silent in-app).
+ *   - push-vs-silent is an event rule carried by the registry (a client
+ *     cancellation always pushes; some events push only when late).
  *
  * Call sites use `void notifyOperators(...)` fire-and-forget — a notification
  * failure must never break the request path. Sends are sequential (trainers
@@ -59,7 +59,7 @@ export const OPERATOR_EVENT_CHANNELS: Record<OperatorEvent, OperatorChannelSpec>
       messageKey: NOTIFICATION_MESSAGE_KEYS.BOOKING_CANCELED_ADMIN,
       type: "BOOKING_CANCELED_ADMIN",
     },
-    push: "when-late",
+    push: "always",
   },
   // An admin canceled N of one client's reservations in a single action.
   // The fan-out collapses to one notification per recipient with a count.

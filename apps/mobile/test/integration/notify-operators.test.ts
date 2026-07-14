@@ -102,7 +102,7 @@ describe("notifyOperators", () => {
     ).toBe(0);
   });
 
-  it("late cancel pushes; early cancel stays silent in-app (BOOKING_CANCELED push rule)", async () => {
+  it("both late and early cancels push (BOOKING_CANCELED always pushes)", async () => {
     const trainer = await seedUser("TRAINER", "t1@test.local");
 
     await notifyOperators({
@@ -124,10 +124,37 @@ describe("notifyOperators", () => {
     });
     const late = logs.find((l) => (l.payload as { sessionId: string }).sessionId === "late");
     const early = logs.find((l) => (l.payload as { sessionId: string }).sessionId === "early");
-    // Push was attempted for the late cancel (no tokens seeded → recorded
-    // attempt), and explicitly skipped for the early one (status untouched).
+    // Every client cancellation now attempts a push (no tokens seeded → recorded
+    // attempt), whether it lands inside the late window or not.
     expect(late?.pushStatus).toBe("NO_ACTIVE_PUSH_TOKENS");
-    expect(early?.pushStatus).toBeNull();
+    expect(early?.pushStatus).toBe("NO_ACTIVE_PUSH_TOKENS");
+  });
+
+  it("an on-time cancel pushes to the trainer and every active admin, still honoring pushEnabled", async () => {
+    const pushingAdmin = await seedUser("ADMIN", "a1@test.local");
+    const mutedAdmin = await seedUser("ADMIN", "muted@test.local");
+    await prisma.notificationPreference.create({
+      data: { userId: mutedAdmin.id, pushEnabled: false, inAppEnabled: true },
+    });
+    const trainer = await seedUser("TRAINER", "t1@test.local");
+
+    await notifyOperators({
+      event: "BOOKING_CANCELED",
+      trainers: [{ userId: trainer.id }],
+      isLate: false,
+      payload: { sessionId: "s1" },
+    });
+
+    const logs = await prisma.notificationLog.findMany({
+      select: { userId: true, pushStatus: true },
+    });
+    expect(logs).toHaveLength(3);
+    const statusFor = (id: string) => logs.find((l) => l.userId === id)?.pushStatus;
+    // Trainer and the opted-in admin get a push attempt even though it's on time.
+    expect(statusFor(trainer.id)).toBe("NO_ACTIVE_PUSH_TOKENS");
+    expect(statusFor(pushingAdmin.id)).toBe("NO_ACTIVE_PUSH_TOKENS");
+    // The admin who disabled push is still logged in-app but never push-attempted.
+    expect(statusFor(mutedAdmin.id)).toBeNull();
   });
 
   it("BULK_RESERVATION_CANCEL coalesces to one notification per recipient — per-trainer counts, total count for admins — and always pushes", async () => {
