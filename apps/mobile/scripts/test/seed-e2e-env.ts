@@ -15,7 +15,12 @@ const seedEnvDefaults: Record<string, string> = {
   API_ADMIN_BOOTSTRAP_TOKEN: "test-bootstrap-token",
   BETTER_AUTH_SECRET: "test-better-auth-secret-min-16-chars",
   BASE_URL: "http://localhost:3010",
-  TEST_ANCHOR_TIME: "2026-05-09T10:00:00Z",
+  // Must match the server/browser anchor in playwright.config.ts
+  // (2026-05-11T09:00:00Z). A drift here silently shifts every seeded
+  // relative date away from what the running app treats as "now" — e.g. a
+  // booking seeded as "soonest upcoming" can land BEFORE the app's now and
+  // vanish from upcoming lists. Keep these two in lockstep.
+  TEST_ANCHOR_TIME: "2026-05-11T09:00:00Z",
 };
 // Use presence, not truthiness: a var the caller set explicitly — even to an
 // empty string — is an intentional choice and must win over the default. This

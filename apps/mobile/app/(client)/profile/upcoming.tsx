@@ -109,10 +109,14 @@ export default function ClientUpcomingSessions() {
 
   function handleBookingPress(b: ClientBooking) {
     // Preferred path: the booking is inside a loaded availability month, so
-    // open the full sheet (forfeit warning) straight on the cancel step.
+    // open the full sheet (forfeit warning lives one tap deeper on the cancel
+    // step). Open on the OVERVIEW, not straight on the confirmation: a client
+    // reaching a booking from this list is reviewing it, not necessarily
+    // cancelling — the single "Otkaži" button that expands to Potvrdi / Nazad
+    // matches the calendar and doesn't read as if we assume they want out.
     const match = availabilitySessions.find((s) => s.id === b.session.id);
     if (match) {
-      booking.open(match, "cancel");
+      booking.open(match);
       return;
     }
     // Fallback: booking is further out than we loaded — a plain confirm sheet
