@@ -305,7 +305,7 @@ describe("POST /api/bookings cancel", () => {
       const res = await POST(buildClientCancelRequest(session.id));
       expect(res.status).toBe(200);
 
-      // Trainer should get a push (skipPush=false).
+      // Trainer should get a push (push not skipped).
       // Fan-out is fire-and-forget; wait for the trainer call to land.
       await vi.waitFor(() => {
         const found = createSystemNotificationMock.mock.calls.find(
@@ -317,10 +317,11 @@ describe("POST /api/bookings cancel", () => {
         (call) => call[0] === baseline.trainer.id && call[2] === "BOOKING_CANCELED_TRAINER",
       );
       expect(trainerCall).toBeDefined();
-      expect(trainerCall![4]).toMatchObject({ skipPush: false });
+      // "always" events don't set skipPush at all — absence means "push".
+      expect(trainerCall![4]?.skipPush).not.toBe(true);
     });
 
-    it("early cancel produces skipPush=true (silent) for the trainer", async () => {
+    it("early cancel still produces skipPush=false for the trainer (every client cancel pushes)", async () => {
       const baseline = await seedBaseline();
       const session = await createFutureSession({
         classTypeId: baseline.reformer.id,
@@ -350,7 +351,9 @@ describe("POST /api/bookings cancel", () => {
         (call) => call[0] === baseline.trainer.id && call[2] === "BOOKING_CANCELED_TRAINER",
       );
       expect(trainerCall).toBeDefined();
-      expect(trainerCall![4]).toMatchObject({ skipPush: true });
+      // BOOKING_CANCELED now pushes on every client cancellation, not just late
+      // ones — "always" events don't set skipPush at all, so absence means "push".
+      expect(trainerCall![4]?.skipPush).not.toBe(true);
     });
 
     it("every active admin receives BOOKING_CANCELED_ADMIN", async () => {
