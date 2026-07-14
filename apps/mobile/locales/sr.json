@@ -356,7 +356,7 @@
       "myPackages": "Moji paketi",
       "sessions": "{{remaining}}/{{total}} termina",
       "expires": "Ističe {{date}}",
-      "upcomingSessions": "Predstojeći termini",
+      "sessionsSection": "Termini",
       "viewUpcoming": "Pogledaj predstojeće termine",
       "trainingHistory": "Istorija treninga",
       "viewHistory": "Pogledaj prošle termine",

@@ -355,7 +355,7 @@
       "myPackages": "My packages",
       "sessions": "{{remaining}}/{{total}} sessions",
       "expires": "Expires {{date}}",
-      "upcomingSessions": "Upcoming sessions",
+      "sessionsSection": "Sessions",
       "viewUpcoming": "View upcoming sessions",
       "trainingHistory": "Training history",
       "viewHistory": "View past sessions",

@@ -360,15 +360,14 @@ export default function ClientProfile() {
           </View>
         </MotiView>
 
-        {/* ── PREDSTOJEĆI TERMINI — hairline list row, no card chrome.
-            Above istorija: what's coming up is more actionable (cancelable)
-            than the past record. ── */}
+        {/* ── TERMINI — one section header, two hairline rows:
+            upcoming (actionable/cancelable) above the past record. ── */}
         <MotiView
           from={{ opacity: 0, translateY: 8 }}
           animate={{ opacity: 1, translateY: 0 }}
           transition={{ type: "timing", duration: 400, delay: 250 }}
         >
-          <SectionRow title={t("client.profileTab.upcomingSessions")} />
+          <SectionRow title={t("client.profileTab.sessionsSection")} />
           <View className="mx-4 border-t border-glass-border">
             <Pressable
               testID="client-profile-upcoming-row"
@@ -384,22 +383,11 @@ export default function ClientProfile() {
               </Text>
               <Icon name="chevron-right" size={16} color={tokens.faint} />
             </Pressable>
-          </View>
-        </MotiView>
-
-        {/* ── ISTORIJA TRENINGA — hairline list row, no card chrome ── */}
-        <MotiView
-          from={{ opacity: 0, translateY: 8 }}
-          animate={{ opacity: 1, translateY: 0 }}
-          transition={{ type: "timing", duration: 400, delay: 260 }}
-        >
-          <SectionRow title={t("client.profileTab.trainingHistory")} />
-          <View className="mx-4 border-t border-glass-border">
             <Pressable
               testID="client-profile-history-row"
               onPress={() => router.push("/(client)/profile/history")}
               android_ripple={null}
-              className="flex-row items-center justify-between py-4 active:opacity-60"
+              className="flex-row items-center justify-between border-t border-glass-border py-4 active:opacity-60"
             >
               <Text
                 className="font-body-medium text-foreground"
