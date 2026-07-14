@@ -87,6 +87,16 @@ export function ScheduleRow({
           ? "client.renewal.rowActionNotStarted"
           : "client.renewal.rowAction";
 
+  // Shared muted/uppercase treatment for the meta lines. The room name gets its
+  // own line below time·duration, so it reuses the exact same style.
+  const metaTextStyle = {
+    fontFamily: "AlbertSans-SemiBold",
+    fontSize: 11,
+    color: tokens.muted,
+    letterSpacing: 1.2,
+    textTransform: "uppercase" as const,
+  };
+
   return (
     <Pressable onPress={onPress} testID={`schedule-row-${session.id}`}>
       <View
@@ -117,19 +127,13 @@ export function ScheduleRow({
 
         {/* Body */}
         <View style={{ flex: 1, gap: 4 }}>
-          <Text
-            style={{
-              fontFamily: "AlbertSans-SemiBold",
-              fontSize: 11,
-              color: tokens.muted,
-              letterSpacing: 1.2,
-              textTransform: "uppercase",
-            }}
-          >
+          <Text style={metaTextStyle}>
             {start.format("HH:mm")} ·{" "}
             {t("client.home.minutesShort", { count: end.diff(start, "minute") })}
-            {session.roomName ? ` · ${session.roomName}` : ""}
           </Text>
+          {session.roomName ? (
+            <Text style={metaTextStyle}>{session.roomName}</Text>
+          ) : null}
           <Text
             style={{
               fontFamily: "AlbertSans-SemiBold",
