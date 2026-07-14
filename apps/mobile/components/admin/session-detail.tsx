@@ -322,11 +322,15 @@ function BookingConsentFlags({ flags }: { flags: ConsentFlags }) {
     );
   }
   const hasConditions = flags.conditions.length > 0 || !!flags.conditionsOther;
-  if (
-    !flags.intakeRecorded &&
-    flags.socialMediaAccepted === null &&
-    !flags.showFirstPilatesHint
-  ) {
+  // The wrapper below only renders these four children, each behind its own
+  // truthiness guard. Gate the wrapper on the same conditions so an empty
+  // `mt-2` view never renders (intakeRecorded alone reserves phantom space).
+  const hasVisibleContent =
+    hasConditions ||
+    !!flags.additionalNotes ||
+    flags.showFirstPilatesHint ||
+    flags.socialMediaAccepted !== null;
+  if (!hasVisibleContent) {
     return null;
   }
   return (
