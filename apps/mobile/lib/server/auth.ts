@@ -1,6 +1,7 @@
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { createAuthMiddleware } from "better-auth/api";
 import { betterAuth } from "better-auth";
+import { customSession } from "better-auth/plugins";
 import { expo } from "@better-auth/expo";
 import { prisma } from "@/lib/server/prisma";
 import { env } from "@/lib/server/env";
@@ -32,7 +33,46 @@ function createAuth() {
     basePath: "/api/auth",
     baseURL: env.BASE_URL,
     trustedOrigins,
-    plugins: [expo()],
+    plugins: [
+      expo(),
+      // Enrich every session's `user` with the fields our route guards need
+      // (`getRequestUser` in auth-guards.ts) so they can trust the session and
+      // skip a redundant per-request `user.findUnique`. `role`, `isActive`,
+      // `firstName`, `lastName`, and `createdAt` already ride on the base user
+      // row better-auth loads during getSession (role/isActive/lastName via
+      // additionalFields below); only `clientProfileId` is a relation, so we
+      // fetch it here — and only for CLIENT users, who are the only ones with a
+      // profile. Admins/trainers pay zero extra queries. Because this runs on
+      // every getSession, `isActive`/role are always live: deactivation and
+      // role changes take effect immediately, with no cookie-cache lag.
+      customSession(async ({ user, session }) => {
+        // better-auth maps our `firstName` column onto its logical `name`
+        // field (see `fields.name` below), so on read it surfaces as
+        // `user.name`, not `user.firstName`. Re-expose it as `firstName` for
+        // the guard/response layer. `lastName`, `role`, and `isActive` are
+        // real additionalFields, so they're already present.
+        const u = user as typeof user & {
+          role: string;
+          isActive: boolean;
+          lastName: string;
+        };
+        const clientProfile =
+          u.role === "CLIENT"
+            ? await prisma.clientProfile.findUnique({
+                where: { userId: u.id },
+                select: { id: true },
+              })
+            : null;
+        return {
+          session,
+          user: {
+            ...u,
+            firstName: u.name,
+            clientProfileId: clientProfile?.id ?? null,
+          },
+        };
+      }),
+    ],
     database: prismaAdapter(prisma, {
       provider: "postgresql",
     }),
@@ -48,6 +88,14 @@ function createAuth() {
       },
       additionalFields: {
         role: {
+          type: "string",
+          input: false,
+        },
+        isActive: {
+          type: "boolean",
+          input: false,
+        },
+        lastName: {
           type: "string",
           input: false,
         },

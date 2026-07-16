@@ -2,35 +2,40 @@ import { UserRole } from "@/generated/prisma";
 import { formatFullName } from "@baza/types/common";
 import { auth } from "@/lib/server/auth";
 import { fail } from "@/lib/server/http";
-import { prisma } from "@/lib/server/prisma";
 
-/** Resolves active user from session; returns null if unauthenticated or inactive. */
+/**
+ * Resolves the active user from the session; returns null if unauthenticated
+ * or inactive.
+ *
+ * The session's `user` is enriched by the `customSession` plugin in
+ * `auth.ts` — it already carries `role`, `email`, `firstName`, `lastName`,
+ * `isActive`, and `clientProfileId`. We trust it and do NOT re-fetch the user
+ * row, saving one DB round-trip on every authenticated request. `isActive` and
+ * role are read live from the DB inside the enrichment callback on each
+ * `getSession`, so deactivation/role changes still take effect immediately (no
+ * cookie-cache lag).
+ */
 export async function getRequestUser(request: Request) {
   const session = await auth.api.getSession({
     headers: request.headers,
   });
 
-  if (!session?.user?.id) {
-    return null;
-  }
+  const user = session?.user;
+  if (!user?.id || !user.isActive) return null;
 
-  const user = await prisma.user.findUnique({
-    where: { id: session.user.id },
-    select: {
-      id: true,
-      role: true,
-      email: true,
-      firstName: true,
-      lastName: true,
-      isActive: true,
-      createdAt: true,
-      clientProfile: { select: { id: true } },
-    },
-  });
-
-  if (!user || !user.isActive) return null;
-
-  return { ...user, fullName: formatFullName(user.firstName, user.lastName) };
+  return {
+    id: user.id,
+    role: user.role as UserRole,
+    email: user.email,
+    firstName: user.firstName,
+    lastName: user.lastName,
+    isActive: user.isActive,
+    createdAt: user.createdAt,
+    fullName: formatFullName(user.firstName, user.lastName),
+    clientProfile: user.clientProfileId
+      ? { id: user.clientProfileId }
+      : null,
+  };
 }
 
 /** Enforces role; returns guard with user or fail response. */
