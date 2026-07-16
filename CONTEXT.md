@@ -28,10 +28,14 @@ _Avoid_: Account.
 A kind of class — Reformer pilates, Energy pilates, Moms&Minis, Golden age. Carries default capacity, duration, and late-cancel window.
 
 **PackageType**:
-A SKU — e.g. "Reformer 12-pack / 30 days". **Scoped to exactly one ClassType** (since `package-class-scoping`); a 12-pack of Reformer can't be used to book Energy.
+A SKU — e.g. "Reformer 12-pack / 30 days". **Scoped to a set of one or more ClassTypes**; a Booking is backable only if the Session's ClassType is in the set. Most SKUs cover one ClassType; a multi-type SKU is a **mix package**. Multiple SKUs may cover the same ClassType (e.g. "Reformer 8" and "Reformer 12" both cover Reformer).
+
+**Mix package**:
+A PackageType (and the ClientPackages activated from it) whose ClassType set has more than one member — e.g. Reformer + Energy. Its sessions are **one shared pool**: any of the `sessionCount` sessions can be spent on any covered ClassType, in any ratio. There are **no per-ClassType quotas** — "8 Reformer + 4 Energy" is not a thing.
+_Avoid_: "combo", "hybrid", per-type-quota phrasings.
 
 **ClientPackage**:
-An instance of a PackageType bought by a Client. Carries `sessionsRemaining`, `expiresAt`, and **snapshots** the PackageType's `classTypeId` + `lateCancelHours` at purchase time so future PackageType edits don't retroactively change existing packages.
+An instance of a PackageType bought by a Client. Carries `sessionsRemaining`, `expiresAt`, and **snapshots** the PackageType's ClassType set + `lateCancelHours` at purchase time so future PackageType edits don't retroactively change existing packages.
 _Avoid_: Pack, subscription.
 
 **StudioRoom**:
@@ -52,7 +56,7 @@ A Client claiming a slot in a Session. Decrements the matched ClientPackage's `s
 **Admin reservation**:
 A Booking created by an Admin on behalf of a Client to hold a seat. Identical to a self-booked Booking in every downstream system (capacity, waitlist, late-cancel, calendar visibility, client cancel rights) — the *only* differences: (1) the admin path skips the booking-time package check, so `clientPackageId` may be `null` at creation; (2) the Booking carries an audit pointer to the creating Admin. Admins can reserve arbitrarily far into the future. The cron at session-end late-binds a package if one is eligible; if not, it records `NO_PACKAGE` and notifies admins (push + in-app) that the Client attended an unbacked session. Used to lock in long-term Clients whose weekly Session mix varies.
 
-The ClassType scoping rule (a Reformer ClientPackage cannot back an Energy Booking) is **not enforced** as a hard rule on Admin reservations — but the admin UI shows a **soft warning** at confirmation time when the Client owns no package for the target ClassType, and the **Pattern reservation** confirmation surfaces a per-ClassType breakdown (e.g. "152 selected: 100 Reformer / 52 Energy — Marija has Reformer only, 52 will be unbacked"). The warning is informational; the admin can proceed.
+The ClassType scoping rule (a ClientPackage whose ClassType set doesn't include Energy cannot back an Energy Booking) is **not enforced** as a hard rule on Admin reservations — but the admin UI shows a **soft warning** at confirmation time when the Client owns no package for the target ClassType, and the **Pattern reservation** confirmation surfaces a per-ClassType breakdown (e.g. "152 selected: 100 Reformer / 52 Energy — Marija has Reformer only, 52 will be unbacked"). The warning is informational; the admin can proceed.
 
 Creation lives on **one screen**: the admin schedule (existing `pregled` calendar) in reservation mode, with a persistent client-selection banner and a selection toolbar. The **only** entry point is the Client profile's "Reserve sessions" action — the screen is never reachable with no client picked, so the banner is always bound. The route is **admin-only**; trainers and clients hitting it are redirected. Under the hood, every reservation is the same gesture: a set of selected `sessionId`s submitted to a single endpoint (`POST /admin/reservations`).
 
@@ -118,7 +122,7 @@ _Avoid_: "Promotion" alone (too narrow — excludes new-program announcements), 
 A Campaign is sent to an audience computed from one or more **axes**, ANDed together. The axes:
 - **Everyone** — all Clients. Mutually exclusive: cannot be ANDed with a narrowing axis.
 - **Package state** — active / expired / none / paused.
-- **ClassType** — Clients who own or have owned a ClientPackage scoped to a given ClassType.
+- **ClassType** — Clients who own or have owned a ClientPackage whose ClassType set **includes** the given ClassType (a mix-package owner belongs to every covered ClassType's audience).
 - **Expiring soon** — Clients with an active ClientPackage within N days of `expiresAt` (N typed at send-time). Overlaps `cron:package-expiry` by design; the two are different messages (system nudge vs. marketing offer) and are **not** deduped.
 - **Lapsed** — Clients with **no** currently-active ClientPackage **and** no BillingRecord / comp ClientPackage created in the last N days (N typed at send-time, default 30). Intent: "come back & renew." Keyed off payment recency, not bookings — a package lasts ~30 days, so a Client mid-package is never lapsed.
 - **Idle package** — Clients who own an active ClientPackage but booked **nothing** in the first N days of that package (no uncancelled Booking with `startsAt` within N days of the ClientPackage's `startsAt`). Intent: "you paid — book your first session before the window burns."
@@ -218,9 +222,9 @@ When writing a date-relative test, match the anchor of the layer you're in.
 
 ## Relationships
 
-- A **Client** owns zero or more **ClientPackages**; each is scoped to one **ClassType**.
+- A **Client** owns zero or more **ClientPackages**; each is scoped to a set of one or more **ClassTypes** (one shared session pool per package, regardless of set size).
 - A **Session** has one **ClassType**, one **StudioRoom**, one **Trainer**, and zero-or-more **Bookings**.
-- A **Booking** matches a **Client**'s eligible **ClientPackage** for the **Session**'s **ClassType**. No match → 409 `no_package_for_class`.
+- A **Booking** matches a **Client**'s eligible **ClientPackage** whose ClassType set includes the **Session**'s **ClassType**. No match → 409 `no_package_for_class`.
 - A **Trainer** can only see **Clients** they've been linked to via at least one **Booking** in a **Session** they're assigned to.
 - A **Note** belongs to one **Trainer**, one **Client**, and one **Session**.
 - **Flow 1** creates a **BillingRecord** and a **ClientPackage** atomically. **Flow 2** creates only a **ClientPackage**.
@@ -228,7 +232,7 @@ When writing a date-relative test, match the anchor of the layer you're in.
 ## Example dialogue
 
 > **Dev:** "When a **Client** books a **Session**, which **ClientPackage** gets decremented?"
-> **Domain expert:** "Whichever active, non-expired **ClientPackage** they own that's scoped to the **Session**'s **ClassType**. If they have multiple eligible ones, the oldest by `startsAt`. If none — 409, the booking is rejected."
+> **Domain expert:** "Whichever active, non-expired **ClientPackage** they own whose ClassType set includes the **Session**'s **ClassType**. If they have multiple eligible ones: the **narrowest ClassType set wins** (a Reformer-only pack is spent before a Reformer+Energy **mix package**, preserving the mix pack's flexibility); within the same set size, the one with the **soonest effective expiry**. If none — 409, the booking is rejected."
 > **Dev:** "And the package's **late-cancel cutoff** — does that come from the current **PackageType** or the **ClientPackage** itself?"
 > **Domain expert:** "The **ClientPackage** — it snapshots `lateCancelHours` at purchase time. If the studio later edits the **PackageType**'s window, in-flight **ClientPackages** keep their original window."
 
