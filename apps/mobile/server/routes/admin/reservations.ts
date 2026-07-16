@@ -4,16 +4,15 @@ import {
 } from "@baza/types/bookings";
 import { UserRole } from "@/generated/prisma";
 import { requireRole } from "@/lib/server/auth-guards";
-import { respond, fail } from "@/lib/server/http";
+import { respond, fail, parseBody } from "@/lib/server/http";
 import { prisma } from "@/lib/server/prisma";
 
 export async function POST(request: Request) {
   const guard = await requireRole(request, [UserRole.ADMIN]);
   if (!guard.ok) return guard.response;
 
-  const raw: unknown = await request.json().catch(() => null);
-  const parsed = createReservationsInputSchema.safeParse(raw);
-  if (!parsed.success) return fail("Invalid payload", 400, parsed.error);
+  const parsed = await parseBody(request, createReservationsInputSchema);
+  if (!parsed.ok) return parsed.response;
   const { clientProfileId, sessionIds } = parsed.data;
 
   const clientProfile = await prisma.clientProfile.findUnique({

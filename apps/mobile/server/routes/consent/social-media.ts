@@ -4,7 +4,7 @@ import {
   socialMediaConsentResponseSchema,
 } from "@baza/types/consent";
 import { requireRole } from "@/lib/server/auth-guards";
-import { fail, respond } from "@/lib/server/http";
+import { respond, parseBody } from "@/lib/server/http";
 import { extractEvidence } from "@/lib/legal/evidence";
 import { ACTIVE_VERSIONS } from "@/lib/legal/versions";
 import { prisma } from "@/lib/server/prisma";
@@ -15,9 +15,8 @@ export async function POST(request: Request) {
   const guard = await requireRole(request, AUTHENTICATED_ROLES);
   if (!guard.ok) return guard.response;
 
-  const body = await request.json().catch(() => null);
-  const parsed = socialMediaConsentInputSchema.safeParse(body);
-  if (!parsed.success) return fail("Invalid payload", 400, parsed.error);
+  const parsed = await parseBody(request, socialMediaConsentInputSchema);
+  if (!parsed.ok) return parsed.response;
 
   const evidence = extractEvidence(request);
 

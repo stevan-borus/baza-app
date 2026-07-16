@@ -78,6 +78,19 @@ describe("POST /api/consent/accept", () => {
     expect(row?.guardianRelation).toBe("parent");
   });
 
+  it("returns 400 (not a 500/throw) on a malformed JSON body", async () => {
+    // Regression: this route once called request.json() unguarded, which
+    // throws on invalid JSON and would surface as a 500. Routing it through
+    // parseBody() wraps the parse in tryCatch so a bad body is a clean 400.
+    const req = new Request("https://t.local/api/consent/accept", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: "{ this is not valid json ",
+    });
+    const res = await POST(req);
+    expect(res.status).toBe(400);
+  });
+
   it("ignores client-supplied ipAddress / userAgent fields", async () => {
     await POST(
       makeReq({

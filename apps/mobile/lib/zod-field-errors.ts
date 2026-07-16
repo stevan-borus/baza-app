@@ -14,7 +14,6 @@ type ZodIssue = {
 type ZodErrorDetails = {
   name?: unknown;
   issues?: unknown;
-  message?: unknown;
 };
 
 type ErrorBody = {
@@ -57,16 +56,6 @@ export function fieldErrorsFromApiError(err: unknown): Record<string, string> {
 
   if (Array.isArray(details.issues)) {
     return issuesToFieldErrors(details.issues);
-  }
-
-  // Older Zod (v3) sometimes serializes issues into `message` as a JSON string.
-  if (typeof details.message === "string") {
-    try {
-      const parsed = JSON.parse(details.message);
-      return issuesToFieldErrors(parsed);
-    } catch {
-      return {};
-    }
   }
 
   return {};

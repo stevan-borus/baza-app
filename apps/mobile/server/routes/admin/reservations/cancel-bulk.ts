@@ -9,7 +9,7 @@ import {
   applyLateCancelForfeit,
   promoteNextWaitlistEntry,
 } from "@/lib/server/booking-cancellation";
-import { respond, fail } from "@/lib/server/http";
+import { respond, parseBody } from "@/lib/server/http";
 import { notifyClient } from "@/lib/server/notify-client";
 import {
   coalesceTrainerCancelCounts,
@@ -22,9 +22,8 @@ export async function POST(request: Request) {
   const guard = await requireRole(request, [UserRole.ADMIN]);
   if (!guard.ok) return guard.response;
 
-  const raw: unknown = await request.json().catch(() => null);
-  const parsed = cancelReservationsBulkInputSchema.safeParse(raw);
-  if (!parsed.success) return fail("Invalid payload", 400, parsed.error);
+  const parsed = await parseBody(request, cancelReservationsBulkInputSchema);
+  if (!parsed.ok) return parsed.response;
   const { bookingIds, waiveCharge } = parsed.data;
 
   const cancellationTime = now();

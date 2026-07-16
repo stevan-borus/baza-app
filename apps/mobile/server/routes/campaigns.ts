@@ -8,9 +8,8 @@ import { now } from "@/lib/now";
 import { requireRole } from "@/lib/server/auth-guards";
 import { dispatchCampaign } from "@/lib/server/campaign-dispatch";
 import { CAMPAIGN_SELECT } from "@/lib/server/campaign-select";
-import { fail, respond } from "@/lib/server/http";
+import { respond, fail, parseBody } from "@/lib/server/http";
 import { prisma } from "@/lib/server/prisma";
-import { tryCatch } from "@/lib/server/try-catch";
 
 export async function GET(request: Request) {
   const guard = await requireRole(request, [UserRole.ADMIN]);
@@ -25,9 +24,8 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   const guard = await requireRole(request, [UserRole.ADMIN]);
   if (!guard.ok) return guard.response;
-  const bodyResult = await tryCatch(request.json());
-  const parsed = createCampaignInputSchema.safeParse(bodyResult.error ? null : bodyResult.data);
-  if (!parsed.success) return fail("Invalid payload", 400, parsed.error);
+  const parsed = await parseBody(request, createCampaignInputSchema);
+  if (!parsed.ok) return parsed.response;
   const { title, body, audienceSpec, scheduledFor, sendNow } = parsed.data;
   // A past scheduledFor would be picked up by the very next cron tick — a
   // surprise immediate send that skips the review window. Reject it; the admin

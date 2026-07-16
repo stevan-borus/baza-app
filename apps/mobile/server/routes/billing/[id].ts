@@ -11,9 +11,8 @@ import {
 } from "@baza/types/billing";
 import { UserRole } from "@/generated/prisma";
 import { requireRole } from "@/lib/server/auth-guards";
-import { fail, respond } from "@/lib/server/http";
+import { respond, fail, parseBody } from "@/lib/server/http";
 import { prisma } from "@/lib/server/prisma";
-import { tryCatch } from "@/lib/server/try-catch";
 
 type RouteParams = Record<string, string>;
 
@@ -21,10 +20,8 @@ export async function PATCH(request: Request, { id }: RouteParams) {
   const guard = await requireRole(request, [UserRole.ADMIN]);
   if (!guard.ok) return guard.response;
 
-  const bodyResult = await tryCatch(request.json());
-  const body = bodyResult.error ? null : bodyResult.data;
-  const parsed = updateBillingRecordInputSchema.safeParse(body);
-  if (!parsed.success) return fail("Invalid payload", 400, parsed.error);
+  const parsed = await parseBody(request, updateBillingRecordInputSchema);
+  if (!parsed.ok) return parsed.response;
 
   // Atomic claim (same pattern as the revoke route): the status guard lives
   // inside the UPDATE's WHERE so a concurrent revoke can't lose its VOIDED

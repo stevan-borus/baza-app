@@ -5,19 +5,14 @@ import {
 import { formatFullName } from "@baza/types/common";
 import { type Prisma, InviteStatus, UserRole } from "@/generated/prisma";
 import { now } from "@/lib/now";
-import { fail, respond } from "@/lib/server/http";
+import { respond, fail, parseBody } from "@/lib/server/http";
 import { hashPassword } from "@/lib/server/password";
 import { prisma } from "@/lib/server/prisma";
 import { hashToken } from "@/lib/server/tokens";
-import { tryCatch } from "@/lib/server/try-catch";
 
 export async function POST(request: Request) {
-  const bodyResult = await tryCatch(request.json());
-  const body = bodyResult.error ? null : bodyResult.data;
-  const parsed = completeInviteInputSchema.safeParse(body);
-  if (!parsed.success) {
-    return fail("Invalid payload", 400, parsed.error);
-  }
+  const parsed = await parseBody(request, completeInviteInputSchema);
+  if (!parsed.ok) return parsed.response;
 
   // Compare hashed token to avoid timing attacks on token lookup.
   const tokenHash = hashToken(parsed.data.token);

@@ -16,9 +16,6 @@ import * as Sentry from "@sentry/react-native";
 
 const dsn = process.env.EXPO_PUBLIC_SENTRY_DSN?.trim();
 
-/** True once init has run with a real DSN — lets callers skip Sentry.wrap noise. */
-export const sentryEnabled = Boolean(dsn);
-
 export function initSentry() {
   if (!dsn) return;
 

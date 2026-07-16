@@ -27,10 +27,10 @@ import { BottomSheetFlatList } from "@gorhom/bottom-sheet";
 import { router } from "expo-router";
 import dayjs from "dayjs";
 import { ReturnToPill } from "@/components/admin/return-to-pill";
-import { useDrillWindow, type DrillWindow } from "@/lib/admin/drill";
+import { useDrillWindow } from "@/lib/admin/drill";
 import { MotiView } from "@/components/ui/styled";
 import { getDateLocale } from "@/lib/i18n";
-import { formatRsd } from "@/lib/format";
+import { formatDateRange, formatRsd } from "@/lib/format";
 import { RAW_METHOD_LABEL_KEYS } from "@/lib/payment-method-labels";
 import { AppSheet } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/card";
@@ -60,22 +60,6 @@ import { useDebouncedValue } from "@/lib/use-debounced-value";
 import { ScreenContainerRaw, useTabBarBottomPadding } from "@/components/ui/screen-container";
 import { HeaderIconButton } from "@/components/ui/app-header";
 import { AdminTabLeftSlot } from "@/components/admin/admin-tab-left-slot";
-
-/**
- * Period-selector label while a cross-tab drill window is active. Mirrors
- * the range-label convention on the Izveštaji sub-pages: inclusive end,
- * year only shown when the range crosses a year boundary.
- */
-function drillRangeLabel(window: DrillWindow, dateLocale: string): string {
-  const fromD = new Date(window.from);
-  // `to` is an exclusive upper bound — display the last included instant.
-  const inclusiveTo = new Date(new Date(window.to).getTime() - 1);
-  const crossesYear = fromD.getUTCFullYear() !== inclusiveTo.getUTCFullYear();
-  const fmt: Intl.DateTimeFormatOptions = crossesYear
-    ? { day: "numeric", month: "short", year: "numeric" }
-    : { day: "numeric", month: "short" };
-  return `${fromD.toLocaleDateString(dateLocale, fmt)} – ${inclusiveTo.toLocaleDateString(dateLocale, fmt)}`;
-}
 
 export default function AdminBilling() {
   const { t, i18n } = useTranslation();
@@ -210,7 +194,7 @@ export default function AdminBilling() {
   const dateLocale = getDateLocale();
 
   const periodLabel = drillWindow
-    ? drillRangeLabel(drillWindow, dateLocale)
+    ? formatDateRange(drillWindow.from, drillWindow.to, dateLocale)
     : selectedMonth.locale(lang).format("MMMM YYYY");
 
   return (

@@ -7,7 +7,7 @@ import {
 import { extractEvidence } from "@/lib/legal/evidence";
 import { latestIntake, recordIntake, withdrawIntake } from "@/lib/server/health-intake";
 import { requireRole } from "@/lib/server/auth-guards";
-import { fail, respond } from "@/lib/server/http";
+import { respond, fail, parseBody } from "@/lib/server/http";
 
 export async function GET(request: Request) {
   const guard = await requireRole(request, [UserRole.CLIENT]);
@@ -26,9 +26,8 @@ export async function POST(request: Request) {
   const clientProfileId = guard.user.clientProfile?.id;
   if (!clientProfileId) return fail("Client profile not found", 404);
 
-  const body = await request.json().catch(() => null);
-  const parsed = healthIntakeInputSchema.safeParse(body);
-  if (!parsed.success) return fail("Invalid payload", 400, parsed.error);
+  const parsed = await parseBody(request, healthIntakeInputSchema);
+  if (!parsed.ok) return parsed.response;
 
   const intake = await recordIntake({
     userId: guard.user.id,

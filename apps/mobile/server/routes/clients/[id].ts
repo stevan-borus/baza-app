@@ -8,10 +8,9 @@ import {
 import { UserRole } from "@/generated/prisma";
 import { now } from "@/lib/now";
 import { requireRole } from "@/lib/server/auth-guards";
-import { fail, respond } from "@/lib/server/http";
+import { respond, fail, parseBody } from "@/lib/server/http";
 import { prisma } from "@/lib/server/prisma";
 import { trainerLinkedToClientProfile } from "@/lib/server/trainer-scope";
-import { tryCatch } from "@/lib/server/try-catch";
 
 type RouteParams = Record<string, string>;
 
@@ -117,10 +116,8 @@ export async function PATCH(request: Request, { id }: RouteParams) {
   const guard = await requireRole(request, [UserRole.ADMIN, UserRole.TRAINER]);
   if (!guard.ok) return guard.response;
 
-  const bodyResult = await tryCatch(request.json());
-  const raw = bodyResult.error ? null : bodyResult.data;
-  const parsed = updateClientInputSchema.safeParse(raw);
-  if (!parsed.success) return fail("Invalid payload", 400, parsed.error);
+  const parsed = await parseBody(request, updateClientInputSchema);
+  if (!parsed.ok) return parsed.response;
   const body = parsed.data;
 
   const existingClient = await prisma.clientProfile.findUnique({

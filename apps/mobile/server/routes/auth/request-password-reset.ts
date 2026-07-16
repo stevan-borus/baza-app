@@ -1,18 +1,15 @@
 import { requestPasswordResetInputSchema } from "@baza/types/auth";
 import { successResponseSchema } from "@baza/types/common";
 import { now } from "@/lib/now";
-import { fail, respond } from "@/lib/server/http";
+import { respond, parseBody } from "@/lib/server/http";
 import { prisma } from "@/lib/server/prisma";
 import { sendResetEmail } from "@/lib/server/resend";
 import { addMinutes, generateRawToken, hashToken } from "@/lib/server/tokens";
 import { env } from "@/lib/server/env";
-import { tryCatch } from "@/lib/server/try-catch";
 
 export async function POST(request: Request) {
-  const bodyResult = await tryCatch(request.json());
-  const body = bodyResult.error ? null : bodyResult.data;
-  const parsed = requestPasswordResetInputSchema.safeParse(body);
-  if (!parsed.success) return fail("Invalid payload", 400, parsed.error);
+  const parsed = await parseBody(request, requestPasswordResetInputSchema);
+  if (!parsed.ok) return parsed.response;
 
   const email = parsed.data.email.toLowerCase().trim();
   const user = await prisma.user.findUnique({
