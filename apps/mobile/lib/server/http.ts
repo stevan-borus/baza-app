@@ -43,9 +43,9 @@ export function respond<S extends z.ZodType>(
  *
  * Crucially, `request.json()` is wrapped in `tryCatch` so a malformed body
  * (e.g. invalid JSON) resolves to `null` and fails validation with a clean
- * 400 — it never throws out to a 500. A handful of routes previously called
- * `request.json()` unguarded and would have thrown on a bad body; routing them
- * through here fixes that.
+ * 400 — it never throws out to a 500. The routes already guarded their own
+ * `json()` calls; centralizing the pattern here keeps that guarantee and stops
+ * a future handler from reintroducing an unguarded parse.
  *
  * Returns a discriminated result: on success, `{ ok: true, data }` with the
  * parsed value; on failure, `{ ok: false, response }` carrying the same
