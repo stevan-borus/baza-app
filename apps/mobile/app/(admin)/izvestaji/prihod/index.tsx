@@ -11,7 +11,6 @@
  * pull in a third-party chart lib for what is structurally a row of bars —
  * the visual is intentionally quiet and matches the studio palette.
  */
-import { useMemo } from "react";
 import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import {
@@ -41,7 +40,7 @@ import { billingQueries } from "@/lib/queries/billing-queries-factory";
 import { ScreenContainerRaw, useTabBarBottomPadding } from "@/components/ui/screen-container";
 import { usePeriodPill, type Period } from "@/lib/admin/use-period-pill";
 import { drillHref } from "@/lib/admin/drill";
-import { formatRsd } from "@/lib/format";
+import { formatDateRange, formatRsd } from "@/lib/format";
 import { RAW_METHOD_LABEL_KEYS as methodLabelKeys } from "@/lib/payment-method-labels";
 
 const BAR_HEIGHT_MAX = 110;
@@ -73,61 +72,27 @@ export default function IzvestajiPrihod() {
     billingQueries.listInfinite({}),
   );
 
-  // Reach into query data inside useMemo so the deps are query.data (cached
-  // reference) rather than a fresh `?? []` array per render — keeps the
-  // memos stable and silences exhaustive-deps.
-  const buckets = useMemo(
-    () => timeSeriesQuery.data?.buckets ?? [],
-    [timeSeriesQuery.data?.buckets],
-  );
-  const totalRevenue = useMemo(
-    () => buckets.reduce((s, b) => s + b.revenue, 0),
-    [buckets],
-  );
-  const maxBucketRevenue = useMemo(
-    () => buckets.reduce((m, b) => (b.revenue > m ? b.revenue : m), 0),
-    [buckets],
+  const buckets = timeSeriesQuery.data?.buckets ?? [];
+  const totalRevenue = buckets.reduce((s, b) => s + b.revenue, 0);
+  const maxBucketRevenue = buckets.reduce(
+    (m, b) => (b.revenue > m ? b.revenue : m),
+    0,
   );
 
-  const packageRows = useMemo(
-    () => byPackageQuery.data?.rows ?? [],
-    [byPackageQuery.data?.rows],
-  );
-  const packageTotal = useMemo(
-    () => packageRows.reduce((s, r) => s + r.revenue, 0),
-    [packageRows],
-  );
-  const methodRows = useMemo(
-    () => byMethodQuery.data?.rows ?? [],
-    [byMethodQuery.data?.rows],
-  );
-  const methodTotal = useMemo(
-    () => methodRows.reduce((s, r) => s + r.revenue, 0),
-    [methodRows],
-  );
+  const packageRows = byPackageQuery.data?.rows ?? [];
+  const packageTotal = packageRows.reduce((s, r) => s + r.revenue, 0);
+  const methodRows = byMethodQuery.data?.rows ?? [];
+  const methodTotal = methodRows.reduce((s, r) => s + r.revenue, 0);
 
   const recentPayments = (
     recentPaymentsQuery.data?.pages[0]?.records ?? []
   ).slice(0, 8);
 
   const dateLocale = i18n.language === "en" ? "en-US" : "sr-RS";
-  const rangeLabel = useMemo(() => {
-    if (!periodWindow.from || !periodWindow.to) {
-      return t("admin.manage.periodAll");
-    }
-    const fromD = new Date(periodWindow.from);
-    const toD = new Date(periodWindow.to);
-    // toD is exclusive — display the last calendar day.
-    const inclusiveTo = new Date(toD.getTime() - 1);
-    // Include the year when the window crosses a calendar boundary —
-    // otherwise "13. maj – 13. maj" on Godina reads as the same day.
-    const crossesYear =
-      fromD.getUTCFullYear() !== inclusiveTo.getUTCFullYear();
-    const fmt: Intl.DateTimeFormatOptions = crossesYear
-      ? { day: "numeric", month: "short", year: "numeric" }
-      : { day: "numeric", month: "short" };
-    return `${fromD.toLocaleDateString(dateLocale, fmt)} – ${inclusiveTo.toLocaleDateString(dateLocale, fmt)}`;
-  }, [periodWindow.from, periodWindow.to, dateLocale, t]);
+  const rangeLabel =
+    !periodWindow.from || !periodWindow.to
+      ? t("admin.manage.periodAll")
+      : formatDateRange(periodWindow.from, periodWindow.to, dateLocale);
 
   // Width budget for the bar chart row — full screen minus 24px page padding
   // either side, minus the card's 20px inner padding either side.

@@ -34,6 +34,7 @@ import { ErrorState } from "@/components/ui/states";
 import { SkeletonBreakdownRows, SkeletonList } from "@/components/ui/skeleton";
 import { CapsLabel, StatStrip } from "@/components/ui/studio";
 import { useThemeTokens } from "@/components/ui/tokens";
+import { formatDateRange } from "@/lib/format";
 import { reportsQueries } from "@/lib/queries/reports-queries-factory";
 import {
   ScreenContainerRaw,
@@ -78,15 +79,7 @@ export default function IzvestajiPaketi() {
     if (!periodWindow.from || !periodWindow.to) {
       return t("admin.manage.periodAll");
     }
-    const fromD = new Date(periodWindow.from);
-    const toD = new Date(periodWindow.to);
-    const inclusiveTo = new Date(toD.getTime() - 1);
-    const crossesYear =
-      fromD.getUTCFullYear() !== inclusiveTo.getUTCFullYear();
-    const fmt: Intl.DateTimeFormatOptions = crossesYear
-      ? { day: "numeric", month: "short", year: "numeric" }
-      : { day: "numeric", month: "short" };
-    return `${fromD.toLocaleDateString(dateLocale, fmt)} – ${inclusiveTo.toLocaleDateString(dateLocale, fmt)}`;
+    return formatDateRange(periodWindow.from, periodWindow.to, dateLocale);
   }, [periodWindow.from, periodWindow.to, dateLocale, t]);
 
   const activePackages = headline?.activePackages ?? 0;

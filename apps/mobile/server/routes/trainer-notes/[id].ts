@@ -5,9 +5,8 @@ import {
 import { successResponseSchema } from "@baza/types/common";
 import { UserRole } from "@/generated/prisma";
 import { requireRole } from "@/lib/server/auth-guards";
-import { fail, respond } from "@/lib/server/http";
+import { respond, fail, parseBody } from "@/lib/server/http";
 import { prisma } from "@/lib/server/prisma";
-import { tryCatch } from "@/lib/server/try-catch";
 
 type RouteParams = Record<string, string>;
 
@@ -30,10 +29,8 @@ export async function PATCH(request: Request, { id }: RouteParams) {
     return fail("You can only edit your own notes", 403);
   }
 
-  const bodyResult = await tryCatch(request.json());
-  const body = bodyResult.error ? null : bodyResult.data;
-  const parsed = updateTrainerNoteInputSchema.safeParse(body);
-  if (!parsed.success) return fail("Invalid payload", 400, parsed.error);
+  const parsed = await parseBody(request, updateTrainerNoteInputSchema);
+  if (!parsed.ok) return parsed.response;
 
   const updated = await prisma.trainerNote.update({
     where: { id },

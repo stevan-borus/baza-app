@@ -52,7 +52,6 @@ export const createCampaignInputSchema = z.object({
   /** When true (and no scheduledFor) the campaign dispatches immediately. */
   sendNow: z.boolean().optional(),
 });
-export type CreateCampaignInput = z.infer<typeof createCampaignInputSchema>;
 
 export const updateCampaignInputSchema = z.object({
   title: z.string().min(1).max(140).optional(),
@@ -62,7 +61,6 @@ export const updateCampaignInputSchema = z.object({
   /** Set "DRAFT" to cancel a SCHEDULED campaign back to a draft. */
   status: z.enum(["DRAFT", "SCHEDULED"]).optional(),
 });
-export type UpdateCampaignInput = z.infer<typeof updateCampaignInputSchema>;
 
 // ── Wire (response) schemas ─────────────────────────────────────────────────
 // The single campaign shape every campaign API response returns
@@ -86,10 +84,8 @@ export const campaignsListResponseSchema = z.object({ campaigns: z.array(campaig
 export type CampaignsListResponse = z.infer<typeof campaignsListResponseSchema>;
 
 export const campaignResponseSchema = z.object({ campaign: campaignSchema });
-export type CampaignResponse = z.infer<typeof campaignResponseSchema>;
 
 export const campaignPreviewResponseSchema = z.object({ count: z.number() });
-export type CampaignPreviewResponse = z.infer<typeof campaignPreviewResponseSchema>;
 
 /** One projected/actual audience member, opted-out clients flagged. */
 export const audienceClientSchema = z.object({
@@ -103,16 +99,11 @@ export type AudienceClient = z.infer<typeof audienceClientSchema>;
 export const campaignAudienceClientsResponseSchema = z.object({
   clients: z.array(audienceClientSchema),
 });
-export type CampaignAudienceClientsResponse = z.infer<
-  typeof campaignAudienceClientsResponseSchema
->;
 
 /** `actual: true` → the logged recipients of a SENT campaign; false → projection. */
 export const campaignRecipientsResponseSchema = z.object({
   actual: z.boolean(),
   clients: z.array(audienceClientSchema),
 });
-export type CampaignRecipientsResponse = z.infer<typeof campaignRecipientsResponseSchema>;
 
 export const campaignDeleteResponseSchema = z.object({ success: z.literal(true) });
-export type CampaignDeleteResponse = z.infer<typeof campaignDeleteResponseSchema>;

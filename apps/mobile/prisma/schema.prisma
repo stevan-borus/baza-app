@@ -3,9 +3,17 @@ generator client {
   output   = "../generated/prisma"
 }
 
+// Enums-only Zod generation. Enums are the one place a generated schema has
+// real sync value — a DB enum IS the API enum, so a new value must reach both
+// automatically. Everything else (the ~2,700-file input/result/model variant
+// trees) is deliberately NOT emitted: the API contract curates and refines
+// each payload by hand (see the *FieldsSchema picks in packages/types), so
+// generated model schemas were only ever used as a field-type lookup, not a
+// contract — not worth 12MB of generated files. Config: prisma/zod-generator.config.json.
 generator zod {
   provider = "prisma-zod-generator"
   output   = "../../../packages/types/src/generated/prisma-zod"
+  config   = "./zod-generator.config.json"
 }
 
 datasource db {

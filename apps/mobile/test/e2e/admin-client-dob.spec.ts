@@ -33,6 +33,12 @@ test.describe("admin client DOB (Serbian)", () => {
 
     // ── 1. DOB renders on the admin client-detail header ─────────────────
     await page.getByTestId("tab-klijenti").click();
+    // Search first: the klijenti list is a virtualized FlatList with uuid
+    // ordering, so a bare row-match is a per-seed lottery (the target row may
+    // be rendered off-screen). Filtering to the one client guarantees the row
+    // is mounted before we tap it. See CONTEXT/memory: klijenti specs search
+    // before asserting rows.
+    await page.getByTestId("klijenti-search-input").fill("Active Reformer Client");
     // Tapping the row navigates to `/klijenti/<userId>` (Phase 1 split:
     // pencil opens actions sheet, row tap goes to detail).
     await page.getByText("Active Reformer Client").first().click();

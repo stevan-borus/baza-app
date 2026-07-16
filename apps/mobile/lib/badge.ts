@@ -8,7 +8,7 @@ import { Platform } from "react-native";
  * The call is fire-and-forget; we never want a badge failure to surface as
  * a user-visible error.
  */
-export async function setAppBadgeCount(count: number): Promise<void> {
+async function setAppBadgeCount(count: number): Promise<void> {
   if (Platform.OS === "web") return;
   try {
     const Notifications = await import("expo-notifications");

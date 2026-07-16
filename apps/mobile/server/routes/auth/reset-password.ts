@@ -1,17 +1,14 @@
 import { resetPasswordInputSchema } from "@baza/types/auth";
 import { successResponseSchema } from "@baza/types/common";
 import { now } from "@/lib/now";
-import { fail, respond } from "@/lib/server/http";
+import { respond, fail, parseBody } from "@/lib/server/http";
 import { hashPassword } from "@/lib/server/password";
 import { prisma } from "@/lib/server/prisma";
 import { hashToken } from "@/lib/server/tokens";
-import { tryCatch } from "@/lib/server/try-catch";
 
 export async function POST(request: Request) {
-  const bodyResult = await tryCatch(request.json());
-  const body = bodyResult.error ? null : bodyResult.data;
-  const parsed = resetPasswordInputSchema.safeParse(body);
-  if (!parsed.success) return fail("Invalid payload", 400, parsed.error);
+  const parsed = await parseBody(request, resetPasswordInputSchema);
+  if (!parsed.ok) return parsed.response;
 
   // Trim before hashing: a token pasted from an email on mobile often carries
   // a leading/trailing space or newline, which would otherwise change the hash

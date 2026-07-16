@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { fieldErrorsFromApiError } from "@/lib/api-errors";
+import { fieldErrorsFromApiError } from "@/lib/zod-field-errors";
 
 // Re-create the ApiError shape locally — importing `@/lib/api` pulls in
 // react-native, which vitest's node env can't transform. The helper consumes
@@ -50,26 +50,6 @@ describe("fieldErrorsFromApiError", () => {
     expect(fieldErrorsFromApiError(apiError)).toEqual({
       sessionCount: "Birthday gift PackageTypes must have sessionCount = 1",
       validityDays: "Validity must be at least 1 day",
-    });
-  });
-
-  it("handles ZodError details serialized via toString (message: JSON string)", () => {
-    const apiError = new ApiError(
-      400,
-      {
-        success: false,
-        error: "Invalid payload",
-        details: {
-          name: "ZodError",
-          message: JSON.stringify([
-            { code: "custom", path: ["sessionCount"], message: "must be 1" },
-          ]),
-        },
-      },
-      "Unable to update",
-    );
-    expect(fieldErrorsFromApiError(apiError)).toEqual({
-      sessionCount: "must be 1",
     });
   });
 

@@ -10,14 +10,13 @@ import { now } from "@/lib/now";
 import { requireRole } from "@/lib/server/auth-guards";
 import { createClientPackageFromType } from "@/lib/server/client-package-create";
 import { linkPackagesToBilling } from "@/lib/server/billing-package-link";
-import { fail, respond } from "@/lib/server/http";
+import { respond, fail, parseBody } from "@/lib/server/http";
 import { countHeldSessions } from "@/lib/server/booking-hold-count";
 import { createSystemNotification } from "@/lib/server/notifications";
 import { findEligibleClientPackage } from "@/lib/server/package-eligibility";
 import { bookableSessions } from "@/lib/server/package-hold";
 import { prisma } from "@/lib/server/prisma";
 import { trainerLinkedToClientProfile } from "@/lib/server/trainer-scope";
-import { tryCatch } from "@/lib/server/try-catch";
 
 export async function GET(request: Request) {
   const guard = await requireRole(request, [UserRole.ADMIN, UserRole.TRAINER, UserRole.CLIENT]);
@@ -311,10 +310,8 @@ export async function POST(request: Request) {
   const guard = await requireRole(request, [UserRole.ADMIN, UserRole.TRAINER]);
   if (!guard.ok) return guard.response;
 
-  const bodyResult = await tryCatch(request.json());
-  const body = bodyResult.error ? null : bodyResult.data;
-  const parsed = createClientPackageInputSchema.safeParse(body);
-  if (!parsed.success) return fail("Invalid payload", 400, parsed.error);
+  const parsed = await parseBody(request, createClientPackageInputSchema);
+  if (!parsed.ok) return parsed.response;
 
   // Trainers may only create packages for clients they are linked to.
   if (guard.user.role === UserRole.TRAINER) {

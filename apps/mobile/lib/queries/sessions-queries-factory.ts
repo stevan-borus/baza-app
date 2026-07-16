@@ -14,6 +14,10 @@ import {
   sessionsListResponseSchema,
   sessionMutationResponseSchema,
   sessionDetailResponseSchema,
+  createSessionInputSchema,
+  updateSessionInputSchema,
+  createRecurringSessionsInputSchema,
+  updateRecurringSeriesInputSchema,
   type Session,
   type SessionDetail,
 } from "@baza/types/scheduling";
@@ -65,15 +69,7 @@ export const sessionsQueries = {
   create: () =>
     mutationOptions({
       mutationKey: [...sessionsAll, "create"] as const,
-      mutationFn: async (payload: {
-        classTypeId: string;
-        roomId?: string;
-        trainerUserId: string;
-        startsAt: string;
-        endsAt: string;
-        capacity: number;
-        isActive?: boolean;
-      }) =>
+      mutationFn: async (payload: z.input<typeof createSessionInputSchema>) =>
         apiRequest("/api/sessions", {
           method: "POST",
           body: payload,
@@ -88,16 +84,7 @@ export const sessionsQueries = {
       mutationFn: async ({
         id,
         ...payload
-      }: {
-        id: string;
-        startsAt?: string;
-        endsAt?: string;
-        capacity?: number;
-        roomId?: string | null;
-        trainerUserId?: string;
-        isActive?: boolean;
-        status?: "SCHEDULED" | "CANCELED" | "COMPLETED";
-      }) =>
+      }: { id: string } & z.input<typeof updateSessionInputSchema>) =>
         apiRequest(`/api/sessions/${id}`, {
           method: "PATCH",
           body: payload,
@@ -109,17 +96,9 @@ export const sessionsQueries = {
   createRecurring: () =>
     mutationOptions({
       mutationKey: [...sessionsAll, "create-recurring"] as const,
-      mutationFn: async (payload: {
-        classTypeId: string;
-        roomId?: string;
-        trainerUserId: string;
-        startsAt: string;
-        durationMins: number;
-        capacity: number;
-        weekCount: number;
-        weekdays: number[];
-        isActive?: boolean;
-      }) =>
+      mutationFn: async (
+        payload: z.input<typeof createRecurringSessionsInputSchema>,
+      ) =>
         apiRequest("/api/sessions/recurring", {
           method: "POST",
           body: payload,
@@ -145,17 +124,7 @@ export const sessionsQueries = {
       mutationFn: async ({
         id,
         ...payload
-      }: {
-        id: string;
-        roomId?: string | null;
-        trainerUserId?: string;
-        weekdays?: number[];
-        timeOfDayMins?: number;
-        durationMins?: number;
-        capacity?: number;
-        isActive?: boolean;
-        weekCount?: number;
-      }) =>
+      }: { id: string } & z.input<typeof updateRecurringSeriesInputSchema>) =>
         apiRequest(`/api/sessions/recurring/${id}`, {
           method: "PATCH",
           body: payload,

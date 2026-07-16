@@ -2,6 +2,11 @@ import { z } from "zod";
 import { AppLocaleSchema } from "./generated/prisma-zod/schemas/enums/AppLocale.schema";
 import { NotificationTypeSchema } from "./generated/prisma-zod/schemas/enums/NotificationType.schema";
 
+// Enum values come from the Prisma schema via the (enums-only) prisma-zod
+// generator, so new AppLocale / NotificationType values reach the API
+// contract automatically.
+const appLocaleSchema = AppLocaleSchema;
+
 export const notificationTypeSchema = NotificationTypeSchema;
 export type NotificationType = z.infer<typeof notificationTypeSchema>;
 
@@ -13,22 +18,16 @@ export const registerPushTokenInputSchema = z.object({
       /^(ExponentPushToken|ExpoPushToken)\[[^\]]+\]$/,
       "Invalid Expo push token",
     ),
-  preferredLocale: AppLocaleSchema.optional(),
+  preferredLocale: appLocaleSchema.optional(),
 });
-export type RegisterPushTokenInput = z.infer<
-  typeof registerPushTokenInputSchema
->;
 
 export const notificationPreferenceInputSchema = z.object({
   pushEnabled: z.boolean().optional(),
   inAppEnabled: z.boolean().optional(),
   campaignsEnabled: z.boolean().optional(),
   bookingEmailsEnabled: z.boolean().optional(),
-  preferredLocale: AppLocaleSchema.optional().nullable(),
+  preferredLocale: appLocaleSchema.optional().nullable(),
 });
-export type NotificationPreferenceInput = z.infer<
-  typeof notificationPreferenceInputSchema
->;
 
 export const createNotificationInputSchema = z.object({
   userId: z.uuid(),
@@ -37,9 +36,6 @@ export const createNotificationInputSchema = z.object({
   body: z.string().min(1).max(2000),
   payload: z.record(z.string(), z.unknown()).optional(),
 });
-export type CreateNotificationInput = z.infer<
-  typeof createNotificationInputSchema
->;
 
 // ─── Notification response schemas ───────────────────────────────────────────
 
@@ -98,18 +94,12 @@ export const createNotificationResponseSchema = z.object({
     createdAt: z.string(),
   }),
 });
-export type CreateNotificationResponse = z.infer<
-  typeof createNotificationResponseSchema
->;
 
 // PATCH /api/notifications — bulk mark-as-read; count of rows flipped.
 export const batchMarkNotificationsReadResponseSchema = z.object({
   success: z.boolean(),
   count: z.number(),
 });
-export type BatchMarkNotificationsReadResponse = z.infer<
-  typeof batchMarkNotificationsReadResponseSchema
->;
 
 // PATCH /api/notifications/[id] — single mark-as-read. `readAt` is always
 // set on the way out (idempotent PATCH keeps the original read instant).
@@ -120,9 +110,6 @@ export const markNotificationReadResponseSchema = z.object({
     readAt: z.string(),
   }),
 });
-export type MarkNotificationReadResponse = z.infer<
-  typeof markNotificationReadResponseSchema
->;
 
 export const notificationPreferencesSchema = z.object({
   pushEnabled: z.boolean(),
@@ -155,15 +142,9 @@ export const registerPushTokenResponseSchema = z.object({
     lastSeenAt: z.string(),
   }),
 });
-export type RegisterPushTokenResponse = z.infer<
-  typeof registerPushTokenResponseSchema
->;
 
 // DELETE /api/notifications/push-token — number of tokens deactivated.
 export const unregisterPushTokenResponseSchema = z.object({
   success: z.boolean(),
   deactivated: z.number(),
 });
-export type UnregisterPushTokenResponse = z.infer<
-  typeof unregisterPushTokenResponseSchema
->;

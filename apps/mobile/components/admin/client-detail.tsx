@@ -12,39 +12,30 @@
 // action sheet rows are preserved, the istorija sub-route at
 // /klijenti/[id]/istorija continues to render past bookings and is now
 // linked from the Treninzi tab footer.
+//
+// The per-section rendering lives in child components under
+// ./client-detail/* — this file owns the screen shell: state, queries, the
+// quick-action handlers, and the action/edit/assign/pause/delete sheets.
 
-import React, { useMemo, useState } from "react";
-import { useMutation, useQuery, useQueryClient, useInfiniteQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { useQuery, useInfiniteQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { Linking, Pressable, ScrollView, Text, View } from "react-native";
+import { Text, View } from "react-native";
 import { useRouter, type Href } from "expo-router";
-import dayjs from "dayjs";
-import { Icon, type IconName } from "@/components/ui/icon";
+import { Icon } from "@/components/ui/icon";
 import { AppSheet } from "@/components/ui/sheet";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { EmptyState, ErrorState } from "@/components/ui/states";
-import { ConfirmSheet } from "@/components/ui/confirm-sheet";
+import { ErrorState } from "@/components/ui/states";
 import { ContactSheet } from "@/components/ui/contact-sheet";
 import { SkeletonCard } from "@/components/ui/skeleton";
-import { SectionLabel } from "@/components/ui/typography";
-import { GlassCard } from "@/components/ui/glass-card";
-import { useThemeTokens } from "@/components/ui/tokens";
 import { ScreenContainerRaw, useTabBarBottomPadding } from "@/components/ui/screen-container";
 import { HeaderIconButton } from "@/components/ui/app-header";
-import { PaginatedList } from "@/components/ui/paginated-list";
 import { clientsQueries, useUpdateClientMutation } from "@/lib/queries/clients-queries-factory";
 import {
   packagesQueries,
-  useRevokeClientPackageMutation,
   type ClientPackage,
 } from "@/lib/queries/packages-queries-factory";
 import { bookingsQueries, type ClientBooking } from "@/lib/queries/bookings-queries-factory";
-import {
-  trainerNotesQueries,
-  type TrainerNote,
-} from "@/lib/queries/trainer-notes-queries-factory";
-import { BookingRow } from "@/components/admin/booking-row";
 import {
   EditClientSheet,
   type EditClientSheetClient,
@@ -52,37 +43,18 @@ import {
 import { PauseSheet } from "@/components/admin/client-flows/pause-sheet";
 import { AssignPackageSheetContent } from "@/components/admin/assign-package-sheet-content";
 import { ReturnToPill } from "@/components/admin/return-to-pill";
-import { TreninziSubTab } from "@/components/admin/treninzi-sub-tab";
-import { ClientLegalPanel } from "@/components/admin/client-legal-panel";
-import { ClientHealthPanel } from "@/components/admin/client-health-panel";
-import { formatDateOfBirth, parseDateOfBirth } from "@/lib/date-of-birth";
 import { nowMs } from "@/lib/now";
 import {
   ClientDetailTabBar,
   type ClientDetailTab,
 } from "@/components/admin/client-detail-tab-bar";
-
-function InitialsAvatar({ name, size = 56 }: { name: string; size?: number }) {
-  const initials = name
-    .split(" ")
-    .map((w) => w[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2);
-  return (
-    <View
-      className="items-center justify-center rounded-full bg-accent-soft"
-      style={{ width: size, height: size }}
-    >
-      <Text
-        className="text-accent font-body-bold"
-        style={{ fontSize: Math.round(size * 0.36) }}
-      >
-        {initials}
-      </Text>
-    </View>
-  );
-}
+import { InitialsAvatar } from "@/components/admin/client-detail/InitialsAvatar";
+import { ActionRow } from "@/components/admin/client-detail/ActionRow";
+import { ClientDetailHeaderCard } from "@/components/admin/client-detail/ClientDetailHeaderCard";
+import { PregledTab } from "@/components/admin/client-detail/PregledTab";
+import { PaketiTab } from "@/components/admin/client-detail/PaketiTab";
+import { TreninziTab } from "@/components/admin/client-detail/TreninziTab";
+import { BeleskeTab } from "@/components/admin/client-detail/BeleskeTab";
 
 function pickActivePackage(packages: ClientPackage[]): ClientPackage | null {
   const msNow = nowMs();
@@ -96,7 +68,6 @@ function pickActivePackage(packages: ClientPackage[]): ClientPackage | null {
 }
 
 export function ClientDetail({ id }: { id: string }) {
-  const queryClient = useQueryClient();
   const router = useRouter();
   const { t, i18n } = useTranslation();
   const lang = i18n.language === "en" ? "en" : "sr";
@@ -135,18 +106,14 @@ export function ClientDetail({ id }: { id: string }) {
     enabled: !!id,
   });
 
-  const allPackages = useMemo(
-    () => packagesQuery.data?.packages ?? [],
-    [packagesQuery.data?.packages],
-  );
-  const activePackage = useMemo(() => pickActivePackage(allPackages), [allPackages]);
+  const allPackages = packagesQuery.data?.packages ?? [];
+  const activePackage = pickActivePackage(allPackages);
 
   // Treninzi tab + Pregled-preview both read from the same infinite query.
   // Pregled shows the first three; Treninzi shows the full paginated list.
-  const upcomingBookings = useMemo<ClientBooking[]>(() => {
-    const pages = upcomingQuery.data?.pages ?? [];
-    return pages.flatMap((p) => p.bookings);
-  }, [upcomingQuery.data?.pages]);
+  const upcomingBookings: ClientBooking[] = (upcomingQuery.data?.pages ?? []).flatMap(
+    (p) => p.bookings,
+  );
 
   // Kept for the delete sheet only — edit's copy of this mutation now lives
   // inside the shared EditClientSheet module. Cache upkeep (clients + reports
@@ -246,66 +213,10 @@ export function ClientDetail({ id }: { id: string }) {
               }}
             >
               <ReturnToPill testID="client-detail-return-to-pill" />
-              <GlassCard size="md">
-                <View className="flex-row items-center gap-3">
-                  <InitialsAvatar name={client.user.fullName} />
-                  <View className="flex-1 gap-0.5">
-                    <Text
-                      className="text-foreground font-body-bold"
-                      style={{ fontSize: 17, letterSpacing: -0.2 }}
-                      numberOfLines={1}
-                    >
-                      {client.user.fullName}
-                    </Text>
-                    <Pressable
-                      testID="client-detail-email"
-                      onPress={() =>
-                        void Linking.openURL(
-                          `mailto:${client.user.email}`,
-                        ).catch(() => {})
-                      }
-                      accessibilityRole="link"
-                    >
-                      <Text
-                        className="text-accent"
-                        style={{ fontSize: 13 }}
-                        numberOfLines={1}
-                      >
-                        {client.user.email}
-                      </Text>
-                    </Pressable>
-                    {client.user.phone ? (
-                      <Pressable
-                        testID="client-detail-phone"
-                        onPress={() => setShowContact(true)}
-                        accessibilityRole="button"
-                      >
-                        <Text
-                          className="text-accent"
-                          style={{ fontSize: 13 }}
-                          numberOfLines={1}
-                        >
-                          {client.user.phone}
-                        </Text>
-                      </Pressable>
-                    ) : null}
-                    {client.dateOfBirth ? (
-                      <View className="flex-row items-center gap-2">
-                        <Text className="text-muted" style={{ fontSize: 13 }}>
-                          {t("admin.clients.labelDateOfBirth")}:
-                        </Text>
-                        <Text className="text-foreground" style={{ fontSize: 13 }}>
-                          {formatDateOfBirth(
-                            parseDateOfBirth(client.dateOfBirth),
-                            i18n.language === "sr" ? "sr" : "en",
-                          )}
-                        </Text>
-                      </View>
-                    ) : null}
-                  </View>
-                  <PackageStatusPill status={client.packageStatus} />
-                </View>
-              </GlassCard>
+              <ClientDetailHeaderCard
+                client={client}
+                onPressPhone={() => setShowContact(true)}
+              />
               <ClientDetailTabBar active={activeTab} onChange={setActiveTab} />
             </View>
 
@@ -510,496 +421,3 @@ export function ClientDetail({ id }: { id: string }) {
     </ScreenContainerRaw>
   );
 }
-
-function PregledTab({
-  activePackage,
-  packagesLoading,
-  upcomingBookings,
-  lang,
-  bottomPad,
-  clientUserId,
-  clientFullName,
-}: {
-  activePackage: ClientPackage | null;
-  packagesLoading: boolean;
-  upcomingBookings: ClientBooking[];
-  lang: "sr" | "en";
-  bottomPad: number;
-  clientUserId: string;
-  clientFullName: string;
-}) {
-  const { t } = useTranslation();
-  return (
-    <ScrollView
-      testID="client-detail-tab-content-pregled"
-      showsVerticalScrollIndicator={false}
-      contentContainerStyle={{
-        paddingHorizontal: 20,
-        paddingBottom: bottomPad,
-        gap: 16,
-      }}
-    >
-      <View className="gap-2">
-        <SectionLabel>{t("admin.clientDetail.currentPackage")}</SectionLabel>
-        {packagesLoading ? (
-          <SkeletonCard />
-        ) : activePackage ? (
-          <View className="bg-surface rounded-lg p-4 gap-1">
-            <Text
-              className="text-foreground font-body-semibold"
-              style={{ fontSize: 15 }}
-              numberOfLines={1}
-            >
-              {activePackage.packageType?.name ?? "—"}
-            </Text>
-            <Text className="text-muted" style={{ fontSize: 13 }}>
-              {t("admin.clientDetail.sessionsRemaining", {
-                remaining: activePackage.sessionsRemaining,
-                total: activePackage.packageType?.sessionCount ?? "—",
-              })}
-            </Text>
-            <Text className="text-muted" style={{ fontSize: 13 }}>
-              {t("admin.clientDetail.validUntil", {
-                date: dayjs(activePackage.expiresAt).locale(lang).format("D.M.YYYY."),
-              })}
-            </Text>
-          </View>
-        ) : (
-          <EmptyState title={t("admin.clientDetail.noActivePackage")} />
-        )}
-      </View>
-
-      {upcomingBookings.length > 0 ? (
-        <View className="gap-2">
-          <SectionLabel>{t("admin.clientDetail.nextSession")}</SectionLabel>
-          <View className="bg-surface rounded-lg overflow-hidden">
-            <BookingRow booking={upcomingBookings[0]!} />
-          </View>
-        </View>
-      ) : null}
-
-      <ClientLegalPanel
-        clientUserId={clientUserId}
-        clientFullName={clientFullName}
-        lang={lang}
-      />
-      <ClientHealthPanel clientUserId={clientUserId} lang={lang} />
-    </ScrollView>
-  );
-}
-
-function PaketiTab({
-  packagesQuery,
-  allPackages,
-  lang,
-  bottomPad,
-}: {
-  packagesQuery: ReturnType<typeof useQuery>;
-  allPackages: ClientPackage[];
-  lang: "sr" | "en";
-  bottomPad: number;
-}) {
-  const { t } = useTranslation();
-  const tokens = useThemeTokens();
-  // Keep-the-trace revoke: destructive confirm first, then the server
-  // cancels future bookings, releases unbacked waitlist seats and voids the
-  // linked payment in one transaction. Cache upkeep lives in the factory.
-  const [revokeTarget, setRevokeTarget] = useState<ClientPackage | null>(null);
-  const revokeMutation = useRevokeClientPackageMutation();
-  return (
-    <ScrollView
-      testID="client-detail-tab-content-paketi"
-      showsVerticalScrollIndicator={false}
-      contentContainerStyle={{
-        paddingHorizontal: 20,
-        paddingBottom: bottomPad,
-        gap: 8,
-      }}
-    >
-      <SectionLabel>{t("admin.clientDetail.packageHistory")}</SectionLabel>
-      {packagesQuery.isLoading ? (
-        <SkeletonCard />
-      ) : packagesQuery.isError ? (
-        <ErrorState message={t("admin.clientDetail.packagesError")} />
-      ) : allPackages.length === 0 ? (
-        <EmptyState title={t("admin.clientDetail.noPackages")} />
-      ) : (
-        <View className="bg-surface rounded-lg overflow-hidden">
-          {allPackages.map((p, idx) => {
-            const revoked = !!p.revokedAt;
-            const expired = new Date(p.expiresAt).getTime() < nowMs();
-            const usedUp = p.sessionsRemaining <= 0;
-            const billingStatus = p.billingRecord?.status ?? "CONFIRMED";
-            return (
-              <React.Fragment key={p.id}>
-                {idx > 0 ? (
-                  <View
-                    className="bg-glass-border"
-                    style={{ height: 1, marginLeft: 16 }}
-                  />
-                ) : null}
-                <View
-                  testID={`package-history-row-${p.id}`}
-                  className="flex-col gap-1 px-4 py-3"
-                  style={revoked ? { opacity: 0.6 } : undefined}
-                >
-                  <View className="flex-row items-center justify-between gap-3">
-                    <Text
-                      className="text-foreground font-body-semibold flex-1"
-                      style={{ fontSize: 14 }}
-                      numberOfLines={1}
-                    >
-                      {p.packageType?.name ?? "—"}
-                    </Text>
-                    {revoked ? (
-                      <Badge status="neutral">
-                        {t("admin.clientDetail.status.revoked")}
-                      </Badge>
-                    ) : expired ? (
-                      <Badge status="danger">
-                        {t("admin.clientDetail.status.expired")}
-                      </Badge>
-                    ) : usedUp ? (
-                      <Badge status="neutral">
-                        {t("admin.clientDetail.status.usedUp")}
-                      </Badge>
-                    ) : (
-                      <Badge status="success">
-                        {t("admin.clientDetail.status.active")}
-                      </Badge>
-                    )}
-                    {!revoked ? (
-                      <Pressable
-                        testID={`package-history-row-${p.id}-revoke`}
-                        onPress={() => setRevokeTarget(p)}
-                        hitSlop={8}
-                        android_ripple={null}
-                        className="active:opacity-60"
-                        accessibilityRole="button"
-                        accessibilityLabel={t("admin.clientDetail.revokeAction")}
-                      >
-                        <Icon name="ban" size={16} color={tokens.danger} />
-                      </Pressable>
-                    ) : null}
-                  </View>
-                  <Text className="text-muted" style={{ fontSize: 12 }}>
-                    {`${dayjs(p.startsAt).locale(lang).format("D.M.YYYY.")} — ${dayjs(p.expiresAt).locale(lang).format("D.M.YYYY.")}`}
-                  </Text>
-                  <View className="flex-row items-center justify-between gap-3">
-                    <Text className="text-muted" style={{ fontSize: 12 }}>
-                      {t("admin.clientDetail.sessionsRemaining", {
-                        remaining: p.sessionsRemaining,
-                        total: p.packageType?.sessionCount ?? "—",
-                      })}
-                    </Text>
-                    <Text
-                      testID={`package-history-row-${p.id}-billing-tag`}
-                      className={
-                        p.billingRecord && billingStatus === "PENDING"
-                          ? "text-warning font-body-medium"
-                          : "text-muted font-body-medium"
-                      }
-                      style={{ fontSize: 12 }}
-                    >
-                      {p.billingRecord
-                        ? billingStatus === "PENDING"
-                          ? t("admin.clientDetail.notPaid")
-                          : billingStatus === "VOIDED"
-                            ? t("admin.clientDetail.voided")
-                            : t("admin.clientDetail.paid", {
-                                amount: p.billingRecord.amount,
-                              })
-                        : t("admin.clientDetail.comp")}
-                    </Text>
-                  </View>
-                </View>
-              </React.Fragment>
-            );
-          })}
-        </View>
-      )}
-      <ConfirmSheet
-        testID="package-revoke-confirm-button"
-        open={!!revokeTarget}
-        onOpenChange={(open) => {
-          if (!open) setRevokeTarget(null);
-        }}
-        title={t("confirm.revokePackageTitle")}
-        message={t("confirm.revokePackageMessage")}
-        confirmLabel={t("confirm.revokePackageConfirm")}
-        loading={revokeMutation.isPending}
-        errorMessage={
-          revokeMutation.isError ? t("admin.clientDetail.revokeError") : null
-        }
-        onConfirm={() => {
-          if (!revokeTarget) return;
-          revokeMutation.mutate(revokeTarget.id, {
-            onSuccess: () => setRevokeTarget(null),
-          });
-        }}
-      />
-    </ScrollView>
-  );
-}
-
-type TreninziSub = "upcoming" | "history";
-
-function TreninziTab({
-  upcomingQuery,
-  upcomingBookings,
-  clientUserId,
-  bottomPad,
-}: {
-  upcomingQuery: ReturnType<typeof useInfiniteQuery>;
-  upcomingBookings: ClientBooking[];
-  clientUserId: string;
-  bottomPad: number;
-}) {
-  const { t } = useTranslation();
-  const [sub, setSub] = useState<TreninziSub>("upcoming");
-
-  // The past-bookings query is started lazily — it only fires when the
-  // history pill is tapped, so opening the tab doesn't fan out a second
-  // request for a panel the user might never look at.
-  const pastQuery = useInfiniteQuery({
-    ...bookingsQueries.byClient({
-      clientUserId,
-      period: "past",
-      limit: 20,
-    }),
-    enabled: sub === "history",
-  });
-  const pastBookings = useMemo<ClientBooking[]>(
-    () => (pastQuery.data?.pages ?? []).flatMap((p) => p.bookings),
-    [pastQuery.data?.pages],
-  );
-
-  const query = sub === "upcoming" ? upcomingQuery : pastQuery;
-  const data = sub === "upcoming" ? upcomingBookings : pastBookings;
-
-  return (
-    <View
-      testID="client-detail-tab-content-treninzi"
-      style={{ flex: 1, paddingHorizontal: 20 }}
-    >
-      {/* Underline tab row — quieter than chip pills, reads unambiguously
-          as sub-tabs nested under the main Pregled/Paketi/Treninzi bar. */}
-      <View
-        className="flex-row border-b border-glass-border"
-        style={{ gap: 20, marginBottom: 12 }}
-      >
-        <TreninziSubTab
-          testID="client-detail-treninzi-pill-upcoming"
-          label={t("admin.clientDetail.upcomingTab")}
-          active={sub === "upcoming"}
-          onPress={() => setSub("upcoming")}
-        />
-        <TreninziSubTab
-          testID="client-detail-treninzi-pill-history"
-          label={t("admin.clientDetail.historyTab")}
-          active={sub === "history"}
-          onPress={() => setSub("history")}
-        />
-      </View>
-      <PaginatedList<ClientBooking>
-        query={query}
-        data={data}
-        keyExtractor={(b) => b.id}
-        renderItem={({ item }) => (
-          <View
-            className="bg-surface rounded-lg overflow-hidden"
-            style={{ marginBottom: 8 }}
-          >
-            <BookingRow
-              booking={item}
-              showCanceledTag={sub === "history"}
-            />
-          </View>
-        )}
-        contentContainerStyle={{
-          paddingBottom: bottomPad,
-        }}
-        errorState={
-          <ErrorState
-            message={t(
-              sub === "upcoming"
-                ? "admin.clientDetail.upcomingError"
-                : "admin.history.error",
-            )}
-          />
-        }
-        emptyState={
-          <EmptyState
-            title={t(
-              sub === "upcoming"
-                ? "admin.clientDetail.noUpcoming"
-                : "admin.clientDetail.noPastBookings",
-            )}
-          />
-        }
-      />
-    </View>
-  );
-}
-
-function BeleskeTab({
-  clientProfileId,
-  lang,
-  bottomPad,
-}: {
-  clientProfileId: string;
-  lang: "sr" | "en";
-  bottomPad: number;
-}) {
-  const { t } = useTranslation();
-  const queryClient = useQueryClient();
-  const [pendingDelete, setPendingDelete] = useState<TrainerNote | null>(null);
-
-  const notesQuery = useInfiniteQuery(
-    trainerNotesQueries.listInfinite({ clientProfileIds: [clientProfileId] }),
-  );
-  const notes = useMemo<TrainerNote[]>(
-    () => (notesQuery.data?.pages ?? []).flatMap((p) => p.notes),
-    [notesQuery.data?.pages],
-  );
-
-  const deleteMutation = useMutation({
-    ...trainerNotesQueries.delete(),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: trainerNotesQueries.all });
-    },
-  });
-
-  return (
-    <View
-      testID="client-detail-tab-content-beleske"
-      style={{ flex: 1, paddingHorizontal: 20 }}
-    >
-      <PaginatedList<TrainerNote>
-        query={notesQuery}
-        data={notes}
-        keyExtractor={(n) => n.id}
-        renderItem={({ item }) => (
-          <Pressable
-            testID={`beleske-row-${item.id}`}
-            onPress={() => setPendingDelete(item)}
-            android_ripple={null}
-            className="bg-surface rounded-lg overflow-hidden active:opacity-80"
-            style={{ marginBottom: 8, padding: 14 }}
-          >
-            <Text
-              className="text-faint font-body-semibold"
-              style={{
-                fontSize: 11,
-                letterSpacing: 1.2,
-                textTransform: "uppercase",
-                marginBottom: 6,
-              }}
-              numberOfLines={1}
-            >
-              {item.trainer?.fullName ?? t("admin.clientDetail.beleske.unknownTrainer")} ·{" "}
-              {dayjs(item.createdAt).locale(lang).format("D.M.YYYY.")}
-            </Text>
-            <Text
-              className="text-foreground"
-              style={{ fontSize: 14, lineHeight: 20 }}
-            >
-              {item.note}
-            </Text>
-          </Pressable>
-        )}
-        contentContainerStyle={{ paddingBottom: bottomPad }}
-        errorState={
-          <ErrorState message={t("admin.clientDetail.beleske.error")} />
-        }
-        emptyState={
-          <EmptyState title={t("admin.clientDetail.beleske.empty")} />
-        }
-      />
-
-      {/* Tap-to-delete confirmation. The only thing an admin does to a
-          note from this surface is remove it — tap on row → confirm.
-          The trainer who wrote the note is not notified of deletion. */}
-      <ConfirmSheet
-        testID="beleske-confirm-delete"
-        open={pendingDelete !== null}
-        onOpenChange={(v) => !v && setPendingDelete(null)}
-        title={t("admin.clientDetail.beleske.confirmDelete")}
-        message={t("admin.clientDetail.beleske.confirmDeleteBody")}
-        confirmLabel={t("admin.clientDetail.beleske.confirm")}
-        loading={deleteMutation.isPending}
-        onConfirm={() => {
-          if (!pendingDelete) return;
-          deleteMutation.mutate(pendingDelete.id, {
-            onSuccess: () => setPendingDelete(null),
-          });
-        }}
-      />
-    </View>
-  );
-}
-
-function PackageStatusPill({
-  status,
-}: {
-  status: "active" | "expiring" | "paused" | "expired" | "none";
-}) {
-  const { t } = useTranslation();
-  if (status === "active") {
-    return <Badge status="success">{t("admin.clientDetail.status.active")}</Badge>;
-  }
-  if (status === "expiring") {
-    return <Badge status="warning">{t("admin.clientDetail.status.expiring")}</Badge>;
-  }
-  if (status === "paused") {
-    return <Badge status="neutral">{t("admin.clientDetail.status.paused")}</Badge>;
-  }
-  if (status === "expired") {
-    return <Badge status="danger">{t("admin.clientDetail.status.expired")}</Badge>;
-  }
-  return <Badge status="neutral">{t("admin.clientDetail.status.none")}</Badge>;
-}
-
-function ActionRow({
-  icon,
-  label,
-  onPress,
-  destructive = false,
-  testID,
-}: {
-  icon: IconName;
-  label: string;
-  onPress: () => void;
-  destructive?: boolean;
-  testID?: string;
-}) {
-  const tokens = useThemeTokens();
-  return (
-    <Pressable
-      testID={testID}
-      onPress={onPress}
-      android_ripple={null}
-      className="flex-row items-center gap-3 py-3.5 active:opacity-70"
-    >
-      <Icon
-        name={icon}
-        size={18}
-        color={destructive ? "#dc2626" : tokens.foreground}
-      />
-      <Text
-        className={
-          destructive
-            ? "text-danger font-body-medium flex-1"
-            : "text-foreground font-body-medium flex-1"
-        }
-        style={{ fontSize: 15 }}
-      >
-        {label}
-      </Text>
-      {!destructive ? (
-        <Icon name="chevron-right" size={16} color={tokens.faint} />
-      ) : null}
-    </Pressable>
-  );
-}
-

@@ -112,9 +112,6 @@ export const healthIntakeSuccessResponseSchema =
   healthIntakeResponseSchema.extend({
     success: z.literal(true),
   });
-export type HealthIntakeSuccessResponse = z.infer<
-  typeof healthIntakeSuccessResponseSchema
->;
 
 // DELETE /api/health-intake — the HealthIntakeWithdrawal audit row, spread
 // at the top level like the other health-intake handlers.
@@ -124,6 +121,3 @@ export const healthIntakeWithdrawalResponseSchema = z.object({
   clientProfileId: z.string(),
   withdrawnAt: z.string(), // ISO date string when JSON-serialized
 });
-export type HealthIntakeWithdrawalResponse = z.infer<
-  typeof healthIntakeWithdrawalResponseSchema
->;

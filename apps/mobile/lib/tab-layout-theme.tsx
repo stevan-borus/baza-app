@@ -1,7 +1,6 @@
 import React from "react";
 import { Icon, type IconName } from "@/components/ui/icon";
 import { Tabs } from "expo-router";
-import { ActivityIndicator } from "react-native";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useThemeTokens } from "@/components/ui/tokens";
@@ -14,14 +13,6 @@ export function TabIcon(props: {
   size?: number;
 }) {
   return <Icon size={props.size ?? 22} name={props.name} color={props.color} />;
-}
-
-export function AppTabLoading({ isDark: _isDark }: { isDark: boolean }) {
-  return (
-    <View className="flex-1 bg-background items-center justify-center">
-      <ActivityIndicator size="large" color={ACCENT} />
-    </View>
-  );
 }
 
 type FloatingTabBarProps = Parameters<
@@ -202,9 +193,4 @@ export function getAppTabScreenOptions(isDark: boolean) {
       backgroundColor: isDark ? "#0E0E10" : "#F4EFE3",
     },
   };
-}
-
-/** Legacy: header rendering is now fully handled by the inline AppHeader. */
-export function getNativeHeaderOptions(_isDark: boolean) {
-  return { headerShown: false as const };
 }

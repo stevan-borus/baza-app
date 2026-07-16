@@ -16,7 +16,6 @@ export const updateClientInputSchema = z.object({
   // `.nullable()` entirely or 409 on { dateOfBirth: null } for CLIENT users.
   dateOfBirth: dateOfBirthSchema.nullable().optional(),
 });
-export type UpdateClientInput = z.infer<typeof updateClientInputSchema>;
 
 export const clientsResponseSchema = z.object({
   success: z.boolean(),
@@ -71,7 +70,6 @@ export const updateClientResponseSchema = z.object({
     ),
   }),
 });
-export type UpdateClientResponse = z.infer<typeof updateClientResponseSchema>;
 
 export const clientByIdResponseSchema = z.object({
   success: z.boolean(),
@@ -91,7 +89,6 @@ export const clientByIdResponseSchema = z.object({
     }),
   }),
 });
-export type ClientByIdResponse = z.infer<typeof clientByIdResponseSchema>;
 
 // GET /api/admin/clients/[id]/consent-records — accepted documents (social
 // media excluded) plus the latest social-media decision. Deliberately has NO
@@ -111,9 +108,6 @@ export const adminClientConsentRecordsResponseSchema = z.object({
     .nullable(z.object({ accepted: z.boolean(), acceptedAt: z.string() }))
     .optional(),
 });
-export type AdminClientConsentRecordsResponse = z.infer<
-  typeof adminClientConsentRecordsResponseSchema
->;
 
 // GET /api/admin/clients/[id]/health — the raw ClientHealthIntake row (same
 // shape the client-facing /api/health-intake GET serves, hence the reuse of
@@ -123,9 +117,6 @@ export const adminClientHealthResponseSchema = z.object({
   intake: z.nullable(healthIntakeResponseSchema),
   withdrawnAt: z.nullable(z.string()),
 });
-export type AdminClientHealthResponse = z.infer<
-  typeof adminClientHealthResponseSchema
->;
 
 // ─── Invites ─────────────────────────────────────────────────────────────────
 // Rows served by GET /api/invites and returned whole by the create / resend /

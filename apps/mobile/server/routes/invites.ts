@@ -8,11 +8,10 @@ import { UserRole } from "@/generated/prisma";
 import { now } from "@/lib/now";
 import { requireRole } from "@/lib/server/auth-guards";
 import { env } from "@/lib/server/env";
-import { fail, respond } from "@/lib/server/http";
+import { respond, fail, parseBody } from "@/lib/server/http";
 import { prisma } from "@/lib/server/prisma";
 import { sendInviteEmail } from "@/lib/server/resend";
 import { addHours, generateRawToken, hashToken } from "@/lib/server/tokens";
-import { tryCatch } from "@/lib/server/try-catch";
 
 export async function GET(request: Request) {
   const guard = await requireRole(request, [UserRole.ADMIN]);
@@ -45,12 +44,8 @@ export async function POST(request: Request) {
   const guard = await requireRole(request, [UserRole.ADMIN]);
   if (!guard.ok) return guard.response;
 
-  const bodyResult = await tryCatch(request.json());
-  const body = bodyResult.error ? null : bodyResult.data;
-  const parsed = inviteClientInputSchema.safeParse(body);
-  if (!parsed.success) {
-    return fail("Invalid payload", 400, parsed.error);
-  }
+  const parsed = await parseBody(request, inviteClientInputSchema);
+  if (!parsed.ok) return parsed.response;
 
   const { email, firstName, lastName, phone, dateOfBirth } = parsed.data;
   const normalizedEmail = email.toLowerCase().trim();

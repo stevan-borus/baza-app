@@ -1,4 +1,11 @@
-import { queryOptions, mutationOptions, infiniteQueryOptions } from "@tanstack/react-query";
+import {
+  queryOptions,
+  mutationOptions,
+  infiniteQueryOptions,
+  useMutation,
+  useQueryClient,
+  type QueryClient,
+} from "@tanstack/react-query";
 import {
   trainerNotesResponseSchema,
   type TrainerNotesResponse,
@@ -107,3 +114,19 @@ export const trainerNotesQueries = {
         }),
     }),
 };
+
+// Standard delete-note mutation with cache upkeep baked in: a deleted note must
+// drop off every notes list (session-detail, client beleske tab), so we
+// invalidate the whole trainer-notes tree on success.
+export function deleteTrainerNoteMutationOptions(queryClient: QueryClient) {
+  return {
+    ...trainerNotesQueries.delete(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: trainerNotesQueries.all });
+    },
+  };
+}
+
+export function useDeleteTrainerNoteMutation() {
+  return useMutation(deleteTrainerNoteMutationOptions(useQueryClient()));
+}

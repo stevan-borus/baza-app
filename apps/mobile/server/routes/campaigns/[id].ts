@@ -7,9 +7,8 @@ import { Prisma, UserRole } from "@/generated/prisma";
 import { now } from "@/lib/now";
 import { requireRole } from "@/lib/server/auth-guards";
 import { CAMPAIGN_SELECT } from "@/lib/server/campaign-select";
-import { fail, paramFromCtxOrUrl, respond } from "@/lib/server/http";
+import { respond, fail, parseBody, paramFromCtxOrUrl } from "@/lib/server/http";
 import { prisma } from "@/lib/server/prisma";
-import { tryCatch } from "@/lib/server/try-catch";
 
 type Ctx = { params?: Record<string, string | undefined> };
 
@@ -31,9 +30,8 @@ export async function PATCH(request: Request, ctx?: Ctx) {
   const existing = await prisma.campaign.findUnique({ where: { id }, select: { status: true, scheduledFor: true } });
   if (!existing) return fail("Not found", 404);
   if (existing.status === "SENT") return fail("Cannot edit a sent campaign", 409);
-  const bodyResult = await tryCatch(request.json());
-  const parsed = updateCampaignInputSchema.safeParse(bodyResult.error ? null : bodyResult.data);
-  if (!parsed.success) return fail("Invalid payload", 400, parsed.error);
+  const parsed = await parseBody(request, updateCampaignInputSchema);
+  if (!parsed.ok) return parsed.response;
 
   // A provided scheduledFor must be in the future (a past instant would fire on
   // the next cron tick — a surprise send bypassing review).

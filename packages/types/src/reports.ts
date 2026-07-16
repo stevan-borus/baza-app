@@ -24,7 +24,6 @@ export const reportsQuerySchema = z.object({
   period: reportsPeriodSchema.default("day"),
   includeDeltas: z.coerce.boolean().default(false),
 });
-export type ReportsQuery = z.infer<typeof reportsQuerySchema>;
 
 // --- Izveštaji wire formats -------------------------------------------------
 // Single home for the /api/reports/* response shapes. The API routes type

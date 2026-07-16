@@ -31,7 +31,7 @@ import {
 } from "@/lib/queries/packages-queries-factory";
 import { trainingsQueries } from "@/lib/queries/trainings-queries-factory";
 import { useAdminCrud } from "@/lib/admin/use-admin-crud";
-import { fieldErrorsFromApiError } from "@/lib/api-errors";
+import { fieldErrorsFromApiError } from "@/lib/zod-field-errors";
 import { formatRsd } from "@/lib/format";
 import { isPriceInputValid, parsePriceInput } from "@/lib/price-input";
 

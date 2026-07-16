@@ -1,6 +1,20 @@
 import { z } from "zod";
-import { ClientPackageInputSchema } from "./generated/prisma-zod/schemas/variants/input/ClientPackage.input";
-import { PackagePauseInputSchema } from "./generated/prisma-zod/schemas/variants/input/PackagePause.input";
+
+// ClientPackage / PackagePause create-input fields as they exist on the Prisma
+// models — picked and extended below (date/reason fields are re-validated in
+// the extends). Hand-written so the package no longer depends on the generated
+// prisma-zod tree for these picked field-sets.
+const clientPackageFieldsSchema = z.object({
+  clientProfileId: z.string(),
+  packageTypeId: z.string(),
+  startsAt: z.date(),
+});
+const packagePauseFieldsSchema = z.object({
+  clientProfileId: z.string(),
+  startsAt: z.date(),
+  endsAt: z.date(),
+  reason: z.string().optional().nullable(),
+});
 
 export const clientPackageStatusSchema = z.enum([
   "active",
@@ -45,11 +59,8 @@ export const clientPackagesTimelineResponseSchema = z.object({
   success: z.boolean(),
   entries: z.array(clientPackageTimelineEntrySchema),
 });
-export type ClientPackagesTimelineResponse = z.infer<
-  typeof clientPackagesTimelineResponseSchema
->;
 
-export const packagePauseInputSchema = PackagePauseInputSchema.pick({
+export const packagePauseInputSchema = packagePauseFieldsSchema.pick({
   clientProfileId: true,
   startsAt: true,
   endsAt: true,
@@ -59,18 +70,14 @@ export const packagePauseInputSchema = PackagePauseInputSchema.pick({
   endsAt: z.coerce.date(),
   reason: z.string().max(300).optional(),
 });
-export type PackagePauseInput = z.infer<typeof packagePauseInputSchema>;
 
-export const createClientPackageInputSchema = ClientPackageInputSchema.pick({
+export const createClientPackageInputSchema = clientPackageFieldsSchema.pick({
   clientProfileId: true,
   packageTypeId: true,
   startsAt: true,
 }).extend({
   startsAt: z.string().min(10),
 });
-export type CreateClientPackageInput = z.infer<
-  typeof createClientPackageInputSchema
->;
 
 // ─── GET /api/packages/client-packages ───────────────────────────────────────
 // One schema for all three branches (client-own, admin list-all, per-client):
@@ -141,9 +148,6 @@ export const clientPackagesResponseSchema = z.object({
   // validate against the same schema.
   nextCursor: z.nullable(z.string()).optional(),
 });
-export type ClientPackagesResponse = z.infer<
-  typeof clientPackagesResponseSchema
->;
 
 // POST /api/packages/client-packages — the ClientPackage row as selected by
 // the create handler.
@@ -160,9 +164,6 @@ export const createClientPackageResponseSchema = z.object({
     sessionsRemaining: z.number(),
   }),
 });
-export type CreateClientPackageResponse = z.infer<
-  typeof createClientPackageResponseSchema
->;
 
 // POST /api/packages/client-packages/[id]/revoke — outcome summary of a
 // keep-the-trace revoke: the package is dead (revokedAt set), its FUTURE
@@ -178,9 +179,6 @@ export const revokeClientPackageResponseSchema = z.object({
   removedWaitlistEntries: z.number(),
   billingRecordVoided: z.boolean(),
 });
-export type RevokeClientPackageResponse = z.infer<
-  typeof revokeClientPackageResponseSchema
->;
 
 // POST /api/packages/pause — the PackagePause row as selected by the handler.
 export const packagePauseResponseSchema = z.object({
@@ -193,4 +191,3 @@ export const packagePauseResponseSchema = z.object({
     reason: z.string().nullable(),
   }),
 });
-export type PackagePauseResponse = z.infer<typeof packagePauseResponseSchema>;
