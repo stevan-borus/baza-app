@@ -16,7 +16,7 @@
  * chart — height ∝ utilization%. No third-party chart lib for what is
  * structurally a row of bars.
  */
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import {
@@ -38,6 +38,7 @@ import {
 import { CapsLabel } from "@/components/ui/studio";
 import { ProgressRing } from "@/components/ui/progress-ring";
 import { useThemeTokens } from "@/components/ui/tokens";
+import { formatDateRange } from "@/lib/format";
 import { reportsQueries } from "@/lib/queries/reports-queries-factory";
 import { ScreenContainerRaw, useTabBarBottomPadding } from "@/components/ui/screen-container";
 import { usePeriodPill, type Period } from "@/lib/admin/use-period-pill";
@@ -115,65 +116,37 @@ export default function IzvestajiIskoriscenost() {
     reportsQueries.utilizationByTrainer({ ...periodWindow, period }),
   );
 
-  const cells: HeatmapCell[] = useMemo(
-    () => heatmapQuery.data?.cells ?? [],
-    [heatmapQuery.data?.cells],
-  );
+  const cells: HeatmapCell[] = heatmapQuery.data?.cells ?? [];
   // Headline ring numbers — sum the whole heatmap so the ring covers the
   // full period window (not just today).
-  const totalBooked = useMemo(
-    () => cells.reduce((s, c) => s + c.booked, 0),
-    [cells],
-  );
-  const totalCapacity = useMemo(
-    () => cells.reduce((s, c) => s + c.capacity, 0),
-    [cells],
-  );
+  const totalBooked = cells.reduce((s, c) => s + c.booked, 0);
+  const totalCapacity = cells.reduce((s, c) => s + c.capacity, 0);
   const overallUtilization =
     totalCapacity > 0 ? totalBooked / totalCapacity : 0;
 
   // Look up a cell quickly by (dow, bucket).
-  const cellLookup = useMemo(() => {
-    const map = new Map<string, HeatmapCell>();
-    for (const c of cells) {
-      map.set(`${c.dayOfWeek}:${c.timeBucket}`, c);
-    }
-    return map;
-  }, [cells]);
+  const cellLookup = new Map<string, HeatmapCell>();
+  for (const c of cells) {
+    cellLookup.set(`${c.dayOfWeek}:${c.timeBucket}`, c);
+  }
 
-  const trendBuckets = useMemo(
-    () => timeSeriesQuery.data?.buckets ?? [],
-    [timeSeriesQuery.data?.buckets],
+  const trendBuckets = timeSeriesQuery.data?.buckets ?? [];
+
+  const roomRows = [...(byRoomQuery.data?.data ?? [])].sort(
+    (a, b) => b.utilization - a.utilization,
+  );
+  const classTypeRows = [...(byClassTypeQuery.data?.data ?? [])].sort(
+    (a, b) => b.utilization - a.utilization,
+  );
+  const trainerRows = [...(byTrainerQuery.data?.data ?? [])].sort(
+    (a, b) => b.utilization - a.utilization,
   );
 
-  const roomRows = useMemo(() => {
-    const data = byRoomQuery.data?.data ?? [];
-    return [...data].sort((a, b) => b.utilization - a.utilization);
-  }, [byRoomQuery.data?.data]);
-  const classTypeRows = useMemo(() => {
-    const data = byClassTypeQuery.data?.data ?? [];
-    return [...data].sort((a, b) => b.utilization - a.utilization);
-  }, [byClassTypeQuery.data?.data]);
-  const trainerRows = useMemo(() => {
-    const data = byTrainerQuery.data?.data ?? [];
-    return [...data].sort((a, b) => b.utilization - a.utilization);
-  }, [byTrainerQuery.data?.data]);
-
   const dateLocale = i18n.language === "en" ? "en-US" : "sr-RS";
-  const rangeLabel = useMemo(() => {
-    if (!periodWindow.from || !periodWindow.to) {
-      return t("admin.manage.periodAll");
-    }
-    const fromD = new Date(periodWindow.from);
-    const toD = new Date(periodWindow.to);
-    const inclusiveTo = new Date(toD.getTime() - 1);
-    const crossesYear =
-      fromD.getUTCFullYear() !== inclusiveTo.getUTCFullYear();
-    const fmt: Intl.DateTimeFormatOptions = crossesYear
-      ? { day: "numeric", month: "short", year: "numeric" }
-      : { day: "numeric", month: "short" };
-    return `${fromD.toLocaleDateString(dateLocale, fmt)} – ${inclusiveTo.toLocaleDateString(dateLocale, fmt)}`;
-  }, [periodWindow.from, periodWindow.to, dateLocale, t]);
+  const rangeLabel =
+    !periodWindow.from || !periodWindow.to
+      ? t("admin.manage.periodAll")
+      : formatDateRange(periodWindow.from, periodWindow.to, dateLocale);
 
   // Trend line — width budget identical to the Prihod chart so the two
   // sub-pages feel visually consistent.

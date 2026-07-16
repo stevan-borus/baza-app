@@ -5,9 +5,8 @@ import {
 import { successResponseSchema } from "@baza/types/common";
 import { UserRole } from "@/generated/prisma";
 import { requireRole } from "@/lib/server/auth-guards";
-import { fail, respond } from "@/lib/server/http";
+import { respond, fail, parseBody } from "@/lib/server/http";
 import { prisma } from "@/lib/server/prisma";
-import { tryCatch } from "@/lib/server/try-catch";
 
 type RouteParams = Record<string, string>;
 
@@ -15,10 +14,8 @@ export async function PATCH(request: Request, { id }: RouteParams) {
   const guard = await requireRole(request, [UserRole.ADMIN]);
   if (!guard.ok) return guard.response;
 
-  const bodyResult = await tryCatch(request.json());
-  const body = bodyResult.error ? null : bodyResult.data;
-  const parsed = updatePackageTypeInputSchema.safeParse(body);
-  if (!parsed.success) return fail("Invalid payload", 400, parsed.error);
+  const parsed = await parseBody(request, updatePackageTypeInputSchema);
+  if (!parsed.ok) return parsed.response;
 
   const existing = await prisma.packageType.findUnique({ where: { id } });
   if (!existing) return fail("Package type not found", 404);

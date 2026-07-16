@@ -9,10 +9,9 @@ import { paginationQuerySchema } from "@baza/types/common";
 import { UserRole } from "@/generated/prisma";
 import { now } from "@/lib/now";
 import { requireRole } from "@/lib/server/auth-guards";
-import { fail, respond } from "@/lib/server/http";
+import { respond, fail, parseBody } from "@/lib/server/http";
 import { createAndDispatchUserNotification } from "@/lib/server/notifications";
 import { prisma } from "@/lib/server/prisma";
-import { tryCatch } from "@/lib/server/try-catch";
 
 const AUTHENTICATED_ROLES = [UserRole.ADMIN, UserRole.TRAINER, UserRole.CLIENT];
 
@@ -62,10 +61,8 @@ export async function POST(request: Request) {
   const guard = await requireRole(request, [UserRole.ADMIN, UserRole.TRAINER]);
   if (!guard.ok) return guard.response;
 
-  const bodyResult = await tryCatch(request.json());
-  const body = bodyResult.error ? null : bodyResult.data;
-  const parsed = createNotificationInputSchema.safeParse(body);
-  if (!parsed.success) return fail("Invalid payload", 400, parsed.error);
+  const parsed = await parseBody(request, createNotificationInputSchema);
+  if (!parsed.ok) return parsed.response;
 
   // Admin/trainer can send ad-hoc notifications; target must be active.
   const target = await prisma.user.findUnique({
@@ -107,10 +104,8 @@ export async function PATCH(request: Request) {
   const guard = await requireRole(request, AUTHENTICATED_ROLES);
   if (!guard.ok) return guard.response;
 
-  const bodyResult = await tryCatch(request.json());
-  const body = bodyResult.error ? null : bodyResult.data;
-  const parsed = batchMarkReadSchema.safeParse(body);
-  if (!parsed.success) return fail("Invalid payload", 400, parsed.error);
+  const parsed = await parseBody(request, batchMarkReadSchema);
+  if (!parsed.ok) return parsed.response;
 
   const result = await prisma.notificationLog.updateMany({
     where: {

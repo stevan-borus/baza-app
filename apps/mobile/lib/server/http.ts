@@ -1,4 +1,5 @@
 import type { z } from "zod";
+import { tryCatch } from "@/lib/server/try-catch";
 
 /**
  * The server-side end of the wire contract: every route's success path goes
@@ -29,6 +30,41 @@ export function respond<S extends z.ZodType>(
     }
   }
   return Response.json(payload as Record<string, unknown>, { status });
+}
+
+/**
+ * Reads and validates a JSON request body against a Zod schema in one step,
+ * collapsing the copy-pasted parse block that lived in ~30 route handlers:
+ *
+ *   const bodyResult = await tryCatch(request.json());
+ *   const body = bodyResult.error ? null : bodyResult.data;
+ *   const parsed = schema.safeParse(body);
+ *   if (!parsed.success) return fail("Invalid payload", 400, parsed.error);
+ *
+ * Crucially, `request.json()` is wrapped in `tryCatch` so a malformed body
+ * (e.g. invalid JSON) resolves to `null` and fails validation with a clean
+ * 400 — it never throws out to a 500. A handful of routes previously called
+ * `request.json()` unguarded and would have thrown on a bad body; routing them
+ * through here fixes that.
+ *
+ * Returns a discriminated result: on success, `{ ok: true, data }` with the
+ * parsed value; on failure, `{ ok: false, response }` carrying the same
+ * `fail("Invalid payload", 400, error)` the routes returned before.
+ */
+export async function parseBody<S extends z.ZodType>(
+  request: Request,
+  schema: S,
+): Promise<
+  | { ok: true; data: z.infer<S> }
+  | { ok: false; response: Response }
+> {
+  const bodyResult = await tryCatch(request.json());
+  const body = bodyResult.error ? null : bodyResult.data;
+  const parsed = schema.safeParse(body);
+  if (!parsed.success) {
+    return { ok: false, response: fail("Invalid payload", 400, parsed.error) };
+  }
+  return { ok: true, data: parsed.data };
 }
 
 export function fail(message: string, status = 400, details?: unknown) {

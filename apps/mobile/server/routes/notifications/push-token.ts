@@ -6,7 +6,7 @@ import {
 import { UserRole } from "@/generated/prisma";
 import { now } from "@/lib/now";
 import { requireRole } from "@/lib/server/auth-guards";
-import { fail, respond } from "@/lib/server/http";
+import { respond, parseBody } from "@/lib/server/http";
 import { prisma } from "@/lib/server/prisma";
 import { tryCatch } from "@/lib/server/try-catch";
 
@@ -16,10 +16,8 @@ export async function POST(request: Request) {
   const guard = await requireRole(request, AUTHENTICATED_ROLES);
   if (!guard.ok) return guard.response;
 
-  const bodyResult = await tryCatch(request.json());
-  const body = bodyResult.error ? null : bodyResult.data;
-  const parsed = registerPushTokenInputSchema.safeParse(body);
-  if (!parsed.success) return fail("Invalid payload", 400, parsed.error);
+  const parsed = await parseBody(request, registerPushTokenInputSchema);
+  if (!parsed.ok) return parsed.response;
 
   // expoPushToken is globally @unique: one physical device's token can only live
   // on a single row. The same token can arrive under a different (userId, deviceId)

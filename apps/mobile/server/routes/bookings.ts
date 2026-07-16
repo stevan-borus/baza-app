@@ -12,7 +12,7 @@ import {
   applyLateCancelForfeit,
   promoteNextWaitlistEntry,
 } from "@/lib/server/booking-cancellation";
-import { respond, fail } from "@/lib/server/http";
+import { respond, fail, parseBody } from "@/lib/server/http";
 import { shouldApplyLateCancelPenalty } from "@/lib/server/cancellation-policy";
 import { notifyClient } from "@/lib/server/notify-client";
 import { notifyOperators } from "@/lib/server/notify-operators";
@@ -20,7 +20,6 @@ import { countHeldSessions } from "@/lib/server/booking-hold-count";
 import { findEligibleClientPackage } from "@/lib/server/package-eligibility";
 import { canHoldAnotherBooking } from "@/lib/server/package-hold";
 import { prisma } from "@/lib/server/prisma";
-import { tryCatch } from "@/lib/server/try-catch";
 
 export async function POST(request: Request) {
   const guard = await requireRole(request, [UserRole.CLIENT]);
@@ -28,10 +27,8 @@ export async function POST(request: Request) {
   const clientProfileId = guard.user.clientProfile?.id;
   if (!clientProfileId) return fail("Client profile not found", 404);
 
-  const bodyResult = await tryCatch(request.json());
-  const body = bodyResult.error ? null : bodyResult.data;
-  const parsed = bookingMutationInputSchema.safeParse(body);
-  if (!parsed.success) return fail("Invalid payload", 400, parsed.error);
+  const parsed = await parseBody(request, bookingMutationInputSchema);
+  if (!parsed.ok) return parsed.response;
 
   const { action, sessionId } = parsed.data;
 

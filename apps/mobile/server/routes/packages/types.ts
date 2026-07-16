@@ -5,9 +5,8 @@ import {
 } from "@baza/types/catalog";
 import { UserRole } from "@/generated/prisma";
 import { requireRole } from "@/lib/server/auth-guards";
-import { fail, respond } from "@/lib/server/http";
+import { respond, fail, parseBody } from "@/lib/server/http";
 import { prisma } from "@/lib/server/prisma";
-import { tryCatch } from "@/lib/server/try-catch";
 
 export async function GET(request: Request) {
   const guard = await requireRole(request, [UserRole.ADMIN, UserRole.TRAINER, UserRole.CLIENT]);
@@ -38,10 +37,8 @@ export async function POST(request: Request) {
   if (!guard.ok) return guard.response;
   // Package types define session count, validity, and late-cancel policy.
 
-  const bodyResult = await tryCatch(request.json());
-  const body = bodyResult.error ? null : bodyResult.data;
-  const parsed = packageTypeInputSchema.safeParse(body);
-  if (!parsed.success) return fail("Invalid payload", 400, parsed.error);
+  const parsed = await parseBody(request, packageTypeInputSchema);
+  if (!parsed.ok) return parsed.response;
 
   // classTypeId is required — confirm the referenced ClassType exists so we
   // surface a 404 instead of a Prisma FK error.

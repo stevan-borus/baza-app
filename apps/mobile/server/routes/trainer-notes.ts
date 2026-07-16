@@ -7,10 +7,9 @@ import {
 } from "@baza/types/trainer-notes";
 import { UserRole } from "@/generated/prisma";
 import { requireRole } from "@/lib/server/auth-guards";
-import { fail, respond } from "@/lib/server/http";
+import { respond, fail, parseBody } from "@/lib/server/http";
 import { prisma } from "@/lib/server/prisma";
 import { trainerOwnsSession } from "@/lib/server/trainer-scope";
-import { tryCatch } from "@/lib/server/try-catch";
 
 export async function GET(request: Request) {
   const guard = await requireRole(request, [UserRole.ADMIN, UserRole.TRAINER]);
@@ -126,10 +125,8 @@ export async function POST(request: Request) {
   const guard = await requireRole(request, [UserRole.ADMIN, UserRole.TRAINER]);
   if (!guard.ok) return guard.response;
 
-  const bodyResult = await tryCatch(request.json());
-  const body = bodyResult.error ? null : bodyResult.data;
-  const parsed = trainerNoteInputSchema.safeParse(body);
-  if (!parsed.success) return fail("Invalid payload", 400, parsed.error);
+  const parsed = await parseBody(request, trainerNoteInputSchema);
+  if (!parsed.ok) return parsed.response;
 
   // Session is optional — a note can be free-form client context with no
   // class attached. When set, we still enforce trainer-ownership and the
