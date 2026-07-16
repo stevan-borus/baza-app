@@ -1,9 +1,10 @@
 import { z } from "zod";
+import { UserRoleSchema } from "./generated/prisma-zod/schemas/enums/UserRole.schema";
 
-// Mirrors the Prisma UserRole enum. Kept as a hand-written source of truth
-// (single small enum) so the app no longer depends on the 2.7k-file
-// prisma-zod generated tree just for a handful of enums and picked field-sets.
-export const userRoleSchema = z.enum(["ADMIN", "TRAINER", "CLIENT"]);
+// Enum values come straight from the Prisma schema via the (enums-only)
+// prisma-zod generator, so a new UserRole reaches the API contract
+// automatically. The lowercase alias keeps the codebase's naming convention.
+export const userRoleSchema = UserRoleSchema;
 
 export const roleSchema = userRoleSchema;
 export type Role = z.infer<typeof roleSchema>;

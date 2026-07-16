@@ -1,0 +1,12 @@
+{
+  "$schema": "../node_modules/prisma-zod-generator/lib/config/schema.json",
+  "mode": "custom",
+  "emit": {
+    "enums": true,
+    "objects": false,
+    "crud": false,
+    "variants": false,
+    "results": false,
+    "pureModels": false
+  }
+}

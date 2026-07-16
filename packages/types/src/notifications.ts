@@ -1,25 +1,13 @@
 import { z } from "zod";
+import { AppLocaleSchema } from "./generated/prisma-zod/schemas/enums/AppLocale.schema";
+import { NotificationTypeSchema } from "./generated/prisma-zod/schemas/enums/NotificationType.schema";
 
-// Mirrors the Prisma AppLocale enum.
-const appLocaleSchema = z.enum(["sr", "en"]);
+// Enum values come from the Prisma schema via the (enums-only) prisma-zod
+// generator, so new AppLocale / NotificationType values reach the API
+// contract automatically.
+const appLocaleSchema = AppLocaleSchema;
 
-// Mirrors the Prisma NotificationType enum.
-export const notificationTypeSchema = z.enum([
-  "BOOKING_CONFIRMED",
-  "SESSION_UPDATED",
-  "TRAINER_NOTE",
-  "GENERAL",
-  "BOOKING_CANCELED_ADMIN",
-  "BOOKING_CANCELED_TRAINER",
-  "CONSENT_REFUSED",
-  "MINOR_PAPER_NEEDED",
-  "BIRTHDAY_ADMIN_PROMPT",
-  "BIRTHDAY_CLIENT_GIFT",
-  "RESERVATION_UNBACKED_ATTENDANCE",
-  "BULK_RESERVATION_CANCEL_ADMIN",
-  "BULK_RESERVATION_CANCEL_TRAINER",
-  "CAMPAIGN",
-]);
+export const notificationTypeSchema = NotificationTypeSchema;
 export type NotificationType = z.infer<typeof notificationTypeSchema>;
 
 export const registerPushTokenInputSchema = z.object({
