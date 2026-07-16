@@ -21,7 +21,6 @@ export const cronCampaignsDispatchResponseSchema = z.object({
   dryRun: z.boolean(),
   dispatched: z.number(),
 });
-export type CronCampaignsDispatchResponse = z.infer<typeof cronCampaignsDispatchResponseSchema>;
 
 /** POST /api/cron/notifications/birthdays — the real run omits `dryRun`. */
 export const cronBirthdaysResponseSchema = z.object({
@@ -34,7 +33,6 @@ export const cronBirthdaysResponseSchema = z.object({
   matchedClients: z.number(),
   sent: z.number(),
 });
-export type CronBirthdaysResponse = z.infer<typeof cronBirthdaysResponseSchema>;
 
 /** POST /api/cron/notifications/package-expiry */
 export const cronPackageExpiryResponseSchema = z.object({
@@ -46,7 +44,6 @@ export const cronPackageExpiryResponseSchema = z.object({
   sent: z.number(),
   scannedPackages: z.number(),
 });
-export type CronPackageExpiryResponse = z.infer<typeof cronPackageExpiryResponseSchema>;
 
 /** POST /api/cron/notifications/reminders */
 export const cronRemindersResponseSchema = z.object({
@@ -58,7 +55,6 @@ export const cronRemindersResponseSchema = z.object({
   sent: z.number(),
   sessionsChecked: z.number(),
 });
-export type CronRemindersResponse = z.infer<typeof cronRemindersResponseSchema>;
 
 /** POST /api/cron/sessions/consumption */
 export const cronSessionsConsumptionResponseSchema = z.object({
@@ -73,6 +69,3 @@ export const cronSessionsConsumptionResponseSchema = z.object({
   noEligiblePackage: z.number(),
   failed: z.number(),
 });
-export type CronSessionsConsumptionResponse = z.infer<
-  typeof cronSessionsConsumptionResponseSchema
->;

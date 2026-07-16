@@ -1,9 +1,26 @@
 import { z } from "zod";
-import { ClassTypeInputSchema } from "./generated/prisma-zod/schemas/variants/input/ClassType.input";
-import { PackageTypeInputSchema } from "./generated/prisma-zod/schemas/variants/input/PackageType.input";
-import { StudioRoomInputSchema } from "./generated/prisma-zod/schemas/variants/input/StudioRoom.input";
 
-export const packageTypeInputSchema = PackageTypeInputSchema.pick({
+// Catalog model fields as they exist on the Prisma models — each is picked and
+// fully re-validated in the .extend() below (the picked shapes exist only to
+// enumerate the writable columns). Hand-written so this package no longer
+// depends on the generated prisma-zod tree.
+const packageTypeFieldsSchema = z.object({
+  name: z.string(),
+  sessionCount: z.number().int(),
+  validityDays: z.number().int(),
+  lateCancelHours: z.number().int(),
+});
+const classTypeFieldsSchema = z.object({
+  name: z.string(),
+  maxClients: z.number().int(),
+  durationMins: z.number().int(),
+});
+const studioRoomFieldsSchema = z.object({
+  name: z.string(),
+  capacity: z.number().int(),
+});
+
+export const packageTypeInputSchema = packageTypeFieldsSchema.pick({
   name: true,
   sessionCount: true,
   validityDays: true,
@@ -29,7 +46,6 @@ export const packageTypeInputSchema = PackageTypeInputSchema.pick({
     path: ["sessionCount"],
   },
 );
-export type PackageTypeInput = z.infer<typeof packageTypeInputSchema>;
 
 export const updatePackageTypeInputSchema = z.object({
   name: z.string().trim().min(2).max(100).optional(),
@@ -47,9 +63,8 @@ export const updatePackageTypeInputSchema = z.object({
     path: ["sessionCount"],
   },
 );
-export type UpdatePackageTypeInput = z.infer<typeof updatePackageTypeInputSchema>;
 
-export const classTypeInputSchema = ClassTypeInputSchema.pick({
+export const classTypeInputSchema = classTypeFieldsSchema.pick({
   name: true,
   maxClients: true,
   durationMins: true,
@@ -58,22 +73,18 @@ export const classTypeInputSchema = ClassTypeInputSchema.pick({
   maxClients: z.number().int().positive(),
   durationMins: z.number().int().positive(),
 });
-export type ClassTypeInput = z.infer<typeof classTypeInputSchema>;
 
-export const studioRoomInputSchema = StudioRoomInputSchema.pick({
+export const studioRoomInputSchema = studioRoomFieldsSchema.pick({
   name: true,
   capacity: true,
 }).extend({
   name: z.string().trim().min(2).max(100),
   capacity: z.number().int().positive(),
 });
-export type StudioRoomInput = z.infer<typeof studioRoomInputSchema>;
 
 export const updateStudioRoomInputSchema = studioRoomInputSchema.partial();
-export type UpdateStudioRoomInput = z.infer<typeof updateStudioRoomInputSchema>;
 
 export const updateClassTypeInputSchema = classTypeInputSchema.partial();
-export type UpdateClassTypeInput = z.infer<typeof updateClassTypeInputSchema>;
 
 // ─── Catalog response schemas ────────────────────────────────────────────────
 

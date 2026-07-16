@@ -1,7 +1,11 @@
 import { z } from "zod";
-import { UserRoleSchema } from "./generated/prisma-zod/schemas/enums/UserRole.schema";
 
-export const roleSchema = UserRoleSchema;
+// Mirrors the Prisma UserRole enum. Kept as a hand-written source of truth
+// (single small enum) so the app no longer depends on the 2.7k-file
+// prisma-zod generated tree just for a handful of enums and picked field-sets.
+export const userRoleSchema = z.enum(["ADMIN", "TRAINER", "CLIENT"]);
+
+export const roleSchema = userRoleSchema;
 export type Role = z.infer<typeof roleSchema>;
 
 /** Display name derived from the normalized first/last fields. */
@@ -67,7 +71,6 @@ export const dateOfBirthSchema = z
 export const successResponseSchema = z.object({
   success: z.literal(true),
 });
-export type SuccessResponse = z.infer<typeof successResponseSchema>;
 
 // GET /api/users/trainers — active staff (trainers + admins) for the
 // session trainer pickers. `fullName` is derived server-side.
@@ -82,16 +85,8 @@ export const trainersResponseSchema = z.object({
   success: z.boolean(),
   users: z.array(trainerUserSchema),
 });
-export type TrainersResponse = z.infer<typeof trainersResponseSchema>;
 
 export const paginationQuerySchema = z.object({
   cursor: z.string().optional(),
   take: z.coerce.number().int().min(1).max(100).default(30),
 });
-export type PaginationQuery = z.infer<typeof paginationQuerySchema>;
-
-export const appThemeTokens = {
-  background: "#fdf7f4",
-  brand: "#2e5b42",
-  accent: "#6e1644",
-} as const;

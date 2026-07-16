@@ -3,9 +3,12 @@ import {
   mutationOptions,
   type QueryClient,
 } from "@tanstack/react-query";
+import { z } from "zod";
 import {
   classTypeMutationResponseSchema,
   classTypesResponseSchema,
+  classTypeInputSchema,
+  updateClassTypeInputSchema,
   type ClassType,
   type ClassTypeMutationResponse,
   type ClassTypesResponse,
@@ -33,7 +36,7 @@ export const trainingsQueries = {
   createClassType: () =>
     mutationOptions({
       mutationKey: [...trainingsAll, "class-types", "create"] as const,
-      mutationFn: (payload: { name: string; maxClients: number; durationMins: number }) =>
+      mutationFn: (payload: z.input<typeof classTypeInputSchema>) =>
         apiRequest("/api/trainings/class-types", {
           method: "POST",
           body: payload,
@@ -48,12 +51,7 @@ export const trainingsQueries = {
       mutationFn: ({
         id,
         ...payload
-      }: {
-        id: string;
-        name?: string;
-        maxClients?: number;
-        durationMins?: number;
-      }) =>
+      }: { id: string } & z.input<typeof updateClassTypeInputSchema>) =>
         apiRequest(`/api/trainings/class-types/${id}`, {
           method: "PATCH",
           body: payload,

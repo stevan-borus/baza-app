@@ -1,7 +1,18 @@
 import { z } from "zod";
-import { BillingRecordInputSchema } from "./generated/prisma-zod/schemas/variants/input/BillingRecord.input";
 
-export const billingRecordInputSchema = BillingRecordInputSchema.pick({
+// The BillingRecord create-input fields as they exist on the Prisma model —
+// picked and extended below. `method` keeps the Prisma PaymentMethod enum
+// (CASH/CARD/COMPANY/MANUAL_ONLINE); amount/notes are overridden in the
+// extend. Hand-written so the package no longer imports the generated
+// prisma-zod tree for this shape.
+const billingRecordFieldsSchema = z.object({
+  clientUserId: z.string(),
+  amount: z.number().int(),
+  method: z.enum(["CASH", "CARD", "COMPANY", "MANUAL_ONLINE"]),
+  notes: z.string().optional().nullable(),
+});
+
+export const billingRecordInputSchema = billingRecordFieldsSchema.pick({
   clientUserId: true,
   amount: true,
   method: true,
@@ -16,7 +27,6 @@ export const billingRecordInputSchema = BillingRecordInputSchema.pick({
   packageTypeId: z.uuid().optional(),
   activatePackageOnConfirm: z.boolean().default(true),
 });
-export type BillingRecordInput = z.infer<typeof billingRecordInputSchema>;
 
 // PATCH /api/billing/[id] — confirm a pay-later record once the client pays
 // in person. Method may be corrected at confirm time (they may have promised
@@ -25,9 +35,6 @@ export const updateBillingRecordInputSchema = z.object({
   status: z.literal("CONFIRMED"),
   method: z.enum(["CASH", "CARD", "COMPANY", "MANUAL_ONLINE"]).optional(),
 });
-export type UpdateBillingRecordInput = z.infer<
-  typeof updateBillingRecordInputSchema
->;
 
 // GET /api/billing — admin Naplata list. Serialized BillingRecord rows joined
 // in-memory with the paying client's identity.
@@ -63,7 +70,6 @@ export const billingResponseSchema = z.object({
   records: z.array(billingRecordSchema),
   nextCursor: z.nullable(z.string()).optional(),
 });
-export type BillingResponse = z.infer<typeof billingResponseSchema>;
 
 // GET /api/billing/summary — filter-wide aggregate for the Naplata hero +
 // StatStrip. Separate from the paginated list because these totals must span
@@ -80,9 +86,6 @@ export const billingSummaryResponseSchema = z.object({
   count: z.number(),
   distinctClients: z.number(),
 });
-export type BillingSummaryResponse = z.infer<
-  typeof billingSummaryResponseSchema
->;
 
 // POST /api/billing — the payment row as created (full row, no select), plus
 // the ClientPackage the payment activated. `clientPackage` is null when the
@@ -113,9 +116,6 @@ export const createBillingRecordResponseSchema = z.object({
     })
     .nullable(),
 });
-export type CreateBillingRecordResponse = z.infer<
-  typeof createBillingRecordResponseSchema
->;
 
 // PATCH /api/billing/[id] — the record after a PENDING → CONFIRMED flip.
 export const updateBillingRecordResponseSchema = z.object({
@@ -133,6 +133,3 @@ export const updateBillingRecordResponseSchema = z.object({
     updatedAt: z.string(),
   }),
 });
-export type UpdateBillingRecordResponse = z.infer<
-  typeof updateBillingRecordResponseSchema
->;

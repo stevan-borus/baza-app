@@ -6,7 +6,6 @@ export const bookingMutationInputSchema = z.object({
   sessionId: z.uuid(),
   action: bookingActionSchema,
 });
-export type BookingMutationInput = z.infer<typeof bookingMutationInputSchema>;
 
 export const bookingMutationResultSchema = z.object({
   success: z.boolean(),
@@ -18,7 +17,6 @@ export const bookingMutationResultSchema = z.object({
     "CANCELED",
   ]),
 });
-export type BookingMutationResult = z.infer<typeof bookingMutationResultSchema>;
 
 // ── Admin reservation wire shapes (/api/admin/reservations[/cancel-bulk]) ──
 
@@ -36,9 +34,6 @@ export const cancelReservationsBulkInputSchema = z.object({
   bookingIds: z.array(z.string().min(1)).min(1),
   waiveCharge: z.boolean().optional().default(false),
 });
-export type CancelReservationsBulkInput = z.infer<
-  typeof cancelReservationsBulkInputSchema
->;
 
 export const createReservationsResponseSchema = z.object({
   success: z.boolean(),
@@ -48,18 +43,12 @@ export const createReservationsResponseSchema = z.object({
   skippedAlreadyBooked: z.array(z.string()),
   skippedMissing: z.array(z.string()),
 });
-export type CreateReservationsResponse = z.infer<
-  typeof createReservationsResponseSchema
->;
 
 export const cancelReservationsBulkResponseSchema = z.object({
   success: z.boolean(),
   canceled: z.number(),
   promotedUserIds: z.array(z.string()),
 });
-export type CancelReservationsBulkResponse = z.infer<
-  typeof cancelReservationsBulkResponseSchema
->;
 
 // GET /api/clients/[id]/bookings — one booking row in a client's history.
 // Status is derived server-side from Booking.canceledAt (the schema has no
@@ -95,5 +84,3 @@ export const BOOKING_ERRORS = {
   PACKAGE_EXHAUSTED: "PACKAGE_EXHAUSTED",
 } as const;
 
-export type BookingErrorCode =
-  (typeof BOOKING_ERRORS)[keyof typeof BOOKING_ERRORS];

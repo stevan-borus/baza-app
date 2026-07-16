@@ -63,7 +63,6 @@ export const consentAcceptResponseSchema = z.object({
     acceptedAt: z.string(), // ISO date string when JSON-serialized
   }),
 });
-export type ConsentAcceptResponse = z.infer<typeof consentAcceptResponseSchema>;
 
 // POST /api/consent/social-media — echo of the recorded Da/Ne decision.
 export const socialMediaConsentResponseSchema = z.object({
@@ -74,9 +73,6 @@ export const socialMediaConsentResponseSchema = z.object({
     acceptedAt: z.string(), // ISO date string when JSON-serialized
   }),
 });
-export type SocialMediaConsentResponse = z.infer<
-  typeof socialMediaConsentResponseSchema
->;
 
 export const legalDocumentResponseSchema = z.object({
   success: z.literal(true),
@@ -85,7 +81,6 @@ export const legalDocumentResponseSchema = z.object({
   locale: z.enum(["sr", "en"]),
   body: z.string(),
 });
-export type LegalDocumentResponse = z.infer<typeof legalDocumentResponseSchema>;
 
 export const legalDocumentsListResponseSchema = z.object({
   success: z.literal(true),
@@ -97,6 +92,3 @@ export const legalDocumentsListResponseSchema = z.object({
     }),
   ),
 });
-export type LegalDocumentsListResponse = z.infer<
-  typeof legalDocumentsListResponseSchema
->;

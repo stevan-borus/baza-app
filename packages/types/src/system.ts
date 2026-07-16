@@ -13,7 +13,6 @@ export const healthResponseSchema = z.object({
   status: z.literal("ok"),
   ts: z.iso.datetime(),
 });
-export type HealthResponse = z.infer<typeof healthResponseSchema>;
 
 /** GET /api/app-version?platform=ios|android — store min/latest versions. */
 export const appVersionResponseSchema = z.object({
@@ -24,4 +23,3 @@ export const appVersionResponseSchema = z.object({
   /** Newest version on the store; soft-nudge when the user is below it. */
   latestVersion: z.string(),
 });
-export type AppVersionResponse = z.infer<typeof appVersionResponseSchema>;

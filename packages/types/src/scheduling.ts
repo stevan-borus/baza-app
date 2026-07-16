@@ -1,14 +1,19 @@
 import { z } from "zod";
-import { SessionResultSchema } from "./generated/prisma-zod/schemas/variants/result/Session.result";
+
+// The Session fields the availability shape picks (id/capacity) as they exist
+// on the Prisma Session model — everything else on the availability wire shape
+// is added in the .extend() below. Hand-written so this package no longer
+// depends on the generated prisma-zod tree.
+const sessionFieldsSchema = z.object({
+  id: z.string(),
+  capacity: z.number().int(),
+});
 
 export const monthlyAvailabilityQuerySchema = z.object({
   month: z.string().regex(/^\d{4}-\d{2}$/),
 });
-export type MonthlyAvailabilityQuery = z.infer<
-  typeof monthlyAvailabilityQuerySchema
->;
 
-export const availabilitySessionSchema = SessionResultSchema.pick({
+export const availabilitySessionSchema = sessionFieldsSchema.pick({
   id: true,
   capacity: true,
 }).extend({
@@ -67,7 +72,6 @@ export const availabilityResponseSchema = z.object({
   month: z.string(),
   sessions: z.array(availabilitySessionSchema),
 });
-export type AvailabilityResponse = z.infer<typeof availabilityResponseSchema>;
 
 export const createSessionInputSchema = z.object({
   classTypeId: z.uuid(),
@@ -78,7 +82,6 @@ export const createSessionInputSchema = z.object({
   capacity: z.number().int().positive(),
   isActive: z.boolean().default(true),
 });
-export type CreateSessionInput = z.infer<typeof createSessionInputSchema>;
 
 export const updateSessionInputSchema = z.object({
   startsAt: z.string().min(10).optional(),
@@ -89,7 +92,6 @@ export const updateSessionInputSchema = z.object({
   isActive: z.boolean().optional(),
   status: z.enum(["SCHEDULED", "CANCELED", "COMPLETED"]).optional(),
 });
-export type UpdateSessionInput = z.infer<typeof updateSessionInputSchema>;
 
 export const createRecurringSessionsInputSchema = z.object({
   classTypeId: z.uuid(),
@@ -102,9 +104,6 @@ export const createRecurringSessionsInputSchema = z.object({
   weekdays: z.array(z.number().int().min(0).max(6)).min(1).max(7),
   isActive: z.boolean().default(true),
 });
-export type CreateRecurringSessionsInput = z.infer<
-  typeof createRecurringSessionsInputSchema
->;
 
 export const updateRecurringSeriesInputSchema = z.object({
   roomId: z.uuid().nullable().optional(),
@@ -118,9 +117,6 @@ export const updateRecurringSeriesInputSchema = z.object({
   /** Replace the future-occurrence horizon with this many weeks from today. */
   weekCount: z.number().int().min(1).max(52).optional(),
 });
-export type UpdateRecurringSeriesInput = z.infer<
-  typeof updateRecurringSeriesInputSchema
->;
 
 // ── Session wire shapes (GET/POST /api/sessions, GET/PATCH /api/sessions/[id]) ──
 
@@ -142,7 +138,6 @@ export const sessionsListResponseSchema = z.object({
   success: z.boolean(),
   sessions: z.array(sessionSchema),
 });
-export type SessionsListResponse = z.infer<typeof sessionsListResponseSchema>;
 
 /** Single-session create/update both return the full session row. */
 export const sessionMutationResponseSchema = z.object({
@@ -173,7 +168,6 @@ export const sessionClientSchema = z.object({
     socialMediaAccepted: z.boolean().nullable(),
   }),
 });
-export type SessionClient = z.infer<typeof sessionClientSchema>;
 
 export const sessionDetailSchema = z.object({
   id: z.string(),
@@ -202,12 +196,10 @@ export const sessionDetailResponseSchema = z.object({
   success: z.boolean(),
   session: sessionDetailSchema,
 });
-export type SessionDetailResponse = z.infer<typeof sessionDetailResponseSchema>;
 
 export const deleteSessionResponseSchema = z.object({
   success: z.boolean(),
 });
-export type DeleteSessionResponse = z.infer<typeof deleteSessionResponseSchema>;
 
 // ── Recurring-series wire shapes (/api/sessions/recurring[/[id]]) ──────────
 
@@ -229,9 +221,6 @@ export const recurringScheduleResponseSchema = z.object({
   schedule: recurringScheduleSchema,
   futureBookingsCount: z.number(),
 });
-export type RecurringScheduleResponse = z.infer<
-  typeof recurringScheduleResponseSchema
->;
 
 export const createRecurringSessionsResponseSchema = z.object({
   success: z.boolean(),
@@ -249,21 +238,12 @@ export const createRecurringSessionsResponseSchema = z.object({
     }),
   ),
 });
-export type CreateRecurringSessionsResponse = z.infer<
-  typeof createRecurringSessionsResponseSchema
->;
 
 export const updateRecurringSeriesResponseSchema = z.object({
   success: z.boolean(),
   schedule: recurringScheduleSchema,
 });
-export type UpdateRecurringSeriesResponse = z.infer<
-  typeof updateRecurringSeriesResponseSchema
->;
 
 export const deleteRecurringSeriesResponseSchema = z.object({
   success: z.boolean(),
 });
-export type DeleteRecurringSeriesResponse = z.infer<
-  typeof deleteRecurringSeriesResponseSchema
->;

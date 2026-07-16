@@ -5,7 +5,6 @@ export const trainerNoteInputSchema = z.object({
   clientProfileId: z.uuid(),
   note: z.string().min(1).max(500),
 });
-export type TrainerNoteInput = z.infer<typeof trainerNoteInputSchema>;
 
 // Comma-separated UUIDs → string[]. Accepts a single UUID or several; the
 // server treats the result as an `in` filter on the corresponding column.
@@ -32,12 +31,10 @@ export const trainerNotesQuerySchema = z.object({
   cursor: z.string().optional(),
   take: z.coerce.number().int().min(1).max(100).default(30),
 });
-export type TrainerNotesQuery = z.infer<typeof trainerNotesQuerySchema>;
 
 export const updateTrainerNoteInputSchema = z.object({
   note: z.string().min(1).max(500),
 });
-export type UpdateTrainerNoteInput = z.infer<typeof updateTrainerNoteInputSchema>;
 
 // ─── Trainer-note response schemas ───────────────────────────────────────────
 
@@ -84,9 +81,6 @@ export const createTrainerNoteResponseSchema = z.object({
     createdAt: z.string(),
   }),
 });
-export type CreateTrainerNoteResponse = z.infer<
-  typeof createTrainerNoteResponseSchema
->;
 
 // PATCH /api/trainer-notes/[id] — the TrainerNote row as updated.
 export const updateTrainerNoteResponseSchema = z.object({
@@ -101,6 +95,3 @@ export const updateTrainerNoteResponseSchema = z.object({
     updatedAt: z.string(),
   }),
 });
-export type UpdateTrainerNoteResponse = z.infer<
-  typeof updateTrainerNoteResponseSchema
->;
