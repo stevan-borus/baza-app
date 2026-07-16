@@ -241,9 +241,9 @@ model ClassType {
   durationMins Int
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
-  sessions       Session[]
-  packageTypes   PackageType[]
-  clientPackages ClientPackage[]
+  sessions           Session[]
+  packageTypeLinks   PackageTypeClassType[]
+  clientPackageLinks ClientPackageClassType[]
 }
 
 model StudioRoom {
@@ -353,13 +353,34 @@ model PackageType {
   // admin can still override per payment, so it is advisory, not enforced.
   price               Int?
   isBirthdayGift      Boolean  @default(false)
-  classTypeId         String
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
-  classType           ClassType @relation(fields: [classTypeId], references: [id], onDelete: Restrict)
+  classTypes          PackageTypeClassType[]
   clientPackages      ClientPackage[]
   billingRecords      BillingRecord[]
+}
 
+// Explicit join tables (ADR-0010): a PackageType covers a SET of ClassTypes
+// (a "mix package" when >1), and a ClientPackage snapshots that set at
+// activation. Explicit — not Prisma implicit m2m — so ClassType keeps
+// onDelete: Restrict like every other ClassType reference in this schema.
+model PackageTypeClassType {
+  packageTypeId String
+  classTypeId   String
+  packageType   PackageType @relation(fields: [packageTypeId], references: [id], onDelete: Cascade)
+  classType     ClassType   @relation(fields: [classTypeId], references: [id], onDelete: Restrict)
+
+  @@id([packageTypeId, classTypeId])
+  @@index([classTypeId])
+}
+
+model ClientPackageClassType {
+  clientPackageId String
+  classTypeId     String
+  clientPackage   ClientPackage @relation(fields: [clientPackageId], references: [id], onDelete: Cascade)
+  classType       ClassType     @relation(fields: [classTypeId], references: [id], onDelete: Restrict)
+
+  @@id([clientPackageId, classTypeId])
   @@index([classTypeId])
 }
 
@@ -367,7 +388,6 @@ model ClientPackage {
   id                String              @id @default(uuid())
   clientProfileId   String
   packageTypeId     String
-  classTypeId       String
   lateCancelHours   Int
   startsAt          DateTime
   expiresAt         DateTime
@@ -379,12 +399,11 @@ model ClientPackage {
   updatedAt         DateTime            @updatedAt
   clientProfile     ClientProfile       @relation(fields: [clientProfileId], references: [id], onDelete: Cascade)
   packageType       PackageType         @relation(fields: [packageTypeId], references: [id], onDelete: Restrict)
-  classType         ClassType           @relation(fields: [classTypeId], references: [id], onDelete: Restrict)
+  classTypes        ClientPackageClassType[]
   bookings          Booking[]
   billingRecord     BillingRecord?
 
-  @@index([classTypeId])
-  @@index([clientProfileId, classTypeId])
+  @@index([clientProfileId])
 }
 
 model PackagePause {
