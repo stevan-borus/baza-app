@@ -39,7 +39,7 @@ async function seedAdminSessionWithBookings() {
       sessionCount: 12,
       validityDays: 30,
       lateCancelHours: 12,
-      classTypeId: reformer.id,
+      classTypes: { create: { classTypeId: reformer.id } },
     },
   });
   const ana = await prisma.user.create({
@@ -50,7 +50,7 @@ async function seedAdminSessionWithBookings() {
     data: {
       clientProfileId: anaProfile.id,
       packageTypeId: pkgType.id,
-      classTypeId: reformer.id,
+      classTypes: { create: { classTypeId: reformer.id } },
       lateCancelHours: 12,
       startsAt: now(),
       expiresAt: new Date(now().getTime() + 30 * 24 * 60 * 60 * 1000),

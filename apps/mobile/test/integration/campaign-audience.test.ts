@@ -21,7 +21,7 @@ async function seedMatrix() {
       name: "Reformer 12-pack",
       sessionCount: 12,
       validityDays: 30,
-      classTypeId: reformer.id,
+      classTypes: { create: { classTypeId: reformer.id } },
     },
   });
   const energyPt = await prisma.packageType.create({
@@ -29,7 +29,7 @@ async function seedMatrix() {
       name: "Energy 12-pack",
       sessionCount: 12,
       validityDays: 30,
-      classTypeId: energy.id,
+      classTypes: { create: { classTypeId: energy.id } },
     },
   });
   const current = now().getTime();
@@ -49,7 +49,7 @@ async function seedMatrix() {
     data: {
       clientProfileId: activeReformer.profileId,
       packageTypeId: reformerPt.id,
-      classTypeId: reformer.id,
+      classTypes: { create: { classTypeId: reformer.id } },
       lateCancelHours: 8,
       startsAt: new Date(current - 5 * DAY),
       expiresAt: new Date(current + 25 * DAY),
@@ -71,7 +71,7 @@ async function seedMatrix() {
     data: {
       clientProfileId: activeEnergy.profileId,
       packageTypeId: energyPt.id,
-      classTypeId: energy.id,
+      classTypes: { create: { classTypeId: energy.id } },
       lateCancelHours: 8,
       startsAt: new Date(current - 2 * DAY),
       expiresAt: new Date(current + 28 * DAY),
@@ -93,7 +93,7 @@ async function seedMatrix() {
     data: {
       clientProfileId: expired.profileId,
       packageTypeId: reformerPt.id,
-      classTypeId: reformer.id,
+      classTypes: { create: { classTypeId: reformer.id } },
       lateCancelHours: 8,
       // createdAt defaults to wall-clock insertion time; pin it to the
       // seeded purchase moment so the lapsed recency check sees an OLD package.
@@ -118,7 +118,7 @@ async function seedMatrix() {
     data: {
       clientProfileId: paused.profileId,
       packageTypeId: reformerPt.id,
-      classTypeId: reformer.id,
+      classTypes: { create: { classTypeId: reformer.id } },
       lateCancelHours: 8,
       startsAt: new Date(current - 5 * DAY),
       expiresAt: new Date(current + 25 * DAY),
@@ -139,7 +139,7 @@ async function seedMatrix() {
     data: {
       clientProfileId: future.profileId,
       packageTypeId: reformerPt.id,
-      classTypeId: reformer.id,
+      classTypes: { create: { classTypeId: reformer.id } },
       lateCancelHours: 8,
       startsAt: new Date(current + 7 * DAY),
       expiresAt: new Date(current + 37 * DAY),
@@ -255,14 +255,14 @@ describe("resolveCampaignAudience", () => {
       data: { userId: soonUser.id },
     });
     const reformerPt = await prisma.packageType.findFirstOrThrow({
-      where: { classTypeId: m.reformer.id },
+      where: { classTypes: { some: { classTypeId: m.reformer.id } } },
     });
     const current = now().getTime();
     await prisma.clientPackage.create({
       data: {
         clientProfileId: soonProfile.id,
         packageTypeId: reformerPt.id,
-        classTypeId: m.reformer.id,
+        classTypes: { create: { classTypeId: m.reformer.id } },
         lateCancelHours: 8,
         startsAt: new Date(current - 20 * DAY),
         expiresAt: new Date(current + 3 * DAY),

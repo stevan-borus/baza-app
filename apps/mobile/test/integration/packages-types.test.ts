@@ -175,7 +175,7 @@ describe("packages/types CRUD", () => {
         sessionCount: 8,
         validityDays: 30,
         lateCancelHours: 12,
-        classTypeId: reformer.id,
+        classTypes: { create: { classTypeId: reformer.id } },
       },
     });
 
@@ -222,7 +222,7 @@ describe("packages/types CRUD", () => {
         sessionCount: 8,
         validityDays: 30,
         lateCancelHours: 12,
-        classTypeId: reformer.id,
+        classTypes: { create: { classTypeId: reformer.id } },
       },
     });
     const response = await DELETE(
@@ -244,7 +244,7 @@ describe("packages/types CRUD", () => {
         sessionCount: 12,
         validityDays: 30,
         lateCancelHours: 12,
-        classTypeId: reformer.id,
+        classTypes: { create: { classTypeId: reformer.id } },
       },
     });
     const client = await prisma.user.create({
@@ -257,7 +257,7 @@ describe("packages/types CRUD", () => {
       data: {
         clientProfileId: profile.id,
         packageTypeId: packageType.id,
-        classTypeId: reformer.id,
+        classTypes: { create: { classTypeId: reformer.id } },
         lateCancelHours: 12,
         startsAt: now(),
         expiresAt: new Date(nowMs() + 30 * 24 * 60 * 60 * 1000),

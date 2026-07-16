@@ -44,14 +44,14 @@ async function seedClientPackage(
       sessionCount: 10,
       validityDays: 365,
       lateCancelHours: 12,
-      classTypeId,
+      classTypes: { create: { classTypeId } },
     },
   });
   return prisma.clientPackage.create({
     data: {
       clientProfileId,
       packageTypeId: packageType.id,
-      classTypeId,
+      classTypes: { create: { classTypeId } },
       lateCancelHours: 12,
       sessionsRemaining: 10,
       startsAt: new Date(nowMs() - 90 * DAY_MS),

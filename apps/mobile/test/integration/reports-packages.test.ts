@@ -23,7 +23,7 @@ async function seedPackagesAndAssignments() {
       sessionCount: 12,
       validityDays: 30,
       lateCancelHours: 12,
-      classTypeId: reformer.id,
+      classTypes: { create: { classTypeId: reformer.id } },
     },
   });
   const reformer8 = await prisma.packageType.create({
@@ -32,7 +32,7 @@ async function seedPackagesAndAssignments() {
       sessionCount: 8,
       validityDays: 30,
       lateCancelHours: 12,
-      classTypeId: reformer.id,
+      classTypes: { create: { classTypeId: reformer.id } },
     },
   });
   const energy12 = await prisma.packageType.create({
@@ -41,7 +41,7 @@ async function seedPackagesAndAssignments() {
       sessionCount: 12,
       validityDays: 30,
       lateCancelHours: 12,
-      classTypeId: energy.id,
+      classTypes: { create: { classTypeId: energy.id } },
     },
   });
 
@@ -66,7 +66,7 @@ async function seedPackagesAndAssignments() {
     data: {
       clientProfileId: clients[0].profile.id,
       packageTypeId: reformer12.id,
-      classTypeId: reformer.id,
+      classTypes: { create: { classTypeId: reformer.id } },
       lateCancelHours: 12,
       startsAt: seedAt,
       expiresAt,
@@ -89,7 +89,7 @@ async function seedPackagesAndAssignments() {
     data: {
       clientProfileId: clients[1].profile.id,
       packageTypeId: reformer12.id,
-      classTypeId: reformer.id,
+      classTypes: { create: { classTypeId: reformer.id } },
       lateCancelHours: 12,
       startsAt: seedAt,
       expiresAt,
@@ -101,7 +101,7 @@ async function seedPackagesAndAssignments() {
     data: {
       clientProfileId: clients[2].profile.id,
       packageTypeId: reformer8.id,
-      classTypeId: reformer.id,
+      classTypes: { create: { classTypeId: reformer.id } },
       lateCancelHours: 12,
       startsAt: seedAt,
       expiresAt,
@@ -130,7 +130,7 @@ async function seedPackagesAndAssignments() {
     data: {
       clientProfileId: energyProfile.id,
       packageTypeId: energy12.id,
-      classTypeId: energy.id,
+      classTypes: { create: { classTypeId: energy.id } },
       lateCancelHours: 12,
       startsAt: seedAt,
       expiresAt,

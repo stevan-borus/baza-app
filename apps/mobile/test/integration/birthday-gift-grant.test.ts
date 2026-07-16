@@ -44,7 +44,7 @@ async function seedPackageType(opts: { name: string; isBirthdayGift: boolean; se
       sessionCount: opts.sessionCount ?? (opts.isBirthdayGift ? 1 : 12),
       validityDays: 30,
       lateCancelHours: 12,
-      classTypeId: classType.id,
+      classTypes: { create: { classTypeId: classType.id } },
       isBirthdayGift: opts.isBirthdayGift,
     },
   });

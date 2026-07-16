@@ -57,7 +57,7 @@ async function seedSessionsAcrossClassTypes() {
       sessionCount: 12,
       validityDays: 30,
       lateCancelHours: 8,
-      classTypeId: reformer.id,
+      classTypes: { create: { classTypeId: reformer.id } },
     },
   });
   // 3 bookings on the reformer session.
@@ -70,7 +70,7 @@ async function seedSessionsAcrossClassTypes() {
       data: {
         clientProfileId: cProfile.id,
         packageTypeId: pkgType.id,
-        classTypeId: reformer.id,
+        classTypes: { create: { classTypeId: reformer.id } },
         lateCancelHours: 8,
         startsAt: new Date("2026-04-01T00:00:00Z"),
         expiresAt: new Date("2026-05-01T00:00:00Z"),
@@ -91,7 +91,7 @@ async function seedSessionsAcrossClassTypes() {
       data: {
         clientProfileId: cProfile.id,
         packageTypeId: pkgType.id,
-        classTypeId: reformer.id,
+        classTypes: { create: { classTypeId: reformer.id } },
         lateCancelHours: 8,
         startsAt: new Date("2026-04-01T00:00:00Z"),
         expiresAt: new Date("2026-05-01T00:00:00Z"),

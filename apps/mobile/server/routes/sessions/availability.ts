@@ -11,7 +11,9 @@ import { respond, fail } from "@/lib/server/http";
 import {
   classifyRenewalLockReason,
   clientOwnsPackageForClass,
+  ELIGIBILITY_PACKAGE_SELECT,
   findEligibleClientPackage,
+  toEligibilityPackage,
 } from "@/lib/server/package-eligibility";
 import { canHoldAnotherBooking, isLastBookableSlot } from "@/lib/server/package-hold";
 import { prisma } from "@/lib/server/prisma";
@@ -125,17 +127,10 @@ export async function GET(request: Request) {
         }
       }
 
-      const [clientPackages, packagePauses] = await Promise.all([
+      const [clientPackageRows, packagePauses] = await Promise.all([
         prisma.clientPackage.findMany({
           where: { clientProfileId },
-          select: {
-            id: true,
-            classTypeId: true,
-            startsAt: true,
-            expiresAt: true,
-            sessionsRemaining: true,
-            revokedAt: true,
-          },
+          select: ELIGIBILITY_PACKAGE_SELECT,
         }),
         prisma.packagePause.findMany({
           where: { clientProfileId },
@@ -145,11 +140,13 @@ export async function GET(request: Request) {
           },
         }),
       ]);
+      const clientPackages = clientPackageRows.map(toEligibilityPackage);
 
       // Visibility: any session of a class the client has EVER owned a pack
       // for stays on the calendar — lapsed clients see a greyed-out schedule
       // with a renewal CTA instead of an unexplained blank. Classes they
-      // never bought stay hidden (keeps fenced class types invisible).
+      // never bought stay hidden (keeps fenced class types invisible; a mix
+      // package makes every covered class type visible).
       visibleSessions = sessions.filter((session: (typeof sessions)[number]) =>
         clientOwnsPackageForClass(clientPackages, session.classTypeId),
       );
@@ -186,7 +183,7 @@ export async function GET(request: Request) {
         if (heldCount === undefined) {
           heldCount = await countHeldSessions(prisma, {
             clientProfileId,
-            classTypeId: session.classTypeId,
+            classTypeIds: eligible.classTypeIds,
             clientPackageId: eligible.id,
             at,
           });

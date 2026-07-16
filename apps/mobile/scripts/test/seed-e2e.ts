@@ -270,7 +270,7 @@ async function seedCatalog() {
         sessionCount: pt.sessionCount,
         validityDays: pt.validityDays,
         lateCancelHours: pt.lateCancelHours,
-        classTypeId: ct.id,
+        classTypes: { create: { classTypeId: ct.id } },
       },
     });
     packageTypeByName.set(pt.name, {
@@ -317,7 +317,7 @@ async function seedClientPackages(opts: {
       data: {
         clientProfileId: client.clientProfileId,
         packageTypeId: args.packageType.id,
-        classTypeId: args.packageType.classTypeId,
+        classTypes: { create: { classTypeId: args.packageType.classTypeId } },
         lateCancelHours: args.packageType.lateCancelHours,
         startsAt: args.startsAt,
         expiresAt: args.expiresAt,
@@ -375,7 +375,7 @@ async function seedClientPackages(opts: {
     data: {
       clientProfileId: opts.clients.get("paused")!.clientProfileId,
       packageTypeId: reformer12.id,
-      classTypeId: reformer12.classTypeId,
+      classTypes: { create: { classTypeId: reformer12.classTypeId } },
       lateCancelHours: reformer12.lateCancelHours,
       startsAt: new Date(currentInstant.getTime() - 5 * DAY_MS),
       expiresAt: new Date(currentInstant.getTime() + 25 * DAY_MS),
@@ -609,7 +609,7 @@ async function seedBookings(opts: {
     const ar = opts.clients.get("activeReformer");
     if (ar) {
       const pkg = await prisma.clientPackage.findFirst({
-        where: { clientProfileId: ar.clientProfileId, classTypeId: reformerCt!.id },
+        where: { clientProfileId: ar.clientProfileId, classTypes: { some: { classTypeId: reformerCt!.id } } },
         select: { id: true },
       });
       if (pkg) {
@@ -629,7 +629,7 @@ async function seedBookings(opts: {
     const ae = opts.clients.get("activeEnergy");
     if (ae) {
       const pkg = await prisma.clientPackage.findFirst({
-        where: { clientProfileId: ae.clientProfileId, classTypeId: energyCt!.id },
+        where: { clientProfileId: ae.clientProfileId, classTypes: { some: { classTypeId: energyCt!.id } } },
         select: { id: true },
       });
       if (pkg) {

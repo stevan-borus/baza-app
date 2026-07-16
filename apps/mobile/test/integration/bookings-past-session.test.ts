@@ -50,14 +50,14 @@ async function seedAdultWithPackage(classTypeId: string) {
       sessionCount: 10,
       validityDays: 365,
       lateCancelHours: 12,
-      classTypeId,
+      classTypes: { create: { classTypeId } },
     },
   });
   const pkg = await prisma.clientPackage.create({
     data: {
       clientProfileId: profileId,
       packageTypeId: packageType.id,
-      classTypeId,
+      classTypes: { create: { classTypeId } },
       lateCancelHours: 12,
       sessionsRemaining: 10,
       startsAt: new Date(nowMs() - 90 * DAY_MS),

@@ -90,7 +90,7 @@ export const packagesQueries = {
         validityDays: number;
         lateCancelHours?: number;
         price?: number | null;
-        classTypeId: string;
+        classTypeIds: string[];
         isBirthdayGift?: boolean;
       }) =>
         apiRequest("/api/packages/types", {
@@ -114,7 +114,7 @@ export const packagesQueries = {
         validityDays?: number;
         lateCancelHours?: number;
         price?: number | null;
-        classTypeId?: string;
+        classTypeIds?: string[];
         isBirthdayGift?: boolean;
       }) =>
         apiRequest(`/api/packages/types/${id}`, {

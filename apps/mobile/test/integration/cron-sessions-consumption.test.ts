@@ -26,14 +26,14 @@ async function seed() {
       sessionCount: 12,
       validityDays: 30,
       lateCancelHours: 12,
-      classTypeId: reformer.id,
+      classTypes: { create: { classTypeId: reformer.id } },
     },
   });
   const clientPackage = await prisma.clientPackage.create({
     data: {
       clientProfileId: clientProfile.id,
       packageTypeId: packageType.id,
-      classTypeId: reformer.id,
+      classTypes: { create: { classTypeId: reformer.id } },
       lateCancelHours: 12,
       startsAt: new Date(nowMs() - 10 * 24 * 60 * 60 * 1000),
       expiresAt: new Date(nowMs() + 30 * 24 * 60 * 60 * 1000),

@@ -83,7 +83,7 @@ describe("class-types PATCH + DELETE", () => {
         sessionCount: 12,
         validityDays: 30,
         lateCancelHours: 12,
-        classTypeId: ct.id,
+        classTypes: { create: { classTypeId: ct.id } },
       },
     });
     asAdmin();

@@ -98,7 +98,7 @@ test.describe("booking — guardian verification gate", () => {
       data: {
         clientProfileId: profileId,
         packageTypeId: reformerPackageType.id,
-        classTypeId: reformerClassType.id,
+        classTypes: { create: { classTypeId: reformerClassType.id } },
         lateCancelHours: reformerPackageType.lateCancelHours,
         sessionsRemaining: reformerPackageType.sessionCount,
         startsAt: new Date(nowMs - 30 * DAY_MS),

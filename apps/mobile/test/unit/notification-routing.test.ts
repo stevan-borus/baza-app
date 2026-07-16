@@ -11,8 +11,8 @@ describe("resolveNotificationHref", () => {
           suggestedClassTypeId: "ct-reformer",
         },
         giftPackageTypes: [
-          { id: "pt-gift-reformer", classTypeId: "ct-reformer" },
-          { id: "pt-gift-mat", classTypeId: "ct-mat" },
+          { id: "pt-gift-reformer", classTypeIds: ["ct-reformer"] },
+          { id: "pt-gift-mat", classTypeIds: ["ct-mat"] },
         ],
       });
       expect(href).toBe(
@@ -28,7 +28,7 @@ describe("resolveNotificationHref", () => {
           suggestedClassTypeId: "ct-unknown",
         },
         giftPackageTypes: [
-          { id: "pt-gift-reformer", classTypeId: "ct-reformer" },
+          { id: "pt-gift-reformer", classTypeIds: ["ct-reformer"] },
         ],
       });
       expect(href).toBe("/(admin)/klijenti?openAssignPackage=cp-123&mode=comp");
@@ -42,7 +42,7 @@ describe("resolveNotificationHref", () => {
           suggestedClassTypeId: null,
         },
         giftPackageTypes: [
-          { id: "pt-gift-reformer", classTypeId: "ct-reformer" },
+          { id: "pt-gift-reformer", classTypeIds: ["ct-reformer"] },
         ],
       });
       expect(href).toBe("/(admin)/klijenti?openAssignPackage=cp-123&mode=comp");

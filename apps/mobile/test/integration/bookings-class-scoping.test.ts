@@ -62,14 +62,14 @@ async function createPackage(opts: {
       sessionCount: 12,
       validityDays: 30,
       lateCancelHours: 12,
-      classTypeId: opts.classTypeId,
+      classTypes: { create: { classTypeId: opts.classTypeId } },
     },
   });
   return prisma.clientPackage.create({
     data: {
       clientProfileId: opts.clientProfileId,
       packageTypeId: packageType.id,
-      classTypeId: opts.classTypeId,
+      classTypes: { create: { classTypeId: opts.classTypeId } },
       lateCancelHours: 12,
       startsAt: opts.startsAt ?? new Date(nowMs() - 24 * 60 * 60 * 1000),
       expiresAt:

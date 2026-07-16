@@ -49,14 +49,14 @@ async function fixtures() {
       sessionCount: 12,
       validityDays: 365,
       lateCancelHours: 8,
-      classTypeId: reformer.id,
+      classTypes: { create: { classTypeId: reformer.id } },
     },
   });
   const pkg = await prisma.clientPackage.create({
     data: {
       clientProfileId: clientProfile.id,
       packageTypeId: packageType.id,
-      classTypeId: reformer.id,
+      classTypes: { create: { classTypeId: reformer.id } },
       lateCancelHours: 8,
       startsAt: new Date(nowMs() - DAY_MS),
       expiresAt: new Date(nowMs() + 90 * DAY_MS),

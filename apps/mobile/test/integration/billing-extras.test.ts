@@ -28,7 +28,7 @@ async function seedAdminClientPackageType() {
       sessionCount: 12,
       validityDays: 30,
       lateCancelHours: 12,
-      classTypeId: reformer.id,
+      classTypes: { create: { classTypeId: reformer.id } },
     },
   });
   return { admin, client, profile, packageType, reformer };

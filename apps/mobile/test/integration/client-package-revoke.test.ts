@@ -58,7 +58,7 @@ async function seed() {
       validityDays: 60,
       lateCancelHours: 12,
       price: 24000,
-      classTypeId: classType.id,
+      classTypes: { create: { classTypeId: classType.id } },
     },
   });
   return { adminUser, trainerUser, clientUser, clientProfile, classType, packageType };
@@ -72,7 +72,7 @@ async function createPackageWithPendingBilling(
     data: {
       clientProfileId: seeded.clientProfile.id,
       packageTypeId: seeded.packageType.id,
-      classTypeId: seeded.classType.id,
+      classTypes: { create: { classTypeId: seeded.classType.id } },
       lateCancelHours: 12,
       startsAt: new Date(nowMs() - DAY),
       expiresAt: new Date(nowMs() + 60 * DAY),
@@ -263,7 +263,7 @@ describe("POST /api/packages/client-packages/[id]/revoke", () => {
       data: {
         clientProfileId: otherProfile.id,
         packageTypeId: seeded.packageType.id,
-        classTypeId: seeded.classType.id,
+        classTypes: { create: { classTypeId: seeded.classType.id } },
         lateCancelHours: 12,
         startsAt: new Date(nowMs() - DAY),
         expiresAt: new Date(nowMs() + 60 * DAY),
@@ -348,7 +348,7 @@ describe("POST /api/packages/client-packages/[id]/revoke", () => {
       data: {
         clientProfileId: seeded.clientProfile.id,
         packageTypeId: seeded.packageType.id,
-        classTypeId: seeded.classType.id,
+        classTypes: { create: { classTypeId: seeded.classType.id } },
         lateCancelHours: 12,
         startsAt: new Date(nowMs() - DAY),
         expiresAt: new Date(nowMs() + 60 * DAY),

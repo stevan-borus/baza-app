@@ -17,7 +17,7 @@ async function makeClassType() {
 
 async function makePackageType(classTypeId: string, name: string) {
   return prisma.packageType.create({
-    data: { name, sessionCount: 10, validityDays: 60, classTypeId },
+    data: { name, sessionCount: 10, validityDays: 60, classTypes: { create: { classTypeId } } },
   });
 }
 
@@ -47,7 +47,7 @@ async function makeClientPackage(opts: {
     data: {
       clientProfileId: opts.clientProfileId,
       packageTypeId: opts.packageTypeId,
-      classTypeId: opts.classTypeId,
+      classTypes: { create: { classTypeId: opts.classTypeId } },
       lateCancelHours: 8,
       startsAt: new Date(Date.now() - DAY_MS),
       expiresAt: new Date(Date.now() + 30 * DAY_MS),

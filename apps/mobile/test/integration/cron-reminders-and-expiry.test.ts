@@ -167,7 +167,7 @@ describe("cron: reminders + package-expiry", () => {
           sessionCount: 12,
           validityDays: 30,
           lateCancelHours: 12,
-          classTypeId: reformer.id,
+          classTypes: { create: { classTypeId: reformer.id } },
         },
       });
       // Pack expires in 5 days, sessionsRemaining > 0, started in the past.
@@ -175,7 +175,7 @@ describe("cron: reminders + package-expiry", () => {
         data: {
           clientProfileId: c.profile.id,
           packageTypeId: packageType.id,
-          classTypeId: reformer.id,
+          classTypes: { create: { classTypeId: reformer.id } },
           lateCancelHours: 12,
           startsAt: new Date(nowMs() - 5 * DAY_MS),
           expiresAt: new Date(nowMs() + 5 * DAY_MS),
@@ -210,14 +210,14 @@ describe("cron: reminders + package-expiry", () => {
           sessionCount: 12,
           validityDays: 30,
           lateCancelHours: 12,
-          classTypeId: reformer.id,
+          classTypes: { create: { classTypeId: reformer.id } },
         },
       });
       await prisma.clientPackage.create({
         data: {
           clientProfileId: noSessions.profile.id,
           packageTypeId: packageType.id,
-          classTypeId: reformer.id,
+          classTypes: { create: { classTypeId: reformer.id } },
           lateCancelHours: 12,
           startsAt: new Date(nowMs() - DAY_MS),
           expiresAt: new Date(nowMs() + 5 * DAY_MS),
@@ -228,7 +228,7 @@ describe("cron: reminders + package-expiry", () => {
         data: {
           clientProfileId: farFuture.profile.id,
           packageTypeId: packageType.id,
-          classTypeId: reformer.id,
+          classTypes: { create: { classTypeId: reformer.id } },
           lateCancelHours: 12,
           startsAt: new Date(nowMs() - DAY_MS),
           expiresAt: new Date(nowMs() + 90 * DAY_MS),

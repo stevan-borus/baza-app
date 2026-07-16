@@ -13,6 +13,26 @@ export type EligibilityPackage = Pick<
   classTypeIds: string[];
 };
 
+/**
+ * The canonical Prisma select for feeding eligibility logic — pairs with
+ * `toEligibilityPackage` to flatten the join rows into `classTypeIds`.
+ */
+export const ELIGIBILITY_PACKAGE_SELECT = {
+  id: true,
+  startsAt: true,
+  expiresAt: true,
+  sessionsRemaining: true,
+  revokedAt: true,
+  classTypes: { select: { classTypeId: true } },
+} as const;
+
+export function toEligibilityPackage<
+  T extends { classTypes: { classTypeId: string }[] },
+>(row: T): Omit<T, "classTypes"> & { classTypeIds: string[] } {
+  const { classTypes, ...rest } = row;
+  return { ...rest, classTypeIds: classTypes.map((link) => link.classTypeId) };
+}
+
 function getPauseOverlapMs(
   pause: Pick<PackagePause, "startsAt" | "endsAt">,
   periodStart: Date,

@@ -69,14 +69,14 @@ async function seedSessionsAcrossRooms() {
       sessionCount: 12,
       validityDays: 30,
       lateCancelHours: 12,
-      classTypeId: reformer.id,
+      classTypes: { create: { classTypeId: reformer.id } },
     },
   });
   const anaPkg = await prisma.clientPackage.create({
     data: {
       clientProfileId: anaProfile.id,
       packageTypeId: pkgType.id,
-      classTypeId: reformer.id,
+      classTypes: { create: { classTypeId: reformer.id } },
       lateCancelHours: 12,
       startsAt: new Date("2026-04-01T00:00:00Z"),
       expiresAt: new Date("2026-05-01T00:00:00Z"),
@@ -97,7 +97,7 @@ async function seedSessionsAcrossRooms() {
       data: {
         clientProfileId: cProfile.id,
         packageTypeId: pkgType.id,
-        classTypeId: reformer.id,
+        classTypes: { create: { classTypeId: reformer.id } },
         lateCancelHours: 12,
         startsAt: new Date("2026-04-01T00:00:00Z"),
         expiresAt: new Date("2026-05-01T00:00:00Z"),
@@ -126,7 +126,7 @@ async function seedSessionsAcrossRooms() {
       data: {
         clientProfileId: cProfile.id,
         packageTypeId: pkgType.id,
-        classTypeId: reformer.id,
+        classTypes: { create: { classTypeId: reformer.id } },
         lateCancelHours: 12,
         startsAt: new Date("2026-04-01T00:00:00Z"),
         expiresAt: new Date("2026-05-01T00:00:00Z"),

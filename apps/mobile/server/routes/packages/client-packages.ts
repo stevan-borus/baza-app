@@ -15,6 +15,7 @@ import { countHeldSessions } from "@/lib/server/booking-hold-count";
 import { createSystemNotification } from "@/lib/server/notifications";
 import { findEligibleClientPackage } from "@/lib/server/package-eligibility";
 import { bookableSessions } from "@/lib/server/package-hold";
+import { PACKAGE_TYPE_CLASS_TYPES_SELECT } from "@/lib/server/package-type-shape";
 import { prisma } from "@/lib/server/prisma";
 import { trainerLinkedToClientProfile } from "@/lib/server/trainer-scope";
 
@@ -29,7 +30,7 @@ export async function GET(request: Request) {
     const ownClientProfileId = guard.user.clientProfile?.id;
     if (!ownClientProfileId) return fail("Client profile not found", 404);
 
-    const [packages, pauses] = await Promise.all([
+    const [packageRows, pauses] = await Promise.all([
       prisma.clientPackage.findMany({
         where: { clientProfileId: ownClientProfileId },
         orderBy: { startsAt: "desc" },
@@ -43,6 +44,7 @@ export async function GET(request: Request) {
               lateCancelHours: true,
             },
           },
+          ...PACKAGE_TYPE_CLASS_TYPES_SELECT,
         },
       }),
       prisma.packagePause.findMany({
@@ -56,6 +58,13 @@ export async function GET(request: Request) {
     // must see they still owe. One query over the funding FK — clientPackageId
     // is @unique on BillingRecord, so a set of the ids that have a PENDING row
     // is all we need to flag `paymentPending` on the payload below.
+    // Flatten the snapshot join rows: `classTypes` becomes the flat
+    // [{id, name}] the response schema speaks, and drives eligibility below.
+    const packages = packageRows.map((row) => ({
+      ...row,
+      classTypes: row.classTypes.map((link) => link.classType),
+    }));
+
     const pendingBilling =
       packages.length > 0
         ? await prisma.billingRecord.findMany({
@@ -97,7 +106,7 @@ export async function GET(request: Request) {
         // across packages would double-count those waitlist holds.
         const heldCount = await countHeldSessions(prisma, {
           clientProfileId: ownClientProfileId,
-          classTypeId: pkg.classTypeId,
+          classTypeIds: pkg.classTypes.map((classType) => classType.id),
           clientPackageId: pkg.id,
           at: currentInstant,
         });
@@ -119,26 +128,20 @@ export async function GET(request: Request) {
     // NOTE: eligibility deliberately stays on sessionsRemaining/expiresAt —
     // a fully-booked package (bookable 0, remaining > 0) is still ACTIVE.
     const activePackage = (() => {
+      const eligibilityPackages = packages.map((item) => ({
+        id: item.id,
+        classTypeIds: item.classTypes.map((classType) => classType.id),
+        startsAt: item.startsAt,
+        expiresAt: item.expiresAt,
+        sessionsRemaining: item.sessionsRemaining,
+        revokedAt: item.revokedAt,
+      }));
       const distinctClassTypeIds = Array.from(
-        new Set(packages.map((p: { classTypeId: string }) => p.classTypeId)),
+        new Set(eligibilityPackages.flatMap((p) => p.classTypeIds)),
       );
       for (const classTypeId of distinctClassTypeIds) {
         const hit = findEligibleClientPackage(
-          packages.map((item: {
-            id: string;
-            classTypeId: string;
-            startsAt: Date;
-            expiresAt: Date;
-            sessionsRemaining: number;
-            revokedAt: Date | null;
-          }) => ({
-            id: item.id,
-            classTypeId: item.classTypeId,
-            startsAt: item.startsAt,
-            expiresAt: item.expiresAt,
-            sessionsRemaining: item.sessionsRemaining,
-            revokedAt: item.revokedAt,
-          })),
+          eligibilityPackages,
           pauses,
           currentInstant,
           classTypeId,
@@ -207,6 +210,7 @@ export async function GET(request: Request) {
         packageType: {
           select: { name: true, sessionCount: true, validityDays: true },
         },
+        ...PACKAGE_TYPE_CLASS_TYPES_SELECT,
         clientProfile: {
           select: {
             user: { select: { id: true, firstName: true, lastName: true, email: true } },
@@ -221,6 +225,7 @@ export async function GET(request: Request) {
       : null;
     const shaped = pagePackages.map((p) => ({
       ...p,
+      classTypes: p.classTypes.map((link) => link.classType),
       client: {
         ...p.clientProfile.user,
         fullName: formatFullName(
@@ -258,6 +263,7 @@ export async function GET(request: Request) {
         packageType: {
           select: { name: true, sessionCount: true, validityDays: true },
         },
+        ...PACKAGE_TYPE_CLASS_TYPES_SELECT,
       },
     }),
     // All statuses on purpose: PENDING must surface as "Nije plaćeno" and
@@ -289,6 +295,7 @@ export async function GET(request: Request) {
     const match = linkMap.get(p.id) ?? null;
     return {
       ...p,
+      classTypes: p.classTypes.map((link) => link.classType),
       billingRecord: match
         ? {
             id: match.id,
@@ -325,19 +332,23 @@ export async function POST(request: Request) {
   const startsAt = new Date(parsed.data.startsAt);
   if (Number.isNaN(startsAt.getTime())) return fail("Invalid startsAt date", 400);
 
-  const packageType = await prisma.packageType.findUnique({
+  const packageTypeRow = await prisma.packageType.findUnique({
     where: { id: parsed.data.packageTypeId },
     select: {
       id: true,
       name: true,
       sessionCount: true,
       validityDays: true,
-      classTypeId: true,
       lateCancelHours: true,
       isBirthdayGift: true,
+      classTypes: { select: { classTypeId: true } },
     },
   });
-  if (!packageType) return fail("Package type not found", 404);
+  if (!packageTypeRow) return fail("Package type not found", 404);
+  const packageType = {
+    ...packageTypeRow,
+    classTypeIds: packageTypeRow.classTypes.map((link) => link.classTypeId),
+  };
 
   const clientPackage = await createClientPackageFromType(prisma, {
     clientProfileId: parsed.data.clientProfileId,
@@ -357,7 +368,7 @@ export async function POST(request: Request) {
         "BIRTHDAY_CLIENT_GIFT",
         {
           clientPackageId: clientPackage.id,
-          classTypeId: packageType.classTypeId,
+          classTypeIds: packageType.classTypeIds,
           packageTypeName: packageType.name,
           expiresAt: clientPackage.expiresAt.toISOString(),
         },

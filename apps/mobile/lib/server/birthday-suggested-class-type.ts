@@ -2,8 +2,10 @@
  * Resolves which ClassType to suggest when granting a birthday gift to a Client.
  *
  * Resolution order (per CONTEXT.md → "Suggested ClassType (birthday gift)"):
- *   1. Currently-active ClientPackage's ClassType (most recent by startsAt).
- *   2. Most recent past Booking's ClassType.
+ *   1. Currently-active ClientPackage's ClassType (most recent by startsAt) —
+ *      only when its snapshotted set names exactly ONE ClassType. A mix
+ *      package doesn't say which type the client favors, so it falls through.
+ *   2. Most recent past Booking's ClassType (the truest "what do they train").
  *   3. None — admin must pick from the available isBirthdayGift PackageTypes.
  *
  * Returns the ClassType id, or null if no signal is available.
@@ -32,9 +34,11 @@ export async function resolveSuggestedClassType(
       revokedAt: null,
     },
     orderBy: { startsAt: "desc" },
-    select: { classTypeId: true },
+    select: { classTypes: { select: { classTypeId: true } } },
   });
-  if (activePackage) return activePackage.classTypeId;
+  if (activePackage && activePackage.classTypes.length === 1) {
+    return activePackage.classTypes[0].classTypeId;
+  }
 
   // 2. Most recent past Booking by session startsAt desc.
   const recentBooking = await prisma.booking.findFirst({

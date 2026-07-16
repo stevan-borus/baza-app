@@ -215,10 +215,6 @@ export async function createPastSessionWithBooking(input: CreatePastSessionInput
         clientProfile: {
           select: {
             id: true,
-            packages: {
-              where: { classTypeId: undefined },
-              select: { id: true, classTypeId: true },
-            },
           },
         },
       },
@@ -248,7 +244,7 @@ export async function createPastSessionWithBooking(input: CreatePastSessionInput
   const pkg = await db().clientPackage.findFirst({
     where: {
       clientProfileId: clientUser.clientProfile.id,
-      classTypeId: classType.id,
+      classTypes: { some: { classTypeId: classType.id } },
     },
     select: { id: true, sessionsRemaining: true, lateCancelHours: true },
   });
@@ -638,9 +634,17 @@ export async function seedExtraClients(count: number) {
 export async function seedExtraClientPackages(count: number) {
   const profiles = await seedExtraClients(count);
   const packageType = await db().packageType.findFirst({
-    select: { id: true, classTypeId: true, sessionCount: true, validityDays: true, lateCancelHours: true },
+    select: {
+      id: true,
+      sessionCount: true,
+      validityDays: true,
+      lateCancelHours: true,
+      classTypes: { select: { classTypeId: true } },
+    },
   });
   if (!packageType) throw new Error("No PackageType in seed");
+  const packageClassTypeId = packageType.classTypes[0]?.classTypeId;
+  if (!packageClassTypeId) throw new Error("Seed PackageType has no ClassType");
   const startsAt = now();
   const expiresAt = new Date(
     startsAt.getTime() + packageType.validityDays * 24 * 60 * 60 * 1000,
@@ -651,7 +655,7 @@ export async function seedExtraClientPackages(count: number) {
       data: {
         clientProfileId: p.profileId,
         packageTypeId: packageType.id,
-        classTypeId: packageType.classTypeId,
+        classTypes: { create: { classTypeId: packageClassTypeId } },
         lateCancelHours: packageType.lateCancelHours,
         startsAt,
         expiresAt,
@@ -815,10 +819,10 @@ export async function seedBirthdayGiftPackageType(opts: {
       sessionCount: 1,
       validityDays: 30,
       lateCancelHours: 12,
-      classTypeId: classType.id,
+      classTypes: { create: { classTypeId: classType.id } },
       isBirthdayGift: true,
     },
-    select: { id: true, classTypeId: true, name: true },
+    select: { id: true, name: true },
   });
   return pt;
 }

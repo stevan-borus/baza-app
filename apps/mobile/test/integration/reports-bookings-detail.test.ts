@@ -82,7 +82,7 @@ async function ensureFixtures() {
         sessionCount: 12,
         validityDays: 365,
         lateCancelHours: 12,
-        classTypeId: classType.id,
+        classTypes: { create: { classTypeId: classType.id } },
       },
     }));
   return { classType, trainer, room, packageType };
@@ -109,7 +109,7 @@ async function makeClientWithPackage(
     data: {
       clientProfileId: profile.id,
       packageTypeId,
-      classTypeId,
+      classTypes: { create: { classTypeId } },
       lateCancelHours,
       startsAt: new Date("2026-01-01T00:00:00Z"),
       expiresAt: new Date("2030-01-01T00:00:00Z"),

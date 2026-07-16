@@ -22,7 +22,10 @@ export function useNotificationTapHandler() {
   const packageTypesQuery = useQuery(packagesQueries.types());
   const giftPackageTypes = (packageTypesQuery.data?.packageTypes ?? [])
     .filter((pt) => pt.isBirthdayGift)
-    .map((pt) => ({ id: pt.id, classTypeId: pt.classTypeId }));
+    .map((pt) => ({
+      id: pt.id,
+      classTypeIds: pt.classTypes.map((classType) => classType.id),
+    }));
 
   function handleTap(input: TapInput): boolean {
     const href = resolveNotificationHref({

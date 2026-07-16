@@ -32,7 +32,11 @@ import { requireRole } from "@/lib/server/auth-guards";
 import { promoteNextWaitlistEntry } from "@/lib/server/booking-cancellation";
 import { fail, respond } from "@/lib/server/http";
 import { createSystemNotification } from "@/lib/server/notifications";
-import { findEligibleClientPackage } from "@/lib/server/package-eligibility";
+import {
+  ELIGIBILITY_PACKAGE_SELECT,
+  findEligibleClientPackage,
+  toEligibilityPackage,
+} from "@/lib/server/package-eligibility";
 import { prisma } from "@/lib/server/prisma";
 import { tryCatch } from "@/lib/server/try-catch";
 
@@ -42,16 +46,20 @@ export async function POST(request: Request, { id }: RouteParams) {
   const guard = await requireRole(request, [UserRole.ADMIN]);
   if (!guard.ok) return guard.response;
 
-  const pkg = await prisma.clientPackage.findUnique({
+  const pkgRow = await prisma.clientPackage.findUnique({
     where: { id },
     select: {
       id: true,
       clientProfileId: true,
-      classTypeId: true,
       revokedAt: true,
+      classTypes: { select: { classTypeId: true } },
     },
   });
-  if (!pkg) return fail("Client package not found", 404);
+  if (!pkgRow) return fail("Client package not found", 404);
+  const pkg = {
+    ...pkgRow,
+    classTypeIds: pkgRow.classTypes.map((link) => link.classTypeId),
+  };
   if (pkg.revokedAt) return fail("Package is already revoked", 409);
 
   const revokedAt = now();
@@ -83,15 +91,16 @@ export async function POST(request: Request, { id }: RouteParams) {
       data: { canceledAt: revokedAt },
     });
 
-    // Release the client's waitlist seats for future sessions of this class
-    // type — unless another live package would still back them. Eligibility
-    // is checked per entry at the session's start instant with the same
-    // pure helper booking uses, so the decision can't drift from booking.
+    // Release the client's waitlist seats for future sessions of the
+    // package's covered class types (all of them, for a mix package) —
+    // unless another live package would still back them. Eligibility is
+    // checked per entry at the session's start instant with the same pure
+    // helper booking uses, so the decision can't drift from booking.
     const waitlistEntries = await tx.waitlistEntry.findMany({
       where: {
         clientProfileId: pkg.clientProfileId,
         session: {
-          classTypeId: pkg.classTypeId,
+          classTypeId: { in: pkg.classTypeIds },
           startsAt: { gt: revokedAt },
         },
       },
@@ -107,17 +116,10 @@ export async function POST(request: Request, { id }: RouteParams) {
         tx.clientPackage.findMany({
           where: {
             clientProfileId: pkg.clientProfileId,
-            classTypeId: pkg.classTypeId,
+            classTypes: { some: { classTypeId: { in: pkg.classTypeIds } } },
             id: { not: pkg.id },
           },
-          select: {
-            id: true,
-            classTypeId: true,
-            startsAt: true,
-            expiresAt: true,
-            sessionsRemaining: true,
-            revokedAt: true,
-          },
+          select: ELIGIBILITY_PACKAGE_SELECT,
         }),
         tx.packagePause.findMany({
           where: { clientProfileId: pkg.clientProfileId },
@@ -128,7 +130,7 @@ export async function POST(request: Request, { id }: RouteParams) {
         .filter(
           (entry) =>
             !findEligibleClientPackage(
-              otherPackages,
+              otherPackages.map(toEligibilityPackage),
               pauses,
               entry.session.startsAt,
               entry.session.classTypeId,

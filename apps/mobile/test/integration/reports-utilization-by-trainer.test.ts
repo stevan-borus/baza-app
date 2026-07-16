@@ -57,7 +57,7 @@ async function seedSessionsAcrossTrainers() {
       sessionCount: 12,
       validityDays: 30,
       lateCancelHours: 8,
-      classTypeId: reformer.id,
+      classTypes: { create: { classTypeId: reformer.id } },
     },
   });
   for (let i = 0; i < 4; i++) {
@@ -69,7 +69,7 @@ async function seedSessionsAcrossTrainers() {
       data: {
         clientProfileId: cProfile.id,
         packageTypeId: pkgType.id,
-        classTypeId: reformer.id,
+        classTypes: { create: { classTypeId: reformer.id } },
         lateCancelHours: 8,
         startsAt: new Date("2026-04-01T00:00:00Z"),
         expiresAt: new Date("2026-05-01T00:00:00Z"),
@@ -89,7 +89,7 @@ async function seedSessionsAcrossTrainers() {
       data: {
         clientProfileId: cProfile.id,
         packageTypeId: pkgType.id,
-        classTypeId: reformer.id,
+        classTypes: { create: { classTypeId: reformer.id } },
         lateCancelHours: 8,
         startsAt: new Date("2026-04-01T00:00:00Z"),
         expiresAt: new Date("2026-05-01T00:00:00Z"),

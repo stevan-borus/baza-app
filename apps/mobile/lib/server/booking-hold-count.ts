@@ -6,15 +6,17 @@ type Db = Prisma.TransactionClient;
 /**
  * How many sessions the client already holds against this package: future
  * uncancelled bookings backed by the package, plus waitlist entries for future
- * sessions of the same class type. Waitlist entries carry no package link in
- * the schema, so they're scoped by class type — the user's chosen model where
- * a waitlist seat also reserves a session.
+ * sessions of the package's covered class types. Waitlist entries carry no
+ * package link in the schema, so they're scoped by class type — the user's
+ * chosen model where a waitlist seat also reserves a session. For a mix
+ * package every covered type's waitlist seats count: any of them would spend
+ * from the same shared pool.
  */
 export async function countHeldSessions(
   tx: Db,
   params: {
     clientProfileId: string;
-    classTypeId: string;
+    classTypeIds: string[];
     clientPackageId: string;
     at: Date;
   },
@@ -32,7 +34,7 @@ export async function countHeldSessions(
       where: {
         clientProfileId: params.clientProfileId,
         session: {
-          classTypeId: params.classTypeId,
+          classTypeId: { in: params.classTypeIds },
           startsAt: { gt: params.at },
         },
       },
