@@ -272,6 +272,11 @@ model Session {
   @@index([startsAt])
   @@index([trainerUserId, startsAt])
   @@index([recurringScheduleId])
+  // Room-conflict check on every session create/edit (and N× per recurring
+  // create) filters by roomId + startsAt overlap.
+  @@index([roomId, startsAt])
+  // Consumption cron scans by session endsAt range.
+  @@index([endsAt])
 }
 
 model RecurringSchedule {
@@ -308,6 +313,12 @@ model Booking {
   @@unique([sessionId, clientProfileId])
   @@index([createdByUserId])
   @@index([waivedByUserId])
+  // Hot paths: booking-hold count + trainer-linkage check + per-client
+  // bookings list all filter by clientProfileId; the composite @@unique leads
+  // with sessionId and can't serve them.
+  @@index([clientProfileId])
+  @@index([clientPackageId])
+  @@index([createdAt])
 }
 
 model WaitlistEntry {
@@ -320,6 +331,8 @@ model WaitlistEntry {
   clientProfile   ClientProfile @relation(fields: [clientProfileId], references: [id], onDelete: Cascade)
 
   @@unique([sessionId, clientProfileId])
+  // booking-hold count filters waitlist by clientProfileId inside the booking tx.
+  @@index([clientProfileId])
 }
 
 model PackageType {
@@ -374,6 +387,10 @@ model PackagePause {
   reason          String?
   createdAt       DateTime      @default(now())
   clientProfile   ClientProfile @relation(fields: [clientProfileId], references: [id], onDelete: Cascade)
+
+  // Pauses are read in every eligibility check (availability, booking, cancel,
+  // waitlist promotion), always filtered by clientProfileId.
+  @@index([clientProfileId])
 }
 
 model SessionConsumption {
@@ -471,6 +488,8 @@ model TrainerNote {
 
   @@index([sessionId, createdAt])
   @@index([clientProfileId, createdAt])
+  // Trainer's default notes feed lists by author, newest first.
+  @@index([trainerUserId, createdAt])
 }
 
 model BillingRecord {
@@ -488,6 +507,11 @@ model BillingRecord {
   updatedAt       DateTime       @updatedAt
 
   @@index([packageTypeId])
+  // Per-client billing pairing (client-packages, /clients/me/packages) filters
+  // by clientUserId; the Naplata list + /billing/summary + revenue report all
+  // filter createdAt range ± status.
+  @@index([clientUserId])
+  @@index([status, createdAt])
 }
 
 model ConsentRecord {
