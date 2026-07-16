@@ -17,7 +17,7 @@ import { parseReportTimeframe } from "@/lib/server/reports";
  * trainer are dropped.
  */
 export async function GET(request: Request) {
-  const guard = await requireRole(request, [UserRole.ADMIN, UserRole.TRAINER]);
+  const guard = await requireRole(request, [UserRole.ADMIN]);
   if (!guard.ok) return guard.response;
 
   const timeframe = parseReportTimeframe(new URL(request.url).searchParams);

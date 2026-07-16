@@ -6,7 +6,7 @@ import { prisma } from "@/lib/server/prisma";
 import { parseDateInput } from "@/lib/server/reports";
 
 export async function GET(request: Request) {
-  const guard = await requireRole(request, [UserRole.ADMIN, UserRole.TRAINER]);
+  const guard = await requireRole(request, [UserRole.ADMIN]);
   if (!guard.ok) return guard.response;
 
   // Optional from/to window. Reports page sends them per period pill so the
