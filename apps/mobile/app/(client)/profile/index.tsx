@@ -288,6 +288,19 @@ export default function ClientProfile() {
                       >
                         {pkg.packageType?.name ?? t("client.package.packageName")}
                       </Text>
+                      {/* Covered set ("Reformer · Energy") — snapshotted on the
+                          package, so it stays truthful even if the SKU is later
+                          edited. Only meaningful once mix packages exist, but
+                          harmless (single name) on classic ones. */}
+                      {(pkg.classTypes ?? []).length > 0 ? (
+                        <Text
+                          testID={`profile-package-covered-${pkg.id}`}
+                          className="text-muted text-[12px]"
+                          numberOfLines={1}
+                        >
+                          {(pkg.classTypes ?? []).map((ct) => ct.name).join(" · ")}
+                        </Text>
+                      ) : null}
                     </View>
                     <View className="flex-row items-baseline">
                       <Text

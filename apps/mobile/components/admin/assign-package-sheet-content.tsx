@@ -196,6 +196,9 @@ export function AssignPackageSheetContent({
           }}
         >
           {t("admin.clients.sessionsCount", { name: pt.name, count: pt.sessionCount })}
+          {pt.classTypes.length > 1
+            ? ` (${pt.classTypes.map((ct) => ct.name).join(" · ")})`
+            : ""}
         </Button>
       ))}
 

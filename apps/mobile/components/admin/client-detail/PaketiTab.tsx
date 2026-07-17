@@ -110,6 +110,16 @@ export function PaketiTab({
                       </Pressable>
                     ) : null}
                   </View>
+                  {(p.classTypes ?? []).length > 0 ? (
+                    <Text
+                      testID={`package-history-row-${p.id}-covered`}
+                      className="text-muted"
+                      style={{ fontSize: 12 }}
+                      numberOfLines={1}
+                    >
+                      {(p.classTypes ?? []).map((ct) => ct.name).join(" · ")}
+                    </Text>
+                  ) : null}
                   <Text className="text-muted" style={{ fontSize: 12 }}>
                     {`${dayjs(p.startsAt).locale(lang).format("D.M.YYYY.")} — ${dayjs(p.expiresAt).locale(lang).format("D.M.YYYY.")}`}
                   </Text>

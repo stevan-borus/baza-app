@@ -467,10 +467,14 @@ export default function AdminBilling() {
               .map((pt) => ({
                 value: pt.id,
                 label: pt.name,
-                hint: t("admin.manage.sessionsDays", {
-                  count: pt.sessionCount,
-                  days: pt.validityDays,
-                }),
+                hint:
+                  t("admin.manage.sessionsDays", {
+                    count: pt.sessionCount,
+                    days: pt.validityDays,
+                  }) +
+                  (pt.classTypes.length > 1
+                    ? ` · ${pt.classTypes.map((ct) => ct.name).join(" · ")}`
+                    : ""),
               }))}
           />
           <Input

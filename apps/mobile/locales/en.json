@@ -763,7 +763,9 @@
     },
     "packages": {
       "classType": "Class type",
-      "classTypeRequired": "Class type is required"
+      "classTypeRequired": "Class type is required",
+      "classTypes": "Class types",
+      "classTypesHint": "Selecting several types makes a mix package — they share one session pool."
     },
     "schedule": {
       "title": "Schedule",
@@ -1218,7 +1220,12 @@
     "navRow": "Campaigns",
     "empty": "No campaigns yet.",
     "error": "Unable to load campaigns.",
-    "status": { "DRAFT": "Draft", "SCHEDULED": "Scheduled", "SENDING": "Sending…", "SENT": "Sent" },
+    "status": {
+      "DRAFT": "Draft",
+      "SCHEDULED": "Scheduled",
+      "SENDING": "Sending…",
+      "SENT": "Sent"
+    },
     "recipients": "{{count}} recipients",
     "clients": {
       "viewProjected": "View clients ({{count}})",
@@ -1244,15 +1251,44 @@
     },
     "compose": {
       "title": "New campaign",
-      "titleLabel": "Title", "titlePlaceholder": "Message title",
-      "bodyLabel": "Message", "bodyPlaceholder": "Message text (single language)",
-      "audience": "Audience", "previewCount": "Reach: {{count}}", "reachNote": "Clients who opted out of promotions are excluded from actual recipients.",
-      "previewEmpty": "Choose an audience to see the reach", "previewLoading": "Calculating reach…", "previewError": "Couldn't calculate reach",
-      "confirmSendTitle": "Send this campaign now?", "confirmScheduleTitle": "Schedule this campaign?", "confirmMessage": "It will reach up to {{count}} clients (opted-out clients excluded).", "saveError": "Couldn't save the campaign. Please try again.",
-      "axes": { "everyone": "All clients", "packageState": "Package state", "classType": "Class type", "expiringSoon": "Package expiring soon", "lapsed": "Lapsed (no renewal)", "idlePackage": "Paid but not attending" },
-      "packageState": { "active": "Active", "expired": "Expired", "none": "No package", "paused": "Paused" },
-      "daysLabel": "Days", "saveDraft": "Save draft", "sendNow": "Send now", "schedule": "Schedule", "scheduleFor": "Schedule for {{when}}", "scheduledFor": "Send time"
+      "titleLabel": "Title",
+      "titlePlaceholder": "Message title",
+      "bodyLabel": "Message",
+      "bodyPlaceholder": "Message text (single language)",
+      "audience": "Audience",
+      "previewCount": "Reach: {{count}}",
+      "reachNote": "Clients who opted out of promotions are excluded from actual recipients.",
+      "previewEmpty": "Choose an audience to see the reach",
+      "previewLoading": "Calculating reach…",
+      "previewError": "Couldn't calculate reach",
+      "confirmSendTitle": "Send this campaign now?",
+      "confirmScheduleTitle": "Schedule this campaign?",
+      "confirmMessage": "It will reach up to {{count}} clients (opted-out clients excluded).",
+      "saveError": "Couldn't save the campaign. Please try again.",
+      "axes": {
+        "everyone": "All clients",
+        "packageState": "Package state",
+        "classType": "Class type",
+        "expiringSoon": "Package expiring soon",
+        "lapsed": "Lapsed (no renewal)",
+        "idlePackage": "Paid but not attending"
+      },
+      "packageState": {
+        "active": "Active",
+        "expired": "Expired",
+        "none": "No package",
+        "paused": "Paused"
+      },
+      "daysLabel": "Days",
+      "saveDraft": "Save draft",
+      "sendNow": "Send now",
+      "schedule": "Schedule",
+      "scheduleFor": "Schedule for {{when}}",
+      "scheduledFor": "Send time"
     },
-    "a11y": { "newCampaign": "Create a new campaign", "axisToggle": "Toggle {{axis}} criterion" }
+    "a11y": {
+      "newCampaign": "Create a new campaign",
+      "axisToggle": "Toggle {{axis}} criterion"
+    }
   }
 }

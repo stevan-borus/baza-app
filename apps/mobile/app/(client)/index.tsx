@@ -479,6 +479,19 @@ function PackageCard({
             >
               {pkg.packageType?.name ?? t("client.home.package")}
             </Text>
+            {(pkg.classTypes ?? []).length > 0 ? (
+              <Text
+                style={{
+                  fontFamily: "AlbertSans-Regular",
+                  fontSize: 12,
+                  color: "rgba(255,255,255,0.6)",
+                  marginTop: 2,
+                }}
+                numberOfLines={1}
+              >
+                {(pkg.classTypes ?? []).map((ct) => ct.name).join(" · ")}
+              </Text>
+            ) : null}
           </View>
           <View style={{ alignItems: "flex-end" }}>
             <View

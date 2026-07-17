@@ -18,7 +18,6 @@ import { SkeletonCard } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { GlassCard } from "@/components/ui/glass-card";
 import { SectionLabel } from "@/components/ui/typography";
-import { Select } from "@/components/ui/select";
 import { ScreenContainerRaw, useTabBarBottomPadding } from "@/components/ui/screen-container";
 import { HeaderIconButton } from "@/components/ui/app-header";
 import { useThemeTokens } from "@/components/ui/tokens";
@@ -34,6 +33,62 @@ import { useAdminCrud } from "@/lib/admin/use-admin-crud";
 import { fieldErrorsFromApiError } from "@/lib/zod-field-errors";
 import { formatRsd } from "@/lib/format";
 import { isPriceInputValid, parsePriceInput } from "@/lib/price-input";
+
+function toggleId(ids: string[], id: string) {
+  return ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id];
+}
+
+// ─── ClassTypeChips ───────────────────────────────────────────────────────────
+// Multi-select covered-set picker (ADR-0010): one chip = classic single-type
+// SKU, several = mix package sharing one session pool.
+
+function ClassTypeChips({
+  label,
+  hint,
+  classTypes,
+  selectedIds,
+  onToggle,
+  emptyText,
+  testIDPrefix,
+}: {
+  label: string;
+  hint: string;
+  classTypes: { id: string; name: string }[];
+  selectedIds: string[];
+  onToggle: (id: string) => void;
+  emptyText: string;
+  testIDPrefix: string;
+}) {
+  return (
+    <View style={{ gap: 8 }}>
+      <Text className="text-muted font-body-medium" style={{ fontSize: 13 }}>
+        {label}
+      </Text>
+      {classTypes.length === 0 ? (
+        <Text className="text-faint" style={{ fontSize: 13 }}>
+          {emptyText}
+        </Text>
+      ) : (
+        <View className="flex-row flex-wrap" style={{ gap: 8 }}>
+          {classTypes.map((ct) => (
+            <FilterChip
+              key={ct.id}
+              testID={`${testIDPrefix}-${ct.id}`}
+              label={ct.name}
+              active={selectedIds.includes(ct.id)}
+              onPress={() => onToggle(ct.id)}
+            />
+          ))}
+        </View>
+      )}
+      {selectedIds.length > 1 ? (
+        <Text className="text-faint" style={{ fontSize: 12 }}>
+          {hint}
+        </Text>
+      ) : null}
+    </View>
+  );
+}
 
 function FieldError({ message }: { message?: string }) {
   if (!message) return null;
@@ -115,7 +170,7 @@ export default function AdminPackages() {
       validityDays: "",
       lateCancelHours: "8",
       price: "",
-      classTypeId: "",
+      classTypeIds: [] as string[],
       isBirthdayGift: false,
     },
     toForm: (pt: {
@@ -125,7 +180,7 @@ export default function AdminPackages() {
       validityDays: number;
       lateCancelHours: number;
       price?: number | null;
-      classTypeId: string;
+      classTypes: { id: string; name: string }[];
       isBirthdayGift?: boolean;
     }) => ({
       name: pt.name,
@@ -133,7 +188,7 @@ export default function AdminPackages() {
       validityDays: String(pt.validityDays),
       lateCancelHours: String(pt.lateCancelHours),
       price: pt.price != null ? String(pt.price) : "",
-      classTypeId: pt.classTypeId,
+      classTypeIds: pt.classTypes.map((ct) => ct.id),
       isBirthdayGift: pt.isBirthdayGift ?? false,
     }),
     create: createPackageTypeMutationOptions(queryClient),
@@ -241,10 +296,18 @@ export default function AdminPackages() {
                           </Badge>
                         ) : null}
                       </View>
-                      {/* Class-type name dropped from this subtitle: it
-                          duplicated the package name right above ("Reformer
-                          12-pack") and truncated the price. The class type
-                          stays load-bearing in the edit sheet's picker. */}
+                      {/* Covered set ("Reformer · Energy"): with mix packages
+                          the set no longer just duplicates the package name,
+                          so it's back on the row — the one glanceable signal
+                          of what a SKU actually covers. */}
+                      <Text
+                        className="text-muted"
+                        style={{ fontSize: 12 }}
+                        numberOfLines={1}
+                        testID={`package-type-covered-${pt.id}`}
+                      >
+                        {pt.classTypes.map((ct) => ct.name).join(" · ")}
+                      </Text>
                       <Text
                         className="text-muted"
                         style={{ fontSize: 12 }}
@@ -332,19 +395,18 @@ export default function AdminPackages() {
               onChangeText={(v) => crud.setForm({ name: v })}
             />
             <FieldError message={createFieldErrors.name} />
-            <Select
-              testID="package-class-type-select"
-              optionTestIDPrefix="package-class-type-option"
-              placeholder={t("admin.packages.classType")}
-              value={crud.form.classTypeId}
-              onChange={(v) => crud.setForm({ classTypeId: v })}
+            <ClassTypeChips
+              label={t("admin.packages.classTypes")}
+              hint={t("admin.packages.classTypesHint")}
+              classTypes={classTypesQuery.data?.classTypes ?? []}
+              selectedIds={crud.form.classTypeIds}
+              onToggle={(id) =>
+                crud.setForm({ classTypeIds: toggleId(crud.form.classTypeIds, id) })
+              }
               emptyText={t("admin.schedule.emptyClassTypes")}
-              options={(classTypesQuery.data?.classTypes ?? []).map((ct) => ({
-                value: ct.id,
-                label: ct.name,
-              }))}
+              testIDPrefix="package-class-type-chip"
             />
-            <FieldError message={createFieldErrors.classTypeId} />
+            <FieldError message={createFieldErrors.classTypeIds} />
             <Input
               testID="package-session-count-input"
               placeholder={t("admin.manage.placeholderSessionCount")}
@@ -410,7 +472,7 @@ export default function AdminPackages() {
                 !crud.form.name ||
                 !crud.form.sessionCount ||
                 !crud.form.validityDays ||
-                !crud.form.classTypeId ||
+                crud.form.classTypeIds.length === 0 ||
                 !isPriceInputValid(crud.form.price) ||
                 (crud.form.isBirthdayGift && crud.form.sessionCount !== "1")
               }
@@ -421,7 +483,7 @@ export default function AdminPackages() {
                   validityDays: parseInt(crud.form.validityDays, 10),
                   lateCancelHours: parseInt(crud.form.lateCancelHours, 10) || 8,
                   price: parsePriceInput(crud.form.price),
-                  classTypeId: crud.form.classTypeId,
+                  classTypeIds: crud.form.classTypeIds,
                   isBirthdayGift: crud.form.isBirthdayGift,
                 })
               }
@@ -457,19 +519,20 @@ export default function AdminPackages() {
               onChangeText={(v) => crud.setEditForm({ name: v })}
             />
             <FieldError message={editFieldErrors.name} />
-            <Select
-              testID="package-edit-class-type-select"
-              optionTestIDPrefix="package-edit-class-type-option"
-              placeholder={t("admin.packages.classType")}
-              value={crud.editForm.classTypeId}
-              onChange={(v) => crud.setEditForm({ classTypeId: v })}
+            <ClassTypeChips
+              label={t("admin.packages.classTypes")}
+              hint={t("admin.packages.classTypesHint")}
+              classTypes={classTypesQuery.data?.classTypes ?? []}
+              selectedIds={crud.editForm.classTypeIds}
+              onToggle={(id) =>
+                crud.setEditForm({
+                  classTypeIds: toggleId(crud.editForm.classTypeIds, id),
+                })
+              }
               emptyText={t("admin.schedule.emptyClassTypes")}
-              options={(classTypesQuery.data?.classTypes ?? []).map((ct) => ({
-                value: ct.id,
-                label: ct.name,
-              }))}
+              testIDPrefix="package-edit-class-type-chip"
             />
-            <FieldError message={editFieldErrors.classTypeId} />
+            <FieldError message={editFieldErrors.classTypeIds} />
             <Input
               testID="package-edit-session-count-input"
               placeholder={t("admin.manage.placeholderSessionCount")}
@@ -535,7 +598,7 @@ export default function AdminPackages() {
                 !crud.editForm.name ||
                 !crud.editForm.sessionCount ||
                 !crud.editForm.validityDays ||
-                !crud.editForm.classTypeId ||
+                crud.editForm.classTypeIds.length === 0 ||
                 !isPriceInputValid(crud.editForm.price) ||
                 (crud.editForm.isBirthdayGift && crud.editForm.sessionCount !== "1")
               }
@@ -548,7 +611,7 @@ export default function AdminPackages() {
                   validityDays: parseInt(crud.editForm.validityDays, 10),
                   lateCancelHours: parseInt(crud.editForm.lateCancelHours, 10) || 8,
                   price: parsePriceInput(crud.editForm.price),
-                  classTypeId: crud.editForm.classTypeId,
+                  classTypeIds: crud.editForm.classTypeIds,
                   isBirthdayGift: crud.editForm.isBirthdayGift,
                 });
               }}

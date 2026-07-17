@@ -51,6 +51,11 @@ export function PregledTab({
             >
               {activePackage.packageType?.name ?? "—"}
             </Text>
+            {(activePackage.classTypes ?? []).length > 0 ? (
+              <Text className="text-muted" style={{ fontSize: 13 }} numberOfLines={1}>
+                {(activePackage.classTypes ?? []).map((ct) => ct.name).join(" · ")}
+              </Text>
+            ) : null}
             <Text className="text-muted" style={{ fontSize: 13 }}>
               {t("admin.clientDetail.sessionsRemaining", {
                 remaining: activePackage.sessionsRemaining,

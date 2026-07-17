@@ -55,10 +55,7 @@ env:
     commands:
       - hideKeyboard
 
-# Pick a ClassType from the seed.
-- tapOn:
-    id: "package-class-type-select"
-- waitForAnimationToEnd
+# Toggle a ClassType chip from the seed (multi-select; one chip = classic SKU).
 - extendedWaitUntil:
     visible: ${CLASS_TYPE_LABEL}
     timeout: 5000
