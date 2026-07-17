@@ -195,10 +195,13 @@ export function AssignPackageSheetContent({
             }
           }}
         >
-          {t("admin.clients.sessionsCount", { name: pt.name, count: pt.sessionCount })}
-          {pt.classTypes.length > 1
-            ? ` (${pt.classTypes.map((ct) => ct.name).join(" · ")})`
-            : ""}
+          {/* ONE string child: Button only wraps a lone string in <Text>, so a
+              second expression here renders raw text straight into the
+              Pressable and blanks every option. */}
+          {t("admin.clients.sessionsCount", { name: pt.name, count: pt.sessionCount }) +
+            (pt.classTypes.length > 1
+              ? ` (${pt.classTypes.map((ct) => ct.name).join(" · ")})`
+              : "")}
         </Button>
       ))}
 
