@@ -259,26 +259,38 @@ export async function createAndDispatchUserNotification(input: NotificationPaylo
   );
 
   if (dispatchResult.error) {
-    return prisma.notificationLog.update({
-      where: { id: log.id },
-      data: {
-        pushSent: false,
-        pushStatus: "DISPATCH_ERROR",
-      },
-      select: {
-        id: true,
-        userId: true,
-        type: true,
-        title: true,
-        body: true,
-        payload: true,
-        pushSent: true,
-        pushStatus: true,
-        readAt: true,
-        createdAt: true,
-      },
-    });
+    // Best-effort status write. This is fire-and-forget at the call site
+    // (`void notifyClient(...)`), so it must NEVER reject: if the log row was
+    // deleted mid-dispatch (a concurrent reset/cleanup — which the e2e stack
+    // does), the update throws P2025 and, unhandled, crashes the whole server
+    // process. Swallow it and fall back to the in-memory log so callers still
+    // get a value.
+    const recorded = await tryCatch(
+      prisma.notificationLog.update({
+        where: { id: log.id },
+        data: {
+          pushSent: false,
+          pushStatus: "DISPATCH_ERROR",
+        },
+        select: {
+          id: true,
+          userId: true,
+          type: true,
+          title: true,
+          body: true,
+          payload: true,
+          pushSent: true,
+          pushStatus: true,
+          readAt: true,
+          createdAt: true,
+        },
+      }),
+    );
+    return recorded.data ?? log;
   }
 
-  return dispatchResult.data;
+  // The happy-path update (inside the tryCatch above) can likewise P2025 if the
+  // row vanished mid-dispatch; tryCatch already caught it, so fall back to the
+  // in-memory log rather than returning undefined.
+  return dispatchResult.data ?? log;
 }

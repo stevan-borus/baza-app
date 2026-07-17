@@ -311,4 +311,39 @@ describe("notifications dispatch — real module + stubbed Expo HTTP", () => {
     expect(persisted?.pushSent).toBe(false);
     expect(persisted?.pushStatus).toBe("NO_ACTIVE_PUSH_TOKENS");
   });
+
+  it("resolves (never rejects) when the log row vanishes before the post-dispatch update", async () => {
+    // Regression: the post-dispatch notificationLog.update hits P2025 when the
+    // row was deleted mid-flight (concurrent reset / cleanup). Because callers
+    // fire this `void` (fire-and-forget), a rejection here surfaces as an
+    // UNHANDLED rejection and crashes the server process — which is exactly what
+    // took down the e2e dev server. Dispatch is best-effort: it must swallow the
+    // missing-row error and resolve, not throw.
+    const user = await makeUser("vanish@test.local");
+    await registerToken(user.id);
+
+    // The Expo stub deletes the just-created log row while the push is "in
+    // flight", so the update that follows targets a row that no longer exists.
+    globalThis.fetch = (async (input: RequestInfo | URL) => {
+      const url = typeof input === "string" ? input : input.toString();
+      if (url.startsWith("https://exp.host/")) {
+        await prisma.notificationLog.deleteMany({ where: { userId: user.id } });
+        return new Response(JSON.stringify({ data: [] }), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        });
+      }
+      return originalFetch(input);
+    }) as typeof fetch;
+
+    // Must not reject.
+    await expect(
+      createAndDispatchUserNotification({
+        userId: user.id,
+        type: "GENERAL",
+        title: "vanishing",
+        body: "row deleted mid-dispatch",
+      }),
+    ).resolves.not.toThrow();
+  });
 });
