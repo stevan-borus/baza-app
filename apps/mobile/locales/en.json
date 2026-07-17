@@ -671,7 +671,6 @@
       "invitesError": "Unable to load invites.",
       "sheetAssign": "Assign package",
       "packageType": "Package type",
-      "sessionsCount": "{{name}} ({{count}} sessions)",
       "placeholderStart": "Start",
       "assign": "Assign",
       "assignError": "Assigning package failed.",
@@ -706,7 +705,8 @@
       "payLater": "Pays later",
       "payLaterHint": "The package activates immediately; the client pays in person at their first visit.",
       "openActions": "Open actions",
-      "viewProfile": "View profile"
+      "viewProfile": "View profile",
+      "sessionsShort": "{{count}} sessions"
     },
     "clientDetail": {
       "title": "Client",

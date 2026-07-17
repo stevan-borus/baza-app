@@ -673,7 +673,6 @@
       "invitesError": "Nije moguće učitati pozivnice.",
       "sheetAssign": "Dodeli paket",
       "packageType": "Tip paketa",
-      "sessionsCount": "{{name}} ({{count}} termina)",
       "placeholderStart": "Početak",
       "assign": "Dodeli",
       "assignError": "Dodela paketa nije uspela.",
@@ -708,7 +707,8 @@
       "payLater": "Plaća kasnije",
       "payLaterHint": "Paket se aktivira odmah, klijent plaća uživo pri prvom dolasku.",
       "openActions": "Otvori akcije",
-      "viewProfile": "Otvori profil"
+      "viewProfile": "Otvori profil",
+      "sessionsShort": "{{count}} termina"
     },
     "clientDetail": {
       "title": "Klijent",
