@@ -31,7 +31,7 @@ import {
 import { trainingsQueries } from "@/lib/queries/trainings-queries-factory";
 import { useAdminCrud } from "@/lib/admin/use-admin-crud";
 import { fieldErrorsFromApiError } from "@/lib/zod-field-errors";
-import { formatRsd } from "@/lib/format";
+import { formatClassTypeList, formatRsd } from "@/lib/format";
 import { isPriceInputValid, parsePriceInput } from "@/lib/price-input";
 
 function toggleId(ids: string[], id: string) {
@@ -306,7 +306,7 @@ export default function AdminPackages() {
                         numberOfLines={1}
                         testID={`package-type-covered-${pt.id}`}
                       >
-                        {pt.classTypes.map((ct) => ct.name).join(" · ")}
+                        {formatClassTypeList(pt.classTypes.map((ct) => ct.name))}
                       </Text>
                       <Text
                         className="text-muted"

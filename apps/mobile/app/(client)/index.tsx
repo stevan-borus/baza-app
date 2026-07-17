@@ -44,6 +44,7 @@ import {
   ClientBookingSheet,
 } from "@/components/client/use-booking-sheet";
 import { useThemeTokens } from "@/components/ui/tokens";
+import { formatClassTypeList } from "@/lib/format";
 
 dayjs.extend(relativeTime);
 
@@ -489,7 +490,7 @@ function PackageCard({
                 }}
                 numberOfLines={1}
               >
-                {(pkg.classTypes ?? []).map((ct) => ct.name).join(" · ")}
+                {formatClassTypeList((pkg.classTypes ?? []).map((ct) => ct.name))}
               </Text>
             ) : null}
           </View>

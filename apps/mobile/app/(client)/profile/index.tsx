@@ -45,6 +45,7 @@ import {
   packageUsedFraction,
 } from "@/lib/package-fully-booked";
 import { ProfilePersonalDataSections } from "@/components/profile/profile-personal-data-sections";
+import { formatClassTypeList } from "@/lib/format";
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -298,7 +299,9 @@ export default function ClientProfile() {
                           className="text-muted text-[12px]"
                           numberOfLines={1}
                         >
-                          {(pkg.classTypes ?? []).map((ct) => ct.name).join(" · ")}
+                          {formatClassTypeList(
+                            (pkg.classTypes ?? []).map((ct) => ct.name),
+                          )}
                         </Text>
                       ) : null}
                     </View>

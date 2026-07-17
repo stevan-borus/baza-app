@@ -15,6 +15,7 @@ import {
   type ClientPackage,
 } from "@/lib/queries/packages-queries-factory";
 import { nowMs } from "@/lib/now";
+import { formatClassTypeList } from "@/lib/format";
 
 export function PaketiTab({
   packagesQuery,
@@ -117,7 +118,7 @@ export function PaketiTab({
                       style={{ fontSize: 12 }}
                       numberOfLines={1}
                     >
-                      {(p.classTypes ?? []).map((ct) => ct.name).join(" · ")}
+                      {formatClassTypeList((p.classTypes ?? []).map((ct) => ct.name))}
                     </Text>
                   ) : null}
                   <Text className="text-muted" style={{ fontSize: 12 }}>

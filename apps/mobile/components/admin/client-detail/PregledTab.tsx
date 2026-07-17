@@ -9,6 +9,7 @@ import { type ClientBooking } from "@/lib/queries/bookings-queries-factory";
 import { BookingRow } from "@/components/admin/booking-row";
 import { ClientLegalPanel } from "@/components/admin/client-legal-panel";
 import { ClientHealthPanel } from "@/components/admin/client-health-panel";
+import { formatClassTypeList } from "@/lib/format";
 
 export function PregledTab({
   activePackage,
@@ -53,7 +54,9 @@ export function PregledTab({
             </Text>
             {(activePackage.classTypes ?? []).length > 0 ? (
               <Text className="text-muted" style={{ fontSize: 13 }} numberOfLines={1}>
-                {(activePackage.classTypes ?? []).map((ct) => ct.name).join(" · ")}
+                {formatClassTypeList(
+                  (activePackage.classTypes ?? []).map((ct) => ct.name),
+                )}
               </Text>
             ) : null}
             <Text className="text-muted" style={{ fontSize: 13 }}>

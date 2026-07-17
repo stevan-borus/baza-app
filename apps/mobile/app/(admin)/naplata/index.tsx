@@ -30,7 +30,7 @@ import { ReturnToPill } from "@/components/admin/return-to-pill";
 import { useDrillWindow } from "@/lib/admin/drill";
 import { MotiView } from "@/components/ui/styled";
 import { getDateLocale } from "@/lib/i18n";
-import { formatDateRange, formatRsd } from "@/lib/format";
+import { formatClassTypeList, formatDateRange, formatRsd } from "@/lib/format";
 import { RAW_METHOD_LABEL_KEYS } from "@/lib/payment-method-labels";
 import { AppSheet } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/card";
@@ -473,7 +473,7 @@ export default function AdminBilling() {
                     days: pt.validityDays,
                   }) +
                   (pt.classTypes.length > 1
-                    ? ` · ${pt.classTypes.map((ct) => ct.name).join(" · ")}`
+                    ? ` · ${formatClassTypeList(pt.classTypes.map((ct) => ct.name))}`
                     : ""),
               }))}
           />

@@ -31,6 +31,7 @@ import {
 import { useCreateBillingMutation } from "@/lib/queries/billing-queries-factory";
 import { RAW_METHOD_LABEL_KEYS } from "@/lib/payment-method-labels";
 import { assignedSamePackageToday } from "@/lib/same-day-package-assignment";
+import { formatClassTypeList } from "@/lib/format";
 
 export type AssignPackageMode = "comp" | "paid";
 
@@ -230,7 +231,7 @@ export function AssignPackageSheetContent({
                       style={{ fontSize: 12 }}
                       numberOfLines={1}
                     >
-                      {pt.classTypes.map((ct) => ct.name).join(" · ")}
+                      {formatClassTypeList(pt.classTypes.map((ct) => ct.name))}
                     </Text>
                   ) : null}
                 </View>
