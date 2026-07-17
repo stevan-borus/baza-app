@@ -116,6 +116,9 @@ export const billingQueries = {
         notes?: string;
         packageTypeId?: string;
         activatePackageOnConfirm?: boolean;
+        // ISO instant for the activated package's validity start (admin flows
+        // send local start-of-day); omitted → server stamps the payment time.
+        startsAt?: string;
       }) =>
         apiRequest("/api/billing", {
           method: "POST",

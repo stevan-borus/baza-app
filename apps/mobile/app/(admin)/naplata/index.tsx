@@ -31,6 +31,9 @@ import { useDrillWindow } from "@/lib/admin/drill";
 import { MotiView } from "@/components/ui/styled";
 import { getDateLocale } from "@/lib/i18n";
 import { formatClassTypeList, formatDateRange, formatRsd } from "@/lib/format";
+import { DateTimePicker } from "@/components/ui/date-time-picker";
+import { startOfLocalDay } from "@/lib/dates";
+import { now } from "@/lib/now";
 import { RAW_METHOD_LABEL_KEYS } from "@/lib/payment-method-labels";
 import { AppSheet } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/card";
@@ -80,6 +83,9 @@ export default function AdminBilling() {
     method: "CASH",
     notes: "",
     packageTypeId: "",
+    // Package validity start (date-only) — null until the admin changes it;
+    // submit falls back to today's start-of-day.
+    startsAt: null as Date | null,
   });
 
   // Cross-tab drill window (ADR-0005) — when Prihod drills into a chart
@@ -477,6 +483,18 @@ export default function AdminBilling() {
                     : ""),
               }))}
           />
+          {/* Validity start (date-only) — only meaningful when the payment
+              activates a package. Defaults to today; the whole picked day is
+              covered (start-of-day semantics, same as Dodeli paket). */}
+          {form.packageTypeId ? (
+            <DateTimePicker
+              testID="billing-package-start-picker"
+              mode="date"
+              value={form.startsAt ?? startOfLocalDay(now())}
+              onChange={(d) => setForm((s) => ({ ...s, startsAt: d }))}
+              placeholder={t("admin.clients.placeholderStart")}
+            />
+          ) : null}
           <Input
             placeholder={t("admin.manage.placeholderNotes")}
             value={form.notes}
@@ -497,6 +515,9 @@ export default function AdminBilling() {
                   notes: form.notes || undefined,
                   packageTypeId: form.packageTypeId || undefined,
                   activatePackageOnConfirm: !!form.packageTypeId,
+                  startsAt: form.packageTypeId
+                    ? (form.startsAt ?? startOfLocalDay(now())).toISOString()
+                    : undefined,
                 },
                 {
                   onSuccess: () => {
@@ -508,6 +529,7 @@ export default function AdminBilling() {
                       method: "CASH",
                       notes: "",
                       packageTypeId: "",
+                      startsAt: null,
                     });
                   },
                 },

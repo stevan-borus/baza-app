@@ -184,7 +184,11 @@ export async function POST(request: Request) {
     };
   }
 
-  const startsAt = now();
+  // Validity start for the activated package: the admin's picked day when
+  // provided (assign sheet + Naplata send local start-of-day), else the
+  // payment instant.
+  const startsAt = parsed.data.startsAt ? new Date(parsed.data.startsAt) : now();
+  if (Number.isNaN(startsAt.getTime())) return fail("Invalid startsAt date", 400);
 
   const result = await prisma.$transaction(async (tx) => {
     const payment = await tx.billingRecord.create({

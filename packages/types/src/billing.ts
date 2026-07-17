@@ -26,6 +26,10 @@ export const billingRecordInputSchema = billingRecordFieldsSchema.pick({
   status: z.enum(["CONFIRMED", "PENDING"]).optional(),
   packageTypeId: z.uuid().optional(),
   activatePackageOnConfirm: z.boolean().default(true),
+  // Package validity start for the activated package. The admin flows send
+  // local start-of-day ("valid from Monday" covers Monday's morning classes);
+  // omitted → the server stamps the payment instant (legacy behavior).
+  startsAt: z.string().min(10).optional(),
 });
 
 // PATCH /api/billing/[id] — confirm a pay-later record once the client pays

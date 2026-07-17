@@ -148,7 +148,9 @@ export function AssignPackageSheetContent({
     }
     // Paid path: the server transaction creates both rows or neither. With
     // pay-later the record lands as PENDING but the package activates
-    // immediately — that's the whole point of the workflow.
+    // immediately — that's the whole point of the workflow. `startsAt` is the
+    // picked day (start-of-day) — without it the server stamps the payment
+    // instant and the picked date is silently ignored.
     paidMutation.mutate(
       {
         clientUserId: client.user.id,
@@ -157,6 +159,7 @@ export function AssignPackageSheetContent({
         method,
         status: payLater ? "PENDING" : "CONFIRMED",
         activatePackageOnConfirm: true,
+        startsAt: startsAtIso,
       },
       { onSuccess },
     );
