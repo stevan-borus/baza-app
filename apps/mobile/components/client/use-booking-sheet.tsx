@@ -97,6 +97,12 @@ export function ClientBookingSheet({
       onCancel={(id) =>
         mutation.mutate({ sessionId: id, action: "CANCEL" }, { onSuccess: hapticSuccess })
       }
+      onLeaveWaitlist={(id) =>
+        mutation.mutate(
+          { sessionId: id, action: "LEAVE_WAITLIST" },
+          { onSuccess: hapticSuccess },
+        )
+      }
       pending={mutation.isPending}
       successState={
         mutation.isSuccess ? mapResultStateToSuccessState(resultState) : null

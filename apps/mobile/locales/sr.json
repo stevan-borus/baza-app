@@ -273,6 +273,8 @@
       "notStartedMessage": "Vaš paket još nije počeo. Zakazivanje će biti moguće od datuma početka paketa.",
       "fullyHeldMessage": "Iskoristili ste sve dostupne termine iz paketa. Otkažite neki od zakazanih termina kako biste mogli da zakažete novi.",
       "lastSessionWarning": "Ovim treningom trošite poslednji termin iz paketa. Obnovite ga kako biste mogli da zakažete naredni trening.",
+      "waitlistReservesSession": "Ovim mestom na listi čekanja rezervišete jedan termin iz paketa. Ako se mesto ne oslobodi do početka časa, termin vam se automatski vraća — ili napustite listu da ga oslobodite odmah.",
+      "lastSessionWaitlistWarning": "Ovo vam je poslednji termin iz paketa. Obnovite ga da biste mogli da zakažete i naredni trening.",
       "homeTitle": "Obnovite paket",
       "rowAction": "Obnovite",
       "rowActionPaused": "Pauzirano",
@@ -407,6 +409,8 @@
       "cancelWarningLate": "Otkazivanje manje od {{hours}} sati pre termina troši jedan termin iz paketa. Da li želite da nastavite?",
       "joinWaitlist": "Pridruži se listi čekanja",
       "leaveWaitlist": "Napusti listu čekanja",
+      "confirmLeaveWaitlist": "Napusti listu čekanja?",
+      "onWaitlist": "Na listi ste čekanja",
       "alreadyBooked": "Već imate rezervaciju"
     },
     "calendar": {
@@ -416,6 +420,7 @@
       "bookingBooked": "Uspešno zakazano!",
       "bookingBookedAlready": "Već ste zakazali ovaj termin",
       "bookingWaitlisted": "Dodati ste na listu čekanja",
+      "waitlistLeft": "Napustili ste listu čekanja",
       "bookingWaitlistPromoted": "Promovisani sa liste čekanja!",
       "bookingCanceled": "Termin je otkazan",
       "bookingCanceledLate": "Termin je otkazan. Pošto je otkazan kasno, jedan termin je potrošen iz paketa.",

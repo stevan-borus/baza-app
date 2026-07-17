@@ -5,12 +5,14 @@ import { navigateWeekStripTo, nextReformerDayKey } from "./helpers/dates";
 import {
   addToWaitlist,
   countActiveBookingsFor,
+  countWaitlistEntriesFor,
   createFutureSession,
   disconnect,
   fillSessionToCapacity,
   findClientBookingFor,
   findSessionConsumption,
   resetAndSeed,
+  setSessionsRemainingFor,
 } from "./helpers/db";
 
 /**
@@ -387,6 +389,139 @@ test.describe("client (Serbian)", () => {
     await expect(
       page.getByText(/Lista čekanja|Waitlist/i).first(),
     ).toBeVisible();
+  });
+
+  test("64: client joins a full session's waitlist, sees the reserves-a-session note, then leaves it", async ({
+    page,
+  }) => {
+    // Full Reformer session 24h out. The active reformer joins its waitlist
+    // (which reserves a package session), sees the honest "reserves a session,
+    // released automatically / leave to free it" note, then leaves — and the
+    // waitlist row is gone.
+    const session = await createFutureSession({
+      trainerEmail: "trainer.reformer@e2e.test",
+      classTypeName: "Reformer pilates",
+      hoursFromNow: 24,
+      capacity: 2,
+    });
+    await fillSessionToCapacity(session.id, "client.active.reformer@e2e.test");
+
+    await signInAs(page, "client.active.reformer@e2e.test");
+    await page.goto("/calendar");
+
+    const targetDate = `${session.startsAt.getFullYear()}-${String(
+      session.startsAt.getMonth() + 1,
+    ).padStart(2, "0")}-${String(session.startsAt.getDate()).padStart(2, "0")}`;
+    await page
+      .locator(`[data-testid="week-strip-day-${targetDate}"]:visible`)
+      .first()
+      .dispatchEvent("click");
+    await page.getByTestId(`schedule-row-${session.id}`).dispatchEvent("click");
+
+    // Full class → join-waitlist button, with the always-on reserve note.
+    await expect(page.getByTestId("booking-waitlist-button")).toBeVisible({
+      timeout: 5_000,
+    });
+    await expect(
+      page.getByTestId("booking-waitlist-reserve-note"),
+    ).toBeVisible();
+
+    // Join the waitlist.
+    await page.getByTestId("booking-waitlist-button").dispatchEvent("click");
+    await expect(page.getByTestId("booking-success-message")).toHaveText(
+      /listu čekanja|waitlist/i,
+      { timeout: 5_000 },
+    );
+    // The post-join confirmation restates the reserves-a-session note.
+    await expect(
+      page.getByTestId("booking-success-waitlist-note"),
+    ).toBeVisible();
+
+    // Server actually recorded the waitlist row.
+    await expect
+      .poll(() =>
+        countWaitlistEntriesFor("client.active.reformer@e2e.test", session.id),
+      )
+      .toBe(1);
+
+    // Close the sheet before reopening. The success block is owned by the
+    // mutation and overrides the action buttons until the sheet closes
+    // (onClose → mutation.reset()); gorhom's backdrop only closes on a real
+    // pointer press, and the sheet covers the backdrop's centre, so click the
+    // backdrop at the top of the viewport (above the sheet).
+    await page.mouse.click(page.viewportSize()!.width / 2, 40);
+    await expect(
+      page.getByTestId("booking-success-message"),
+    ).not.toBeVisible();
+
+    // Reopen the sheet — now the client is waitlisted, so they see LEAVE, not JOIN.
+    await page.getByTestId(`schedule-row-${session.id}`).dispatchEvent("click");
+    await expect(
+      page.getByTestId("booking-leave-waitlist-button"),
+    ).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByTestId("booking-waitlist-button")).toHaveCount(0);
+
+    // Leave: confirm step → success.
+    await page
+      .getByTestId("booking-leave-waitlist-button")
+      .dispatchEvent("click");
+    await expect(
+      page.getByTestId("booking-confirm-leave-waitlist-button"),
+    ).toBeVisible();
+    await page
+      .getByTestId("booking-confirm-leave-waitlist-button")
+      .dispatchEvent("click");
+    await expect(page.getByTestId("booking-success-message")).toHaveText(
+      /Napustili ste listu čekanja|left the waitlist/i,
+      { timeout: 5_000 },
+    );
+
+    // The waitlist row (and its held session) is released.
+    await expect
+      .poll(() =>
+        countWaitlistEntriesFor("client.active.reformer@e2e.test", session.id),
+      )
+      .toBe(0);
+  });
+
+  test("65: a waitlisted client at their last package slot can still reach the leave button", async ({
+    page,
+  }) => {
+    // Edge the leave feature exists FOR: the client's own waitlist entry
+    // consumes their last remaining session, so the server marks that session
+    // bookable:false / FULLY_HELD. The sheet must still offer LEAVE (which
+    // frees the slot) rather than the renewal-lock message — otherwise the one
+    // person who most needs to leave is stranded.
+    await setSessionsRemainingFor("client.active.reformer@e2e.test", 1);
+
+    const session = await createFutureSession({
+      trainerEmail: "trainer.reformer@e2e.test",
+      classTypeName: "Reformer pilates",
+      hoursFromNow: 24,
+      capacity: 2,
+    });
+    await fillSessionToCapacity(session.id, "client.active.reformer@e2e.test");
+    // Put the client on the waitlist directly — this reserves their last slot.
+    await addToWaitlist(session.id, "client.active.reformer@e2e.test", 1);
+
+    await signInAs(page, "client.active.reformer@e2e.test");
+    await page.goto("/calendar");
+
+    const targetDate = `${session.startsAt.getFullYear()}-${String(
+      session.startsAt.getMonth() + 1,
+    ).padStart(2, "0")}-${String(session.startsAt.getDate()).padStart(2, "0")}`;
+    await page
+      .locator(`[data-testid="week-strip-day-${targetDate}"]:visible`)
+      .first()
+      .dispatchEvent("click");
+    await page.getByTestId(`schedule-row-${session.id}`).dispatchEvent("click");
+
+    // The leave button is reachable despite the FULLY_HELD lock; the renewal
+    // lock message must NOT be what greets a waitlisted client.
+    await expect(
+      page.getByTestId("booking-leave-waitlist-button"),
+    ).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByTestId("booking-fully-held-message")).toHaveCount(0);
   });
 
   test("60: notifications list renders", async ({ page }) => {

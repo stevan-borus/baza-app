@@ -44,7 +44,10 @@ export const bookingsQueries = {
   mutateBooking: () =>
     mutationOptions({
       mutationKey: [...bookingsAll, "mutate"] as const,
-      mutationFn: async (payload: { sessionId: string; action: "BOOK" | "CANCEL" }) => {
+      mutationFn: async (payload: {
+        sessionId: string;
+        action: "BOOK" | "CANCEL" | "LEAVE_WAITLIST";
+      }) => {
         try {
           return await apiRequest("/api/bookings", {
             method: "POST",
@@ -97,11 +100,11 @@ export const bookingsQueries = {
     }),
 };
 
-// BOOK holds a package session and CANCEL can forfeit one (late-cancel), so
-// beyond availability (["sessions"]) and the admin package caches
-// (["packages"]) this must refetch the client's own surfaces: the Paketi tab
-// timeline (["client-packages"], no pull-to-refresh) and the bookings history
-// (["bookings"]).
+// BOOK holds a package session, CANCEL can forfeit one (late-cancel), and
+// LEAVE_WAITLIST releases a held one, so beyond availability (["sessions"]) and
+// the admin package caches (["packages"]) this must refetch the client's own
+// surfaces: the Paketi tab timeline (["client-packages"], no pull-to-refresh)
+// and the bookings history (["bookings"]).
 export function mutateBookingMutationOptions(queryClient: QueryClient) {
   return {
     ...bookingsQueries.mutateBooking(),

@@ -1,8 +1,8 @@
 /**
  * Maps a server booking-mutation `state` onto the booking sheet's visible
- * success confirmation. The sheet only renders three outcomes — BOOKED,
- * WAITLISTED, CANCELED — so every server state collapses onto one of those (or
- * null for "show no confirmation").
+ * success confirmation. The sheet renders four outcomes — BOOKED, WAITLISTED,
+ * CANCELED, LEFT_WAITLIST — so every server state collapses onto one of those
+ * (or null for "show no confirmation").
  *
  * Note WAITLIST_PROMOTED: the server returns it on the CANCEL path when the
  * canceling client's freed seat auto-promotes a waitlisted peer. From the
@@ -11,7 +11,11 @@
  * picks the plain-vs-forfeit variant). Mapping it to null is the bug this
  * function guards against: the canceling client would see nothing at all.
  */
-export type BookingSuccessState = "BOOKED" | "WAITLISTED" | "CANCELED";
+export type BookingSuccessState =
+  | "BOOKED"
+  | "WAITLISTED"
+  | "CANCELED"
+  | "LEFT_WAITLIST";
 
 export function mapResultStateToSuccessState(
   resultState: string | undefined,
@@ -25,6 +29,8 @@ export function mapResultStateToSuccessState(
     case "CANCELED":
     case "WAITLIST_PROMOTED":
       return "CANCELED";
+    case "LEFT_WAITLIST":
+      return "LEFT_WAITLIST";
     default:
       return null;
   }
