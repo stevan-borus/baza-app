@@ -142,14 +142,14 @@ describe("admin reservations — edge cases", () => {
         sessionCount: 12,
         validityDays: 30,
         lateCancelHours: 8,
-        classTypeId: reformer.id,
+        classTypes: { create: { classTypeId: reformer.id } },
       },
     });
     const pack = await prisma.clientPackage.create({
       data: {
         clientProfileId: clientProfile.id,
         packageTypeId: packageType.id,
-        classTypeId: reformer.id,
+        classTypes: { create: { classTypeId: reformer.id } },
         lateCancelHours: 8,
         startsAt: new Date(nowMs() - 24 * 60 * 60 * 1000),
         expiresAt: new Date(nowMs() + 30 * 24 * 60 * 60 * 1000),

@@ -185,7 +185,7 @@ function packageType(id: string, over: Partial<PackageType> = {}): PackageType {
     sessionCount: 10,
     validityDays: 30,
     lateCancelHours: 8,
-    classTypeId: "ct1",
+    classTypes: [{ id: "ct1", name: "CT 1" }],
     ...over,
   };
 }
@@ -203,7 +203,7 @@ describe("packages (package types) cache splice", () => {
       name: "10-pack",
       sessionCount: 10,
       validityDays: 30,
-      classTypeId: "ct1",
+      classTypeIds: ["ct1"],
     });
 
     const list = client.getQueryData<{ packageTypes: PackageType[] }>(packageTypesKey);

@@ -17,7 +17,11 @@ import { shouldApplyLateCancelPenalty } from "@/lib/server/cancellation-policy";
 import { notifyClient } from "@/lib/server/notify-client";
 import { notifyOperators } from "@/lib/server/notify-operators";
 import { countHeldSessions } from "@/lib/server/booking-hold-count";
-import { findEligibleClientPackage } from "@/lib/server/package-eligibility";
+import {
+  ELIGIBILITY_PACKAGE_SELECT,
+  findEligibleClientPackage,
+  toEligibilityPackage,
+} from "@/lib/server/package-eligibility";
 import { canHoldAnotherBooking } from "@/lib/server/package-hold";
 import { prisma } from "@/lib/server/prisma";
 
@@ -63,15 +67,11 @@ export async function POST(request: Request) {
 
     const [clientPackages, packagePauses] = await Promise.all([
       prisma.clientPackage.findMany({
-        where: { clientProfileId, classTypeId: session.classTypeId },
-        select: {
-          id: true,
-          classTypeId: true,
-          startsAt: true,
-          expiresAt: true,
-          sessionsRemaining: true,
-          revokedAt: true,
+        where: {
+          clientProfileId,
+          classTypes: { some: { classTypeId: session.classTypeId } },
         },
+        select: ELIGIBILITY_PACKAGE_SELECT,
       }),
       prisma.packagePause.findMany({
         where: { clientProfileId },
@@ -83,7 +83,7 @@ export async function POST(request: Request) {
     ]);
 
     const eligiblePackage = findEligibleClientPackage(
-      clientPackages,
+      clientPackages.map(toEligibilityPackage),
       packagePauses,
       session.startsAt,
       session.classTypeId,
@@ -108,7 +108,7 @@ export async function POST(request: Request) {
     const result = await prisma.$transaction(async (tx) => {
       const heldCount = await countHeldSessions(tx, {
         clientProfileId,
-        classTypeId: session.classTypeId,
+        classTypeIds: eligiblePackage.classTypeIds,
         clientPackageId: eligiblePackage.id,
         at: now(),
       });

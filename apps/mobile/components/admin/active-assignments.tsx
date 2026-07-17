@@ -23,6 +23,7 @@ import { AssignPackageFlow } from "@/components/admin/assign-package-flow";
 import { packagesQueries } from "@/lib/queries/packages-queries-factory";
 import { useDebouncedValue } from "@/lib/use-debounced-value";
 import { now } from "@/lib/now";
+import { formatClassTypeList } from "@/lib/format";
 
 type AssignmentFilter = "all" | "expiring" | "expired";
 
@@ -185,6 +186,17 @@ export function ActiveAssignments() {
                       <Text className="text-muted" style={{ fontSize: 13 }} numberOfLines={1}>
                         {packageName}
                       </Text>
+                      {(pkg.classTypes ?? []).length > 0 ? (
+                        <Text
+                          className="text-faint"
+                          style={{ fontSize: 12 }}
+                          numberOfLines={1}
+                        >
+                          {formatClassTypeList(
+                            (pkg.classTypes ?? []).map((ct) => ct.name),
+                          )}
+                        </Text>
+                      ) : null}
                       <Text className="text-muted" style={{ fontSize: 12 }}>
                         {t("admin.manage.sessionsRemaining", {
                           count: pkg.sessionsRemaining,

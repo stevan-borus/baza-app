@@ -40,10 +40,10 @@ async function ensureFixtures() {
       sessionCount: 12,
       validityDays: 30,
       lateCancelHours: 12,
-      classTypeId: classType.id,
+      classTypes: { create: { classTypeId: classType.id } },
     },
   });
-  return { admin, classType, room, trainer, pkgType };
+  return { admin, classType, room, trainer, pkgType: { id: pkgType.id, classTypeId: classType.id } };
 }
 
 async function createClient(
@@ -61,7 +61,7 @@ async function createClient(
     data: {
       clientProfileId: profile.id,
       packageTypeId: pkgType.id,
-      classTypeId: pkgType.classTypeId,
+      classTypes: { create: { classTypeId: pkgType.classTypeId } },
       lateCancelHours: 12,
       startsAt: now(),
       expiresAt: new Date(now().getTime() + 30 * DAY_MS),

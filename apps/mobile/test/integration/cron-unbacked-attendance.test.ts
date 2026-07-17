@@ -133,14 +133,14 @@ describe("cron:sessions unbacked-attendance notification", () => {
         sessionCount: 12,
         validityDays: 30,
         lateCancelHours: 8,
-        classTypeId: reformer.id,
+        classTypes: { create: { classTypeId: reformer.id } },
       },
     });
     await prisma.clientPackage.create({
       data: {
         clientProfileId: clientProfile.id,
         packageTypeId: pt.id,
-        classTypeId: reformer.id,
+        classTypes: { create: { classTypeId: reformer.id } },
         lateCancelHours: 8,
         startsAt: new Date(nowMs() - 24 * 60 * 60 * 1000),
         expiresAt: new Date(nowMs() + 30 * 24 * 60 * 60 * 1000),

@@ -17,9 +17,9 @@ export type NotificationRoutingInput = {
   /**
    * The catalog of birthday-gift PackageTypes available right now — supplied
    * by the caller from the packageTypes query cache. We pick the one whose
-   * `classTypeId` matches the notification's `suggestedClassTypeId`.
+   * covered `classTypeIds` include the notification's `suggestedClassTypeId`.
    */
-  giftPackageTypes: Array<{ id: string; classTypeId: string }>;
+  giftPackageTypes: Array<{ id: string; classTypeIds: string[] }>;
 };
 
 type Payload = Record<string, Json>;
@@ -39,7 +39,9 @@ export function resolveNotificationHref(input: NotificationRoutingInput): string
       if (!clientProfileId) return null;
       const suggestedClassTypeId = getString(payload, "suggestedClassTypeId");
       const gift = suggestedClassTypeId
-        ? giftPackageTypes.find((pt) => pt.classTypeId === suggestedClassTypeId)
+        ? giftPackageTypes.find((pt) =>
+            pt.classTypeIds.includes(suggestedClassTypeId),
+          )
         : undefined;
       const params = new URLSearchParams({
         openAssignPackage: clientProfileId,

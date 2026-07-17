@@ -92,9 +92,8 @@ test.describe("admin — list splices on write (no refetch)", () => {
 
     await page.getByTestId("admin-new-package-button").dispatchEvent("click");
     await page.getByTestId("package-name-input").fill("E2E Splice Package");
-    // A package type requires a class type — open the select and pick the first.
-    await page.getByTestId("package-class-type-select").click();
-    await page.locator('[data-testid^="package-class-type-option-"]').first().click();
+    // A package type requires at least one class type — toggle the first chip.
+    await page.locator('[data-testid^="package-class-type-chip-"]').first().click();
     await page.getByTestId("package-session-count-input").fill("8");
     await page.getByTestId("package-validity-days-input").fill("30");
     await page.getByTestId("package-late-cancel-input").fill("12");

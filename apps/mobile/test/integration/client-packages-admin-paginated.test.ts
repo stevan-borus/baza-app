@@ -36,7 +36,7 @@ async function seedPackageType() {
       sessionCount: 12,
       validityDays: 30,
       lateCancelHours: 12,
-      classTypeId: reformer.id,
+      classTypes: { create: { classTypeId: reformer.id } },
     },
   });
   return { reformer, packageType };
@@ -69,7 +69,7 @@ async function seedClientPackages(count: number) {
       data: {
         clientProfileId: profile.id,
         packageTypeId: packageType.id,
-        classTypeId: reformer.id,
+        classTypes: { create: { classTypeId: reformer.id } },
         lateCancelHours: 12,
         startsAt,
         expiresAt,
@@ -210,7 +210,7 @@ describe("GET /api/packages/client-packages — admin pagination", () => {
       data: {
         clientProfileId: targetProfile.id,
         packageTypeId: packageType.id,
-        classTypeId: reformer.id,
+        classTypes: { create: { classTypeId: reformer.id } },
         lateCancelHours: 12,
         startsAt,
         expiresAt: new Date(startsAt.getTime() + 30 * 24 * 60 * 60 * 1000),

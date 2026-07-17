@@ -12,7 +12,7 @@ const baseAt = new Date("2026-05-15T10:00:00Z");
 
 function makePackage(overrides: Partial<{
   id: string;
-  classTypeId: string;
+  classTypeIds: string[];
   startsAt: Date;
   expiresAt: Date;
   sessionsRemaining: number;
@@ -20,7 +20,7 @@ function makePackage(overrides: Partial<{
 }>) {
   return {
     id: overrides.id ?? "pkg-1",
-    classTypeId: overrides.classTypeId ?? REFORMER_CLASS_TYPE_ID,
+    classTypeIds: overrides.classTypeIds ?? [REFORMER_CLASS_TYPE_ID],
     startsAt: overrides.startsAt ?? new Date("2026-05-01T00:00:00Z"),
     expiresAt: overrides.expiresAt ?? new Date("2026-06-01T00:00:00Z"),
     sessionsRemaining: overrides.sessionsRemaining ?? 5,
@@ -29,6 +29,23 @@ function makePackage(overrides: Partial<{
 }
 
 describe("findEligibleClientPackage class-scoped behaviour", () => {
+  it("a mix package backs a session of any covered class type", () => {
+    const mix = {
+      id: "mix-1",
+      classTypeIds: [REFORMER_CLASS_TYPE_ID, ENERGY_CLASS_TYPE_ID],
+      startsAt: new Date("2026-05-01T00:00:00Z"),
+      expiresAt: new Date("2026-06-01T00:00:00Z"),
+      sessionsRemaining: 5,
+      revokedAt: null,
+    };
+    expect(
+      findEligibleClientPackage([mix], [], baseAt, ENERGY_CLASS_TYPE_ID)?.id,
+    ).toBe("mix-1");
+    expect(
+      findEligibleClientPackage([mix], [], baseAt, REFORMER_CLASS_TYPE_ID)?.id,
+    ).toBe("mix-1");
+  });
+
   it("returns the pack when classTypeId matches and pack is otherwise valid", () => {
     const pkg = makePackage({});
     const result = findEligibleClientPackage(
@@ -41,7 +58,7 @@ describe("findEligibleClientPackage class-scoped behaviour", () => {
   });
 
   it("returns null when the only pack belongs to a different class type", () => {
-    const pkg = makePackage({ classTypeId: ENERGY_CLASS_TYPE_ID });
+    const pkg = makePackage({ classTypeIds: [ENERGY_CLASS_TYPE_ID] });
     const result = findEligibleClientPackage(
       [pkg],
       [],
@@ -107,24 +124,65 @@ describe("findEligibleClientPackage class-scoped behaviour", () => {
     expect(result).toBeNull();
   });
 
-  it("prefers the newest startsAt when multiple matching packs are valid", () => {
-    const older = makePackage({
-      id: "older",
+  it("spends the pack that expires soonest when same-width packs are both valid", () => {
+    // Front-desk rule: burn the dying pack first. The soon-expiring pack here
+    // is also the OLDER one, so a newest-startsAt rule would wrongly strand it.
+    const expiresSoon = makePackage({
+      id: "expires-soon",
       startsAt: new Date("2026-04-01T00:00:00Z"),
       expiresAt: new Date("2026-06-01T00:00:00Z"),
     });
-    const newer = makePackage({
-      id: "newer",
+    const expiresLater = makePackage({
+      id: "expires-later",
       startsAt: new Date("2026-05-10T00:00:00Z"),
       expiresAt: new Date("2026-06-10T00:00:00Z"),
     });
     const result = findEligibleClientPackage(
-      [older, newer],
+      [expiresLater, expiresSoon],
       [],
       baseAt,
       REFORMER_CLASS_TYPE_ID,
     );
-    expect(result?.id).toBe("newer");
+    expect(result?.id).toBe("expires-soon");
+  });
+
+  it("spends a single-type pack before a mix pack covering the same class (narrowest set wins)", () => {
+    // The mix pack is newer AND expires sooner — both old tie-breaks would
+    // pick it. Scope width must trump both: burning the flexible pack while
+    // a narrow pack could cover the session robs the client of Energy slots.
+    const mix = makePackage({
+      id: "mix",
+      classTypeIds: [REFORMER_CLASS_TYPE_ID, ENERGY_CLASS_TYPE_ID],
+      startsAt: new Date("2026-05-10T00:00:00Z"),
+      expiresAt: new Date("2026-05-25T00:00:00Z"),
+    });
+    const reformerOnly = makePackage({
+      id: "reformer-only",
+      startsAt: new Date("2026-04-01T00:00:00Z"),
+      expiresAt: new Date("2026-06-01T00:00:00Z"),
+    });
+    const result = findEligibleClientPackage(
+      [mix, reformerOnly],
+      [],
+      baseAt,
+      REFORMER_CLASS_TYPE_ID,
+    );
+    expect(result?.id).toBe("reformer-only");
+  });
+
+  it("falls back to the mix pack when no narrower pack covers the class", () => {
+    const mix = makePackage({
+      id: "mix",
+      classTypeIds: [REFORMER_CLASS_TYPE_ID, ENERGY_CLASS_TYPE_ID],
+    });
+    const reformerOnly = makePackage({ id: "reformer-only" });
+    const result = findEligibleClientPackage(
+      [mix, reformerOnly],
+      [],
+      baseAt,
+      ENERGY_CLASS_TYPE_ID,
+    );
+    expect(result?.id).toBe("mix");
   });
 
   it("ignores revoked packs even when otherwise valid", () => {
@@ -162,12 +220,12 @@ describe("findEligibleClientPackage class-scoped behaviour", () => {
   it("picks a same-class pack when other-class packs are mixed in", () => {
     const otherClass = makePackage({
       id: "other",
-      classTypeId: ENERGY_CLASS_TYPE_ID,
+      classTypeIds: [ENERGY_CLASS_TYPE_ID],
       startsAt: new Date("2026-05-12T00:00:00Z"),
     });
     const reformer = makePackage({
       id: "reformer",
-      classTypeId: REFORMER_CLASS_TYPE_ID,
+      classTypeIds: [REFORMER_CLASS_TYPE_ID],
       startsAt: new Date("2026-05-10T00:00:00Z"),
     });
     const result = findEligibleClientPackage(
@@ -195,16 +253,34 @@ describe("clientOwnsPackageForClass session-visibility behaviour", () => {
   });
 
   it("does not count packs of other class types (keeps fenced classes hidden)", () => {
-    const energyOnly = makePackage({ classTypeId: ENERGY_CLASS_TYPE_ID });
+    const energyOnly = makePackage({ classTypeIds: [ENERGY_CLASS_TYPE_ID] });
     expect(clientOwnsPackageForClass([energyOnly], REFORMER_CLASS_TYPE_ID)).toBe(false);
   });
 
   it("is false with no packs at all", () => {
     expect(clientOwnsPackageForClass([], REFORMER_CLASS_TYPE_ID)).toBe(false);
   });
+
+  it("a mix pack makes every covered class type visible", () => {
+    const mix = makePackage({
+      classTypeIds: [REFORMER_CLASS_TYPE_ID, ENERGY_CLASS_TYPE_ID],
+    });
+    expect(clientOwnsPackageForClass([mix], REFORMER_CLASS_TYPE_ID)).toBe(true);
+    expect(clientOwnsPackageForClass([mix], ENERGY_CLASS_TYPE_ID)).toBe(true);
+  });
 });
 
 describe("classifyRenewalLockReason cause classification", () => {
+  it("classifies a used-up mix pack as RENEW for every covered class type", () => {
+    const usedUpMix = makePackage({
+      classTypeIds: [REFORMER_CLASS_TYPE_ID, ENERGY_CLASS_TYPE_ID],
+      sessionsRemaining: 0,
+    });
+    expect(
+      classifyRenewalLockReason([usedUpMix], [], baseAt, ENERGY_CLASS_TYPE_ID),
+    ).toBe("RENEW");
+  });
+
   // Only ever called when findEligibleClientPackage returned null but the
   // client owns a matching-class pack — so its job is to pick the BEST reason
   // among the owned matching packs, with priority PAUSED > NOT_STARTED > RENEW.
@@ -331,7 +407,7 @@ describe("classifyRenewalLockReason cause classification", () => {
     // A future Energy pack shouldn't make the Reformer lock read NOT_STARTED.
     const otherClassFuture = makePackage({
       id: "energy-future",
-      classTypeId: ENERGY_CLASS_TYPE_ID,
+      classTypeIds: [ENERGY_CLASS_TYPE_ID],
       startsAt: new Date("2026-06-01T00:00:00Z"),
       expiresAt: new Date("2026-07-01T00:00:00Z"),
     });

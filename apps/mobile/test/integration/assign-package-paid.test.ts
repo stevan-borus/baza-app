@@ -38,7 +38,7 @@ async function seed() {
       sessionCount: 8,
       validityDays: 60,
       lateCancelHours: 12,
-      classTypeId: classType.id,
+      classTypes: { create: { classTypeId: classType.id } },
     },
   });
   return { adminUser, clientUser, clientProfile, classType, packageType };
@@ -115,6 +115,68 @@ describe("assign-package paid mode (POST /api/billing)", () => {
 
     // (e) Package sessions seeded from the PackageType snapshot.
     expect(pack.sessionsRemaining).toBe(8);
+  });
+
+  it("explicit startsAt pins the activated package to the picked day, not the payment instant", async () => {
+    // The admin sells a package "starting Monday" — the client must be able to
+    // book Monday's MORNING classes, so the UI sends local start-of-day and
+    // the server must honor it instead of stamping now().
+    const { adminUser, clientUser, packageType } = await seed();
+    setMockUser({
+      id: adminUser.id,
+      role: "ADMIN",
+      email: adminUser.email,
+      isActive: true,
+      clientProfile: null,
+    });
+
+    const pickedDay = new Date(now().getTime() + 3 * 24 * 60 * 60 * 1000);
+    pickedDay.setHours(0, 0, 0, 0);
+    const res = await POST(
+      buildJsonRequest({
+        clientUserId: clientUser.id,
+        amount: 24000,
+        method: "CARD",
+        packageTypeId: packageType.id,
+        activatePackageOnConfirm: true,
+        startsAt: pickedDay.toISOString(),
+      }),
+    );
+    expect(res.status).toBe(201);
+
+    const pack = (await prisma.clientPackage.findMany())[0]!;
+    expect(pack.startsAt.getTime()).toBe(pickedDay.getTime());
+    const packageTypeRow = await prisma.packageType.findUniqueOrThrow({
+      where: { id: packageType.id },
+    });
+    expect(pack.expiresAt.getTime()).toBe(
+      pickedDay.getTime() + packageTypeRow.validityDays * 24 * 60 * 60 * 1000,
+    );
+  });
+
+  it("rejects an unparseable startsAt with 400 instead of silently falling back", async () => {
+    const { adminUser, clientUser, packageType } = await seed();
+    setMockUser({
+      id: adminUser.id,
+      role: "ADMIN",
+      email: adminUser.email,
+      isActive: true,
+      clientProfile: null,
+    });
+
+    const res = await POST(
+      buildJsonRequest({
+        clientUserId: clientUser.id,
+        amount: 24000,
+        method: "CARD",
+        packageTypeId: packageType.id,
+        activatePackageOnConfirm: true,
+        startsAt: "not-a-date",
+      }),
+    );
+    expect(res.status).toBe(400);
+    expect(await prisma.clientPackage.count()).toBe(0);
+    expect(await prisma.billingRecord.count()).toBe(0);
   });
 
   it("GET /api/packages/client-packages?clientProfileId attaches billingRecord to paid packages and null to comp packages", async () => {

@@ -5,7 +5,11 @@
  */
 import type { Prisma } from "@/generated/prisma";
 import { shouldApplyLateCancelPenalty } from "@/lib/server/cancellation-policy";
-import { findEligibleClientPackage } from "@/lib/server/package-eligibility";
+import {
+  ELIGIBILITY_PACKAGE_SELECT,
+  findEligibleClientPackage,
+  toEligibilityPackage,
+} from "@/lib/server/package-eligibility";
 
 /** Works with both the root PrismaClient and an interactive-tx client. */
 type Db = Prisma.TransactionClient;
@@ -46,15 +50,8 @@ async function resolveEligiblePackageId(
 ) {
   const [clientPackages, packagePauses] = await Promise.all([
     db.clientPackage.findMany({
-      where: { clientProfileId, classTypeId },
-      select: {
-        id: true,
-        classTypeId: true,
-        startsAt: true,
-        expiresAt: true,
-        sessionsRemaining: true,
-        revokedAt: true,
-      },
+      where: { clientProfileId, classTypes: { some: { classTypeId } } },
+      select: ELIGIBILITY_PACKAGE_SELECT,
     }),
     db.packagePause.findMany({
       where: { clientProfileId },
@@ -62,7 +59,7 @@ async function resolveEligiblePackageId(
     }),
   ]);
   const eligiblePackage = findEligibleClientPackage(
-    clientPackages,
+    clientPackages.map(toEligibilityPackage),
     packagePauses,
     at,
     classTypeId,

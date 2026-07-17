@@ -134,7 +134,7 @@ async function seedClassTypesAndPackages() {
         sessionCount: pt.sessionCount,
         validityDays: pt.validityDays,
         lateCancelHours: pt.lateCancelHours,
-        classTypeId: ct.id,
+        classTypes: { create: { classTypeId: ct.id } },
       },
     });
     console.log(

@@ -50,7 +50,7 @@ async function seed() {
       validityDays: 60,
       lateCancelHours: 12,
       price: 24000,
-      classTypeId: classType.id,
+      classTypes: { create: { classTypeId: classType.id } },
     },
   });
   return { adminUser, trainerUser, clientUser, clientProfile, classType, packageType };

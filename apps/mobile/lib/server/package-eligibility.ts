@@ -1,5 +1,38 @@
 import type { ClientPackage, PackagePause } from "@/generated/prisma";
 
+/**
+ * The package shape all eligibility logic runs on. `classTypeIds` is the
+ * ClientPackage's snapshotted ClassType set (one element for a classic
+ * single-type package, several for a mix package) — callers flatten the
+ * join rows into ids before calling in.
+ */
+export type EligibilityPackage = Pick<
+  ClientPackage,
+  "id" | "startsAt" | "expiresAt" | "sessionsRemaining" | "revokedAt"
+> & {
+  classTypeIds: string[];
+};
+
+/**
+ * The canonical Prisma select for feeding eligibility logic — pairs with
+ * `toEligibilityPackage` to flatten the join rows into `classTypeIds`.
+ */
+export const ELIGIBILITY_PACKAGE_SELECT = {
+  id: true,
+  startsAt: true,
+  expiresAt: true,
+  sessionsRemaining: true,
+  revokedAt: true,
+  classTypes: { select: { classTypeId: true } },
+} as const;
+
+export function toEligibilityPackage<
+  T extends { classTypes: { classTypeId: string }[] },
+>(row: T): Omit<T, "classTypes"> & { classTypeIds: string[] } {
+  const { classTypes, ...rest } = row;
+  return { ...rest, classTypeIds: classTypes.map((link) => link.classTypeId) };
+}
+
 function getPauseOverlapMs(
   pause: Pick<PackagePause, "startsAt" | "endsAt">,
   periodStart: Date,
@@ -32,57 +65,60 @@ export function isInPauseWindow(
 }
 
 /**
- * True when the client owns ANY pack for this class type, regardless of
+ * True when the client owns ANY pack covering this class type, regardless of
  * expiry / remaining sessions / pauses. Drives session VISIBILITY on the
  * client calendar: a lapsed Reformer client still sees Reformer sessions
  * (greyed out, with a renewal CTA) instead of an unexplained empty calendar,
  * while classes they never bought stay hidden.
  */
 export function clientOwnsPackageForClass(
-  packages: Pick<ClientPackage, "classTypeId">[],
+  packages: Pick<EligibilityPackage, "classTypeIds">[],
   classTypeId: string,
 ): boolean {
-  return packages.some((pkg) => pkg.classTypeId === classTypeId);
+  return packages.some((pkg) => pkg.classTypeIds.includes(classTypeId));
 }
 
-export type EligiblePackage = Pick<
-  ClientPackage,
-  "id" | "classTypeId" | "startsAt" | "expiresAt" | "sessionsRemaining" | "revokedAt"
-> & {
+export type EligiblePackage = EligibilityPackage & {
   effectiveExpiresAt: Date;
 };
 
 /**
- * Returns the newest pack the client could spend on a session at `at` whose
- * class is `classTypeId`. Eligible = matching class, started, has sessions,
- * effective expiry (pause-extended) in the future, `at` not in a pause, and
- * not revoked. `revokedAt` is a REQUIRED input field on purpose — every call
- * site must select it, so a new query can't silently treat a revoked package
- * as bookable.
+ * Returns the pack the client should spend on a session at `at` whose class
+ * is `classTypeId`. Eligible = ClassType set covers the class, started, has
+ * sessions, effective expiry (pause-extended) in the future, `at` not in a
+ * pause, and not revoked. `revokedAt` is a REQUIRED input field on purpose —
+ * every call site must select it, so a new query can't silently treat a
+ * revoked package as bookable.
+ *
+ * Spend priority when several packs are eligible (ADR-0010): the NARROWEST
+ * ClassType set wins — a single-type pack is spent before a mix pack, so the
+ * mix pack's flexibility survives — then the soonest effective expiry, so the
+ * dying pack is burned first.
  */
 export function findEligibleClientPackage(
-  packages: Pick<
-    ClientPackage,
-    "id" | "classTypeId" | "startsAt" | "expiresAt" | "sessionsRemaining" | "revokedAt"
-  >[],
+  packages: EligibilityPackage[],
   pauses: Pick<PackagePause, "startsAt" | "endsAt">[],
   at: Date,
   classTypeId: string,
 ): EligiblePackage | null {
-  const sortedPackages = packages
-    .filter((pkg) => pkg.classTypeId === classTypeId)
-    .sort((a, b) => b.startsAt.getTime() - a.startsAt.getTime());
-  for (const pkg of sortedPackages) {
+  const candidates = packages
+    .filter((pkg) => pkg.classTypeIds.includes(classTypeId))
+    .map((pkg) => ({
+      ...pkg,
+      effectiveExpiresAt: getEffectiveExpiresAt(pkg, pauses, at),
+    }))
+    .sort(
+      (a, b) =>
+        a.classTypeIds.length - b.classTypeIds.length ||
+        a.effectiveExpiresAt.getTime() - b.effectiveExpiresAt.getTime(),
+    );
+  for (const pkg of candidates) {
     if (pkg.revokedAt) continue;
     if (pkg.sessionsRemaining <= 0) continue;
     if (pkg.startsAt > at) continue;
-    const effectiveExpiresAt = getEffectiveExpiresAt(pkg, pauses, at);
-    if (effectiveExpiresAt < at) continue;
+    if (pkg.effectiveExpiresAt < at) continue;
     if (isInPauseWindow(pauses, at)) continue;
-    return {
-      ...pkg,
-      effectiveExpiresAt,
-    };
+    return pkg;
   }
   return null;
 }
@@ -107,16 +143,13 @@ export function findEligibleClientPackage(
  * - RENEW: catch-all — every matching pack is used up, expired, or revoked.
  */
 export function classifyRenewalLockReason(
-  packages: Pick<
-    ClientPackage,
-    "id" | "classTypeId" | "startsAt" | "expiresAt" | "sessionsRemaining" | "revokedAt"
-  >[],
+  packages: EligibilityPackage[],
   pauses: Pick<PackagePause, "startsAt" | "endsAt">[],
   at: Date,
   classTypeId: string,
 ): "PAUSED" | "NOT_STARTED" | "RENEW" {
   const matching = packages.filter(
-    (pkg) => pkg.classTypeId === classTypeId && !pkg.revokedAt,
+    (pkg) => pkg.classTypeIds.includes(classTypeId) && !pkg.revokedAt,
   );
 
   // A "would-be-bookable" pack: has sessions and its pause-extended expiry is

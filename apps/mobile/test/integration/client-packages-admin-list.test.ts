@@ -21,7 +21,7 @@ async function seedTwoClientsTwoPackages() {
       sessionCount: 12,
       validityDays: 30,
       lateCancelHours: 12,
-      classTypeId: reformer.id,
+      classTypes: { create: { classTypeId: reformer.id } },
     },
   });
   const ana = await prisma.user.create({
@@ -38,7 +38,7 @@ async function seedTwoClientsTwoPackages() {
     data: {
       clientProfileId: anaProfile.id,
       packageTypeId: r12.id,
-      classTypeId: reformer.id,
+      classTypes: { create: { classTypeId: reformer.id } },
       lateCancelHours: 12,
       startsAt,
       expiresAt,
@@ -49,7 +49,7 @@ async function seedTwoClientsTwoPackages() {
     data: {
       clientProfileId: milosProfile.id,
       packageTypeId: r12.id,
-      classTypeId: reformer.id,
+      classTypes: { create: { classTypeId: reformer.id } },
       lateCancelHours: 12,
       startsAt,
       expiresAt,

@@ -82,7 +82,7 @@ async function seedSessionWithBookings(opts: {
         sessionCount: 12,
         validityDays: 365,
         lateCancelHours: 12,
-        classTypeId: reformer.id,
+        classTypes: { create: { classTypeId: reformer.id } },
       },
     }));
 
@@ -102,7 +102,7 @@ async function seedSessionWithBookings(opts: {
       data: {
         clientProfileId: profile.id,
         packageTypeId: pkgType.id,
-        classTypeId: reformer.id,
+        classTypes: { create: { classTypeId: reformer.id } },
         lateCancelHours: 12,
         startsAt: new Date("2026-01-01T00:00:00Z"),
         expiresAt: new Date("2030-01-01T00:00:00Z"),

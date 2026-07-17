@@ -13,15 +13,18 @@ export function FilterChip({
   active,
   onPress,
   trailingIcon,
+  testID,
 }: {
   label: string;
   active: boolean;
   onPress: () => void;
   trailingIcon?: IconName;
+  testID?: string;
 }) {
   const tokens = useThemeTokens();
   return (
     <Pressable
+      testID={testID}
       onPress={onPress}
       accessibilityRole="button"
       accessibilityState={{ selected: active }}

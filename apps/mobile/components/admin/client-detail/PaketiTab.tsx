@@ -15,6 +15,7 @@ import {
   type ClientPackage,
 } from "@/lib/queries/packages-queries-factory";
 import { nowMs } from "@/lib/now";
+import { formatClassTypeList } from "@/lib/format";
 
 export function PaketiTab({
   packagesQuery,
@@ -110,6 +111,16 @@ export function PaketiTab({
                       </Pressable>
                     ) : null}
                   </View>
+                  {(p.classTypes ?? []).length > 0 ? (
+                    <Text
+                      testID={`package-history-row-${p.id}-covered`}
+                      className="text-muted"
+                      style={{ fontSize: 12 }}
+                      numberOfLines={1}
+                    >
+                      {formatClassTypeList((p.classTypes ?? []).map((ct) => ct.name))}
+                    </Text>
+                  ) : null}
                   <Text className="text-muted" style={{ fontSize: 12 }}>
                     {`${dayjs(p.startsAt).locale(lang).format("D.M.YYYY.")} — ${dayjs(p.expiresAt).locale(lang).format("D.M.YYYY.")}`}
                   </Text>

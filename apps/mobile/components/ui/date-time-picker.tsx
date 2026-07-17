@@ -6,6 +6,7 @@ import DateTimePickerModal from "react-native-modal-datetime-picker";
 import { useTranslation } from "react-i18next";
 import { useColorScheme } from "@/components/useColorScheme";
 import { getDateLocale } from "@/lib/i18n";
+import { startOfLocalDay } from "@/lib/dates";
 import { now } from "@/lib/now";
 import { useThemeTokens, ACCENT } from "./tokens";
 import { WebDateTimeSheet } from "./date-time-picker-web";
@@ -53,7 +54,11 @@ export function DateTimePicker({
 
   function handleConfirm(date: Date) {
     setIsVisible(false);
-    onChange(date);
+    // Date mode means the human picked a DAY: strip the incidental wall-clock
+    // time the underlying picker smuggles in, or consumers that treat the
+    // value as a boundary (package startsAt) exclude the earlier part of the
+    // picked day itself.
+    onChange(mode === "date" ? startOfLocalDay(date) : date);
   }
 
   function handleCancel() {

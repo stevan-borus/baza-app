@@ -21,7 +21,7 @@ async function seedReformerWithPackageType(opts?: { lateCancelHours?: number }) 
       sessionCount: 12,
       validityDays: 30,
       lateCancelHours: opts?.lateCancelHours ?? 12,
-      classTypeId: reformer.id,
+      classTypes: { create: { classTypeId: reformer.id } },
     },
   });
   return { reformer, packageType };
@@ -101,10 +101,11 @@ describe("packages/client-packages", () => {
 
     const persisted = await prisma.clientPackage.findFirstOrThrow({
       where: { clientProfileId: client.profile.id },
+      include: { classTypes: true },
     });
     expect(persisted.sessionsRemaining).toBe(12);
     expect(persisted.lateCancelHours).toBe(24);
-    expect(persisted.classTypeId).toBe(reformer.id);
+    expect(persisted.classTypes.map((l) => l.classTypeId)).toEqual([reformer.id]);
     expect(persisted.expiresAt.getTime()).toBe(startsAt.getTime() + 30 * DAY_MS);
   });
 
@@ -158,7 +159,7 @@ describe("packages/client-packages", () => {
       data: {
         clientProfileId: me.profile.id,
         packageTypeId: packageType.id,
-        classTypeId: reformer.id,
+        classTypes: { create: { classTypeId: reformer.id } },
         lateCancelHours: 12,
         startsAt: new Date(nowMs() - 5 * DAY_MS),
         expiresAt: new Date(nowMs() + 25 * DAY_MS),
@@ -169,7 +170,7 @@ describe("packages/client-packages", () => {
       data: {
         clientProfileId: other.profile.id,
         packageTypeId: packageType.id,
-        classTypeId: reformer.id,
+        classTypes: { create: { classTypeId: reformer.id } },
         lateCancelHours: 12,
         startsAt: new Date(nowMs() - 5 * DAY_MS),
         expiresAt: new Date(nowMs() + 25 * DAY_MS),
@@ -212,7 +213,7 @@ describe("packages/client-packages", () => {
       data: {
         clientProfileId: a.profile.id,
         packageTypeId: packageType.id,
-        classTypeId: reformer.id,
+        classTypes: { create: { classTypeId: reformer.id } },
         lateCancelHours: 12,
         startsAt: now(),
         expiresAt: new Date(nowMs() + 30 * DAY_MS),
@@ -223,7 +224,7 @@ describe("packages/client-packages", () => {
       data: {
         clientProfileId: b.profile.id,
         packageTypeId: packageType.id,
-        classTypeId: reformer.id,
+        classTypes: { create: { classTypeId: reformer.id } },
         lateCancelHours: 12,
         startsAt: now(),
         expiresAt: new Date(nowMs() + 30 * DAY_MS),

@@ -35,14 +35,14 @@ async function seedBaseline() {
       sessionCount: 12,
       validityDays: 30,
       lateCancelHours: 12,
-      classTypeId: reformer.id,
+      classTypes: { create: { classTypeId: reformer.id } },
     },
   });
   const clientPackage = await prisma.clientPackage.create({
     data: {
       clientProfileId: clientProfile.id,
       packageTypeId: packageType.id,
-      classTypeId: reformer.id,
+      classTypes: { create: { classTypeId: reformer.id } },
       lateCancelHours: 12,
       startsAt: new Date(nowMs() - 5 * DAY_MS),
       expiresAt: new Date(nowMs() + 30 * DAY_MS),
@@ -239,13 +239,13 @@ describe("POST /api/bookings cancel", () => {
       data: { userId: client2.id, dateOfBirth: new Date("1990-01-01") },
     });
     const packageType2 = await prisma.packageType.findFirstOrThrow({
-      where: { classTypeId: reformer.id },
+      where: { classTypes: { some: { classTypeId: reformer.id } } },
     });
     await prisma.clientPackage.create({
       data: {
         clientProfileId: clientProfile2.id,
         packageTypeId: packageType2.id,
-        classTypeId: reformer.id,
+        classTypes: { create: { classTypeId: reformer.id } },
         lateCancelHours: 12,
         startsAt: new Date(nowMs() - DAY_MS),
         expiresAt: new Date(nowMs() + 30 * DAY_MS),

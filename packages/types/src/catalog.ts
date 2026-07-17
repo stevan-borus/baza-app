@@ -37,7 +37,9 @@ export const packageTypeInputSchema = packageTypeFieldsSchema.pick({
   // Optional list price in RSD — prefills the paid-assign amount, editable
   // per payment. Null/omitted = no price on file.
   price: z.number().int().positive().nullable().optional(),
-  classTypeId: z.uuid(),
+  // The covered ClassType SET (ADR-0010): one entry = classic single-type
+  // SKU, several = a mix package (one shared session pool across them).
+  classTypeIds: z.array(z.uuid()).min(1),
   isBirthdayGift: z.boolean().optional().default(false),
 }).refine(
   (data) => !data.isBirthdayGift || data.sessionCount === 1,
@@ -53,7 +55,7 @@ export const updatePackageTypeInputSchema = z.object({
   validityDays: z.number().int().positive().optional(),
   lateCancelHours: z.number().int().nonnegative().optional(),
   price: z.number().int().positive().nullable().optional(),
-  classTypeId: z.uuid().optional(),
+  classTypeIds: z.array(z.uuid()).min(1).optional(),
   isBirthdayGift: z.boolean().optional(),
 }).refine(
   (data) =>
@@ -100,8 +102,9 @@ export const packageTypeSchema = z.object({
   validityDays: z.number(),
   lateCancelHours: z.number(),
   price: z.number().nullable().optional(),
-  classTypeId: z.string(),
-  classType: embeddedClassTypeSchema.optional(),
+  // Covered ClassType set, id+name per entry so package surfaces can render
+  // the covered types ("Reformer · Energy") without a second lookup.
+  classTypes: z.array(embeddedClassTypeSchema),
   isBirthdayGift: z.boolean().optional(),
 });
 export type PackageType = z.infer<typeof packageTypeSchema>;

@@ -107,11 +107,18 @@ const embeddedBillingRecordSchema = z.object({
   status: z.enum(["CONFIRMED", "PENDING", "VOIDED"]).optional(),
 });
 
+const embeddedClassTypeSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+});
+
 export const clientPackageSchema = z.object({
   id: z.string(),
   clientProfileId: z.string(),
   packageTypeId: z.string(),
-  classTypeId: z.string().optional(),
+  // The snapshotted covered ClassType set (id+name for display). One entry =
+  // classic single-type package, several = mix package.
+  classTypes: z.array(embeddedClassTypeSchema).optional(),
   startsAt: z.string(),
   expiresAt: z.string(),
   sessionsRemaining: z.number(),
@@ -157,7 +164,7 @@ export const createClientPackageResponseSchema = z.object({
     id: z.string(),
     clientProfileId: z.string(),
     packageTypeId: z.string(),
-    classTypeId: z.string(),
+    classTypeIds: z.array(z.string()),
     lateCancelHours: z.number(),
     startsAt: z.string(),
     expiresAt: z.string(),

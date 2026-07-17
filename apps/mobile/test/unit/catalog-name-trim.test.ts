@@ -26,7 +26,7 @@ describe("catalog name fields trim on parse", () => {
       sessionCount: 10,
       validityDays: 30,
       lateCancelHours: 12,
-      classTypeId: "715846df-aa96-46c5-af12-9cff686465f9",
+      classTypeIds: ["715846df-aa96-46c5-af12-9cff686465f9"],
     });
     expect(parsed.name).toBe("Energy");
   });
@@ -70,7 +70,7 @@ describe("catalog name fields trim on parse", () => {
         sessionCount: 10,
         validityDays: 30,
         lateCancelHours: 12,
-        classTypeId: "715846df-aa96-46c5-af12-9cff686465f9",
+        classTypeIds: ["715846df-aa96-46c5-af12-9cff686465f9"],
       }),
     ).toThrow();
   });

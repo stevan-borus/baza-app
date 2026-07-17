@@ -13,6 +13,19 @@ export function formatRsd(n: number): string {
 }
 
 /**
+ * One-line label for a package's covered ClassType set ("Reformer · Energy").
+ * A mix package can cover the whole catalog; past two names the line stops
+ * being readable and starts truncating mid-word, so overflow collapses to a
+ * count ("Reformer · Energy +3"). "+N" needs no translation, so the helper
+ * stays locale-free.
+ */
+export function formatClassTypeList(names: string[]): string {
+  const MAX_NAMES = 2;
+  if (names.length <= MAX_NAMES) return names.join(" · ");
+  return `${names.slice(0, MAX_NAMES).join(" · ")} +${names.length - MAX_NAMES}`;
+}
+
+/**
  * Period-range label shared by the Naplata drill header and every Izveštaji
  * sub-page. `toExclusive` is an exclusive upper bound (the API returns
  * half-open windows), so we display the last INCLUDED instant — `toExclusive`

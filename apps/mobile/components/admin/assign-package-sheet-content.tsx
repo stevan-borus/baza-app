@@ -13,15 +13,17 @@
 // close, so all local form state is reset between opens "for free".
 
 import React, { useState } from "react";
-import { Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
+import { Icon } from "@/components/ui/icon";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { ErrorState } from "@/components/ui/states";
 import { SectionLabel } from "@/components/ui/typography";
 import { DateTimePicker } from "@/components/ui/date-time-picker";
+import { useThemeTokens } from "@/components/ui/tokens";
 import {
   packagesQueries,
   useAssignClientPackageMutation,
@@ -29,6 +31,7 @@ import {
 import { useCreateBillingMutation } from "@/lib/queries/billing-queries-factory";
 import { RAW_METHOD_LABEL_KEYS } from "@/lib/payment-method-labels";
 import { assignedSamePackageToday } from "@/lib/same-day-package-assignment";
+import { formatClassTypeList } from "@/lib/format";
 
 export type AssignPackageMode = "comp" | "paid";
 
@@ -67,6 +70,7 @@ export function AssignPackageSheetContent({
   initialPackageTypeId,
 }: AssignPackageSheetContentProps) {
   const { t } = useTranslation();
+  const tokens = useThemeTokens();
 
   // Shared fields.
   const [packageTypeId, setPackageTypeId] = useState(initialPackageTypeId ?? "");
@@ -144,7 +148,9 @@ export function AssignPackageSheetContent({
     }
     // Paid path: the server transaction creates both rows or neither. With
     // pay-later the record lands as PENDING but the package activates
-    // immediately — that's the whole point of the workflow.
+    // immediately — that's the whole point of the workflow. `startsAt` is the
+    // picked day (start-of-day) — without it the server stamps the payment
+    // instant and the picked date is silently ignored.
     paidMutation.mutate(
       {
         clientUserId: client.user.id,
@@ -153,6 +159,7 @@ export function AssignPackageSheetContent({
         method,
         status: payLater ? "PENDING" : "CONFIRMED",
         activatePackageOnConfirm: true,
+        startsAt: startsAtIso,
       },
       { onSuccess },
     );
@@ -180,24 +187,68 @@ export function AssignPackageSheetContent({
         {`${client.user.fullName} · ${client.user.email}`}
       </Text>
 
-      {packageTypes.map((pt) => (
-        <Button
-          key={pt.id}
-          testID={`assign-package-option-${pt.id}`}
-          size="small"
-          variant={packageTypeId === pt.id ? "primary" : "secondary"}
-          onPress={() => {
-            setPackageTypeId(pt.id);
-            // Prefill from the catalog price (still editable). Never
-            // clobber an amount the admin already typed by hand.
-            if (mode === "paid" && pt.price != null && !amountTouched) {
-              setAmount(String(pt.price));
-            }
-          }}
-        >
-          {t("admin.clients.sessionsCount", { name: pt.name, count: pt.sessionCount })}
-        </Button>
-      ))}
+      {/* Option list, not a button stack: mix packages need a second line for
+          the covered set, which a single-line Button label can't hold without
+          truncating. Same anatomy as Select options — label + muted hint,
+          accent check on the selected row. */}
+      <View className="bg-glass border border-glass-border rounded-lg overflow-hidden">
+        {packageTypes.map((pt, idx) => {
+          const selected = packageTypeId === pt.id;
+          return (
+            <Pressable
+              key={pt.id}
+              testID={`assign-package-option-${pt.id}`}
+              accessibilityRole="button"
+              accessibilityState={{ selected }}
+              android_ripple={null}
+              onPress={() => {
+                setPackageTypeId(pt.id);
+                // Prefill from the catalog price (still editable). Never
+                // clobber an amount the admin already typed by hand.
+                if (mode === "paid" && pt.price != null && !amountTouched) {
+                  setAmount(String(pt.price));
+                }
+              }}
+              className="active:opacity-70"
+            >
+              <View
+                className={`flex-row items-center gap-3 px-3.5 py-3 ${
+                  idx > 0 ? "border-t border-glass-border" : ""
+                } ${selected ? "bg-accent-soft" : ""}`}
+              >
+                <View className="flex-1 gap-0.5">
+                  <Text
+                    className={`text-foreground ${
+                      selected ? "font-body-semibold" : ""
+                    }`}
+                    style={{ fontSize: 14 }}
+                    numberOfLines={1}
+                  >
+                    {pt.name}
+                  </Text>
+                  {/* Covered set only for mix packs — on single-type SKUs it
+                      just repeats the name ("Reformer 8-pack" / "Reformer"). */}
+                  {pt.classTypes.length > 1 ? (
+                    <Text
+                      className="text-muted"
+                      style={{ fontSize: 12 }}
+                      numberOfLines={1}
+                    >
+                      {formatClassTypeList(pt.classTypes.map((ct) => ct.name))}
+                    </Text>
+                  ) : null}
+                </View>
+                <Text className="text-muted" style={{ fontSize: 12 }}>
+                  {t("admin.clients.sessionsShort", { count: pt.sessionCount })}
+                </Text>
+                {selected ? (
+                  <Icon name="check" size={13} color={tokens.accent} />
+                ) : null}
+              </View>
+            </Pressable>
+          );
+        })}
+      </View>
 
       <DateTimePicker
         testID="assign-package-start-picker"

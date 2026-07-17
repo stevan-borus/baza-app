@@ -45,7 +45,11 @@ function buildClientWhere(spec: CampaignAudienceSpec): Prisma.UserWhereInput {
 
   if (spec.classTypeId)
     profileConditions.push({
-      packages: { some: { classTypeId: spec.classTypeId } },
+      // Set membership: a mix-package owner belongs to EVERY covered
+      // ClassType's audience, not just an exact-scope match.
+      packages: {
+        some: { classTypes: { some: { classTypeId: spec.classTypeId } } },
+      },
     });
 
   if (spec.expiringSoonDays !== undefined) {

@@ -303,13 +303,13 @@ describe("booking-change emails — integration points", () => {
       data: { sessionId: session.id, clientProfileId: aProfile.id, createdByUserId: admin.id },
     });
     const packageType = await prisma.packageType.create({
-      data: { name: "Reformer 12", sessionCount: 12, validityDays: 30, lateCancelHours: 8, classTypeId: reformer.id },
+      data: { name: "Reformer 12", sessionCount: 12, validityDays: 30, lateCancelHours: 8, classTypes: { create: { classTypeId: reformer.id } } },
     });
     await prisma.clientPackage.create({
       data: {
         clientProfileId: bProfile.id,
         packageTypeId: packageType.id,
-        classTypeId: reformer.id,
+        classTypes: { create: { classTypeId: reformer.id } },
         lateCancelHours: 8,
         startsAt: new Date(nowMs() - 24 * 60 * 60 * 1000),
         expiresAt: new Date(nowMs() + 30 * 24 * 60 * 60 * 1000),

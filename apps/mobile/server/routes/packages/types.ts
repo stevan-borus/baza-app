@@ -6,6 +6,10 @@ import {
 import { UserRole } from "@/generated/prisma";
 import { requireRole } from "@/lib/server/auth-guards";
 import { respond, fail, parseBody } from "@/lib/server/http";
+import {
+  PACKAGE_TYPE_CLASS_TYPES_SELECT,
+  shapePackageTypeClassTypes,
+} from "@/lib/server/package-type-shape";
 import { prisma } from "@/lib/server/prisma";
 
 export async function GET(request: Request) {
@@ -22,31 +26,36 @@ export async function GET(request: Request) {
       lateCancelHours: true,
       price: true,
       isBirthdayGift: true,
-      classTypeId: true,
-      classType: { select: { id: true, name: true } },
+      ...PACKAGE_TYPE_CLASS_TYPES_SELECT,
       createdAt: true,
       updatedAt: true,
     },
   });
 
-  return respond(packageTypesResponseSchema, { success: true, packageTypes });
+  return respond(packageTypesResponseSchema, {
+    success: true,
+    packageTypes: packageTypes.map(shapePackageTypeClassTypes),
+  });
 }
 
 export async function POST(request: Request) {
   const guard = await requireRole(request, [UserRole.ADMIN]);
   if (!guard.ok) return guard.response;
-  // Package types define session count, validity, and late-cancel policy.
+  // Package types define session count, validity, late-cancel policy, and the
+  // covered ClassType set (a mix package when it has more than one).
 
   const parsed = await parseBody(request, packageTypeInputSchema);
   if (!parsed.ok) return parsed.response;
 
-  // classTypeId is required — confirm the referenced ClassType exists so we
-  // surface a 404 instead of a Prisma FK error.
-  const classType = await prisma.classType.findUnique({
-    where: { id: parsed.data.classTypeId },
-    select: { id: true },
+  // Every referenced ClassType must exist so we surface a 404 instead of a
+  // Prisma FK error.
+  const classTypeIds = Array.from(new Set(parsed.data.classTypeIds));
+  const classTypeCount = await prisma.classType.count({
+    where: { id: { in: classTypeIds } },
   });
-  if (!classType) return fail("Class type not found", 404);
+  if (classTypeCount !== classTypeIds.length) {
+    return fail("Class type not found", 404);
+  }
 
   const packageType = await prisma.packageType.create({
     data: {
@@ -55,8 +64,10 @@ export async function POST(request: Request) {
       validityDays: parsed.data.validityDays,
       lateCancelHours: parsed.data.lateCancelHours,
       price: parsed.data.price ?? null,
-      classTypeId: parsed.data.classTypeId,
       isBirthdayGift: parsed.data.isBirthdayGift ?? false,
+      classTypes: {
+        create: classTypeIds.map((classTypeId) => ({ classTypeId })),
+      },
     },
     select: {
       id: true,
@@ -65,16 +76,15 @@ export async function POST(request: Request) {
       validityDays: true,
       lateCancelHours: true,
       price: true,
-      classTypeId: true,
       isBirthdayGift: true,
-      classType: { select: { id: true, name: true } },
+      ...PACKAGE_TYPE_CLASS_TYPES_SELECT,
       createdAt: true,
     },
   });
 
   return respond(
     packageTypeMutationResponseSchema,
-    { success: true, packageType },
+    { success: true, packageType: shapePackageTypeClassTypes(packageType) },
     201,
   );
 }

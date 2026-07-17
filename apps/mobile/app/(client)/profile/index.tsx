@@ -45,6 +45,7 @@ import {
   packageUsedFraction,
 } from "@/lib/package-fully-booked";
 import { ProfilePersonalDataSections } from "@/components/profile/profile-personal-data-sections";
+import { formatClassTypeList } from "@/lib/format";
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -288,6 +289,21 @@ export default function ClientProfile() {
                       >
                         {pkg.packageType?.name ?? t("client.package.packageName")}
                       </Text>
+                      {/* Covered set ("Reformer · Energy") — snapshotted on the
+                          package, so it stays truthful even if the SKU is later
+                          edited. Only meaningful once mix packages exist, but
+                          harmless (single name) on classic ones. */}
+                      {(pkg.classTypes ?? []).length > 0 ? (
+                        <Text
+                          testID={`profile-package-covered-${pkg.id}`}
+                          className="text-muted text-[12px]"
+                          numberOfLines={1}
+                        >
+                          {formatClassTypeList(
+                            (pkg.classTypes ?? []).map((ct) => ct.name),
+                          )}
+                        </Text>
+                      ) : null}
                     </View>
                     <View className="flex-row items-baseline">
                       <Text

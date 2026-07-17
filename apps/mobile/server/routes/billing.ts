@@ -154,7 +154,7 @@ export async function POST(request: Request) {
     id: string;
     sessionCount: number;
     validityDays: number;
-    classTypeId: string;
+    classTypeIds: string[];
     lateCancelHours: number;
   } | null = null;
   if (shouldActivatePackage) {
@@ -169,18 +169,26 @@ export async function POST(request: Request) {
           id: true,
           sessionCount: true,
           validityDays: true,
-          classTypeId: true,
           lateCancelHours: true,
+          classTypes: { select: { classTypeId: true } },
         },
       }),
     ]);
     if (!clientProfile) return fail("Client profile not found", 404);
     if (!packageType) return fail("Package type not found", 404);
     clientProfileId = clientProfile.id;
-    packageTypeRow = packageType;
+    const { classTypes, ...packageTypeScalars } = packageType;
+    packageTypeRow = {
+      ...packageTypeScalars,
+      classTypeIds: classTypes.map((link) => link.classTypeId),
+    };
   }
 
-  const startsAt = now();
+  // Validity start for the activated package: the admin's picked day when
+  // provided (assign sheet + Naplata send local start-of-day), else the
+  // payment instant.
+  const startsAt = parsed.data.startsAt ? new Date(parsed.data.startsAt) : now();
+  if (Number.isNaN(startsAt.getTime())) return fail("Invalid startsAt date", 400);
 
   const result = await prisma.$transaction(async (tx) => {
     const payment = await tx.billingRecord.create({

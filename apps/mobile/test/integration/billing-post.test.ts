@@ -26,7 +26,7 @@ async function seedClientAndPackageType() {
       sessionCount: 12,
       validityDays: 30,
       lateCancelHours: 24,
-      classTypeId: classType.id,
+      classTypes: { create: { classTypeId: classType.id } },
     },
   });
   return { adminUser, clientUser, clientProfile, classType, packageType };
@@ -74,13 +74,14 @@ describe("POST /api/billing", () => {
     const json = await res.json();
     expect(json.success).toBe(true);
     expect(json.payment.status).toBe("CONFIRMED");
-    expect(json.clientPackage.classTypeId).toBe(classType.id);
+    expect(json.clientPackage.classTypeIds).toEqual([classType.id]);
 
     const records = await prisma.billingRecord.findMany();
     expect(records).toHaveLength(1);
     const packs = await prisma.clientPackage.findMany();
     expect(packs).toHaveLength(1);
-    expect(packs[0].classTypeId).toBe(classType.id);
+    const packLinks = await prisma.clientPackageClassType.findMany();
+    expect(packLinks.map((l) => l.classTypeId)).toEqual([classType.id]);
     expect(packs[0].lateCancelHours).toBe(24);
     expect(packs[0].sessionsRemaining).toBe(12);
   });

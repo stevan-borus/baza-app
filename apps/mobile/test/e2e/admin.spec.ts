@@ -182,7 +182,7 @@ test.describe("admin (Serbian)", () => {
       .toBe(0);
   });
 
-  test("15: admin creates a PackageType (with required ClassType picker)", async ({
+  test("15: admin creates a mix PackageType (multi-select ClassType chips)", async ({
     page,
   }) => {
     await signInAs(page, "admin");
@@ -194,14 +194,10 @@ test.describe("admin (Serbian)", () => {
 
     const name = `E2E Package ${Date.now()}`;
     await page.getByTestId("package-name-input").fill(name);
-    await page
-      .getByTestId("package-class-type-select")
-      .dispatchEvent("click");
-    // Pick the first available class-type option.
-    await page
-      .locator('[data-testid^="package-class-type-option-"]')
-      .first()
-      .dispatchEvent("click");
+    // Toggle the first TWO class-type chips — a mix package (ADR-0010).
+    const chips = page.locator('[data-testid^="package-class-type-chip-"]');
+    await chips.nth(0).dispatchEvent("click");
+    await chips.nth(1).dispatchEvent("click");
     await page.getByTestId("package-session-count-input").fill("8");
     await page.getByTestId("package-validity-days-input").fill("30");
     await page.getByTestId("package-late-cancel-input").fill("12");
@@ -241,10 +237,7 @@ test.describe("admin (Serbian)", () => {
       .dispatchEvent("click");
     await page.getByTestId("package-name-input").fill(name);
     await page
-      .getByTestId("package-class-type-select")
-      .dispatchEvent("click");
-    await page
-      .locator('[data-testid^="package-class-type-option-"]')
+      .locator('[data-testid^="package-class-type-chip-"]')
       .first()
       .dispatchEvent("click");
     await page.getByTestId("package-session-count-input").fill("4");

@@ -66,17 +66,91 @@ describe("packages/types CRUD", () => {
         sessionCount: 12,
         validityDays: 30,
         lateCancelHours: 12,
-        classTypeId: reformer.id,
+        classTypeIds: [reformer.id],
       }),
     );
     expect(response.status).toBe(201);
-    const body = (await response.json()) as { packageType: { id: string; classTypeId: string } };
-    expect(body.packageType.classTypeId).toBe(reformer.id);
+    const body = (await response.json()) as {
+      packageType: { id: string; classTypes: { id: string; name: string }[] };
+    };
+    expect(body.packageType.classTypes).toEqual([
+      { id: reformer.id, name: "Reformer pilates" },
+    ]);
 
     const persisted = await prisma.packageType.findUnique({
       where: { id: body.packageType.id },
     });
     expect(persisted?.name).toBe("Reformer 12-pack");
+  });
+
+  it("POST with multiple classTypeIds creates a mix package — join rows persisted, classTypes in response", async () => {
+    const { admin, reformer } = await seedAdminAndClassType();
+    const energy = await prisma.classType.create({
+      data: { name: "Energy", maxClients: 8, durationMins: 45 },
+    });
+    asAdmin(admin);
+
+    const response = await POST(
+      jsonRequest({
+        name: "Mix 12-pack",
+        sessionCount: 12,
+        validityDays: 30,
+        lateCancelHours: 12,
+        classTypeIds: [reformer.id, energy.id],
+      }),
+    );
+    expect(response.status).toBe(201);
+    const body = (await response.json()) as {
+      packageType: { id: string; classTypes: { id: string; name: string }[] };
+    };
+    expect(body.packageType.classTypes.map((ct) => ct.id).sort()).toEqual(
+      [reformer.id, energy.id].sort(),
+    );
+
+    const joinRows = await prisma.packageTypeClassType.findMany({
+      where: { packageTypeId: body.packageType.id },
+    });
+    expect(joinRows.map((r) => r.classTypeId).sort()).toEqual(
+      [reformer.id, energy.id].sort(),
+    );
+  });
+
+  it("PATCH replaces the covered set — narrowing a mix pack back to one type", async () => {
+    const { admin, reformer } = await seedAdminAndClassType();
+    const energy = await prisma.classType.create({
+      data: { name: "Energy", maxClients: 8, durationMins: 45 },
+    });
+    asAdmin(admin);
+    const created = await prisma.packageType.create({
+      data: {
+        name: "Mix 12-pack",
+        sessionCount: 12,
+        validityDays: 30,
+        lateCancelHours: 12,
+        classTypes: {
+          create: [{ classTypeId: reformer.id }, { classTypeId: energy.id }],
+        },
+      },
+    });
+
+    const response = await PATCH(
+      new Request(`http://test.local/api/packages/types/${created.id}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ classTypeIds: [energy.id] }),
+      }),
+      { id: created.id },
+    );
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as {
+      packageType: { classTypes: { id: string; name: string }[] };
+    };
+    expect(body.packageType.classTypes).toEqual([{ id: energy.id, name: "Energy" }]);
+
+    const joinRows = await prisma.packageTypeClassType.findMany({
+      where: { packageTypeId: created.id },
+    });
+    expect(joinRows.map((r) => r.classTypeId)).toEqual([energy.id]);
   });
 
   it("POST trims a padded name before persisting (the 'Energy ' incident)", async () => {
@@ -93,7 +167,7 @@ describe("packages/types CRUD", () => {
         sessionCount: 10,
         validityDays: 30,
         lateCancelHours: 12,
-        classTypeId: reformer.id,
+        classTypeIds: [reformer.id],
       }),
     );
     expect(response.status).toBe(201);
@@ -116,7 +190,7 @@ describe("packages/types CRUD", () => {
         sessionCount: 1,
         validityDays: 30,
         lateCancelHours: 12,
-        classTypeId: reformer.id,
+        classTypeIds: [reformer.id],
         isBirthdayGift: true,
       }),
     );
@@ -132,7 +206,7 @@ describe("packages/types CRUD", () => {
     expect(persisted?.isBirthdayGift).toBe(true);
   });
 
-  it("POST returns 404 when classTypeId references a non-existent ClassType", async () => {
+  it("POST returns 404 when classTypeIds references a non-existent ClassType", async () => {
     const { admin } = await seedAdminAndClassType();
     asAdmin(admin);
 
@@ -142,7 +216,7 @@ describe("packages/types CRUD", () => {
         sessionCount: 8,
         validityDays: 30,
         lateCancelHours: 12,
-        classTypeId: "00000000-0000-0000-0000-000000000000",
+        classTypeIds: ["00000000-0000-0000-0000-000000000000"],
       }),
     );
     expect(response.status).toBe(404);
@@ -159,7 +233,7 @@ describe("packages/types CRUD", () => {
         sessionCount: 8,
         validityDays: 30,
         lateCancelHours: 12,
-        classTypeId: reformer.id,
+        classTypeIds: [reformer.id],
       }),
     );
     expect(response.status).toBe(403);
@@ -175,7 +249,7 @@ describe("packages/types CRUD", () => {
         sessionCount: 8,
         validityDays: 30,
         lateCancelHours: 12,
-        classTypeId: reformer.id,
+        classTypes: { create: { classTypeId: reformer.id } },
       },
     });
 
@@ -222,7 +296,7 @@ describe("packages/types CRUD", () => {
         sessionCount: 8,
         validityDays: 30,
         lateCancelHours: 12,
-        classTypeId: reformer.id,
+        classTypes: { create: { classTypeId: reformer.id } },
       },
     });
     const response = await DELETE(
@@ -244,7 +318,7 @@ describe("packages/types CRUD", () => {
         sessionCount: 12,
         validityDays: 30,
         lateCancelHours: 12,
-        classTypeId: reformer.id,
+        classTypes: { create: { classTypeId: reformer.id } },
       },
     });
     const client = await prisma.user.create({
@@ -257,7 +331,7 @@ describe("packages/types CRUD", () => {
       data: {
         clientProfileId: profile.id,
         packageTypeId: packageType.id,
-        classTypeId: reformer.id,
+        classTypes: { create: { classTypeId: reformer.id } },
         lateCancelHours: 12,
         startsAt: now(),
         expiresAt: new Date(nowMs() + 30 * 24 * 60 * 60 * 1000),

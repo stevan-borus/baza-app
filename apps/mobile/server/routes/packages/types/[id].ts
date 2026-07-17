@@ -6,6 +6,10 @@ import { successResponseSchema } from "@baza/types/common";
 import { UserRole } from "@/generated/prisma";
 import { requireRole } from "@/lib/server/auth-guards";
 import { respond, fail, parseBody } from "@/lib/server/http";
+import {
+  PACKAGE_TYPE_CLASS_TYPES_SELECT,
+  shapePackageTypeClassTypes,
+} from "@/lib/server/package-type-shape";
 import { prisma } from "@/lib/server/prisma";
 
 type RouteParams = Record<string, string>;
@@ -20,17 +24,34 @@ export async function PATCH(request: Request, { id }: RouteParams) {
   const existing = await prisma.packageType.findUnique({ where: { id } });
   if (!existing) return fail("Package type not found", 404);
 
-  if (parsed.data.classTypeId) {
-    const classType = await prisma.classType.findUnique({
-      where: { id: parsed.data.classTypeId },
-      select: { id: true },
+  const classTypeIds = parsed.data.classTypeIds
+    ? Array.from(new Set(parsed.data.classTypeIds))
+    : undefined;
+  if (classTypeIds) {
+    const classTypeCount = await prisma.classType.count({
+      where: { id: { in: classTypeIds } },
     });
-    if (!classType) return fail("Class type not found", 404);
+    if (classTypeCount !== classTypeIds.length) {
+      return fail("Class type not found", 404);
+    }
   }
 
+  const { classTypeIds: _ignored, ...scalarData } = parsed.data;
+  // Replacing the covered set only affects FUTURE activations — existing
+  // ClientPackages snapshotted their own set and keep it.
   const packageType = await prisma.packageType.update({
     where: { id },
-    data: parsed.data,
+    data: {
+      ...scalarData,
+      ...(classTypeIds
+        ? {
+            classTypes: {
+              deleteMany: {},
+              create: classTypeIds.map((classTypeId) => ({ classTypeId })),
+            },
+          }
+        : {}),
+    },
     select: {
       id: true,
       name: true,
@@ -38,8 +59,7 @@ export async function PATCH(request: Request, { id }: RouteParams) {
       validityDays: true,
       lateCancelHours: true,
       price: true,
-      classTypeId: true,
-      classType: { select: { id: true, name: true } },
+      ...PACKAGE_TYPE_CLASS_TYPES_SELECT,
       isBirthdayGift: true,
       updatedAt: true,
     },
@@ -47,7 +67,7 @@ export async function PATCH(request: Request, { id }: RouteParams) {
 
   return respond(packageTypeMutationResponseSchema, {
     success: true,
-    packageType,
+    packageType: shapePackageTypeClassTypes(packageType),
   });
 }
 

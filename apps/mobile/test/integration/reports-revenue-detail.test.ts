@@ -177,7 +177,7 @@ describe("reports/revenue/by-package-type", () => {
         sessionCount: 12,
         validityDays: 30,
         lateCancelHours: 12,
-        classTypeId: reformer.id,
+        classTypes: { create: { classTypeId: reformer.id } },
       },
     });
     const pt8 = await prisma.packageType.create({
@@ -186,7 +186,7 @@ describe("reports/revenue/by-package-type", () => {
         sessionCount: 8,
         validityDays: 30,
         lateCancelHours: 12,
-        classTypeId: reformer.id,
+        classTypes: { create: { classTypeId: reformer.id } },
       },
     });
     const at = new Date("2026-07-15T10:00:00Z");

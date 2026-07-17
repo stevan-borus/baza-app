@@ -38,7 +38,7 @@ async function fixtures() {
       sessionCount: 12,
       validityDays: 365,
       lateCancelHours: 8,
-      classTypeId: reformer.id,
+      classTypes: { create: { classTypeId: reformer.id } },
     },
   });
   const client = await prisma.user.create({
@@ -51,7 +51,7 @@ async function fixtures() {
     data: {
       clientProfileId: clientProfile.id,
       packageTypeId: packageType.id,
-      classTypeId: reformer.id,
+      classTypes: { create: { classTypeId: reformer.id } },
       lateCancelHours: 8,
       startsAt: new Date(now().getTime() - 30 * DAY_MS),
       expiresAt: new Date(now().getTime() + 90 * DAY_MS),
@@ -268,7 +268,7 @@ describe("GET /api/sessions/[id] — showFirstPilatesHint cutoff", () => {
         sessionCount: 12,
         validityDays: 365,
         lateCancelHours: 8,
-        classTypeId: reformer.id,
+        classTypes: { create: { classTypeId: reformer.id } },
       },
     });
     const client = await prisma.user.create({
@@ -281,7 +281,7 @@ describe("GET /api/sessions/[id] — showFirstPilatesHint cutoff", () => {
       data: {
         clientProfileId: clientProfile.id,
         packageTypeId: packageType.id,
-        classTypeId: reformer.id,
+        classTypes: { create: { classTypeId: reformer.id } },
         lateCancelHours: 8,
         startsAt: new Date(now().getTime() - DAY_MS),
         expiresAt: new Date(now().getTime() + 90 * DAY_MS),

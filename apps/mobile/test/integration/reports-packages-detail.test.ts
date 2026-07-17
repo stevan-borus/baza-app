@@ -71,7 +71,7 @@ async function ensureFixtures() {
         sessionCount: 12,
         validityDays: 365,
         lateCancelHours: 12,
-        classTypeId: classType.id,
+        classTypes: { create: { classTypeId: classType.id } },
       },
     }));
   return { classType, reformer12 };
@@ -104,7 +104,7 @@ async function makePackage(opts: {
     data: {
       clientProfileId: opts.clientProfileId,
       packageTypeId: opts.packageTypeId,
-      classTypeId: opts.classTypeId,
+      classTypes: { create: { classTypeId: opts.classTypeId } },
       lateCancelHours: 12,
       startsAt: opts.startsAt,
       expiresAt: opts.expiresAt,
@@ -232,7 +232,7 @@ describe("reports/packages/detail", () => {
         sessionCount: 12,
         validityDays: 365,
         lateCancelHours: 12,
-        classTypeId: classType.id,
+        classTypes: { create: { classTypeId: classType.id } },
       },
     });
     const r8 = await prisma.packageType.create({
@@ -241,7 +241,7 @@ describe("reports/packages/detail", () => {
         sessionCount: 8,
         validityDays: 365,
         lateCancelHours: 12,
-        classTypeId: classType.id,
+        classTypes: { create: { classTypeId: classType.id } },
       },
     });
     const r4 = await prisma.packageType.create({
@@ -250,7 +250,7 @@ describe("reports/packages/detail", () => {
         sessionCount: 4,
         validityDays: 365,
         lateCancelHours: 12,
-        classTypeId: classType.id,
+        classTypes: { create: { classTypeId: classType.id } },
       },
     });
     // 1× R12, 3× R8, 2× R4 — expected sort: R8 (3), R4 (2), R12 (1).

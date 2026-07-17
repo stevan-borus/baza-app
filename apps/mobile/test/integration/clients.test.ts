@@ -39,7 +39,7 @@ async function makeReformerPackageType() {
       sessionCount: 12,
       validityDays: 30,
       lateCancelHours: 12,
-      classTypeId: reformer.id,
+      classTypes: { create: { classTypeId: reformer.id } },
     },
   });
   return { reformer, packageType };
@@ -94,7 +94,7 @@ describe("clients API", () => {
       data: {
         clientProfileId: active.profile.id,
         packageTypeId: packageType.id,
-        classTypeId: reformer.id,
+        classTypes: { create: { classTypeId: reformer.id } },
         lateCancelHours: 12,
         startsAt: new Date(nowMs() - 5 * DAY_MS),
         expiresAt: new Date(nowMs() + 25 * DAY_MS),
@@ -105,7 +105,7 @@ describe("clients API", () => {
       data: {
         clientProfileId: expired.profile.id,
         packageTypeId: packageType.id,
-        classTypeId: reformer.id,
+        classTypes: { create: { classTypeId: reformer.id } },
         lateCancelHours: 12,
         startsAt: new Date(nowMs() - 60 * DAY_MS),
         expiresAt: new Date(nowMs() - 7 * DAY_MS),
