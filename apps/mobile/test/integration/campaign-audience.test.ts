@@ -241,6 +241,51 @@ describe("resolveCampaignAudience", () => {
     ]);
   });
 
+  it("classType matches a mix-package holder through set membership — either covered type selects them", async () => {
+    const m = await seedMatrix();
+    const current = now().getTime();
+    const mixPt = await prisma.packageType.create({
+      data: {
+        name: "Mix 12-pack",
+        sessionCount: 12,
+        validityDays: 30,
+        classTypes: {
+          create: [{ classTypeId: m.reformer.id }, { classTypeId: m.energy.id }],
+        },
+      },
+    });
+    const mixUser = await prisma.user.create({
+      data: { email: "mix@e2e.test", firstName: "M", lastName: "Mix", role: "CLIENT" },
+    });
+    const mixProfile = await prisma.clientProfile.create({
+      data: { userId: mixUser.id },
+    });
+    await prisma.clientPackage.create({
+      data: {
+        clientProfileId: mixProfile.id,
+        packageTypeId: mixPt.id,
+        classTypes: {
+          create: [{ classTypeId: m.reformer.id }, { classTypeId: m.energy.id }],
+        },
+        lateCancelHours: 8,
+        startsAt: new Date(current - 2 * DAY),
+        expiresAt: new Date(current + 28 * DAY),
+        sessionsRemaining: 12,
+      },
+    });
+
+    // One package, TWO doors in: the mix client is part of the reformer
+    // audience AND the energy audience.
+    const reformerAudience = await resolveCampaignAudience({
+      classTypeId: m.reformer.id,
+    });
+    expect(reformerAudience).toContain(mixUser.id);
+
+    expect((await resolveCampaignAudience({ classTypeId: m.energy.id })).sort()).toEqual(
+      [m.activeEnergy.userId, mixUser.id].sort(),
+    );
+  });
+
   it("expiringSoon=10 selects active packages expiring within 10 days", async () => {
     const m = await seedMatrix();
     const soonUser = await prisma.user.create({

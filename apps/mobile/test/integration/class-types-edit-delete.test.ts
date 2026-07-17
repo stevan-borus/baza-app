@@ -125,4 +125,59 @@ describe("class-types PATCH + DELETE", () => {
     expect(response.status).toBe(409);
     expect(await prisma.classType.findUnique({ where: { id: ct.id } })).not.toBeNull();
   });
+
+  it("DELETE returns 409 when only a ClientPackage SNAPSHOT references the class type", async () => {
+    // A sold package snapshots its covered set; the SKU can later be narrowed
+    // away from a type while sold packages still cover it. Deleting the type
+    // must stay blocked as long as any snapshot references it — otherwise a
+    // client would lose a covered type they paid for.
+    const snapshotOnly = await prisma.classType.create({
+      data: { name: "SnapshotOnly", maxClients: 6, durationMins: 60 },
+    });
+    const other = await prisma.classType.create({
+      data: { name: "Other", maxClients: 6, durationMins: 60 },
+    });
+    // The SKU now covers only `other` — no PackageTypeClassType row for
+    // `snapshotOnly`, and no Session either.
+    const packageType = await prisma.packageType.create({
+      data: {
+        name: "Narrowed mix",
+        sessionCount: 12,
+        validityDays: 30,
+        lateCancelHours: 12,
+        classTypes: { create: { classTypeId: other.id } },
+      },
+    });
+    const client = await prisma.user.create({
+      data: { email: "c@test.local", firstName: "C", lastName: "Test", role: "CLIENT" },
+    });
+    const profile = await prisma.clientProfile.create({
+      data: { userId: client.id },
+    });
+    await prisma.clientPackage.create({
+      data: {
+        clientProfileId: profile.id,
+        packageTypeId: packageType.id,
+        classTypes: {
+          create: [{ classTypeId: snapshotOnly.id }, { classTypeId: other.id }],
+        },
+        lateCancelHours: 12,
+        startsAt: new Date("2026-07-01T00:00:00Z"),
+        expiresAt: new Date("2026-08-01T00:00:00Z"),
+        sessionsRemaining: 12,
+      },
+    });
+
+    asAdmin();
+    const response = await DELETE(
+      new Request(`http://test.local/api/trainings/class-types/${snapshotOnly.id}`, {
+        method: "DELETE",
+      }),
+      { id: snapshotOnly.id },
+    );
+    expect(response.status).toBe(409);
+    expect(
+      await prisma.classType.findUnique({ where: { id: snapshotOnly.id } }),
+    ).not.toBeNull();
+  });
 });
