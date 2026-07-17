@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const bookingActionSchema = z.enum(["BOOK", "CANCEL"]);
+export const bookingActionSchema = z.enum(["BOOK", "CANCEL", "LEAVE_WAITLIST"]);
 
 export const bookingMutationInputSchema = z.object({
   sessionId: z.uuid(),
@@ -15,6 +15,7 @@ export const bookingMutationResultSchema = z.object({
     "WAITLISTED",
     "WAITLIST_PROMOTED",
     "CANCELED",
+    "LEFT_WAITLIST",
   ]),
 });
 

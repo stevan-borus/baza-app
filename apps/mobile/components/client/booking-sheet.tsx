@@ -21,16 +21,23 @@ import { Button } from "@/components/ui/button";
 import { useThemeTokens, type ThemeTokens } from "@/components/ui/tokens";
 import type { AvailabilitySession } from "@baza/types/scheduling";
 
-type BookingStep = "idle" | "confirmBook" | "confirmCancel" | "success" | "error";
+type BookingStep =
+  | "idle"
+  | "confirmBook"
+  | "confirmCancel"
+  | "confirmLeaveWaitlist"
+  | "success"
+  | "error";
 
 type Props = {
   session: AvailabilitySession | null;
   onClose: () => void;
   onBook: (id: string) => void;
   onCancel: (id: string) => void;
+  onLeaveWaitlist: (id: string) => void;
   pending: boolean;
   /** Set after a successful mutation so the sheet replaces its buttons with a confirmation block. */
-  successState: "BOOKED" | "WAITLISTED" | "CANCELED" | null;
+  successState: "BOOKED" | "WAITLISTED" | "CANCELED" | "LEFT_WAITLIST" | null;
   /** Server error code (e.g. GUARDIAN_VERIFICATION_REQUIRED) when the mutation fails. */
   errorCode: string | null;
   /** Step to open on for a freshly-opened session. "confirmCancel" lets the
@@ -43,6 +50,7 @@ export function BookingSheet({
   onClose,
   onBook,
   onCancel,
+  onLeaveWaitlist,
   pending,
   successState,
   errorCode,
@@ -88,6 +96,9 @@ export function BookingSheet({
   // count never surfaces on a class that still has open spots.
   const hasWaitlist = isFull && !!session && session.waitlistCount > 0;
   const isBookedByMe = !!session?.isBookedByMe;
+  // On the waitlist for this (full) class — the sheet shows a "leave waitlist"
+  // state instead of the "join waitlist" button.
+  const isWaitlistedByMe = !!session?.isWaitlistedByMe;
   // A session that has already started/passed can't be booked. The server
   // rejects it too (SESSION_IN_PAST) — this just hides the CTA up front.
   const isPast =
@@ -242,6 +253,32 @@ export function BookingSheet({
                     {t("client.dayView.sessionPast")}
                   </Text>
                 </View>
+              ) : isWaitlistedByMe ? (
+                // Already on the waitlist for this full class — offer to leave
+                // (which frees the reserved session), not to join again.
+                // Deliberately checked BEFORE renewalLocked: the client's own
+                // waitlist entry can BE the held session that makes this
+                // session FULLY_HELD, so a lock check first would trap the very
+                // person who needs to leave behind a "renew" message.
+                <View className="flex-col gap-3">
+                  <View className="flex-row items-center justify-center gap-2">
+                    <Icon name="clock-o" size={16} color="#a17d3a" />
+                    <Text className="font-body-semibold text-warning text-[14px]">
+                      {t("client.dayView.onWaitlist")}
+                    </Text>
+                  </View>
+                  <Button
+                    testID="booking-leave-waitlist-button"
+                    variant="danger"
+                    onPress={() => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                      setStep("confirmLeaveWaitlist");
+                    }}
+                    disabled={pending}
+                  >
+                    {t("client.dayView.leaveWaitlist")}
+                  </Button>
+                </View>
               ) : renewalLocked ? (
                 // No book/waitlist actions — the client can't book this one.
                 // The server's 409 stays as the backstop if a stale sheet
@@ -266,17 +303,41 @@ export function BookingSheet({
                   );
                 })()
               ) : isFull ? (
-                <Button
-                  testID="booking-waitlist-button"
-                  variant="secondary"
-                  onPress={() => {
-                    bookedLastSlotRef.current = isLastSlot;
-                    onBook(session.id);
-                  }}
-                  disabled={pending}
-                >
-                  {t("client.dayView.joinWaitlist")}
-                </Button>
+                <View className="flex-col gap-3">
+                  <Button
+                    testID="booking-waitlist-button"
+                    variant="secondary"
+                    onPress={() => {
+                      bookedLastSlotRef.current = isLastSlot;
+                      onBook(session.id);
+                    }}
+                    disabled={pending}
+                  >
+                    {t("client.dayView.joinWaitlist")}
+                  </Button>
+                  {/* Every waitlist join reserves a package session — say so up
+                      front (not just at the last-slot edge), plus the auto-
+                      release + leave escape hatch. Last slot adds the renew line. */}
+                  <View
+                    testID="booking-waitlist-reserve-note"
+                    className="flex-row items-start gap-2 px-3 py-3 rounded-xl border border-warning/40 bg-warning-soft"
+                  >
+                    <Icon name="info-circle" size={16} color="#a17d3a" />
+                    <View className="flex-1 flex-col gap-1">
+                      <Text className="text-[13px] text-warning font-body-medium">
+                        {t("client.renewal.waitlistReservesSession")}
+                      </Text>
+                      {isLastSlot ? (
+                        <Text
+                          testID="booking-waitlist-last-slot-note"
+                          className="text-[13px] text-warning font-body-semibold"
+                        >
+                          {t("client.renewal.lastSessionWaitlistWarning")}
+                        </Text>
+                      ) : null}
+                    </View>
+                  </View>
+                </View>
               ) : (
                 <Button
                   testID="booking-book-button"
@@ -373,46 +434,106 @@ export function BookingSheet({
                   </View>
                 );
               })()
+            ) : effectiveStep === "confirmLeaveWaitlist" ? (
+              // Leaving the waitlist frees the reserved session — no forfeit,
+              // no penalty. Confirm step mirrors the cancel flow so a tap can't
+              // do it by accident.
+              <View className="flex-col gap-3">
+                <Text
+                  testID="booking-leave-waitlist-warning"
+                  className="text-foreground font-body-semibold text-[15px]"
+                  style={{ textAlign: "center" }}
+                >
+                  {t("client.dayView.confirmLeaveWaitlist")}
+                </Text>
+                <View className="flex-col gap-2">
+                  <Button
+                    testID="booking-confirm-leave-waitlist-button"
+                    variant="danger"
+                    onPress={() => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+                      onLeaveWaitlist(session.id);
+                    }}
+                    disabled={pending}
+                  >
+                    {t("client.dayView.confirm")}
+                  </Button>
+                  <Button
+                    testID="booking-confirm-leave-waitlist-back-button"
+                    variant="ghost"
+                    onPress={() => setStep("idle")}
+                  >
+                    {t("common.back", { defaultValue: "Nazad" })}
+                  </Button>
+                </View>
+              </View>
             ) : effectiveStep === "success" ? (
               (() => {
                 // A LATE cancel forfeited one package session — say so in the
                 // result, not just in the pre-confirm warning. Early cancels
                 // keep the neutral copy.
+                // CANCELED and LEFT_WAITLIST are both "you undid something"
+                // outcomes — neutral (amber info) styling, not the green check.
+                const isNeutralOutcome =
+                  successState === "CANCELED" || successState === "LEFT_WAITLIST";
                 const successText =
                   successState === "BOOKED"
                     ? t("client.calendar.bookingBooked")
                     : successState === "WAITLISTED"
                       ? t("client.calendar.bookingWaitlisted")
-                      : successState === "CANCELED"
-                        ? isLateCancel
-                          ? t("client.calendar.bookingCanceledLate")
-                          : t("client.calendar.bookingCanceled")
-                        : "";
+                      : successState === "LEFT_WAITLIST"
+                        ? t("client.calendar.waitlistLeft")
+                        : successState === "CANCELED"
+                          ? isLateCancel
+                            ? t("client.calendar.bookingCanceledLate")
+                            : t("client.calendar.bookingCanceled")
+                          : "";
                 return (
                   <View className="flex-col gap-2">
                     <View className="flex-row items-center justify-center gap-2 py-3">
                       <Icon
-                        name={successState === "CANCELED" ? "info-circle" : "check-circle"}
+                        name={isNeutralOutcome ? "info-circle" : "check-circle"}
                         size={18}
-                        color={successState === "CANCELED" ? "#a17d3a" : tokens.accent}
+                        color={isNeutralOutcome ? "#a17d3a" : tokens.accent}
                       />
                       <Text
                         testID="booking-success-message"
                         accessibilityLabel={successText}
                         className="font-body-semibold text-[15px] flex-shrink"
                         style={{
-                          color: successState === "CANCELED" ? "#a17d3a" : "#2e5b42",
+                          color: isNeutralOutcome ? "#a17d3a" : "#2e5b42",
                         }}
                       >
                         {successText}
                       </Text>
                     </View>
-                    {/* The snapshot (not the live flag) drives this: after the
-                        refetch the just-booked hold flips lastBookableSlot off,
-                        but the client still needs to hear "that was your last
-                        one — renew". */}
-                    {bookedLastSlotRef.current &&
-                    (successState === "BOOKED" || successState === "WAITLISTED") ? (
+                    {/* A waitlist join reserves a session — restate that after
+                        the join (reserves + auto-release + leave option), plus
+                        the "last one, renew" line when it was the last slot.
+                        The snapshot drives the last-slot line: the availability
+                        refetch flips lastBookableSlot off once the seat counts
+                        as a hold, but the client still needs to hear it. */}
+                    {successState === "WAITLISTED" ? (
+                      <View
+                        testID="booking-success-waitlist-note"
+                        className="flex-row items-start gap-2 px-3 py-3 rounded-xl border border-warning/40 bg-warning-soft"
+                      >
+                        <Icon name="info-circle" size={16} color="#a17d3a" />
+                        <View className="flex-1 flex-col gap-1">
+                          <Text className="text-[13px] text-warning font-body-medium">
+                            {t("client.renewal.waitlistReservesSession")}
+                          </Text>
+                          {bookedLastSlotRef.current ? (
+                            <Text
+                              testID="booking-success-last-slot-warning"
+                              className="text-[13px] text-warning font-body-semibold"
+                            >
+                              {t("client.renewal.lastSessionWaitlistWarning")}
+                            </Text>
+                          ) : null}
+                        </View>
+                      </View>
+                    ) : bookedLastSlotRef.current && successState === "BOOKED" ? (
                       <View
                         testID="booking-success-last-slot-warning"
                         className="flex-row items-start gap-2 px-3 py-3 rounded-xl border border-warning/40 bg-warning-soft"

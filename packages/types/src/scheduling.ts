@@ -30,6 +30,10 @@ export const availabilitySessionSchema = sessionFieldsSchema.pick({
   recurringScheduleId: z.nullable(z.string()).optional(),
   isActive: z.boolean().optional(),
   isBookedByMe: z.boolean().optional(),
+  // True when the current client sits on this session's waitlist (full class).
+  // Drives the booking sheet's "leave waitlist" state. Absent (staff / older
+  // cached payloads) means not waitlisted.
+  isWaitlistedByMe: z.boolean().optional(),
   lateCancelHours: z.nullable(z.number()).optional(),
   /**
    * False when the client owns a (lapsed/used-up/paused) package for this

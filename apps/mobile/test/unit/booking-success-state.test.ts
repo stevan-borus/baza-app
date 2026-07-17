@@ -31,6 +31,10 @@ describe("mapResultStateToSuccessState", () => {
     expect(mapResultStateToSuccessState("WAITLIST_PROMOTED")).toBe("CANCELED");
   });
 
+  it("maps LEFT_WAITLIST to the LEFT_WAITLIST confirmation", () => {
+    expect(mapResultStateToSuccessState("LEFT_WAITLIST")).toBe("LEFT_WAITLIST");
+  });
+
   it("maps unknown / undefined state to null (no confirmation)", () => {
     expect(mapResultStateToSuccessState(undefined)).toBeNull();
     expect(mapResultStateToSuccessState("SOMETHING_ELSE")).toBeNull();

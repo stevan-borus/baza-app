@@ -36,6 +36,23 @@ export async function POST(request: Request) {
 
   const { action, sessionId } = parsed.data;
 
+  if (action === "LEAVE_WAITLIST") {
+    // Handled BEFORE the SCHEDULED-only session guard below: a client must be
+    // able to free the reserved session even if the class was since canceled
+    // (a canceled session leaves the waitlist row — and its held slot — behind,
+    // and never appears in availability, so this is the only way out). It only
+    // deletes the CALLER's own row (scoped by clientProfileId), so it's safe
+    // regardless of session status. Idempotent: no row is still success. No
+    // forfeit, no promotion — a waitlist seat never held a real spot.
+    await prisma.waitlistEntry.deleteMany({
+      where: { sessionId, clientProfileId },
+    });
+    return respond(bookingMutationResultSchema, {
+      success: true,
+      state: "LEFT_WAITLIST",
+    });
+  }
+
   const session = await prisma.session.findUnique({
     where: { id: sessionId },
     select: {

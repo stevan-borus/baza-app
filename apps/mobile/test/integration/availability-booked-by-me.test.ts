@@ -25,6 +25,7 @@ function buildRequest() {
 type SessionRow = {
   id: string;
   isBookedByMe?: boolean;
+  isWaitlistedByMe?: boolean;
   lateCancelHours?: number | null;
 };
 
@@ -147,6 +148,37 @@ describe("GET /api/sessions/availability — isBookedByMe / lateCancelHours", ()
     const row = body.sessions.find((s) => s.id === session.id)!;
     expect(row.isBookedByMe).toBe(false);
     expect(row.lateCancelHours).toBeNull();
+  });
+
+  it("marks isWaitlistedByMe=true for the session the client waits on, false elsewhere", async () => {
+    const { trainer, client, clientProfile, room, reformer } = await fixtures();
+    const waited = await makeSession({
+      classTypeId: reformer.id,
+      trainerUserId: trainer.id,
+      roomId: room.id,
+      startsAt: new Date("2026-06-10T10:00:00Z"),
+    });
+    const other = await makeSession({
+      classTypeId: reformer.id,
+      trainerUserId: trainer.id,
+      roomId: room.id,
+      startsAt: new Date("2026-06-11T10:00:00Z"),
+    });
+    await prisma.waitlistEntry.create({
+      data: { sessionId: waited.id, clientProfileId: clientProfile.id, position: 1 },
+    });
+    setMockUser({
+      id: client.id,
+      role: "CLIENT",
+      email: client.email,
+      isActive: true,
+      clientProfile: { id: clientProfile.id },
+    });
+
+    const res = await GET(buildRequest());
+    const body = (await res.json()) as { sessions: SessionRow[] };
+    expect(body.sessions.find((s) => s.id === waited.id)!.isWaitlistedByMe).toBe(true);
+    expect(body.sessions.find((s) => s.id === other.id)!.isWaitlistedByMe).toBe(false);
   });
 
   it("canceled bookings do not count — isBookedByMe stays false", async () => {

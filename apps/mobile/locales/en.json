@@ -273,6 +273,8 @@
       "notStartedMessage": "Your package hasn't started yet. Booking will be available from your package's start date.",
       "fullyHeldMessage": "You've used all the available sessions in your package. Cancel one of your booked sessions to be able to book a new one.",
       "lastSessionWarning": "This booking spends the last session in your package. Renew it so you can book your next one.",
+      "waitlistReservesSession": "This waitlist spot reserves one session from your package. If a spot doesn't open before the class starts, the session is released back to you automatically — or leave the list to free it right away.",
+      "lastSessionWaitlistWarning": "This is the last session in your package. Renew it so you can book your next training too.",
       "homeTitle": "Renew your package",
       "rowAction": "Renew",
       "rowActionPaused": "Paused",
@@ -406,6 +408,8 @@
       "cancelWarningLate": "Canceling less than {{hours}} hours before the session uses one session from your package. Continue?",
       "joinWaitlist": "Join waitlist",
       "leaveWaitlist": "Leave waitlist",
+      "confirmLeaveWaitlist": "Leave the waitlist?",
+      "onWaitlist": "You're on the waitlist",
       "alreadyBooked": "You already have a booking"
     },
     "calendar": {
@@ -415,6 +419,7 @@
       "bookingBooked": "Successfully booked!",
       "bookingBookedAlready": "You already booked this session",
       "bookingWaitlisted": "You were added to the waitlist",
+      "waitlistLeft": "You left the waitlist",
       "bookingWaitlistPromoted": "Promoted from waitlist!",
       "bookingCanceled": "Session was canceled",
       "bookingCanceledLate": "Session was canceled. Because it was a late cancellation, one session was used from your package.",

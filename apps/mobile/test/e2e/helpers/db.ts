@@ -475,6 +475,20 @@ export async function addToWaitlist(
   });
 }
 
+export async function countWaitlistEntriesFor(
+  clientEmail: string,
+  sessionId: string,
+) {
+  const user = await db().user.findUnique({
+    where: { email: clientEmail.toLowerCase() },
+    select: { clientProfile: { select: { id: true } } },
+  });
+  if (!user?.clientProfile) return 0;
+  return db().waitlistEntry.count({
+    where: { sessionId, clientProfileId: user.clientProfile.id },
+  });
+}
+
 export async function findClientBookingFor(
   clientEmail: string,
   sessionId: string,
@@ -543,6 +557,25 @@ export async function getSessionsRemaining(clientPackageId: string) {
     select: { sessionsRemaining: true },
   });
   return pkg?.sessionsRemaining ?? null;
+}
+
+/**
+ * Force every active package a client owns down to `sessionsRemaining` — lets a
+ * spec drive the "last slot" / FULLY_HELD edge without depending on seed counts.
+ */
+export async function setSessionsRemainingFor(
+  clientEmail: string,
+  sessionsRemaining: number,
+) {
+  const user = await db().user.findUnique({
+    where: { email: clientEmail.toLowerCase() },
+    select: { clientProfile: { select: { id: true } } },
+  });
+  if (!user?.clientProfile) throw new Error("Client not found");
+  await db().clientPackage.updateMany({
+    where: { clientProfileId: user.clientProfile.id },
+    data: { sessionsRemaining },
+  });
 }
 
 export async function countActiveBookingsFor(userEmail: string) {

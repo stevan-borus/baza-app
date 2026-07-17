@@ -86,6 +86,7 @@ export async function GET(request: Request) {
 
   let visibleSessions = sessions;
   let myBookedSessionIds = new Set<string>();
+  let myWaitlistedSessionIds = new Set<string>();
   // CLIENT-only per-session booking flags. Staff sessions default to
   // bookable (no entry in the map). Keyed by session id.
   const sessionBookingFlags = new Map<
@@ -126,6 +127,17 @@ export async function GET(request: Request) {
           myBookingLateCancelHours.set(b.sessionId, b.clientPackage.lateCancelHours);
         }
       }
+
+      // Sessions this client is waitlisted on — drives the sheet's "leave
+      // waitlist" state so a waitlisted client sees a leave button, not a join.
+      const myWaitlist = await prisma.waitlistEntry.findMany({
+        where: {
+          clientProfileId,
+          sessionId: { in: sessions.map((s) => s.id) },
+        },
+        select: { sessionId: true },
+      });
+      myWaitlistedSessionIds = new Set(myWaitlist.map((w) => w.sessionId));
 
       const [clientPackageRows, packagePauses] = await Promise.all([
         prisma.clientPackage.findMany({
@@ -244,6 +256,7 @@ export async function GET(request: Request) {
         recurringScheduleId: session.recurringScheduleId,
         isActive: visibleToClients,
         isBookedByMe: myBookedSessionIds.has(session.id),
+        isWaitlistedByMe: myWaitlistedSessionIds.has(session.id),
         lateCancelHours: myBookingLateCancelHours.get(session.id) ?? null,
         // Staff (no map entry) are always bookable and never warned.
         bookable: sessionBookingFlags.get(session.id)?.bookable ?? true,
