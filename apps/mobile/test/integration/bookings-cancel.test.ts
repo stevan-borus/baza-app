@@ -203,6 +203,40 @@ describe("POST /api/bookings cancel", () => {
     expect(consumptions).toHaveLength(1);
   });
 
+  it("rejects canceling a session that has already started", async () => {
+    const { trainer, client, clientProfile, reformer, clientPackage } =
+      await seedBaseline();
+    // Session started 30 minutes ago — still SCHEDULED, so the generic guard
+    // passes, but the cancel path must now reject it (SESSION_ALREADY_STARTED).
+    const session = await createFutureSession({
+      classTypeId: reformer.id,
+      trainerUserId: trainer.id,
+      startsAtMsFromNow: -30 * 60 * 1000,
+    });
+    await prisma.booking.create({
+      data: {
+        sessionId: session.id,
+        clientProfileId: clientProfile.id,
+        clientPackageId: clientPackage.id,
+      },
+    });
+    asClient({ id: client.id, profileId: clientProfile.id, email: client.email });
+
+    const response = await POST(buildClientCancelRequest(session.id));
+    expect(response.status).toBe(409);
+
+    // The booking must NOT be flipped — the client stays booked.
+    const booking = await prisma.booking.findFirst({
+      where: { sessionId: session.id, clientProfileId: clientProfile.id },
+    });
+    expect(booking?.canceledAt).toBeNull();
+    // No forfeit / consumption on a blocked cancel.
+    const consumption = await prisma.sessionConsumption.findFirst({
+      where: { sessionId: session.id, clientProfileId: clientProfile.id },
+    });
+    expect(consumption).toBeNull();
+  });
+
   it("returns 404 when canceling for a session that does not exist", async () => {
     const { client, clientProfile } = await seedBaseline();
     asClient({ id: client.id, profileId: clientProfile.id, email: client.email });

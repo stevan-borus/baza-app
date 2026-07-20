@@ -186,6 +186,16 @@ export async function POST(request: Request) {
     });
   }
 
+  // CANCEL path. A cancel is blocked the moment the session has started: once
+  // the class is in progress (or past), the seat was effectively used, so
+  // letting the client back out here would be a free escape — no forfeit fires
+  // post-start (the penalty policy only applies before start). Guard here, not
+  // in the generic status check above, because an in-progress session is still
+  // SCHEDULED. BOOK has its own past-start guard; LEAVE_WAITLIST returned above.
+  if (session.startsAt.getTime() <= now().getTime()) {
+    return fail(BOOKING_ERRORS.SESSION_ALREADY_STARTED, 409);
+  }
+
   const cancellationTime = now();
   const activeBooking = await prisma.booking.findUnique({
     where: { sessionId_clientProfileId: { sessionId, clientProfileId } },

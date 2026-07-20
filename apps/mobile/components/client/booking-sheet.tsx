@@ -222,25 +222,49 @@ export function BookingSheet({
           >
             {effectiveStep === "idle" ? (
               isBookedByMe ? (
-                <View className="flex-col gap-3">
-                  <View className="flex-row items-center justify-center gap-2">
-                    <Icon name="check-circle" size={16} color={tokens.accentLight} />
-                    <Text className="font-body-semibold text-accent-light text-[14px]">
-                      {t("client.dayView.alreadyBooked")}
-                    </Text>
+                isPast ? (
+                  // Booked, but the session has already started — a client can't
+                  // cancel a started session (the server returns
+                  // SESSION_ALREADY_STARTED). Show the booked confirmation plus a
+                  // plain status line, no tappable cancel button.
+                  <View className="flex-col gap-3">
+                    <View className="flex-row items-center justify-center gap-2">
+                      <Icon name="check-circle" size={16} color={tokens.accentLight} />
+                      <Text className="font-body-semibold text-accent-light text-[14px]">
+                        {t("client.dayView.alreadyBooked")}
+                      </Text>
+                    </View>
+                    <View
+                      testID="booking-past-state"
+                      className="flex-row items-center justify-center gap-2 py-2"
+                    >
+                      <Icon name="clock-o" size={14} color={tokens.faint} />
+                      <Text className="text-muted text-[13px]">
+                        {t("client.dayView.sessionPast")}
+                      </Text>
+                    </View>
                   </View>
-                  <Button
-                    testID="booking-cancel-button"
-                    variant="danger"
-                    onPress={() => {
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                      setStep("confirmCancel");
-                    }}
-                    disabled={pending}
-                  >
-                    {t("client.calendar.cancel")}
-                  </Button>
-                </View>
+                ) : (
+                  <View className="flex-col gap-3">
+                    <View className="flex-row items-center justify-center gap-2">
+                      <Icon name="check-circle" size={16} color={tokens.accentLight} />
+                      <Text className="font-body-semibold text-accent-light text-[14px]">
+                        {t("client.dayView.alreadyBooked")}
+                      </Text>
+                    </View>
+                    <Button
+                      testID="booking-cancel-button"
+                      variant="danger"
+                      onPress={() => {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                        setStep("confirmCancel");
+                      }}
+                      disabled={pending}
+                    >
+                      {t("client.calendar.cancel")}
+                    </Button>
+                  </View>
+                )
               ) : isPast ? (
                 // No action is possible, so this is plain status text — not a
                 // button-shaped element that invites a tap.
