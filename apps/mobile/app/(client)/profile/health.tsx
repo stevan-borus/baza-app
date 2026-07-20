@@ -35,6 +35,14 @@ import type { HealthIntakeResponse } from "@baza/types/health-intake";
 
 const ARM_TIMEOUT_MS = 3000;
 
+// The global <KeyboardToolbar/> (mounted in _layout) sits above the keyboard
+// and is NOT part of the keyboard height the scroll view measures, so we add
+// its height to bottomOffset by hand — otherwise the focused field lands
+// *behind* the toolbar. Mirrors the library's own KEYBOARD_TOOLBAR_HEIGHT
+// (react-native-keyboard-controller, not publicly exported). 24 = desired gap.
+const KEYBOARD_TOOLBAR_HEIGHT = 42;
+const KEYBOARD_BOTTOM_OFFSET = 24 + KEYBOARD_TOOLBAR_HEIGHT;
+
 function intakeToState(intake: HealthIntakeResponse): HealthIntakeState {
   return {
     conditions: intake.conditions,
@@ -156,13 +164,21 @@ export default function ClientProfileHealth() {
     >
       <KeyboardAwareScrollView
         style={{ flex: 1 }}
+        // mode="layout" appends a real spacer below the content so the LAST
+        // field (additionalNotes) can always be lifted above the keyboard —
+        // insets mode relies on iOS contentInset, which is flaky when the
+        // content is only ~as tall as the viewport (our case).
+        mode="layout"
         contentContainerStyle={{
           gap: 16,
           paddingHorizontal: 24,
           paddingTop: 24,
-          paddingBottom: dirty ? 96 : bottomPad,
+          // Static: reserve the sticky-footer space unconditionally. Changing
+          // content height mid-focus doesn't re-trigger the library's scroll
+          // (it only re-syncs on bottomOffset), so we keep this constant.
+          paddingBottom: Math.max(96, bottomPad),
         }}
-        bottomOffset={24}
+        bottomOffset={KEYBOARD_BOTTOM_OFFSET}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
