@@ -7,6 +7,7 @@ import {
   countActiveBookingsFor,
   countWaitlistEntriesFor,
   createFutureSession,
+  createPastSessionWithBooking,
   disconnect,
   fillSessionToCapacity,
   findClientBookingFor,
@@ -285,6 +286,45 @@ test.describe("client (Serbian)", () => {
         { timeout: 10_000 },
       )
       .not.toBeNull();
+  });
+
+  test("57b: cannot cancel a booking once the session has started", async ({
+    page,
+  }) => {
+    // Book the client into a session that started 2h before the anchor
+    // (07:00Z vs the 09:00Z anchor) — still SCHEDULED, so it renders as a
+    // normal, bookable-looking row. The sheet must show the past-state line
+    // and NOT the cancel button: a started session can't be cancelled, and
+    // the server backs this with a 409 (SESSION_ALREADY_STARTED).
+    const startsAt = new Date("2026-05-11T07:00:00Z");
+    const { sessionId } = await createPastSessionWithBooking({
+      trainerEmail: "trainer.reformer@e2e.test",
+      classTypeName: "Reformer pilates",
+      clientEmail: "client.active.reformer@e2e.test",
+      startsAt,
+      cancel: "none",
+    });
+
+    await signInAs(page, "client.active.reformer@e2e.test");
+    await page.goto("/calendar");
+
+    // Same-day-as-anchor: compute the local date-key the WeekStrip pill uses.
+    const targetDate = `${startsAt.getFullYear()}-${String(
+      startsAt.getMonth() + 1,
+    ).padStart(2, "0")}-${String(startsAt.getDate()).padStart(2, "0")}`;
+    await page
+      .locator(`[data-testid="week-strip-day-${targetDate}"]:visible`)
+      .first()
+      .dispatchEvent("click");
+
+    await page.getByTestId(`schedule-row-${sessionId}`).dispatchEvent("click");
+
+    // Positive signal the sheet opened before asserting an absence, so a
+    // sheet that never mounted can't false-green the missing cancel button.
+    await expect(page.getByTestId("booking-detail-room")).toBeVisible();
+    // Booked + started → status line shown, cancel button gone.
+    await expect(page.getByTestId("booking-past-state")).toBeVisible();
+    await expect(page.getByTestId("booking-cancel-button")).toHaveCount(0);
   });
 
   test("58: full session shows the join-waitlist button", async ({ page }) => {
