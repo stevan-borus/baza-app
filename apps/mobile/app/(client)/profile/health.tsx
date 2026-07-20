@@ -10,7 +10,8 @@
  */
 import { useTranslation } from "react-i18next";
 import { useEffect, useRef, useState } from "react";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { useQuery } from "@tanstack/react-query";
 import { authQueries } from "@/lib/queries/auth-queries-factory";
 import {
@@ -153,7 +154,7 @@ export default function ClientProfileHealth() {
       title={t("profile.healthSection")}
       headerVariant="detail"
     >
-      <ScrollView
+      <KeyboardAwareScrollView
         style={{ flex: 1 }}
         contentContainerStyle={{
           gap: 16,
@@ -161,6 +162,7 @@ export default function ClientProfileHealth() {
           paddingTop: 24,
           paddingBottom: dirty ? 96 : bottomPad,
         }}
+        bottomOffset={24}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
@@ -199,7 +201,7 @@ export default function ClientProfileHealth() {
             </Pressable>
           </View>
         ) : null}
-      </ScrollView>
+      </KeyboardAwareScrollView>
 
       {dirty ? (
         <View
