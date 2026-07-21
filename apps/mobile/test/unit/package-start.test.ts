@@ -72,11 +72,37 @@ describe("studioDayStartFor", () => {
   it("keeps a Belgrade local-midnight pick on the day the admin named", () => {
     // What the real date picker produces on an admin's device: local
     // midnight on 1 Aug = 22:00Z on 31 July. Must NOT become 31 July.
+    //
+    // This is the case that shipped green locally (CET) and failed in CI
+    // (UTC): the day has to be read in the STUDIO's zone, because the server
+    // receiving this instant runs UTC, where it reads as 31 July. The
+    // assertion formats in STUDIO_TIMEZONE so it means the same thing
+    // wherever the suite runs.
     const localMidnight = new Date("2026-07-31T22:00:00.000Z");
     const result = studioDayStartFor(localMidnight);
     expect(dayjs(result).tz(STUDIO_TIMEZONE).format("YYYY-MM-DD HH:mm")).toBe(
       "2026-08-01 05:00",
     );
+  });
+
+  it("resolves a pick identically no matter the runtime timezone", () => {
+    // The regression guard for the CI failure. `process.env.TZ` drives the
+    // runtime zone; the same instant must produce the same studio day when
+    // the process thinks it is in Belgrade, in UTC, or in Los Angeles.
+    // Without the studio-zone read, the UTC and LA runs land a day early.
+    const localMidnight = new Date("2026-07-31T22:00:00.000Z");
+    const original = process.env.TZ;
+    const seen = new Set<string>();
+    try {
+      for (const tz of ["Europe/Belgrade", "UTC", "America/Los_Angeles"]) {
+        process.env.TZ = tz;
+        seen.add(studioDayStartFor(localMidnight).toISOString());
+      }
+    } finally {
+      process.env.TZ = original;
+    }
+    // One entry = every runtime zone agreed. 1 Aug 05:00 CEST is 03:00Z.
+    expect([...seen]).toEqual(["2026-08-01T03:00:00.000Z"]);
   });
 
   it("never moves a pick to a different calendar day", () => {

@@ -57,15 +57,20 @@ export function startOfStudioDay(at: Date): Date {
  * device is 22:00Z the day before and on a UTC caller is 02:00 Belgrade —
  * both sit before the 05:00 opening, so instant-based logic would shift the
  * package a day earlier than the admin chose. The calendar date is read in
- * the ORIGINATING zone (the day the human selected), then re-stamped at the
- * studio's opening hour.
+ * the STUDIO's zone, then re-stamped at the opening hour.
  *
- * NOTE: reading the date in the originating zone means a server-side caller
- * running UTC and a Belgrade device agree on a picked day, which is what the
- * admin means. It is NOT for normalizing arbitrary timestamps.
+ * Reading the day in `STUDIO_TIMEZONE` — not the runtime's — is the whole
+ * point. A picker on a Belgrade device sends 22:00Z for "1 August"; the
+ * server that receives it runs UTC, where that instant reads as 31 July.
+ * Formatting in the runtime zone would therefore shift the package a day
+ * earlier on the server while looking correct on the device (and correct in
+ * a CET test run, which is how this shipped green locally and failed in CI).
+ * Belgrade is where the admin, the studio and the calendar day all agree.
  */
 export function studioDayStartFor(pickedDay: Date): Date {
-  return studioDayStartForKey(dayjs(pickedDay).format("YYYY-MM-DD"));
+  return studioDayStartForKey(
+    dayjs(pickedDay).tz(STUDIO_TIMEZONE).format("YYYY-MM-DD"),
+  );
 }
 
 /**
