@@ -33,6 +33,7 @@ export default defineConfig({
         // no process global, so give them an empty env → real clock.
         define: {
           "process.env": JSON.stringify({}),
+          __DEV__: "false",
         },
         resolve: {
           // Native-only chrome (gestures, sheet physics, animations,
@@ -90,6 +91,34 @@ export default defineConfig({
               replacement: path.resolve(
                 __dirname,
                 "test/component/stubs/expo-haptics.ts",
+              ),
+            },
+            {
+              find: "expo-router",
+              replacement: path.resolve(
+                __dirname,
+                "test/component/stubs/expo-router.ts",
+              ),
+            },
+            {
+              find: "expo-blur",
+              replacement: path.resolve(
+                __dirname,
+                "test/component/stubs/expo-blur.tsx",
+              ),
+            },
+            {
+              find: "react-native-modal-datetime-picker",
+              replacement: path.resolve(
+                __dirname,
+                "test/component/stubs/modal-datetime-picker.tsx",
+              ),
+            },
+            {
+              find: /^expo-modules-core$/,
+              replacement: path.resolve(
+                __dirname,
+                "test/component/stubs/expo-modules-core.ts",
               ),
             },
             {
