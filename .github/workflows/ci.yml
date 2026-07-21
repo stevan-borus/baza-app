@@ -51,3 +51,30 @@ jobs:
       - name: Unit tests
         working-directory: apps/mobile
         run: pnpm test:unit
+
+      # Component tests are DB-free too — they only need a headless Chromium.
+      # The browser binary (~130MB download) is cached keyed on the Playwright
+      # version, so the install only re-runs when Playwright is bumped.
+      - name: Get Playwright version
+        id: playwright-version
+        working-directory: apps/mobile
+        run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+      - name: Cache Playwright Chromium
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-chromium-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}
+      - name: Install Playwright Chromium
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        working-directory: apps/mobile
+        run: pnpm exec playwright install --with-deps chromium
+      # OS packages aren't part of the cached path — reinstall them cheaply on
+      # a cache hit so a runner-image change can't strand the cached browser.
+      - name: Install Playwright system deps
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        working-directory: apps/mobile
+        run: pnpm exec playwright install-deps chromium
+      - name: Component tests
+        working-directory: apps/mobile
+        run: pnpm test:component
