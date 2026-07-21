@@ -11,7 +11,9 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { fireEvent } from "@testing-library/react";
 import React from "react";
 import "@/lib/i18n";
-import { routerCalls } from "expo-router";
+// Same module instance the components get via the "expo-router" alias, but
+// imported by path so the real expo-router types don't reject `routerCalls`.
+import { routerCalls } from "./stubs/expo-router";
 import { authQueries } from "@/lib/queries/auth-queries-factory";
 import { renderWithQueryClient } from "./helpers";
 
@@ -31,11 +33,16 @@ function renderScreen() {
   // renders as a signed-in admin without touching the network.
   return renderWithQueryClient(<KatalogIndex />, (client) => {
     client.setQueryData(authQueries.me().queryKey, {
+      success: true,
       user: {
         id: "admin-1",
         email: "admin@test.local",
-        role: "ADMIN",
+        firstName: "Admin",
+        lastName: "Test",
+        fullName: "Admin Test",
+        role: "ADMIN" as const,
         isActive: true,
+        createdAt: new Date(),
         clientProfile: null,
       },
     });

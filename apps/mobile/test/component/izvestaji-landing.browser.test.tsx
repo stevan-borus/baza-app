@@ -12,7 +12,9 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { fireEvent } from "@testing-library/react";
 import React from "react";
 import "@/lib/i18n";
-import { routerCalls } from "expo-router";
+// Imported by path so the real expo-router types don't reject `routerCalls`;
+// same module instance the screen sees through the alias.
+import { routerCalls } from "./stubs/expo-router";
 import { reportsQueries } from "@/lib/queries/reports-queries-factory";
 import { computePeriodWindow } from "@/lib/admin/use-period-pill";
 import { authQueries } from "@/lib/queries/auth-queries-factory";
@@ -27,24 +29,39 @@ function renderScreen() {
   const window = computePeriodWindow("month", new Date());
   return renderWithQueryClient(<IzvestajiLanding />, (client) => {
     client.setQueryData(authQueries.me().queryKey, {
+      success: true,
       user: {
         id: "admin-1",
         email: "admin@test.local",
-        role: "ADMIN",
+        firstName: "Admin",
+        lastName: "Test",
+        fullName: "Admin Test",
+        role: "ADMIN" as const,
         isActive: true,
+        createdAt: new Date(),
         clientProfile: null,
       },
     });
     client.setQueryData(reportsQueries.summary(window).queryKey, {
+      success: true,
       summary: {
-        revenue: 125000,
-        totalSessions: 42,
+        totalClients: 20,
         activeClients: 17,
+        inactiveClients: 3,
+        totalSessions: 42,
+        revenue: 125000,
+        totalPayments: 30,
       },
     });
     client.setQueryData(
       reportsQueries.utilization({ ...window, period: "month" }).queryKey,
-      { data: [{ utilization: 0.5 }, { utilization: 0.7 }] },
+      {
+        success: true,
+        data: [
+          { period: "2026-07", totalCapacity: 100, totalBooked: 50, utilization: 0.5 },
+          { period: "2026-08", totalCapacity: 100, totalBooked: 70, utilization: 0.7 },
+        ],
+      },
     );
   });
 }

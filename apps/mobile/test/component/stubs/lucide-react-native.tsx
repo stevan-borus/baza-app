@@ -15,7 +15,7 @@ export type LucideIcon = React.ComponentType<Record<string, unknown>>;
  * assert an icon's presence/absence without real SVG. */
 const icon = (name: string): LucideIcon =>
   function LucideStub() {
-    return <View dataSet={{ lucide: name }} testID={`lucide-${name}`} />;
+    return <View testID={`lucide-${name}`} />;
   };
 
 export const AlertTriangle = icon("AlertTriangle");

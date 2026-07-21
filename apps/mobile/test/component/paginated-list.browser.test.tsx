@@ -152,7 +152,7 @@ describe("PaginatedList — end-reached pagination", () => {
   }));
 
   function scrollToBottom(container: HTMLElement) {
-    const scroller = [...container.querySelectorAll("div")].find(
+    const scroller = Array.from(container.querySelectorAll("div")).find(
       (el) => el.scrollHeight > el.clientHeight && el.clientHeight > 0,
     );
     if (!scroller) throw new Error("no scrollable element found");
