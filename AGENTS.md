@@ -6,6 +6,10 @@
 - Run scripts from `package.json`. Don't invoke `tsc`, `vitest`, `playwright`, `prisma` directly — go through the script (e.g. `pnpm --filter mobile test:e2e`, `pnpm --filter mobile check-types`).
 - Schema changes: `prisma migrate dev` / `migrate deploy` / `migrate reset`. **Never** `prisma db push`, even on test DBs.
 
+## Code Conventions
+
+- If you need a paragraph-long comment to justify why a workaround is OK, the code is wrong — fix the code.
+
 ## i18n
 
 Every visible string lives in BOTH `apps/mobile/locales/sr.json` AND `apps/mobile/locales/en.json`. Includes a11y labels. Serbian is default.
@@ -18,7 +22,18 @@ Testing Trophy — integration > unit. Real DB, real route handlers, real Playwr
 |---|---|---|
 | E2E | Playwright (Chromium, web) | `apps/mobile/test/e2e/` |
 | Integration | Vitest + real Postgres | `apps/mobile/test/integration/` |
+| Component | Vitest Browser Mode (Chromium, react-native-web) | `apps/mobile/test/component/` |
 | Unit | Vitest | `apps/mobile/test/unit/` |
+
+Component layer (`pnpm test:component`, `*.browser.test.tsx`): mounts real
+components in headless Chromium with real i18n and a real seeded QueryClient
+(`test/component/helpers.tsx`). Use it for UI branch logic and interactions —
+lock states, confirm flows, copy variants — instead of a new e2e spec or a
+`renderToStaticMarkup` string test. Metro-only native chrome (gorhom,
+reanimated, moti, uniwind, svg, haptics, expo-router) is stubbed at the
+package boundary in `test/component/stubs/` — everything first-party renders
+real. Don't mock the query layer or i18n in these tests; seed caches and
+assert the shipped copy.
 
 ### Before opening a PR
 
@@ -31,8 +46,8 @@ before opening or updating a PR:
 # 1. Start the local test Postgres (once per session)
 docker compose up -d
 
-# 2. From apps/mobile — the fast gate (also what CI runs):
-pnpm lint && pnpm check-types && pnpm test:unit
+# 2. From apps/mobile — the fast gate (also what CI runs) + component tests:
+pnpm lint && pnpm check-types && pnpm test:unit && pnpm test:component
 
 # 3. Integration (resets+migrates baza_app_test, then runs the suite):
 pnpm test:db:prepare && pnpm test:integration

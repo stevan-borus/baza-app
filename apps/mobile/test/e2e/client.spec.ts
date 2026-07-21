@@ -13,7 +13,6 @@ import {
   findClientBookingFor,
   findSessionConsumption,
   resetAndSeed,
-  setSessionsRemainingFor,
 } from "./helpers/db";
 
 /**
@@ -524,45 +523,12 @@ test.describe("client (Serbian)", () => {
       .toBe(0);
   });
 
-  test("65: a waitlisted client at their last package slot can still reach the leave button", async ({
-    page,
-  }) => {
-    // Edge the leave feature exists FOR: the client's own waitlist entry
-    // consumes their last remaining session, so the server marks that session
-    // bookable:false / FULLY_HELD. The sheet must still offer LEAVE (which
-    // frees the slot) rather than the renewal-lock message — otherwise the one
-    // person who most needs to leave is stranded.
-    await setSessionsRemainingFor("client.active.reformer@e2e.test", 1);
-
-    const session = await createFutureSession({
-      trainerEmail: "trainer.reformer@e2e.test",
-      classTypeName: "Reformer pilates",
-      hoursFromNow: 24,
-      capacity: 2,
-    });
-    await fillSessionToCapacity(session.id, "client.active.reformer@e2e.test");
-    // Put the client on the waitlist directly — this reserves their last slot.
-    await addToWaitlist(session.id, "client.active.reformer@e2e.test", 1);
-
-    await signInAs(page, "client.active.reformer@e2e.test");
-    await page.goto("/calendar");
-
-    const targetDate = `${session.startsAt.getFullYear()}-${String(
-      session.startsAt.getMonth() + 1,
-    ).padStart(2, "0")}-${String(session.startsAt.getDate()).padStart(2, "0")}`;
-    await page
-      .locator(`[data-testid="week-strip-day-${targetDate}"]:visible`)
-      .first()
-      .dispatchEvent("click");
-    await page.getByTestId(`schedule-row-${session.id}`).dispatchEvent("click");
-
-    // The leave button is reachable despite the FULLY_HELD lock; the renewal
-    // lock message must NOT be what greets a waitlisted client.
-    await expect(
-      page.getByTestId("booking-leave-waitlist-button"),
-    ).toBeVisible({ timeout: 5_000 });
-    await expect(page.getByTestId("booking-fully-held-message")).toHaveCount(0);
-  });
+  // The "waitlisted client at their last slot can still reach LEAVE" spec was
+  // retired in favor of two cheaper layers that pin both halves of the trap:
+  // integration (availability-renewal-flags: the server emits FULLY_HELD AND
+  // isWaitlistedByMe together for the client whose own waitlist hold is the
+  // lock) + component (booking-sheet: isWaitlistedByMe beats renewalLocked, so
+  // LEAVE renders instead of the lock message).
 
   test("60: notifications list renders", async ({ page }) => {
     await signInAs(page, "client.active.reformer@e2e.test");
