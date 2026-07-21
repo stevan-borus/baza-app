@@ -35,38 +35,79 @@ export default defineConfig({
           "process.env": JSON.stringify({}),
         },
         resolve: {
-          alias: {
-            // Native-only chrome (gestures, sheet physics, animations,
-            // haptics) can't load outside Metro — stubbed at the package
-            // boundary. Everything of OURS renders real. See stubs/*.
-            "@gorhom/bottom-sheet": path.resolve(
-              __dirname,
-              "test/component/stubs/gorhom-bottom-sheet.tsx",
-            ),
-            "react-native-reanimated": path.resolve(
-              __dirname,
-              "test/component/stubs/reanimated.ts",
-            ),
-            moti: path.resolve(__dirname, "test/component/stubs/moti.tsx"),
-            "react-native-safe-area-context": path.resolve(
-              __dirname,
-              "test/component/stubs/safe-area-context.tsx",
-            ),
-            uniwind: path.resolve(__dirname, "test/component/stubs/uniwind.ts"),
-            "expo-haptics": path.resolve(
-              __dirname,
-              "test/component/stubs/expo-haptics.ts",
-            ),
-            "react-native-svg": path.resolve(
-              __dirname,
-              "test/component/stubs/react-native-svg.tsx",
-            ),
-            "lucide-react-native": path.resolve(
-              __dirname,
-              "test/component/stubs/lucide-react-native.tsx",
-            ),
-            "react-native": "react-native-web",
-          },
+          // Native-only chrome (gestures, sheet physics, animations,
+          // haptics) can't load outside Metro — stubbed at the package
+          // boundary. Everything of OURS renders real. See stubs/*.
+          //
+          // Array form with a regex first: the root "@" prefix alias would
+          // otherwise swallow "@/lib/auth-client" before the stub matches
+          // (alias resolution is first-match, no chaining).
+          alias: [
+            {
+              find: /^@\/lib\/auth-client$/,
+              replacement: path.resolve(
+                __dirname,
+                "test/component/stubs/auth-client.ts",
+              ),
+            },
+            {
+              find: "@gorhom/bottom-sheet",
+              replacement: path.resolve(
+                __dirname,
+                "test/component/stubs/gorhom-bottom-sheet.tsx",
+              ),
+            },
+            {
+              find: "react-native-reanimated",
+              replacement: path.resolve(
+                __dirname,
+                "test/component/stubs/reanimated.ts",
+              ),
+            },
+            {
+              find: "moti",
+              replacement: path.resolve(
+                __dirname,
+                "test/component/stubs/moti.tsx",
+              ),
+            },
+            {
+              find: "react-native-safe-area-context",
+              replacement: path.resolve(
+                __dirname,
+                "test/component/stubs/safe-area-context.tsx",
+              ),
+            },
+            {
+              find: "uniwind",
+              replacement: path.resolve(
+                __dirname,
+                "test/component/stubs/uniwind.ts",
+              ),
+            },
+            {
+              find: "expo-haptics",
+              replacement: path.resolve(
+                __dirname,
+                "test/component/stubs/expo-haptics.ts",
+              ),
+            },
+            {
+              find: "react-native-svg",
+              replacement: path.resolve(
+                __dirname,
+                "test/component/stubs/react-native-svg.tsx",
+              ),
+            },
+            {
+              find: "lucide-react-native",
+              replacement: path.resolve(
+                __dirname,
+                "test/component/stubs/lucide-react-native.tsx",
+              ),
+            },
+            { find: "react-native", replacement: "react-native-web" },
+          ],
           // Metro resolves platform files (.web.js) first; mirror that so RN
           // libraries pick their web implementations instead of deep-importing
           // react-native internals that don't exist in react-native-web.
@@ -107,6 +148,9 @@ export default defineConfig({
                   "react-native-safe-area-context",
                   "@gorhom/bottom-sheet",
                   "moti",
+                  // Imports expo-constants/expo-linking internally; keeping it
+                  // out of the optimizer lets those hit our stub aliases.
+                  "@better-auth/expo",
                 ],
               },
             },
