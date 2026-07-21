@@ -12,6 +12,7 @@ import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { setMockUser } from "./auth-mock";
 import { resetDb } from "./setup-db";
 import { now } from "@/lib/now";
+import { computePackageExpiresAt } from "@/lib/package-expiry";
 
 vi.mock("@/lib/server/auth-guards", async () => (await import("./auth-mock")).authGuardsMock());
 
@@ -149,8 +150,11 @@ describe("assign-package paid mode (POST /api/billing)", () => {
     const packageTypeRow = await prisma.packageType.findUniqueOrThrow({
       where: { id: packageType.id },
     });
+    // Expiry counts from the PICKED day (not the payment instant) and lands
+    // at the end of the last valid studio day — asserted via the shared
+    // helper so this stays true if the rule is ever retuned.
     expect(pack.expiresAt.getTime()).toBe(
-      pickedDay.getTime() + packageTypeRow.validityDays * 24 * 60 * 60 * 1000,
+      computePackageExpiresAt(pickedDay, packageTypeRow.validityDays).getTime(),
     );
   });
 

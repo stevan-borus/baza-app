@@ -1,6 +1,5 @@
 import type { Prisma, PrismaClient } from "@/generated/prisma";
-
-const DAY_MS = 24 * 60 * 60 * 1000;
+import { computePackageExpiresAt } from "@/lib/package-expiry";
 
 /**
  * The exact PackageType fields a Package activation snapshots. Callers fetch
@@ -20,14 +19,16 @@ export type PackageTypeSnapshot = {
  * Package activation (CONTEXT.md): materialize a ClientPackage from a
  * PackageType, snapshotting the SKU's terms at this moment so later
  * PackageType edits never retroactively change the package. The ONLY place
- * the snapshot copy + expiry math live — both Nova uplata (inside its
- * BillingRecord transaction) and Poklon paket / birthday gift call this.
- * The ClassType set is snapshotted as ClientPackageClassType join rows.
+ * the snapshot copy lives — both Nova uplata (inside its BillingRecord
+ * transaction) and Poklon paket / birthday gift call this. The ClassType
+ * set is snapshotted as ClientPackageClassType join rows. The expiry rule
+ * itself lives in `lib/package-expiry.ts`.
  *
  * `db` accepts a transaction client or the root client so callers control
  * atomicity (the booking-cancellation.ts pattern). `startsAt` is the
  * caller's business decision: payment time for Nova uplata, admin-chosen
- * (possibly future) date for a manual assign — expiry always counts from it.
+ * (possibly future) date for a manual assign — expiry always counts from it,
+ * landing at the end of the last valid studio day.
  */
 export async function createClientPackageFromType(
   db: PrismaClient | Prisma.TransactionClient,
@@ -37,8 +38,9 @@ export async function createClientPackageFromType(
     startsAt: Date;
   },
 ) {
-  const expiresAt = new Date(
-    args.startsAt.getTime() + args.packageType.validityDays * DAY_MS,
+  const expiresAt = computePackageExpiresAt(
+    args.startsAt,
+    args.packageType.validityDays,
   );
   const { classTypes, ...row } = await db.clientPackage.create({
     data: {
