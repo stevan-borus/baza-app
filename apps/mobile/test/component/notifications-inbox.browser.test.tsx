@@ -185,4 +185,13 @@ describe("NotificationsInbox — loading and error", () => {
       }),
     ).toBeTruthy();
   });
+
+  it("renders the admin error copy when the fetch fails", async () => {
+    const screen = renderWithQueryClient(<NotificationsInbox context="admin" />);
+    expect(
+      await screen.findByText("Greška pri učitavanju obaveštenja", undefined, {
+        timeout: 5000,
+      }),
+    ).toBeTruthy();
+  });
 });

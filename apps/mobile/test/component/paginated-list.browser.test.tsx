@@ -6,12 +6,14 @@
  * so tests hand it plain objects of that shape and assert what the USER
  * sees: rows, state fallbacks, the fetching footer. The old static suite
  * asserted prop-forwarding into a mocked list — implementation, not
- * behavior, and it's dropped without replacement on purpose.
+ * behavior, and it's dropped without replacement on purpose. The one
+ * forwarded prop that IS user-visible behavior — refreshControl, the
+ * pull-to-refresh path on every list screen — keeps a mount-level test.
  */
 import { describe, it, expect, vi } from "vitest";
 import { render } from "@testing-library/react";
 import React from "react";
-import { View } from "react-native";
+import { RefreshControl, View } from "react-native";
 import type { UseInfiniteQueryResult } from "@tanstack/react-query";
 import { PaginatedList } from "@/components/ui/paginated-list";
 
@@ -201,5 +203,25 @@ describe("PaginatedList — end-reached pagination", () => {
     scrollToBottom(screen.container);
     await new Promise((r) => setTimeout(r, 50));
     expect(fetchNextPage).not.toHaveBeenCalled();
+  });
+});
+
+describe("PaginatedList — pull-to-refresh", () => {
+  it("mounts a provided refreshControl inside the list", async () => {
+    // Klijenti et al. hang pull-to-refresh off the list because the sticky
+    // header lives outside it — if the element stops reaching LegendList's
+    // scroll container, refresh silently dies on every list screen.
+    const screen = renderList({
+      refreshControl: (
+        <RefreshControl
+          testID="list-refresh-control"
+          refreshing={false}
+          onRefresh={() => {}}
+        />
+      ),
+    });
+
+    await screen.findByText("Alpha");
+    expect(screen.getByTestId("list-refresh-control")).toBeTruthy();
   });
 });
