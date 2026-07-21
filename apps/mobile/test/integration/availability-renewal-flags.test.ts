@@ -277,6 +277,59 @@ describe("GET /api/sessions/availability renewal flags", () => {
     });
   });
 
+  it("keeps isWaitlistedByMe on a FULLY_HELD session when the client's own waitlist hold is the lock", async () => {
+    // The leave-waitlist trap: the client's waitlist entry consumes their
+    // LAST remaining session, so every session (including the waitlisted one)
+    // reports FULLY_HELD. The payload must still carry isWaitlistedByMe so
+    // the sheet can offer LEAVE instead of stranding the client behind the
+    // lock message. (The sheet-side priority is component-tested; this pins
+    // the server emitting both flags together.)
+    const { client, clientProfile, trainer, reformer } = await baseFixtures();
+    const waitlistedSession = await makeSession(
+      reformer.id,
+      trainer.id,
+      SESSION_DATE,
+    );
+    const openSession = await makeSession(
+      reformer.id,
+      trainer.id,
+      OTHER_SESSION_DATE,
+    );
+    await makePackage({
+      clientProfileId: clientProfile.id,
+      classTypeId: reformer.id,
+      sessionsRemaining: 1,
+    });
+    await prisma.waitlistEntry.create({
+      data: {
+        sessionId: waitlistedSession.id,
+        clientProfileId: clientProfile.id,
+        position: 1,
+      },
+    });
+
+    asClient(client, clientProfile.id);
+
+    const res = await GET(buildRequest(MONTH));
+    const json = await res.json();
+    const waitlisted = json.sessions.find(
+      (s: { id: string }) => s.id === waitlistedSession.id,
+    );
+    expect(waitlisted).toMatchObject({
+      bookable: false,
+      lockReason: "FULLY_HELD",
+      isWaitlistedByMe: true,
+    });
+    const open = json.sessions.find(
+      (s: { id: string }) => s.id === openSession.id,
+    );
+    expect(open).toMatchObject({
+      bookable: false,
+      lockReason: "FULLY_HELD",
+      isWaitlistedByMe: false,
+    });
+  });
+
   it("mixes greyed-out and bookable sessions per class type for the same client", async () => {
     const { client, clientProfile, trainer, reformer, energy } =
       await baseFixtures();
