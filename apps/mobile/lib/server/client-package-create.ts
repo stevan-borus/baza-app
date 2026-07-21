@@ -1,6 +1,6 @@
 import type { Prisma, PrismaClient } from "@/generated/prisma";
-
-const DAY_MS = 24 * 60 * 60 * 1000;
+import { computePackageExpiresAt } from "@/lib/package-expiry";
+import { studioDayStartFor } from "@/lib/studio-time";
 
 /**
  * The exact PackageType fields a Package activation snapshots. Callers fetch
@@ -20,14 +20,22 @@ export type PackageTypeSnapshot = {
  * Package activation (CONTEXT.md): materialize a ClientPackage from a
  * PackageType, snapshotting the SKU's terms at this moment so later
  * PackageType edits never retroactively change the package. The ONLY place
- * the snapshot copy + expiry math live — both Nova uplata (inside its
- * BillingRecord transaction) and Poklon paket / birthday gift call this.
- * The ClassType set is snapshotted as ClientPackageClassType join rows.
+ * the snapshot copy lives — both Nova uplata (inside its BillingRecord
+ * transaction) and Poklon paket / birthday gift call this. The ClassType
+ * set is snapshotted as ClientPackageClassType join rows. The expiry rule
+ * itself lives in `lib/package-expiry.ts`.
  *
  * `db` accepts a transaction client or the root client so callers control
  * atomicity (the booking-cancellation.ts pattern). `startsAt` is the
- * caller's business decision: payment time for Nova uplata, admin-chosen
- * (possibly future) date for a manual assign — expiry always counts from it.
+ * caller's business decision — which DAY the package begins: payment day for
+ * Nova uplata, admin-picked (possibly future) day for a manual assign.
+ *
+ * The instant is normalized here rather than trusted: whatever time-of-day
+ * the caller passes, the package opens at 05:00 studio time on that day and
+ * runs to the close of its last day. Doing it at this chokepoint means every
+ * activation path gets a whole first day — a package "starting the 20th"
+ * that was submitted at 14:51 would otherwise exclude the 20th's morning
+ * classes, which is the mirror of the end-of-day expiry bug.
  */
 export async function createClientPackageFromType(
   db: PrismaClient | Prisma.TransactionClient,
@@ -37,15 +45,17 @@ export async function createClientPackageFromType(
     startsAt: Date;
   },
 ) {
-  const expiresAt = new Date(
-    args.startsAt.getTime() + args.packageType.validityDays * DAY_MS,
+  const startsAt = studioDayStartFor(args.startsAt);
+  const expiresAt = computePackageExpiresAt(
+    startsAt,
+    args.packageType.validityDays,
   );
   const { classTypes, ...row } = await db.clientPackage.create({
     data: {
       clientProfileId: args.clientProfileId,
       packageTypeId: args.packageType.id,
       lateCancelHours: args.packageType.lateCancelHours,
-      startsAt: args.startsAt,
+      startsAt,
       expiresAt,
       sessionsRemaining: args.packageType.sessionCount,
       classTypes: {

@@ -18,6 +18,7 @@ import {
   setClientBirthdayToToday,
 } from "./helpers/db";
 import { signInAs } from "./helpers/auth";
+import { computePackageExpiresAt } from "@/lib/package-expiry";
 
 const REFORMER_CLIENT_EMAIL = "client.active.reformer@e2e.test";
 
@@ -121,11 +122,16 @@ test.describe("birthday gift — grant flow", () => {
     expect(pkg!.packageType.isBirthdayGift).toBe(true);
     expect(pkg!.packageType.name).toBe(giftPackageTypeName);
     expect(pkg!.sessionsRemaining).toBe(1);
-    // expiresAt = startsAt + validityDays * 24h. Allow ±1 minute for clock
-    // skew between the test runner and the server.
-    const expectedExpiresMs =
-      pkg!.startsAt.getTime() + pkg!.packageType.validityDays * 24 * 60 * 60 * 1000;
-    expect(Math.abs(pkg!.expiresAt.getTime() - expectedExpiresMs)).toBeLessThan(60_000);
+    // The gift package obeys the same expiry rule as every other package:
+    // it opens at the start of its studio day and dies at the close of the
+    // last valid one. Asserted through the shared helper rather than
+    // re-deriving it, so a change to the rule can't leave this spec behind.
+    expect(pkg!.expiresAt.getTime()).toBe(
+      computePackageExpiresAt(
+        pkg!.startsAt,
+        pkg!.packageType.validityDays,
+      ).getTime(),
+    );
 
     // The client should now have a BIRTHDAY_CLIENT_GIFT notification with
     // the gift package's name baked into the body.

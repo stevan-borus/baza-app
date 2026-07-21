@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { computePackageExpiresAt } from "@/lib/package-expiry";
 import {
   classifyRenewalLockReason,
   clientOwnsPackageForClass,
@@ -27,6 +28,78 @@ function makePackage(overrides: Partial<{
     revokedAt: overrides.revokedAt ?? null,
   };
 }
+
+// The whole point of end-of-day expiry: the last day is a WHOLE day. A
+// client whose pack expires "23 July" must be able to book a 22:00 class
+// on the 23rd. Under the old startsAt + N*24h expiry they were cut off at
+// whatever o'clock they originally paid.
+describe("findEligibleClientPackage on the final valid day", () => {
+  const lastDayEnd = computePackageExpiresAt(
+    new Date("2026-06-23T07:00:00.000Z"),
+    30,
+  );
+
+  it("still books late in the evening of the expiry day", () => {
+    // 21:00 Belgrade on 22 July (day 30) — well past the 09:00 purchase
+    // o'clock that used to cut the day short, still inside the last day.
+    const pkg = makePackage({ expiresAt: lastDayEnd });
+    const at = new Date("2026-07-22T19:00:00.000Z");
+    expect(
+      findEligibleClientPackage([pkg], [], at, REFORMER_CLASS_TYPE_ID)?.id,
+    ).toBe("pkg-1");
+  });
+
+  it("covers the whole final day regardless of purchase time of day", () => {
+    // The core defect, stated directly: two clients who bought the same
+    // 30-day pack on the same day get the SAME final moment, whether they
+    // paid at 08:00 or at 20:00. Under duration-based expiry the early
+    // buyer lost the tail of their last day.
+    const early = computePackageExpiresAt(
+      new Date("2026-06-23T06:00:00.000Z"),
+      30,
+    );
+    const late = computePackageExpiresAt(
+      new Date("2026-06-23T18:00:00.000Z"),
+      30,
+    );
+    const at = new Date("2026-07-22T19:00:00.000Z");
+    for (const expiresAt of [early, late]) {
+      expect(
+        findEligibleClientPackage(
+          [makePackage({ expiresAt })],
+          [],
+          at,
+          REFORMER_CLASS_TYPE_ID,
+        )?.id,
+      ).toBe("pkg-1");
+    }
+  });
+
+  it("is spent by the first moment of the following day", () => {
+    // 00:30 Belgrade on 23 July — the pack is done, and the client should
+    // be told to renew rather than silently booking.
+    const pkg = makePackage({ expiresAt: lastDayEnd });
+    const at = new Date("2026-07-22T22:30:00.000Z");
+    expect(
+      findEligibleClientPackage([pkg], [], at, REFORMER_CLASS_TYPE_ID),
+    ).toBeNull();
+    expect(
+      classifyRenewalLockReason([pkg], [], at, REFORMER_CLASS_TYPE_ID),
+    ).toBe("RENEW");
+  });
+
+  it("does not stretch a 30-day pack into a 31st day", () => {
+    // The regression guard for the rule "30 days means 30, not 31". The
+    // old `startsAt + 30 * 24h` expiry landed on 23 July 07:00Z, which
+    // left a 30-day pack bookable on its 31st calendar day. Anyone who
+    // reintroduces duration-based expiry fails here.
+    const pkg = makePackage({ expiresAt: lastDayEnd });
+    const dayThirtyOne = new Date("2026-07-23T04:00:00.000Z");
+    expect(
+      findEligibleClientPackage([pkg], [], dayThirtyOne, REFORMER_CLASS_TYPE_ID),
+    ).toBeNull();
+  });
+});
 
 describe("findEligibleClientPackage class-scoped behaviour", () => {
   it("a mix package backs a session of any covered class type", () => {

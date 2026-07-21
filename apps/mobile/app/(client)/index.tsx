@@ -23,6 +23,7 @@ import { useTranslation } from "react-i18next";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import { now } from "@/lib/now";
+import { packageDaysLeft } from "@/lib/package-expiry";
 import {
   isActiveClientPackage,
   isFullyBookedActivePackage,
@@ -438,7 +439,10 @@ function PackageCard({
   // The NUMBER below stays "bookable / total".
   const pct = packageUsedFraction(left, total);
   const expires = dayjs(pkg.expiresAt);
-  const daysLeft = expires.diff(dayjs(), "day");
+  // Calendar-day distance, not a truncated duration — so this number and
+  // the expiry date beside it never contradict each other. See
+  // lib/package-expiry.ts.
+  const daysLeft = packageDaysLeft(new Date(pkg.expiresAt), now());
   const expiringSoon = daysLeft <= 14;
   // Active-but-fully-reserved ("0 / 12"): a real owner read this as broken.
   // Show a one-line explanation of why it's 0 and where renewal happens. This
@@ -560,14 +564,16 @@ function PackageCard({
             letterSpacing: 0.2,
           }}
         >
-          {expiringSoon
-            ? t("client.home.expiresWithCountdown", {
-                date: expires.locale(lang).format("D MMMM"),
-                days: daysLeft,
-              })
-            : t("client.home.expiresOn", {
-                date: expires.locale(lang).format("D MMMM"),
-              })}
+          {daysLeft === 0
+            ? t("client.home.expiresToday")
+            : expiringSoon
+              ? t("client.home.expiresWithCountdown", {
+                  date: expires.locale(lang).format("D MMMM"),
+                  count: daysLeft,
+                })
+              : t("client.home.expiresOn", {
+                  date: expires.locale(lang).format("D MMMM"),
+                })}
         </Text>
 
         {fullyBooked ? (

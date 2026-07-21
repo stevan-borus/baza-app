@@ -8,6 +8,7 @@ import { GET, POST } from "@/server/routes/packages/client-packages";
 import { POST as POST_PAUSE } from "@/server/routes/packages/pause";
 import { prisma } from "@/lib/server/prisma";
 import { now, nowMs } from "@/lib/now";
+import { computePackageExpiresAt } from "@/lib/package-expiry";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -106,7 +107,13 @@ describe("packages/client-packages", () => {
     expect(persisted.sessionsRemaining).toBe(12);
     expect(persisted.lateCancelHours).toBe(24);
     expect(persisted.classTypes.map((l) => l.classTypeId)).toEqual([reformer.id]);
-    expect(persisted.expiresAt.getTime()).toBe(startsAt.getTime() + 30 * DAY_MS);
+    // Expiry is end-of-studio-day on the last valid day, not startsAt + N*24h
+    // — asserted through the same helper the route uses so this can't drift
+    // back to duration math. (The rule itself is unit-tested in
+    // test/unit/package-expiry.test.ts.)
+    expect(persisted.expiresAt.getTime()).toBe(
+      computePackageExpiresAt(startsAt, 30).getTime(),
+    );
   });
 
   it("POST returns 404 when the packageTypeId is unknown (no orphan ClientPackage created)", async () => {

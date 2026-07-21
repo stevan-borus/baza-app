@@ -140,9 +140,12 @@ describe("POST /api/bookings — past-session guard", () => {
     expect(res.status).toBe(200);
   });
 
-  // Cancelling a booking on a past session must still work — the guard only
-  // applies to NEW bookings, not to undoing existing ones.
-  it("still allows CANCEL on a past session", async () => {
+  // CANCEL is blocked from the moment the session starts (#129): a client
+  // cancelled mid-class and escaped the late-cancel forfeit, because the
+  // penalty only fires before start. bookings-cancel.test.ts covers the
+  // in-progress case (started 30 min ago); this pins the long-past one, so
+  // "the class is over" can't be mistaken for a reason to allow the undo.
+  it("rejects CANCEL on a session that started an hour ago", async () => {
     const { profileId, packageId } = await seedAdultWithPackage(classTypeId);
     const past = await seedSession({
       classTypeId,
@@ -158,6 +161,29 @@ describe("POST /api/bookings — past-session guard", () => {
       },
     });
     const res = await bookingsPOST(makeReq("CANCEL", past.id));
+    expect(res.status).toBe(409);
+    const body = (await res.json()) as { error: string };
+    expect(body.error).toBe("SESSION_ALREADY_STARTED");
+  });
+
+  // The boundary the guard actually turns on. A session one minute out is
+  // still cancellable; the two cases above only prove the far side of it.
+  it("still allows CANCEL right up until the session starts", async () => {
+    const { profileId, packageId } = await seedAdultWithPackage(classTypeId);
+    const imminent = await seedSession({
+      classTypeId,
+      roomId,
+      trainerUserId,
+      startsAt: new Date(nowMs() + 60 * 1000),
+    });
+    await prisma.booking.create({
+      data: {
+        sessionId: imminent.id,
+        clientProfileId: profileId,
+        clientPackageId: packageId,
+      },
+    });
+    const res = await bookingsPOST(makeReq("CANCEL", imminent.id));
     expect(res.status).toBe(200);
   });
 });
