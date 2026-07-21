@@ -682,6 +682,8 @@
       "sheetAssign": "Dodeli paket",
       "packageType": "Tip paketa",
       "placeholderStart": "Početak",
+      "packageStartLabel": "Paket počinje",
+      "packageStartHint": "Klijent može da zakazuje od tog dana ujutru. Ranije ne.",
       "assign": "Dodeli",
       "assignError": "Dodela paketa nije uspela.",
       "duplicateSameDayHint": "Ovaj klijent je danas već dobio isti paket.",

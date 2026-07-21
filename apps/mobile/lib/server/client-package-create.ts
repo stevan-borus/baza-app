@@ -1,5 +1,6 @@
 import type { Prisma, PrismaClient } from "@/generated/prisma";
 import { computePackageExpiresAt } from "@/lib/package-expiry";
+import { studioDayStartFor } from "@/lib/studio-time";
 
 /**
  * The exact PackageType fields a Package activation snapshots. Callers fetch
@@ -26,9 +27,15 @@ export type PackageTypeSnapshot = {
  *
  * `db` accepts a transaction client or the root client so callers control
  * atomicity (the booking-cancellation.ts pattern). `startsAt` is the
- * caller's business decision: payment time for Nova uplata, admin-chosen
- * (possibly future) date for a manual assign — expiry always counts from it,
- * landing at the end of the last valid studio day.
+ * caller's business decision — which DAY the package begins: payment day for
+ * Nova uplata, admin-picked (possibly future) day for a manual assign.
+ *
+ * The instant is normalized here rather than trusted: whatever time-of-day
+ * the caller passes, the package opens at 05:00 studio time on that day and
+ * runs to the close of its last day. Doing it at this chokepoint means every
+ * activation path gets a whole first day — a package "starting the 20th"
+ * that was submitted at 14:51 would otherwise exclude the 20th's morning
+ * classes, which is the mirror of the end-of-day expiry bug.
  */
 export async function createClientPackageFromType(
   db: PrismaClient | Prisma.TransactionClient,
@@ -38,8 +45,9 @@ export async function createClientPackageFromType(
     startsAt: Date;
   },
 ) {
+  const startsAt = studioDayStartFor(args.startsAt);
   const expiresAt = computePackageExpiresAt(
-    args.startsAt,
+    startsAt,
     args.packageType.validityDays,
   );
   const { classTypes, ...row } = await db.clientPackage.create({
@@ -47,7 +55,7 @@ export async function createClientPackageFromType(
       clientProfileId: args.clientProfileId,
       packageTypeId: args.packageType.id,
       lateCancelHours: args.packageType.lateCancelHours,
-      startsAt: args.startsAt,
+      startsAt,
       expiresAt,
       sessionsRemaining: args.packageType.sessionCount,
       classTypes: {

@@ -679,6 +679,8 @@
       "sheetAssign": "Assign package",
       "packageType": "Package type",
       "placeholderStart": "Start",
+      "packageStartLabel": "Package starts",
+      "packageStartHint": "The client can book from that morning onwards. Not before.",
       "assign": "Assign",
       "assignError": "Assigning package failed.",
       "duplicateSameDayHint": "This client already received the same package today.",

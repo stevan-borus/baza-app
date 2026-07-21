@@ -13,6 +13,7 @@ import { setMockUser } from "./auth-mock";
 import { resetDb } from "./setup-db";
 import { now } from "@/lib/now";
 import { computePackageExpiresAt } from "@/lib/package-expiry";
+import { studioDayStartFor } from "@/lib/studio-time";
 
 vi.mock("@/lib/server/auth-guards", async () => (await import("./auth-mock")).authGuardsMock());
 
@@ -104,10 +105,13 @@ describe("assign-package paid mode (POST /api/billing)", () => {
     expect(record.packageTypeId).toBe(packageType.id);
     expect(pack.packageTypeId).toBe(packageType.id);
 
-    // (c) Package startsAt is pinned to the anchor instant (the server
-    //     uses `now()`), so the two rows land on the same logical clock
-    //     tick inside the transaction.
-    expect(pack.startsAt.getTime()).toBe(anchor);
+    // (c) With no explicit startsAt the server falls back to today, but the
+    //     package still opens at the START of that studio day rather than
+    //     the payment instant — otherwise a 14:51 payment would exclude the
+    //     morning classes of the day the client just paid for.
+    expect(pack.startsAt.getTime()).toBe(
+      studioDayStartFor(new Date(anchor)).getTime(),
+    );
 
     // (d) Amount + method are persisted exactly as submitted by the UI.
     expect(record.amount).toBe(24000);
@@ -146,7 +150,10 @@ describe("assign-package paid mode (POST /api/billing)", () => {
     expect(res.status).toBe(201);
 
     const pack = (await prisma.clientPackage.findMany())[0]!;
-    expect(pack.startsAt.getTime()).toBe(pickedDay.getTime());
+    // The picked DAY is honored — normalized to that day's 05:00 studio
+    // opening, never rolled back to the day before (the picker hands back
+    // local midnight, which is before the opening hour).
+    expect(pack.startsAt.getTime()).toBe(studioDayStartFor(pickedDay).getTime());
     const packageTypeRow = await prisma.packageType.findUniqueOrThrow({
       where: { id: packageType.id },
     });

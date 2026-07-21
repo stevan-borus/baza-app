@@ -31,6 +31,8 @@ import {
 import { useCreateBillingMutation } from "@/lib/queries/billing-queries-factory";
 import { RAW_METHOD_LABEL_KEYS } from "@/lib/payment-method-labels";
 import { assignedSamePackageToday } from "@/lib/same-day-package-assignment";
+import { suggestedPackageStart } from "@/lib/suggested-package-start";
+import { now } from "@/lib/now";
 import { formatClassTypeList } from "@/lib/format";
 
 export type AssignPackageMode = "comp" | "paid";
@@ -99,10 +101,22 @@ export function AssignPackageSheetContent({
   // was intentional, but the note makes any future accident visible.
   const existingPackagesQuery = useQuery(packagesQueries.clientPackages(client.id));
   const existingPackages = existingPackagesQuery.data?.packages ?? [];
+
+  // The date the picker shows until the admin picks something else. Derived,
+  // not synced into state with an effect: `startsAt` stays null while
+  // untouched, so the suggestion can update when the packages query lands
+  // without ever fighting a value the admin has already chosen.
+  //
+  // Clients almost always renew AT their last session, so a client with a
+  // usable package gets "the day after it runs out" — otherwise the new pack
+  // would start midway through the old one. Everyone else gets today.
+  const suggestedStart = suggestedPackageStart(existingPackages, now());
+  const effectiveStartsAt = startsAt ?? suggestedStart;
+
   const alreadyAssignedToday = assignedSamePackageToday(
     existingPackages,
     packageTypeId,
-    startsAt,
+    effectiveStartsAt,
   );
   const packageTypes =
     mode === "paid"
@@ -127,14 +141,15 @@ export function AssignPackageSheetContent({
         ? t("admin.clients.amountPositive")
         : null;
 
+  // The start date is always present now (suggested or picked), so it no
+  // longer gates submit — the picker can't be left empty.
   const submitDisabled =
     mode === "comp"
-      ? compMutation.isPending || !packageTypeId || !startsAt
-      : paidMutation.isPending || !packageTypeId || !startsAt || !amountValid;
+      ? compMutation.isPending || !packageTypeId
+      : paidMutation.isPending || !packageTypeId || !amountValid;
 
   function handleSubmit() {
-    if (!startsAt) return;
-    const startsAtIso = startsAt.toISOString();
+    const startsAtIso = effectiveStartsAt.toISOString();
     if (mode === "comp") {
       compMutation.mutate(
         {
@@ -250,13 +265,17 @@ export function AssignPackageSheetContent({
         })}
       </View>
 
+      <SectionLabel>{t("admin.clients.packageStartLabel")}</SectionLabel>
       <DateTimePicker
         testID="assign-package-start-picker"
         mode="date"
-        value={startsAt}
+        value={effectiveStartsAt}
         onChange={setStartsAt}
         placeholder={t("admin.clients.placeholderStart")}
       />
+      <Text className="text-muted" style={{ fontSize: 12 }}>
+        {t("admin.clients.packageStartHint")}
+      </Text>
 
       {mode === "paid" ? (
         <>

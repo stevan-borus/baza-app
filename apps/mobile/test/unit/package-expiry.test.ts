@@ -3,7 +3,7 @@ import timezone from "dayjs/plugin/timezone";
 import utc from "dayjs/plugin/utc";
 import { describe, expect, it } from "vitest";
 import { computePackageExpiresAt } from "@/lib/package-expiry";
-import { STUDIO_TIMEZONE } from "@/lib/studio-time";
+import { STUDIO_TIMEZONE, startOfStudioDay } from "@/lib/studio-time";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -61,6 +61,33 @@ describe("computePackageExpiresAt", () => {
       const lastDay = dayjs(expiresAt).tz(STUDIO_TIMEZONE).startOf("day");
       expect(lastDay.diff(firstDay, "day") + 1).toBe(validityDays);
     }
+  });
+
+  it("spans 05:00 on day one to the close of the last day", () => {
+    // The two boundaries together, as a client would describe them: the pack
+    // opens the morning it starts and dies at the end of its last day. 20
+    // July 05:00 Belgrade (03:00Z) + 30 days -> 18 Aug 23:59:59.999 (21:59Z).
+    const startsAt = startOfStudioDay(new Date("2026-07-20T12:51:00.000Z"));
+    expect(startsAt.toISOString()).toBe("2026-07-20T03:00:00.000Z");
+    expect(computePackageExpiresAt(startsAt, 30).toISOString()).toBe(
+      "2026-08-18T21:59:59.999Z",
+    );
+  });
+
+  it("counts the same 30 days whether or not startsAt was normalized", () => {
+    // Normalizing the start must not quietly shift the expiry DATE — the
+    // admin picked a day, and both ends key off that day.
+    const rawPick = new Date("2026-07-20T12:51:00.000Z");
+    const normalized = startOfStudioDay(rawPick);
+    expect(
+      dayjs(computePackageExpiresAt(normalized, 30))
+        .tz(STUDIO_TIMEZONE)
+        .format("YYYY-MM-DD"),
+    ).toBe(
+      dayjs(computePackageExpiresAt(rawPick, 30))
+        .tz(STUDIO_TIMEZONE)
+        .format("YYYY-MM-DD"),
+    );
   });
 
   it("a 1-day package is valid through the end of its own start day", () => {
