@@ -1,5 +1,6 @@
 import path from "node:path";
 import { defineConfig } from "vitest/config";
+import { playwright } from "@vitest/browser-playwright";
 
 export default defineConfig({
   esbuild: {
@@ -20,6 +21,96 @@ export default defineConfig({
           name: "unit",
           include: ["test/unit/**/*.test.{ts,tsx}"],
           environment: "node",
+        },
+      },
+      {
+        extends: true,
+        // Component tests mount real RN components in Chromium via
+        // react-native-web — the same rendering path Playwright e2e uses,
+        // minus the app shell, server, and DB.
+        //
+        // `lib/now` (and friends) read process.env per call; the browser has
+        // no process global, so give them an empty env → real clock.
+        define: {
+          "process.env": JSON.stringify({}),
+        },
+        resolve: {
+          alias: {
+            // Native-only chrome (gestures, sheet physics, animations,
+            // haptics) can't load outside Metro — stubbed at the package
+            // boundary. Everything of OURS renders real. See stubs/*.
+            "@gorhom/bottom-sheet": path.resolve(
+              __dirname,
+              "test/component/stubs/gorhom-bottom-sheet.tsx",
+            ),
+            "react-native-reanimated": path.resolve(
+              __dirname,
+              "test/component/stubs/reanimated.ts",
+            ),
+            moti: path.resolve(__dirname, "test/component/stubs/moti.tsx"),
+            "react-native-safe-area-context": path.resolve(
+              __dirname,
+              "test/component/stubs/safe-area-context.tsx",
+            ),
+            uniwind: path.resolve(__dirname, "test/component/stubs/uniwind.ts"),
+            "expo-haptics": path.resolve(
+              __dirname,
+              "test/component/stubs/expo-haptics.ts",
+            ),
+            "react-native-svg": path.resolve(
+              __dirname,
+              "test/component/stubs/react-native-svg.tsx",
+            ),
+            "lucide-react-native": path.resolve(
+              __dirname,
+              "test/component/stubs/lucide-react-native.tsx",
+            ),
+            "react-native": "react-native-web",
+          },
+          // Metro resolves platform files (.web.js) first; mirror that so RN
+          // libraries pick their web implementations instead of deep-importing
+          // react-native internals that don't exist in react-native-web.
+          extensions: [
+            ".web.tsx",
+            ".web.ts",
+            ".web.jsx",
+            ".web.js",
+            ".tsx",
+            ".ts",
+            ".jsx",
+            ".js",
+            ".json",
+          ],
+        },
+        test: {
+          name: "component",
+          include: ["test/component/**/*.browser.test.tsx"],
+          setupFiles: ["./test/component/setup.ts"],
+          isolate: true,
+          browser: {
+            enabled: true,
+            provider: playwright(),
+            headless: true,
+            instances: [{ browser: "chromium" }],
+            screenshotFailures: false,
+          },
+          deps: {
+            optimizer: {
+              web: {
+                // These RN libraries deep-import react-native internals in
+                // their .js files but ship .web.js siblings; the optimizer's
+                // resolver ignores our .web-first extensions, so serve them
+                // unbundled through the project resolver instead.
+                exclude: [
+                  "react-native-gesture-handler",
+                  "react-native-reanimated",
+                  "react-native-safe-area-context",
+                  "@gorhom/bottom-sheet",
+                  "moti",
+                ],
+              },
+            },
+          },
         },
       },
       {

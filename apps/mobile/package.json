@@ -29,6 +29,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:unit": "vitest run --project unit",
+    "test:component": "vitest run --project component",
     "test:integration": "vitest run --project integration",
     "dev:db:unpatch": "tsx scripts/dev/unpatch-dev-db.ts",
     "test:db:bootstrap": "tsx scripts/test/bootstrap-test-db.ts",
@@ -125,20 +126,22 @@
   "devDependencies": {
     "@playwright/test": "^1.61.0",
     "@sentry/cli": "2.58.4",
+    "@testing-library/react": "^16.3.2",
     "@types/express": "^5.0.6",
     "@types/node": "^26.0.0",
     "@types/pg": "^8.20.0",
     "@types/react": "~19.2.17",
     "@types/react-dom": "^19.2.3",
     "@types/react-test-renderer": "19.1.0",
-    "@vitest/expect": "^4.1.9",
+    "@vitest/browser-playwright": "^4.1.10",
+    "@vitest/expect": "^4.1.10",
     "babel-plugin-react-compiler": "^1.0.0",
-    "dotenv": "17.4.2",
     "babel-preset-expo": "^56.0.15",
+    "dotenv": "17.4.2",
     "prisma": "^7.8.0",
     "prisma-zod-generator": "^2.1.4",
     "react-test-renderer": "19.2.3",
     "tsx": "^4.22.4",
-    "vitest": "^4.1.9"
+    "vitest": "^4.1.10"
   }
 }
