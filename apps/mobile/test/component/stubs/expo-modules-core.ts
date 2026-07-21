@@ -46,6 +46,10 @@ export function uuidv4(): string {
   return "00000000-0000-4000-8000-000000000000";
 }
 
+export const uuid = { v4: uuidv4, v5: uuidv4 };
+
+export class LegacyEventEmitter extends EventEmitter {}
+
 export class CodedError extends Error {
   code: string;
   constructor(code: string, message: string) {
