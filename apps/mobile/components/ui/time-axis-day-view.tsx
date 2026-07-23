@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import dayjs from "dayjs";
 import { Badge } from "@/components/ui/badge";
+import { IntensityDots } from "@/components/ui/intensity-dots";
 import { useThemeTokens } from "@/components/ui/tokens";
 import {
   HOUR_START,
@@ -32,6 +33,8 @@ type SessionBlock = {
   trainerName?: string | null;
   bookedCount: number;
   capacity: number;
+  /** Admin-set 1–3 intensity for this occurrence; null/absent = unmarked. */
+  intensity?: number | null;
   status?: "available" | "full" | "booked" | "waitlisted";
 };
 
@@ -166,12 +169,16 @@ export function TimeAxisDayView({
                 >
                   <View className="px-2.5 flex-row items-center gap-2">
                     <View className="flex-1 gap-0.5">
-                      <Text
-                        className="font-body-semibold text-sm text-foreground"
-                        numberOfLines={1}
-                      >
-                        {s.classTypeName}
-                      </Text>
+                      <View className="flex-row items-center gap-1.5">
+                        <Text
+                          className="font-body-semibold text-sm text-foreground"
+                          numberOfLines={1}
+                          style={{ flexShrink: 1 }}
+                        >
+                          {s.classTypeName}
+                        </Text>
+                        <IntensityDots intensity={s.intensity} size={5} />
+                      </View>
                       {compact ? null : (
                         <Text
                           className="text-xs"

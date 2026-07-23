@@ -128,6 +128,25 @@ describe("BookingSheet renewal locks", () => {
   });
 });
 
+describe("BookingSheet intensity", () => {
+  it("shows the intensity dots when the session is marked", async () => {
+    const screen = renderSheet({
+      session: makeSession({ intensity: 2 }),
+    });
+    await screen.findByTestId("intensity-dots");
+  });
+
+  it("shows no intensity dots when the session is unmarked", async () => {
+    const screen = renderSheet({
+      session: makeSession({ intensity: null }),
+    });
+    // The book button is enough to know the sheet mounted for an unmarked
+    // session; the meter must be absent.
+    await screen.findByTestId("booking-book-button");
+    expect(screen.queryByTestId("intensity-dots")).toBeNull();
+  });
+});
+
 describe("BookingSheet booking flow", () => {
   it("book → two-step confirm → onBook fires with the session id", async () => {
     const onBook = vi.fn();

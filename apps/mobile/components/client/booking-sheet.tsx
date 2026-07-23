@@ -18,6 +18,7 @@ import { isInLateCancelWindow } from "@/lib/late-cancel";
 import { nowMs } from "@/lib/now";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { IntensityDots } from "@/components/ui/intensity-dots";
 import { useThemeTokens, type ThemeTokens } from "@/components/ui/tokens";
 import type { AvailabilitySession } from "@baza/types/scheduling";
 
@@ -143,9 +144,12 @@ export function BookingSheet({
             transition={{ type: "timing", duration: 250 }}
           >
             <View className="gap-1.5">
-              <Text className="text-xs font-body-semibold text-muted uppercase tracking-wider">
-                {session.classTypeName}
-              </Text>
+              <View className="flex-row items-center gap-2">
+                <Text className="text-xs font-body-semibold text-muted uppercase tracking-wider">
+                  {session.classTypeName}
+                </Text>
+                <IntensityDots intensity={session.intensity} />
+              </View>
               <Text
                 className="text-foreground font-display"
                 style={{ fontSize: 34, letterSpacing: -0.5, lineHeight: 38 }}

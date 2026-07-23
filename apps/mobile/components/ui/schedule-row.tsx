@@ -13,6 +13,7 @@ import { Image, Pressable, Text, View } from "react-native";
 import dayjs from "dayjs";
 import { useTranslation } from "react-i18next";
 import { useThemeTokens } from "@/components/ui/tokens";
+import { IntensityDots } from "@/components/ui/intensity-dots";
 
 const PHOTO_RINGS = require("@/assets/studio/rings.webp");
 const PHOTO_PLANK = require("@/assets/studio/plank.webp");
@@ -48,6 +49,8 @@ export type ScheduleRowSession = {
   roomName: string | null;
   availableSlots: number;
   capacity: number;
+  /** Admin-set 1–3 intensity for this occurrence; null/absent = unmarked. */
+  intensity?: number | null;
   isBookedByMe?: boolean;
   /** False = the client can't book this session: the row renders muted
    * (still tappable — the sheet explains why). */
@@ -134,17 +137,21 @@ export function ScheduleRow({
           {session.roomName ? (
             <Text style={metaTextStyle}>{session.roomName}</Text>
           ) : null}
-          <Text
-            style={{
-              fontFamily: "AlbertSans-SemiBold",
-              fontSize: 16,
-              color: tokens.foreground,
-              letterSpacing: -0.2,
-            }}
-            numberOfLines={1}
-          >
-            {session.classTypeName}
-          </Text>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+            <Text
+              style={{
+                flexShrink: 1,
+                fontFamily: "AlbertSans-SemiBold",
+                fontSize: 16,
+                color: tokens.foreground,
+                letterSpacing: -0.2,
+              }}
+              numberOfLines={1}
+            >
+              {session.classTypeName}
+            </Text>
+            <IntensityDots intensity={session.intensity} />
+          </View>
           <Text
             style={{
               fontFamily: "AlbertSans-Regular",

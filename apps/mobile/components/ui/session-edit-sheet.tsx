@@ -14,6 +14,10 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { DateTimePicker } from "@/components/ui/date-time-picker";
 import { SectionLabel } from "@/components/ui/typography";
+import {
+  IntensitySelector,
+  type IntensityValue,
+} from "@/components/ui/intensity-selector";
 import { ErrorState } from "@/components/ui/states";
 import { useThemeTokens } from "@/components/ui/tokens";
 import {
@@ -34,6 +38,7 @@ type UpdateSessionVars = {
   trainerUserId?: string;
   isActive?: boolean;
   status?: "SCHEDULED" | "CANCELED" | "COMPLETED";
+  intensity?: 1 | 2 | 3 | null;
 };
 type UpdateSeriesVars = {
   id: string;
@@ -82,6 +87,8 @@ export type EditSessionInput = {
   endsAt: Date | string;
   recurringScheduleId: string | null;
   isActive?: boolean;
+  /** Current per-occurrence intensity marking (1–3), or null when unmarked. */
+  intensity?: number | null;
 };
 
 type ShowEditState = {
@@ -107,6 +114,7 @@ type EditForm = {
   trainerUserId: string;
   status: string;
   isActive: boolean;
+  intensity: IntensityValue;
 };
 
 type SeriesForm = {
@@ -158,6 +166,7 @@ export function useSessionEditSheet() {
     trainerUserId: "",
     status: "SCHEDULED",
     isActive: true,
+    intensity: null,
   });
   const [seriesForm, setSeriesForm] = useState<SeriesForm>({
     weekdays: [],
@@ -244,6 +253,11 @@ export function useSessionEditSheet() {
       session.startsAt instanceof Date ? session.startsAt : new Date(session.startsAt);
     const endsAt =
       session.endsAt instanceof Date ? session.endsAt : new Date(session.endsAt);
+    // Only 1/2/3 seed a marked selector; anything else (null / stray) is "none".
+    const seededIntensity: IntensityValue =
+      session.intensity === 1 || session.intensity === 2 || session.intensity === 3
+        ? session.intensity
+        : null;
     setEditForm({
       startsAt,
       endsAt,
@@ -252,6 +266,7 @@ export function useSessionEditSheet() {
       trainerUserId: session.trainerUserId ?? "",
       status: "SCHEDULED",
       isActive: sessionIsActive,
+      intensity: seededIntensity,
     });
     setShowEdit({
       sessionId: session.id,
@@ -436,6 +451,15 @@ export function SessionEditSheet(props: SessionEditSheetBoundProps) {
                 }))}
               />
 
+              {/* Per-occurrence intensity marking. Editable any time (incl.
+                  after bookings exist); saves with the rest of the session. */}
+              <IntensitySelector
+                value={editForm.intensity}
+                onChange={(next) =>
+                  setEditForm((s) => ({ ...s, intensity: next }))
+                }
+              />
+
               {(() => {
                 // ADR-0002 occurrence rule: per-session save path is disabled
                 // iff THIS session has bookings, regardless of whether it
@@ -488,6 +512,8 @@ export function SessionEditSheet(props: SessionEditSheetBoundProps) {
                     roomId: editForm.roomId || undefined,
                     trainerUserId: editForm.trainerUserId,
                     isActive: editForm.isActive,
+                    // Always sent so clearing to null (unmark) persists.
+                    intensity: editForm.intensity,
                   });
                 }}
               >

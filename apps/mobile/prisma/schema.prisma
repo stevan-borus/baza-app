@@ -264,6 +264,10 @@ model Session {
   startsAt             DateTime
   endsAt               DateTime
   capacity             Int
+  // Optional admin-set 1–3 marking of how hard THIS occurrence will be.
+  // Null = unmarked (not "easy"). Strictly per-occurrence — recurring
+  // siblings are never touched. Valid values 1, 2, 3 (enforced in Zod).
+  intensity            Int?
   isActive             Boolean             @default(true)
   status               SessionStatus       @default(SCHEDULED)
   createdAt            DateTime            @default(now())

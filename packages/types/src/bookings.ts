@@ -63,6 +63,8 @@ export const clientBookingItemSchema = z.object({
     id: z.string(),
     startsAt: z.string(),
     endsAt: z.string(),
+    // Admin-set 1–3 intensity for this occurrence; null/absent = unmarked.
+    intensity: z.number().int().nullable().optional(),
     classType: z.object({ id: z.string(), name: z.string() }),
     room: z.nullable(z.object({ id: z.string(), name: z.string() })),
     trainer: z.nullable(z.object({ id: z.string(), fullName: z.string() })),

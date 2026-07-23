@@ -1299,5 +1299,14 @@
       "newCampaign": "Create a new campaign",
       "axisToggle": "Toggle {{axis}} criterion"
     }
+  },
+  "session": {
+    "intensity": {
+      "label": "Intensity",
+      "none": "Unmarked",
+      "a11yLabel": "Intensity {{value}} of {{total}}",
+      "selectorNoneA11y": "No intensity marking",
+      "selectorLevelA11y": "Intensity {{value}} of {{total}}"
+    }
   }
 }

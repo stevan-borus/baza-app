@@ -11,6 +11,7 @@ import { useTranslation } from "react-i18next";
 import dayjs from "dayjs";
 import { Badge } from "@/components/ui/badge";
 import { Icon } from "@/components/ui/icon";
+import { IntensityDots } from "@/components/ui/intensity-dots";
 import { useThemeTokens } from "@/components/ui/tokens";
 import type { ClientBooking } from "@/lib/queries/bookings-queries-factory";
 
@@ -38,13 +39,16 @@ export function BookingRow({
   const inner = (
     <>
       <View className="flex-1 flex-col gap-0.5">
-        <Text
-          className="text-foreground font-body-semibold"
-          style={{ fontSize: 14 }}
-          numberOfLines={1}
-        >
-          {booking.session.classType.name}
-        </Text>
+        <View className="flex-row items-center gap-2">
+          <Text
+            className="text-foreground font-body-semibold"
+            style={{ flexShrink: 1, fontSize: 14 }}
+            numberOfLines={1}
+          >
+            {booking.session.classType.name}
+          </Text>
+          <IntensityDots intensity={booking.session.intensity} />
+        </View>
         <Text className="text-muted" style={{ fontSize: 12 }}>
           {`${dayjs(booking.session.startsAt).locale(lang).format("ddd, D.M.")} · ${dayjs(booking.session.startsAt).format("HH:mm")}–${dayjs(booking.session.endsAt).format("HH:mm")}`}
         </Text>

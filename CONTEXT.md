@@ -50,6 +50,11 @@ A scheduled class — `(classType, room, trainer, startsAt, endsAt, capacity)`. 
 **Recurring series**:
 A set of Sessions generated from a weekday pattern (e.g. Mon/Wed/Fri × 4 weeks). Each occurrence is an editable Session; edits can target one occurrence or the whole series.
 
+**Intensity** (intenzitet):
+An optional Admin-set 1–3 marking on a single Session telling Clients how hard that occurrence will be. Unmarked (the default) means "not rated" — **not** "easy". Strictly per-occurrence: marking one occurrence of a recurring series never touches its siblings. Admins set, change, or clear it at any time, including after Clients have booked. Purely advisory and display-only: it gates nothing (no booking restrictions, no filtering) and setting/changing it notifies no one. Rendered to every role as a filled-dot meter (●●○), never as stars — stars read as a quality rating, the opposite of an intensity warning.
+
+_Avoid_: "difficulty" / "težina" (ambiguous with weight in a fitness context), "stars"/"rating". The word is **intensity**.
+
 **Booking**:
 A Client claiming a slot in a Session. Decrements the matched ClientPackage's `sessionsRemaining` (or doesn't, depending on cancellation timing — see below). Can be created by the Client (via `POST /bookings`, gated by `no_package_for_class`) or by an **Admin** (via the admin booking path, which **skips** the package-eligibility check — see **Admin reservation**).
 

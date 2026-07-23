@@ -27,6 +27,9 @@ export const availabilitySessionSchema = sessionFieldsSchema.pick({
   bookedCount: z.number(),
   waitlistCount: z.number(),
   availableSlots: z.number(),
+  // Admin-set 1–3 intensity for this occurrence; null/absent = unmarked.
+  // Display-only — never gates booking or filtering.
+  intensity: z.number().int().nullable().optional(),
   recurringScheduleId: z.nullable(z.string()).optional(),
   isActive: z.boolean().optional(),
   isBookedByMe: z.boolean().optional(),
@@ -87,6 +90,14 @@ export const createSessionInputSchema = z.object({
   isActive: z.boolean().default(true),
 });
 
+// Optional admin-set 1–3 marking of how hard a single occurrence will be.
+// null clears it (unmarked, NOT "easy"); the {1,2,3} literal union enforces
+// the valid range at the server-parse boundary so no client can persist a
+// rogue value.
+export const intensityInputSchema = z
+  .union([z.literal(1), z.literal(2), z.literal(3)])
+  .nullable();
+
 export const updateSessionInputSchema = z.object({
   startsAt: z.string().min(10).optional(),
   endsAt: z.string().min(10).optional(),
@@ -95,6 +106,7 @@ export const updateSessionInputSchema = z.object({
   trainerUserId: z.uuid().optional(),
   isActive: z.boolean().optional(),
   status: z.enum(["SCHEDULED", "CANCELED", "COMPLETED"]).optional(),
+  intensity: intensityInputSchema.optional(),
 });
 
 export const createRecurringSessionsInputSchema = z.object({
@@ -133,6 +145,7 @@ export const sessionSchema = z.object({
   endsAt: z.string(),
   capacity: z.number(),
   status: z.enum(["SCHEDULED", "CANCELED", "COMPLETED"]),
+  intensity: z.number().int().nullable().optional(),
   classType: z.object({ id: z.string(), name: z.string() }).optional(),
   room: z.object({ id: z.string(), name: z.string() }).nullable().optional(),
 });
@@ -180,6 +193,7 @@ export const sessionDetailSchema = z.object({
   status: z.enum(["SCHEDULED", "CANCELED", "COMPLETED"]),
   capacity: z.number(),
   isActive: z.boolean(),
+  intensity: z.number().int().nullable().optional(),
   classTypeId: z.string(),
   roomId: z.nullable(z.string()),
   trainerUserId: z.nullable(z.string()),
