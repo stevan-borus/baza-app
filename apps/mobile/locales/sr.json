@@ -1307,12 +1307,10 @@
     }
   },
   "session": {
-    "intensity": {
-      "label": "Intenzitet",
-      "none": "Bez oznake",
-      "a11yLabel": "Intenzitet {{value}} od {{total}}",
-      "selectorNoneA11y": "Bez oznake intenziteta",
-      "selectorLevelA11y": "Intenzitet {{value}} od {{total}}"
+    "advanced": {
+      "badge": "Napredno",
+      "switchLabel": "Napredno",
+      "a11yLabel": "Napredni trening"
     }
   }
 }

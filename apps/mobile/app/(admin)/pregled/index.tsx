@@ -255,7 +255,7 @@ export default function AdminSchedule() {
                         roomName: s.roomName,
                         bookedCount: s.bookedCount,
                         capacity: s.capacity,
-                        intensity: s.intensity,
+                        isAdvanced: s.isAdvanced,
                         status:
                           s.availableSlots > 0 ? "available" : "full",
                       }),

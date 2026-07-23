@@ -128,22 +128,22 @@ describe("BookingSheet renewal locks", () => {
   });
 });
 
-describe("BookingSheet intensity", () => {
-  it("shows the intensity dots when the session is marked", async () => {
+describe("BookingSheet advanced badge", () => {
+  it("shows the advanced badge when the session is marked", async () => {
     const screen = renderSheet({
-      session: makeSession({ intensity: 2 }),
+      session: makeSession({ isAdvanced: true }),
     });
-    await screen.findByTestId("intensity-dots");
+    await screen.findByTestId("advanced-badge");
   });
 
-  it("shows no intensity dots when the session is unmarked", async () => {
+  it("shows no advanced badge when the session is unmarked", async () => {
     const screen = renderSheet({
-      session: makeSession({ intensity: null }),
+      session: makeSession({ isAdvanced: false }),
     });
     // The book button is enough to know the sheet mounted for an unmarked
-    // session; the meter must be absent.
+    // session; the badge must be absent.
     await screen.findByTestId("booking-book-button");
-    expect(screen.queryByTestId("intensity-dots")).toBeNull();
+    expect(screen.queryByTestId("advanced-badge")).toBeNull();
   });
 });
 

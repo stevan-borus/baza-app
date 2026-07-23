@@ -6,7 +6,7 @@ import { router, type Href } from "expo-router";
 import dayjs from "dayjs";
 import { Icon } from "@/components/ui/icon";
 import { GlassCard } from "@/components/ui/glass-card";
-import { IntensityDots } from "@/components/ui/intensity-dots";
+import { AdvancedBadge } from "@/components/ui/advanced-badge";
 import { ErrorState, EmptyState } from "@/components/ui/states";
 import { SkeletonCard } from "@/components/ui/skeleton";
 import { SectionLabel } from "@/components/ui/typography";
@@ -97,7 +97,7 @@ export function SessionDetail({
                 endsAt: session.endsAt,
                 recurringScheduleId: session.recurringScheduleId ?? null,
                 isActive: session.isActive,
-                intensity: session.intensity,
+                isAdvanced: session.isAdvanced,
               });
             }}
             accessibilityLabel={t("admin.sessionDetail.editAction")}
@@ -139,7 +139,7 @@ export function SessionDetail({
                   >
                     {dateLabel}
                   </Text>
-                  <IntensityDots intensity={session.intensity} />
+                  <AdvancedBadge isAdvanced={session.isAdvanced} size="detail" />
                 </View>
                 <Text className="text-muted" style={{ fontSize: 14 }}>
                   {timeLabel}

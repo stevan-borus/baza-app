@@ -18,7 +18,7 @@ import { isInLateCancelWindow } from "@/lib/late-cancel";
 import { nowMs } from "@/lib/now";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { IntensityDots } from "@/components/ui/intensity-dots";
+import { AdvancedBadge } from "@/components/ui/advanced-badge";
 import { useThemeTokens, type ThemeTokens } from "@/components/ui/tokens";
 import type { AvailabilitySession } from "@baza/types/scheduling";
 
@@ -148,7 +148,7 @@ export function BookingSheet({
                 <Text className="text-xs font-body-semibold text-muted uppercase tracking-wider">
                   {session.classTypeName}
                 </Text>
-                <IntensityDots intensity={session.intensity} />
+                <AdvancedBadge isAdvanced={session.isAdvanced} size="detail" />
               </View>
               <Text
                 className="text-foreground font-display"

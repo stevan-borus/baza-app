@@ -62,7 +62,7 @@ export async function GET(request: Request, { id }: RouteParams) {
       status: true,
       capacity: true,
       isActive: true,
-      intensity: true,
+      isAdvanced: true,
       classTypeId: true,
       roomId: true,
       trainerUserId: true,
@@ -357,9 +357,9 @@ export async function PATCH(request: Request, { id }: RouteParams) {
       status: parsed.data.status,
       isActive: parsed.data.isActive,
       trainerUserId: parsed.data.trainerUserId,
-      // Per-occurrence intensity marking. `undefined` (field omitted) leaves it
-      // untouched; `null` clears it. Only 1/2/3/null reach here (Zod-enforced).
-      intensity: parsed.data.intensity,
+      // Per-occurrence "advanced" marking. `undefined` (field omitted) leaves
+      // it untouched; a boolean sets or clears it.
+      isAdvanced: parsed.data.isAdvanced,
     },
     select: {
       id: true,
@@ -370,7 +370,7 @@ export async function PATCH(request: Request, { id }: RouteParams) {
       roomId: true,
       trainerUserId: true,
       isActive: true,
-      intensity: true,
+      isAdvanced: true,
       classTypeId: true,
       classType: { select: { id: true, name: true } },
       room: { select: { id: true, name: true } },

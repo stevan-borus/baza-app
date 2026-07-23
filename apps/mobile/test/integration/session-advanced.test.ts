@@ -1,8 +1,8 @@
 /**
- * Session intensity — the admin-set 1–3 per-occurrence marking.
+ * Session "advanced" — the admin-set binary per-occurrence marking.
  *
- * Write path (PATCH /api/sessions/[id]): admins set 1/2/3, clear to null, and
- * every out-of-range or non-admin attempt is rejected. Editable after bookings
+ * Write path (PATCH /api/sessions/[id]): admins set true / false; omitting the
+ * field leaves it untouched; a non-admin is rejected. Editable after bookings
  * exist. Read path: the field surfaces on GET /api/sessions/[id] (detail) and
  * GET /api/sessions/availability (client calendar) for the roles that render a
  * card — the omit-in-one-select bug this feature was written to avoid.
@@ -78,7 +78,7 @@ function patchRequest(sessionId: string, body: unknown) {
   });
 }
 
-describe("session intensity write path (PATCH)", () => {
+describe("session advanced write path (PATCH)", () => {
   beforeEach(async () => {
     await resetDb();
   });
@@ -87,100 +87,98 @@ describe("session intensity write path (PATCH)", () => {
     await prisma.$disconnect();
   });
 
-  it.each([1, 2, 3])(
-    "admin sets intensity=%i on a session",
-    async (intensity) => {
-      const { session } = await seed();
-      asAdmin();
-
-      const res = await PATCH(patchRequest(session.id, { intensity }), {
-        id: session.id,
-      });
-      expect(res.status).toBe(200);
-      const reloaded = await prisma.session.findUnique({
-        where: { id: session.id },
-      });
-      expect(reloaded?.intensity).toBe(intensity);
-      const body = (await res.json()) as { session: { intensity: number | null } };
-      expect(body.session.intensity).toBe(intensity);
-    },
-  );
-
-  it("admin clears intensity to null", async () => {
+  it("admin marks a session advanced (isAdvanced=true)", async () => {
     const { session } = await seed();
-    await prisma.session.update({
-      where: { id: session.id },
-      data: { intensity: 3 },
-    });
     asAdmin();
 
-    const res = await PATCH(patchRequest(session.id, { intensity: null }), {
+    const res = await PATCH(patchRequest(session.id, { isAdvanced: true }), {
       id: session.id,
     });
     expect(res.status).toBe(200);
     const reloaded = await prisma.session.findUnique({
       where: { id: session.id },
     });
-    expect(reloaded?.intensity).toBeNull();
-    const body = (await res.json()) as { session: { intensity: number | null } };
-    expect(body.session.intensity).toBeNull();
+    expect(reloaded?.isAdvanced).toBe(true);
+    const body = (await res.json()) as { session: { isAdvanced: boolean } };
+    expect(body.session.isAdvanced).toBe(true);
   });
 
-  it("editing intensity is allowed after bookings exist", async () => {
-    const { reformer, session } = await seed();
+  it("admin clears the advanced marking (isAdvanced=false)", async () => {
+    const { session } = await seed();
+    await prisma.session.update({
+      where: { id: session.id },
+      data: { isAdvanced: true },
+    });
+    asAdmin();
+
+    const res = await PATCH(patchRequest(session.id, { isAdvanced: false }), {
+      id: session.id,
+    });
+    expect(res.status).toBe(200);
+    const reloaded = await prisma.session.findUnique({
+      where: { id: session.id },
+    });
+    expect(reloaded?.isAdvanced).toBe(false);
+    const body = (await res.json()) as { session: { isAdvanced: boolean } };
+    expect(body.session.isAdvanced).toBe(false);
+  });
+
+  it("omitting isAdvanced leaves an existing marking untouched", async () => {
+    const { session } = await seed();
+    await prisma.session.update({
+      where: { id: session.id },
+      data: { isAdvanced: true },
+    });
+    asAdmin();
+
+    // A capacity-only edit must not clear the advanced flag.
+    const res = await PATCH(patchRequest(session.id, { capacity: 8 }), {
+      id: session.id,
+    });
+    expect(res.status).toBe(200);
+    const reloaded = await prisma.session.findUnique({
+      where: { id: session.id },
+    });
+    expect(reloaded?.isAdvanced).toBe(true);
+  });
+
+  it("marking advanced is allowed after bookings exist", async () => {
+    const { session } = await seed();
     const client = await prisma.user.create({
       data: { email: "int-c@test.local", firstName: "C", lastName: "T", role: "CLIENT" },
     });
     const profile = await prisma.clientProfile.create({ data: { userId: client.id } });
-    void reformer;
     await prisma.booking.create({
       data: { sessionId: session.id, clientProfileId: profile.id },
     });
     asAdmin();
 
-    const res = await PATCH(patchRequest(session.id, { intensity: 2 }), {
+    const res = await PATCH(patchRequest(session.id, { isAdvanced: true }), {
       id: session.id,
     });
     expect(res.status).toBe(200);
     const reloaded = await prisma.session.findUnique({
       where: { id: session.id },
     });
-    expect(reloaded?.intensity).toBe(2);
+    expect(reloaded?.isAdvanced).toBe(true);
   });
 
-  it.each([0, 4, -1])(
-    "rejects out-of-range intensity=%s (400) and persists nothing",
-    async (intensity) => {
-      const { session } = await seed();
-      asAdmin();
-
-      const res = await PATCH(patchRequest(session.id, { intensity }), {
-        id: session.id,
-      });
-      expect(res.status).toBe(400);
-      const reloaded = await prisma.session.findUnique({
-        where: { id: session.id },
-      });
-      expect(reloaded?.intensity).toBeNull();
-    },
-  );
-
-  it("rejects a non-admin (trainer) setting intensity (403)", async () => {
+  it("rejects a non-admin (trainer) marking advanced (403)", async () => {
     const { trainer, session } = await seed();
     asTrainer(trainer);
 
-    const res = await PATCH(patchRequest(session.id, { intensity: 2 }), {
+    const res = await PATCH(patchRequest(session.id, { isAdvanced: true }), {
       id: session.id,
     });
     expect(res.status).toBe(403);
     const reloaded = await prisma.session.findUnique({
       where: { id: session.id },
     });
-    expect(reloaded?.intensity).toBeNull();
+    expect(reloaded?.isAdvanced).toBe(false);
   });
 });
 
-describe("session intensity read paths", () => {
+describe("session advanced read paths", () => {
   beforeEach(async () => {
     await resetDb();
   });
@@ -189,11 +187,11 @@ describe("session intensity read paths", () => {
     await prisma.$disconnect();
   });
 
-  it("GET /api/sessions/[id] returns the intensity for admin", async () => {
+  it("GET /api/sessions/[id] returns isAdvanced for admin", async () => {
     const { session } = await seed();
     await prisma.session.update({
       where: { id: session.id },
-      data: { intensity: 3 },
+      data: { isAdvanced: true },
     });
     asAdmin();
 
@@ -202,15 +200,15 @@ describe("session intensity read paths", () => {
       { id: session.id },
     );
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { session: { intensity: number | null } };
-    expect(body.session.intensity).toBe(3);
+    const body = (await res.json()) as { session: { isAdvanced: boolean } };
+    expect(body.session.isAdvanced).toBe(true);
   });
 
-  it("GET /api/sessions/availability returns the intensity for a client", async () => {
+  it("GET /api/sessions/availability returns isAdvanced for a client", async () => {
     const { reformer, session } = await seed();
     await prisma.session.update({
       where: { id: session.id },
-      data: { intensity: 2 },
+      data: { isAdvanced: true },
     });
     // A client with an eligible package for the class so the session is visible.
     const client = await prisma.user.create({
@@ -253,9 +251,9 @@ describe("session intensity read paths", () => {
     );
     expect(res.status).toBe(200);
     const body = (await res.json()) as {
-      sessions: Array<{ id: string; intensity?: number | null }>;
+      sessions: Array<{ id: string; isAdvanced?: boolean }>;
     };
     const row = body.sessions.find((s) => s.id === session.id)!;
-    expect(row.intensity).toBe(2);
+    expect(row.isAdvanced).toBe(true);
   });
 });

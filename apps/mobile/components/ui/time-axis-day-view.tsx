@@ -2,7 +2,7 @@ import React, { useEffect, useRef } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import dayjs from "dayjs";
 import { Badge } from "@/components/ui/badge";
-import { IntensityDots } from "@/components/ui/intensity-dots";
+import { AdvancedBadge } from "@/components/ui/advanced-badge";
 import { useThemeTokens } from "@/components/ui/tokens";
 import {
   HOUR_START,
@@ -33,8 +33,8 @@ type SessionBlock = {
   trainerName?: string | null;
   bookedCount: number;
   capacity: number;
-  /** Admin-set 1–3 intensity for this occurrence; null/absent = unmarked. */
-  intensity?: number | null;
+  /** Admin-set "advanced" marking for this occurrence; absent = unmarked. */
+  isAdvanced?: boolean;
   status?: "available" | "full" | "booked" | "waitlisted";
 };
 
@@ -177,7 +177,7 @@ export function TimeAxisDayView({
                         >
                           {s.classTypeName}
                         </Text>
-                        <IntensityDots intensity={s.intensity} size={5} />
+                        <AdvancedBadge isAdvanced={s.isAdvanced} />
                       </View>
                       {compact ? null : (
                         <Text

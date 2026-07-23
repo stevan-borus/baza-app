@@ -13,7 +13,7 @@ import { Image, Pressable, Text, View } from "react-native";
 import dayjs from "dayjs";
 import { useTranslation } from "react-i18next";
 import { useThemeTokens } from "@/components/ui/tokens";
-import { IntensityDots } from "@/components/ui/intensity-dots";
+import { AdvancedBadge } from "@/components/ui/advanced-badge";
 
 const PHOTO_RINGS = require("@/assets/studio/rings.webp");
 const PHOTO_PLANK = require("@/assets/studio/plank.webp");
@@ -49,8 +49,8 @@ export type ScheduleRowSession = {
   roomName: string | null;
   availableSlots: number;
   capacity: number;
-  /** Admin-set 1–3 intensity for this occurrence; null/absent = unmarked. */
-  intensity?: number | null;
+  /** Admin-set "advanced" marking for this occurrence; absent = unmarked. */
+  isAdvanced?: boolean;
   isBookedByMe?: boolean;
   /** False = the client can't book this session: the row renders muted
    * (still tappable — the sheet explains why). */
@@ -150,7 +150,7 @@ export function ScheduleRow({
             >
               {session.classTypeName}
             </Text>
-            <IntensityDots intensity={session.intensity} />
+            <AdvancedBadge isAdvanced={session.isAdvanced} />
           </View>
           <Text
             style={{
