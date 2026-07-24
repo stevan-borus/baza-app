@@ -132,18 +132,19 @@ export function SessionDetail({
           <>
             <GlassCard size="md">
               <View style={{ gap: 8 }}>
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                  <Text
-                    className="text-foreground font-body-bold"
-                    style={{ flexShrink: 1, fontSize: 18 }}
-                  >
-                    {dateLabel}
+                <Text
+                  className="text-foreground font-body-bold"
+                  style={{ fontSize: 18 }}
+                >
+                  {dateLabel}
+                </Text>
+                {/* Time meta line — the 🔥 mark rides at the end. */}
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                  <Text className="text-muted" style={{ fontSize: 14 }}>
+                    {timeLabel}
                   </Text>
                   <AdvancedBadge isAdvanced={session.isAdvanced} size="detail" />
                 </View>
-                <Text className="text-muted" style={{ fontSize: 14 }}>
-                  {timeLabel}
-                </Text>
                 <View style={{ flexDirection: "row", gap: 16, marginTop: 4 }}>
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
                     <Icon name="user" size={13} color={tokens.muted} />

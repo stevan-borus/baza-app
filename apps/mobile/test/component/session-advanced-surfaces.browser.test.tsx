@@ -1,9 +1,9 @@
 /**
- * The read surfaces that render a session's "advanced" badge. Real Chromium +
- * shipped i18n. Each surface shows the badge when the session is marked and
- * nothing when it's unmarked — the previous production bug was a field present
- * in one place and silently missing in another, so these pin presence on every
- * card that renders a session.
+ * The read surfaces that render a session's advanced 🔥 mark on its time/meta
+ * line. Real Chromium + shipped i18n. Each surface shows the mark when the
+ * session is marked and nothing when it's unmarked — the previous production
+ * bug was a field present in one place and silently missing in another, so
+ * these pin presence on every card that renders a session.
  */
 import { describe, it, expect } from "vitest";
 import { render } from "@testing-library/react";
@@ -53,7 +53,7 @@ describe("ScheduleRow advanced badge", () => {
       <ScheduleRow session={scheduleSession(true)} onPress={noop} />,
     );
     expect(screen.getByTestId("advanced-badge")).toBeTruthy();
-    expect(screen.getByText("Napredno")).toBeTruthy();
+    expect(screen.getByText("🔥")).toBeTruthy();
   });
 
   it("shows no badge when the session is unmarked", () => {

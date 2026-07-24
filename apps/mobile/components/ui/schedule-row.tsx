@@ -130,28 +130,29 @@ export function ScheduleRow({
 
         {/* Body */}
         <View style={{ flex: 1, gap: 4 }}>
-          <Text style={metaTextStyle}>
-            {start.format("HH:mm")} ·{" "}
-            {t("client.home.minutesShort", { count: end.diff(start, "minute") })}
-          </Text>
-          {session.roomName ? (
-            <Text style={metaTextStyle}>{session.roomName}</Text>
-          ) : null}
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-            <Text
-              style={{
-                flexShrink: 1,
-                fontFamily: "AlbertSans-SemiBold",
-                fontSize: 16,
-                color: tokens.foreground,
-                letterSpacing: -0.2,
-              }}
-              numberOfLines={1}
-            >
-              {session.classTypeName}
+          {/* Time·duration eyebrow — the 🔥 mark rides at the end of this line
+              (the time never truncates, so the glyph never gets pushed off). */}
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+            <Text style={metaTextStyle}>
+              {start.format("HH:mm")} ·{" "}
+              {t("client.home.minutesShort", { count: end.diff(start, "minute") })}
             </Text>
             <AdvancedBadge isAdvanced={session.isAdvanced} />
           </View>
+          {session.roomName ? (
+            <Text style={metaTextStyle}>{session.roomName}</Text>
+          ) : null}
+          <Text
+            style={{
+              fontFamily: "AlbertSans-SemiBold",
+              fontSize: 16,
+              color: tokens.foreground,
+              letterSpacing: -0.2,
+            }}
+            numberOfLines={1}
+          >
+            {session.classTypeName}
+          </Text>
           <Text
             style={{
               fontFamily: "AlbertSans-Regular",

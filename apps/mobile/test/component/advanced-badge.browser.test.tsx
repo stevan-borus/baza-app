@@ -1,11 +1,11 @@
 /**
- * AdvancedBadge — the outlined text badge marking a session as an advanced
- * (hard) occurrence. Real Chromium + react-native-web + shipped Serbian i18n.
+ * AdvancedBadge — the bare fire-emoji mark on a session's time line, flagging
+ * it as an advanced (hard) occurrence. Real Chromium + react-native-web +
+ * shipped Serbian i18n.
  *
  * Pins the display contract: nothing renders when the session isn't marked;
- * when it is, the shipped normal-case "Napredno" copy shows. The word is
- * advanced/napredno — never intensity, difficulty, stars, or levels; the copy
- * is normal case, not uppercase (owner rejected uppercase).
+ * when it is, the shipped 🔥 glyph shows and the word "Napredni trening" lives
+ * only in the a11y label — never as visible card copy.
  */
 import { describe, it, expect } from "vitest";
 import { render } from "@testing-library/react";
@@ -24,20 +24,18 @@ describe("AdvancedBadge", () => {
     },
   );
 
-  it("renders the shipped 'Napredno' copy when marked", () => {
+  it("renders the fire glyph when marked", () => {
     const screen = render(<AdvancedBadge isAdvanced />);
     expect(screen.getByTestId("advanced-badge")).toBeTruthy();
-    expect(screen.getByText("Napredno")).toBeTruthy();
+    expect(screen.getByText("🔥")).toBeTruthy();
   });
 
-  it("keeps the copy in normal case, not uppercase", () => {
+  it("keeps the word 'Napredno' out of the visible copy", () => {
     const screen = render(<AdvancedBadge isAdvanced />);
-    const label = screen.getByText("Napredno");
-    // The shipped string is normal case; the badge must not transform it.
-    expect(getComputedStyle(label).textTransform).not.toBe("uppercase");
+    expect(screen.queryByText("Napredno")).toBeNull();
   });
 
-  it("labels the badge as advanced training for screen readers", () => {
+  it("labels the mark as advanced training for screen readers", () => {
     const screen = render(<AdvancedBadge isAdvanced />);
     expect(
       screen.getByTestId("advanced-badge").getAttribute("aria-label"),
@@ -47,13 +45,13 @@ describe("AdvancedBadge", () => {
   it("scales the detail size up from the compact default", () => {
     const compact = render(<AdvancedBadge isAdvanced />);
     const compactSize = parseFloat(
-      getComputedStyle(compact.getByText("Napredno")).fontSize,
+      getComputedStyle(compact.getByText("🔥")).fontSize,
     );
     compact.unmount();
 
     const detail = render(<AdvancedBadge isAdvanced size="detail" />);
     const detailSize = parseFloat(
-      getComputedStyle(detail.getByText("Napredno")).fontSize,
+      getComputedStyle(detail.getByText("🔥")).fontSize,
     );
     expect(detailSize).toBeGreaterThan(compactSize);
   });

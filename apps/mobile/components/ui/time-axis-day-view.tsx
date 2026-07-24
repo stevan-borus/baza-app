@@ -177,18 +177,28 @@ export function TimeAxisDayView({
                         >
                           {s.classTypeName}
                         </Text>
-                        <AdvancedBadge isAdvanced={s.isAdvanced} />
+                        {/* Compact blocks have no meta line — the 🔥 mark has
+                            nowhere else to go, so it rides the title here. */}
+                        {compact ? (
+                          <AdvancedBadge isAdvanced={s.isAdvanced} />
+                        ) : null}
                       </View>
                       {compact ? null : (
-                        <Text
-                          className="text-xs"
-                          style={{ color: tintText(color, tokens.foreground) }}
-                          numberOfLines={1}
-                        >
-                          {dayjs(s.startsAt).format("HH:mm")}–
-                          {dayjs(s.endsAt).format("HH:mm")}
-                          {s.roomName ? ` · ${s.roomName}` : ""}
-                        </Text>
+                        <View className="flex-row items-center gap-1.5">
+                          <Text
+                            className="text-xs"
+                            style={{
+                              flexShrink: 1,
+                              color: tintText(color, tokens.foreground),
+                            }}
+                            numberOfLines={1}
+                          >
+                            {dayjs(s.startsAt).format("HH:mm")}–
+                            {dayjs(s.endsAt).format("HH:mm")}
+                            {s.roomName ? ` · ${s.roomName}` : ""}
+                          </Text>
+                          <AdvancedBadge isAdvanced={s.isAdvanced} />
+                        </View>
                       )}
                     </View>
                     {/* Always-visible capacity, vertically centered. Full →

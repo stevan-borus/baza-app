@@ -144,19 +144,20 @@ export function BookingSheet({
             transition={{ type: "timing", duration: 250 }}
           >
             <View className="gap-1.5">
-              <View className="flex-row items-center gap-2">
-                <Text className="text-xs font-body-semibold text-muted uppercase tracking-wider">
-                  {session.classTypeName}
+              <Text className="text-xs font-body-semibold text-muted uppercase tracking-wider">
+                {session.classTypeName}
+              </Text>
+              {/* Time headline — the 🔥 mark rides at the end of the time line. */}
+              <View className="flex-row items-end gap-2">
+                <Text
+                  className="text-foreground font-display"
+                  style={{ fontSize: 34, letterSpacing: -0.5, lineHeight: 38 }}
+                >
+                  {dayjs(session.startsAt).format("HH:mm")} –{" "}
+                  {dayjs(session.endsAt).format("HH:mm")}
                 </Text>
                 <AdvancedBadge isAdvanced={session.isAdvanced} size="detail" />
               </View>
-              <Text
-                className="text-foreground font-display"
-                style={{ fontSize: 34, letterSpacing: -0.5, lineHeight: 38 }}
-              >
-                {dayjs(session.startsAt).format("HH:mm")} –{" "}
-                {dayjs(session.endsAt).format("HH:mm")}
-              </Text>
               <View className="flex-row items-center gap-2.5 pt-0.5">
                 <Text className="text-muted text-sm">
                   {dayjs(session.startsAt).locale(lang).format("dddd, D MMMM")}
