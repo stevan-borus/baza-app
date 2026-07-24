@@ -1,5 +1,5 @@
 /**
- * IntermediateBadge — the intermediate-level ("srednji nivo") session mark: a
+ * IntermediateBadge — the intermediate ("Zahtevno" / challenging) session mark: a
  * brand-green ★ text glyph the eye catches while scanning times. Renders
  * NOTHING when the session isn't marked.
  *
@@ -9,7 +9,7 @@
  * the glyph carries its own color and sits as a single Text with no
  * line-height of its own.
  *
- * Dense rows stay wordless; `showLabel` expands the mark to "★ Srednji nivo"
+ * Dense rows stay wordless; `showLabel` expands the mark to "★ Zahtevno"
  * on detail surfaces (the booking sheet), which double as the legend that
  * teaches the star — so no persistent legend chrome exists anywhere. Elsewhere
  * the word survives only in the a11y label (and the admin edit switch).

@@ -1,11 +1,11 @@
 /**
  * IntermediateBadge — the bare accent-green ★ mark on a session's time line,
- * flagging it as an intermediate-level ("srednji nivo") occurrence. Real
+ * flagging it as an intermediate ("Zahtevno" / challenging) occurrence. Real
  * Chromium + react-native-web + shipped Serbian i18n.
  *
  * Pins the display contract: nothing renders when the session isn't marked;
  * when it is, the shipped ★ glyph shows tinted the accent (not inherited ink),
- * and the word "Srednji nivo" lives only in the a11y label and the showLabel
+ * and the word "Zahtevno" lives only in the a11y label and the showLabel
  * variant — "Napredno"/"Napredni" appears nowhere.
  */
 import { describe, it, expect } from "vitest";
@@ -38,24 +38,24 @@ describe("IntermediateBadge", () => {
     // Dense rows are wordless; only the booking sheet opts into the label
     // via showLabel, so the default must never leak the word.
     const screen = render(<IntermediateBadge isIntermediate />);
-    expect(screen.queryByText("Srednji nivo")).toBeNull();
+    expect(screen.queryByText("Zahtevno")).toBeNull();
     expect(screen.queryByText(/Napredn/)).toBeNull();
   });
 
-  it("labels the mark as intermediate-level training for screen readers", () => {
+  it("labels the mark as challenging training for screen readers", () => {
     const screen = render(<IntermediateBadge isIntermediate />);
     expect(
       screen.getByTestId("intermediate-badge").getAttribute("aria-label"),
-    ).toBe("Trening srednjeg nivoa");
+    ).toBe("Zahtevan trening");
   });
 
-  it("expands to glyph + 'Srednji nivo' when showLabel is set", () => {
+  it("expands to glyph + 'Zahtevno' when showLabel is set", () => {
     const screen = render(<IntermediateBadge isIntermediate showLabel />);
     const badge = screen.getByTestId("intermediate-badge");
     expect(badge.textContent).toContain("★");
-    expect(badge.textContent).toContain("Srednji nivo");
+    expect(badge.textContent).toContain("Zahtevno");
     // The visible word is `label`, NOT the a11y phrase — they differ now.
-    expect(badge.textContent).not.toContain("Trening srednjeg nivoa");
+    expect(badge.textContent).not.toContain("Zahtevan trening");
   });
 
   it("tints the star with the accent, not the inherited ink", () => {

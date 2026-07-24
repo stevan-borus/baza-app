@@ -155,7 +155,7 @@ export function BookingSheet({
                 {dayjs(session.endsAt).format("HH:mm")}
               </Text>
               {/* The sheet doubles as the legend: the mark expands to
-                  "★ Srednji nivo" here (dense rows show the bare glyph). */}
+                  "★ Zahtevno" here (dense rows show the bare glyph). */}
               <IntermediateBadge isIntermediate={session.isIntermediate} size="detail" showLabel />
               <View className="flex-row items-center gap-2.5 pt-0.5">
                 <Text className="text-muted text-sm">
