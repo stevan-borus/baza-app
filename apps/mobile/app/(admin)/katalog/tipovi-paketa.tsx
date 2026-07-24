@@ -160,6 +160,13 @@ export default function AdminPackages() {
   const typesQuery = useQuery(packagesQueries.types());
   const classTypesQuery = useQuery(trainingsQueries.classTypes());
 
+  // The built-in system gift is app-managed — never shown in catalog
+  // management. Admins can neither edit nor delete it, so hiding the row keeps
+  // the list to the SKUs they actually maintain.
+  const managedPackageTypes = (typesQuery.data?.packageTypes ?? []).filter(
+    (pt) => !pt.isSystem,
+  );
+
   // Cache upkeep (types-list splice / invalidation) stays in the factory
   // options; the sheet choreography (open/close/reset) lives in the CRUD
   // machine.
@@ -260,13 +267,13 @@ export default function AdminPackages() {
             </View>
           ) : null}
 
-          {!typesQuery.isError && !typesQuery.isLoading && (typesQuery.data?.packageTypes ?? []).length === 0 ? (
+          {!typesQuery.isError && !typesQuery.isLoading && managedPackageTypes.length === 0 ? (
             <EmptyState title={t("admin.manage.packagesEmpty")} />
           ) : null}
 
-          {(typesQuery.data?.packageTypes ?? []).length > 0 ? (
+          {managedPackageTypes.length > 0 ? (
             <View className="bg-surface rounded-lg overflow-hidden">
-              {(typesQuery.data?.packageTypes ?? []).map((pt, idx) => (
+              {managedPackageTypes.map((pt, idx) => (
                 <React.Fragment key={pt.id}>
                   {idx > 0 ? (
                     <View

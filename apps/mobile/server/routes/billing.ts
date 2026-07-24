@@ -8,6 +8,7 @@ import { UserRole } from "@/generated/prisma";
 import { now } from "@/lib/now";
 import { requireRole } from "@/lib/server/auth-guards";
 import { createClientPackageFromType } from "@/lib/server/client-package-create";
+import { notifyClient } from "@/lib/server/notify-client";
 import { respond, fail, parseBody } from "@/lib/server/http";
 import { prisma } from "@/lib/server/prisma";
 import type { Prisma } from "@/generated/prisma";
@@ -152,6 +153,7 @@ export async function POST(request: Request) {
   let clientProfileId: string | null = null;
   let packageTypeRow: {
     id: string;
+    name: string;
     sessionCount: number;
     validityDays: number;
     classTypeIds: string[];
@@ -167,6 +169,7 @@ export async function POST(request: Request) {
         where: { id: parsed.data.packageTypeId! },
         select: {
           id: true,
+          name: true,
           sessionCount: true,
           validityDays: true,
           lateCancelHours: true,
@@ -225,6 +228,19 @@ export async function POST(request: Request) {
 
     return { payment, clientPackage };
   });
+
+  // A package landed for the client — tell them it's active. Fire-and-forget:
+  // a notification failure must never fail the payment that just committed.
+  // Pay-later (PENDING) gets the payment-neutral assigned copy: the receipt
+  // copy would claim a payment the client's own packages view still flags as
+  // "Nije plaćeno".
+  if (result.clientPackage && packageTypeRow) {
+    void notifyClient({
+      userId: parsed.data.clientUserId,
+      event: status === "CONFIRMED" ? "PACKAGE_PURCHASED" : "PACKAGE_ASSIGNED",
+      vars: { packageTypeName: packageTypeRow.name },
+    });
+  }
 
   return respond(
     createBillingRecordResponseSchema,

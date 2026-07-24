@@ -28,6 +28,7 @@ import {
   packagesQueries,
   useAssignClientPackageMutation,
 } from "@/lib/queries/packages-queries-factory";
+import { trainingsQueries } from "@/lib/queries/trainings-queries-factory";
 import { useCreateBillingMutation } from "@/lib/queries/billing-queries-factory";
 import { RAW_METHOD_LABEL_KEYS } from "@/lib/payment-method-labels";
 import { assignedSamePackageToday } from "@/lib/same-day-package-assignment";
@@ -63,6 +64,14 @@ export type AssignPackageSheetContentProps = {
    * Uses the useState initializer pattern — no effect required.
    */
   initialPackageTypeId?: string;
+  /**
+   * Birthday-gift deep-link pre-selection: the class type the gift picker opens
+   * with pre-ticked (e.g. the client's usual class from a BIRTHDAY_ADMIN_PROMPT).
+   * Only meaningful once the selected SKU is a birthday gift; the picker is
+   * multi-select, so the admin can tick more before confirming. useState
+   * initializer — no effect.
+   */
+  initialClassTypeId?: string;
 };
 
 export function AssignPackageSheetContent({
@@ -70,6 +79,7 @@ export function AssignPackageSheetContent({
   mode,
   onSuccess,
   initialPackageTypeId,
+  initialClassTypeId,
 }: AssignPackageSheetContentProps) {
   const { t } = useTranslation();
   const tokens = useThemeTokens();
@@ -77,6 +87,12 @@ export function AssignPackageSheetContent({
   // Shared fields.
   const [packageTypeId, setPackageTypeId] = useState(initialPackageTypeId ?? "");
   const [startsAt, setStartsAt] = useState<Date | null>(null);
+  // Birthday-gift class-type override: the SET of class types the gift covers.
+  // Multi-select — pre-ticked from the deep link; the admin ticks more (or
+  // unticks) before confirming. One 🎂 gift, targeted at whichever classes.
+  const [giftClassTypeIds, setGiftClassTypeIds] = useState<string[]>(
+    initialClassTypeId ? [initialClassTypeId] : [],
+  );
 
   // Paid-mode-only fields. Initialised regardless so the hook order is
   // stable across mode flips (the parent always remounts on sheet open, but
@@ -93,6 +109,11 @@ export function AssignPackageSheetContent({
 
   const packageTypesQuery = useQuery(packagesQueries.types());
   const allPackageTypes = packageTypesQuery.data?.packageTypes ?? [];
+
+  // The gift-mode picker draws from the same class-types catalog the rest of
+  // the admin app uses — one 🎂 SKU covers whichever class type is chosen here.
+  const classTypesQuery = useQuery(trainingsQueries.classTypes());
+  const classTypes = classTypesQuery.data?.classTypes ?? [];
 
   // Non-blocking duplicate hint: if this client already got the SAME package
   // type on the SAME day, show a note so an accidental repeat is noticed.
@@ -123,6 +144,12 @@ export function AssignPackageSheetContent({
       ? allPackageTypes.filter((pt) => !pt.isBirthdayGift)
       : allPackageTypes;
 
+  // Gift mode is entered only by SELECTING a birthday-gift SKU (comp mode). The
+  // class-type picker then decides which class the gift covers — one SKU serves
+  // every class type. Non-gift SKUs snapshot their own set (no picker).
+  const selectedType = allPackageTypes.find((pt) => pt.id === packageTypeId);
+  const isGift = mode === "comp" && !!selectedType?.isBirthdayGift;
+
   // Cache upkeep (packages + clients packageStatus + reports) is baked into
   // the factory hooks; the component-only side-effect (close sheet) is
   // passed per-call via mutate(vars, { onSuccess }).
@@ -145,7 +172,9 @@ export function AssignPackageSheetContent({
   // longer gates submit — the picker can't be left empty.
   const submitDisabled =
     mode === "comp"
-      ? compMutation.isPending || !packageTypeId
+      ? compMutation.isPending ||
+        !packageTypeId ||
+        (isGift && giftClassTypeIds.length === 0)
       : paidMutation.isPending || !packageTypeId || !amountValid;
 
   function handleSubmit() {
@@ -156,6 +185,8 @@ export function AssignPackageSheetContent({
           clientProfileId: client.id,
           packageTypeId,
           startsAt: startsAtIso,
+          // Gift only: snapshot the picked class-type SET instead of the SKU's.
+          ...(isGift ? { classTypeIdsOverride: giftClassTypeIds } : {}),
         },
         { onSuccess },
       );
@@ -264,6 +295,62 @@ export function AssignPackageSheetContent({
           );
         })}
       </View>
+
+      {/* Gift class-type picker — one 🎂 gift, targeted at whichever class
+          types the admin ticks. Multi-select: same option-row anatomy as the
+          package list above, but tapping a row toggles it in/out of the set. */}
+      {isGift ? (
+        <View className="flex-col gap-2">
+          <SectionLabel>{t("admin.clients.giftClassTypeLabel")}</SectionLabel>
+          <View
+            className="bg-glass border border-glass-border rounded-lg overflow-hidden"
+            accessibilityLabel={t("admin.clients.giftClassTypeA11y")}
+          >
+            {classTypes.map((ct, idx) => {
+              const selected = giftClassTypeIds.includes(ct.id);
+              return (
+                <Pressable
+                  key={ct.id}
+                  testID={`assign-gift-class-type-${ct.id}`}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected }}
+                  android_ripple={null}
+                  onPress={() =>
+                    setGiftClassTypeIds((prev) =>
+                      prev.includes(ct.id)
+                        ? prev.filter((id) => id !== ct.id)
+                        : [...prev, ct.id],
+                    )
+                  }
+                  className="active:opacity-70"
+                >
+                  <View
+                    className={`flex-row items-center gap-3 px-3.5 py-3 ${
+                      idx > 0 ? "border-t border-glass-border" : ""
+                    } ${selected ? "bg-accent-soft" : ""}`}
+                  >
+                    <Text
+                      className={`flex-1 text-foreground ${
+                        selected ? "font-body-semibold" : ""
+                      }`}
+                      style={{ fontSize: 14 }}
+                      numberOfLines={1}
+                    >
+                      {ct.name}
+                    </Text>
+                    {selected ? (
+                      <Icon name="check" size={13} color={tokens.accent} />
+                    ) : null}
+                  </View>
+                </Pressable>
+              );
+            })}
+          </View>
+          <Text className="text-muted" style={{ fontSize: 12 }}>
+            {t("admin.clients.giftClassTypeHint")}
+          </Text>
+        </View>
+      ) : null}
 
       <SectionLabel>{t("admin.clients.packageStartLabel")}</SectionLabel>
       <DateTimePicker

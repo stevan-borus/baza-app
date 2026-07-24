@@ -13,6 +13,7 @@ import { linkPackagesToBilling } from "@/lib/server/billing-package-link";
 import { respond, fail, parseBody } from "@/lib/server/http";
 import { countHeldSessions } from "@/lib/server/booking-hold-count";
 import { createSystemNotification } from "@/lib/server/notifications";
+import { notifyClient } from "@/lib/server/notify-client";
 import { findEligibleClientPackage } from "@/lib/server/package-eligibility";
 import { bookableSessions } from "@/lib/server/package-hold";
 import { PACKAGE_TYPE_CLASS_TYPES_SELECT } from "@/lib/server/package-type-shape";
@@ -63,6 +64,8 @@ export async function GET(request: Request) {
     const packages = packageRows.map((row) => ({
       ...row,
       classTypes: row.classTypes.map((link) => link.classType),
+      // Grant-aware total: SKU sessionCount + this package's snapshotted bonus.
+      sessionsTotal: row.packageType.sessionCount + row.bonusSessions,
     }));
 
     const pendingBilling =
@@ -226,6 +229,7 @@ export async function GET(request: Request) {
     const shaped = pagePackages.map((p) => ({
       ...p,
       classTypes: p.classTypes.map((link) => link.classType),
+      sessionsTotal: p.packageType.sessionCount + p.bonusSessions,
       client: {
         ...p.clientProfile.user,
         fullName: formatFullName(
@@ -296,6 +300,7 @@ export async function GET(request: Request) {
     return {
       ...p,
       classTypes: p.classTypes.map((link) => link.classType),
+      sessionsTotal: p.packageType.sessionCount + p.bonusSessions,
       billingRecord: match
         ? {
             id: match.id,
@@ -350,29 +355,56 @@ export async function POST(request: Request) {
     classTypeIds: packageTypeRow.classTypes.map((link) => link.classTypeId),
   };
 
+  // Birthday gift: the admin may override which class type(s) the gift covers,
+  // so ONE 🎂 SKU serves every class type. Honored only for a gift SKU; a
+  // non-gift SKU snapshots its own set, so an override there is a client error.
+  const override = parsed.data.classTypeIdsOverride;
+  if (override) {
+    if (!packageType.isBirthdayGift) {
+      return fail("classTypeIdsOverride is only valid for a birthday gift", 400);
+    }
+    const existing = await prisma.classType.count({
+      where: { id: { in: override } },
+    });
+    if (existing !== new Set(override).size) {
+      return fail("Unknown class type in classTypeIdsOverride", 400);
+    }
+  }
+
   const clientPackage = await createClientPackageFromType(prisma, {
     clientProfileId: parsed.data.clientProfileId,
-    packageType,
+    // Snapshot the override set when present (gift only); otherwise the SKU's.
+    packageType: override ? { ...packageType, classTypeIds: override } : packageType,
     startsAt,
   });
 
-  if (packageType.isBirthdayGift) {
-    const clientProfile = await prisma.clientProfile.findUnique({
-      where: { id: parsed.data.clientProfileId },
-      select: { user: { select: { id: true } } },
-    });
-    if (clientProfile) {
+  const clientProfile = await prisma.clientProfile.findUnique({
+    where: { id: parsed.data.clientProfileId },
+    select: { user: { select: { id: true } } },
+  });
+  if (clientProfile) {
+    if (packageType.isBirthdayGift) {
       void createSystemNotification(
         clientProfile.user.id,
         NOTIFICATION_MESSAGE_KEYS.BIRTHDAY_CLIENT_GIFT,
         "BIRTHDAY_CLIENT_GIFT",
         {
           clientPackageId: clientPackage.id,
-          classTypeIds: packageType.classTypeIds,
+          // The ACTUAL snapshotted set (may be the admin's override), not the
+          // SKU's — the client's gift covers what was picked at assign time.
+          classTypeIds: clientPackage.classTypeIds,
           packageTypeName: packageType.name,
           expiresAt: clientPackage.expiresAt.toISOString(),
         },
       );
+    } else {
+      // Non-gift assign (comp / manual) — tell the client a package landed.
+      // Fire-and-forget so a notification failure can't fail the assignment.
+      void notifyClient({
+        userId: clientProfile.user.id,
+        event: "PACKAGE_ASSIGNED",
+        vars: { packageTypeName: packageType.name },
+      });
     }
   }
 

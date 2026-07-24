@@ -256,7 +256,9 @@ export default function ClientProfile() {
           ) : null}
           <View className="gap-3 px-4">
             {activePackages.map((pkg: ClientPackage) => {
-              const total = pkg.packageType?.sessionCount ?? 0;
+              // Grant-aware total (SKU sessionCount + bonusSessions), computed
+              // server-side so a "+1 termin" grant reads 13/13, not 13/12.
+              const total = pkg.sessionsTotal ?? 0;
               // Bar is usage-driven (owner decision) to match the home card: it
               // FILLS UP as sessions are booked/attended — used / total, using
               // bookable (falling back to sessionsRemaining). A fully-booked

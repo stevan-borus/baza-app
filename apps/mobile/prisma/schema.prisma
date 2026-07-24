@@ -71,6 +71,7 @@ enum NotificationType {
   BULK_RESERVATION_CANCEL_ADMIN
   BULK_RESERVATION_CANCEL_TRAINER
   CAMPAIGN
+  PACKAGE_ASSIGNED
 }
 
 enum CampaignStatus {
@@ -357,6 +358,9 @@ model PackageType {
   // admin can still override per payment, so it is advisory, not enforced.
   price               Int?
   isBirthdayGift      Boolean  @default(false)
+  // A built-in gift row the app ensures on its own — hidden from catalog
+  // management and protected from edit/delete. Admins never create gift SKUs.
+  isSystem            Boolean  @default(false)
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
   classTypes          PackageTypeClassType[]
@@ -396,6 +400,11 @@ model ClientPackage {
   startsAt          DateTime
   expiresAt         DateTime
   sessionsRemaining Int
+  // Admin "+1 termin" grants snapshot here so a grant grows the TOTAL, not
+  // past it: effective total = packageType.sessionCount + bonusSessions. Every
+  // "x/y" site reads that sum, so an unused 12/12 → +1 → 13/13. Existing rows
+  // default 0 (no grant yet), so the SKU's sessionCount stays the total.
+  bonusSessions     Int                 @default(0)
   // Keep-the-trace revoke: a revoked package stops granting booking rights,
   // but the row (and its past bookings/consumption) stays for the record.
   revokedAt         DateTime?

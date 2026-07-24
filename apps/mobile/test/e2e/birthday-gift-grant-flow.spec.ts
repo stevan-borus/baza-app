@@ -4,6 +4,11 @@
  * resulting ClientPackage row carries the invariants we care about
  * (sessionsRemaining=1, expiresAt = startsAt + validityDays).
  *
+ * The grant lands on the SYSTEM gift row ("🎂 Rođendanski poklon"): the
+ * birthday prompt preselects it over any legacy admin-made gift SKU (isSystem
+ * wins — see notification-routing). The legacy SKU seeded here still guards
+ * that hand-made gifts remain listed in the sheet until deleted.
+ *
  * Drives the full flow rather than poking the API directly so we catch any
  * regression in the sheet → submit → notification path.
  */
@@ -22,6 +27,9 @@ import { computePackageExpiresAt } from "@/lib/package-expiry";
 
 const REFORMER_CLIENT_EMAIL = "client.active.reformer@e2e.test";
 
+// The self-healed system gift row the birthday flow grants from.
+const SYSTEM_GIFT_NAME = "🎂 Rođendanski poklon";
+
 const CRON_TOKEN =
   process.env.API_ADMIN_BOOTSTRAP_TOKEN ?? "test-admin-bootstrap-token";
 
@@ -34,7 +42,6 @@ async function postCron(page: Page, path: string) {
 
 test.describe("birthday gift — grant flow", () => {
   let giftPackageTypeId: string;
-  let giftPackageTypeName: string;
 
   test.beforeAll(async () => {
     await resetAndSeed();
@@ -44,7 +51,6 @@ test.describe("birthday gift — grant flow", () => {
       name: "Rođendanski poklon (Reformer)",
     });
     giftPackageTypeId = gift.id;
-    giftPackageTypeName = gift.name;
     await setClientBirthdayToToday(REFORMER_CLIENT_EMAIL);
   });
 
@@ -80,7 +86,8 @@ test.describe("birthday gift — grant flow", () => {
     await expect(reformerRow).toBeVisible({ timeout: 8_000 });
     await reformerRow.dispatchEvent("click");
 
-    // Sheet opens for that client with the gift PackageType preselected.
+    // Sheet opens for that client with the SYSTEM gift preselected; the legacy
+    // hand-made gift SKU must still be listed (it keeps working until deleted).
     await expect(page).toHaveURL(
       /\/\(admin\)\/klijenti(\?|$)|\/klijenti(\?|$)/,
       { timeout: 8_000 },
@@ -120,7 +127,7 @@ test.describe("birthday gift — grant flow", () => {
     const pkg = await findLatestBirthdayGiftPackageFor(REFORMER_CLIENT_EMAIL);
     expect(pkg).not.toBeNull();
     expect(pkg!.packageType.isBirthdayGift).toBe(true);
-    expect(pkg!.packageType.name).toBe(giftPackageTypeName);
+    expect(pkg!.packageType.name).toBe(SYSTEM_GIFT_NAME);
     expect(pkg!.sessionsRemaining).toBe(1);
     // The gift package obeys the same expiry rule as every other package:
     // it opens at the start of its studio day and dies at the close of the
@@ -143,14 +150,14 @@ test.describe("birthday gift — grant flow", () => {
         },
         { timeout: 10_000 },
       )
-      .toContain(giftPackageTypeName);
+      .toContain(SYSTEM_GIFT_NAME);
 
     const giftNotif = await findBirthdayClientGiftFor(REFORMER_CLIENT_EMAIL);
     expect(giftNotif).not.toBeNull();
     expect(giftNotif!.title).toContain("Srećan rođendan");
-    expect(giftNotif!.body).toContain(giftPackageTypeName);
+    expect(giftNotif!.body).toContain(SYSTEM_GIFT_NAME);
     expect(giftNotif!.payload).toMatchObject({
-      packageTypeName: giftPackageTypeName,
+      packageTypeName: SYSTEM_GIFT_NAME,
       clientPackageId: pkg!.id,
     });
   });

@@ -28,7 +28,9 @@ export type NotificationMessageKey =
   | "BIRTHDAY_CLIENT_GIFT"
   | "RESERVATION_UNBACKED_ATTENDANCE"
   | "BULK_RESERVATION_CANCEL_ADMIN"
-  | "BULK_RESERVATION_CANCEL_TRAINER";
+  | "BULK_RESERVATION_CANCEL_TRAINER"
+  | "PACKAGE_PURCHASED"
+  | "PACKAGE_ASSIGNED";
 
 export const NOTIFICATION_MESSAGE_KEYS = {
   BOOKING_CONFIRMED: "BOOKING_CONFIRMED",
@@ -47,6 +49,8 @@ export const NOTIFICATION_MESSAGE_KEYS = {
   RESERVATION_UNBACKED_ATTENDANCE: "RESERVATION_UNBACKED_ATTENDANCE",
   BULK_RESERVATION_CANCEL_ADMIN: "BULK_RESERVATION_CANCEL_ADMIN",
   BULK_RESERVATION_CANCEL_TRAINER: "BULK_RESERVATION_CANCEL_TRAINER",
+  PACKAGE_PURCHASED: "PACKAGE_PURCHASED",
+  PACKAGE_ASSIGNED: "PACKAGE_ASSIGNED",
 } as const satisfies Record<NotificationMessageKey, NotificationMessageKey>;
 
 const messages: Record<
@@ -172,6 +176,30 @@ const messages: Record<
     en: {
       title: "Reservations canceled",
       body: "{{count}} of your sessions canceled for {{clientFullName}}.",
+    },
+  },
+  // Client paid for a package — reads as a receipt, so it leads with the
+  // payment being recorded before naming the now-active package.
+  PACKAGE_PURCHASED: {
+    sr: {
+      title: "Paket je aktivan",
+      body: "Uplata je evidentirana — paket {{packageTypeName}} je aktivan.",
+    },
+    en: {
+      title: "Package active",
+      body: "Payment recorded — your {{packageTypeName}} package is active.",
+    },
+  },
+  // Package granted to the client (comp / manual assign) — reads as a grant,
+  // not a receipt, so it stays free of any payment language.
+  PACKAGE_ASSIGNED: {
+    sr: {
+      title: "Dodeljen vam je paket",
+      body: "Dodeljen vam je paket {{packageTypeName}}.",
+    },
+    en: {
+      title: "Package assigned",
+      body: "You've been assigned the {{packageTypeName}} package.",
     },
   },
 };

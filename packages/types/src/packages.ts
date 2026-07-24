@@ -77,6 +77,12 @@ export const createClientPackageInputSchema = clientPackageFieldsSchema.pick({
   startsAt: true,
 }).extend({
   startsAt: z.string().min(10),
+  // Birthday gift only: the admin-picked class-type set the new package covers.
+  // Non-empty; each id must be an existing ClassType (checked server-side).
+  // Honored ONLY when the chosen PackageType.isBirthdayGift — supplying it for
+  // any other SKU is a 400. Lets one 🎂 SKU serve every class type: the gift is
+  // snapshotted against the picked set, not the SKU's own covered set.
+  classTypeIdsOverride: z.array(z.string()).min(1).optional(),
 });
 
 // ─── GET /api/packages/client-packages ───────────────────────────────────────
@@ -122,6 +128,11 @@ export const clientPackageSchema = z.object({
   startsAt: z.string(),
   expiresAt: z.string(),
   sessionsRemaining: z.number(),
+  // Effective package total = packageType.sessionCount + bonusSessions, computed
+  // server-side so the "x/y termina" arithmetic lives in ONE place. An admin
+  // "+1 termin" grant bumps bonusSessions, growing this total (12/12 → 13/13);
+  // every UI total site reads THIS, never packageType.sessionCount directly.
+  sessionsTotal: z.number(),
   // Set when an admin revoked the package (keep-the-trace semantics): the
   // row stays visible in history, marked "Opozvan", but grants no rights.
   revokedAt: z.string().nullable().optional(),
@@ -185,6 +196,18 @@ export const revokeClientPackageResponseSchema = z.object({
   canceledFutureBookings: z.number(),
   removedWaitlistEntries: z.number(),
   billingRecordVoided: z.boolean(),
+});
+
+// POST /api/packages/client-packages/[id]/add-session — the "+1 termin" admin
+// grant: sessionsRemaining incremented by one on a still-active package. The
+// updated row is echoed back so the caller can reflect the new count without a
+// refetch (invalidations still run).
+export const addSessionResponseSchema = z.object({
+  success: z.boolean(),
+  clientPackage: z.object({
+    id: z.string(),
+    sessionsRemaining: z.number(),
+  }),
 });
 
 // POST /api/packages/pause — the PackagePause row as selected by the handler.

@@ -16,10 +16,12 @@ export type NotificationRoutingInput = {
   payload: Record<string, Json> | null | undefined;
   /**
    * The catalog of birthday-gift PackageTypes available right now — supplied
-   * by the caller from the packageTypes query cache. We pick the one whose
-   * covered `classTypeIds` include the notification's `suggestedClassTypeId`.
+   * by the caller from the packageTypes query cache. The built-in system gift
+   * is preselected deterministically (`isSystem` wins); any legacy admin-
+   * created gift SKUs keep the single/tiebreak fallback so an older studio
+   * still routes sensibly until it deletes them.
    */
-  giftPackageTypes: Array<{ id: string; classTypeIds: string[] }>;
+  giftPackageTypes: Array<{ id: string; classTypeIds: string[]; isSystem?: boolean }>;
 };
 
 type Payload = Record<string, Json>;
@@ -38,16 +40,30 @@ export function resolveNotificationHref(input: NotificationRoutingInput): string
       const clientProfileId = getString(payload, "clientProfileId");
       if (!clientProfileId) return null;
       const suggestedClassTypeId = getString(payload, "suggestedClassTypeId");
-      const gift = suggestedClassTypeId
-        ? giftPackageTypes.find((pt) =>
-            pt.classTypeIds.includes(suggestedClassTypeId),
-          )
-        : undefined;
+      // Built-in system gift always wins — it's the one row admins are meant to
+      // use. Otherwise fall back to the legacy rule: one gift SKU → preselect
+      // it; several → covered-match tiebreak (first match, else first gift SKU);
+      // none → no preselection. The class-type hint rides through regardless so
+      // the assign-sheet picker can prefill it.
+      const systemGift = giftPackageTypes.find((pt) => pt.isSystem);
+      const gift =
+        systemGift ??
+        (giftPackageTypes.length === 1
+          ? giftPackageTypes[0]
+          : giftPackageTypes.length > 1
+            ? (suggestedClassTypeId
+                ? giftPackageTypes.find((pt) =>
+                    pt.classTypeIds.includes(suggestedClassTypeId),
+                  )
+                : undefined) ?? giftPackageTypes[0]
+            : undefined);
       const params = new URLSearchParams({
         openAssignPackage: clientProfileId,
         mode: "comp",
       });
       if (gift) params.set("initialPackageTypeId", gift.id);
+      if (suggestedClassTypeId)
+        params.set("initialClassTypeId", suggestedClassTypeId);
       return `/(admin)/klijenti?${params.toString()}`;
     }
 
@@ -62,6 +78,11 @@ export function resolveNotificationHref(input: NotificationRoutingInput): string
       if (!clientUserId) return null;
       return `/(admin)/klijenti/${clientUserId}`;
     }
+
+    // A package was assigned or paid for. The destination is the client's own
+    // packages view — always available, so no payload is required to route.
+    case "PACKAGE_ASSIGNED":
+      return "/(client)/profile/packages";
 
     default:
       return null;

@@ -106,6 +106,10 @@ export const packageTypeSchema = z.object({
   // the covered types ("Reformer · Energy") without a second lookup.
   classTypes: z.array(embeddedClassTypeSchema),
   isBirthdayGift: z.boolean().optional(),
+  // A built-in gift row the app ensures itself — hidden from catalog
+  // management, protected from edit/delete. Not writable through the catalog
+  // form, so it appears on responses only.
+  isSystem: z.boolean().optional(),
 });
 export type PackageType = z.infer<typeof packageTypeSchema>;
 
