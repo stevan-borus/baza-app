@@ -48,6 +48,42 @@ Follows the `CLIENT_EVENT_CHANNELS` registry pattern (`lib/server/client-event-c
 
 **Operational (owner, post-ship):** keep/create one 🎂 SKU (its own class-type set becomes irrelevant), retire the per-class-type gift SKUs. New class types never require new gift SKUs.
 
+## 4. Counter fix: "+1 termin" must grow the total (owner-reported bug)
+
+Manual QA found `13/12 termina`: every "x/y" site divides by the SKU's live
+`sessionCount`, while add-session only bumps `sessionsRemaining`. Owner-defined
+semantics: the grant grows the TOTAL — unused 12/12 → +1 → 13/13; one used
+(11/12) → +1 → 12/13.
+
+Fix: `bonusSessions Int @default(0)` on `ClientPackage` (additive migration, no
+backfill — existing rows have 0 bonus). The add-session route increments
+`sessionsRemaining` AND `bonusSessions` in one update. Effective total
+everywhere = `packageType.sessionCount + bonusSessions`. Audit EVERY total/
+consumption site, server and UI: clients packageStatus shapes, client-detail,
+clients/me/packages, packages/client-packages, reports consumption math
+(`consumed = sessionCount + bonusSessions - sessionsRemaining`), package-expiry
+cron, admin client detail (Pregled + Paketi tabs), client home hero, client
+packages screen.
+
+## 5. Built-in system gift (replaces "one SKU" from §3)
+
+Admins should never create ANY gift SKU. A system gift PackageType lives in the
+DB: `isSystem Boolean @default(false)` on PackageType (additive migration);
+one row (name "🎂 Rođendanski poklon", sessionCount 1, validityDays 30,
+lateCancelHours 8 — the catalog form default, isBirthdayGift true, isSystem
+true, no price) ensured idempotently server-side so every environment self-
+heals (ensure hook on the packages/types read path; concurrent-safe).
+
+- Catalog management (tipovi-paketa) hides `isSystem` rows; the server rejects
+  edit/delete of a system row. Paid flows already exclude gifts.
+- Comp assign sheet: the system gift appears as an option; picking it shows the
+  class-type picker — now MULTI-select (owner decision) — prefilled from
+  `initialClassTypeId`; submit sends the picked set as `classTypeIdsOverride`
+  (already an array end-to-end). Submit gated on ≥1 picked.
+- Notification routing: preselect the system gift deterministically (isSystem
+  first, then the existing single/tiebreak fallback for any legacy gift SKUs).
+- Legacy admin-created gift SKUs keep working; owners can simply delete them.
+
 ## Testing (Testing Trophy — integration first)
 
 - Integration: add-session route (increment, 404, revoked/expired 409, role guard); both dispatch sites create a NotificationLog row with the right type + message vars; classTypeIdsOverride (honored for gift, rejected for non-gift, snapshot + push payload reflect override).
