@@ -1303,9 +1303,9 @@
   "session": {
     "intermediate": {
       "badge": "★",
-      "label": "Challenging",
-      "switchLabel": "Challenging",
-      "a11yLabel": "Challenging training"
+      "label": "Demanding",
+      "switchLabel": "Demanding",
+      "a11yLabel": "Demanding training"
     }
   }
 }
