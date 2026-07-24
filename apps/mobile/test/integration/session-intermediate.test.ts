@@ -1,5 +1,5 @@
 /**
- * Session "intermediate" (Zahtevno) — the admin-set binary per-occurrence marking.
+ * Session "intermediate" — the admin-set binary per-occurrence marking.
  *
  * Write path (PATCH /api/sessions/[id]): admins set true / false; omitting the
  * field leaves it untouched; a non-admin is rejected. Editable after bookings

@@ -1,5 +1,5 @@
 /**
- * The admin session edit sheet's "intermediate" (Zahtevno) Switch. Real Chromium + shipped
+ * The admin session edit sheet's "Intermediate" Switch. Real Chromium + shipped
  * i18n + a real seeded QueryClient (rooms/trainers caches) — the same path
  * production renders. Pins that the switch shows the shipped label, seeds its
  * value from the opened session, and reflects a toggle. Editable any time.
@@ -63,7 +63,7 @@ describe("SessionEditSheet intermediate switch", () => {
     expect(
       await screen.findByTestId("session-edit-intermediate-switch"),
     ).toBeTruthy();
-    expect(screen.getByText("Zahtevno")).toBeTruthy();
+    expect(screen.getByText("Intermediate")).toBeTruthy();
   });
 
   it("seeds the switch ON when the session is already intermediate", async () => {

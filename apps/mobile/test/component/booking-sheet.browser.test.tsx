@@ -144,7 +144,7 @@ describe("BookingSheet intermediate badge", () => {
     });
     const badge = await screen.findByTestId("intermediate-badge");
     expect(badge.textContent).toContain("★");
-    expect(badge.textContent).toContain("Zahtevno");
+    expect(badge.textContent).toContain("Intermediate");
   });
 
   it("shows no intermediate badge when the session is unmarked", async () => {

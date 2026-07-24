@@ -1309,9 +1309,9 @@
   "session": {
     "intermediate": {
       "badge": "★",
-      "label": "Zahtevno",
-      "switchLabel": "Zahtevno",
-      "a11yLabel": "Zahtevan trening"
+      "label": "Intermediate",
+      "switchLabel": "Intermediate",
+      "a11yLabel": "Intermediate trening"
     }
   }
 }

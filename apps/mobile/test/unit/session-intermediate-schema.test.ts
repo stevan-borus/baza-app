@@ -1,5 +1,5 @@
 /**
- * Session "intermediate" (Zahtevno) is an optional admin-set binary marking. The rule lives
+ * Session "intermediate" is an optional admin-set binary marking. The rule lives
  * at the zod (server-parse) layer: it's a plain boolean, and omitting the
  * field leaves the flag untouched.
  */
