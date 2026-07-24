@@ -231,10 +231,13 @@ export async function POST(request: Request) {
 
   // A package landed for the client — tell them it's active. Fire-and-forget:
   // a notification failure must never fail the payment that just committed.
+  // Pay-later (PENDING) gets the payment-neutral assigned copy: the receipt
+  // copy would claim a payment the client's own packages view still flags as
+  // "Nije plaćeno".
   if (result.clientPackage && packageTypeRow) {
     void notifyClient({
       userId: parsed.data.clientUserId,
-      event: "PACKAGE_PURCHASED",
+      event: status === "CONFIRMED" ? "PACKAGE_PURCHASED" : "PACKAGE_ASSIGNED",
       vars: { packageTypeName: packageTypeRow.name },
     });
   }

@@ -11,9 +11,10 @@
  *
  * Verified:
  *   1. naplata POST (activated package) → PACKAGE_ASSIGNED row, PACKAGE_PURCHASED copy
- *   2. non-gift dodeli POST → PACKAGE_ASSIGNED row, PACKAGE_ASSIGNED copy
- *   3. gift dodeli POST → still BIRTHDAY_CLIENT_GIFT (regression guard)
- *   4. neither new event sends an email
+ *   2. pay-later naplata POST (PENDING) → PACKAGE_ASSIGNED copy, not the payment receipt
+ *   3. non-gift dodeli POST → PACKAGE_ASSIGNED row, PACKAGE_ASSIGNED copy
+ *   4. gift dodeli POST → still BIRTHDAY_CLIENT_GIFT (regression guard)
+ *   5. neither new event sends an email
  */
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { setMockUser } from "./auth-mock";
@@ -167,6 +168,37 @@ describe("package-assignment push", () => {
     expect(logs[0].body).toBe("Uplata je evidentirana — paket Reformer 8 je aktivan.");
     expect(logs[0].payload).toMatchObject({
       messageKey: "notification.package_purchased",
+      packageTypeName: "Reformer 8",
+    });
+  });
+
+  it("pay-later naplata POST (PENDING) pushes the payment-neutral PACKAGE_ASSIGNED copy", async () => {
+    const { clientUserId, packageType } = await seedAdminClientAndPackage();
+
+    const res = await POST_BILLING(
+      buildBillingRequest({
+        clientUserId,
+        amount: 24000,
+        method: "CARD",
+        status: "PENDING",
+        packageTypeId: packageType.id,
+        activatePackageOnConfirm: true,
+      }),
+    );
+    expect(res.status).toBe(201);
+
+    const logs = await vi.waitFor(async () => {
+      const rows = await prisma.notificationLog.findMany({
+        where: { userId: clientUserId, type: "PACKAGE_ASSIGNED" },
+      });
+      expect(rows).toHaveLength(1);
+      return rows;
+    });
+    // No payment happened yet — the client must NOT get the "Uplata je
+    // evidentirana" receipt while their packages view says "Nije plaćeno".
+    expect(logs[0].body).toBe("Dodeljen vam je paket Reformer 8.");
+    expect(logs[0].payload).toMatchObject({
+      messageKey: "notification.package_assigned",
       packageTypeName: "Reformer 8",
     });
   });
