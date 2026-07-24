@@ -4,10 +4,11 @@ import { resetDb } from "./setup-db";
 
 vi.mock("@/lib/server/auth-guards", async () => (await import("./auth-mock")).authGuardsMock());
 
-import { POST } from "@/server/routes/packages/types";
+import { GET, POST } from "@/server/routes/packages/types";
 import { PATCH, DELETE } from "@/server/routes/packages/types/[id]";
 import { prisma } from "@/lib/server/prisma";
 import { now, nowMs } from "@/lib/now";
+import { SYSTEM_BIRTHDAY_GIFT_ID } from "@/lib/server/system-gift";
 
 async function seedAdminAndClassType() {
   const admin = await prisma.user.create({
@@ -347,5 +348,87 @@ describe("packages/types CRUD", () => {
     );
     expect(response.status).toBe(409);
     expect(await prisma.packageType.findUnique({ where: { id: packageType.id } })).not.toBeNull();
+  });
+
+  // ── Built-in system gift (§5) ──────────────────────────────────────────────
+
+  function getRequest() {
+    return new Request("http://test.local/api/packages/types", { method: "GET" });
+  }
+
+  it("GET ensures the built-in gift row — present exactly once after two calls", async () => {
+    const { admin } = await seedAdminAndClassType();
+    asAdmin(admin);
+
+    await GET(getRequest());
+    const second = await GET(getRequest());
+    expect(second.status).toBe(200);
+    const body = (await second.json()) as {
+      packageTypes: {
+        id: string;
+        name: string;
+        isSystem?: boolean;
+        isBirthdayGift?: boolean;
+        classTypes: unknown[];
+      }[];
+    };
+
+    // Idempotent: two GETs, still exactly one system row in the DB…
+    const rows = await prisma.packageType.findMany({
+      where: { isSystem: true },
+    });
+    expect(rows).toHaveLength(1);
+    expect(rows[0].id).toBe(SYSTEM_BIRTHDAY_GIFT_ID);
+    expect(rows[0].name).toBe("🎂 Rođendanski poklon");
+    expect(rows[0].sessionCount).toBe(1);
+    expect(rows[0].validityDays).toBe(30);
+    expect(rows[0].lateCancelHours).toBe(8);
+    expect(rows[0].isBirthdayGift).toBe(true);
+    expect(rows[0].price).toBeNull();
+
+    // …and the response shape carries isSystem + isBirthdayGift, with no
+    // covered class types (the assign-sheet override defines coverage).
+    const gift = body.packageTypes.find((pt) => pt.id === SYSTEM_BIRTHDAY_GIFT_ID);
+    expect(gift).toBeTruthy();
+    expect(gift!.isSystem).toBe(true);
+    expect(gift!.isBirthdayGift).toBe(true);
+    expect(gift!.classTypes).toEqual([]);
+  });
+
+  it("PATCH on the system gift is rejected (409) and leaves it unchanged", async () => {
+    const { admin } = await seedAdminAndClassType();
+    asAdmin(admin);
+    await GET(getRequest()); // ensure the row exists
+
+    const response = await PATCH(
+      new Request(`http://test.local/api/packages/types/${SYSTEM_BIRTHDAY_GIFT_ID}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ name: "Hacked gift" }),
+      }),
+      { id: SYSTEM_BIRTHDAY_GIFT_ID },
+    );
+    expect(response.status).toBe(409);
+    const persisted = await prisma.packageType.findUnique({
+      where: { id: SYSTEM_BIRTHDAY_GIFT_ID },
+    });
+    expect(persisted?.name).toBe("🎂 Rođendanski poklon");
+  });
+
+  it("DELETE on the system gift is rejected (409) and leaves it in place", async () => {
+    const { admin } = await seedAdminAndClassType();
+    asAdmin(admin);
+    await GET(getRequest()); // ensure the row exists
+
+    const response = await DELETE(
+      new Request(`http://test.local/api/packages/types/${SYSTEM_BIRTHDAY_GIFT_ID}`, {
+        method: "DELETE",
+      }),
+      { id: SYSTEM_BIRTHDAY_GIFT_ID },
+    );
+    expect(response.status).toBe(409);
+    expect(
+      await prisma.packageType.findUnique({ where: { id: SYSTEM_BIRTHDAY_GIFT_ID } }),
+    ).not.toBeNull();
   });
 });

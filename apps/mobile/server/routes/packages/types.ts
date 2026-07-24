@@ -11,10 +11,15 @@ import {
   shapePackageTypeClassTypes,
 } from "@/lib/server/package-type-shape";
 import { prisma } from "@/lib/server/prisma";
+import { ensureSystemBirthdayGift } from "@/lib/server/system-gift";
 
 export async function GET(request: Request) {
   const guard = await requireRole(request, [UserRole.ADMIN, UserRole.TRAINER, UserRole.CLIENT]);
   if (!guard.ok) return guard.response;
+
+  // Self-heal the built-in gift before the list is read, so the assign sheet and
+  // notification routing always see it. Read-first inside — no write per read.
+  await ensureSystemBirthdayGift(prisma);
 
   const packageTypes = await prisma.packageType.findMany({
     orderBy: { createdAt: "desc" },
@@ -26,6 +31,7 @@ export async function GET(request: Request) {
       lateCancelHours: true,
       price: true,
       isBirthdayGift: true,
+      isSystem: true,
       ...PACKAGE_TYPE_CLASS_TYPES_SELECT,
       createdAt: true,
       updatedAt: true,
@@ -77,6 +83,7 @@ export async function POST(request: Request) {
       lateCancelHours: true,
       price: true,
       isBirthdayGift: true,
+      isSystem: true,
       ...PACKAGE_TYPE_CLASS_TYPES_SELECT,
       createdAt: true,
     },

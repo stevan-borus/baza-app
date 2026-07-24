@@ -358,6 +358,9 @@ model PackageType {
   // admin can still override per payment, so it is advisory, not enforced.
   price               Int?
   isBirthdayGift      Boolean  @default(false)
+  // A built-in gift row the app ensures on its own — hidden from catalog
+  // management and protected from edit/delete. Admins never create gift SKUs.
+  isSystem            Boolean  @default(false)
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
   classTypes          PackageTypeClassType[]

@@ -2,10 +2,11 @@
  * Assign-package sheet — birthday-gift class-type picker (Vitest Browser Mode,
  * real Chromium, real RNW, real i18n with the shipped Serbian copy).
  *
- * Feature 3: one 🎂 SKU serves every class type. When the SELECTED package type
- * is a birthday gift, the sheet shows a single-select class-type picker
- * prefilled from `initialClassTypeId`; submit carries `classTypeIdsOverride`.
- * A non-gift SKU shows no picker and submits no override. The server-side
+ * §5: one 🎂 gift, targeted at whichever class types the admin ticks. When the
+ * SELECTED package type is a birthday gift, the sheet shows a MULTI-select
+ * class-type picker pre-ticked from `initialClassTypeId`; submit carries the
+ * full ticked set as `classTypeIdsOverride`, and is gated on ≥1 ticked. A
+ * non-gift SKU shows no picker and submits no override. The server-side
  * validation (400s, snapshot) is covered by the integration suite.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -101,37 +102,58 @@ beforeEach(() => {
 });
 
 describe("AssignPackageSheetContent gift class-type picker", () => {
-  it("shows the picker prefilled from initialClassTypeId once the gift SKU is selected", () => {
+  it("shows the picker pre-ticked from initialClassTypeId once the gift SKU is selected", () => {
     const screen = renderSheet("ct-reformer");
     // Pick the gift SKU.
     fireEvent.click(screen.getByTestId("assign-package-option-pt-gift"));
-    // Picker renders with its shipped Serbian label.
-    expect(screen.getByText("Tip treninga za poklon")).toBeTruthy();
-    // The prefilled row carries the selection check; the others don't.
+    // Picker renders with its shipped Serbian (plural) label.
+    expect(screen.getByText("Tipovi treninga za poklon")).toBeTruthy();
+    // The pre-ticked row carries the selection check; the others don't.
     const prefilled = screen.getByTestId("assign-gift-class-type-ct-reformer");
     expect(within(prefilled).queryByTestId("lucide-Check")).toBeTruthy();
     const other = screen.getByTestId("assign-gift-class-type-ct-barre");
     expect(within(other).queryByTestId("lucide-Check")).toBeNull();
   });
 
-  it("submits classTypeIdsOverride reflecting the chosen (changed) class type", async () => {
+  it("ticking a second class type submits both in classTypeIdsOverride", async () => {
     const screen = renderSheet("ct-reformer");
     fireEvent.click(screen.getByTestId("assign-package-option-pt-gift"));
-    // Admin changes the pick from the prefilled Reformer to Barre.
+    // Reformer is pre-ticked; admin adds Barre without unticking Reformer.
     fireEvent.click(screen.getByTestId("assign-gift-class-type-ct-barre"));
 
     fireEvent.click(screen.getByTestId("assign-package-submit"));
     await waitFor(() => expect(postCall()).toBeTruthy());
-    expect(postCall()![1]).toMatchObject({
-      method: "POST",
-      body: { packageTypeId: "pt-gift", classTypeIdsOverride: ["ct-barre"] },
-    });
+    const body = postCall()![1] as {
+      method: string;
+      body: { packageTypeId: string; classTypeIdsOverride: string[] };
+    };
+    expect(body.method).toBe("POST");
+    expect(body.body.packageTypeId).toBe("pt-gift");
+    expect([...body.body.classTypeIdsOverride].sort()).toEqual(
+      ["ct-barre", "ct-reformer"].sort(),
+    );
+  });
+
+  it("unticking down to zero disables submit", () => {
+    // RN-Web Pressable renders `disabled` as aria-disabled on a div, not the
+    // native disabled attribute — assert the aria state directly.
+    const screen = renderSheet("ct-reformer");
+    fireEvent.click(screen.getByTestId("assign-package-option-pt-gift"));
+    // With the pre-ticked Reformer the submit is enabled…
+    expect(
+      screen.getByTestId("assign-package-submit").getAttribute("aria-disabled"),
+    ).not.toBe("true");
+    // …untick it → nothing selected → submit gated.
+    fireEvent.click(screen.getByTestId("assign-gift-class-type-ct-reformer"));
+    expect(
+      screen.getByTestId("assign-package-submit").getAttribute("aria-disabled"),
+    ).toBe("true");
   });
 
   it("a non-gift SKU shows no picker and submits no override", async () => {
     const screen = renderSheet("ct-reformer");
     fireEvent.click(screen.getByTestId("assign-package-option-pt-reformer"));
-    expect(screen.queryByText("Tip treninga za poklon")).toBeNull();
+    expect(screen.queryByText("Tipovi treninga za poklon")).toBeNull();
 
     fireEvent.click(screen.getByTestId("assign-package-submit"));
     await waitFor(() => expect(postCall()).toBeTruthy());

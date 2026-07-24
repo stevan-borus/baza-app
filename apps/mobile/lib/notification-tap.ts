@@ -25,6 +25,7 @@ export function useNotificationTapHandler() {
     .map((pt) => ({
       id: pt.id,
       classTypeIds: pt.classTypes.map((classType) => classType.id),
+      isSystem: pt.isSystem ?? false,
     }));
 
   function handleTap(input: TapInput): boolean {

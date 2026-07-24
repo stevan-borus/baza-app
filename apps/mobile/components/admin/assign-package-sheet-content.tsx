@@ -66,9 +66,10 @@ export type AssignPackageSheetContentProps = {
   initialPackageTypeId?: string;
   /**
    * Birthday-gift deep-link pre-selection: the class type the gift picker opens
-   * prefilled to (e.g. the client's usual class from a BIRTHDAY_ADMIN_PROMPT).
-   * Only meaningful once the selected SKU is a birthday gift; the admin can
-   * still change it before confirming. useState initializer — no effect.
+   * with pre-ticked (e.g. the client's usual class from a BIRTHDAY_ADMIN_PROMPT).
+   * Only meaningful once the selected SKU is a birthday gift; the picker is
+   * multi-select, so the admin can tick more before confirming. useState
+   * initializer — no effect.
    */
   initialClassTypeId?: string;
 };
@@ -86,10 +87,11 @@ export function AssignPackageSheetContent({
   // Shared fields.
   const [packageTypeId, setPackageTypeId] = useState(initialPackageTypeId ?? "");
   const [startsAt, setStartsAt] = useState<Date | null>(null);
-  // Birthday-gift class-type override: the single class type the gift covers.
-  // Prefilled from the deep link; the admin can change it before confirming.
-  const [giftClassTypeId, setGiftClassTypeId] = useState(
-    initialClassTypeId ?? "",
+  // Birthday-gift class-type override: the SET of class types the gift covers.
+  // Multi-select — pre-ticked from the deep link; the admin ticks more (or
+  // unticks) before confirming. One 🎂 gift, targeted at whichever classes.
+  const [giftClassTypeIds, setGiftClassTypeIds] = useState<string[]>(
+    initialClassTypeId ? [initialClassTypeId] : [],
   );
 
   // Paid-mode-only fields. Initialised regardless so the hook order is
@@ -170,7 +172,9 @@ export function AssignPackageSheetContent({
   // longer gates submit — the picker can't be left empty.
   const submitDisabled =
     mode === "comp"
-      ? compMutation.isPending || !packageTypeId || (isGift && !giftClassTypeId)
+      ? compMutation.isPending ||
+        !packageTypeId ||
+        (isGift && giftClassTypeIds.length === 0)
       : paidMutation.isPending || !packageTypeId || !amountValid;
 
   function handleSubmit() {
@@ -181,8 +185,8 @@ export function AssignPackageSheetContent({
           clientProfileId: client.id,
           packageTypeId,
           startsAt: startsAtIso,
-          // Gift only: snapshot the picked class type instead of the SKU's set.
-          ...(isGift ? { classTypeIdsOverride: [giftClassTypeId] } : {}),
+          // Gift only: snapshot the picked class-type SET instead of the SKU's.
+          ...(isGift ? { classTypeIdsOverride: giftClassTypeIds } : {}),
         },
         { onSuccess },
       );
@@ -292,8 +296,9 @@ export function AssignPackageSheetContent({
         })}
       </View>
 
-      {/* Gift class-type picker — one 🎂 SKU serves every class type. Same
-          option-row anatomy as the package list above (single-select). */}
+      {/* Gift class-type picker — one 🎂 gift, targeted at whichever class
+          types the admin ticks. Multi-select: same option-row anatomy as the
+          package list above, but tapping a row toggles it in/out of the set. */}
       {isGift ? (
         <View className="flex-col gap-2">
           <SectionLabel>{t("admin.clients.giftClassTypeLabel")}</SectionLabel>
@@ -302,7 +307,7 @@ export function AssignPackageSheetContent({
             accessibilityLabel={t("admin.clients.giftClassTypeA11y")}
           >
             {classTypes.map((ct, idx) => {
-              const selected = giftClassTypeId === ct.id;
+              const selected = giftClassTypeIds.includes(ct.id);
               return (
                 <Pressable
                   key={ct.id}
@@ -310,7 +315,13 @@ export function AssignPackageSheetContent({
                   accessibilityRole="button"
                   accessibilityState={{ selected }}
                   android_ripple={null}
-                  onPress={() => setGiftClassTypeId(ct.id)}
+                  onPress={() =>
+                    setGiftClassTypeIds((prev) =>
+                      prev.includes(ct.id)
+                        ? prev.filter((id) => id !== ct.id)
+                        : [...prev, ct.id],
+                    )
+                  }
                   className="active:opacity-70"
                 >
                   <View

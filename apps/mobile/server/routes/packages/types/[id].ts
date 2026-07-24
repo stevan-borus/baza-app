@@ -23,6 +23,10 @@ export async function PATCH(request: Request, { id }: RouteParams) {
 
   const existing = await prisma.packageType.findUnique({ where: { id } });
   if (!existing) return fail("Package type not found", 404);
+  // The built-in gift is app-managed — never editable through the catalog.
+  if (existing.isSystem) {
+    return fail("This package type is managed by the system and cannot be edited", 409);
+  }
 
   const classTypeIds = parsed.data.classTypeIds
     ? Array.from(new Set(parsed.data.classTypeIds))
@@ -61,6 +65,7 @@ export async function PATCH(request: Request, { id }: RouteParams) {
       price: true,
       ...PACKAGE_TYPE_CLASS_TYPES_SELECT,
       isBirthdayGift: true,
+      isSystem: true,
       updatedAt: true,
     },
   });
@@ -74,6 +79,14 @@ export async function PATCH(request: Request, { id }: RouteParams) {
 export async function DELETE(request: Request, { id }: RouteParams) {
   const guard = await requireRole(request, [UserRole.ADMIN]);
   if (!guard.ok) return guard.response;
+  // The built-in gift is app-managed — never deletable through the catalog.
+  const target = await prisma.packageType.findUnique({
+    where: { id },
+    select: { isSystem: true },
+  });
+  if (target?.isSystem) {
+    return fail("This package type is managed by the system and cannot be deleted", 409);
+  }
   // Refuse deletion if any client package references this type.
   const inUse = await prisma.clientPackage.findFirst({
     where: { packageTypeId: id },

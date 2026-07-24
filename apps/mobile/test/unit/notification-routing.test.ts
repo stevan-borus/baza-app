@@ -68,6 +68,43 @@ describe("resolveNotificationHref", () => {
       );
     });
 
+    test("system gift is preselected over legacy gift SKUs, regardless of order or covered set", () => {
+      const href = resolveNotificationHref({
+        type: "BIRTHDAY_ADMIN_PROMPT",
+        payload: {
+          clientProfileId: "cp-123",
+          suggestedClassTypeId: "ct-reformer",
+        },
+        giftPackageTypes: [
+          { id: "pt-legacy-reformer", classTypeIds: ["ct-reformer"] },
+          { id: "pt-system", classTypeIds: [], isSystem: true },
+          { id: "pt-legacy-mat", classTypeIds: ["ct-mat"] },
+        ],
+      });
+      // The system gift wins even though a legacy SKU covers the suggested
+      // class type and the system row has no covered set of its own.
+      expect(href).toBe(
+        "/(admin)/klijenti?openAssignPackage=cp-123&mode=comp&initialPackageTypeId=pt-system&initialClassTypeId=ct-reformer",
+      );
+    });
+
+    test("no system gift, only legacy SKUs → legacy single/tiebreak fallback still applies", () => {
+      const href = resolveNotificationHref({
+        type: "BIRTHDAY_ADMIN_PROMPT",
+        payload: {
+          clientProfileId: "cp-123",
+          suggestedClassTypeId: "ct-reformer",
+        },
+        giftPackageTypes: [
+          { id: "pt-legacy-mat", classTypeIds: ["ct-mat"], isSystem: false },
+          { id: "pt-legacy-reformer", classTypeIds: ["ct-reformer"], isSystem: false },
+        ],
+      });
+      expect(href).toBe(
+        "/(admin)/klijenti?openAssignPackage=cp-123&mode=comp&initialPackageTypeId=pt-legacy-reformer&initialClassTypeId=ct-reformer",
+      );
+    });
+
     test("with null suggestedClassTypeId → still preselects the single gift SKU", () => {
       const href = resolveNotificationHref({
         type: "BIRTHDAY_ADMIN_PROMPT",

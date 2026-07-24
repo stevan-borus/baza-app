@@ -52,6 +52,7 @@ import { POST } from "@/server/routes/packages/client-packages";
 import { prisma } from "@/lib/server/prisma";
 import { now } from "@/lib/now";
 import { findEligibleClientPackage } from "@/lib/server/package-eligibility";
+import { ensureSystemBirthdayGift, SYSTEM_BIRTHDAY_GIFT_ID } from "@/lib/server/system-gift";
 
 async function seed(opts?: { isBirthdayGift?: boolean }) {
   const admin = await prisma.user.create({
@@ -229,5 +230,64 @@ describe("client-packages gift class-type override", () => {
     const payload = logs[0].payload as { classTypeIds?: string[] };
     expect(payload.classTypeIds).toEqual([reformer.id]);
     expect(payload.classTypeIds).not.toContain(mat.id);
+  });
+
+  it("system gift (no covered set) + a 2-class-type override snapshots both, both bookable", async () => {
+    // The built-in system gift links NO class types of its own — the override
+    // is the sole source of coverage. Ensure the row, then assign it with two
+    // picked class types and assert both are snapshotted and eligible.
+    const { clientProfileId, mat, reformer } = await seed();
+    await ensureSystemBirthdayGift(prisma);
+
+    const res = await POST(
+      buildRequest({
+        clientProfileId,
+        packageTypeId: SYSTEM_BIRTHDAY_GIFT_ID,
+        startsAt: now().toISOString(),
+        classTypeIdsOverride: [mat.id, reformer.id],
+      }),
+    );
+    expect(res.status).toBe(201);
+    const body = (await res.json()) as {
+      clientPackage: { id: string; classTypeIds: string[] };
+    };
+    expect([...body.clientPackage.classTypeIds].sort()).toEqual(
+      [mat.id, reformer.id].sort(),
+    );
+
+    const snapshot = await prisma.clientPackageClassType.findMany({
+      where: { clientPackageId: body.clientPackage.id },
+      select: { classTypeId: true },
+    });
+    expect(snapshot.map((s) => s.classTypeId).sort()).toEqual(
+      [mat.id, reformer.id].sort(),
+    );
+
+    const created = await prisma.clientPackage.findUniqueOrThrow({
+      where: { id: body.clientPackage.id },
+      select: {
+        id: true,
+        startsAt: true,
+        expiresAt: true,
+        sessionsRemaining: true,
+        revokedAt: true,
+        classTypes: { select: { classTypeId: true } },
+      },
+    });
+    const eligibilityPackage = {
+      id: created.id,
+      classTypeIds: created.classTypes.map((c) => c.classTypeId),
+      startsAt: created.startsAt,
+      expiresAt: created.expiresAt,
+      sessionsRemaining: created.sessionsRemaining,
+      revokedAt: created.revokedAt,
+    };
+    const at = now();
+    expect(
+      findEligibleClientPackage([eligibilityPackage], [], at, mat.id),
+    ).not.toBeNull();
+    expect(
+      findEligibleClientPackage([eligibilityPackage], [], at, reformer.id),
+    ).not.toBeNull();
   });
 });

@@ -16,13 +16,12 @@ export type NotificationRoutingInput = {
   payload: Record<string, Json> | null | undefined;
   /**
    * The catalog of birthday-gift PackageTypes available right now — supplied
-   * by the caller from the packageTypes query cache. With one gift SKU per
-   * class type retired, a single gift SKU now serves every class type via the
-   * assign-sheet picker: we preselect the lone SKU when there is exactly one,
-   * and only fall back to a covered-class-type match as a tiebreak when a
-   * studio still runs several gift SKUs.
+   * by the caller from the packageTypes query cache. The built-in system gift
+   * is preselected deterministically (`isSystem` wins); any legacy admin-
+   * created gift SKUs keep the single/tiebreak fallback so an older studio
+   * still routes sensibly until it deletes them.
    */
-  giftPackageTypes: Array<{ id: string; classTypeIds: string[] }>;
+  giftPackageTypes: Array<{ id: string; classTypeIds: string[]; isSystem?: boolean }>;
 };
 
 type Payload = Record<string, Json>;
@@ -41,12 +40,15 @@ export function resolveNotificationHref(input: NotificationRoutingInput): string
       const clientProfileId = getString(payload, "clientProfileId");
       if (!clientProfileId) return null;
       const suggestedClassTypeId = getString(payload, "suggestedClassTypeId");
-      // One gift SKU → always preselect it. Several → keep the covered-match as
-      // a tiebreak (first match wins, else the first gift SKU). None → no
-      // preselection. The class-type hint rides through regardless so the
-      // assign-sheet picker can prefill it.
+      // Built-in system gift always wins — it's the one row admins are meant to
+      // use. Otherwise fall back to the legacy rule: one gift SKU → preselect
+      // it; several → covered-match tiebreak (first match, else first gift SKU);
+      // none → no preselection. The class-type hint rides through regardless so
+      // the assign-sheet picker can prefill it.
+      const systemGift = giftPackageTypes.find((pt) => pt.isSystem);
       const gift =
-        giftPackageTypes.length === 1
+        systemGift ??
+        (giftPackageTypes.length === 1
           ? giftPackageTypes[0]
           : giftPackageTypes.length > 1
             ? (suggestedClassTypeId
@@ -54,7 +56,7 @@ export function resolveNotificationHref(input: NotificationRoutingInput): string
                     pt.classTypeIds.includes(suggestedClassTypeId),
                   )
                 : undefined) ?? giftPackageTypes[0]
-            : undefined;
+            : undefined);
       const params = new URLSearchParams({
         openAssignPackage: clientProfileId,
         mode: "comp",
