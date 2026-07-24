@@ -13,8 +13,9 @@
  *    number — the most useful tile to read regardless of the period pill.
  *  - **Expiring soon** ⊂ Active where `expiresAt <= now + 14d`. Same
  *    period-independent semantics.
- *  - **Consumption rate** = average of `(sessionCount - sessionsRemaining)
- *    / sessionCount` across packages **started in [from, to)**. So this one
+ *  - **Consumption rate** = average of `(total - sessionsRemaining) / total`
+ *    where `total = sessionCount + bonusSessions` (admin "+1 termin" grants
+ *    grow the total), across packages **started in [from, to)**. So this one
  *    IS period-dependent — it answers "for the cohort of packages started
  *    in this window, how far through them are people on average?"
  *  - **Sold in period** = count of ClientPackage rows where `startsAt ∈
@@ -100,6 +101,7 @@ export async function GET(request: Request) {
       packageTypeId: true,
       startsAt: true,
       sessionsRemaining: true,
+      bonusSessions: true,
       clientProfile: {
         select: {
           userId: true,
@@ -118,7 +120,9 @@ export async function GET(request: Request) {
   if (soldInPeriod > 0) {
     let totalRatio = 0;
     for (const pkg of periodPackages) {
-      const sc = pkg.packageType.sessionCount;
+      // Effective total includes admin "+1 termin" grants (bonusSessions), so a
+      // granted package's consumption stays honest: consumed = total − remaining.
+      const sc = pkg.packageType.sessionCount + pkg.bonusSessions;
       if (sc > 0) {
         const consumed = Math.max(0, sc - pkg.sessionsRemaining);
         totalRatio += consumed / sc;

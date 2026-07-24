@@ -62,7 +62,9 @@ export function PregledTab({
             <Text className="text-muted" style={{ fontSize: 13 }}>
               {t("admin.clientDetail.sessionsRemaining", {
                 remaining: activePackage.sessionsRemaining,
-                total: activePackage.packageType?.sessionCount ?? "—",
+                // Grant-aware total (server: sessionCount + bonusSessions), so a
+                // "+1 termin" grant reads 13/13, not 13/12.
+                total: activePackage.sessionsTotal ?? "—",
               })}
             </Text>
             <Text className="text-muted" style={{ fontSize: 13 }}>

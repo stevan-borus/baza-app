@@ -64,6 +64,8 @@ export async function GET(request: Request) {
     const packages = packageRows.map((row) => ({
       ...row,
       classTypes: row.classTypes.map((link) => link.classType),
+      // Grant-aware total: SKU sessionCount + this package's snapshotted bonus.
+      sessionsTotal: row.packageType.sessionCount + row.bonusSessions,
     }));
 
     const pendingBilling =
@@ -227,6 +229,7 @@ export async function GET(request: Request) {
     const shaped = pagePackages.map((p) => ({
       ...p,
       classTypes: p.classTypes.map((link) => link.classType),
+      sessionsTotal: p.packageType.sessionCount + p.bonusSessions,
       client: {
         ...p.clientProfile.user,
         fullName: formatFullName(
@@ -297,6 +300,7 @@ export async function GET(request: Request) {
     return {
       ...p,
       classTypes: p.classTypes.map((link) => link.classType),
+      sessionsTotal: p.packageType.sessionCount + p.bonusSessions,
       billingRecord: match
         ? {
             id: match.id,

@@ -154,7 +154,9 @@ export function PaketiTab({
                     <Text className="text-muted" style={{ fontSize: 12 }}>
                       {t("admin.clientDetail.sessionsRemaining", {
                         remaining: p.sessionsRemaining,
-                        total: p.packageType?.sessionCount ?? "—",
+                        // Grant-aware total (server: sessionCount + bonusSessions),
+                        // so a "+1 termin" grant reads 13/13, not 13/12.
+                        total: p.sessionsTotal ?? "—",
                       })}
                     </Text>
                     <Text

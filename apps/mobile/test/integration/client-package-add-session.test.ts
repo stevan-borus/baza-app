@@ -20,6 +20,7 @@ import { nowMs } from "@/lib/now";
 vi.mock("@/lib/server/auth-guards", async () => (await import("./auth-mock")).authGuardsMock());
 
 import { POST as POST_ADD_SESSION } from "@/server/routes/packages/client-packages/[id]/add-session";
+import { GET as GET_CLIENT_PACKAGES } from "@/server/routes/packages/client-packages";
 import { prisma } from "@/lib/server/prisma";
 
 const HOUR = 60 * 60 * 1000;
@@ -109,6 +110,52 @@ function asClient(seeded: Awaited<ReturnType<typeof seed>>) {
   });
 }
 
+// A 12-session SKU so the "13/12" bug is unmistakable in the reproduction.
+async function createTwelveSessionPackage(
+  seeded: Awaited<ReturnType<typeof seed>>,
+  sessionsRemaining: number,
+) {
+  const packageType = await prisma.packageType.create({
+    data: {
+      name: "Reformer 12",
+      sessionCount: 12,
+      validityDays: 60,
+      lateCancelHours: 12,
+      price: 36000,
+      classTypes: { create: { classTypeId: seeded.classType.id } },
+    },
+  });
+  return prisma.clientPackage.create({
+    data: {
+      clientProfileId: seeded.clientProfile.id,
+      packageTypeId: packageType.id,
+      classTypes: { create: { classTypeId: seeded.classType.id } },
+      lateCancelHours: 12,
+      startsAt: new Date(nowMs() - DAY),
+      expiresAt: new Date(nowMs() + 60 * DAY),
+      sessionsRemaining,
+    },
+  });
+}
+
+// Read the admin per-client packages payload for the seeded client.
+async function fetchAdminPackageRow(
+  seeded: Awaited<ReturnType<typeof seed>>,
+  packageId: string,
+) {
+  asAdmin(seeded);
+  const res = await GET_CLIENT_PACKAGES(
+    new Request(
+      `http://test.local/api/packages/client-packages?clientProfileId=${seeded.clientProfile.id}`,
+      { method: "GET" },
+    ),
+  );
+  const body = await res.json();
+  return body.packages.find(
+    (p: { id: string }) => p.id === packageId,
+  ) as { sessionsRemaining: number; sessionsTotal: number } | undefined;
+}
+
 describe("POST /api/packages/client-packages/[id]/add-session", () => {
   beforeEach(async () => {
     await resetDb();
@@ -192,5 +239,36 @@ describe("POST /api/packages/client-packages/[id]/add-session", () => {
 
     const res = await POST_ADD_SESSION(addSessionRequest(pkg.id), { id: pkg.id });
     expect(res.status).toBe(403);
+  });
+
+  // Owner-reported bug: a grant grows the TOTAL, not past it. A full 12/12
+  // package must read 13/13 after +1 — not the "13/12" QA found when every
+  // "x/y" site divided by the SKU's live sessionCount.
+  it("grows the total: unused 12/12 → +1 → 13/13", async () => {
+    const seeded = await seed();
+    const pkg = await createTwelveSessionPackage(seeded, 12);
+
+    asAdmin(seeded);
+    const res = await POST_ADD_SESSION(addSessionRequest(pkg.id), { id: pkg.id });
+    expect(res.status).toBe(200);
+
+    const row = await fetchAdminPackageRow(seeded, pkg.id);
+    expect(row?.sessionsRemaining).toBe(13);
+    expect(row?.sessionsTotal).toBe(13);
+  });
+
+  // One session already consumed (11/12): +1 restores it AND grows the total,
+  // so it reads 12/13 — the client is not owed the consumed session back on top.
+  it("grows the total: one consumed 11/12 → +1 → 12/13", async () => {
+    const seeded = await seed();
+    const pkg = await createTwelveSessionPackage(seeded, 11);
+
+    asAdmin(seeded);
+    const res = await POST_ADD_SESSION(addSessionRequest(pkg.id), { id: pkg.id });
+    expect(res.status).toBe(200);
+
+    const row = await fetchAdminPackageRow(seeded, pkg.id);
+    expect(row?.sessionsRemaining).toBe(12);
+    expect(row?.sessionsTotal).toBe(13);
   });
 });

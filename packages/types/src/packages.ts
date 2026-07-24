@@ -128,6 +128,11 @@ export const clientPackageSchema = z.object({
   startsAt: z.string(),
   expiresAt: z.string(),
   sessionsRemaining: z.number(),
+  // Effective package total = packageType.sessionCount + bonusSessions, computed
+  // server-side so the "x/y termina" arithmetic lives in ONE place. An admin
+  // "+1 termin" grant bumps bonusSessions, growing this total (12/12 → 13/13);
+  // every UI total site reads THIS, never packageType.sessionCount directly.
+  sessionsTotal: z.number(),
   // Set when an admin revoked the package (keep-the-trace semantics): the
   // row stays visible in history, marked "Opozvan", but grants no rights.
   revokedAt: z.string().nullable().optional(),

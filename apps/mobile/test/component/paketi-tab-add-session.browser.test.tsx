@@ -37,6 +37,7 @@ function makePackage(overrides: Partial<ClientPackage> = {}): ClientPackage {
     startsAt: new Date(Date.now() - DAY).toISOString(),
     expiresAt: new Date(Date.now() + 30 * DAY).toISOString(),
     sessionsRemaining: 3,
+    sessionsTotal: 8,
     packageType: { name: "Reformer 8", sessionCount: 8, validityDays: 60 },
     ...overrides,
   };
@@ -84,6 +85,23 @@ describe("PaketiTab +1 termin", () => {
     expect(
       screen.queryByTestId("package-history-row-pkg-1-add-session"),
     ).toBeNull();
+  });
+
+  it("renders the fraction from sessionsTotal, so a granted 13/13 never reads 13/12", () => {
+    // Unused package: remaining === total. A "+1 termin" grant bumps BOTH
+    // (server ships sessionsTotal = sessionCount + bonusSessions), so the row
+    // reads 13/13, not 13/12 — the owner-reported bug.
+    const screen = renderTab([
+      makePackage({ sessionsRemaining: 13, sessionsTotal: 13 }),
+    ]);
+    expect(screen.getByText(/13\s*\/\s*13/)).toBeTruthy();
+  });
+
+  it("renders remaining/total independently when they differ (12/13 after one consumed)", () => {
+    const screen = renderTab([
+      makePackage({ sessionsRemaining: 12, sessionsTotal: 13 }),
+    ]);
+    expect(screen.getByText(/12\s*\/\s*13/)).toBeTruthy();
   });
 
   it("confirming fires the add-session mutation against the package's route", async () => {

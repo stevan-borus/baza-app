@@ -33,7 +33,13 @@ export async function POST(request: Request, { id }: RouteParams) {
 
   const updated = await prisma.clientPackage.update({
     where: { id: pkg.id },
-    data: { sessionsRemaining: { increment: 1 } },
+    // Grow the TOTAL, not past it: bump bonusSessions alongside sessionsRemaining
+    // in one update so every "x/y" site (which reads sessionCount + bonusSessions)
+    // shows 13/13 for an unused 12/12, not 13/12.
+    data: {
+      sessionsRemaining: { increment: 1 },
+      bonusSessions: { increment: 1 },
+    },
     select: { id: true, sessionsRemaining: true },
   });
 

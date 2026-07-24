@@ -428,7 +428,9 @@ function PackageCard({
   onPress: () => void;
 }) {
   const { t } = useTranslation();
-  const total = pkg.packageType?.sessionCount ?? 0;
+  // Grant-aware total (SKU sessionCount + bonusSessions), computed server-side
+  // so a "+1 termin" grant reads 13/13, not 13/12.
+  const total = pkg.sessionsTotal ?? 0;
   // "Left to book" — remaining credits minus sessions already held (future
   // bookings + waitlist seats), computed server-side. Raw sessionsRemaining
   // is consumed-at-attendance credits, which clients misread as bookable.
