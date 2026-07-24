@@ -194,7 +194,7 @@ const messages: Record<
   // not a receipt, so it stays free of any payment language.
   PACKAGE_ASSIGNED: {
     sr: {
-      title: "Dodeljen ti je paket",
+      title: "Dodeljen vam je paket",
       body: "Dodeljen vam je paket {{packageTypeName}}.",
     },
     en: {
