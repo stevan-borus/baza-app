@@ -31,8 +31,11 @@ export async function POST(request: Request, { id }: RouteParams) {
     return fail("Package has expired", 409);
   }
 
-  const updated = await prisma.clientPackage.update({
-    where: { id: pkg.id },
+  // Atomic claim (same pattern as revoke): the guards are re-checked in the
+  // update's where so a revoke landing between the read above and this write
+  // can't be credited.
+  const claimed = await prisma.clientPackage.updateMany({
+    where: { id: pkg.id, revokedAt: null, expiresAt: { gt: now() } },
     // Grow the TOTAL, not past it: bump bonusSessions alongside sessionsRemaining
     // in one update so every "x/y" site (which reads sessionCount + bonusSessions)
     // shows 13/13 for an unused 12/12, not 13/12.
@@ -40,6 +43,11 @@ export async function POST(request: Request, { id }: RouteParams) {
       sessionsRemaining: { increment: 1 },
       bonusSessions: { increment: 1 },
     },
+  });
+  if (claimed.count === 0) return fail("Package can no longer be credited", 409);
+
+  const updated = await prisma.clientPackage.findUniqueOrThrow({
+    where: { id: pkg.id },
     select: { id: true, sessionsRemaining: true },
   });
 
