@@ -142,6 +142,8 @@ export const packagesQueries = {
         clientProfileId: string;
         packageTypeId: string;
         startsAt: string;
+        // Birthday gift only: the admin-picked class-type set the gift covers.
+        classTypeIdsOverride?: string[];
       }) =>
         apiRequest("/api/packages/client-packages", {
           method: "POST",

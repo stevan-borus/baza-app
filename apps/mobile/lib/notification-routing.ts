@@ -16,8 +16,11 @@ export type NotificationRoutingInput = {
   payload: Record<string, Json> | null | undefined;
   /**
    * The catalog of birthday-gift PackageTypes available right now — supplied
-   * by the caller from the packageTypes query cache. We pick the one whose
-   * covered `classTypeIds` include the notification's `suggestedClassTypeId`.
+   * by the caller from the packageTypes query cache. With one gift SKU per
+   * class type retired, a single gift SKU now serves every class type via the
+   * assign-sheet picker: we preselect the lone SKU when there is exactly one,
+   * and only fall back to a covered-class-type match as a tiebreak when a
+   * studio still runs several gift SKUs.
    */
   giftPackageTypes: Array<{ id: string; classTypeIds: string[] }>;
 };
@@ -38,16 +41,27 @@ export function resolveNotificationHref(input: NotificationRoutingInput): string
       const clientProfileId = getString(payload, "clientProfileId");
       if (!clientProfileId) return null;
       const suggestedClassTypeId = getString(payload, "suggestedClassTypeId");
-      const gift = suggestedClassTypeId
-        ? giftPackageTypes.find((pt) =>
-            pt.classTypeIds.includes(suggestedClassTypeId),
-          )
-        : undefined;
+      // One gift SKU → always preselect it. Several → keep the covered-match as
+      // a tiebreak (first match wins, else the first gift SKU). None → no
+      // preselection. The class-type hint rides through regardless so the
+      // assign-sheet picker can prefill it.
+      const gift =
+        giftPackageTypes.length === 1
+          ? giftPackageTypes[0]
+          : giftPackageTypes.length > 1
+            ? (suggestedClassTypeId
+                ? giftPackageTypes.find((pt) =>
+                    pt.classTypeIds.includes(suggestedClassTypeId),
+                  )
+                : undefined) ?? giftPackageTypes[0]
+            : undefined;
       const params = new URLSearchParams({
         openAssignPackage: clientProfileId,
         mode: "comp",
       });
       if (gift) params.set("initialPackageTypeId", gift.id);
+      if (suggestedClassTypeId)
+        params.set("initialClassTypeId", suggestedClassTypeId);
       return `/(admin)/klijenti?${params.toString()}`;
     }
 

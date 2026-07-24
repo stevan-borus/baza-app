@@ -3,7 +3,23 @@ import { resolveNotificationHref } from "@/lib/notification-routing";
 
 describe("resolveNotificationHref", () => {
   describe("BIRTHDAY_ADMIN_PROMPT", () => {
-    test("with matching gift PackageType → pre-selects packageTypeId", () => {
+    test("exactly one gift SKU → preselects it regardless of covered class type", () => {
+      // The gift SKU no longer has to cover the suggested class type — one SKU
+      // now serves every class type via the assign-sheet picker.
+      const href = resolveNotificationHref({
+        type: "BIRTHDAY_ADMIN_PROMPT",
+        payload: {
+          clientProfileId: "cp-123",
+          suggestedClassTypeId: "ct-reformer",
+        },
+        giftPackageTypes: [{ id: "pt-gift", classTypeIds: ["ct-mat"] }],
+      });
+      expect(href).toBe(
+        "/(admin)/klijenti?openAssignPackage=cp-123&mode=comp&initialPackageTypeId=pt-gift&initialClassTypeId=ct-reformer",
+      );
+    });
+
+    test("several gift SKUs → includes-match tiebreak wins (first match)", () => {
       const href = resolveNotificationHref({
         type: "BIRTHDAY_ADMIN_PROMPT",
         payload: {
@@ -11,16 +27,17 @@ describe("resolveNotificationHref", () => {
           suggestedClassTypeId: "ct-reformer",
         },
         giftPackageTypes: [
-          { id: "pt-gift-reformer", classTypeIds: ["ct-reformer"] },
           { id: "pt-gift-mat", classTypeIds: ["ct-mat"] },
+          { id: "pt-gift-reformer", classTypeIds: ["ct-reformer"] },
+          { id: "pt-gift-reformer-2", classTypeIds: ["ct-reformer"] },
         ],
       });
       expect(href).toBe(
-        "/(admin)/klijenti?openAssignPackage=cp-123&mode=comp&initialPackageTypeId=pt-gift-reformer",
+        "/(admin)/klijenti?openAssignPackage=cp-123&mode=comp&initialPackageTypeId=pt-gift-reformer&initialClassTypeId=ct-reformer",
       );
     });
 
-    test("with no matching gift PackageType → routes without packageTypeId", () => {
+    test("several gift SKUs, none match → falls back to the first gift SKU", () => {
       const href = resolveNotificationHref({
         type: "BIRTHDAY_ADMIN_PROMPT",
         payload: {
@@ -28,31 +45,48 @@ describe("resolveNotificationHref", () => {
           suggestedClassTypeId: "ct-unknown",
         },
         giftPackageTypes: [
+          { id: "pt-gift-mat", classTypeIds: ["ct-mat"] },
           { id: "pt-gift-reformer", classTypeIds: ["ct-reformer"] },
         ],
       });
-      expect(href).toBe("/(admin)/klijenti?openAssignPackage=cp-123&mode=comp");
+      expect(href).toBe(
+        "/(admin)/klijenti?openAssignPackage=cp-123&mode=comp&initialPackageTypeId=pt-gift-mat&initialClassTypeId=ct-unknown",
+      );
     });
 
-    test("with null suggestedClassTypeId → routes without packageTypeId", () => {
+    test("no gift SKUs → routes without a preselection but keeps the class-type hint", () => {
+      const href = resolveNotificationHref({
+        type: "BIRTHDAY_ADMIN_PROMPT",
+        payload: {
+          clientProfileId: "cp-123",
+          suggestedClassTypeId: "ct-reformer",
+        },
+        giftPackageTypes: [],
+      });
+      expect(href).toBe(
+        "/(admin)/klijenti?openAssignPackage=cp-123&mode=comp&initialClassTypeId=ct-reformer",
+      );
+    });
+
+    test("with null suggestedClassTypeId → still preselects the single gift SKU", () => {
       const href = resolveNotificationHref({
         type: "BIRTHDAY_ADMIN_PROMPT",
         payload: {
           clientProfileId: "cp-123",
           suggestedClassTypeId: null,
         },
-        giftPackageTypes: [
-          { id: "pt-gift-reformer", classTypeIds: ["ct-reformer"] },
-        ],
+        giftPackageTypes: [{ id: "pt-gift", classTypeIds: ["ct-reformer"] }],
       });
-      expect(href).toBe("/(admin)/klijenti?openAssignPackage=cp-123&mode=comp");
+      expect(href).toBe(
+        "/(admin)/klijenti?openAssignPackage=cp-123&mode=comp&initialPackageTypeId=pt-gift",
+      );
     });
 
     test("with missing clientProfileId → returns null", () => {
       const href = resolveNotificationHref({
         type: "BIRTHDAY_ADMIN_PROMPT",
         payload: { suggestedClassTypeId: "ct-reformer" },
-        giftPackageTypes: [],
+        giftPackageTypes: [{ id: "pt-gift", classTypeIds: ["ct-reformer"] }],
       });
       expect(href).toBeNull();
     });

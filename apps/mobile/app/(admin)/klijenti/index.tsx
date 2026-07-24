@@ -76,6 +76,8 @@ type AssignFor = {
   clientId: string;
   mode: AssignPackageMode;
   initialPackageTypeId: string | null;
+  // Birthday-gift deep link: the class type the gift picker opens prefilled to.
+  initialClassTypeId: string | null;
 };
 
 // ─── ClientRow / Separator ────────────────────────────────────────────────────
@@ -168,6 +170,7 @@ export default function AdminClients() {
     openAssignPackage?: string;
     mode?: string;
     initialPackageTypeId?: string;
+    initialClassTypeId?: string;
   }>();
 
   // ── Tab + search + filter state ──────────────────────────────────────────
@@ -199,6 +202,7 @@ export default function AdminClients() {
     if (
       !linkParams.openAssignPackage &&
       !linkParams.initialPackageTypeId &&
+      !linkParams.initialClassTypeId &&
       !linkParams.mode
     ) {
       return;
@@ -208,17 +212,20 @@ export default function AdminClients() {
         clientId: linkParams.openAssignPackage,
         mode: linkParams.mode === "paid" ? "paid" : "comp",
         initialPackageTypeId: linkParams.initialPackageTypeId ?? null,
+        initialClassTypeId: linkParams.initialClassTypeId ?? null,
       });
     }
     router.setParams({
       openAssignPackage: undefined,
       mode: undefined,
       initialPackageTypeId: undefined,
+      initialClassTypeId: undefined,
     });
   }, [
     linkParams.openAssignPackage,
     linkParams.mode,
     linkParams.initialPackageTypeId,
+    linkParams.initialClassTypeId,
   ]);
 
   // ── Queries ───────────────────────────────────────────────────────────────
@@ -557,10 +564,20 @@ export default function AdminClients() {
           setEditClient(clients.find((c) => c.id === id) ?? null)
         }
         onNewPayment={(id) =>
-          setAssignFor({ clientId: id, mode: "paid", initialPackageTypeId: null })
+          setAssignFor({
+            clientId: id,
+            mode: "paid",
+            initialPackageTypeId: null,
+            initialClassTypeId: null,
+          })
         }
         onAssignPackage={(id) =>
-          setAssignFor({ clientId: id, mode: "comp", initialPackageTypeId: null })
+          setAssignFor({
+            clientId: id,
+            mode: "comp",
+            initialPackageTypeId: null,
+            initialClassTypeId: null,
+          })
         }
         onPause={(id) => setPauseClientId(id)}
       />
@@ -575,6 +592,7 @@ export default function AdminClients() {
         client={assignClient}
         mode={assignFor?.mode ?? "comp"}
         initialPackageTypeId={assignFor?.initialPackageTypeId ?? undefined}
+        initialClassTypeId={assignFor?.initialClassTypeId ?? undefined}
         onClose={() => setAssignFor(null)}
         onBack={() => {
           const id = assignFor?.clientId ?? null;

@@ -351,9 +351,26 @@ export async function POST(request: Request) {
     classTypeIds: packageTypeRow.classTypes.map((link) => link.classTypeId),
   };
 
+  // Birthday gift: the admin may override which class type(s) the gift covers,
+  // so ONE 🎂 SKU serves every class type. Honored only for a gift SKU; a
+  // non-gift SKU snapshots its own set, so an override there is a client error.
+  const override = parsed.data.classTypeIdsOverride;
+  if (override) {
+    if (!packageType.isBirthdayGift) {
+      return fail("classTypeIdsOverride is only valid for a birthday gift", 400);
+    }
+    const existing = await prisma.classType.count({
+      where: { id: { in: override } },
+    });
+    if (existing !== new Set(override).size) {
+      return fail("Unknown class type in classTypeIdsOverride", 400);
+    }
+  }
+
   const clientPackage = await createClientPackageFromType(prisma, {
     clientProfileId: parsed.data.clientProfileId,
-    packageType,
+    // Snapshot the override set when present (gift only); otherwise the SKU's.
+    packageType: override ? { ...packageType, classTypeIds: override } : packageType,
     startsAt,
   });
 
@@ -369,7 +386,9 @@ export async function POST(request: Request) {
         "BIRTHDAY_CLIENT_GIFT",
         {
           clientPackageId: clientPackage.id,
-          classTypeIds: packageType.classTypeIds,
+          // The ACTUAL snapshotted set (may be the admin's override), not the
+          // SKU's — the client's gift covers what was picked at assign time.
+          classTypeIds: clientPackage.classTypeIds,
           packageTypeName: packageType.name,
           expiresAt: clientPackage.expiresAt.toISOString(),
         },

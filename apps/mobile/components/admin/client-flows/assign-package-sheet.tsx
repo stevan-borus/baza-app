@@ -39,6 +39,12 @@ export type AssignPackageSheetProps = {
    * first sheet open after a deep-link, cleared with the flow.
    */
   initialPackageTypeId?: string;
+  /**
+   * Deep-link pre-selection for the birthday-gift class-type picker — the
+   * class type the gift should cover. Only meaningful when the selected SKU is
+   * a birthday gift; ignored otherwise.
+   */
+  initialClassTypeId?: string;
   onClose: () => void;
   /** Back chevron — the SCREEN decides where "back" goes (actions sheet). */
   onBack: () => void;
@@ -48,6 +54,7 @@ export function AssignPackageSheet({
   client,
   mode,
   initialPackageTypeId,
+  initialClassTypeId,
   onClose,
   onBack,
 }: AssignPackageSheetProps) {
@@ -75,6 +82,7 @@ export function AssignPackageSheet({
             client={client}
             mode={mode}
             initialPackageTypeId={initialPackageTypeId}
+            initialClassTypeId={initialClassTypeId}
             onSuccess={onClose}
           />
         </View>

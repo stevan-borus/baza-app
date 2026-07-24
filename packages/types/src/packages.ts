@@ -77,6 +77,12 @@ export const createClientPackageInputSchema = clientPackageFieldsSchema.pick({
   startsAt: true,
 }).extend({
   startsAt: z.string().min(10),
+  // Birthday gift only: the admin-picked class-type set the new package covers.
+  // Non-empty; each id must be an existing ClassType (checked server-side).
+  // Honored ONLY when the chosen PackageType.isBirthdayGift — supplying it for
+  // any other SKU is a 400. Lets one 🎂 SKU serve every class type: the gift is
+  // snapshotted against the picked set, not the SKU's own covered set.
+  classTypeIdsOverride: z.array(z.string()).min(1).optional(),
 });
 
 // ─── GET /api/packages/client-packages ───────────────────────────────────────
