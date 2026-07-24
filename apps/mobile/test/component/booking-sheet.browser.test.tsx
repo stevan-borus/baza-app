@@ -136,6 +136,17 @@ describe("BookingSheet advanced badge", () => {
     await screen.findByTestId("advanced-badge");
   });
 
+  it("spells the mark out — the sheet doubles as the legend", async () => {
+    // Dense rows show the bare 🔥; the sheet is the one surface where the tap
+    // already landed, so the mark expands to glyph + word here.
+    const screen = renderSheet({
+      session: makeSession({ isAdvanced: true }),
+    });
+    const badge = await screen.findByTestId("advanced-badge");
+    expect(badge.textContent).toContain("🔥");
+    expect(badge.textContent).toContain("Napredni trening");
+  });
+
   it("shows no advanced badge when the session is unmarked", async () => {
     const screen = renderSheet({
       session: makeSession({ isAdvanced: false }),

@@ -30,9 +30,12 @@ describe("AdvancedBadge", () => {
     expect(screen.getByText("🔥")).toBeTruthy();
   });
 
-  it("keeps the word 'Napredno' out of the visible copy", () => {
+  it("keeps the word out of the visible copy by default", () => {
+    // Dense rows are wordless; only the booking sheet opts into the label
+    // via showLabel, so the default must never leak the word.
     const screen = render(<AdvancedBadge isAdvanced />);
     expect(screen.queryByText("Napredno")).toBeNull();
+    expect(screen.queryByText(/Napredni trening/)).toBeNull();
   });
 
   it("labels the mark as advanced training for screen readers", () => {
