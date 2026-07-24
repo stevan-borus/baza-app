@@ -98,6 +98,26 @@ describe("resolveNotificationHref", () => {
     });
   });
 
+  describe("PACKAGE_ASSIGNED", () => {
+    test("routes to the client's packages view", () => {
+      const href = resolveNotificationHref({
+        type: "PACKAGE_ASSIGNED",
+        payload: { clientPackageId: "cpkg-1", packageTypeName: "10 Reformer" },
+        giftPackageTypes: [],
+      });
+      expect(href).toBe("/(client)/profile/packages");
+    });
+
+    test("with null payload → still routes to the packages view", () => {
+      const href = resolveNotificationHref({
+        type: "PACKAGE_ASSIGNED",
+        payload: null,
+        giftPackageTypes: [],
+      });
+      expect(href).toBe("/(client)/profile/packages");
+    });
+  });
+
   describe("unhandled types", () => {
     test("BOOKING_CONFIRMED → returns null (no admin destination)", () => {
       const href = resolveNotificationHref({

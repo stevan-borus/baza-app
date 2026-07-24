@@ -13,6 +13,7 @@ import { linkPackagesToBilling } from "@/lib/server/billing-package-link";
 import { respond, fail, parseBody } from "@/lib/server/http";
 import { countHeldSessions } from "@/lib/server/booking-hold-count";
 import { createSystemNotification } from "@/lib/server/notifications";
+import { notifyClient } from "@/lib/server/notify-client";
 import { findEligibleClientPackage } from "@/lib/server/package-eligibility";
 import { bookableSessions } from "@/lib/server/package-hold";
 import { PACKAGE_TYPE_CLASS_TYPES_SELECT } from "@/lib/server/package-type-shape";
@@ -356,12 +357,12 @@ export async function POST(request: Request) {
     startsAt,
   });
 
-  if (packageType.isBirthdayGift) {
-    const clientProfile = await prisma.clientProfile.findUnique({
-      where: { id: parsed.data.clientProfileId },
-      select: { user: { select: { id: true } } },
-    });
-    if (clientProfile) {
+  const clientProfile = await prisma.clientProfile.findUnique({
+    where: { id: parsed.data.clientProfileId },
+    select: { user: { select: { id: true } } },
+  });
+  if (clientProfile) {
+    if (packageType.isBirthdayGift) {
       void createSystemNotification(
         clientProfile.user.id,
         NOTIFICATION_MESSAGE_KEYS.BIRTHDAY_CLIENT_GIFT,
@@ -373,6 +374,14 @@ export async function POST(request: Request) {
           expiresAt: clientPackage.expiresAt.toISOString(),
         },
       );
+    } else {
+      // Non-gift assign (comp / manual) — tell the client a package landed.
+      // Fire-and-forget so a notification failure can't fail the assignment.
+      void notifyClient({
+        userId: clientProfile.user.id,
+        event: "PACKAGE_ASSIGNED",
+        vars: { packageTypeName: packageType.name },
+      });
     }
   }
 

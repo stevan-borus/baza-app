@@ -63,6 +63,11 @@ export function resolveNotificationHref(input: NotificationRoutingInput): string
       return `/(admin)/klijenti/${clientUserId}`;
     }
 
+    // A package was assigned or paid for. The destination is the client's own
+    // packages view — always available, so no payload is required to route.
+    case "PACKAGE_ASSIGNED":
+      return "/(client)/profile/packages";
+
     default:
       return null;
   }

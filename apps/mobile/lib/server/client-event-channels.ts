@@ -21,7 +21,9 @@ export type ClientEvent =
   | "WAITLIST_PROMOTED"
   | "SESSION_UPDATED"
   | "ADMIN_CANCEL"
-  | "BULK_CANCEL";
+  | "BULK_CANCEL"
+  | "PACKAGE_PURCHASED"
+  | "PACKAGE_ASSIGNED";
 
 type ChannelSpec = {
   /** Transactional email kind, or undefined if this event sends no email. */
@@ -50,5 +52,14 @@ export const CLIENT_EVENT_CHANNELS: Record<ClientEvent, ChannelSpec> = {
   // for the same reason as ADMIN_CANCEL.
   BULK_CANCEL: {
     email: "BULK_CANCEL",
+  },
+  // They paid for a package (naplata). In-app/push only — no email; the
+  // NotificationType is shared with PACKAGE_ASSIGNED, only the copy differs.
+  PACKAGE_PURCHASED: {
+    inApp: { messageKey: "PACKAGE_PURCHASED", type: "PACKAGE_ASSIGNED" },
+  },
+  // A package was assigned to them (comp / manual, non-gift). In-app/push only.
+  PACKAGE_ASSIGNED: {
+    inApp: { messageKey: "PACKAGE_ASSIGNED", type: "PACKAGE_ASSIGNED" },
   },
 };
