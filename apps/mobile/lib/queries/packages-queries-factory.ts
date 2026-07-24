@@ -160,6 +160,16 @@ export const packagesQueries = {
         }),
     }),
 
+  addSessionToClientPackage: () =>
+    mutationOptions({
+      mutationKey: [...packagesAll, "client-packages", "add-session"] as const,
+      mutationFn: (id: string) =>
+        apiRequest(`/api/packages/client-packages/${id}/add-session`, {
+          method: "POST",
+          errorMessage: "Unable to add a session",
+        }),
+    }),
+
   pause: () =>
     mutationOptions({
       mutationKey: [...packagesAll, "pause"] as const,
@@ -284,8 +294,30 @@ export function revokeClientPackageMutationOptions(queryClient: QueryClient) {
   };
 }
 
+// "+1 termin" bumps sessionsRemaining on one package, which changes the admin
+// package rows (["packages"]) and the client's derived packageStatus — the
+// same "left to book" / active-package figures the assign path already
+// refreshes under ["clients"] — plus the packages-report counts (["reports"]).
+// It never touches bookings/billing/sessions, so those stay out.
+export function addSessionToClientPackageMutationOptions(queryClient: QueryClient) {
+  return {
+    ...packagesQueries.addSessionToClientPackage(),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: packagesQueries.all }),
+        queryClient.invalidateQueries({ queryKey: clientsQueries.all }),
+        queryClient.invalidateQueries({ queryKey: reportsQueries.all }),
+      ]);
+    },
+  };
+}
+
 export function useAssignClientPackageMutation() {
   return useMutation(assignClientPackageMutationOptions(useQueryClient()));
+}
+
+export function useAddSessionToClientPackageMutation() {
+  return useMutation(addSessionToClientPackageMutationOptions(useQueryClient()));
 }
 
 export function useRevokeClientPackageMutation() {

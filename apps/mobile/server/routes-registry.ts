@@ -53,6 +53,7 @@ import * as route_notifications_id from "@/server/routes/notifications/[id]";
 import * as route_notifications_preferences from "@/server/routes/notifications/preferences";
 import * as route_notifications_push_token from "@/server/routes/notifications/push-token";
 import * as route_packages_client_packages from "@/server/routes/packages/client-packages";
+import * as route_packages_client_packages_id_add_session from "@/server/routes/packages/client-packages/[id]/add-session";
 import * as route_packages_client_packages_id_revoke from "@/server/routes/packages/client-packages/[id]/revoke";
 import * as route_packages_pause from "@/server/routes/packages/pause";
 import * as route_packages_types from "@/server/routes/packages/types";
@@ -135,6 +136,7 @@ export const routesRegistry: Record<string, RouteModule> = {
   "notifications/preferences": route_notifications_preferences,
   "notifications/push-token": route_notifications_push_token,
   "packages/client-packages": route_packages_client_packages,
+  "packages/client-packages/[id]/add-session": route_packages_client_packages_id_add_session,
   "packages/client-packages/[id]/revoke": route_packages_client_packages_id_revoke,
   "packages/pause": route_packages_pause,
   "packages/types": route_packages_types,

@@ -11,6 +11,7 @@ import { SkeletonCard } from "@/components/ui/skeleton";
 import { SectionLabel } from "@/components/ui/typography";
 import { useThemeTokens } from "@/components/ui/tokens";
 import {
+  useAddSessionToClientPackageMutation,
   useRevokeClientPackageMutation,
   type ClientPackage,
 } from "@/lib/queries/packages-queries-factory";
@@ -35,6 +36,13 @@ export function PaketiTab({
   // linked payment in one transaction. Cache upkeep lives in the factory.
   const [revokeTarget, setRevokeTarget] = useState<ClientPackage | null>(null);
   const revokeMutation = useRevokeClientPackageMutation();
+  // "+1 termin": restore the session a no-show charge took after a justified
+  // absence. Only offered on an active package (an expired/revoked one can't
+  // absorb a useful credit) — same active gate the server enforces.
+  const [addSessionTarget, setAddSessionTarget] = useState<ClientPackage | null>(
+    null,
+  );
+  const addSessionMutation = useAddSessionToClientPackageMutation();
   return (
     <ScrollView
       testID="client-detail-tab-content-paketi"
@@ -97,6 +105,24 @@ export function PaketiTab({
                         {t("admin.clientDetail.status.active")}
                       </Badge>
                     )}
+                    {!revoked && !expired ? (
+                      <Pressable
+                        testID={`package-history-row-${p.id}-add-session`}
+                        onPress={() => setAddSessionTarget(p)}
+                        hitSlop={8}
+                        android_ripple={null}
+                        className="active:opacity-60"
+                        accessibilityRole="button"
+                        accessibilityLabel={t("admin.clientDetail.addSessionAction")}
+                      >
+                        <Text
+                          className="text-success font-body-semibold"
+                          style={{ fontSize: 13 }}
+                        >
+                          {t("admin.clientDetail.addSessionAction")}
+                        </Text>
+                      </Pressable>
+                    ) : null}
                     {!revoked ? (
                       <Pressable
                         testID={`package-history-row-${p.id}-revoke`}
@@ -174,6 +200,29 @@ export function PaketiTab({
           if (!revokeTarget) return;
           revokeMutation.mutate(revokeTarget.id, {
             onSuccess: () => setRevokeTarget(null),
+          });
+        }}
+      />
+      <ConfirmSheet
+        testID="package-add-session-confirm-button"
+        open={!!addSessionTarget}
+        onOpenChange={(open) => {
+          if (!open) setAddSessionTarget(null);
+        }}
+        tone="primary"
+        title={t("confirm.addSessionTitle")}
+        message={t("confirm.addSessionMessage")}
+        confirmLabel={t("confirm.addSessionConfirm")}
+        loading={addSessionMutation.isPending}
+        errorMessage={
+          addSessionMutation.isError
+            ? t("admin.clientDetail.addSessionError")
+            : null
+        }
+        onConfirm={() => {
+          if (!addSessionTarget) return;
+          addSessionMutation.mutate(addSessionTarget.id, {
+            onSuccess: () => setAddSessionTarget(null),
           });
         }}
       />

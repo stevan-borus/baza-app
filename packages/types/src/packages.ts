@@ -187,6 +187,18 @@ export const revokeClientPackageResponseSchema = z.object({
   billingRecordVoided: z.boolean(),
 });
 
+// POST /api/packages/client-packages/[id]/add-session — the "+1 termin" admin
+// grant: sessionsRemaining incremented by one on a still-active package. The
+// updated row is echoed back so the caller can reflect the new count without a
+// refetch (invalidations still run).
+export const addSessionResponseSchema = z.object({
+  success: z.boolean(),
+  clientPackage: z.object({
+    id: z.string(),
+    sessionsRemaining: z.number(),
+  }),
+});
+
 // POST /api/packages/pause — the PackagePause row as selected by the handler.
 export const packagePauseResponseSchema = z.object({
   success: z.boolean(),
