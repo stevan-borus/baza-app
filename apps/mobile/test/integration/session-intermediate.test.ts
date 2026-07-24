@@ -1,5 +1,5 @@
 /**
- * Session "advanced" — the admin-set binary per-occurrence marking.
+ * Session "intermediate" (srednji nivo) — the admin-set binary per-occurrence marking.
  *
  * Write path (PATCH /api/sessions/[id]): admins set true / false; omitting the
  * field leaves it untouched; a non-admin is rejected. Editable after bookings
@@ -78,7 +78,7 @@ function patchRequest(sessionId: string, body: unknown) {
   });
 }
 
-describe("session advanced write path (PATCH)", () => {
+describe("session intermediate write path (PATCH)", () => {
   beforeEach(async () => {
     await resetDb();
   });
@@ -87,51 +87,51 @@ describe("session advanced write path (PATCH)", () => {
     await prisma.$disconnect();
   });
 
-  it("admin marks a session advanced (isAdvanced=true)", async () => {
+  it("admin marks a session intermediate (isIntermediate=true)", async () => {
     const { session } = await seed();
     asAdmin();
 
-    const res = await PATCH(patchRequest(session.id, { isAdvanced: true }), {
+    const res = await PATCH(patchRequest(session.id, { isIntermediate: true }), {
       id: session.id,
     });
     expect(res.status).toBe(200);
     const reloaded = await prisma.session.findUnique({
       where: { id: session.id },
     });
-    expect(reloaded?.isAdvanced).toBe(true);
-    const body = (await res.json()) as { session: { isAdvanced: boolean } };
-    expect(body.session.isAdvanced).toBe(true);
+    expect(reloaded?.isIntermediate).toBe(true);
+    const body = (await res.json()) as { session: { isIntermediate: boolean } };
+    expect(body.session.isIntermediate).toBe(true);
   });
 
-  it("admin clears the advanced marking (isAdvanced=false)", async () => {
+  it("admin clears the intermediate marking (isIntermediate=false)", async () => {
     const { session } = await seed();
     await prisma.session.update({
       where: { id: session.id },
-      data: { isAdvanced: true },
+      data: { isIntermediate: true },
     });
     asAdmin();
 
-    const res = await PATCH(patchRequest(session.id, { isAdvanced: false }), {
+    const res = await PATCH(patchRequest(session.id, { isIntermediate: false }), {
       id: session.id,
     });
     expect(res.status).toBe(200);
     const reloaded = await prisma.session.findUnique({
       where: { id: session.id },
     });
-    expect(reloaded?.isAdvanced).toBe(false);
-    const body = (await res.json()) as { session: { isAdvanced: boolean } };
-    expect(body.session.isAdvanced).toBe(false);
+    expect(reloaded?.isIntermediate).toBe(false);
+    const body = (await res.json()) as { session: { isIntermediate: boolean } };
+    expect(body.session.isIntermediate).toBe(false);
   });
 
-  it("omitting isAdvanced leaves an existing marking untouched", async () => {
+  it("omitting isIntermediate leaves an existing marking untouched", async () => {
     const { session } = await seed();
     await prisma.session.update({
       where: { id: session.id },
-      data: { isAdvanced: true },
+      data: { isIntermediate: true },
     });
     asAdmin();
 
-    // A capacity-only edit must not clear the advanced flag.
+    // A capacity-only edit must not clear the intermediate flag.
     const res = await PATCH(patchRequest(session.id, { capacity: 8 }), {
       id: session.id,
     });
@@ -139,10 +139,10 @@ describe("session advanced write path (PATCH)", () => {
     const reloaded = await prisma.session.findUnique({
       where: { id: session.id },
     });
-    expect(reloaded?.isAdvanced).toBe(true);
+    expect(reloaded?.isIntermediate).toBe(true);
   });
 
-  it("marking advanced is allowed after bookings exist", async () => {
+  it("marking intermediate is allowed after bookings exist", async () => {
     const { session } = await seed();
     const client = await prisma.user.create({
       data: { email: "int-c@test.local", firstName: "C", lastName: "T", role: "CLIENT" },
@@ -153,32 +153,32 @@ describe("session advanced write path (PATCH)", () => {
     });
     asAdmin();
 
-    const res = await PATCH(patchRequest(session.id, { isAdvanced: true }), {
+    const res = await PATCH(patchRequest(session.id, { isIntermediate: true }), {
       id: session.id,
     });
     expect(res.status).toBe(200);
     const reloaded = await prisma.session.findUnique({
       where: { id: session.id },
     });
-    expect(reloaded?.isAdvanced).toBe(true);
+    expect(reloaded?.isIntermediate).toBe(true);
   });
 
-  it("rejects a non-admin (trainer) marking advanced (403)", async () => {
+  it("rejects a non-admin (trainer) marking intermediate (403)", async () => {
     const { trainer, session } = await seed();
     asTrainer(trainer);
 
-    const res = await PATCH(patchRequest(session.id, { isAdvanced: true }), {
+    const res = await PATCH(patchRequest(session.id, { isIntermediate: true }), {
       id: session.id,
     });
     expect(res.status).toBe(403);
     const reloaded = await prisma.session.findUnique({
       where: { id: session.id },
     });
-    expect(reloaded?.isAdvanced).toBe(false);
+    expect(reloaded?.isIntermediate).toBe(false);
   });
 });
 
-describe("session advanced read paths", () => {
+describe("session intermediate read paths", () => {
   beforeEach(async () => {
     await resetDb();
   });
@@ -187,11 +187,11 @@ describe("session advanced read paths", () => {
     await prisma.$disconnect();
   });
 
-  it("GET /api/sessions/[id] returns isAdvanced for admin", async () => {
+  it("GET /api/sessions/[id] returns isIntermediate for admin", async () => {
     const { session } = await seed();
     await prisma.session.update({
       where: { id: session.id },
-      data: { isAdvanced: true },
+      data: { isIntermediate: true },
     });
     asAdmin();
 
@@ -200,15 +200,15 @@ describe("session advanced read paths", () => {
       { id: session.id },
     );
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { session: { isAdvanced: boolean } };
-    expect(body.session.isAdvanced).toBe(true);
+    const body = (await res.json()) as { session: { isIntermediate: boolean } };
+    expect(body.session.isIntermediate).toBe(true);
   });
 
-  it("GET /api/sessions/availability returns isAdvanced for a client", async () => {
+  it("GET /api/sessions/availability returns isIntermediate for a client", async () => {
     const { reformer, session } = await seed();
     await prisma.session.update({
       where: { id: session.id },
-      data: { isAdvanced: true },
+      data: { isIntermediate: true },
     });
     // A client with an eligible package for the class so the session is visible.
     const client = await prisma.user.create({
@@ -251,9 +251,9 @@ describe("session advanced read paths", () => {
     );
     expect(res.status).toBe(200);
     const body = (await res.json()) as {
-      sessions: Array<{ id: string; isAdvanced?: boolean }>;
+      sessions: Array<{ id: string; isIntermediate?: boolean }>;
     };
     const row = body.sessions.find((s) => s.id === session.id)!;
-    expect(row.isAdvanced).toBe(true);
+    expect(row.isIntermediate).toBe(true);
   });
 });

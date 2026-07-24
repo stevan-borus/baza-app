@@ -1307,10 +1307,11 @@
     }
   },
   "session": {
-    "advanced": {
-      "badge": "🔥",
-      "switchLabel": "Napredno",
-      "a11yLabel": "Napredni trening"
+    "intermediate": {
+      "badge": "★",
+      "label": "Srednji nivo",
+      "switchLabel": "Srednji nivo",
+      "a11yLabel": "Trening srednjeg nivoa"
     }
   }
 }

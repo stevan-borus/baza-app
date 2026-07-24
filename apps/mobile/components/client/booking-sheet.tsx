@@ -18,7 +18,7 @@ import { isInLateCancelWindow } from "@/lib/late-cancel";
 import { nowMs } from "@/lib/now";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { AdvancedBadge } from "@/components/ui/advanced-badge";
+import { IntermediateBadge } from "@/components/ui/intermediate-badge";
 import { useThemeTokens, type ThemeTokens } from "@/components/ui/tokens";
 import type { AvailabilitySession } from "@baza/types/scheduling";
 
@@ -155,8 +155,8 @@ export function BookingSheet({
                 {dayjs(session.endsAt).format("HH:mm")}
               </Text>
               {/* The sheet doubles as the legend: the mark expands to
-                  "🔥 Napredni trening" here (dense rows show the bare glyph). */}
-              <AdvancedBadge isAdvanced={session.isAdvanced} size="detail" showLabel />
+                  "★ Srednji nivo" here (dense rows show the bare glyph). */}
+              <IntermediateBadge isIntermediate={session.isIntermediate} size="detail" showLabel />
               <View className="flex-row items-center gap-2.5 pt-0.5">
                 <Text className="text-muted text-sm">
                   {dayjs(session.startsAt).locale(lang).format("dddd, D MMMM")}

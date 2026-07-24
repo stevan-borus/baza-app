@@ -145,7 +145,7 @@ export async function GET(request: Request, { id }: RouteParams) {
           id: true,
           startsAt: true,
           endsAt: true,
-          isAdvanced: true,
+          isIntermediate: true,
           classType: { select: { id: true, name: true } },
           room: { select: { id: true, name: true } },
           trainer: { select: { id: true, firstName: true, lastName: true } },
@@ -167,7 +167,7 @@ export async function GET(request: Request, { id }: RouteParams) {
       id: b.session.id,
       startsAt: b.session.startsAt.toISOString(),
       endsAt: b.session.endsAt.toISOString(),
-      isAdvanced: b.session.isAdvanced,
+      isIntermediate: b.session.isIntermediate,
       classType: b.session.classType,
       room: b.session.room,
       trainer: b.session.trainer

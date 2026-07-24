@@ -50,8 +50,8 @@ A scheduled class — `(classType, room, trainer, startsAt, endsAt, capacity)`. 
 **Recurring series**:
 A set of Sessions generated from a weekday pattern (e.g. Mon/Wed/Fri × 4 weeks). Each occurrence is an editable Session; edits can target one occurrence or the whole series.
 
-**Advanced** (napredno):
-An optional Admin-set binary marking on a single Session telling Clients that occurrence is a hard one. Unmarked (the default) is the norm; marked means "expect a demanding class". Strictly per-occurrence: marking one occurrence of a recurring series never touches its siblings. Admins set or clear it at any time, including after Clients have booked. Purely advisory and display-only: it gates nothing (no booking restrictions, no filtering) and setting/clearing it notifies no one. Rendered to every role as an outlined text badge ("Napredno"), normal case — deliberately not levels, stars, or dots: admins think "this one's hard", not in grades.
+**Intermediate** (srednji nivo):
+An optional Admin-set binary marking on a single Session telling Clients that occurrence is an intermediate-level one — the tier the studio actually communicates to clients. Unmarked (the default) is the norm; marked means "srednji nivo". Strictly per-occurrence: marking one occurrence of a recurring series never touches its siblings. Admins set or clear it at any time, including after Clients have booked. Purely advisory and display-only: it gates nothing (no booking restrictions, no filtering) and setting/clearing it notifies no one. Rendered to every role as a wordless brand-green ★ text glyph riding the session's time/meta line; the booking sheet doubles as the legend, expanding the mark to "★ Srednji nivo". The word otherwise survives only in the a11y label and the admin edit switch.
 
 _Avoid_: "intensity"/"intenzitet" (the earlier 1–3 concept, now retired), "difficulty"/"težina", "stars", "levels".
 

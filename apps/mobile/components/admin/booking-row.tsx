@@ -11,7 +11,7 @@ import { useTranslation } from "react-i18next";
 import dayjs from "dayjs";
 import { Badge } from "@/components/ui/badge";
 import { Icon } from "@/components/ui/icon";
-import { AdvancedBadge } from "@/components/ui/advanced-badge";
+import { IntermediateBadge } from "@/components/ui/intermediate-badge";
 import { useThemeTokens } from "@/components/ui/tokens";
 import type { ClientBooking } from "@/lib/queries/bookings-queries-factory";
 
@@ -51,7 +51,7 @@ export function BookingRow({
           <Text className="text-muted" style={{ fontSize: 12 }}>
             {`${dayjs(booking.session.startsAt).locale(lang).format("ddd, D.M.")} · ${dayjs(booking.session.startsAt).format("HH:mm")}–${dayjs(booking.session.endsAt).format("HH:mm")}`}
           </Text>
-          <AdvancedBadge isAdvanced={booking.session.isAdvanced} />
+          <IntermediateBadge isIntermediate={booking.session.isIntermediate} />
         </View>
         <Text className="text-muted" style={{ fontSize: 12 }}>
           {[booking.session.room?.name, booking.session.trainer?.fullName]

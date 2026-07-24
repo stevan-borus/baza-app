@@ -1,5 +1,5 @@
 /**
- * The admin session edit sheet's "advanced" Switch. Real Chromium + shipped
+ * The admin session edit sheet's "intermediate" (srednji nivo) Switch. Real Chromium + shipped
  * i18n + a real seeded QueryClient (rooms/trainers caches) — the same path
  * production renders. Pins that the switch shows the shipped label, seeds its
  * value from the opened session, and reflects a toggle. Editable any time.
@@ -54,26 +54,26 @@ function Harness({ session }: { session: EditSessionInput }) {
   return <SessionEditSheet {...sheet.bind()} />;
 }
 
-describe("SessionEditSheet advanced switch", () => {
-  it("renders the advanced switch with the shipped label", async () => {
+describe("SessionEditSheet intermediate switch", () => {
+  it("renders the intermediate switch with the shipped label", async () => {
     const screen = renderWithQueryClient(
       <Harness session={baseSession} />,
       seedCaches,
     );
     expect(
-      await screen.findByTestId("session-edit-advanced-switch"),
+      await screen.findByTestId("session-edit-intermediate-switch"),
     ).toBeTruthy();
-    expect(screen.getByText("Napredno")).toBeTruthy();
+    expect(screen.getByText("Srednji nivo")).toBeTruthy();
   });
 
-  it("seeds the switch ON when the session is already advanced", async () => {
+  it("seeds the switch ON when the session is already intermediate", async () => {
     const screen = renderWithQueryClient(
-      <Harness session={{ ...baseSession, isAdvanced: true }} />,
+      <Harness session={{ ...baseSession, isIntermediate: true }} />,
       seedCaches,
     );
     // react-native-web renders Switch as a wrapper div with the testID and a
     // hidden checkbox input reflecting `value`.
-    const wrapper = await screen.findByTestId("session-edit-advanced-switch");
+    const wrapper = await screen.findByTestId("session-edit-intermediate-switch");
     const input = wrapper.querySelector<HTMLInputElement>(
       'input[type="checkbox"]',
     )!;
@@ -82,10 +82,10 @@ describe("SessionEditSheet advanced switch", () => {
 
   it("seeds the switch OFF for an unmarked session and toggles on tap", async () => {
     const screen = renderWithQueryClient(
-      <Harness session={{ ...baseSession, isAdvanced: false }} />,
+      <Harness session={{ ...baseSession, isIntermediate: false }} />,
       seedCaches,
     );
-    const wrapper = await screen.findByTestId("session-edit-advanced-switch");
+    const wrapper = await screen.findByTestId("session-edit-intermediate-switch");
     const input = wrapper.querySelector<HTMLInputElement>(
       'input[type="checkbox"]',
     )!;

@@ -34,7 +34,7 @@ type UpdateSessionVars = {
   trainerUserId?: string;
   isActive?: boolean;
   status?: "SCHEDULED" | "CANCELED" | "COMPLETED";
-  isAdvanced?: boolean;
+  isIntermediate?: boolean;
 };
 type UpdateSeriesVars = {
   id: string;
@@ -83,8 +83,8 @@ export type EditSessionInput = {
   endsAt: Date | string;
   recurringScheduleId: string | null;
   isActive?: boolean;
-  /** Current per-occurrence "advanced" marking. Absent = unmarked. */
-  isAdvanced?: boolean;
+  /** Current per-occurrence "intermediate" marking. Absent = unmarked. */
+  isIntermediate?: boolean;
 };
 
 type ShowEditState = {
@@ -110,7 +110,7 @@ type EditForm = {
   trainerUserId: string;
   status: string;
   isActive: boolean;
-  isAdvanced: boolean;
+  isIntermediate: boolean;
 };
 
 type SeriesForm = {
@@ -162,7 +162,7 @@ export function useSessionEditSheet() {
     trainerUserId: "",
     status: "SCHEDULED",
     isActive: true,
-    isAdvanced: false,
+    isIntermediate: false,
   });
   const [seriesForm, setSeriesForm] = useState<SeriesForm>({
     weekdays: [],
@@ -257,7 +257,7 @@ export function useSessionEditSheet() {
       trainerUserId: session.trainerUserId ?? "",
       status: "SCHEDULED",
       isActive: sessionIsActive,
-      isAdvanced: session.isAdvanced ?? false,
+      isIntermediate: session.isIntermediate ?? false,
     });
     setShowEdit({
       sessionId: session.id,
@@ -442,17 +442,17 @@ export function SessionEditSheet(props: SessionEditSheetBoundProps) {
                 }))}
               />
 
-              {/* Per-occurrence "advanced" marking. Editable any time (incl.
+              {/* Per-occurrence "intermediate" marking. Editable any time (incl.
                   after bookings exist); saves with the rest of the session. */}
               <View className="flex-row items-center justify-between px-1 py-1">
                 <Text className="text-sm text-muted">
-                  {t("session.advanced.switchLabel")}
+                  {t("session.intermediate.switchLabel")}
                 </Text>
                 <Switch
-                  testID="session-edit-advanced-switch"
-                  value={editForm.isAdvanced}
+                  testID="session-edit-intermediate-switch"
+                  value={editForm.isIntermediate}
                   onValueChange={(v) =>
-                    setEditForm((s) => ({ ...s, isAdvanced: v }))
+                    setEditForm((s) => ({ ...s, isIntermediate: v }))
                   }
                   trackColor={{ false: tokens.glassStrong, true: tokens.accent }}
                   style={{ transform: [{ scale: 0.85 }] }}
@@ -512,7 +512,7 @@ export function SessionEditSheet(props: SessionEditSheetBoundProps) {
                     trainerUserId: editForm.trainerUserId,
                     isActive: editForm.isActive,
                     // Always sent so toggling off (unmark) persists.
-                    isAdvanced: editForm.isAdvanced,
+                    isIntermediate: editForm.isIntermediate,
                   });
                 }}
               >

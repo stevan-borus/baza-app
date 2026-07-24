@@ -1301,10 +1301,11 @@
     }
   },
   "session": {
-    "advanced": {
-      "badge": "🔥",
-      "switchLabel": "Advanced",
-      "a11yLabel": "Advanced training"
+    "intermediate": {
+      "badge": "★",
+      "label": "Intermediate level",
+      "switchLabel": "Intermediate",
+      "a11yLabel": "Intermediate level training"
     }
   }
 }

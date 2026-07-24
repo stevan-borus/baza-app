@@ -128,33 +128,33 @@ describe("BookingSheet renewal locks", () => {
   });
 });
 
-describe("BookingSheet advanced badge", () => {
-  it("shows the advanced badge when the session is marked", async () => {
+describe("BookingSheet intermediate badge", () => {
+  it("shows the intermediate badge when the session is marked", async () => {
     const screen = renderSheet({
-      session: makeSession({ isAdvanced: true }),
+      session: makeSession({ isIntermediate: true }),
     });
-    await screen.findByTestId("advanced-badge");
+    await screen.findByTestId("intermediate-badge");
   });
 
   it("spells the mark out — the sheet doubles as the legend", async () => {
-    // Dense rows show the bare 🔥; the sheet is the one surface where the tap
+    // Dense rows show the bare ★; the sheet is the one surface where the tap
     // already landed, so the mark expands to glyph + word here.
     const screen = renderSheet({
-      session: makeSession({ isAdvanced: true }),
+      session: makeSession({ isIntermediate: true }),
     });
-    const badge = await screen.findByTestId("advanced-badge");
-    expect(badge.textContent).toContain("🔥");
-    expect(badge.textContent).toContain("Napredni trening");
+    const badge = await screen.findByTestId("intermediate-badge");
+    expect(badge.textContent).toContain("★");
+    expect(badge.textContent).toContain("Srednji nivo");
   });
 
-  it("shows no advanced badge when the session is unmarked", async () => {
+  it("shows no intermediate badge when the session is unmarked", async () => {
     const screen = renderSheet({
-      session: makeSession({ isAdvanced: false }),
+      session: makeSession({ isIntermediate: false }),
     });
     // The book button is enough to know the sheet mounted for an unmarked
     // session; the badge must be absent.
     await screen.findByTestId("booking-book-button");
-    expect(screen.queryByTestId("advanced-badge")).toBeNull();
+    expect(screen.queryByTestId("intermediate-badge")).toBeNull();
   });
 });
 

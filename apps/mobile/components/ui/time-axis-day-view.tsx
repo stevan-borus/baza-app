@@ -2,7 +2,7 @@ import React, { useEffect, useRef } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import dayjs from "dayjs";
 import { Badge } from "@/components/ui/badge";
-import { AdvancedBadge } from "@/components/ui/advanced-badge";
+import { IntermediateBadge } from "@/components/ui/intermediate-badge";
 import { useThemeTokens } from "@/components/ui/tokens";
 import {
   HOUR_START,
@@ -33,8 +33,8 @@ type SessionBlock = {
   trainerName?: string | null;
   bookedCount: number;
   capacity: number;
-  /** Admin-set "advanced" marking for this occurrence; absent = unmarked. */
-  isAdvanced?: boolean;
+  /** Admin-set "intermediate" marking for this occurrence; absent = unmarked. */
+  isIntermediate?: boolean;
   status?: "available" | "full" | "booked" | "waitlisted";
 };
 
@@ -180,7 +180,7 @@ export function TimeAxisDayView({
                         {/* Compact blocks have no meta line — the 🔥 mark has
                             nowhere else to go, so it rides the title here. */}
                         {compact ? (
-                          <AdvancedBadge isAdvanced={s.isAdvanced} />
+                          <IntermediateBadge isIntermediate={s.isIntermediate} />
                         ) : null}
                       </View>
                       {compact ? null : (
@@ -197,7 +197,7 @@ export function TimeAxisDayView({
                             {dayjs(s.endsAt).format("HH:mm")}
                             {s.roomName ? ` · ${s.roomName}` : ""}
                           </Text>
-                          <AdvancedBadge isAdvanced={s.isAdvanced} />
+                          <IntermediateBadge isIntermediate={s.isIntermediate} />
                         </View>
                       )}
                     </View>

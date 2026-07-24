@@ -63,8 +63,8 @@ export const clientBookingItemSchema = z.object({
     id: z.string(),
     startsAt: z.string(),
     endsAt: z.string(),
-    // Admin-set binary "advanced" marking for this occurrence; absent = unmarked.
-    isAdvanced: z.boolean().optional(),
+    // Admin-set binary "intermediate" (srednji nivo) marking for this occurrence; absent = unmarked.
+    isIntermediate: z.boolean().optional(),
     classType: z.object({ id: z.string(), name: z.string() }),
     room: z.nullable(z.object({ id: z.string(), name: z.string() })),
     trainer: z.nullable(z.object({ id: z.string(), fullName: z.string() })),
