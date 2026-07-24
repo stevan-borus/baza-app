@@ -1299,5 +1299,13 @@
       "newCampaign": "Create a new campaign",
       "axisToggle": "Toggle {{axis}} criterion"
     }
+  },
+  "session": {
+    "intermediate": {
+      "badge": "★",
+      "label": "Intermediate",
+      "switchLabel": "Intermediate",
+      "a11yLabel": "Intermediate training"
+    }
   }
 }

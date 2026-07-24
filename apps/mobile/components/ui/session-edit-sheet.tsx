@@ -34,6 +34,7 @@ type UpdateSessionVars = {
   trainerUserId?: string;
   isActive?: boolean;
   status?: "SCHEDULED" | "CANCELED" | "COMPLETED";
+  isIntermediate?: boolean;
 };
 type UpdateSeriesVars = {
   id: string;
@@ -82,6 +83,8 @@ export type EditSessionInput = {
   endsAt: Date | string;
   recurringScheduleId: string | null;
   isActive?: boolean;
+  /** Current per-occurrence "intermediate" marking. Absent = unmarked. */
+  isIntermediate?: boolean;
 };
 
 type ShowEditState = {
@@ -107,6 +110,7 @@ type EditForm = {
   trainerUserId: string;
   status: string;
   isActive: boolean;
+  isIntermediate: boolean;
 };
 
 type SeriesForm = {
@@ -158,6 +162,7 @@ export function useSessionEditSheet() {
     trainerUserId: "",
     status: "SCHEDULED",
     isActive: true,
+    isIntermediate: false,
   });
   const [seriesForm, setSeriesForm] = useState<SeriesForm>({
     weekdays: [],
@@ -252,6 +257,7 @@ export function useSessionEditSheet() {
       trainerUserId: session.trainerUserId ?? "",
       status: "SCHEDULED",
       isActive: sessionIsActive,
+      isIntermediate: session.isIntermediate ?? false,
     });
     setShowEdit({
       sessionId: session.id,
@@ -436,6 +442,23 @@ export function SessionEditSheet(props: SessionEditSheetBoundProps) {
                 }))}
               />
 
+              {/* Per-occurrence "intermediate" marking. Editable any time (incl.
+                  after bookings exist); saves with the rest of the session. */}
+              <View className="flex-row items-center justify-between px-1 py-1">
+                <Text className="text-sm text-muted">
+                  {t("session.intermediate.switchLabel")}
+                </Text>
+                <Switch
+                  testID="session-edit-intermediate-switch"
+                  value={editForm.isIntermediate}
+                  onValueChange={(v) =>
+                    setEditForm((s) => ({ ...s, isIntermediate: v }))
+                  }
+                  trackColor={{ false: tokens.glassStrong, true: tokens.accent }}
+                  style={{ transform: [{ scale: 0.85 }] }}
+                />
+              </View>
+
               {(() => {
                 // ADR-0002 occurrence rule: per-session save path is disabled
                 // iff THIS session has bookings, regardless of whether it
@@ -488,6 +511,8 @@ export function SessionEditSheet(props: SessionEditSheetBoundProps) {
                     roomId: editForm.roomId || undefined,
                     trainerUserId: editForm.trainerUserId,
                     isActive: editForm.isActive,
+                    // Always sent so toggling off (unmark) persists.
+                    isIntermediate: editForm.isIntermediate,
                   });
                 }}
               >

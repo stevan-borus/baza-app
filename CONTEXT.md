@@ -50,6 +50,11 @@ A scheduled class — `(classType, room, trainer, startsAt, endsAt, capacity)`. 
 **Recurring series**:
 A set of Sessions generated from a weekday pattern (e.g. Mon/Wed/Fri × 4 weeks). Each occurrence is an editable Session; edits can target one occurrence or the whole series.
 
+**Intermediate**:
+An optional Admin-set binary marking on a single Session telling Clients that occurrence is a demanding one — the middle tier the studio actually communicates to clients, worded with the English loanword "Intermediate" in both languages (the studio rejected "napredno", "srednji nivo", and "zahtevno"; English tier names are the norm in Serbian fitness culture, and the shipped word now matches the `isIntermediate` field exactly). Unmarked (the default) is the norm. Strictly per-occurrence: marking one occurrence of a recurring series never touches its siblings. Admins set or clear it at any time, including after Clients have booked. Purely advisory and display-only: it gates nothing (no booking restrictions, no filtering) and setting/clearing it notifies no one. Rendered to every role as a wordless brand-green ★ text glyph riding the session's time/meta line; the booking sheet doubles as the legend, expanding the mark to "★ Intermediate". The word otherwise survives only in the a11y label and the admin edit switch.
+
+_Avoid_: "intensity"/"intenzitet" (the earlier 1–3 concept, now retired), "difficulty"/"težina", "stars", "levels".
+
 **Booking**:
 A Client claiming a slot in a Session. Decrements the matched ClientPackage's `sessionsRemaining` (or doesn't, depending on cancellation timing — see below). Can be created by the Client (via `POST /bookings`, gated by `no_package_for_class`) or by an **Admin** (via the admin booking path, which **skips** the package-eligibility check — see **Admin reservation**).
 

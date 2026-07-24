@@ -27,6 +27,9 @@ export const availabilitySessionSchema = sessionFieldsSchema.pick({
   bookedCount: z.number(),
   waitlistCount: z.number(),
   availableSlots: z.number(),
+  // Admin-set binary "intermediate" (srednji nivo) marking for this occurrence; absent = unmarked.
+  // Display-only — never gates booking or filtering.
+  isIntermediate: z.boolean().optional(),
   recurringScheduleId: z.nullable(z.string()).optional(),
   isActive: z.boolean().optional(),
   isBookedByMe: z.boolean().optional(),
@@ -95,6 +98,8 @@ export const updateSessionInputSchema = z.object({
   trainerUserId: z.uuid().optional(),
   isActive: z.boolean().optional(),
   status: z.enum(["SCHEDULED", "CANCELED", "COMPLETED"]).optional(),
+  // Optional binary "intermediate" (srednji nivo) marking for this occurrence; omitted = untouched.
+  isIntermediate: z.boolean().optional(),
 });
 
 export const createRecurringSessionsInputSchema = z.object({
@@ -133,6 +138,7 @@ export const sessionSchema = z.object({
   endsAt: z.string(),
   capacity: z.number(),
   status: z.enum(["SCHEDULED", "CANCELED", "COMPLETED"]),
+  isIntermediate: z.boolean().optional(),
   classType: z.object({ id: z.string(), name: z.string() }).optional(),
   room: z.object({ id: z.string(), name: z.string() }).nullable().optional(),
 });
@@ -180,6 +186,7 @@ export const sessionDetailSchema = z.object({
   status: z.enum(["SCHEDULED", "CANCELED", "COMPLETED"]),
   capacity: z.number(),
   isActive: z.boolean(),
+  isIntermediate: z.boolean().optional(),
   classTypeId: z.string(),
   roomId: z.nullable(z.string()),
   trainerUserId: z.nullable(z.string()),

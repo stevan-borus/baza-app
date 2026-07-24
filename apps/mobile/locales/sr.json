@@ -1305,5 +1305,13 @@
       "newCampaign": "Kreiraj novu kampanju",
       "axisToggle": "Uključi kriterijum {{axis}}"
     }
+  },
+  "session": {
+    "intermediate": {
+      "badge": "★",
+      "label": "Intermediate",
+      "switchLabel": "Intermediate",
+      "a11yLabel": "Intermediate trening"
+    }
   }
 }

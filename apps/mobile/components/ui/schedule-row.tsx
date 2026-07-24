@@ -13,6 +13,7 @@ import { Image, Pressable, Text, View } from "react-native";
 import dayjs from "dayjs";
 import { useTranslation } from "react-i18next";
 import { useThemeTokens } from "@/components/ui/tokens";
+import { IntermediateBadge } from "@/components/ui/intermediate-badge";
 
 const PHOTO_RINGS = require("@/assets/studio/rings.webp");
 const PHOTO_PLANK = require("@/assets/studio/plank.webp");
@@ -48,6 +49,8 @@ export type ScheduleRowSession = {
   roomName: string | null;
   availableSlots: number;
   capacity: number;
+  /** Admin-set "intermediate" marking for this occurrence; absent = unmarked. */
+  isIntermediate?: boolean;
   isBookedByMe?: boolean;
   /** False = the client can't book this session: the row renders muted
    * (still tappable — the sheet explains why). */
@@ -127,10 +130,15 @@ export function ScheduleRow({
 
         {/* Body */}
         <View style={{ flex: 1, gap: 4 }}>
-          <Text style={metaTextStyle}>
-            {start.format("HH:mm")} ·{" "}
-            {t("client.home.minutesShort", { count: end.diff(start, "minute") })}
-          </Text>
+          {/* Time·duration eyebrow — the 🔥 mark rides at the end of this line
+              (the time never truncates, so the glyph never gets pushed off). */}
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+            <Text style={metaTextStyle}>
+              {start.format("HH:mm")} ·{" "}
+              {t("client.home.minutesShort", { count: end.diff(start, "minute") })}
+            </Text>
+            <IntermediateBadge isIntermediate={session.isIntermediate} />
+          </View>
           {session.roomName ? (
             <Text style={metaTextStyle}>{session.roomName}</Text>
           ) : null}

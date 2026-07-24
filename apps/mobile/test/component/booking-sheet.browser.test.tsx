@@ -128,6 +128,36 @@ describe("BookingSheet renewal locks", () => {
   });
 });
 
+describe("BookingSheet intermediate badge", () => {
+  it("shows the intermediate badge when the session is marked", async () => {
+    const screen = renderSheet({
+      session: makeSession({ isIntermediate: true }),
+    });
+    await screen.findByTestId("intermediate-badge");
+  });
+
+  it("spells the mark out — the sheet doubles as the legend", async () => {
+    // Dense rows show the bare ★; the sheet is the one surface where the tap
+    // already landed, so the mark expands to glyph + word here.
+    const screen = renderSheet({
+      session: makeSession({ isIntermediate: true }),
+    });
+    const badge = await screen.findByTestId("intermediate-badge");
+    expect(badge.textContent).toContain("★");
+    expect(badge.textContent).toContain("Intermediate");
+  });
+
+  it("shows no intermediate badge when the session is unmarked", async () => {
+    const screen = renderSheet({
+      session: makeSession({ isIntermediate: false }),
+    });
+    // The book button is enough to know the sheet mounted for an unmarked
+    // session; the badge must be absent.
+    await screen.findByTestId("booking-book-button");
+    expect(screen.queryByTestId("intermediate-badge")).toBeNull();
+  });
+});
+
 describe("BookingSheet booking flow", () => {
   it("book → two-step confirm → onBook fires with the session id", async () => {
     const onBook = vi.fn();

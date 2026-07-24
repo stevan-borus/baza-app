@@ -201,6 +201,7 @@ export default function TrainerSchedule() {
                         roomName: s.roomName,
                         bookedCount: s.bookedCount,
                         capacity: s.capacity,
+                        isIntermediate: s.isIntermediate,
                         status:
                           s.availableSlots > 0 ? "available" : "full",
                       }),

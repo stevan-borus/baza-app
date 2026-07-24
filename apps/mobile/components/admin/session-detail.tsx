@@ -6,6 +6,7 @@ import { router, type Href } from "expo-router";
 import dayjs from "dayjs";
 import { Icon } from "@/components/ui/icon";
 import { GlassCard } from "@/components/ui/glass-card";
+import { IntermediateBadge } from "@/components/ui/intermediate-badge";
 import { ErrorState, EmptyState } from "@/components/ui/states";
 import { SkeletonCard } from "@/components/ui/skeleton";
 import { SectionLabel } from "@/components/ui/typography";
@@ -96,6 +97,7 @@ export function SessionDetail({
                 endsAt: session.endsAt,
                 recurringScheduleId: session.recurringScheduleId ?? null,
                 isActive: session.isActive,
+                isIntermediate: session.isIntermediate,
               });
             }}
             accessibilityLabel={t("admin.sessionDetail.editAction")}
@@ -130,12 +132,19 @@ export function SessionDetail({
           <>
             <GlassCard size="md">
               <View style={{ gap: 8 }}>
-                <Text className="text-foreground font-body-bold" style={{ fontSize: 18 }}>
+                <Text
+                  className="text-foreground font-body-bold"
+                  style={{ fontSize: 18 }}
+                >
                   {dateLabel}
                 </Text>
-                <Text className="text-muted" style={{ fontSize: 14 }}>
-                  {timeLabel}
-                </Text>
+                {/* Time meta line — the 🔥 mark rides at the end. */}
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                  <Text className="text-muted" style={{ fontSize: 14 }}>
+                    {timeLabel}
+                  </Text>
+                  <IntermediateBadge isIntermediate={session.isIntermediate} size="detail" />
+                </View>
                 <View style={{ flexDirection: "row", gap: 16, marginTop: 4 }}>
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
                     <Icon name="user" size={13} color={tokens.muted} />

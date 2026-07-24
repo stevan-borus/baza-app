@@ -264,6 +264,10 @@ model Session {
   startsAt             DateTime
   endsAt               DateTime
   capacity             Int
+  // Optional admin-set binary marking that THIS occurrence is a hard one.
+  // Default false = unmarked (the norm). Strictly per-occurrence — recurring
+  // siblings are never touched. Advisory + display-only.
+  isIntermediate       Boolean             @default(false)
   isActive             Boolean             @default(true)
   status               SessionStatus       @default(SCHEDULED)
   createdAt            DateTime            @default(now())

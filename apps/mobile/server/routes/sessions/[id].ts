@@ -62,6 +62,7 @@ export async function GET(request: Request, { id }: RouteParams) {
       status: true,
       capacity: true,
       isActive: true,
+      isIntermediate: true,
       classTypeId: true,
       roomId: true,
       trainerUserId: true,
@@ -356,6 +357,9 @@ export async function PATCH(request: Request, { id }: RouteParams) {
       status: parsed.data.status,
       isActive: parsed.data.isActive,
       trainerUserId: parsed.data.trainerUserId,
+      // Per-occurrence "intermediate" (srednji nivo) marking. `undefined`
+      // (field omitted) leaves it untouched; a boolean sets or clears it.
+      isIntermediate: parsed.data.isIntermediate,
     },
     select: {
       id: true,
@@ -366,6 +370,7 @@ export async function PATCH(request: Request, { id }: RouteParams) {
       roomId: true,
       trainerUserId: true,
       isActive: true,
+      isIntermediate: true,
       classTypeId: true,
       classType: { select: { id: true, name: true } },
       room: { select: { id: true, name: true } },

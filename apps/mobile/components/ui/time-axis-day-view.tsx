@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import dayjs from "dayjs";
 import { Badge } from "@/components/ui/badge";
+import { IntermediateBadge } from "@/components/ui/intermediate-badge";
 import { useThemeTokens } from "@/components/ui/tokens";
 import {
   HOUR_START,
@@ -32,6 +33,8 @@ type SessionBlock = {
   trainerName?: string | null;
   bookedCount: number;
   capacity: number;
+  /** Admin-set "intermediate" marking for this occurrence; absent = unmarked. */
+  isIntermediate?: boolean;
   status?: "available" | "full" | "booked" | "waitlisted";
 };
 
@@ -166,22 +169,36 @@ export function TimeAxisDayView({
                 >
                   <View className="px-2.5 flex-row items-center gap-2">
                     <View className="flex-1 gap-0.5">
-                      <Text
-                        className="font-body-semibold text-sm text-foreground"
-                        numberOfLines={1}
-                      >
-                        {s.classTypeName}
-                      </Text>
-                      {compact ? null : (
+                      <View className="flex-row items-center gap-1.5">
                         <Text
-                          className="text-xs"
-                          style={{ color: tintText(color, tokens.foreground) }}
+                          className="font-body-semibold text-sm text-foreground"
                           numberOfLines={1}
+                          style={{ flexShrink: 1 }}
                         >
-                          {dayjs(s.startsAt).format("HH:mm")}–
-                          {dayjs(s.endsAt).format("HH:mm")}
-                          {s.roomName ? ` · ${s.roomName}` : ""}
+                          {s.classTypeName}
                         </Text>
+                        {/* Compact blocks have no meta line — the 🔥 mark has
+                            nowhere else to go, so it rides the title here. */}
+                        {compact ? (
+                          <IntermediateBadge isIntermediate={s.isIntermediate} />
+                        ) : null}
+                      </View>
+                      {compact ? null : (
+                        <View className="flex-row items-center gap-1.5">
+                          <Text
+                            className="text-xs"
+                            style={{
+                              flexShrink: 1,
+                              color: tintText(color, tokens.foreground),
+                            }}
+                            numberOfLines={1}
+                          >
+                            {dayjs(s.startsAt).format("HH:mm")}–
+                            {dayjs(s.endsAt).format("HH:mm")}
+                            {s.roomName ? ` · ${s.roomName}` : ""}
+                          </Text>
+                          <IntermediateBadge isIntermediate={s.isIntermediate} />
+                        </View>
                       )}
                     </View>
                     {/* Always-visible capacity, vertically centered. Full →
