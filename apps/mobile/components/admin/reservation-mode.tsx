@@ -686,7 +686,7 @@ function SelectionToolbar({
   const { t } = useTranslation();
   return (
     <View
-      className="absolute bottom-0 left-0 right-0 flex-row items-center gap-3 border-t border-glass-border bg-bg/95 px-5 py-4"
+      className="absolute bottom-0 left-0 right-0 flex-row items-center gap-3 border-t border-glass-border bg-background px-5 py-4"
       style={{ paddingBottom: 24 }}
     >
       <View className="flex-1">
