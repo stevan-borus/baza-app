@@ -12,7 +12,7 @@ import React, {
   useImperativeHandle,
   useState,
 } from "react";
-import { ScrollView, TextInput, View } from "react-native";
+import { FlatList, ScrollView, TextInput, View } from "react-native";
 
 export type BottomSheetBackdropProps = Record<string, unknown>;
 
@@ -68,6 +68,11 @@ export function BottomSheetScrollView({
 }: { children?: React.ReactNode } & Record<string, unknown>) {
   return <ScrollView {...rest}>{children}</ScrollView>;
 }
+
+// The sheet-aware FlatList is a plain FlatList once the gesture context is
+// gone — it exists in the real package only to share the sheet's scroll
+// responder.
+export const BottomSheetFlatList = FlatList;
 
 export const BottomSheetTextInput = TextInput;
 

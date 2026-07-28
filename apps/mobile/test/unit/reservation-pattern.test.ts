@@ -12,7 +12,11 @@
  */
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import dayjs from "dayjs";
-import { expandPattern, type SessionForPattern } from "@/lib/reservation-pattern";
+import {
+  expandPattern,
+  monthKeysForPattern,
+  type SessionForPattern,
+} from "@/lib/reservation-pattern";
 
 // Anchor on a Monday so weekday math is unambiguous.
 const ANCHOR = dayjs("2026-05-11T00:00:00"); // Monday
@@ -138,6 +142,62 @@ describe("expandPattern — biweekly rhythm", () => {
       rangeStart: ANCHOR,
     });
     expect([...result].sort()).toEqual(["w0-mon", "w2-mon", "w4-mon"]);
+  });
+});
+
+describe("monthKeysForPattern", () => {
+  // The bug this exists for: a 12-week pattern started near month end used to
+  // be matched against ONE month of availability, so it could only ever select
+  // the current month's leftovers ("2 instead of 15+").
+
+  it("returns the single month key when the whole range sits inside one month", () => {
+    expect(
+      monthKeysForPattern({
+        rhythm: "weekly",
+        weekA: { weekdays: [0], timeOfDayMins: 7 * 60 },
+        weekB: { weekdays: [], timeOfDayMins: 0 },
+        weeks: 2,
+        rangeStart: dayjs("2026-05-04T00:00:00"),
+      }),
+    ).toEqual(["2026-05"]);
+  });
+
+  it("covers every month a 12-week pattern started at month end spans", () => {
+    // Start Fri 2026-05-29 + 12 weeks → 2026-08-21. Four month keys.
+    expect(
+      monthKeysForPattern({
+        rhythm: "weekly",
+        weekA: { weekdays: [0], timeOfDayMins: 7 * 60 },
+        weekB: { weekdays: [], timeOfDayMins: 0 },
+        weeks: 12,
+        rangeStart: dayjs("2026-05-29T00:00:00"),
+      }),
+    ).toEqual(["2026-05", "2026-06", "2026-07", "2026-08"]);
+  });
+
+  it("crosses the year boundary", () => {
+    expect(
+      monthKeysForPattern({
+        rhythm: "weekly",
+        weekA: { weekdays: [0], timeOfDayMins: 7 * 60 },
+        weekB: { weekdays: [], timeOfDayMins: 0 },
+        weeks: 8,
+        rangeStart: dayjs("2026-12-10T00:00:00"),
+      }),
+    ).toEqual(["2026-12", "2027-01", "2027-02"]);
+  });
+
+  it("returns keys in ascending order with no duplicates", () => {
+    const keys = monthKeysForPattern({
+      rhythm: "weekly",
+      weekA: { weekdays: [0], timeOfDayMins: 7 * 60 },
+      weekB: { weekdays: [], timeOfDayMins: 0 },
+      weeks: 52,
+      rangeStart: dayjs("2026-05-11T00:00:00"),
+    });
+    expect(new Set(keys).size).toBe(keys.length);
+    expect([...keys].sort()).toEqual(keys);
+    expect(keys[0]).toBe("2026-05");
   });
 });
 

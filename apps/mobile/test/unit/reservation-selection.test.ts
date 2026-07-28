@@ -22,6 +22,7 @@ import {
   distinctClassTypeNames,
   createInitialState,
   resetSelections,
+  selectedSessionList,
   setClassTypeFilter,
   switchMode,
   toggleBooking,
@@ -349,6 +350,78 @@ describe("classifySession", () => {
       expect(classifySession(s, c).selectable).toBe(false);
       expect(toggleSession(createInitialState(), s, c).selectedSessionIds.size).toBe(0);
     }
+  });
+});
+
+describe("selectedSessionList — selections survive month navigation", () => {
+  // The screen only ever holds ONE month of availability at a time. Before the
+  // fix the confirm sheet resolved ids against that single month's array, so a
+  // session selected in June vanished from the count (and from the mutation's
+  // sessionIds) the moment the strip paged back to May.
+  const mayCtx = ctx();
+
+  it("returns the full session object for every selected id, in start order", () => {
+    const june = futureSession("june", {
+      startsAt: ANCHOR.add(40, "day").hour(7).toDate(),
+    });
+    const may = futureSession("may", { startsAt: ANCHOR.add(1, "day").hour(7).toDate() });
+
+    let state = createInitialState();
+    state = toggleSession(state, june, mayCtx);
+    state = toggleSession(state, may, mayCtx);
+
+    expect(selectedSessionList(state).map((s) => s.id)).toEqual(["may", "june"]);
+  });
+
+  it("keeps a session selected in another month after the visible month changes", () => {
+    const june = futureSession("june", {
+      startsAt: ANCHOR.add(40, "day").hour(7).toDate(),
+    });
+    const state = toggleSession(createInitialState(), june, mayCtx);
+
+    // The component re-renders with May's availability only — the selection
+    // must still resolve to the full June session object.
+    expect(selectedSessionList(state)).toEqual([june]);
+    expect(state.selectedSessionIds.has("june")).toBe(true);
+  });
+
+  it("drops the stored session when the same card is tapped again", () => {
+    const s = futureSession("s1");
+    const selected = toggleSession(createInitialState(), s, mayCtx);
+    const deselected = toggleSession(selected, s, mayCtx);
+    expect(selectedSessionList(deselected)).toEqual([]);
+  });
+
+  it("stores pattern matches too, so a cross-month sweep reaches the confirm sheet", () => {
+    const sessions: SelectableSession[] = [
+      futureSession("mon-may", { startsAt: ANCHOR.hour(7).toDate() }),
+      // Same weekday/time, but 5 weeks out — a different calendar month.
+      futureSession("mon-june", { startsAt: ANCHOR.add(35, "day").hour(7).toDate() }),
+    ];
+    const result = applyPattern(
+      createInitialState(),
+      sessions,
+      {
+        rhythm: "weekly" as const,
+        weekA: { weekdays: [0], timeOfDayMins: 7 * 60 },
+        weekB: { weekdays: [], timeOfDayMins: 0 },
+        weeks: 12,
+        rangeStart: ANCHOR,
+      },
+      mayCtx,
+    );
+    expect(selectedSessionList(result.state).map((s) => s.id)).toEqual([
+      "mon-may",
+      "mon-june",
+    ]);
+  });
+
+  it("is emptied by clearActiveSelection and resetSelections", () => {
+    let state = createInitialState();
+    state = toggleSession(state, futureSession("s1"), mayCtx);
+    expect(selectedSessionList(clearActiveSelection(state))).toEqual([]);
+    expect(selectedSessionList(resetSelections(state))).toEqual([]);
+    expect(selectedSessionList(switchMode(state, "cancel"))).toEqual([]);
   });
 });
 

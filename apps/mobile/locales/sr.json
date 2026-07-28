@@ -1114,7 +1114,10 @@
       "cancelTitle_few": "Otkaži {{count}} termina?",
       "cancelTitle_other": "Otkaži {{count}} termina?",
       "cancelConfirmCta": "Otkaži termin",
-      "patternSkippedFull": "{{skipped}} od {{total}} termina je popunjeno i preskočeno"
+      "patternSkippedFull": "{{skipped}} od {{total}} termina je popunjeno i preskočeno",
+      "pattern": {
+        "applying": "Primenjujem…"
+      }
     }
   },
   "trainer": {

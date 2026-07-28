@@ -1108,7 +1108,10 @@
       "cancelTitle_one": "Cancel this session?",
       "cancelTitle_other": "Cancel {{count}} sessions?",
       "cancelConfirmCta": "Cancel session",
-      "patternSkippedFull": "{{skipped}} of {{total}} sessions were full and skipped"
+      "patternSkippedFull": "{{skipped}} of {{total}} sessions were full and skipped",
+      "pattern": {
+        "applying": "Applying…"
+      }
     }
   },
   "trainer": {
