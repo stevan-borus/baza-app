@@ -32,13 +32,14 @@ export type ReservationSelectionState<
   S extends SelectableSession = SelectableSession,
 > = {
   readonly mode: ReservationModeKind;
-  readonly selectedSessionIds: ReadonlySet<string>;
   /**
-   * The selected sessions themselves, keyed by id — NOT derivable from the
-   * screen, which only ever holds one month of availability at a time. A
-   * session selected in June (by pattern or by paging the week strip) would
-   * otherwise disappear from the confirm sheet's count and from the
-   * mutation's `sessionIds` the moment the visible month changed back.
+   * The selected sessions themselves, keyed by id — the ONLY record of the
+   * reserve-mode selection (membership checks go through `.has`). Carries
+   * objects, not bare ids, because the screen only ever holds one month of
+   * availability at a time: a session selected in June (by pattern or by
+   * paging the week strip) would otherwise disappear from the confirm
+   * sheet's count and from the mutation's `sessionIds` the moment the
+   * visible month changed back.
    */
   readonly selectedSessionsById: ReadonlyMap<string, S>;
   readonly selectedBookingIds: ReadonlySet<string>;
@@ -59,7 +60,6 @@ export function createInitialState<
 >(): ReservationSelectionState<S> {
   return {
     mode: "reserve",
-    selectedSessionIds: new Set(),
     selectedSessionsById: new Map(),
     selectedBookingIds: new Set(),
     classTypeFilter: "",
@@ -129,16 +129,10 @@ export function toggleSession<S extends SelectableSession>(
   ctx: SelectionContext,
 ): ReservationSelectionState<S> {
   if (!classifySession(session, ctx).selectable) return state;
-  const next = new Set(state.selectedSessionIds);
   const nextById = new Map(state.selectedSessionsById);
-  if (next.has(session.id)) {
-    next.delete(session.id);
-    nextById.delete(session.id);
-  } else {
-    next.add(session.id);
-    nextById.set(session.id, session);
-  }
-  return { ...state, selectedSessionIds: next, selectedSessionsById: nextById };
+  if (nextById.has(session.id)) nextById.delete(session.id);
+  else nextById.set(session.id, session);
+  return { ...state, selectedSessionsById: nextById };
 }
 
 /**
@@ -153,7 +147,6 @@ export function switchMode<S extends SelectableSession>(
   return {
     ...state,
     mode,
-    selectedSessionIds: new Set(),
     selectedSessionsById: new Map(),
     selectedBookingIds: new Set(),
   };
@@ -206,7 +199,6 @@ export function applyPattern<S extends SelectableSession>(
 ): ApplyPatternResult<S> {
   const matched = expandPattern([...sessions], input);
   const byId = new Map(sessions.map((s) => [s.id, s]));
-  const next = new Set(state.selectedSessionIds);
   const nextById = new Map(state.selectedSessionsById);
   let skippedFull = 0;
   let skippedAlreadyBooked = 0;
@@ -225,12 +217,11 @@ export function applyPattern<S extends SelectableSession>(
       skippedFull += 1;
       continue;
     }
-    if (!next.has(id)) added += 1;
-    next.add(id);
+    if (!nextById.has(id)) added += 1;
     nextById.set(id, session);
   }
   return {
-    state: { ...state, selectedSessionIds: next, selectedSessionsById: nextById },
+    state: { ...state, selectedSessionsById: nextById },
     skippedFull,
     skippedAlreadyBooked,
     added,
@@ -247,7 +238,6 @@ export function resetSelections<S extends SelectableSession>(
 ): ReservationSelectionState<S> {
   return {
     ...state,
-    selectedSessionIds: new Set(),
     selectedSessionsById: new Map(),
     selectedBookingIds: new Set(),
   };
@@ -258,7 +248,7 @@ export function clearActiveSelection<S extends SelectableSession>(
   state: ReservationSelectionState<S>,
 ): ReservationSelectionState<S> {
   return state.mode === "reserve"
-    ? { ...state, selectedSessionIds: new Set(), selectedSessionsById: new Map() }
+    ? { ...state, selectedSessionsById: new Map() }
     : { ...state, selectedBookingIds: new Set() };
 }
 

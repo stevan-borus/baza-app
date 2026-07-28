@@ -1,8 +1,8 @@
 /**
  * Reservation mode — admin-only screen bound to one Client. Two ways to
- * populate the selection set: tap session cards in the calendar, or apply
+ * populate the selection: tap session cards in the calendar, or apply
  * a weekly/biweekly pattern via the accelerator sheet. Both feed the same
- * `selectedSessionIds` set.
+ * `selectedSessionsById` map.
  *
  * The selection state machine (mode, the two selection sets, the ClassType
  * filter, the unselectable rules, pattern merging) is pure and lives in
@@ -12,7 +12,7 @@
  * The route is gated to ADMIN — trainers and clients hitting
  * /klijenti/rezervisi get redirected to their home tab.
  */
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { useTranslation } from "react-i18next";
 import { useQuery, useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
@@ -58,7 +58,10 @@ import { sessionsQueries } from "@/lib/queries/sessions-queries-factory";
 import { BottomSheetFlatList } from "@gorhom/bottom-sheet";
 import { clientsQueries } from "@/lib/queries/clients-queries-factory";
 import { packagesQueries } from "@/lib/queries/packages-queries-factory";
-import { bookingsQueries } from "@/lib/queries/bookings-queries-factory";
+import {
+  bookingsQueries,
+  fetchAllUpcomingBookedSessionIds,
+} from "@/lib/queries/bookings-queries-factory";
 import {
   useCreateReservationsMutation,
   useCancelReservationsBulkMutation,
@@ -113,7 +116,7 @@ export function ReservationMode() {
   const [selection, setSelection] = useState(
     createInitialState<AvailabilitySession>,
   );
-  const { mode, classTypeFilter, selectedSessionIds, selectedBookingIds } = selection;
+  const { mode, classTypeFilter, selectedSessionsById, selectedBookingIds } = selection;
   // Everything selected, in every month — the visible month's array is only
   // ever a subset (see reservation-selection.ts → selectedSessionsById).
   const selectedSessions = selectedSessionList(selection);
@@ -151,6 +154,13 @@ export function ReservationMode() {
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
 
   const queryClient = useQueryClient();
+  // Invalidation ticket for an in-flight pattern apply. The sweep awaits one
+  // network round-trip per month; if the admin dismisses the pattern sheet or
+  // the bound client changes before the fetches land, the computed result
+  // describes a selection context that no longer exists and must be dropped —
+  // otherwise it would resurrect a cleared selection or leak one client's
+  // pattern onto the next. Bumped by every event that ends that context.
+  const applyEpochRef = useRef(0);
   const availabilityQuery = useQuery(sessionsQueries.availabilityByMonth(month));
   const allSessions = (availabilityQuery.data?.sessions ?? []) as AvailabilitySession[];
 
@@ -234,21 +244,37 @@ export function ReservationMode() {
   // query options the calendar uses, so a revisit is free) and expand against
   // the merged list.
   async function handleApplyPattern(input: PatternInput) {
+    const epoch = applyEpochRef.current;
     const months = monthKeysForPattern(input);
-    const pages = await Promise.all(
-      months.map((m) =>
-        queryClient.fetchQuery(sessionsQueries.availabilityByMonth(m)),
+    // The screen's own bookings query only holds its loaded pages (page one,
+    // usually) — enough for the visible list, not for a sweep that spans
+    // months. Walk the complete set here; if that walk fails, fall back to
+    // the loaded pages rather than blocking the sweep (the server re-checks
+    // and skips already-booked sessions anyway — only the count softens).
+    const [pages, completeBookedIds] = await Promise.all([
+      Promise.all(
+        months.map((m) =>
+          queryClient.fetchQuery(sessionsQueries.availabilityByMonth(m)),
+        ),
       ),
-    );
+      clientUserId
+        ? fetchAllUpcomingBookedSessionIds(clientUserId).catch(() => null)
+        : Promise.resolve(null),
+    ]);
     // The month endpoints can overlap at boundaries — dedupe by id.
     const byId = new Map<string, AvailabilitySession>();
     for (const page of pages)
       for (const s of page.sessions as AvailabilitySession[]) byId.set(s.id, s);
 
-    // Reading `selection` across the await is safe: the pattern sheet is modal
-    // and its Apply button is held for the duration, so no tap can change the
-    // selection underneath us.
-    const result = applyPattern(selection, [...byId.values()], input, selectionCtx);
+    // Superseded while we were fetching (sheet dismissed, client changed) —
+    // the captured selection no longer describes reality; drop the result.
+    if (applyEpochRef.current !== epoch) return;
+
+    const sweepCtx: SelectionContext = {
+      nowMs: nowMs(),
+      alreadyBookedSessionIds: completeBookedIds ?? alreadyBookedSessionIds,
+    };
+    const result = applyPattern(selection, [...byId.values()], input, sweepCtx);
     setSelection(result.state);
     const total = result.added + result.skippedFull + result.skippedAlreadyBooked;
     setPatternNotice(
@@ -277,6 +303,7 @@ export function ReservationMode() {
             clientUserId: undefined,
             clientFullName: undefined,
           });
+          applyEpochRef.current += 1;
           setClientProfileId(null);
           setClientUserId(null);
           setClientFullName(null);
@@ -364,7 +391,7 @@ export function ReservationMode() {
                     <SelectableSessionCard
                       key={s.id}
                       session={s}
-                      selected={selectedSessionIds.has(s.id)}
+                      selected={selectedSessionsById.has(s.id)}
                       classification={classifySession(s, selectionCtx)}
                       onPress={() =>
                         setSelection((prev) => toggleSession(prev, s, selectionCtx))
@@ -455,6 +482,7 @@ export function ReservationMode() {
       <AppSheet open={showClientPicker} onOpenChange={setShowClientPicker} rawContent>
         <ClientPickerSheet
           onPick={(profile) => {
+            applyEpochRef.current += 1;
             setClientProfileId(profile.id);
             setClientUserId(profile.userId);
             setClientFullName(profile.fullName);
@@ -463,7 +491,13 @@ export function ReservationMode() {
         />
       </AppSheet>
 
-      <AppSheet open={showPatternSheet} onOpenChange={setShowPatternSheet}>
+      <AppSheet
+        open={showPatternSheet}
+        onOpenChange={(open) => {
+          if (!open) applyEpochRef.current += 1;
+          setShowPatternSheet(open);
+        }}
+      >
         <PatternSheet onApply={handleApplyPattern} />
       </AppSheet>
 
@@ -878,6 +912,10 @@ function PatternSheet({
   // network round-trip per month — hold the button until it lands rather than
   // closing the sheet on a selection that isn't computed yet.
   const [applying, setApplying] = useState(false);
+  // A month fetch can fail mid-apply; the sheet is the only surface the
+  // admin is looking at, so the failure has to be said here — otherwise the
+  // button just snaps back to "Primeni" and the tap looks ignored.
+  const [applyError, setApplyError] = useState<string | null>(null);
 
   async function handleApply() {
     if (weekA.weekdays.length === 0) return;
@@ -885,6 +923,7 @@ function PatternSheet({
     const parsed = Number(weeksStr);
     const weekCount = Number.isFinite(parsed) && parsed > 0 ? Math.min(52, parsed) : 1;
     setApplying(true);
+    setApplyError(null);
     try {
       await onApply({
         rhythm,
@@ -894,6 +933,12 @@ function PatternSheet({
         // "Today" — via the now() seam so the test stack's anchor pins it.
         rangeStart: dayjs(now()).startOf("day"),
       });
+    } catch {
+      setApplyError(
+        t("admin.reservations.pattern.error", {
+          defaultValue: "Nije moguće učitati termine. Pokušaj ponovo.",
+        }),
+      );
     } finally {
       setApplying(false);
     }
@@ -955,6 +1000,16 @@ function PatternSheet({
           maxLength={2}
         />
       </View>
+
+      {applyError ? (
+        <Text
+          testID="reservation-pattern-error"
+          className="text-danger font-body-medium"
+          style={{ fontSize: 13, lineHeight: 18 }}
+        >
+          {applyError}
+        </Text>
+      ) : null}
 
       <Button
         testID="reservation-pattern-apply"
