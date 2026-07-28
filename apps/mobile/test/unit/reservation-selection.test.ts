@@ -22,6 +22,7 @@ import {
   distinctClassTypeNames,
   createInitialState,
   resetSelections,
+  selectedSessionList,
   setClassTypeFilter,
   switchMode,
   toggleBooking,
@@ -69,7 +70,7 @@ describe("createInitialState", () => {
   it("starts in reserve mode with empty selections and no class-type filter", () => {
     const state = createInitialState();
     expect(state.mode).toBe("reserve");
-    expect(state.selectedSessionIds.size).toBe(0);
+    expect(state.selectedSessionsById.size).toBe(0);
     expect(state.selectedBookingIds.size).toBe(0);
     expect(state.classTypeFilter).toBe("");
   });
@@ -81,12 +82,12 @@ describe("toggleSession", () => {
     const initial = createInitialState();
 
     const selected = toggleSession(initial, s, ctx());
-    expect([...selected.selectedSessionIds]).toEqual(["s1"]);
+    expect([...selected.selectedSessionsById.keys()]).toEqual(["s1"]);
     // Immutable transitions — the component relies on referential updates.
-    expect(initial.selectedSessionIds.size).toBe(0);
+    expect(initial.selectedSessionsById.size).toBe(0);
 
     const deselected = toggleSession(selected, s, ctx());
-    expect(deselected.selectedSessionIds.size).toBe(0);
+    expect(deselected.selectedSessionsById.size).toBe(0);
   });
 
   it("ignores taps on past sessions (shipped guard — see file doc comment)", () => {
@@ -94,19 +95,19 @@ describe("toggleSession", () => {
       startsAt: ANCHOR.subtract(1, "hour").toDate(),
     });
     const next = toggleSession(createInitialState(), past, ctx());
-    expect(next.selectedSessionIds.size).toBe(0);
+    expect(next.selectedSessionsById.size).toBe(0);
   });
 
   it("ignores taps on full sessions (availableSlots <= 0)", () => {
     const full = futureSession("full", { availableSlots: 0 });
     const next = toggleSession(createInitialState(), full, ctx());
-    expect(next.selectedSessionIds.size).toBe(0);
+    expect(next.selectedSessionsById.size).toBe(0);
   });
 
   it("ignores taps on sessions the client already booked (Već rezervisano)", () => {
     const s = futureSession("booked");
     const next = toggleSession(createInitialState(), s, ctx(["booked"]));
-    expect(next.selectedSessionIds.size).toBe(0);
+    expect(next.selectedSessionsById.size).toBe(0);
   });
 });
 
@@ -131,7 +132,7 @@ describe("switchMode", () => {
 
     const switched = switchMode(state, "cancel");
     expect(switched.mode).toBe("cancel");
-    expect(switched.selectedSessionIds.size).toBe(0);
+    expect(switched.selectedSessionsById.size).toBe(0);
     expect(switched.selectedBookingIds.size).toBe(0);
     expect(switched.classTypeFilter).toBe("Reformer pilates");
   });
@@ -145,12 +146,12 @@ describe("setClassTypeFilter", () => {
 
     const filtered = setClassTypeFilter(state, "Energy pilates");
     expect(filtered.classTypeFilter).toBe("Energy pilates");
-    expect([...filtered.selectedSessionIds]).toEqual(["s1"]);
+    expect([...filtered.selectedSessionsById.keys()]).toEqual(["s1"]);
     expect([...filtered.selectedBookingIds]).toEqual(["b1"]);
 
     // Back to "all" keeps them too.
     const all = setClassTypeFilter(filtered, "");
-    expect([...all.selectedSessionIds]).toEqual(["s1"]);
+    expect([...all.selectedSessionsById.keys()]).toEqual(["s1"]);
     expect([...all.selectedBookingIds]).toEqual(["b1"]);
   });
 });
@@ -164,7 +165,7 @@ describe("clearActiveSelection", () => {
     state = toggleBooking(state, "b1");
 
     const clearedReserve = clearActiveSelection(state);
-    expect(clearedReserve.selectedSessionIds.size).toBe(0);
+    expect(clearedReserve.selectedSessionsById.size).toBe(0);
     expect([...clearedReserve.selectedBookingIds]).toEqual(["b1"]);
 
     let cancelState = switchMode(state, "cancel");
@@ -181,7 +182,7 @@ describe("resetSelections", () => {
     state = toggleBooking(state, "b1");
 
     const reset = resetSelections(state);
-    expect(reset.selectedSessionIds.size).toBe(0);
+    expect(reset.selectedSessionsById.size).toBe(0);
     expect(reset.selectedBookingIds.size).toBe(0);
     // Mode and filter are untouched — clearing the client doesn't move you
     // off the screen state you were in.
@@ -211,7 +212,7 @@ describe("applyPattern", () => {
     const result = applyPattern(state, sessions, weeklyMonAt7, ctx(["mon2"]));
     // Tap selection survives; mon1 matched; mon2 skipped (already booked);
     // Tuesday never matched.
-    expect([...result.state.selectedSessionIds].sort()).toEqual(["mon1", "tapped"]);
+    expect([...result.state.selectedSessionsById.keys()].sort()).toEqual(["mon1", "tapped"]);
     // already-booked still skipped and counted separately (regression guard).
     expect(result.skippedAlreadyBooked).toBe(1);
     expect(result.skippedFull).toBe(0);
@@ -229,7 +230,7 @@ describe("applyPattern", () => {
       }),
     ];
     const result = applyPattern(createInitialState(), sessions, weeklyMonAt7, ctx());
-    expect(result.state.selectedSessionIds.size).toBe(0);
+    expect(result.state.selectedSessionsById.size).toBe(0);
   });
 
   it("counts skippedFull and added separately (2 full of 4 matched → skippedFull 2, added 2)", () => {
@@ -253,7 +254,7 @@ describe("applyPattern", () => {
       { ...weeklyMonAt7, weeks: 4 },
       ctx(),
     );
-    expect([...result.state.selectedSessionIds].sort()).toEqual(["mon-w0", "mon-w2"]);
+    expect([...result.state.selectedSessionsById.keys()].sort()).toEqual(["mon-w0", "mon-w2"]);
     expect(result.skippedFull).toBe(2);
     expect(result.added).toBe(2);
     expect(result.skippedAlreadyBooked).toBe(0);
@@ -270,7 +271,7 @@ describe("applyPattern", () => {
       { ...weeklyMonAt7, weeks: 2 },
       ctx(),
     );
-    expect([...result.state.selectedSessionIds].sort()).toEqual(["mon-w0", "mon-w1"]);
+    expect([...result.state.selectedSessionsById.keys()].sort()).toEqual(["mon-w0", "mon-w1"]);
     expect(result.added).toBe(2);
     expect(result.skippedFull).toBe(0);
     expect(result.skippedAlreadyBooked).toBe(0);
@@ -292,7 +293,7 @@ describe("applyPattern", () => {
       weeklyMonAt7,
       ctx(["mon-both"]),
     );
-    expect(result.state.selectedSessionIds.size).toBe(0);
+    expect(result.state.selectedSessionsById.size).toBe(0);
     expect(result.skippedAlreadyBooked).toBe(1);
     expect(result.skippedFull).toBe(0);
     expect(result.added).toBe(0);
@@ -310,7 +311,7 @@ describe("applyPattern", () => {
       { ...weeklyMonAt7, rangeStart: ANCHOR.subtract(14, "day"), weeks: 4 },
       ctx(),
     );
-    expect(result.state.selectedSessionIds.size).toBe(0);
+    expect(result.state.selectedSessionsById.size).toBe(0);
   });
 });
 
@@ -347,8 +348,80 @@ describe("classifySession", () => {
     const c = ctx(["b"]);
     for (const s of cases) {
       expect(classifySession(s, c).selectable).toBe(false);
-      expect(toggleSession(createInitialState(), s, c).selectedSessionIds.size).toBe(0);
+      expect(toggleSession(createInitialState(), s, c).selectedSessionsById.size).toBe(0);
     }
+  });
+});
+
+describe("selectedSessionList — selections survive month navigation", () => {
+  // The screen only ever holds ONE month of availability at a time. Before the
+  // fix the confirm sheet resolved ids against that single month's array, so a
+  // session selected in June vanished from the count (and from the mutation's
+  // sessionIds) the moment the strip paged back to May.
+  const mayCtx = ctx();
+
+  it("returns the full session object for every selected id, in start order", () => {
+    const june = futureSession("june", {
+      startsAt: ANCHOR.add(40, "day").hour(7).toDate(),
+    });
+    const may = futureSession("may", { startsAt: ANCHOR.add(1, "day").hour(7).toDate() });
+
+    let state = createInitialState();
+    state = toggleSession(state, june, mayCtx);
+    state = toggleSession(state, may, mayCtx);
+
+    expect(selectedSessionList(state).map((s) => s.id)).toEqual(["may", "june"]);
+  });
+
+  it("keeps a session selected in another month after the visible month changes", () => {
+    const june = futureSession("june", {
+      startsAt: ANCHOR.add(40, "day").hour(7).toDate(),
+    });
+    const state = toggleSession(createInitialState(), june, mayCtx);
+
+    // The component re-renders with May's availability only — the selection
+    // must still resolve to the full June session object.
+    expect(selectedSessionList(state)).toEqual([june]);
+    expect(state.selectedSessionsById.has("june")).toBe(true);
+  });
+
+  it("drops the stored session when the same card is tapped again", () => {
+    const s = futureSession("s1");
+    const selected = toggleSession(createInitialState(), s, mayCtx);
+    const deselected = toggleSession(selected, s, mayCtx);
+    expect(selectedSessionList(deselected)).toEqual([]);
+  });
+
+  it("stores pattern matches too, so a cross-month sweep reaches the confirm sheet", () => {
+    const sessions: SelectableSession[] = [
+      futureSession("mon-may", { startsAt: ANCHOR.hour(7).toDate() }),
+      // Same weekday/time, but 5 weeks out — a different calendar month.
+      futureSession("mon-june", { startsAt: ANCHOR.add(35, "day").hour(7).toDate() }),
+    ];
+    const result = applyPattern(
+      createInitialState(),
+      sessions,
+      {
+        rhythm: "weekly" as const,
+        weekA: { weekdays: [0], timeOfDayMins: 7 * 60 },
+        weekB: { weekdays: [], timeOfDayMins: 0 },
+        weeks: 12,
+        rangeStart: ANCHOR,
+      },
+      mayCtx,
+    );
+    expect(selectedSessionList(result.state).map((s) => s.id)).toEqual([
+      "mon-may",
+      "mon-june",
+    ]);
+  });
+
+  it("is emptied by clearActiveSelection and resetSelections", () => {
+    let state = createInitialState();
+    state = toggleSession(state, futureSession("s1"), mayCtx);
+    expect(selectedSessionList(clearActiveSelection(state))).toEqual([]);
+    expect(selectedSessionList(resetSelections(state))).toEqual([]);
+    expect(selectedSessionList(switchMode(state, "cancel"))).toEqual([]);
   });
 });
 

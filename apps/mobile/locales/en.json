@@ -1108,7 +1108,18 @@
       "cancelTitle_one": "Cancel this session?",
       "cancelTitle_other": "Cancel {{count}} sessions?",
       "cancelConfirmCta": "Cancel session",
-      "patternSkippedFull": "{{skipped}} of {{total}} sessions were full and skipped"
+      "patternSkippedFull": "{{skipped}} of {{total}} sessions were full and skipped",
+      "pattern": {
+        "weekly": "Every week",
+        "biweekly": "Alternating",
+        "weekA": "Week A",
+        "weekB": "Week B",
+        "weeks": "Number of weeks",
+        "time": "Time",
+        "apply": "Apply",
+        "applying": "Applying…",
+        "error": "Couldn't load sessions. Try again."
+      }
     }
   },
   "trainer": {

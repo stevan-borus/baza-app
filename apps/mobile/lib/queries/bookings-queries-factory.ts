@@ -36,6 +36,33 @@ function fetchClientBookingsPage(params: {
   );
 }
 
+/**
+ * Every session id the client holds a CONFIRMED upcoming booking on —
+ * ALL pages, not just the first. The paginated byClient query is fine for
+ * rendering a list the user scrolls, but any logic that asks "is this
+ * session already booked?" (the admin pattern sweep) needs the complete
+ * set: a booking sitting on page two is still a booking.
+ */
+export async function fetchAllUpcomingBookedSessionIds(
+  clientUserId: string,
+): Promise<Set<string>> {
+  const ids = new Set<string>();
+  let cursor: string | null = null;
+  do {
+    const page: ClientBookingsResponse = await fetchClientBookingsPage({
+      clientUserId,
+      period: "upcoming",
+      limit: 50,
+      cursor,
+    });
+    for (const b of page.bookings) {
+      if (b.status === "CONFIRMED") ids.add(b.session.id);
+    }
+    cursor = page.nextCursor;
+  } while (cursor);
+  return ids;
+}
+
 const bookingsAll = ["bookings"] as const;
 
 export const bookingsQueries = {

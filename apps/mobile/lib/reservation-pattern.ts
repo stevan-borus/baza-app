@@ -35,13 +35,42 @@ export type SessionForPattern = {
   startsAt: Date;
 };
 
+/**
+ * Every "YYYY-MM" availability key the pattern's date range touches, ascending.
+ *
+ * The screen's calendar only ever loads ONE month of availability, so a
+ * pattern started near month end used to have nothing but that month's
+ * leftovers to match against — "12 weeks" selected 2 sessions instead of 15+.
+ * The caller fetches each of these months before expanding.
+ *
+ * Uses the same `dayjs.format("YYYY-MM")` shape as
+ * `use-week-navigation.ts:monthKeyFromDate`, which is what
+ * `sessionsQueries.availabilityByMonth` is keyed on.
+ */
+export function monthKeysForPattern(input: PatternInput): string[] {
+  const start = input.rangeStart.startOf("day");
+  const end = patternRangeEnd(input);
+  const keys: string[] = [];
+  let cursor = start.startOf("month");
+  while (!cursor.isAfter(end, "month")) {
+    keys.push(cursor.format("YYYY-MM"));
+    cursor = cursor.add(1, "month");
+  }
+  return keys;
+}
+
+/** Last instant the pattern can match — shared by expansion and month keys. */
+function patternRangeEnd(input: PatternInput): dayjs.Dayjs {
+  return input.rangeStart.startOf("day").add(input.weeks, "week").endOf("day");
+}
+
 export function expandPattern(
   sessions: SessionForPattern[],
   input: PatternInput,
 ): Set<string> {
   const out = new Set<string>();
   const start = input.rangeStart.startOf("day");
-  const end = start.add(input.weeks, "week").endOf("day");
+  const end = patternRangeEnd(input);
   // Sessions whose startsAt is already in the past are never matched —
   // booking a past session has no real meaning and the UI's per-card
   // `disabled` state already prevents manual selection. The pattern

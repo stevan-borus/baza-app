@@ -1,8 +1,8 @@
 /**
  * Reservation mode — admin-only screen bound to one Client. Two ways to
- * populate the selection set: tap session cards in the calendar, or apply
+ * populate the selection: tap session cards in the calendar, or apply
  * a weekly/biweekly pattern via the accelerator sheet. Both feed the same
- * `selectedSessionIds` set.
+ * `selectedSessionsById` map.
  *
  * The selection state machine (mode, the two selection sets, the ClassType
  * filter, the unselectable rules, pattern merging) is pure and lives in
@@ -12,10 +12,10 @@
  * The route is gated to ADMIN — trainers and clients hitting
  * /klijenti/rezervisi get redirected to their home tab.
  */
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { useTranslation } from "react-i18next";
-import { useQuery, useInfiniteQuery } from "@tanstack/react-query";
+import { useQuery, useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter, type Href } from "expo-router";
 import dayjs from "dayjs";
 import { Icon } from "@/components/ui/icon";
@@ -30,11 +30,15 @@ import { EmptyState } from "@/components/ui/states";
 import { Input } from "@/components/ui/input";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { FilterChip } from "@/components/ui/studio/filter-chip";
-import { nowMs } from "@/lib/now";
+import { now, nowMs } from "@/lib/now";
 import { useWeekNavigation, weekRangeLabel } from "@/lib/use-week-navigation";
 import { useThemePreference } from "@/lib/theme-preference";
 import { authQueries } from "@/lib/queries/auth-queries-factory";
-import { type PatternInput, type RhythmWeek } from "@/lib/reservation-pattern";
+import {
+  monthKeysForPattern,
+  type PatternInput,
+  type RhythmWeek,
+} from "@/lib/reservation-pattern";
 import {
   applyPattern,
   classifySession,
@@ -42,6 +46,7 @@ import {
   createInitialState,
   distinctClassTypeNames,
   resetSelections,
+  selectedSessionList,
   setClassTypeFilter,
   switchMode,
   toggleBooking,
@@ -53,7 +58,10 @@ import { sessionsQueries } from "@/lib/queries/sessions-queries-factory";
 import { BottomSheetFlatList } from "@gorhom/bottom-sheet";
 import { clientsQueries } from "@/lib/queries/clients-queries-factory";
 import { packagesQueries } from "@/lib/queries/packages-queries-factory";
-import { bookingsQueries } from "@/lib/queries/bookings-queries-factory";
+import {
+  bookingsQueries,
+  fetchAllUpcomingBookedSessionIds,
+} from "@/lib/queries/bookings-queries-factory";
 import {
   useCreateReservationsMutation,
   useCancelReservationsBulkMutation,
@@ -105,8 +113,13 @@ export function ReservationMode() {
   // The whole selection state machine lives in the pure module
   // `lib/admin/reservation-selection` — the component just holds the value
   // and dispatches transitions, so the rules are unit-testable.
-  const [selection, setSelection] = useState(createInitialState);
-  const { mode, classTypeFilter, selectedSessionIds, selectedBookingIds } = selection;
+  const [selection, setSelection] = useState(
+    createInitialState<AvailabilitySession>,
+  );
+  const { mode, classTypeFilter, selectedSessionsById, selectedBookingIds } = selection;
+  // Everything selected, in every month — the visible month's array is only
+  // ever a subset (see reservation-selection.ts → selectedSessionsById).
+  const selectedSessions = selectedSessionList(selection);
   const [clientProfileId, setClientProfileId] = useState<string | null>(
     params.clientProfileId ?? null,
   );
@@ -140,6 +153,14 @@ export function ReservationMode() {
   const [showConfirmSheet, setShowConfirmSheet] = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
 
+  const queryClient = useQueryClient();
+  // Invalidation ticket for an in-flight pattern apply. The sweep awaits one
+  // network round-trip per month; if the admin dismisses the pattern sheet or
+  // the bound client changes before the fetches land, the computed result
+  // describes a selection context that no longer exists and must be dropped —
+  // otherwise it would resurrect a cleared selection or leak one client's
+  // pattern onto the next. Bumped by every event that ends that context.
+  const applyEpochRef = useRef(0);
   const availabilityQuery = useQuery(sessionsQueries.availabilityByMonth(month));
   const allSessions = (availabilityQuery.data?.sessions ?? []) as AvailabilitySession[];
 
@@ -216,8 +237,44 @@ export function ReservationMode() {
     return acc;
   }, {});
 
-  function handleApplyPattern(input: PatternInput) {
-    const result = applyPattern(selection, allSessions, input, selectionCtx);
+  // A 12-week pattern almost always outruns the month the calendar is parked
+  // on — started on the 28th it would otherwise have nothing but that month's
+  // last few sessions to match ("2 selected instead of 15"). Fetch every month
+  // the range spans (cached at the factory's own staleTime — these are the same
+  // query options the calendar uses, so a revisit is free) and expand against
+  // the merged list.
+  async function handleApplyPattern(input: PatternInput) {
+    const epoch = applyEpochRef.current;
+    const months = monthKeysForPattern(input);
+    // The screen's own bookings query only holds its loaded pages (page one,
+    // usually) — enough for the visible list, not for a sweep that spans
+    // months. Walk the complete set here; if that walk fails, fall back to
+    // the loaded pages rather than blocking the sweep (the server re-checks
+    // and skips already-booked sessions anyway — only the count softens).
+    const [pages, completeBookedIds] = await Promise.all([
+      Promise.all(
+        months.map((m) =>
+          queryClient.fetchQuery(sessionsQueries.availabilityByMonth(m)),
+        ),
+      ),
+      clientUserId
+        ? fetchAllUpcomingBookedSessionIds(clientUserId).catch(() => null)
+        : Promise.resolve(null),
+    ]);
+    // The month endpoints can overlap at boundaries — dedupe by id.
+    const byId = new Map<string, AvailabilitySession>();
+    for (const page of pages)
+      for (const s of page.sessions as AvailabilitySession[]) byId.set(s.id, s);
+
+    // Superseded while we were fetching (sheet dismissed, client changed) —
+    // the captured selection no longer describes reality; drop the result.
+    if (applyEpochRef.current !== epoch) return;
+
+    const sweepCtx: SelectionContext = {
+      nowMs: nowMs(),
+      alreadyBookedSessionIds: completeBookedIds ?? alreadyBookedSessionIds,
+    };
+    const result = applyPattern(selection, [...byId.values()], input, sweepCtx);
     setSelection(result.state);
     const total = result.added + result.skippedFull + result.skippedAlreadyBooked;
     setPatternNotice(
@@ -246,6 +303,7 @@ export function ReservationMode() {
             clientUserId: undefined,
             clientFullName: undefined,
           });
+          applyEpochRef.current += 1;
           setClientProfileId(null);
           setClientUserId(null);
           setClientFullName(null);
@@ -333,7 +391,7 @@ export function ReservationMode() {
                     <SelectableSessionCard
                       key={s.id}
                       session={s}
-                      selected={selectedSessionIds.has(s.id)}
+                      selected={selectedSessionsById.has(s.id)}
                       classification={classifySession(s, selectionCtx)}
                       onPress={() =>
                         setSelection((prev) => toggleSession(prev, s, selectionCtx))
@@ -404,8 +462,8 @@ export function ReservationMode() {
 
       {mode === "reserve" ? (
         <SelectionToolbar
-          count={selectedSessionIds.size}
-          disabled={!clientProfileId || selectedSessionIds.size === 0}
+          count={selectedSessions.length}
+          disabled={!clientProfileId || selectedSessions.length === 0}
           onConfirm={() => setShowConfirmSheet(true)}
           onClear={() => setSelection(clearActiveSelection)}
           ctaLabel={t("admin.reservations.confirm", { defaultValue: "Rezerviši" })}
@@ -424,6 +482,7 @@ export function ReservationMode() {
       <AppSheet open={showClientPicker} onOpenChange={setShowClientPicker} rawContent>
         <ClientPickerSheet
           onPick={(profile) => {
+            applyEpochRef.current += 1;
             setClientProfileId(profile.id);
             setClientUserId(profile.userId);
             setClientFullName(profile.fullName);
@@ -432,7 +491,13 @@ export function ReservationMode() {
         />
       </AppSheet>
 
-      <AppSheet open={showPatternSheet} onOpenChange={setShowPatternSheet}>
+      <AppSheet
+        open={showPatternSheet}
+        onOpenChange={(open) => {
+          if (!open) applyEpochRef.current += 1;
+          setShowPatternSheet(open);
+        }}
+      >
         <PatternSheet onApply={handleApplyPattern} />
       </AppSheet>
 
@@ -440,7 +505,7 @@ export function ReservationMode() {
         {clientProfileId ? (
           <ConfirmSheet
             clientProfileId={clientProfileId}
-            selectedSessions={allSessions.filter((s) => selectedSessionIds.has(s.id))}
+            selectedSessions={selectedSessions}
             onDone={() => {
               setSelection(clearActiveSelection);
               setShowConfirmSheet(false);
@@ -655,7 +720,7 @@ function SelectionToolbar({
   const { t } = useTranslation();
   return (
     <View
-      className="absolute bottom-0 left-0 right-0 flex-row items-center gap-3 border-t border-glass-border bg-bg/95 px-5 py-4"
+      className="absolute bottom-0 left-0 right-0 flex-row items-center gap-3 border-t border-glass-border bg-background px-5 py-4"
       style={{ paddingBottom: 24 }}
     >
       <View className="flex-1">
@@ -832,7 +897,7 @@ function ClientPickerSheet({
 function PatternSheet({
   onApply,
 }: {
-  onApply: (input: PatternInput) => void;
+  onApply: (input: PatternInput) => Promise<void>;
 }) {
   const { t, i18n } = useTranslation();
   const lang = i18n.language === "en" ? "en" : "sr";
@@ -843,24 +908,45 @@ function PatternSheet({
   // Raw string state for the weeks input — only parsed on apply, so deleting
   // the value doesn't snap to "0" while the user is editing.
   const [weeksStr, setWeeksStr] = useState("12");
+  // Applying reaches out for every month the range spans, so it can take a
+  // network round-trip per month — hold the button until it lands rather than
+  // closing the sheet on a selection that isn't computed yet.
+  const [applying, setApplying] = useState(false);
+  // A month fetch can fail mid-apply; the sheet is the only surface the
+  // admin is looking at, so the failure has to be said here — otherwise the
+  // button just snaps back to "Primeni" and the tap looks ignored.
+  const [applyError, setApplyError] = useState<string | null>(null);
 
-  function handleApply() {
+  async function handleApply() {
     if (weekA.weekdays.length === 0) return;
     if (rhythm === "biweekly" && weekB.weekdays.length === 0) return;
     const parsed = Number(weeksStr);
     const weekCount = Number.isFinite(parsed) && parsed > 0 ? Math.min(52, parsed) : 1;
-    onApply({
-      rhythm,
-      weekA,
-      weekB,
-      weeks: weekCount,
-      rangeStart: dayjs().startOf("day"),
-    });
+    setApplying(true);
+    setApplyError(null);
+    try {
+      await onApply({
+        rhythm,
+        weekA,
+        weekB,
+        weeks: weekCount,
+        // "Today" — via the now() seam so the test stack's anchor pins it.
+        rangeStart: dayjs(now()).startOf("day"),
+      });
+    } catch {
+      setApplyError(
+        t("admin.reservations.pattern.error", {
+          defaultValue: "Nije moguće učitati termine. Pokušaj ponovo.",
+        }),
+      );
+    } finally {
+      setApplying(false);
+    }
   }
 
   const aReady = weekA.weekdays.length > 0;
   const bReady = rhythm === "weekly" || weekB.weekdays.length > 0;
-  const canApply = aReady && bReady;
+  const canApply = aReady && bReady && !applying;
 
   return (
     <View className="flex-col gap-5">
@@ -915,8 +1001,24 @@ function PatternSheet({
         />
       </View>
 
-      <Button onPress={handleApply} disabled={!canApply}>
-        {t("admin.reservations.pattern.apply", { defaultValue: "Primeni" })}
+      {applyError ? (
+        <Text
+          testID="reservation-pattern-error"
+          className="text-danger font-body-medium"
+          style={{ fontSize: 13, lineHeight: 18 }}
+        >
+          {applyError}
+        </Text>
+      ) : null}
+
+      <Button
+        testID="reservation-pattern-apply"
+        onPress={handleApply}
+        disabled={!canApply}
+      >
+        {applying
+          ? t("admin.reservations.pattern.applying", { defaultValue: "Primenjujem…" })
+          : t("admin.reservations.pattern.apply", { defaultValue: "Primeni" })}
       </Button>
     </View>
   );
