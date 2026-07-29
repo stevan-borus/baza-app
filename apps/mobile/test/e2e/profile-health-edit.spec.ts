@@ -1,14 +1,15 @@
 /**
  * E2E: profile health edit-existing flow.
  *
- * Verifies the always-editable layout:
+ * Verifies the always-editable layout and the post-save exit:
  *   1. Client records an intake (same setup as the smoke spec).
- *   2. After save, the sticky save button is gone and the form is still
- *      mounted (always-editable).
- *   3. Toggling a checkbox marks the draft dirty → sticky save reappears.
- *   4. Saving again hides the button (draft now matches server).
+ *   2. Saving pops back to the profile — the task is done, so the client
+ *      doesn't sit on a form with nothing left to do.
+ *   3. Re-opening prefills the form; toggling a checkbox marks the draft
+ *      dirty → sticky save appears (and is enabled).
+ *   4. Saving again returns to the profile.
  *
- * Covers the new dirty-detection path: changes to the prefilled form must
+ * Covers the dirty-detection path: changes to the prefilled form must
  * surface the save action, and a no-op refetch must not show it.
  */
 import { test, expect } from "./helpers/fixtures";
@@ -25,7 +26,7 @@ test.describe("profile health — edit-existing flow", () => {
     await disconnect();
   });
 
-  test("editing a prefilled intake reveals sticky save; saving hides it again", async ({
+  test("editing a prefilled intake reveals sticky save; saving returns to the profile", async ({
     page,
   }) => {
     await page.setViewportSize({ width: 390, height: 844 });
@@ -47,10 +48,21 @@ test.describe("profile health — edit-existing flow", () => {
     await page.getByTestId("profile-health-save").click();
     await initialSave;
 
-    // Sticky save disappears because draft now matches the saved record.
-    await expect(page.getByTestId("profile-health-save")).toHaveCount(0);
-    // Form stays mounted (always-editable, not a chip view).
+    // Saving pops back to the profile — the form is gone, the row is back.
+    await expect(page.getByTestId("health-intake-form")).toHaveCount(0);
+    await expect(page.getByTestId("profile-health-row")).toBeVisible();
+
+    // Re-open: the form is still always-editable and now prefilled.
+    await page.getByTestId("profile-health-row").click();
     await expect(page.getByTestId("health-intake-form")).toBeVisible();
+    // Nothing changed yet, so the sticky save stays hidden.
+    await expect(page.getByTestId("profile-health-save")).toHaveCount(0);
+    // Wait for the prefill to actually land before touching the form: the
+    // intake query is staleTime: 0, so re-entry refetches, and the draft is
+    // reseeded from the result — a toggle made before that lands is wiped.
+    // The withdraw link only renders once an intake is in hand, so it is the
+    // signal that the refetch resolved.
+    await expect(page.getByTestId("profile-health-withdraw")).toBeVisible();
 
     // Toggle a condition the user hadn't selected → draft becomes dirty.
     await page.getByTestId("condition-back_pain").click();
@@ -63,7 +75,7 @@ test.describe("profile health — edit-existing flow", () => {
       page.locator('[data-testid="profile-health-save"][aria-disabled="true"]'),
     ).toHaveCount(0, { timeout: 5_000 });
 
-    // Save → re-fires POST → button hides as state returns to clean.
+    // Save → re-fires POST → back to the profile again.
     const editSave = page.waitForResponse(
       (r) =>
         r.url().includes("/api/health-intake") && r.request().method() === "POST",
@@ -72,6 +84,7 @@ test.describe("profile health — edit-existing flow", () => {
     const editResp = await editSave;
     expect(editResp.status()).toBe(200);
 
-    await expect(page.getByTestId("profile-health-save")).toHaveCount(0);
+    await expect(page.getByTestId("health-intake-form")).toHaveCount(0);
+    await expect(page.getByTestId("profile-health-row")).toBeVisible();
   });
 });

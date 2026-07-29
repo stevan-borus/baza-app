@@ -66,6 +66,13 @@ export default defineConfig({
               ),
             },
             {
+              find: "react-native-keyboard-controller",
+              replacement: path.resolve(
+                __dirname,
+                "test/component/stubs/keyboard-controller.tsx",
+              ),
+            },
+            {
               find: "moti",
               replacement: path.resolve(
                 __dirname,

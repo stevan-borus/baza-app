@@ -3,8 +3,9 @@
  *
  * Setup: the client records a minimal intake first (no seed shortcut for
  * pre-existing intake rows, and the surface intentionally only reveals
- * "Povuci saglasnost" when an intake exists). Then exercises the destructive
- * action:
+ * "Povuci saglasnost" when an intake exists). Saving pops back to the
+ * profile, so the spec re-opens the row before exercising the destructive
+ * action — unlike save, withdrawing keeps the client on the screen:
  *
  *   1. Tap once → button arms (text + bold, red), no server call.
  *   2. Tap again within 3s → DELETE-equivalent withdraw mutation runs.
@@ -51,7 +52,11 @@ test.describe("profile health — withdraw flow", () => {
     const recordResp = await recordPost;
     expect(recordResp.status()).toBe(200);
 
-    // Save button hides; withdraw link is revealed at the bottom of the form.
+    // Saving returns to the profile; re-open the row to reach the withdraw
+    // link, which is revealed at the bottom now that an intake exists.
+    await expect(page.getByTestId("health-intake-form")).toHaveCount(0);
+    await page.getByTestId("profile-health-row").click();
+    await expect(page.getByTestId("health-intake-form")).toBeVisible();
     await expect(page.getByTestId("profile-health-save")).toHaveCount(0);
     const withdraw = page.getByTestId("profile-health-withdraw");
     await expect(withdraw).toBeVisible();

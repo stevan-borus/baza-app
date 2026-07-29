@@ -6,12 +6,14 @@
  * when one exists. "Withdraw consent" lives at the very bottom of the
  * scrolled form (Settings-style: destructive actions at the end), so it
  * doesn't compete with content. The sticky "Save changes" footer appears
- * only when the draft diverges from the saved record.
+ * only when the draft diverges from the saved record, and a successful save
+ * pops back to the profile.
  */
 import { useTranslation } from "react-i18next";
 import { useEffect, useRef, useState } from "react";
 import { Pressable, Text, View } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
+import { router } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import { authQueries } from "@/lib/queries/auth-queries-factory";
 import {
@@ -135,6 +137,10 @@ export default function ClientProfileHealth() {
     setError(null);
     try {
       await recordMutation.mutateAsync(intakeToInput(draft));
+      // Saving is the end of the task — go back to the profile the client
+      // pushed from instead of leaving them on a form with nothing left to
+      // do. On failure we stay put, so the error sits next to the fields.
+      router.back();
     } catch {
       setError(t("intake.saveFailed"));
     }
