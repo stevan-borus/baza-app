@@ -7,9 +7,10 @@
  *   3. Tap the Zdravstveni podaci row → pushes /(client)/profile/health.
  *   4. Form is always rendered inline (always-editable layout).
  *   5. Fill the required fields, tap "Sačuvaj izmene".
- *   6. Sticky save button disappears (no longer dirty); the form stays
- *      mounted but is now in sync with the saved record, and the
- *      "Povuci saglasnost" link is revealed at the bottom of the scroll.
+ *   6. Saving pops back to the profile tab.
+ *   7. Re-opening the row shows the form in sync with the saved record —
+ *      no sticky save, and the "Povuci saglasnost" link now revealed at
+ *      the bottom of the scroll.
  *
  * RN-Web caveat: the Button component renders as <div> with aria-disabled
  * while disabled and strips the attribute when enabled, so we use
@@ -31,7 +32,7 @@ test.describe("health intake — profile flow", () => {
     await disconnect();
   });
 
-  test("client navigates to /health → fills the long-form intake → form collapses to chips", async ({
+  test("client navigates to /health → fills the long-form intake → returns to the profile", async ({
     page,
   }) => {
     await page.setViewportSize({ width: 390, height: 844 });
@@ -72,10 +73,15 @@ test.describe("health intake — profile flow", () => {
       );
     }
 
-    // Save button hides (no longer dirty) and the withdraw link becomes
-    // visible at the bottom of the scrolled form.
-    await expect(page.getByTestId("profile-health-save")).toHaveCount(0);
+    // Saving returns to the profile — the form unmounts, the row is back.
+    await expect(page.getByTestId("health-intake-form")).toHaveCount(0);
+    await expect(healthRow).toBeVisible();
+
+    // Re-opening shows the saved record: no sticky save (draft is clean) and
+    // the withdraw link now at the bottom of the scrolled form.
+    await healthRow.click();
     await expect(page.getByTestId("health-intake-form")).toBeVisible();
+    await expect(page.getByTestId("profile-health-save")).toHaveCount(0);
     await expect(page.getByTestId("profile-health-withdraw")).toBeVisible();
   });
 });
