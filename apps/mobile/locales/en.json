@@ -726,7 +726,12 @@
       "payLaterHint": "The package activates immediately; the client pays in person at their first visit.",
       "openActions": "Open actions",
       "viewProfile": "View profile",
-      "sessionsShort": "{{count}} sessions"
+      "sessionsShort": "{{count}} sessions",
+      "giftToggleLabel": "Gift package",
+      "giftToggleHint": "The client doesn't pay, but the trainer is paid at the package rate.",
+      "giftSessionsLabel": "Gifted sessions",
+      "giftSessionsHint": "At most {{count}} (what the package holds).",
+      "giftSessionsHintNoPackage": "Pick a package first."
     },
     "clientDetail": {
       "title": "Client",

@@ -1,21 +1,19 @@
 /**
- * Assign-package sheet — birthday-gift class-type picker (Vitest Browser Mode,
- * real Chromium, real RNW, real i18n with the shipped Serbian copy).
+ * Assign-package sheet — gifting (Vitest Browser Mode, real Chromium, real
+ * RNW, real i18n with the shipped Serbian copy).
  *
- * §5: one 🎂 gift, targeted at whichever class types the admin ticks. When the
- * SELECTED package type is a birthday gift, the sheet shows a MULTI-select
- * class-type picker pre-ticked from `initialClassTypeId`; submit carries the
- * full ticked set as `classTypeIdsOverride`, and is gated on ≥1 ticked. A
- * non-gift SKU shows no picker and submits no override. The server-side
- * validation (400s, snapshot) is covered by the integration suite.
+ * A gift is now a REAL, priced package handed over without payment rather than
+ * its own unpriced 🎂 SKU: it keeps the package price so trainer payout can
+ * value the sessions, and grants ONE session by default instead of the whole
+ * pack. This pins that contract — the toggle, the default, the cap, and the
+ * fact that the retired gift SKUs are no longer selectable at all.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { fireEvent, waitFor, within } from "@testing-library/react";
+import { fireEvent, waitFor } from "@testing-library/react";
 import React from "react";
 import "@/lib/i18n";
 import { renderWithQueryClient } from "./helpers";
 import { packagesQueries } from "@/lib/queries/packages-queries-factory";
-import { trainingsQueries } from "@/lib/queries/trainings-queries-factory";
 
 const apiRequestMock = vi.fn(
   async (_path: string, _opts?: Record<string, unknown>) => ({
@@ -35,7 +33,8 @@ const CLIENT = {
   user: { id: "user-1", fullName: "Ana Ković", email: "ana@test.local" },
 };
 
-const GIFT = {
+/** A retired gift SKU — must not appear in the picker any more. */
+const LEGACY_GIFT = {
   id: "pt-gift",
   name: "Rođendanski poklon",
   sessionCount: 1,
@@ -45,22 +44,16 @@ const GIFT = {
   classTypes: [{ id: "ct-mat", name: "Mat" }],
   isBirthdayGift: true,
 };
-const NON_GIFT = {
+const REFORMER_12 = {
   id: "pt-reformer",
-  name: "Reformer 8",
-  sessionCount: 8,
+  name: "Reformer 12",
+  sessionCount: 12,
   validityDays: 60,
   lateCancelHours: 12,
-  price: 24000,
+  price: 15000,
   classTypes: [{ id: "ct-reformer", name: "Reformer" }],
   isBirthdayGift: false,
 };
-
-const CLASS_TYPES = [
-  { id: "ct-mat", name: "Mat", maxClients: 10, durationMins: 60 },
-  { id: "ct-reformer", name: "Reformer", maxClients: 6, durationMins: 60 },
-  { id: "ct-barre", name: "Barre", maxClients: 8, durationMins: 60 },
-];
 
 function renderSheet(initialClassTypeId?: string) {
   return renderWithQueryClient(
@@ -73,11 +66,7 @@ function renderSheet(initialClassTypeId?: string) {
     (client) => {
       client.setQueryData(packagesQueries.types().queryKey, {
         success: true,
-        packageTypes: [GIFT, NON_GIFT],
-      });
-      client.setQueryData(trainingsQueries.classTypes().queryKey, {
-        success: true,
-        classTypes: CLASS_TYPES,
+        packageTypes: [LEGACY_GIFT, REFORMER_12],
       });
       // Seed the client's existing-packages cache so the duplicate-hint query
       // doesn't hit the mocked apiRequest — keeps mock.calls to the POST only.
@@ -89,11 +78,11 @@ function renderSheet(initialClassTypeId?: string) {
   );
 }
 
-// The mocked apiRequest is shared with any query the sheet fires; the mutation
-// is the one POST to the client-packages endpoint.
 function postCall() {
   return apiRequestMock.mock.calls.find(
-    (c) => c[0] === "/api/packages/client-packages" && (c[1] as { method?: string })?.method === "POST",
+    (c) =>
+      c[0] === "/api/packages/client-packages" &&
+      (c[1] as { method?: string })?.method === "POST",
   );
 }
 
@@ -101,64 +90,86 @@ beforeEach(() => {
   apiRequestMock.mockClear();
 });
 
-describe("AssignPackageSheetContent gift class-type picker", () => {
-  it("shows the picker pre-ticked from initialClassTypeId once the gift SKU is selected", () => {
-    const screen = renderSheet("ct-reformer");
-    // Pick the gift SKU.
-    fireEvent.click(screen.getByTestId("assign-package-option-pt-gift"));
-    // Picker renders with its shipped Serbian (plural) label.
-    expect(screen.getByText("Tipovi treninga za poklon")).toBeTruthy();
-    // The pre-ticked row carries the selection check; the others don't.
-    const prefilled = screen.getByTestId("assign-gift-class-type-ct-reformer");
-    expect(within(prefilled).queryByTestId("lucide-Check")).toBeTruthy();
-    const other = screen.getByTestId("assign-gift-class-type-ct-barre");
-    expect(within(other).queryByTestId("lucide-Check")).toBeNull();
+describe("AssignPackageSheetContent gifting", () => {
+  it("no longer offers the retired gift SKUs", () => {
+    const screen = renderSheet();
+    // Selecting an unpriced gift SKU would create a package worth nothing to
+    // the trainer, so it is filtered out entirely.
+    expect(screen.queryByTestId("assign-package-option-pt-gift")).toBeNull();
+    expect(screen.queryByTestId("assign-package-option-pt-reformer")).toBeTruthy();
   });
 
-  it("ticking a second class type submits both in classTypeIdsOverride", async () => {
-    const screen = renderSheet("ct-reformer");
-    fireEvent.click(screen.getByTestId("assign-package-option-pt-gift"));
-    // Reformer is pre-ticked; admin adds Barre without unticking Reformer.
-    fireEvent.click(screen.getByTestId("assign-gift-class-type-ct-barre"));
+  it("gifts one session by default, keeping the real package", async () => {
+    const screen = renderSheet();
+    fireEvent.click(screen.getByTestId("assign-package-option-pt-reformer"));
+    fireEvent.click(screen.getByTestId("assign-gift-toggle"));
 
     fireEvent.click(screen.getByTestId("assign-package-submit"));
     await waitFor(() => expect(postCall()).toBeTruthy());
+
     const body = postCall()![1] as {
-      method: string;
-      body: { packageTypeId: string; classTypeIdsOverride: string[] };
+      body: {
+        packageTypeId: string;
+        isGift: boolean;
+        sessionsGranted: number;
+      };
     };
-    expect(body.method).toBe("POST");
-    expect(body.body.packageTypeId).toBe("pt-gift");
-    expect([...body.body.classTypeIdsOverride].sort()).toEqual(
-      ["ct-barre", "ct-reformer"].sort(),
-    );
+    // The REAL package, so payroll can value the session at 15000/12.
+    expect(body.body.packageTypeId).toBe("pt-reformer");
+    expect(body.body.isGift).toBe(true);
+    // Gifting "Reformer 12" must not hand over all twelve.
+    expect(body.body.sessionsGranted).toBe(1);
   });
 
-  it("unticking down to zero disables submit", () => {
-    // RN-Web Pressable renders `disabled` as aria-disabled on a div, not the
-    // native disabled attribute — assert the aria state directly.
-    const screen = renderSheet("ct-reformer");
-    fireEvent.click(screen.getByTestId("assign-package-option-pt-gift"));
-    // With the pre-ticked Reformer the submit is enabled…
-    expect(
-      screen.getByTestId("assign-package-submit").getAttribute("aria-disabled"),
-    ).not.toBe("true");
-    // …untick it → nothing selected → submit gated.
-    fireEvent.click(screen.getByTestId("assign-gift-class-type-ct-reformer"));
-    expect(
-      screen.getByTestId("assign-package-submit").getAttribute("aria-disabled"),
-    ).toBe("true");
+  it("sends no gift fields when the toggle is off", async () => {
+    const screen = renderSheet();
+    fireEvent.click(screen.getByTestId("assign-package-option-pt-reformer"));
+
+    fireEvent.click(screen.getByTestId("assign-package-submit"));
+    await waitFor(() => expect(postCall()).toBeTruthy());
+
+    const body = postCall()![1] as { body: Record<string, unknown> };
+    expect(body.body.isGift).toBeUndefined();
+    expect(body.body.sessionsGranted).toBeUndefined();
   });
 
-  it("a non-gift SKU shows no picker and submits no override", async () => {
+  it("carries an edited gift session count", async () => {
+    const screen = renderSheet();
+    fireEvent.click(screen.getByTestId("assign-package-option-pt-reformer"));
+    fireEvent.click(screen.getByTestId("assign-gift-toggle"));
+    fireEvent.change(screen.getByTestId("assign-gift-sessions"), {
+      target: { value: "3" },
+    });
+
+    fireEvent.click(screen.getByTestId("assign-package-submit"));
+    await waitFor(() => expect(postCall()).toBeTruthy());
+
+    const body = postCall()![1] as { body: { sessionsGranted: number } };
+    expect(body.body.sessionsGranted).toBe(3);
+  });
+
+  it("blocks submit when the gift count exceeds the package's own sessions", () => {
+    const screen = renderSheet();
+    fireEvent.click(screen.getByTestId("assign-package-option-pt-reformer"));
+    fireEvent.click(screen.getByTestId("assign-gift-toggle"));
+    // Reformer 12 holds twelve; thirteen would invent a session.
+    fireEvent.change(screen.getByTestId("assign-gift-sessions"), {
+      target: { value: "13" },
+    });
+
+    fireEvent.click(screen.getByTestId("assign-package-submit"));
+    expect(postCall()).toBeFalsy();
+  });
+
+  it("opens with the gift toggle on for a birthday deep link", async () => {
+    // A BIRTHDAY_ADMIN_PROMPT tap is by definition a gift.
     const screen = renderSheet("ct-reformer");
     fireEvent.click(screen.getByTestId("assign-package-option-pt-reformer"));
-    expect(screen.queryByText("Tipovi treninga za poklon")).toBeNull();
 
     fireEvent.click(screen.getByTestId("assign-package-submit"));
     await waitFor(() => expect(postCall()).toBeTruthy());
-    const body = postCall()![1] as { body: Record<string, unknown> };
-    expect(body.body).not.toHaveProperty("classTypeIdsOverride");
-    expect(body.body).toMatchObject({ packageTypeId: "pt-reformer" });
+
+    const body = postCall()![1] as { body: { isGift: boolean } };
+    expect(body.body.isGift).toBe(true);
   });
 });

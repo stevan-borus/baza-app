@@ -730,7 +730,12 @@
       "payLaterHint": "Paket se aktivira odmah, klijent plaća uživo pri prvom dolasku.",
       "openActions": "Otvori akcije",
       "viewProfile": "Otvori profil",
-      "sessionsShort": "{{count}} termina"
+      "sessionsShort": "{{count}} termina",
+      "giftToggleLabel": "Poklon paket",
+      "giftToggleHint": "Klijent ne plaća, ali se treneru obračunava po ceni paketa.",
+      "giftSessionsLabel": "Broj termina na poklon",
+      "giftSessionsHint": "Najviše {{count}} (koliko paket ima).",
+      "giftSessionsHintNoPackage": "Prvo izaberite paket."
     },
     "clientDetail": {
       "title": "Klijent",

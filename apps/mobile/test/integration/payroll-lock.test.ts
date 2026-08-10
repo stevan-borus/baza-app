@@ -462,6 +462,41 @@ describe("trainer rates", () => {
     expect(body.rates.map((r: { percent: number }) => r.percent)).toContain(55);
   });
 
+  it("starts a rate on the picked calendar day in Belgrade, not the day before", async () => {
+    const seeded = await seed();
+    asUser(seeded.admin);
+
+    await POST_RATE(
+      rateRequest({
+        trainerUserId: seeded.trainer.id,
+        percent: 45,
+        effectiveFrom: "2026-09-01",
+      }),
+    );
+
+    const stored = await prisma.trainerRate.findFirstOrThrow({
+      where: { trainerUserId: seeded.trainer.id, percent: 45 },
+    });
+    // 05:00 Belgrade on 1 Sep = 03:00Z (CEST). Parsing the date string as an
+    // instant instead of a calendar day would land on 31 Aug — a rate that
+    // silently starts in the wrong MONTH, which is the unit payroll is paid in.
+    expect(stored.effectiveFrom.toISOString()).toBe("2026-09-01T03:00:00.000Z");
+  });
+
+  it("rejects an effectiveFrom that is not a plain calendar date", async () => {
+    const seeded = await seed();
+    asUser(seeded.admin);
+
+    const res = await POST_RATE(
+      rateRequest({
+        trainerUserId: seeded.trainer.id,
+        percent: 45,
+        effectiveFrom: "2026-09-01T22:30:00.000Z",
+      }),
+    );
+    expect(res.status).toBe(400);
+  });
+
   it("rejects a rate for a user who is not a trainer", async () => {
     const seeded = await seed();
     asUser(seeded.admin);

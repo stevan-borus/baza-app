@@ -33,18 +33,19 @@ export async function GET(request: Request) {
     select: { id: true },
   });
 
-  const months = [];
-  for (const trainer of trainers) {
-    months.push(
-      await readPayrollPeriod(prisma, {
+  // Per-trainer reads are independent, so run them together rather than
+  // paying one round trip per trainer in series.
+  const months = await Promise.all(
+    trainers.map((trainer) =>
+      readPayrollPeriod(prisma, {
         trainerUserId: trainer.id,
         year: params.year,
         month: params.month,
         asOf,
         compute: computePayrollMonth,
       }),
-    );
-  }
+    ),
+  );
 
   return respond(payrollSummaryResponseSchema, {
     success: true,

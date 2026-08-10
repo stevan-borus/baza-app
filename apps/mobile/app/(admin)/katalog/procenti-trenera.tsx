@@ -7,6 +7,7 @@
  * paid. The list shows the rate in force today; the sheet shows the trail.
  */
 import { useState } from "react";
+import dayjs from "dayjs";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Pressable, ScrollView, Text, View } from "react-native";
@@ -263,8 +264,12 @@ export default function ProcentiTrenera() {
               await createRate.mutateAsync({
                 trainerUserId: editing.id,
                 percent: parsedPercent,
-                // Date-only: the server normalizes to the studio day boundary.
-                effectiveFrom: effectiveFrom.toISOString().slice(0, 10),
+                // The CALENDAR date the admin picked, formatted locally — not
+                // via toISOString(), which converts to UTC first and would send
+                // the previous day for anything picked before 02:00 in
+                // Belgrade, starting the rate in the wrong month. The server
+                // re-stamps it at the studio day boundary.
+                effectiveFrom: dayjs(effectiveFrom).format("YYYY-MM-DD"),
                 note: note.trim() || undefined,
               });
               setEditing(null);

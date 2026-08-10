@@ -7,7 +7,7 @@ import { UserRole } from "@/generated/prisma";
 import { requireRole } from "@/lib/server/auth-guards";
 import { fail, parseBody, respond } from "@/lib/server/http";
 import { prisma } from "@/lib/server/prisma";
-import { studioDayStartFor } from "@/lib/studio-time";
+import { studioDayStartForKey } from "@/lib/studio-time";
 
 /**
  * Trainer commission rates.
@@ -62,18 +62,23 @@ export async function POST(request: Request) {
     return fail("User is not a trainer", 400);
   }
 
-  const effectiveFrom = new Date(parsed.data.effectiveFrom);
-  if (Number.isNaN(effectiveFrom.getTime())) {
-    return fail("Invalid effectiveFrom date", 400);
+  // A rate starts on a CALENDAR DAY, so the client sends `YYYY-MM-DD` and the
+  // key path stamps it directly at that day's studio opening. Round-tripping
+  // through `new Date(...)` first would parse the string as UTC midnight and
+  // rely on Belgrade being ahead of UTC to land back on the right date — true
+  // today, but a silent trap the moment anything shifts.
+  const dayKey = /^\d{4}-\d{2}-\d{2}$/.exec(parsed.data.effectiveFrom)?.[0];
+  if (!dayKey) {
+    return fail("effectiveFrom must be a YYYY-MM-DD date", 400);
   }
 
   const rate = await prisma.trainerRate.create({
     data: {
       trainerUserId: parsed.data.trainerUserId,
       percent: parsed.data.percent,
-      // Normalize to the studio day boundary the rest of the app uses, so a
-      // rate "from the 1st" covers that whole day's sessions.
-      effectiveFrom: studioDayStartFor(effectiveFrom),
+      // The studio day boundary the rest of the app uses, so a rate "from the
+      // 1st" covers that whole day's sessions.
+      effectiveFrom: studioDayStartForKey(dayKey),
       note: parsed.data.note ?? null,
       createdByUserId: guard.user.id,
     },

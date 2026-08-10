@@ -28,7 +28,6 @@ import {
   packagesQueries,
   useAssignClientPackageMutation,
 } from "@/lib/queries/packages-queries-factory";
-import { trainingsQueries } from "@/lib/queries/trainings-queries-factory";
 import { useCreateBillingMutation } from "@/lib/queries/billing-queries-factory";
 import { RAW_METHOD_LABEL_KEYS } from "@/lib/payment-method-labels";
 import { assignedSamePackageToday } from "@/lib/same-day-package-assignment";
@@ -65,11 +64,10 @@ export type AssignPackageSheetContentProps = {
    */
   initialPackageTypeId?: string;
   /**
-   * Birthday-gift deep-link pre-selection: the class type the gift picker opens
-   * with pre-ticked (e.g. the client's usual class from a BIRTHDAY_ADMIN_PROMPT).
-   * Only meaningful once the selected SKU is a birthday gift; the picker is
-   * multi-select, so the admin can tick more before confirming. useState
-   * initializer — no effect.
+   * Birthday deep-link marker (from a BIRTHDAY_ADMIN_PROMPT tap). Gifts no
+   * longer carry their own class-type set — they inherit the real package's —
+   * so this now only tells the sheet the assignment is a gift, and it opens
+   * with the gift toggle already on. useState initializer — no effect.
    */
   initialClassTypeId?: string;
 };
@@ -87,12 +85,14 @@ export function AssignPackageSheetContent({
   // Shared fields.
   const [packageTypeId, setPackageTypeId] = useState(initialPackageTypeId ?? "");
   const [startsAt, setStartsAt] = useState<Date | null>(null);
-  // Birthday-gift class-type override: the SET of class types the gift covers.
-  // Multi-select — pre-ticked from the deep link; the admin ticks more (or
-  // unticks) before confirming. One 🎂 gift, targeted at whichever classes.
-  const [giftClassTypeIds, setGiftClassTypeIds] = useState<string[]>(
-    initialClassTypeId ? [initialClassTypeId] : [],
-  );
+  // A gift is a real package handed over without payment. It covers whatever
+  // that package covers, so there is no class-type picker any more. A birthday
+  // deep-link (which always carries a class hint) is by definition a gift, so
+  // it opens with the toggle already on.
+  const [giftMode, setGiftMode] = useState(Boolean(initialClassTypeId));
+  // Gifting "Reformer 12" must not hand over all twelve sessions, so a gift
+  // defaults to one and the admin can raise it.
+  const [giftSessions, setGiftSessions] = useState("1");
 
   // Paid-mode-only fields. Initialised regardless so the hook order is
   // stable across mode flips (the parent always remounts on sheet open, but
@@ -109,11 +109,6 @@ export function AssignPackageSheetContent({
 
   const packageTypesQuery = useQuery(packagesQueries.types());
   const allPackageTypes = packageTypesQuery.data?.packageTypes ?? [];
-
-  // The gift-mode picker draws from the same class-types catalog the rest of
-  // the admin app uses — one 🎂 SKU covers whichever class type is chosen here.
-  const classTypesQuery = useQuery(trainingsQueries.classTypes());
-  const classTypes = classTypesQuery.data?.classTypes ?? [];
 
   // Non-blocking duplicate hint: if this client already got the SAME package
   // type on the SAME day, show a note so an accidental repeat is noticed.
@@ -139,16 +134,25 @@ export function AssignPackageSheetContent({
     packageTypeId,
     effectiveStartsAt,
   );
-  const packageTypes =
-    mode === "paid"
-      ? allPackageTypes.filter((pt) => !pt.isBirthdayGift)
-      : allPackageTypes;
+  // The legacy 🎂 SKUs are hidden everywhere now: a gift is a REAL package
+  // handed over without payment (isGift), so it keeps a price and the trainer
+  // is paid for teaching it. Selecting an unpriced gift SKU would create a
+  // package worth nothing to the trainer.
+  const packageTypes = allPackageTypes.filter((pt) => !pt.isBirthdayGift);
 
-  // Gift mode is entered only by SELECTING a birthday-gift SKU (comp mode). The
-  // class-type picker then decides which class the gift covers — one SKU serves
-  // every class type. Non-gift SKUs snapshot their own set (no picker).
-  const selectedType = allPackageTypes.find((pt) => pt.id === packageTypeId);
-  const isGift = mode === "comp" && !!selectedType?.isBirthdayGift;
+  const selectedType = packageTypes.find((pt) => pt.id === packageTypeId);
+  // Gift mode is now a deliberate toggle on a real package, not a consequence
+  // of which SKU was picked.
+  const isGift = mode === "comp" && giftMode;
+
+  // A gift can grant between one session and the package's own count —
+  // anything more would be inventing sessions the package never had.
+  const giftSessionsNumber = Number(giftSessions);
+  const giftSessionsValid =
+    giftSessions.trim() !== "" &&
+    Number.isInteger(giftSessionsNumber) &&
+    giftSessionsNumber >= 1 &&
+    (!selectedType || giftSessionsNumber <= selectedType.sessionCount);
 
   // Cache upkeep (packages + clients packageStatus + reports) is baked into
   // the factory hooks; the component-only side-effect (close sheet) is
@@ -174,7 +178,7 @@ export function AssignPackageSheetContent({
     mode === "comp"
       ? compMutation.isPending ||
         !packageTypeId ||
-        (isGift && giftClassTypeIds.length === 0)
+        (isGift && !giftSessionsValid)
       : paidMutation.isPending || !packageTypeId || !amountValid;
 
   function handleSubmit() {
@@ -185,8 +189,11 @@ export function AssignPackageSheetContent({
           clientProfileId: client.id,
           packageTypeId,
           startsAt: startsAtIso,
-          // Gift only: snapshot the picked class-type SET instead of the SKU's.
-          ...(isGift ? { classTypeIdsOverride: giftClassTypeIds } : {}),
+          // A gift keeps the real (priced) package so payroll can value its
+          // sessions, but grants only the few the admin is actually giving.
+          ...(isGift
+            ? { isGift: true, sessionsGranted: Number(giftSessions) }
+            : {}),
         },
         { onSuccess },
       );
@@ -296,59 +303,53 @@ export function AssignPackageSheetContent({
         })}
       </View>
 
-      {/* Gift class-type picker — one 🎂 gift, targeted at whichever class
-          types the admin ticks. Multi-select: same option-row anatomy as the
-          package list above, but tapping a row toggles it in/out of the set. */}
-      {isGift ? (
+      {/* Gift toggle — comp mode only. A gift hands over a REAL package
+          without payment: it keeps the package price (so the trainer is paid
+          for teaching it) but grants only the session or two being given. */}
+      {mode === "comp" ? (
         <View className="flex-col gap-2">
-          <SectionLabel>{t("admin.clients.giftClassTypeLabel")}</SectionLabel>
-          <View
-            className="bg-glass border border-glass-border rounded-lg overflow-hidden"
-            accessibilityLabel={t("admin.clients.giftClassTypeA11y")}
+          <Pressable
+            testID="assign-gift-toggle"
+            accessibilityRole="switch"
+            accessibilityState={{ checked: giftMode }}
+            android_ripple={null}
+            onPress={() => setGiftMode((prev) => !prev)}
+            className="active:opacity-70"
           >
-            {classTypes.map((ct, idx) => {
-              const selected = giftClassTypeIds.includes(ct.id);
-              return (
-                <Pressable
-                  key={ct.id}
-                  testID={`assign-gift-class-type-${ct.id}`}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected }}
-                  android_ripple={null}
-                  onPress={() =>
-                    setGiftClassTypeIds((prev) =>
-                      prev.includes(ct.id)
-                        ? prev.filter((id) => id !== ct.id)
-                        : [...prev, ct.id],
-                    )
-                  }
-                  className="active:opacity-70"
-                >
-                  <View
-                    className={`flex-row items-center gap-3 px-3.5 py-3 ${
-                      idx > 0 ? "border-t border-glass-border" : ""
-                    } ${selected ? "bg-accent-soft" : ""}`}
-                  >
-                    <Text
-                      className={`flex-1 text-foreground ${
-                        selected ? "font-body-semibold" : ""
-                      }`}
-                      style={{ fontSize: 14 }}
-                      numberOfLines={1}
-                    >
-                      {ct.name}
-                    </Text>
-                    {selected ? (
-                      <Icon name="check" size={13} color={tokens.accent} />
-                    ) : null}
-                  </View>
-                </Pressable>
-              );
-            })}
-          </View>
-          <Text className="text-muted" style={{ fontSize: 12 }}>
-            {t("admin.clients.giftClassTypeHint")}
-          </Text>
+            <View className="bg-glass border border-glass-border rounded-lg flex-row items-center gap-3 px-3.5 py-3">
+              <View className="flex-1">
+                <Text className="text-foreground" style={{ fontSize: 14 }}>
+                  {t("admin.clients.giftToggleLabel")}
+                </Text>
+                <Text className="text-muted" style={{ fontSize: 12 }}>
+                  {t("admin.clients.giftToggleHint")}
+                </Text>
+              </View>
+              {giftMode ? (
+                <Icon name="check" size={13} color={tokens.accent} />
+              ) : null}
+            </View>
+          </Pressable>
+
+          {isGift ? (
+            <View className="flex-col gap-1">
+              <SectionLabel>{t("admin.clients.giftSessionsLabel")}</SectionLabel>
+              <Input
+                testID="assign-gift-sessions"
+                value={giftSessions}
+                onChangeText={setGiftSessions}
+                keyboardType="number-pad"
+                placeholder="1"
+              />
+              <Text className="text-muted" style={{ fontSize: 12 }}>
+                {selectedType
+                  ? t("admin.clients.giftSessionsHint", {
+                      count: selectedType.sessionCount,
+                    })
+                  : t("admin.clients.giftSessionsHintNoPackage")}
+              </Text>
+            </View>
+          ) : null}
         </View>
       ) : null}
 
