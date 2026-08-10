@@ -207,8 +207,12 @@ describe("Obrazac pattern — month span", () => {
     // The breakdown row names the class type and its count — before the fix
     // this counted only the slice of the series the visible month happened to
     // hold (2 of 12), because the sheet resolved ids against that array.
+    // Scoped by testID: the class name also renders on the session cards
+    // behind the open sheet, so a bare text query matches more than one node.
     await screen.findByTestId("reservation-confirm-sheet-cta");
-    const row = screen.getByText("Reformer pilates").parentElement!;
+    const row = screen.getByTestId(
+      "reservation-confirm-breakdown-Reformer pilates",
+    );
     expect(row.textContent).toContain("12");
   });
 
