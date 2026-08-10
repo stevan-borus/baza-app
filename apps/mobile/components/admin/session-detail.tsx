@@ -7,6 +7,7 @@ import dayjs from "dayjs";
 import { Icon } from "@/components/ui/icon";
 import { GlassCard } from "@/components/ui/glass-card";
 import { IntermediateBadge } from "@/components/ui/intermediate-badge";
+import { MixedGroupBadge } from "@/components/ui/mixed-group-badge";
 import { ErrorState, EmptyState } from "@/components/ui/states";
 import { SkeletonCard } from "@/components/ui/skeleton";
 import { SectionLabel } from "@/components/ui/typography";
@@ -98,6 +99,7 @@ export function SessionDetail({
                 recurringScheduleId: session.recurringScheduleId ?? null,
                 isActive: session.isActive,
                 isIntermediate: session.isIntermediate,
+                isMixedGroup: session.isMixedGroup,
               });
             }}
             accessibilityLabel={t("admin.sessionDetail.editAction")}
@@ -144,6 +146,7 @@ export function SessionDetail({
                     {timeLabel}
                   </Text>
                   <IntermediateBadge isIntermediate={session.isIntermediate} size="detail" />
+                  <MixedGroupBadge isMixedGroup={session.isMixedGroup} size="detail" />
                 </View>
                 <View style={{ flexDirection: "row", gap: 16, marginTop: 4 }}>
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>

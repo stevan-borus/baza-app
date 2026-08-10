@@ -55,6 +55,11 @@ An optional Admin-set binary marking on a single Session telling Clients that oc
 
 _Avoid_: "intensity"/"intenzitet" (the earlier 1–3 concept, now retired), "difficulty"/"težina", "stars", "levels".
 
+**Mixed group** (`isMixedGroup`, "Mešana grupa"):
+An optional Admin-set binary marking on a single Session telling Clients that occurrence trains men and women together — the studio's default groups are not mixed, so the mark flags the exception. Shares every rule with [Intermediate] and is fully orthogonal to it: a Session can carry both marks, either, or neither. Strictly per-occurrence, settable any time (including after Clients have booked), purely advisory and display-only — it gates nothing and notifies no one. Rendered to every role as a wordless ♀♂ text pair riding the session's time/meta line, tinted the same brand accent as the ★ so the two read as one system of session marks (told apart by glyph shape, not color); the booking sheet doubles as the legend, expanding it to "♀♂ Mešana grupa". Unlike Intermediate, this one IS translated — "Mixed group" in English.
+
+_Avoid_: emoji glyphs (⚧/👫 carry their own uncontrollable color and can't be themed), "coed", "unisex", "mixed gender".
+
 **Booking**:
 A Client claiming a slot in a Session. Decrements the matched ClientPackage's `sessionsRemaining` (or doesn't, depending on cancellation timing — see below). Can be created by the Client (via `POST /bookings`, gated by `no_package_for_class`) or by an **Admin** (via the admin booking path, which **skips** the package-eligibility check — see **Admin reservation**).
 

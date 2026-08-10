@@ -1331,6 +1331,12 @@
       "label": "Intermediate",
       "switchLabel": "Intermediate",
       "a11yLabel": "Intermediate trening"
+    },
+    "mixedGroup": {
+      "badge": "♀♂",
+      "label": "Mešana grupa",
+      "switchLabel": "Mešana grupa",
+      "a11yLabel": "Mešana grupa — treniraju muškarci i žene"
     }
   }
 }

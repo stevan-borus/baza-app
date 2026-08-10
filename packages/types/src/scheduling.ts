@@ -30,6 +30,9 @@ export const availabilitySessionSchema = sessionFieldsSchema.pick({
   // Admin-set binary "intermediate" (srednji nivo) marking for this occurrence; absent = unmarked.
   // Display-only — never gates booking or filtering.
   isIntermediate: z.boolean().optional(),
+  // Admin-set binary "mixed group" marking (men and women train together);
+  // absent = unmarked. Display-only, and orthogonal to isIntermediate.
+  isMixedGroup: z.boolean().optional(),
   recurringScheduleId: z.nullable(z.string()).optional(),
   isActive: z.boolean().optional(),
   isBookedByMe: z.boolean().optional(),
@@ -100,6 +103,8 @@ export const updateSessionInputSchema = z.object({
   status: z.enum(["SCHEDULED", "CANCELED", "COMPLETED"]).optional(),
   // Optional binary "intermediate" (srednji nivo) marking for this occurrence; omitted = untouched.
   isIntermediate: z.boolean().optional(),
+  // Optional binary "mixed group" marking for this occurrence; omitted = untouched.
+  isMixedGroup: z.boolean().optional(),
 });
 
 export const createRecurringSessionsInputSchema = z.object({
@@ -139,6 +144,7 @@ export const sessionSchema = z.object({
   capacity: z.number(),
   status: z.enum(["SCHEDULED", "CANCELED", "COMPLETED"]),
   isIntermediate: z.boolean().optional(),
+  isMixedGroup: z.boolean().optional(),
   classType: z.object({ id: z.string(), name: z.string() }).optional(),
   room: z.object({ id: z.string(), name: z.string() }).nullable().optional(),
 });
@@ -187,6 +193,7 @@ export const sessionDetailSchema = z.object({
   capacity: z.number(),
   isActive: z.boolean(),
   isIntermediate: z.boolean().optional(),
+  isMixedGroup: z.boolean().optional(),
   classTypeId: z.string(),
   roomId: z.nullable(z.string()),
   trainerUserId: z.nullable(z.string()),

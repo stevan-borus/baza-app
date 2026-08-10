@@ -3,6 +3,7 @@ import { Pressable, ScrollView, Text, View } from "react-native";
 import dayjs from "dayjs";
 import { Badge } from "@/components/ui/badge";
 import { IntermediateBadge } from "@/components/ui/intermediate-badge";
+import { MixedGroupBadge } from "@/components/ui/mixed-group-badge";
 import { useThemeTokens } from "@/components/ui/tokens";
 import {
   HOUR_START,
@@ -35,6 +36,7 @@ type SessionBlock = {
   capacity: number;
   /** Admin-set "intermediate" marking for this occurrence; absent = unmarked. */
   isIntermediate?: boolean;
+  isMixedGroup?: boolean;
   status?: "available" | "full" | "booked" | "waitlisted";
 };
 
@@ -177,10 +179,15 @@ export function TimeAxisDayView({
                         >
                           {s.classTypeName}
                         </Text>
-                        {/* Compact blocks have no meta line — the 🔥 mark has
-                            nowhere else to go, so it rides the title here. */}
+                        {/* Compact blocks have no meta line — the session marks
+                            have nowhere else to go, so they ride the title. */}
                         {compact ? (
-                          <IntermediateBadge isIntermediate={s.isIntermediate} />
+                          <>
+                            <IntermediateBadge
+                              isIntermediate={s.isIntermediate}
+                            />
+                            <MixedGroupBadge isMixedGroup={s.isMixedGroup} />
+                          </>
                         ) : null}
                       </View>
                       {compact ? null : (
@@ -198,6 +205,7 @@ export function TimeAxisDayView({
                             {s.roomName ? ` · ${s.roomName}` : ""}
                           </Text>
                           <IntermediateBadge isIntermediate={s.isIntermediate} />
+                          <MixedGroupBadge isMixedGroup={s.isMixedGroup} />
                         </View>
                       )}
                     </View>

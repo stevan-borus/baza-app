@@ -63,6 +63,7 @@ export async function GET(request: Request, { id }: RouteParams) {
       capacity: true,
       isActive: true,
       isIntermediate: true,
+      isMixedGroup: true,
       classTypeId: true,
       roomId: true,
       trainerUserId: true,
@@ -360,6 +361,8 @@ export async function PATCH(request: Request, { id }: RouteParams) {
       // Per-occurrence "intermediate" (srednji nivo) marking. `undefined`
       // (field omitted) leaves it untouched; a boolean sets or clears it.
       isIntermediate: parsed.data.isIntermediate,
+      // Same contract for the per-occurrence "mixed group" marking.
+      isMixedGroup: parsed.data.isMixedGroup,
     },
     select: {
       id: true,
@@ -371,6 +374,7 @@ export async function PATCH(request: Request, { id }: RouteParams) {
       trainerUserId: true,
       isActive: true,
       isIntermediate: true,
+      isMixedGroup: true,
       classTypeId: true,
       classType: { select: { id: true, name: true } },
       room: { select: { id: true, name: true } },
