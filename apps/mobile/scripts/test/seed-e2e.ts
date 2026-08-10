@@ -322,6 +322,7 @@ async function seedClientPackages(opts: {
         startsAt: args.startsAt,
         expiresAt: args.expiresAt,
         sessionsRemaining: args.sessionsRemaining,
+        sessionsGranted: args.sessionsRemaining,
       },
     });
     await prisma.billingRecord.create({
@@ -380,6 +381,7 @@ async function seedClientPackages(opts: {
       startsAt: new Date(currentInstant.getTime() - 5 * DAY_MS),
       expiresAt: new Date(currentInstant.getTime() + 25 * DAY_MS),
       sessionsRemaining: 10,
+      sessionsGranted: 10,
     },
   });
   await prisma.packagePause.create({

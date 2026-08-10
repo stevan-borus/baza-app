@@ -409,11 +409,23 @@ model ClientPackage {
   startsAt          DateTime
   expiresAt         DateTime
   sessionsRemaining Int
+  // How many sessions this package actually granted at activation. Snapshotted
+  // rather than derived from packageType.sessionCount because a gift assigns a
+  // REAL (priced) package but hands over only a session or two — a 1-session
+  // gift on a 12-session SKU would otherwise render "1/12" everywhere. Backfilled
+  // from the SKU's sessionCount, so paid packages are unchanged.
+  sessionsGranted   Int
   // Admin "+1 termin" grants snapshot here so a grant grows the TOTAL, not
-  // past it: effective total = packageType.sessionCount + bonusSessions. Every
+  // past it: effective total = sessionsGranted + bonusSessions. Every
   // "x/y" site reads that sum, so an unused 12/12 → +1 → 13/13. Existing rows
-  // default 0 (no grant yet), so the SKU's sessionCount stays the total.
+  // default 0 (no grant yet), so the granted count stays the total.
   bonusSessions     Int                 @default(0)
+  // A gift/comp package: activated without payment, so it never carries a
+  // BillingRecord and stays out of revenue. It keeps its real packageTypeId
+  // (and therefore its real price) so trainer payout can value the sessions
+  // the same way it values a paid one — the studio absorbs the cost, but the
+  // trainer is paid for the work.
+  isGift            Boolean             @default(false)
   // Keep-the-trace revoke: a revoked package stops granting booking rights,
   // but the row (and its past bookings/consumption) stays for the record.
   revokedAt         DateTime?

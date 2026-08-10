@@ -61,6 +61,7 @@ async function fixtures() {
       startsAt: new Date(nowMs() - DAY_MS),
       expiresAt: new Date(nowMs() + 90 * DAY_MS),
       sessionsRemaining: 12,
+      sessionsGranted: 12,
     },
   });
   const room = await prisma.studioRoom.create({

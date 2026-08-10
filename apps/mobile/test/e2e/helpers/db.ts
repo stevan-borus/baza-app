@@ -566,6 +566,7 @@ export async function getSessionsRemaining(clientPackageId: string) {
 export async function setSessionsRemainingFor(
   clientEmail: string,
   sessionsRemaining: number,
+  sessionsGranted: number,
 ) {
   const user = await db().user.findUnique({
     where: { email: clientEmail.toLowerCase() },
@@ -693,6 +694,7 @@ export async function seedExtraClientPackages(count: number) {
         startsAt,
         expiresAt,
         sessionsRemaining: packageType.sessionCount,
+        sessionsGranted: packageType.sessionCount,
       },
       select: { id: true, clientProfileId: true },
     });
@@ -919,6 +921,7 @@ export async function findLatestBirthdayGiftPackageFor(userEmail: string) {
     select: {
       id: true,
       sessionsRemaining: true,
+      sessionsGranted: true,
       startsAt: true,
       expiresAt: true,
       packageType: { select: { name: true, validityDays: true, isBirthdayGift: true } },

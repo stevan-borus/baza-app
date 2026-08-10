@@ -99,6 +99,7 @@ describe("clients API", () => {
         startsAt: new Date(nowMs() - 5 * DAY_MS),
         expiresAt: new Date(nowMs() + 25 * DAY_MS),
         sessionsRemaining: 8,
+        sessionsGranted: 8,
       },
     });
     await prisma.clientPackage.create({
@@ -110,6 +111,7 @@ describe("clients API", () => {
         startsAt: new Date(nowMs() - 60 * DAY_MS),
         expiresAt: new Date(nowMs() - 7 * DAY_MS),
         sessionsRemaining: 4,
+        sessionsGranted: 4,
       },
     });
 

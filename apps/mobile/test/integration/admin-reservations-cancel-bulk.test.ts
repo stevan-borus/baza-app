@@ -228,6 +228,7 @@ describe("POST /api/admin/reservations/cancel-bulk", () => {
         startsAt: new Date(nowMs() - 24 * 60 * 60 * 1000),
         expiresAt: new Date(nowMs() + 30 * 24 * 60 * 60 * 1000),
         sessionsRemaining: 12,
+        sessionsGranted: 12,
       },
     });
     await prisma.waitlistEntry.create({
@@ -318,6 +319,7 @@ describe("POST /api/admin/reservations/cancel-bulk", () => {
           startsAt: new Date(nowMs() - 24 * 60 * 60 * 1000),
           expiresAt: new Date(nowMs() + 30 * 24 * 60 * 60 * 1000),
           sessionsRemaining: 8,
+          sessionsGranted: 8,
         },
       });
       const booking = await prisma.booking.create({
@@ -398,6 +400,7 @@ describe("POST /api/admin/reservations/cancel-bulk", () => {
           startsAt: new Date(nowMs() - 24 * 60 * 60 * 1000),
           expiresAt: new Date(nowMs() + 30 * 24 * 60 * 60 * 1000),
           sessionsRemaining: 8,
+          sessionsGranted: 8,
         },
       });
       const booking = await prisma.booking.create({

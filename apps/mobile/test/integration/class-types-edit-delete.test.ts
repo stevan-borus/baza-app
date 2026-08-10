@@ -165,6 +165,7 @@ describe("class-types PATCH + DELETE", () => {
         startsAt: new Date("2026-07-01T00:00:00Z"),
         expiresAt: new Date("2026-08-01T00:00:00Z"),
         sessionsRemaining: 12,
+        sessionsGranted: 12,
       },
     });
 

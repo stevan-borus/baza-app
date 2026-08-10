@@ -63,6 +63,7 @@ async function fixtures() {
       startsAt: new Date("2026-05-01"),
       expiresAt: new Date("2026-12-01"),
       sessionsRemaining: 12,
+      sessionsGranted: 12,
     },
   });
   return { trainer, client, clientProfile, room, reformer, pkg };

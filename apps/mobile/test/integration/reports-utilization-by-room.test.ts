@@ -81,6 +81,7 @@ async function seedSessionsAcrossRooms() {
       startsAt: new Date("2026-04-01T00:00:00Z"),
       expiresAt: new Date("2026-05-01T00:00:00Z"),
       sessionsRemaining: 12,
+      sessionsGranted: 12,
     },
   });
   const sessions = await prisma.session.findMany({
@@ -102,6 +103,7 @@ async function seedSessionsAcrossRooms() {
         startsAt: new Date("2026-04-01T00:00:00Z"),
         expiresAt: new Date("2026-05-01T00:00:00Z"),
         sessionsRemaining: 12,
+        sessionsGranted: 12,
       },
     });
     const cPkg = await prisma.clientPackage.findFirstOrThrow({
@@ -131,6 +133,7 @@ async function seedSessionsAcrossRooms() {
         startsAt: new Date("2026-04-01T00:00:00Z"),
         expiresAt: new Date("2026-05-01T00:00:00Z"),
         sessionsRemaining: 12,
+        sessionsGranted: 12,
       },
     });
     const cPkg = await prisma.clientPackage.findFirstOrThrow({

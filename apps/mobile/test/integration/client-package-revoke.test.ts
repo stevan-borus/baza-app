@@ -77,6 +77,7 @@ async function createPackageWithPendingBilling(
       startsAt: new Date(nowMs() - DAY),
       expiresAt: new Date(nowMs() + 60 * DAY),
       sessionsRemaining: opts?.sessionsRemaining ?? 6,
+      sessionsGranted: opts?.sessionsRemaining ?? 6,
     },
   });
   const billing = await prisma.billingRecord.create({
@@ -268,6 +269,7 @@ describe("POST /api/packages/client-packages/[id]/revoke", () => {
         startsAt: new Date(nowMs() - DAY),
         expiresAt: new Date(nowMs() + 60 * DAY),
         sessionsRemaining: 5,
+        sessionsGranted: 5,
       },
     });
 
@@ -353,6 +355,7 @@ describe("POST /api/packages/client-packages/[id]/revoke", () => {
         startsAt: new Date(nowMs() - DAY),
         expiresAt: new Date(nowMs() + 60 * DAY),
         sessionsRemaining: 4,
+        sessionsGranted: 4,
       },
     });
     const waitlistSession = await createSession(seeded, new Date(nowMs() + 2 * DAY));

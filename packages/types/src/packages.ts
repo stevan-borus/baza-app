@@ -83,6 +83,14 @@ export const createClientPackageInputSchema = clientPackageFieldsSchema.pick({
   // any other SKU is a 400. Lets one 🎂 SKU serve every class type: the gift is
   // snapshotted against the picked set, not the SKU's own covered set.
   classTypeIdsOverride: z.array(z.string()).min(1).optional(),
+  // Gift/comp assign: hand over a REAL (priced) package without payment, so no
+  // BillingRecord follows and it stays out of revenue. Keeping the real SKU is
+  // what lets trainer payout value a gifted session like a paid one.
+  isGift: z.boolean().optional(),
+  // Sessions the gift actually grants — defaults to 1 server-side, because
+  // gifting "Reformer 12" must not hand over all twelve. Capped at the SKU's
+  // own sessionCount (checked server-side, where the SKU is known).
+  sessionsGranted: z.number().int().min(1).optional(),
 });
 
 // ─── GET /api/packages/client-packages ───────────────────────────────────────
@@ -180,6 +188,10 @@ export const createClientPackageResponseSchema = z.object({
     startsAt: z.string(),
     expiresAt: z.string(),
     sessionsRemaining: z.number(),
+    // The "y" in "x/y" — the granted count plus any grant, NOT the SKU's live
+    // sessionCount, so a 1-session gift on a 12-session SKU reads "1/1".
+    sessionsTotal: z.number(),
+    isGift: z.boolean(),
   }),
 });
 

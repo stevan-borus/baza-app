@@ -171,6 +171,7 @@ describe("packages/client-packages", () => {
         startsAt: new Date(nowMs() - 5 * DAY_MS),
         expiresAt: new Date(nowMs() + 25 * DAY_MS),
         sessionsRemaining: 8,
+        sessionsGranted: 8,
       },
     });
     await prisma.clientPackage.create({
@@ -182,6 +183,7 @@ describe("packages/client-packages", () => {
         startsAt: new Date(nowMs() - 5 * DAY_MS),
         expiresAt: new Date(nowMs() + 25 * DAY_MS),
         sessionsRemaining: 8,
+        sessionsGranted: 8,
       },
     });
 
@@ -225,6 +227,7 @@ describe("packages/client-packages", () => {
         startsAt: now(),
         expiresAt: new Date(nowMs() + 30 * DAY_MS),
         sessionsRemaining: 12,
+        sessionsGranted: 12,
       },
     });
     await prisma.clientPackage.create({
@@ -236,6 +239,7 @@ describe("packages/client-packages", () => {
         startsAt: now(),
         expiresAt: new Date(nowMs() + 30 * DAY_MS),
         sessionsRemaining: 12,
+        sessionsGranted: 12,
       },
     });
 

@@ -47,6 +47,7 @@ async function seedBaseline() {
       startsAt: new Date(nowMs() - 5 * DAY_MS),
       expiresAt: new Date(nowMs() + 30 * DAY_MS),
       sessionsRemaining: 8,
+      sessionsGranted: 8,
     },
   });
   return { trainer, client, clientProfile, reformer, clientPackage };
@@ -284,6 +285,7 @@ describe("POST /api/bookings cancel", () => {
         startsAt: new Date(nowMs() - DAY_MS),
         expiresAt: new Date(nowMs() + 30 * DAY_MS),
         sessionsRemaining: 8,
+        sessionsGranted: 8,
       },
     });
     await prisma.waitlistEntry.create({

@@ -55,6 +55,7 @@ async function seedAdminSessionWithBookings() {
       startsAt: now(),
       expiresAt: new Date(now().getTime() + 30 * 24 * 60 * 60 * 1000),
       sessionsRemaining: 12,
+      sessionsGranted: 12,
     },
   });
   await prisma.booking.create({
