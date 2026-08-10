@@ -1407,6 +1407,10 @@
     "exportCsv": "Izvezi CSV",
     "perSession": "po treningu",
     "a11yPrevMonth": "Prethodni mesec",
-    "a11yNextMonth": "Sledeći mesec"
+    "a11yNextMonth": "Sledeći mesec",
+    "ratesTitle": "Procenti trenera",
+    "ratesSubtitle": "Procenat honorara po treneru",
+    "effectiveFromHint": "Novi procenat važi od ovog datuma. Prethodni meseci ostaju netaknuti.",
+    "rateNotePlaceholder": "npr. dogovor sa 01.09."
   }
 }

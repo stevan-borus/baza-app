@@ -1398,6 +1398,10 @@
     "exportCsv": "Export CSV",
     "perSession": "per session",
     "a11yPrevMonth": "Previous month",
-    "a11yNextMonth": "Next month"
+    "a11yNextMonth": "Next month",
+    "ratesTitle": "Trainer percentages",
+    "ratesSubtitle": "Commission percentage per trainer",
+    "effectiveFromHint": "The new percentage applies from this date. Previous months are left untouched.",
+    "rateNotePlaceholder": "e.g. agreed from Sep 1"
   }
 }
