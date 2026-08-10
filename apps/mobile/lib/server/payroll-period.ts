@@ -44,6 +44,7 @@ export async function readPayrollPeriod(
       lines: {
         orderBy: { sessionStartsAt: "asc" },
         select: {
+          id: true,
           sessionId: true,
           sessionStartsAt: true,
           classTypeName: true,
@@ -85,7 +86,10 @@ export async function readPayrollPeriod(
       const key = line.sessionId ?? `${line.sessionStartsAt.toISOString()}:${line.classTypeName}`;
       const existing = bySession.get(key);
       const attendee = {
-        bookingId: `${key}:${line.clientName}`,
+        // The frozen line's own id, not a name-derived key: two clients in one
+        // session can share a name, and a colliding key would drop a row from
+        // the rendered breakdown.
+        bookingId: line.id,
         clientName: line.clientName,
         packageName: line.packageName,
         sessionValue: line.sessionValue,

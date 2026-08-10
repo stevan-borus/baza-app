@@ -95,6 +95,15 @@ export async function POST(request: Request) {
       })),
   );
 
+  // The frozen lines ARE the record of what was paid, so the stored total must
+  // equal what they add up to. The live computation sums unrounded per-session
+  // values (right for an open month — no drift across a few hundred
+  // attendances), but each snapshot line stores a whole dinar, so re-deriving
+  // the total from the lines is what keeps the header and the breakdown from
+  // disagreeing by a dinar on a locked month.
+  const lockedGross = lines.reduce((sum, line) => sum + line.sessionValue, 0);
+  const lockedPayout = Math.round((lockedGross * computed.percent) / 100);
+
   await prisma.$transaction(async (tx) => {
     const period = await tx.payrollPeriod.upsert({
       where: {
@@ -105,16 +114,16 @@ export async function POST(request: Request) {
         periodStart: from,
         status: "LOCKED",
         percent: computed.percent,
-        grossAmount: computed.gross,
-        payoutAmount: computed.payout,
+        grossAmount: lockedGross,
+        payoutAmount: lockedPayout,
         lockedAt: now(),
         lockedByUserId: guard.user.id,
       },
       update: {
         status: "LOCKED",
         percent: computed.percent,
-        grossAmount: computed.gross,
-        payoutAmount: computed.payout,
+        grossAmount: lockedGross,
+        payoutAmount: lockedPayout,
         lockedAt: now(),
         lockedByUserId: guard.user.id,
         // Re-locking replaces the previous snapshot wholesale.
@@ -134,6 +143,6 @@ export async function POST(request: Request) {
     success: true,
     status: "LOCKED",
     lineCount: lines.length,
-    payout: computed.payout,
+    payout: lockedPayout,
   });
 }

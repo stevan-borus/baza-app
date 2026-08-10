@@ -192,6 +192,127 @@ describe("POST /api/payroll/lock", () => {
     expect(body.month.gross).toBe(2500);
   });
 
+  it("keeps both attendees when two clients in a session share a name", async () => {
+    const seeded = await seed();
+    const session = await prisma.session.create({
+      data: {
+        classTypeId: seeded.classType.id,
+        trainerUserId: seeded.trainer.id,
+        startsAt: JULY_SESSION,
+        endsAt: new Date(JULY_SESSION.getTime() + HOUR),
+        capacity: 6,
+      },
+    });
+    // Same display name, different people — a small studio really does get
+    // two "Ana Anić"s, and a name-keyed line would collapse them into one.
+    for (const email of ["ana1@test.local", "ana2@test.local"]) {
+      const client = await prisma.user.create({
+        data: {
+          email,
+          firstName: "Ana",
+          lastName: "Anić",
+          role: "CLIENT",
+          clientProfile: { create: {} },
+        },
+        select: { clientProfile: { select: { id: true } } },
+      });
+      const profileId = client.clientProfile!.id;
+      const pkg = await prisma.clientPackage.create({
+        data: {
+          clientProfileId: profileId,
+          packageTypeId: seeded.packageType.id,
+          classTypes: { create: { classTypeId: seeded.classType.id } },
+          lateCancelHours: 12,
+          startsAt: new Date("2026-07-01T05:00:00.000Z"),
+          expiresAt: new Date("2026-09-01T05:00:00.000Z"),
+          sessionsRemaining: 12,
+          sessionsGranted: 12,
+        },
+      });
+      await prisma.booking.create({
+        data: { sessionId: session.id, clientProfileId: profileId, clientPackageId: pkg.id },
+      });
+    }
+
+    asUser(seeded.admin);
+    await POST_LOCK(lockRequest({ trainerUserId: seeded.trainer.id, year: 2026, month: 7 }));
+
+    const body = await (await readMonth(seeded.trainer.id)).json();
+    expect(body.month.attendeeCount).toBe(2);
+    expect(body.month.sessions[0].attendees).toHaveLength(2);
+    // Distinct keys, so neither row is dropped when rendered.
+    const ids = body.month.sessions[0].attendees.map(
+      (a: { bookingId: string }) => a.bookingId,
+    );
+    expect(new Set(ids).size).toBe(2);
+    expect(body.month.gross).toBe(2500);
+  });
+
+  it("stores a locked total that equals the sum of its own frozen lines", async () => {
+    const seeded = await seed();
+    // 13.000 / 12 = 1083.33… — a price that does NOT divide evenly, so an
+    // unrounded total and the sum of the rounded lines drift apart. The header
+    // must agree with the breakdown it is shown above.
+    const uneven = await prisma.packageType.create({
+      data: {
+        name: "Energy",
+        sessionCount: 12,
+        validityDays: 60,
+        lateCancelHours: 12,
+        price: 13000,
+        classTypes: { create: { classTypeId: seeded.classType.id } },
+      },
+    });
+    const session = await prisma.session.create({
+      data: {
+        classTypeId: seeded.classType.id,
+        trainerUserId: seeded.trainer.id,
+        startsAt: JULY_SESSION,
+        endsAt: new Date(JULY_SESSION.getTime() + HOUR),
+        capacity: 6,
+      },
+    });
+    for (const email of ["u1@test.local", "u2@test.local", "u3@test.local"]) {
+      const client = await prisma.user.create({
+        data: {
+          email,
+          firstName: email[1] ?? "U",
+          lastName: "Uneven",
+          role: "CLIENT",
+          clientProfile: { create: {} },
+        },
+        select: { clientProfile: { select: { id: true } } },
+      });
+      const profileId = client.clientProfile!.id;
+      const pkg = await prisma.clientPackage.create({
+        data: {
+          clientProfileId: profileId,
+          packageTypeId: uneven.id,
+          classTypes: { create: { classTypeId: seeded.classType.id } },
+          lateCancelHours: 12,
+          startsAt: new Date("2026-07-01T05:00:00.000Z"),
+          expiresAt: new Date("2026-09-01T05:00:00.000Z"),
+          sessionsRemaining: 12,
+          sessionsGranted: 12,
+        },
+      });
+      await prisma.booking.create({
+        data: { sessionId: session.id, clientProfileId: profileId, clientPackageId: pkg.id },
+      });
+    }
+
+    asUser(seeded.admin);
+    await POST_LOCK(lockRequest({ trainerUserId: seeded.trainer.id, year: 2026, month: 7 }));
+
+    const body = await (await readMonth(seeded.trainer.id)).json();
+    const lineSum = body.month.sessions
+      .flatMap((s: { attendees: Array<{ sessionValue: number }> }) => s.attendees)
+      .reduce((sum: number, a: { sessionValue: number }) => sum + a.sessionValue, 0);
+    // 3 × round(1083.33) = 3249, not the 3250 an unrounded sum would report.
+    expect(body.month.gross).toBe(lineSum);
+    expect(body.month.gross).toBe(3249);
+  });
+
   it("refuses to lock a month when the trainer has no rate", async () => {
     const seeded = await seed();
     await prisma.trainerRate.deleteMany({ where: { trainerUserId: seeded.trainer.id } });
