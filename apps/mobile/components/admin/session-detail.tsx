@@ -100,6 +100,7 @@ export function SessionDetail({
                 isActive: session.isActive,
                 isIntermediate: session.isIntermediate,
                 isMixedGroup: session.isMixedGroup,
+                emptyBookingCutoffHours: session.emptyBookingCutoffHours,
               });
             }}
             accessibilityLabel={t("admin.sessionDetail.editAction")}
@@ -170,6 +171,24 @@ export function SessionDetail({
                 </View>
               </View>
             </GlassCard>
+
+            {/* An empty roster inside the cutoff window is not "no bookings
+                yet" — signup is already closed, so the class is off unless an
+                admin books someone. Say so rather than leaving the trainer to
+                infer it from the empty state. */}
+            {session.emptyCutoffLocked ? (
+              <GlassCard size="md" testID="session-detail-empty-cutoff">
+                <Text className="text-warning" style={{ fontSize: 14 }}>
+                  {t("admin.sessionDetail.emptyCutoffNotice", {
+                    // `count` (not `hours`) drives the Serbian plural form
+                    // (do 4 časa / do 5 časova). Stale cached payloads may
+                    // lack the hours; 4 is the per-session default (same
+                    // fallback as the booking sheet).
+                    count: session.emptyBookingCutoffHours ?? 4,
+                  })}
+                </Text>
+              </GlassCard>
+            ) : null}
 
             <View style={{ gap: 10 }}>
               <SectionLabel>{t("admin.sessionDetail.bookedClients")}</SectionLabel>

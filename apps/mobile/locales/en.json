@@ -279,7 +279,8 @@
       "rowAction": "Renew",
       "rowActionPaused": "Paused",
       "rowActionNotStarted": "Soon",
-      "rowActionFullyHeld": "No sessions left"
+      "rowActionFullyHeld": "No sessions left",
+      "rowActionEmptyCutoff": "Closed"
     },
     "clientPackages": {
       "title": "My packages",
@@ -412,7 +413,9 @@
       "leaveWaitlist": "Leave waitlist",
       "confirmLeaveWaitlist": "Leave the waitlist?",
       "onWaitlist": "You're on the waitlist",
-      "alreadyBooked": "You already have a booking"
+      "alreadyBooked": "You already have a booking",
+      "emptyCutoffMessage_one": "Nobody signed up for this session, so booking closed {{count}} hour before it starts. Pick another time or get in touch with us.",
+      "emptyCutoffMessage_other": "Nobody signed up for this session, so booking closed {{count}} hours before it starts. Pick another time or get in touch with us."
     },
     "calendar": {
       "title": "Calendar",
@@ -431,6 +434,7 @@
       "errorNoPackage": "You don't have an active package for this class type.",
       "errorPackageExhausted": "No sessions left in your package. Cancel a booking or renew.",
       "errorSessionPast": "This session has already passed.",
+      "errorEmptyCutoff": "Nobody signed up for this session, so booking is closed.",
       "room": "Room",
       "trainer": "Trainer",
       "availableSlots": "{{count}} available",
@@ -821,6 +825,8 @@
       "weekday5Short": "F",
       "weekday6Short": "S",
       "placeholderCapacity": "Max clients",
+      "placeholderEmptyBookingCutoff": "Empty session closes (hours)",
+      "emptyBookingCutoffHelper": "If nobody has booked, the session closes this many hours before it starts. Enter 0 to turn the rule off.",
       "maxClientsHint": "clients",
       "createError": "Creating session failed.",
       "editTitle": "Edit: {{name}}",
@@ -851,7 +857,9 @@
       "photoConsentNo": "Photo/video: No",
       "hintFirstPilates": "First time pilates",
       "excuseRemoveCta": "Cancel session",
-      "excuseTitle": "Cancel session?"
+      "excuseTitle": "Cancel session?",
+      "emptyCutoffNotice_one": "Signups are closed — nobody booked by {{count}} hour before the start.",
+      "emptyCutoffNotice_other": "Signups are closed — nobody booked by {{count}} hours before the start."
     },
     "manage": {
       "title": "Manage",
@@ -1120,6 +1128,10 @@
         "applying": "Applying…",
         "error": "Couldn't load sessions. Try again."
       }
+    },
+    "dayView": {
+      "emptyCutoffChip": "Closed",
+      "emptyCutoffChipA11y": "Signups closed — no clients booked"
     }
   },
   "trainer": {

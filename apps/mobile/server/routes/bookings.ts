@@ -17,6 +17,7 @@ import { shouldApplyLateCancelPenalty } from "@/lib/server/cancellation-policy";
 import { notifyClient } from "@/lib/server/notify-client";
 import { notifyOperators } from "@/lib/server/notify-operators";
 import { countHeldSessions } from "@/lib/server/booking-hold-count";
+import { isEmptySessionCutoffLocked } from "@/lib/server/booking-cutoff";
 import {
   ELIGIBILITY_PACKAGE_SELECT,
   findEligibleClientPackage,
@@ -62,6 +63,7 @@ export async function POST(request: Request) {
       status: true,
       classTypeId: true,
       trainerUserId: true,
+      emptyBookingCutoffHours: true,
       classType: { select: { name: true } },
     },
   });
@@ -144,6 +146,17 @@ export async function POST(request: Request) {
         tx.waitlistEntry.count({ where: { sessionId } }),
       ]);
 
+      if (
+        isEmptySessionCutoffLocked({
+          startsAt: session.startsAt,
+          activeBookingsCount,
+          cutoffHours: session.emptyBookingCutoffHours,
+          at: now(),
+        })
+      ) {
+        return { state: "EMPTY_SESSION_CUTOFF" as const };
+      }
+
       if (activeBookingsCount >= session.capacity) {
         // Full class: add to waitlist with stable position; idempotent.
         const existingWait = await tx.waitlistEntry.findUnique({
@@ -174,6 +187,9 @@ export async function POST(request: Request) {
 
     if (result.state === "PACKAGE_EXHAUSTED") {
       return fail(BOOKING_ERRORS.PACKAGE_EXHAUSTED, 409);
+    }
+    if (result.state === "EMPTY_SESSION_CUTOFF") {
+      return fail(BOOKING_ERRORS.EMPTY_SESSION_CUTOFF, 409);
     }
     // No in-app notification for self-initiated bookings — the booking sheet
     // shows an immediate inline success block, which is the right UX. We

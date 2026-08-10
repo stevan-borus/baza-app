@@ -44,7 +44,17 @@ type SessionFormState = {
   durationMins: string;
   weekCount: string;
   weekdays: number[];
+  emptyBookingCutoffHours: string;
 };
+
+// 0 is a meaningful value for the empty-session cutoff (it turns the rule off
+// for this occurrence), so the `parseInt(v) || fallback` idiom the other
+// numeric fields use would silently rewrite a deliberate "0" to 4. An empty
+// box still parses NaN → 4.
+function parseCutoffHours(raw: string): number {
+  const parsed = parseInt(raw, 10);
+  return Number.isNaN(parsed) ? 4 : parsed;
+}
 
 // Mirrors the server cap in createRecurringSessionsInputSchema (weekCount
 // .max(52)). Surfaced in the form so the limit is visible up front instead of
@@ -61,6 +71,7 @@ const INITIAL_FORM: SessionFormState = {
   durationMins: "",
   weekCount: "",
   weekdays: [],
+  emptyBookingCutoffHours: "",
 };
 
 export function NewSessionSheet({ open, onOpenChange }: NewSessionSheetProps) {
@@ -293,6 +304,25 @@ export function NewSessionSheet({ open, onOpenChange }: NewSessionSheetProps) {
           }
         />
 
+        {/* Per-occurrence only — a recurring batch takes the DB default, so
+            the field would misread as "for every generated session". */}
+        {!isRecurring ? (
+          <View className="gap-1">
+            <Input
+              testID="session-create-empty-cutoff-input"
+              label={t("admin.schedule.placeholderEmptyBookingCutoff")}
+              keyboardType="numeric"
+              value={newSession.emptyBookingCutoffHours}
+              onChangeText={(v) =>
+                setNewSession((s) => ({ ...s, emptyBookingCutoffHours: v }))
+              }
+            />
+            <Text className="text-xs text-faint px-1">
+              {t("admin.schedule.emptyBookingCutoffHelper")}
+            </Text>
+          </View>
+        ) : null}
+
         <View className="flex-row items-center justify-between px-1 py-1">
           <Text className="text-sm text-muted">
             {t("admin.schedule.visibleToClients")}
@@ -359,6 +389,9 @@ export function NewSessionSheet({ open, onOpenChange }: NewSessionSheetProps) {
                   startsAt: newSession.startsAt.toISOString(),
                   endsAt: endsAt.toISOString(),
                   capacity,
+                  emptyBookingCutoffHours: parseCutoffHours(
+                    newSession.emptyBookingCutoffHours,
+                  ),
                   isActive: createIsActive,
                 },
                 {

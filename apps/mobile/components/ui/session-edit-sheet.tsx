@@ -24,6 +24,15 @@ import { roomsQueries } from "@/lib/queries/rooms-queries-factory";
 import { usersQueries } from "@/lib/queries/users-queries-factory";
 import { formatMutationError } from "@/lib/admin/format-mutation-error";
 
+// 0 is a meaningful value for the empty-session cutoff (it turns the rule off
+// for this occurrence), so the `parseInt(v) || fallback` idiom the other
+// numeric fields use would silently rewrite a deliberate "0" to 4. An empty
+// box still parses NaN → 4.
+function parseCutoffHours(raw: string): number {
+  const parsed = parseInt(raw, 10);
+  return Number.isNaN(parsed) ? 4 : parsed;
+}
+
 // Mutation payload shapes (kept in sync with sessionsQueries factory).
 type UpdateSessionVars = {
   id: string;
@@ -36,6 +45,7 @@ type UpdateSessionVars = {
   status?: "SCHEDULED" | "CANCELED" | "COMPLETED";
   isIntermediate?: boolean;
   isMixedGroup?: boolean;
+  emptyBookingCutoffHours?: number;
 };
 type UpdateSeriesVars = {
   id: string;
@@ -88,6 +98,8 @@ export type EditSessionInput = {
   isIntermediate?: boolean;
   /** Current per-occurrence "mixed group" marking. Absent = unmarked. */
   isMixedGroup?: boolean;
+  /** Current per-occurrence empty-booking cutoff in hours. Absent = the default 4. */
+  emptyBookingCutoffHours?: number;
 };
 
 type ShowEditState = {
@@ -115,6 +127,7 @@ type EditForm = {
   isActive: boolean;
   isIntermediate: boolean;
   isMixedGroup: boolean;
+  emptyBookingCutoffHours: string;
 };
 
 type SeriesForm = {
@@ -168,6 +181,7 @@ export function useSessionEditSheet() {
     isActive: true,
     isIntermediate: false,
     isMixedGroup: false,
+    emptyBookingCutoffHours: "",
   });
   const [seriesForm, setSeriesForm] = useState<SeriesForm>({
     weekdays: [],
@@ -264,6 +278,7 @@ export function useSessionEditSheet() {
       isActive: sessionIsActive,
       isIntermediate: session.isIntermediate ?? false,
       isMixedGroup: session.isMixedGroup ?? false,
+      emptyBookingCutoffHours: String(session.emptyBookingCutoffHours ?? 4),
     });
     setShowEdit({
       sessionId: session.id,
@@ -482,6 +497,24 @@ export function SessionEditSheet(props: SessionEditSheetBoundProps) {
                 />
               </View>
 
+              {/* Per-occurrence empty-booking cutoff. Same per-occurrence
+                  rule as the two switches above — editing it never touches
+                  recurring siblings. */}
+              <View className="gap-1">
+                <Input
+                  testID="session-edit-empty-cutoff-input"
+                  placeholder={t("admin.schedule.placeholderEmptyBookingCutoff")}
+                  keyboardType="numeric"
+                  value={editForm.emptyBookingCutoffHours}
+                  onChangeText={(v) =>
+                    setEditForm((s) => ({ ...s, emptyBookingCutoffHours: v }))
+                  }
+                />
+                <Text className="text-xs text-faint px-1">
+                  {t("admin.schedule.emptyBookingCutoffHelper")}
+                </Text>
+              </View>
+
               {(() => {
                 // ADR-0002 occurrence rule: per-session save path is disabled
                 // iff THIS session has bookings, regardless of whether it
@@ -537,6 +570,10 @@ export function SessionEditSheet(props: SessionEditSheetBoundProps) {
                     // Always sent so toggling off (unmark) persists.
                     isIntermediate: editForm.isIntermediate,
                     isMixedGroup: editForm.isMixedGroup,
+                    // Always sent so clearing back to 0 (rule off) persists.
+                    emptyBookingCutoffHours: parseCutoffHours(
+                      editForm.emptyBookingCutoffHours,
+                    ),
                   });
                 }}
               >

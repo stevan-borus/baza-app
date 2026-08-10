@@ -51,7 +51,12 @@ export default function AdminSettingsClassTypes() {
   // the sheet choreography (open/close/reset) lives in the CRUD machine.
   const crud = useAdminCrud({
     empty: { name: "", maxClients: "", durationMins: "" },
-    toForm: (ct: { id: string; name: string; maxClients: number; durationMins: number }) => ({
+    toForm: (ct: {
+      id: string;
+      name: string;
+      maxClients: number;
+      durationMins: number;
+    }) => ({
       name: ct.name,
       maxClients: String(ct.maxClients),
       durationMins: String(ct.durationMins),
