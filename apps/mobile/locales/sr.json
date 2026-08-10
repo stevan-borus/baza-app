@@ -416,7 +416,9 @@
       "confirmLeaveWaitlist": "Napusti listu čekanja?",
       "onWaitlist": "Na listi ste čekanja",
       "alreadyBooked": "Već imate rezervaciju",
-      "emptyCutoffMessage": "Za ovaj termin niko nije zakazao trening, pa je zakazivanje zatvoreno {{hours}} h pre početka. Izaberite neki drugi termin ili nam se javite."
+      "emptyCutoffMessage_one": "Za ovaj termin niko nije zakazao trening, pa je zakazivanje zatvoreno {{count}} čas pre početka. Izaberite neki drugi termin ili nam se javite.",
+      "emptyCutoffMessage_few": "Za ovaj termin niko nije zakazao trening, pa je zakazivanje zatvoreno {{count}} časa pre početka. Izaberite neki drugi termin ili nam se javite.",
+      "emptyCutoffMessage_other": "Za ovaj termin niko nije zakazao trening, pa je zakazivanje zatvoreno {{count}} časova pre početka. Izaberite neki drugi termin ili nam se javite."
     },
     "calendar": {
       "title": "Kalendar",
@@ -861,7 +863,9 @@
       "hintFirstPilates": "Prvi put pilates",
       "excuseRemoveCta": "Otkaži termin",
       "excuseTitle": "Otkaži termin?",
-      "emptyCutoffNotice": "Prijave su zatvorene — niko se nije prijavio do {{hours}} h pre početka."
+      "emptyCutoffNotice_one": "Prijave su zatvorene — niko se nije prijavio do {{count}} časa pre početka.",
+      "emptyCutoffNotice_few": "Prijave su zatvorene — niko se nije prijavio do {{count}} časa pre početka.",
+      "emptyCutoffNotice_other": "Prijave su zatvorene — niko se nije prijavio do {{count}} časova pre početka."
     },
     "manage": {
       "title": "Upravljanje",

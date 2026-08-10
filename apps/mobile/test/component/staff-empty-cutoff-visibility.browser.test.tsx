@@ -140,7 +140,7 @@ describe("SessionDetail empty-cutoff notice", () => {
     expect(screen.getByTestId("session-detail-empty-cutoff")).toBeTruthy();
     expect(
       screen.getByText(
-        "Prijave su zatvorene — niko se nije prijavio do 4 h pre početka.",
+        "Prijave su zatvorene — niko se nije prijavio do 4 časa pre početka.",
       ),
     ).toBeTruthy();
   });

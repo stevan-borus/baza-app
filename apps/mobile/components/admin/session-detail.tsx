@@ -180,9 +180,11 @@ export function SessionDetail({
               <GlassCard size="md" testID="session-detail-empty-cutoff">
                 <Text className="text-warning" style={{ fontSize: 14 }}>
                   {t("admin.sessionDetail.emptyCutoffNotice", {
-                    // Stale cached payloads may lack the hours; 4 is the
-                    // per-session default (same fallback as the booking sheet).
-                    hours: session.emptyBookingCutoffHours ?? 4,
+                    // `count` (not `hours`) drives the Serbian plural form
+                    // (do 4 časa / do 5 časova). Stale cached payloads may
+                    // lack the hours; 4 is the per-session default (same
+                    // fallback as the booking sheet).
+                    count: session.emptyBookingCutoffHours ?? 4,
                   })}
                 </Text>
               </GlassCard>

@@ -643,9 +643,10 @@ function renewalLockCopy(session: AvailabilitySession): {
       return {
         testID: "booking-empty-cutoff-message",
         messageKey: "client.dayView.emptyCutoffMessage",
-        // Older cached payloads can carry the reason without the hours; 4 is
-        // the class-type default the server falls back to.
-        values: { hours: session.emptyBookingCutoffHours ?? 4 },
+        // `count` (not `hours`) so i18next picks the Serbian plural form
+        // (1 čas / 4 časa / 5 časova). Older cached payloads can carry the
+        // reason without the hours; 4 is the schema default fallback.
+        values: { count: session.emptyBookingCutoffHours ?? 4 },
       };
     default:
       return {

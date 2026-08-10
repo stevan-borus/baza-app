@@ -414,7 +414,8 @@
       "confirmLeaveWaitlist": "Leave the waitlist?",
       "onWaitlist": "You're on the waitlist",
       "alreadyBooked": "You already have a booking",
-      "emptyCutoffMessage": "Nobody signed up for this session, so booking closed {{hours}}h before it starts. Pick another time or get in touch with us."
+      "emptyCutoffMessage_one": "Nobody signed up for this session, so booking closed {{count}} hour before it starts. Pick another time or get in touch with us.",
+      "emptyCutoffMessage_other": "Nobody signed up for this session, so booking closed {{count}} hours before it starts. Pick another time or get in touch with us."
     },
     "calendar": {
       "title": "Calendar",
@@ -857,7 +858,8 @@
       "hintFirstPilates": "First time pilates",
       "excuseRemoveCta": "Cancel session",
       "excuseTitle": "Cancel session?",
-      "emptyCutoffNotice": "Signups are closed — nobody booked by {{hours}} h before the start."
+      "emptyCutoffNotice_one": "Signups are closed — nobody booked by {{count}} hour before the start.",
+      "emptyCutoffNotice_other": "Signups are closed — nobody booked by {{count}} hours before the start."
     },
     "manage": {
       "title": "Manage",
