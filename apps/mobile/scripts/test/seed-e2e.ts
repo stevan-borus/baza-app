@@ -134,12 +134,16 @@ const CLASS_TYPES = [
   { name: "Golden age pilates", maxClients: 10, durationMins: 60 },
 ] as const;
 
+// Prices mirror the studio's real catalog, because trainer payout values a
+// session as price / sessions-in-package — an unpriced package pays the
+// trainer nothing and would make every payout spec assert zero.
 const PACKAGE_TYPES = [
   {
     name: "Reformer 12-pack",
     sessionCount: 12,
     validityDays: 30,
     lateCancelHours: 12,
+    price: 15000, // 1.250 / session
     classTypeName: "Reformer pilates",
   },
   {
@@ -147,6 +151,7 @@ const PACKAGE_TYPES = [
     sessionCount: 8,
     validityDays: 30,
     lateCancelHours: 12,
+    price: 11000, // 1.375 / session
     classTypeName: "Reformer pilates",
   },
   {
@@ -154,6 +159,7 @@ const PACKAGE_TYPES = [
     sessionCount: 12,
     validityDays: 30,
     lateCancelHours: 12,
+    price: 13000,
     classTypeName: "Energy pilates",
   },
   {
@@ -161,6 +167,7 @@ const PACKAGE_TYPES = [
     sessionCount: 8,
     validityDays: 30,
     lateCancelHours: 12,
+    price: 11000,
     classTypeName: "Moms&Minis",
   },
   {
@@ -168,6 +175,7 @@ const PACKAGE_TYPES = [
     sessionCount: 8,
     validityDays: 30,
     lateCancelHours: 12,
+    price: 11000,
     classTypeName: "Golden age pilates",
   },
 ] as const;
@@ -270,6 +278,7 @@ async function seedCatalog() {
         sessionCount: pt.sessionCount,
         validityDays: pt.validityDays,
         lateCancelHours: pt.lateCancelHours,
+        price: pt.price,
         classTypes: { create: { classTypeId: ct.id } },
       },
     });

@@ -401,7 +401,12 @@ export async function POST(request: Request) {
     select: { user: { select: { id: true } } },
   });
   if (clientProfile) {
-    if (packageType.isBirthdayGift) {
+    // Follow the ASSIGNMENT's gift flag, not the SKU's: a gift is now a real
+    // priced package handed over without payment, so keying off
+    // packageType.isBirthdayGift would send the flat "package assigned" copy
+    // to someone who was just given a birthday present. The legacy gift SKUs
+    // still count while they exist.
+    if (isGift || packageType.isBirthdayGift) {
       void createSystemNotification(
         clientProfile.user.id,
         NOTIFICATION_MESSAGE_KEYS.BIRTHDAY_CLIENT_GIFT,

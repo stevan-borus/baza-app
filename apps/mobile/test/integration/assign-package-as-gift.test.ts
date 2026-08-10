@@ -7,6 +7,7 @@ vi.mock("@/lib/server/auth-guards", async () => (await import("./auth-mock")).au
 vi.mock("@/lib/server/notifications", async () => (await import("./notifications-mock")).notificationsMock());
 
 import { POST } from "@/server/routes/packages/client-packages";
+import { computePayrollMonth } from "@/lib/server/payroll";
 import { prisma } from "@/lib/server/prisma";
 
 /**
@@ -180,5 +181,76 @@ describe("assign an existing package as a gift", () => {
     // same computation in the other direction unless the granted count wins.
     expect(body.clientPackage.sessionsTotal).toBe(1);
     expect(body.clientPackage.sessionsRemaining).toBe(1);
+  });
+
+  it("pays the trainer for a gift assigned through this route", async () => {
+    // The whole point of gifting a REAL package: the session the client
+    // attends on it is worth something to the trainer. This closes the loop
+    // from the assign route all the way to the payout figure, rather than
+    // building the gift row by hand as the payroll specs do.
+    const { clientProfileId } = await seedAdminAndClient();
+    const packageType = await seedPaidPackageType();
+
+    const assigned = await POST(
+      buildAssignRequest({
+        clientProfileId,
+        packageTypeId: packageType.id,
+        startsAt: "2026-07-01",
+        isGift: true,
+      }),
+    );
+    expect(assigned.status).toBe(201);
+    const { clientPackage } = (await assigned.json()) as {
+      clientPackage: { id: string };
+    };
+
+    const trainer = await prisma.user.create({
+      data: {
+        email: "trainer@test.local",
+        firstName: "Ana",
+        lastName: "Trener",
+        role: "TRAINER",
+      },
+    });
+    await prisma.trainerRate.create({
+      data: {
+        trainerUserId: trainer.id,
+        percent: 40,
+        effectiveFrom: new Date("2026-01-01T05:00:00.000Z"),
+      },
+    });
+    const classType = await prisma.classType.findFirstOrThrow();
+    const startsAt = new Date("2026-07-15T08:00:00.000Z");
+    const session = await prisma.session.create({
+      data: {
+        classTypeId: classType.id,
+        trainerUserId: trainer.id,
+        startsAt,
+        endsAt: new Date(startsAt.getTime() + 60 * 60 * 1000),
+        capacity: 6,
+      },
+    });
+    await prisma.booking.create({
+      data: {
+        sessionId: session.id,
+        clientProfileId,
+        clientPackageId: clientPackage.id,
+      },
+    });
+
+    const month = await computePayrollMonth(prisma, {
+      trainerUserId: trainer.id,
+      year: 2026,
+      month: 7,
+      asOf: new Date("2026-08-05T10:00:00.000Z"),
+    });
+
+    // A 1-session gift drawn from a 15.000 package: the grant IS the rate
+    // basis, so the house pays the trainer the full single-session value —
+    // never zero, which is what the old unpriced gift SKUs produced.
+    expect(month.giftCount).toBe(1);
+    expect(month.gross).toBe(15000);
+    expect(month.payout).toBe(6000); // 40%
+    expect(month.unpricedCount).toBe(0);
   });
 });

@@ -1,6 +1,4 @@
 import { router, type Href } from "expo-router";
-import { useQuery } from "@tanstack/react-query";
-import { packagesQueries } from "@/lib/queries/packages-queries-factory";
 import { resolveNotificationHref } from "@/lib/notification-routing";
 
 type Json = string | number | boolean | null | Json[] | { [k: string]: Json };
@@ -19,14 +17,18 @@ type TapInput = {
  * been in the admin app a moment ago.
  */
 export function useNotificationTapHandler() {
-  const packageTypesQuery = useQuery(packagesQueries.types());
-  const giftPackageTypes = (packageTypesQuery.data?.packageTypes ?? [])
-    .filter((pt) => pt.isBirthdayGift)
-    .map((pt) => ({
-      id: pt.id,
-      classTypeIds: pt.classTypes.map((classType) => classType.id),
-      isSystem: pt.isSystem ?? false,
-    }));
+  // Gifts are now given from a REAL, priced package (isGift on the assignment)
+  // rather than a dedicated 🎂 SKU, and the assign sheet no longer lists those
+  // retired SKUs. Preselecting one would hand the sheet a package id that is
+  // not in its own list: the submit would look enabled while the admin could
+  // neither see nor change what they were about to grant. So a birthday tap
+  // preselects nothing and simply opens the sheet in gift mode — the class-type
+  // hint still rides along to mark the assignment as a gift.
+  const giftPackageTypes: Array<{
+    id: string;
+    classTypeIds: string[];
+    isSystem?: boolean;
+  }> = [];
 
   function handleTap(input: TapInput): boolean {
     const href = resolveNotificationHref({
