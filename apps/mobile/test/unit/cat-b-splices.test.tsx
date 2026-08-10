@@ -119,7 +119,14 @@ describe("rooms cache splice", () => {
 // ── trainings (class types) ─────────────────────────────────────────────────
 const classTypesKey = trainingsQueries.classTypes().queryKey;
 function classType(id: string, over: Partial<ClassType> = {}): ClassType {
-  return { id, name: `Type ${id}`, maxClients: 8, durationMins: 60, ...over };
+  return {
+    id,
+    name: `Type ${id}`,
+    maxClients: 8,
+    durationMins: 60,
+    emptyBookingCutoffHours: 4,
+    ...over,
+  };
 }
 
 describe("trainings (class types) cache splice", () => {

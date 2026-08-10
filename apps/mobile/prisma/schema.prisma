@@ -240,6 +240,9 @@ model ClassType {
   name         String
   maxClients   Int
   durationMins Int
+  // Hours before start at which a session with zero active bookings stops
+  // being bookable by clients. 0 disables the rule for this class type.
+  emptyBookingCutoffHours Int @default(4)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   sessions           Session[]

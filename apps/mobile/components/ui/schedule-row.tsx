@@ -60,8 +60,10 @@ export type ScheduleRowSession = {
   /** Present when bookable is false: "RENEW" = expired/used-up package (renew
    * CTA); "PAUSED" = live package inside an active pause window; "NOT_STARTED"
    * = package starts in the future; "FULLY_HELD" = eligible package but every
-   * remaining session is already committed to future bookings/waitlist holds. */
-  lockReason?: "RENEW" | "PAUSED" | "NOT_STARTED" | "FULLY_HELD";
+   * remaining session is already committed to future bookings/waitlist holds;
+   * "EMPTY_CUTOFF" = nobody booked this session and its cutoff window has begun
+   * (not per-client — renewing would not unlock it). */
+  lockReason?: "RENEW" | "PAUSED" | "NOT_STARTED" | "FULLY_HELD" | "EMPTY_CUTOFF";
 };
 
 export function ScheduleRow({
@@ -82,7 +84,8 @@ export function ScheduleRow({
   const renewalLocked = session.bookable === false;
   const photo = photoForClassType(session.classTypeName);
   // Per-reason row action label. RENEW is the fallback (also covers older
-  // payloads that carry no lockReason).
+  // payloads that carry no lockReason). EMPTY_CUTOFF must never fall through
+  // to it — the client's package is fine, so "Obnovite" would be a lie.
   const lockedActionKey =
     session.lockReason === "FULLY_HELD"
       ? "client.renewal.rowActionFullyHeld"
@@ -90,7 +93,9 @@ export function ScheduleRow({
         ? "client.renewal.rowActionPaused"
         : session.lockReason === "NOT_STARTED"
           ? "client.renewal.rowActionNotStarted"
-          : "client.renewal.rowAction";
+          : session.lockReason === "EMPTY_CUTOFF"
+            ? "client.renewal.rowActionEmptyCutoff"
+            : "client.renewal.rowAction";
 
   // Shared muted/uppercase treatment for the meta lines. The room name gets its
   // own line below time·duration, so it reuses the exact same style.

@@ -62,12 +62,20 @@ export const availabilitySessionSchema = sessionFieldsSchema.pick({
    * - "FULLY_HELD"  — an eligible package exists, but every remaining session
    *                   is already committed to future bookings/waitlist holds;
    *                   booking would 409 until one of them is canceled.
-   * PAUSED / NOT_STARTED are additive (older clients that only know RENEW /
-   * FULLY_HELD fall back to the generic renewal copy).
+   * - "EMPTY_CUTOFF" — nobody has booked this session and the class type's
+   *                   empty-booking cutoff window has begun; the studio won't
+   *                   open the room, so nobody can book it (not per-client).
+   * PAUSED / NOT_STARTED / EMPTY_CUTOFF are additive (older clients that only
+   * know RENEW / FULLY_HELD fall back to the generic renewal copy).
    */
   lockReason: z
-    .enum(["RENEW", "PAUSED", "NOT_STARTED", "FULLY_HELD"])
+    .enum(["RENEW", "PAUSED", "NOT_STARTED", "FULLY_HELD", "EMPTY_CUTOFF"])
     .optional(),
+  /**
+   * The class type's empty-booking cutoff in hours, so the sheet can name the
+   * window in its copy. Present only when lockReason === "EMPTY_CUTOFF".
+   */
+  emptyBookingCutoffHours: z.number().optional(),
   /**
    * True when booking this session would take the client's LAST bookable
    * slot on their eligible package (sessionsRemaining − held slots === 1).

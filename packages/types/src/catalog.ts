@@ -14,6 +14,7 @@ const classTypeFieldsSchema = z.object({
   name: z.string(),
   maxClients: z.number().int(),
   durationMins: z.number().int(),
+  emptyBookingCutoffHours: z.number().int(),
 });
 const studioRoomFieldsSchema = z.object({
   name: z.string(),
@@ -70,10 +71,15 @@ export const classTypeInputSchema = classTypeFieldsSchema.pick({
   name: true,
   maxClients: true,
   durationMins: true,
+  emptyBookingCutoffHours: true,
 }).extend({
   name: z.string().trim().min(2).max(100),
   maxClients: z.number().int().positive(),
   durationMins: z.number().int().positive(),
+  // Hours before start at which a session with zero active bookings stops
+  // accepting client bookings. Nonnegative, not positive: 0 is the documented
+  // "rule off for this class type" value.
+  emptyBookingCutoffHours: z.number().int().nonnegative().default(4),
 });
 
 export const studioRoomInputSchema = studioRoomFieldsSchema.pick({
@@ -86,7 +92,16 @@ export const studioRoomInputSchema = studioRoomFieldsSchema.pick({
 
 export const updateStudioRoomInputSchema = studioRoomInputSchema.partial();
 
-export const updateClassTypeInputSchema = classTypeInputSchema.partial();
+// Spelled out rather than `classTypeInputSchema.partial()`: .partial() keeps
+// the .default() on emptyBookingCutoffHours, so a PATCH that never mentions the
+// field would still parse to 4 and overwrite a configured value. PATCH must
+// only carry the keys the admin actually sent.
+export const updateClassTypeInputSchema = z.object({
+  name: z.string().trim().min(2).max(100).optional(),
+  maxClients: z.number().int().positive().optional(),
+  durationMins: z.number().int().positive().optional(),
+  emptyBookingCutoffHours: z.number().int().nonnegative().optional(),
+});
 
 // ─── Catalog response schemas ────────────────────────────────────────────────
 
@@ -155,6 +170,7 @@ export const classTypeSchema = z.object({
   name: z.string(),
   maxClients: z.number(),
   durationMins: z.number(),
+  emptyBookingCutoffHours: z.number(),
 });
 export type ClassType = z.infer<typeof classTypeSchema>;
 

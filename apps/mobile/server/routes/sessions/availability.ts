@@ -6,6 +6,7 @@ import {
 import { UserRole } from "@/generated/prisma";
 import { now } from "@/lib/now";
 import { requireRole } from "@/lib/server/auth-guards";
+import { isEmptySessionCutoffLocked } from "@/lib/server/booking-cutoff";
 import { countHeldSessions } from "@/lib/server/booking-hold-count";
 import { respond, fail } from "@/lib/server/http";
 import {
@@ -72,7 +73,7 @@ export async function GET(request: Request) {
       classTypeId: true,
       trainerUserId: true,
       recurringScheduleId: true,
-      classType: { select: { name: true } },
+      classType: { select: { name: true, emptyBookingCutoffHours: true } },
       room: { select: { name: true } },
       trainer: { select: { firstName: true, lastName: true } },
       recurringSchedule: { select: { isActive: true } },
@@ -95,8 +96,10 @@ export async function GET(request: Request) {
     string,
     {
       bookable: boolean;
-      lockReason?: "RENEW" | "PAUSED" | "NOT_STARTED" | "FULLY_HELD";
+      lockReason?: "RENEW" | "PAUSED" | "NOT_STARTED" | "FULLY_HELD" | "EMPTY_CUTOFF";
       lastBookableSlot: boolean;
+      // Only set alongside EMPTY_CUTOFF — the sheet names the window in its copy.
+      emptyBookingCutoffHours?: number;
     }
   >();
   // Per-session late-cancel-hours pulled from the booking's package. Used
@@ -171,6 +174,25 @@ export async function GET(request: Request) {
       const heldCountByPackageId = new Map<string, number>();
       const at = now();
       for (const session of visibleSessions) {
+        // Checked before the package lookup: this lock is absolute, not
+        // per-client. A lapsed client would otherwise read RENEW and be sold a
+        // renewal that still could not open this session for anyone.
+        if (
+          isEmptySessionCutoffLocked({
+            startsAt: session.startsAt,
+            activeBookingsCount: session._count.bookings,
+            cutoffHours: session.classType.emptyBookingCutoffHours,
+            at,
+          })
+        ) {
+          sessionBookingFlags.set(session.id, {
+            bookable: false,
+            lockReason: "EMPTY_CUTOFF",
+            lastBookableSlot: false,
+            emptyBookingCutoffHours: session.classType.emptyBookingCutoffHours,
+          });
+          continue;
+        }
         const eligible = findEligibleClientPackage(
           clientPackages,
           packagePauses,
@@ -265,6 +287,8 @@ export async function GET(request: Request) {
         // Staff (no map entry) are always bookable and never warned.
         bookable: sessionBookingFlags.get(session.id)?.bookable ?? true,
         lockReason: sessionBookingFlags.get(session.id)?.lockReason,
+        emptyBookingCutoffHours:
+          sessionBookingFlags.get(session.id)?.emptyBookingCutoffHours,
         lastBookableSlot:
           sessionBookingFlags.get(session.id)?.lastBookableSlot ?? false,
       };

@@ -109,6 +109,36 @@ describe("BookingSheet renewal locks", () => {
     await screen.findByTestId("booking-renewal-message");
   });
 
+  it("EMPTY_CUTOFF lock names the cutoff window the studio closed booking in", async () => {
+    const screen = renderSheet({
+      session: makeSession({
+        bookable: false,
+        lockReason: "EMPTY_CUTOFF",
+        emptyBookingCutoffHours: 4,
+      }),
+    });
+
+    const message = await screen.findByTestId("booking-empty-cutoff-message");
+    expect(message.textContent).toContain("4");
+    expect(message.textContent).toContain("niko nije zakazao");
+    expect(screen.queryByTestId("booking-book-button")).toBeNull();
+    expect(screen.queryByTestId("booking-renewal-message")).toBeNull();
+  });
+
+  it("EMPTY_CUTOFF copy uses the class type's own window, not a fixed 4h", async () => {
+    const screen = renderSheet({
+      session: makeSession({
+        bookable: false,
+        lockReason: "EMPTY_CUTOFF",
+        emptyBookingCutoffHours: 6,
+      }),
+    });
+
+    const message = await screen.findByTestId("booking-empty-cutoff-message");
+    expect(message.textContent).toContain("6");
+    expect(message.textContent).not.toContain("4");
+  });
+
   it("a waitlisted client sees LEAVE, not the lock message, even when FULLY_HELD", async () => {
     // The client's own waitlist hold can BE what makes the session FULLY_HELD;
     // the lock must not trap the one person who needs the leave button.
@@ -387,6 +417,7 @@ describe("BookingSheet result states", () => {
     ["no_package_for_class", "Nemate aktivan paket"],
     ["PACKAGE_EXHAUSTED", "Nemate više termina u paketu"],
     ["SESSION_IN_PAST", "već prošao"],
+    ["EMPTY_SESSION_CUTOFF", "niko nije zakazao"],
     ["SOME_UNKNOWN_CODE", "Akcija zakazivanja nije uspela."],
   ] as const)("errorCode %s renders its copy", async (code, copy) => {
     const screen = renderSheet({ errorCode: code });

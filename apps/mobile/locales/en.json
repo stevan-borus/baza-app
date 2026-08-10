@@ -279,7 +279,8 @@
       "rowAction": "Renew",
       "rowActionPaused": "Paused",
       "rowActionNotStarted": "Soon",
-      "rowActionFullyHeld": "No sessions left"
+      "rowActionFullyHeld": "No sessions left",
+      "rowActionEmptyCutoff": "Closed"
     },
     "clientPackages": {
       "title": "My packages",
@@ -412,7 +413,8 @@
       "leaveWaitlist": "Leave waitlist",
       "confirmLeaveWaitlist": "Leave the waitlist?",
       "onWaitlist": "You're on the waitlist",
-      "alreadyBooked": "You already have a booking"
+      "alreadyBooked": "You already have a booking",
+      "emptyCutoffMessage": "Nobody signed up for this session, so booking closed {{hours}}h before it starts. Pick another time or get in touch with us."
     },
     "calendar": {
       "title": "Calendar",
@@ -431,6 +433,7 @@
       "errorNoPackage": "You don't have an active package for this class type.",
       "errorPackageExhausted": "No sessions left in your package. Cancel a booking or renew.",
       "errorSessionPast": "This session has already passed.",
+      "errorEmptyCutoff": "Nobody signed up for this session, so booking is closed.",
       "room": "Room",
       "trainer": "Trainer",
       "availableSlots": "{{count}} available",
@@ -927,6 +930,9 @@
       "classTypeSummary": "{{duration}} min · Max {{max}}",
       "placeholderMaxClients": "Max clients",
       "placeholderDurationMins": "Duration (min)",
+      "placeholderEmptyBookingCutoff": "Empty session closes (hours)",
+      "emptyBookingCutoffHelper": "If nobody has booked, the session closes this many hours before it starts. Enter 0 to turn the rule off.",
+      "emptyBookingCutoffChip": "{{hours}}h",
       "createError": "Creating failed.",
       "sheetNewRoom": "New room",
       "placeholderCapacity": "Capacity",

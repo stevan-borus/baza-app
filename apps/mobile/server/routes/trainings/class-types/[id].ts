@@ -28,6 +28,7 @@ export async function PATCH(request: Request, { id }: RouteParams) {
       name: true,
       maxClients: true,
       durationMins: true,
+      emptyBookingCutoffHours: true,
       updatedAt: true,
     },
   });
