@@ -77,6 +77,17 @@ export const availabilitySessionSchema = sessionFieldsSchema.pick({
    */
   emptyBookingCutoffHours: z.number().optional(),
   /**
+   * True when the session has no active bookings AND its class type's
+   * empty-booking cutoff window has begun — i.e. clients can no longer sign
+   * up and the class will not run unless an admin books someone manually.
+   *
+   * Display-only, and sent for EVERY role: it never gates booking (staff
+   * bypass the rule entirely, and the client gate is `bookable`/`lockReason`).
+   * Staff read it for the "closed — plan around it" signal the whole rule
+   * exists to give them. Absent/false means the session is still open.
+   */
+  emptyCutoffLocked: z.boolean().optional(),
+  /**
    * True when booking this session would take the client's LAST bookable
    * slot on their eligible package (sessionsRemaining − held slots === 1).
    * Drives the "renew to keep training" warning at confirm time.
@@ -211,6 +222,18 @@ export const sessionDetailSchema = z.object({
   trainer: z.object({ id: z.string(), fullName: z.string() }).nullable(),
   bookedCount: z.number(),
   seriesBookedCount: z.number(),
+  /**
+   * True when this session has no active bookings AND its class type's
+   * empty-booking cutoff window has begun — clients can no longer sign up.
+   * Display-only: the detail screen says so in words, so the trainer knows
+   * the class won't run unless an admin books someone manually.
+   */
+  emptyCutoffLocked: z.boolean().optional(),
+  /**
+   * The class type's empty-booking cutoff in hours, so the detail screen can
+   * name the window. Present only alongside `emptyCutoffLocked`.
+   */
+  emptyBookingCutoffHours: z.number().optional(),
   bookings: z.array(sessionClientSchema.extend({ createdAt: z.string() })),
   // Queued clients (capacity full). Empty array when nobody is waiting; the
   // UI hides the section entirely in that case.

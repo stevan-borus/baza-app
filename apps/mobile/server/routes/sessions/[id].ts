@@ -6,8 +6,9 @@ import {
   updateSessionInputSchema,
 } from "@baza/types/scheduling";
 import { UserRole } from "@/generated/prisma";
-import { nowMs } from "@/lib/now";
+import { now, nowMs } from "@/lib/now";
 import { requireRole } from "@/lib/server/auth-guards";
+import { isEmptySessionCutoffLocked } from "@/lib/server/booking-cutoff";
 import { notifyClient } from "@/lib/server/notify-client";
 import { notifyOperators } from "@/lib/server/notify-operators";
 import { respond, fail, parseBody } from "@/lib/server/http";
@@ -68,7 +69,9 @@ export async function GET(request: Request, { id }: RouteParams) {
       roomId: true,
       trainerUserId: true,
       recurringScheduleId: true,
-      classType: { select: { id: true, name: true } },
+      classType: {
+        select: { id: true, name: true, emptyBookingCutoffHours: true },
+      },
       room: { select: { id: true, name: true } },
       trainer: { select: { id: true, firstName: true, lastName: true } },
       bookings: {
@@ -215,8 +218,21 @@ export async function GET(request: Request, { id }: RouteParams) {
       })
     : bookedCount;
 
+  // Display-only "clients can no longer sign up" signal. The detail screen
+  // spells it out so a trainer reading an empty roster knows the class won't
+  // run unless an admin books someone manually — not that it merely has no
+  // bookings yet.
+  const emptyCutoffLocked = isEmptySessionCutoffLocked({
+    startsAt: session.startsAt,
+    activeBookingsCount: session.bookings.length,
+    cutoffHours: session.classType.emptyBookingCutoffHours,
+    at: now(),
+  });
+
   const shaped = {
     ...session,
+    emptyCutoffLocked,
+    emptyBookingCutoffHours: session.classType.emptyBookingCutoffHours,
     trainer: session.trainer
       ? {
           id: session.trainer.id,

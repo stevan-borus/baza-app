@@ -254,6 +254,12 @@ export async function GET(request: Request) {
     }
   }
 
+  // Display-only cutoff signal, computed for every role (the client branch
+  // above has its own `at` for the booking gate; this one covers staff too,
+  // who never enter that branch). Staff need to SEE the closed slot — that
+  // trainer-plans-around-an-empty-slot case is the whole point of the rule.
+  const responseAt = now();
+
   return respond(availabilityResponseSchema, {
     success: true,
     month: parsed.data.month,
@@ -284,6 +290,12 @@ export async function GET(request: Request) {
         isBookedByMe: myBookedSessionIds.has(session.id),
         isWaitlistedByMe: myWaitlistedSessionIds.has(session.id),
         lateCancelHours: myBookingLateCancelHours.get(session.id) ?? null,
+        emptyCutoffLocked: isEmptySessionCutoffLocked({
+          startsAt: session.startsAt,
+          activeBookingsCount: session._count.bookings,
+          cutoffHours: session.classType.emptyBookingCutoffHours,
+          at: responseAt,
+        }),
         // Staff (no map entry) are always bookable and never warned.
         bookable: sessionBookingFlags.get(session.id)?.bookable ?? true,
         lockReason: sessionBookingFlags.get(session.id)?.lockReason,

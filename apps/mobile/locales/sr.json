@@ -858,7 +858,8 @@
       "photoConsentNo": "Foto/video: Ne",
       "hintFirstPilates": "Prvi put pilates",
       "excuseRemoveCta": "Otkaži termin",
-      "excuseTitle": "Otkaži termin?"
+      "excuseTitle": "Otkaži termin?",
+      "emptyCutoffNotice": "Prijave su zatvorene — niko se nije prijavio do {{hours}} h pre početka. Termin neće biti održan osim ako administrator ručno ne upiše klijenta."
     },
     "manage": {
       "title": "Upravljanje",
@@ -1132,6 +1133,10 @@
         "applying": "Primenjujem…",
         "error": "Nije moguće učitati termine. Pokušaj ponovo."
       }
+    },
+    "dayView": {
+      "emptyCutoffChip": "Zatvoreno",
+      "emptyCutoffChipA11y": "Prijave zatvorene — nema prijavljenih klijenata"
     }
   },
   "trainer": {

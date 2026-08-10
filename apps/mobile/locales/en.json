@@ -854,7 +854,8 @@
       "photoConsentNo": "Photo/video: No",
       "hintFirstPilates": "First time pilates",
       "excuseRemoveCta": "Cancel session",
-      "excuseTitle": "Cancel session?"
+      "excuseTitle": "Cancel session?",
+      "emptyCutoffNotice": "Signups are closed — nobody booked by {{hours}} h before the start. This class will not run unless an admin books a client manually."
     },
     "manage": {
       "title": "Manage",
@@ -1126,6 +1127,10 @@
         "applying": "Applying…",
         "error": "Couldn't load sessions. Try again."
       }
+    },
+    "dayView": {
+      "emptyCutoffChip": "Closed",
+      "emptyCutoffChipA11y": "Signups closed — no clients booked"
     }
   },
   "trainer": {
