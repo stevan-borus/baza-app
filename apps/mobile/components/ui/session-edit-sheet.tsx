@@ -35,6 +35,7 @@ type UpdateSessionVars = {
   isActive?: boolean;
   status?: "SCHEDULED" | "CANCELED" | "COMPLETED";
   isIntermediate?: boolean;
+  isMixedGroup?: boolean;
 };
 type UpdateSeriesVars = {
   id: string;
@@ -85,6 +86,8 @@ export type EditSessionInput = {
   isActive?: boolean;
   /** Current per-occurrence "intermediate" marking. Absent = unmarked. */
   isIntermediate?: boolean;
+  /** Current per-occurrence "mixed group" marking. Absent = unmarked. */
+  isMixedGroup?: boolean;
 };
 
 type ShowEditState = {
@@ -111,6 +114,7 @@ type EditForm = {
   status: string;
   isActive: boolean;
   isIntermediate: boolean;
+  isMixedGroup: boolean;
 };
 
 type SeriesForm = {
@@ -163,6 +167,7 @@ export function useSessionEditSheet() {
     status: "SCHEDULED",
     isActive: true,
     isIntermediate: false,
+    isMixedGroup: false,
   });
   const [seriesForm, setSeriesForm] = useState<SeriesForm>({
     weekdays: [],
@@ -258,6 +263,7 @@ export function useSessionEditSheet() {
       status: "SCHEDULED",
       isActive: sessionIsActive,
       isIntermediate: session.isIntermediate ?? false,
+      isMixedGroup: session.isMixedGroup ?? false,
     });
     setShowEdit({
       sessionId: session.id,
@@ -459,6 +465,23 @@ export function SessionEditSheet(props: SessionEditSheetBoundProps) {
                 />
               </View>
 
+              {/* Per-occurrence "mixed group" marking — same rules as the
+                  intermediate switch above, and independent of it. */}
+              <View className="flex-row items-center justify-between px-1 py-1">
+                <Text className="text-sm text-muted">
+                  {t("session.mixedGroup.switchLabel")}
+                </Text>
+                <Switch
+                  testID="session-edit-mixed-group-switch"
+                  value={editForm.isMixedGroup}
+                  onValueChange={(v) =>
+                    setEditForm((s) => ({ ...s, isMixedGroup: v }))
+                  }
+                  trackColor={{ false: tokens.glassStrong, true: tokens.accent }}
+                  style={{ transform: [{ scale: 0.85 }] }}
+                />
+              </View>
+
               {(() => {
                 // ADR-0002 occurrence rule: per-session save path is disabled
                 // iff THIS session has bookings, regardless of whether it
@@ -513,6 +536,7 @@ export function SessionEditSheet(props: SessionEditSheetBoundProps) {
                     isActive: editForm.isActive,
                     // Always sent so toggling off (unmark) persists.
                     isIntermediate: editForm.isIntermediate,
+                    isMixedGroup: editForm.isMixedGroup,
                   });
                 }}
               >

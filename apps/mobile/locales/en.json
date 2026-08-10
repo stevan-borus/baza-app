@@ -1325,6 +1325,12 @@
       "label": "Intermediate",
       "switchLabel": "Intermediate",
       "a11yLabel": "Intermediate training"
+    },
+    "mixedGroup": {
+      "badge": "♀♂",
+      "label": "Mixed group",
+      "switchLabel": "Mixed group",
+      "a11yLabel": "Mixed group — men and women train together"
     }
   }
 }

@@ -14,6 +14,7 @@ import dayjs from "dayjs";
 import { useTranslation } from "react-i18next";
 import { useThemeTokens } from "@/components/ui/tokens";
 import { IntermediateBadge } from "@/components/ui/intermediate-badge";
+import { MixedGroupBadge } from "@/components/ui/mixed-group-badge";
 
 const PHOTO_RINGS = require("@/assets/studio/rings.webp");
 const PHOTO_PLANK = require("@/assets/studio/plank.webp");
@@ -51,6 +52,7 @@ export type ScheduleRowSession = {
   capacity: number;
   /** Admin-set "intermediate" marking for this occurrence; absent = unmarked. */
   isIntermediate?: boolean;
+  isMixedGroup?: boolean;
   isBookedByMe?: boolean;
   /** False = the client can't book this session: the row renders muted
    * (still tappable — the sheet explains why). */
@@ -138,6 +140,7 @@ export function ScheduleRow({
               {t("client.home.minutesShort", { count: end.diff(start, "minute") })}
             </Text>
             <IntermediateBadge isIntermediate={session.isIntermediate} />
+            <MixedGroupBadge isMixedGroup={session.isMixedGroup} />
           </View>
           {session.roomName ? (
             <Text style={metaTextStyle}>{session.roomName}</Text>

@@ -19,6 +19,7 @@ import { nowMs } from "@/lib/now";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { IntermediateBadge } from "@/components/ui/intermediate-badge";
+import { MixedGroupBadge } from "@/components/ui/mixed-group-badge";
 import { useThemeTokens, type ThemeTokens } from "@/components/ui/tokens";
 import type { AvailabilitySession } from "@baza/types/scheduling";
 
@@ -157,6 +158,7 @@ export function BookingSheet({
               {/* The sheet doubles as the legend: the mark expands to
                   "★ Intermediate" here (dense rows show the bare glyph). */}
               <IntermediateBadge isIntermediate={session.isIntermediate} size="detail" showLabel />
+              <MixedGroupBadge isMixedGroup={session.isMixedGroup} size="detail" showLabel />
               <View className="flex-row items-center gap-2.5 pt-0.5">
                 <Text className="text-muted text-sm">
                   {dayjs(session.startsAt).locale(lang).format("dddd, D MMMM")}
