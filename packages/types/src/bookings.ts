@@ -65,6 +65,8 @@ export const clientBookingItemSchema = z.object({
     endsAt: z.string(),
     // Admin-set binary "intermediate" (srednji nivo) marking for this occurrence; absent = unmarked.
     isIntermediate: z.boolean().optional(),
+    // Admin-set binary "mixed group" marking for this occurrence; absent = unmarked.
+    isMixedGroup: z.boolean().optional(),
     classType: z.object({ id: z.string(), name: z.string() }),
     room: z.nullable(z.object({ id: z.string(), name: z.string() })),
     trainer: z.nullable(z.object({ id: z.string(), fullName: z.string() })),
@@ -86,5 +88,6 @@ export const BOOKING_ERRORS = {
   SESSION_IN_PAST: "SESSION_IN_PAST",
   SESSION_ALREADY_STARTED: "SESSION_ALREADY_STARTED",
   PACKAGE_EXHAUSTED: "PACKAGE_EXHAUSTED",
+  EMPTY_SESSION_CUTOFF: "EMPTY_SESSION_CUTOFF",
 } as const;
 

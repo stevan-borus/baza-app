@@ -19,6 +19,7 @@ import { nowMs } from "@/lib/now";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { IntermediateBadge } from "@/components/ui/intermediate-badge";
+import { MixedGroupBadge } from "@/components/ui/mixed-group-badge";
 import { useThemeTokens, type ThemeTokens } from "@/components/ui/tokens";
 import type { AvailabilitySession } from "@baza/types/scheduling";
 
@@ -157,6 +158,7 @@ export function BookingSheet({
               {/* The sheet doubles as the legend: the mark expands to
                   "★ Intermediate" here (dense rows show the bare glyph). */}
               <IntermediateBadge isIntermediate={session.isIntermediate} size="detail" showLabel />
+              <MixedGroupBadge isMixedGroup={session.isMixedGroup} size="detail" showLabel />
               <View className="flex-row items-center gap-2.5 pt-0.5">
                 <Text className="text-muted text-sm">
                   {dayjs(session.startsAt).locale(lang).format("dddd, D MMMM")}
@@ -312,12 +314,13 @@ export function BookingSheet({
                 // The server's 409 stays as the backstop if a stale sheet
                 // slips through. Plain informational block, not a disabled
                 // button. Each lock reason gets its own copy + testID:
-                // FULLY_HELD / PAUSED / NOT_STARTED each need a distinct,
-                // truthful message — telling a paused or not-yet-started client
-                // to "renew" would be wrong and confusing. RENEW is the
+                // FULLY_HELD / PAUSED / NOT_STARTED / EMPTY_CUTOFF each need a
+                // distinct, truthful message — telling a paused or not-yet-
+                // started client to "renew" would be wrong and confusing, and
+                // EMPTY_CUTOFF isn't about their package at all. RENEW is the
                 // fallback (also covers older payloads with no lockReason).
                 (() => {
-                  const lock = renewalLockCopy(session.lockReason);
+                  const lock = renewalLockCopy(session);
                   return (
                     <View
                       testID={lock.testID}
@@ -325,7 +328,7 @@ export function BookingSheet({
                     >
                       <Icon name="info-circle" size={18} color="#a17d3a" />
                       <Text className="flex-1 text-[14px] text-warning font-body-semibold">
-                        {t(lock.messageKey)}
+                        {t(lock.messageKey, lock.values)}
                       </Text>
                     </View>
                   );
@@ -594,7 +597,9 @@ export function BookingSheet({
                         ? t("client.calendar.errorPackageExhausted")
                         : errorCode === "SESSION_IN_PAST"
                           ? t("client.calendar.errorSessionPast")
-                          : t("client.calendar.bookingError")}
+                          : errorCode === "EMPTY_SESSION_CUTOFF"
+                            ? t("client.calendar.errorEmptyCutoff")
+                            : t("client.calendar.bookingError")}
                 </Text>
               </View>
             )}
@@ -609,13 +614,16 @@ export function BookingSheet({
  * Copy + testID for the renewal-lock informational block, one per lockReason.
  * RENEW is the fallback and also covers older payloads that carry no reason.
  * testIDs for RENEW and FULLY_HELD are unchanged so existing specs keep
- * matching; PAUSED / NOT_STARTED get their own.
+ * matching; PAUSED / NOT_STARTED / EMPTY_CUTOFF get their own.
+ * Takes the whole session because EMPTY_CUTOFF names the class type's own
+ * window in its copy, so it needs `values` for interpolation.
  */
-function renewalLockCopy(lockReason: AvailabilitySession["lockReason"]): {
+function renewalLockCopy(session: AvailabilitySession): {
   testID: string;
   messageKey: string;
+  values?: Record<string, unknown>;
 } {
-  switch (lockReason) {
+  switch (session.lockReason) {
     case "FULLY_HELD":
       return {
         testID: "booking-fully-held-message",
@@ -630,6 +638,15 @@ function renewalLockCopy(lockReason: AvailabilitySession["lockReason"]): {
       return {
         testID: "booking-not-started-message",
         messageKey: "client.renewal.notStartedMessage",
+      };
+    case "EMPTY_CUTOFF":
+      return {
+        testID: "booking-empty-cutoff-message",
+        messageKey: "client.dayView.emptyCutoffMessage",
+        // `count` (not `hours`) so i18next picks the Serbian plural form
+        // (1 čas / 4 časa / 5 časova). Older cached payloads can carry the
+        // reason without the hours; 4 is the schema default fallback.
+        values: { count: session.emptyBookingCutoffHours ?? 4 },
       };
     default:
       return {

@@ -279,7 +279,8 @@
       "rowAction": "Obnovite",
       "rowActionPaused": "Pauzirano",
       "rowActionNotStarted": "Uskoro",
-      "rowActionFullyHeld": "Bez termina"
+      "rowActionFullyHeld": "Bez termina",
+      "rowActionEmptyCutoff": "Zatvoreno"
     },
     "clientPackages": {
       "title": "Moji paketi",
@@ -414,7 +415,10 @@
       "leaveWaitlist": "Napusti listu čekanja",
       "confirmLeaveWaitlist": "Napusti listu čekanja?",
       "onWaitlist": "Na listi ste čekanja",
-      "alreadyBooked": "Već imate rezervaciju"
+      "alreadyBooked": "Već imate rezervaciju",
+      "emptyCutoffMessage_one": "Za ovaj termin niko nije zakazao trening, pa je zakazivanje zatvoreno {{count}} čas pre početka. Izaberite neki drugi termin ili nam se javite.",
+      "emptyCutoffMessage_few": "Za ovaj termin niko nije zakazao trening, pa je zakazivanje zatvoreno {{count}} časa pre početka. Izaberite neki drugi termin ili nam se javite.",
+      "emptyCutoffMessage_other": "Za ovaj termin niko nije zakazao trening, pa je zakazivanje zatvoreno {{count}} časova pre početka. Izaberite neki drugi termin ili nam se javite."
     },
     "calendar": {
       "title": "Kalendar",
@@ -433,6 +437,7 @@
       "errorNoPackage": "Nemate aktivan paket za ovaj tip treninga.",
       "errorPackageExhausted": "Nemate više termina u paketu. Otkažite zakazani termin ili obnovite paket.",
       "errorSessionPast": "Ovaj termin je već prošao.",
+      "errorEmptyCutoff": "Za ovaj termin niko nije zakazao trening, pa je zakazivanje zatvoreno.",
       "room": "Sala",
       "trainer": "Trener",
       "availableSlots": "{{count}} slobodno",
@@ -824,6 +829,8 @@
       "weekday5Short": "P",
       "weekday6Short": "S",
       "placeholderCapacity": "Max klijenata",
+      "placeholderEmptyBookingCutoff": "Zatvaranje praznog termina (sati)",
+      "emptyBookingCutoffHelper": "Ako niko nije rezervisao, termin se zatvara ovoliko sati pre početka. Unesite 0 da isključite pravilo.",
       "maxClientsHint": "klijenata",
       "createError": "Kreiranje termina nije uspelo.",
       "editTitle": "Uredi: {{name}}",
@@ -855,7 +862,10 @@
       "photoConsentNo": "Foto/video: Ne",
       "hintFirstPilates": "Prvi put pilates",
       "excuseRemoveCta": "Otkaži termin",
-      "excuseTitle": "Otkaži termin?"
+      "excuseTitle": "Otkaži termin?",
+      "emptyCutoffNotice_one": "Prijave su zatvorene — niko se nije prijavio do {{count}} časa pre početka.",
+      "emptyCutoffNotice_few": "Prijave su zatvorene — niko se nije prijavio do {{count}} časa pre početka.",
+      "emptyCutoffNotice_other": "Prijave su zatvorene — niko se nije prijavio do {{count}} časova pre početka."
     },
     "manage": {
       "title": "Upravljanje",
@@ -1126,6 +1136,10 @@
         "applying": "Primenjujem…",
         "error": "Nije moguće učitati termine. Pokušaj ponovo."
       }
+    },
+    "dayView": {
+      "emptyCutoffChip": "Zatvoreno",
+      "emptyCutoffChipA11y": "Prijave zatvorene — nema prijavljenih klijenata"
     }
   },
   "trainer": {
@@ -1331,6 +1345,12 @@
       "label": "Intermediate",
       "switchLabel": "Intermediate",
       "a11yLabel": "Intermediate trening"
+    },
+    "mixedGroup": {
+      "badge": "♀♂",
+      "label": "Mešana grupa",
+      "switchLabel": "Mešana grupa",
+      "a11yLabel": "Mešana grupa — treniraju muškarci i žene"
     }
   }
 }

@@ -360,3 +360,132 @@ describe("sessions CRUD", () => {
     expect(response.status).toBe(404);
   });
 });
+
+describe("sessions emptyBookingCutoffHours (per-occurrence config)", () => {
+  beforeEach(async () => {
+    await resetDb();
+  });
+  afterAll(async () => {
+    await resetDb();
+    await prisma.$disconnect();
+  });
+
+  async function postSession(
+    trainerUserId: string,
+    classTypeId: string,
+    body: Record<string, unknown>,
+  ) {
+    return POST(
+      jsonRequest("http://test.local/api/sessions", "POST", {
+        classTypeId,
+        trainerUserId,
+        startsAt: futureStart.toISOString(),
+        endsAt: futureEnd.toISOString(),
+        capacity: 6,
+        ...body,
+      }),
+    );
+  }
+
+  it("POST with an explicit cutoff persists and returns it", async () => {
+    const { trainer, reformer } = await seed();
+    asAdmin();
+
+    const response = await postSession(trainer.id, reformer.id, {
+      emptyBookingCutoffHours: 8,
+    });
+
+    expect(response.status).toBe(201);
+    const json = await response.json();
+    expect(json.session.emptyBookingCutoffHours).toBe(8);
+    const reloaded = await prisma.session.findUnique({
+      where: { id: json.session.id },
+    });
+    expect(reloaded?.emptyBookingCutoffHours).toBe(8);
+  });
+
+  it("POST without the field falls back to the 4h default", async () => {
+    const { trainer, reformer } = await seed();
+    asAdmin();
+
+    const response = await postSession(trainer.id, reformer.id, {});
+
+    expect(response.status).toBe(201);
+    const json = await response.json();
+    expect(json.session.emptyBookingCutoffHours).toBe(4);
+    const reloaded = await prisma.session.findUnique({
+      where: { id: json.session.id },
+    });
+    expect(reloaded?.emptyBookingCutoffHours).toBe(4);
+  });
+
+  it("PATCH sets the cutoff to 0 (rule off) without touching the other fields", async () => {
+    const { trainer, reformer } = await seed();
+    const session = await prisma.session.create({
+      data: {
+        classTypeId: reformer.id,
+        trainerUserId: trainer.id,
+        startsAt: futureStart,
+        endsAt: futureEnd,
+        capacity: 6,
+        emptyBookingCutoffHours: 4,
+      },
+    });
+    asAdmin();
+
+    const response = await PATCH(
+      jsonRequest(
+        `http://test.local/api/sessions/${session.id}`,
+        "PATCH",
+        { emptyBookingCutoffHours: 0 },
+      ),
+      { id: session.id },
+    );
+
+    expect(response.status).toBe(200);
+    const json = await response.json();
+    expect(json.session.emptyBookingCutoffHours).toBe(0);
+    const reloaded = await prisma.session.findUnique({
+      where: { id: session.id },
+    });
+    expect(reloaded?.emptyBookingCutoffHours).toBe(0);
+    expect(reloaded?.capacity).toBe(6);
+    expect(reloaded?.trainerUserId).toBe(trainer.id);
+  });
+
+  // Regression guard: an updateSessionInputSchema built with .partial() off a
+  // defaulted create schema would parse an omitted field back to 4 and silently
+  // wipe a configured value.
+  it("PATCH that omits the cutoff leaves the stored value alone (no default reset)", async () => {
+    const { trainer, reformer } = await seed();
+    const session = await prisma.session.create({
+      data: {
+        classTypeId: reformer.id,
+        trainerUserId: trainer.id,
+        startsAt: futureStart,
+        endsAt: futureEnd,
+        capacity: 6,
+        emptyBookingCutoffHours: 9,
+      },
+    });
+    asAdmin();
+
+    const response = await PATCH(
+      jsonRequest(
+        `http://test.local/api/sessions/${session.id}`,
+        "PATCH",
+        { capacity: 10 },
+      ),
+      { id: session.id },
+    );
+
+    expect(response.status).toBe(200);
+    const json = await response.json();
+    expect(json.session.emptyBookingCutoffHours).toBe(9);
+    const reloaded = await prisma.session.findUnique({
+      where: { id: session.id },
+    });
+    expect(reloaded?.emptyBookingCutoffHours).toBe(9);
+    expect(reloaded?.capacity).toBe(10);
+  });
+});

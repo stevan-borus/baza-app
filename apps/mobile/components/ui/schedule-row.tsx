@@ -14,6 +14,7 @@ import dayjs from "dayjs";
 import { useTranslation } from "react-i18next";
 import { useThemeTokens } from "@/components/ui/tokens";
 import { IntermediateBadge } from "@/components/ui/intermediate-badge";
+import { MixedGroupBadge } from "@/components/ui/mixed-group-badge";
 
 const PHOTO_RINGS = require("@/assets/studio/rings.webp");
 const PHOTO_PLANK = require("@/assets/studio/plank.webp");
@@ -51,6 +52,7 @@ export type ScheduleRowSession = {
   capacity: number;
   /** Admin-set "intermediate" marking for this occurrence; absent = unmarked. */
   isIntermediate?: boolean;
+  isMixedGroup?: boolean;
   isBookedByMe?: boolean;
   /** False = the client can't book this session: the row renders muted
    * (still tappable — the sheet explains why). */
@@ -58,8 +60,10 @@ export type ScheduleRowSession = {
   /** Present when bookable is false: "RENEW" = expired/used-up package (renew
    * CTA); "PAUSED" = live package inside an active pause window; "NOT_STARTED"
    * = package starts in the future; "FULLY_HELD" = eligible package but every
-   * remaining session is already committed to future bookings/waitlist holds. */
-  lockReason?: "RENEW" | "PAUSED" | "NOT_STARTED" | "FULLY_HELD";
+   * remaining session is already committed to future bookings/waitlist holds;
+   * "EMPTY_CUTOFF" = nobody booked this session and its cutoff window has begun
+   * (not per-client — renewing would not unlock it). */
+  lockReason?: "RENEW" | "PAUSED" | "NOT_STARTED" | "FULLY_HELD" | "EMPTY_CUTOFF";
 };
 
 export function ScheduleRow({
@@ -80,7 +84,8 @@ export function ScheduleRow({
   const renewalLocked = session.bookable === false;
   const photo = photoForClassType(session.classTypeName);
   // Per-reason row action label. RENEW is the fallback (also covers older
-  // payloads that carry no lockReason).
+  // payloads that carry no lockReason). EMPTY_CUTOFF must never fall through
+  // to it — the client's package is fine, so "Obnovite" would be a lie.
   const lockedActionKey =
     session.lockReason === "FULLY_HELD"
       ? "client.renewal.rowActionFullyHeld"
@@ -88,7 +93,9 @@ export function ScheduleRow({
         ? "client.renewal.rowActionPaused"
         : session.lockReason === "NOT_STARTED"
           ? "client.renewal.rowActionNotStarted"
-          : "client.renewal.rowAction";
+          : session.lockReason === "EMPTY_CUTOFF"
+            ? "client.renewal.rowActionEmptyCutoff"
+            : "client.renewal.rowAction";
 
   // Shared muted/uppercase treatment for the meta lines. The room name gets its
   // own line below time·duration, so it reuses the exact same style.
@@ -138,6 +145,7 @@ export function ScheduleRow({
               {t("client.home.minutesShort", { count: end.diff(start, "minute") })}
             </Text>
             <IntermediateBadge isIntermediate={session.isIntermediate} />
+            <MixedGroupBadge isMixedGroup={session.isMixedGroup} />
           </View>
           {session.roomName ? (
             <Text style={metaTextStyle}>{session.roomName}</Text>

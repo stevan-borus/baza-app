@@ -6,8 +6,9 @@ import {
   updateSessionInputSchema,
 } from "@baza/types/scheduling";
 import { UserRole } from "@/generated/prisma";
-import { nowMs } from "@/lib/now";
+import { now, nowMs } from "@/lib/now";
 import { requireRole } from "@/lib/server/auth-guards";
+import { isEmptySessionCutoffLocked } from "@/lib/server/booking-cutoff";
 import { notifyClient } from "@/lib/server/notify-client";
 import { notifyOperators } from "@/lib/server/notify-operators";
 import { respond, fail, parseBody } from "@/lib/server/http";
@@ -63,10 +64,12 @@ export async function GET(request: Request, { id }: RouteParams) {
       capacity: true,
       isActive: true,
       isIntermediate: true,
+      isMixedGroup: true,
       classTypeId: true,
       roomId: true,
       trainerUserId: true,
       recurringScheduleId: true,
+      emptyBookingCutoffHours: true,
       classType: { select: { id: true, name: true } },
       room: { select: { id: true, name: true } },
       trainer: { select: { id: true, firstName: true, lastName: true } },
@@ -214,8 +217,20 @@ export async function GET(request: Request, { id }: RouteParams) {
       })
     : bookedCount;
 
+  // Display-only "clients can no longer sign up" signal. The detail screen
+  // spells it out so a trainer reading an empty roster knows the class won't
+  // run unless an admin books someone manually — not that it merely has no
+  // bookings yet.
+  const emptyCutoffLocked = isEmptySessionCutoffLocked({
+    startsAt: session.startsAt,
+    activeBookingsCount: session.bookings.length,
+    cutoffHours: session.emptyBookingCutoffHours,
+    at: now(),
+  });
+
   const shaped = {
     ...session,
+    emptyCutoffLocked,
     trainer: session.trainer
       ? {
           id: session.trainer.id,
@@ -360,6 +375,11 @@ export async function PATCH(request: Request, { id }: RouteParams) {
       // Per-occurrence "intermediate" (srednji nivo) marking. `undefined`
       // (field omitted) leaves it untouched; a boolean sets or clears it.
       isIntermediate: parsed.data.isIntermediate,
+      // Same contract for the per-occurrence "mixed group" marking.
+      isMixedGroup: parsed.data.isMixedGroup,
+      // Same contract for the per-occurrence empty-booking cutoff: omitted
+      // leaves the stored value alone, a number (including 0) sets it.
+      emptyBookingCutoffHours: parsed.data.emptyBookingCutoffHours,
     },
     select: {
       id: true,
@@ -371,6 +391,8 @@ export async function PATCH(request: Request, { id }: RouteParams) {
       trainerUserId: true,
       isActive: true,
       isIntermediate: true,
+      isMixedGroup: true,
+      emptyBookingCutoffHours: true,
       classTypeId: true,
       classType: { select: { id: true, name: true } },
       room: { select: { id: true, name: true } },

@@ -269,6 +269,15 @@ model Session {
   // Default false = unmarked (the norm). Strictly per-occurrence — recurring
   // siblings are never touched. Advisory + display-only.
   isIntermediate       Boolean             @default(false)
+  // Optional admin-set binary marking that THIS occurrence is a mixed group
+  // (men and women train together). Same shape and rules as isIntermediate:
+  // default false, strictly per-occurrence, advisory + display-only.
+  isMixedGroup         Boolean             @default(false)
+  // Hours before start at which THIS occurrence, with zero active bookings,
+  // stops being bookable by clients. Per-occurrence like the markings above:
+  // a one-off that needs a longer runway doesn't drag its siblings with it.
+  // 0 disables the rule for this session.
+  emptyBookingCutoffHours Int             @default(4)
   isActive             Boolean             @default(true)
   status               SessionStatus       @default(SCHEDULED)
   createdAt            DateTime            @default(now())

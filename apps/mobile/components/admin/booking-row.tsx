@@ -12,6 +12,7 @@ import dayjs from "dayjs";
 import { Badge } from "@/components/ui/badge";
 import { Icon } from "@/components/ui/icon";
 import { IntermediateBadge } from "@/components/ui/intermediate-badge";
+import { MixedGroupBadge } from "@/components/ui/mixed-group-badge";
 import { useThemeTokens } from "@/components/ui/tokens";
 import type { ClientBooking } from "@/lib/queries/bookings-queries-factory";
 
@@ -52,6 +53,7 @@ export function BookingRow({
             {`${dayjs(booking.session.startsAt).locale(lang).format("ddd, D.M.")} · ${dayjs(booking.session.startsAt).format("HH:mm")}–${dayjs(booking.session.endsAt).format("HH:mm")}`}
           </Text>
           <IntermediateBadge isIntermediate={booking.session.isIntermediate} />
+          <MixedGroupBadge isMixedGroup={booking.session.isMixedGroup} />
         </View>
         <Text className="text-muted" style={{ fontSize: 12 }}>
           {[booking.session.room?.name, booking.session.trainer?.fullName]

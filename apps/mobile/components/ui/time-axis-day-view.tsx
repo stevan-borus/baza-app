@@ -1,8 +1,10 @@
 import React, { useEffect, useRef } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
+import { useTranslation } from "react-i18next";
 import dayjs from "dayjs";
 import { Badge } from "@/components/ui/badge";
 import { IntermediateBadge } from "@/components/ui/intermediate-badge";
+import { MixedGroupBadge } from "@/components/ui/mixed-group-badge";
 import { useThemeTokens } from "@/components/ui/tokens";
 import {
   HOUR_START,
@@ -35,6 +37,13 @@ type SessionBlock = {
   capacity: number;
   /** Admin-set "intermediate" marking for this occurrence; absent = unmarked. */
   isIntermediate?: boolean;
+  isMixedGroup?: boolean;
+  /**
+   * Nobody booked, and the session's empty-booking cutoff has passed —
+   * clients can no longer sign up. Display-only; staff still book freely.
+   * Absent (older cached payloads) reads as open.
+   */
+  emptyCutoffLocked?: boolean;
   status?: "available" | "full" | "booked" | "waitlisted";
 };
 
@@ -66,6 +75,7 @@ export function TimeAxisDayView({
   embedded = false,
 }: Props) {
   const scrollRef = useRef<ScrollView>(null);
+  const { t } = useTranslation();
   const tokens = useThemeTokens();
   const now = dayjs();
   const isToday = now.format("YYYY-MM-DD") === date;
@@ -177,10 +187,15 @@ export function TimeAxisDayView({
                         >
                           {s.classTypeName}
                         </Text>
-                        {/* Compact blocks have no meta line — the 🔥 mark has
-                            nowhere else to go, so it rides the title here. */}
+                        {/* Compact blocks have no meta line — the session marks
+                            have nowhere else to go, so they ride the title. */}
                         {compact ? (
-                          <IntermediateBadge isIntermediate={s.isIntermediate} />
+                          <>
+                            <IntermediateBadge
+                              isIntermediate={s.isIntermediate}
+                            />
+                            <MixedGroupBadge isMixedGroup={s.isMixedGroup} />
+                          </>
                         ) : null}
                       </View>
                       {compact ? null : (
@@ -198,6 +213,7 @@ export function TimeAxisDayView({
                             {s.roomName ? ` · ${s.roomName}` : ""}
                           </Text>
                           <IntermediateBadge isIntermediate={s.isIntermediate} />
+                          <MixedGroupBadge isMixedGroup={s.isMixedGroup} />
                         </View>
                       )}
                     </View>
@@ -206,6 +222,19 @@ export function TimeAxisDayView({
                         tinted from the class color so it stays legible against
                         the green fill (the shared neutral Badge's glass bg +
                         muted text washed out here). */}
+                    {/* Signup closed on an empty slot — the reason the cutoff
+                        exists is that staff can plan around it, so it has to
+                        read from the grid without opening the session. */}
+                    {s.emptyCutoffLocked ? (
+                      <View
+                        testID={`session-block-empty-cutoff-${s.id}`}
+                        accessibilityLabel={t("admin.dayView.emptyCutoffChipA11y")}
+                      >
+                        <Badge status="warning">
+                          {t("admin.dayView.emptyCutoffChip")}
+                        </Badge>
+                      </View>
+                    ) : null}
                     {isFull ? (
                       <Badge status="danger">
                         {s.bookedCount}/{s.capacity}

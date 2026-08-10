@@ -1209,7 +1209,12 @@ function ConfirmSheet({
       {/* Per-class-type rows */}
       <View style={{ borderTopWidth: 1, borderTopColor: "rgba(0,0,0,0.08)" }}>
         {byClassType.map(([name, count]) => (
-          <Row key={name} label={name} value={String(count)} />
+          <Row
+            key={name}
+            testID={`reservation-confirm-breakdown-${name}`}
+            label={name}
+            value={String(count)}
+          />
         ))}
       </View>
 
@@ -1257,9 +1262,18 @@ function ConfirmSheet({
   );
 }
 
-function Row({ label, value }: { label: string; value: string }) {
+function Row({
+  label,
+  value,
+  testID,
+}: {
+  label: string;
+  value: string;
+  testID?: string;
+}) {
   return (
     <View
+      testID={testID}
       className="flex-row items-baseline justify-between py-3"
       style={{ borderBottomWidth: 1, borderBottomColor: "rgba(0,0,0,0.08)" }}
     >

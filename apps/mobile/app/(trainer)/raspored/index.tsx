@@ -202,6 +202,8 @@ export default function TrainerSchedule() {
                         bookedCount: s.bookedCount,
                         capacity: s.capacity,
                         isIntermediate: s.isIntermediate,
+                        isMixedGroup: s.isMixedGroup,
+                        emptyCutoffLocked: s.emptyCutoffLocked,
                         status:
                           s.availableSlots > 0 ? "available" : "full",
                       }),
