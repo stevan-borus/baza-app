@@ -73,7 +73,8 @@ export async function GET(request: Request) {
       classTypeId: true,
       trainerUserId: true,
       recurringScheduleId: true,
-      classType: { select: { name: true, emptyBookingCutoffHours: true } },
+      emptyBookingCutoffHours: true,
+      classType: { select: { name: true } },
       room: { select: { name: true } },
       trainer: { select: { firstName: true, lastName: true } },
       recurringSchedule: { select: { isActive: true } },
@@ -181,7 +182,7 @@ export async function GET(request: Request) {
           isEmptySessionCutoffLocked({
             startsAt: session.startsAt,
             activeBookingsCount: session._count.bookings,
-            cutoffHours: session.classType.emptyBookingCutoffHours,
+            cutoffHours: session.emptyBookingCutoffHours,
             at,
           })
         ) {
@@ -189,7 +190,7 @@ export async function GET(request: Request) {
             bookable: false,
             lockReason: "EMPTY_CUTOFF",
             lastBookableSlot: false,
-            emptyBookingCutoffHours: session.classType.emptyBookingCutoffHours,
+            emptyBookingCutoffHours: session.emptyBookingCutoffHours,
           });
           continue;
         }
@@ -293,7 +294,7 @@ export async function GET(request: Request) {
         emptyCutoffLocked: isEmptySessionCutoffLocked({
           startsAt: session.startsAt,
           activeBookingsCount: session._count.bookings,
-          cutoffHours: session.classType.emptyBookingCutoffHours,
+          cutoffHours: session.emptyBookingCutoffHours,
           at: responseAt,
         }),
         // Staff (no map entry) are always bookable and never warned.

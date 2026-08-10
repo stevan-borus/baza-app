@@ -824,6 +824,8 @@
       "weekday5Short": "F",
       "weekday6Short": "S",
       "placeholderCapacity": "Max clients",
+      "placeholderEmptyBookingCutoff": "Empty session closes (hours)",
+      "emptyBookingCutoffHelper": "If nobody has booked, the session closes this many hours before it starts. Enter 0 to turn the rule off.",
       "maxClientsHint": "clients",
       "createError": "Creating session failed.",
       "editTitle": "Edit: {{name}}",
@@ -855,7 +857,7 @@
       "hintFirstPilates": "First time pilates",
       "excuseRemoveCta": "Cancel session",
       "excuseTitle": "Cancel session?",
-      "emptyCutoffNotice": "Signups are closed — nobody booked by {{hours}} h before the start. This class will not run unless an admin books a client manually."
+      "emptyCutoffNotice": "Signups are closed — nobody booked by {{hours}} h before the start."
     },
     "manage": {
       "title": "Manage",
@@ -931,9 +933,6 @@
       "classTypeSummary": "{{duration}} min · Max {{max}}",
       "placeholderMaxClients": "Max clients",
       "placeholderDurationMins": "Duration (min)",
-      "placeholderEmptyBookingCutoff": "Empty session closes (hours)",
-      "emptyBookingCutoffHelper": "If nobody has booked, the session closes this many hours before it starts. Enter 0 to turn the rule off.",
-      "emptyBookingCutoffChip": "{{hours}}h",
       "createError": "Creating failed.",
       "sheetNewRoom": "New room",
       "placeholderCapacity": "Capacity",

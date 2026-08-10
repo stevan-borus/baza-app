@@ -100,6 +100,7 @@ export function SessionDetail({
                 isActive: session.isActive,
                 isIntermediate: session.isIntermediate,
                 isMixedGroup: session.isMixedGroup,
+                emptyBookingCutoffHours: session.emptyBookingCutoffHours,
               });
             }}
             accessibilityLabel={t("admin.sessionDetail.editAction")}
@@ -180,7 +181,7 @@ export function SessionDetail({
                 <Text className="text-warning" style={{ fontSize: 14 }}>
                   {t("admin.sessionDetail.emptyCutoffNotice", {
                     // Stale cached payloads may lack the hours; 4 is the
-                    // class-type default (same fallback as the booking sheet).
+                    // per-session default (same fallback as the booking sheet).
                     hours: session.emptyBookingCutoffHours ?? 4,
                   })}
                 </Text>

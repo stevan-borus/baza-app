@@ -3,7 +3,7 @@
  *
  * The booking gate already 409s on a last-minute booking into a class nobody
  * has joined yet. The client calendar has to agree BEFORE the tap: a session
- * inside its class type's empty-booking cutoff window comes back
+ * inside its own empty-booking cutoff window comes back
  * `bookable: false` with `lockReason: "EMPTY_CUTOFF"` and the hours to
  * interpolate into the sheet's explanation.
  *
@@ -24,7 +24,7 @@ const HOUR_MS = 60 * 60 * 1000;
 const DAY_MS = 24 * HOUR_MS;
 const MONTH = "2026-05";
 
-async function baseFixtures(opts?: { emptyBookingCutoffHours?: number }) {
+async function baseFixtures() {
   const trainer = await prisma.user.create({
     data: { email: "tr@test.local", firstName: "T", lastName: "Trainer", role: "TRAINER" },
   });
@@ -42,15 +42,17 @@ async function baseFixtures(opts?: { emptyBookingCutoffHours?: number }) {
       name: "Reformer pilates",
       maxClients: 6,
       durationMins: 60,
-      ...(opts?.emptyBookingCutoffHours === undefined
-        ? {}
-        : { emptyBookingCutoffHours: opts.emptyBookingCutoffHours }),
     },
   });
   return { trainer, admin, client, clientProfile, reformer };
 }
 
-async function makeSession(classTypeId: string, trainerUserId: string, startsAt: Date) {
+async function makeSession(
+  classTypeId: string,
+  trainerUserId: string,
+  startsAt: Date,
+  emptyBookingCutoffHours?: number,
+) {
   return prisma.session.create({
     data: {
       classTypeId,
@@ -60,6 +62,9 @@ async function makeSession(classTypeId: string, trainerUserId: string, startsAt:
       capacity: 6,
       isActive: true,
       status: "SCHEDULED",
+      ...(emptyBookingCutoffHours === undefined
+        ? {}
+        : { emptyBookingCutoffHours }),
     },
   });
 }
@@ -190,11 +195,9 @@ describe("GET /api/sessions/availability empty-session cutoff", () => {
     expect(json.sessions[0].lockReason).toBeUndefined();
   });
 
-  it("never locks when the class type's cutoff is 0", async () => {
-    const { client, clientProfile, trainer, reformer } = await baseFixtures({
-      emptyBookingCutoffHours: 0,
-    });
-    await makeSession(reformer.id, trainer.id, new Date(nowMs() + HOUR_MS));
+  it("never locks when the session's cutoff is 0", async () => {
+    const { client, clientProfile, trainer, reformer } = await baseFixtures();
+    await makeSession(reformer.id, trainer.id, new Date(nowMs() + HOUR_MS), 0);
     await makePackage({ clientProfileId: clientProfile.id, classTypeId: reformer.id });
 
     asClient(client, clientProfile.id);

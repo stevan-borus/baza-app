@@ -827,6 +827,8 @@
       "weekday5Short": "P",
       "weekday6Short": "S",
       "placeholderCapacity": "Max klijenata",
+      "placeholderEmptyBookingCutoff": "Zatvaranje praznog termina (sati)",
+      "emptyBookingCutoffHelper": "Ako niko nije rezervisao, termin se zatvara ovoliko sati pre početka. Unesite 0 da isključite pravilo.",
       "maxClientsHint": "klijenata",
       "createError": "Kreiranje termina nije uspelo.",
       "editTitle": "Uredi: {{name}}",
@@ -859,7 +861,7 @@
       "hintFirstPilates": "Prvi put pilates",
       "excuseRemoveCta": "Otkaži termin",
       "excuseTitle": "Otkaži termin?",
-      "emptyCutoffNotice": "Prijave su zatvorene — niko se nije prijavio do {{hours}} h pre početka. Termin neće biti održan osim ako administrator ručno ne upiše klijenta."
+      "emptyCutoffNotice": "Prijave su zatvorene — niko se nije prijavio do {{hours}} h pre početka."
     },
     "manage": {
       "title": "Upravljanje",
@@ -935,9 +937,6 @@
       "classTypeSummary": "{{duration}} min · Maks {{max}}",
       "placeholderMaxClients": "Max klijenata",
       "placeholderDurationMins": "Trajanje (min)",
-      "placeholderEmptyBookingCutoff": "Zatvaranje praznog termina (sati)",
-      "emptyBookingCutoffHelper": "Ako niko nije rezervisao, termin se zatvara ovoliko sati pre početka. Unesite 0 da isključite pravilo.",
-      "emptyBookingCutoffChip": "{{hours}}h",
       "createError": "Kreiranje nije uspelo.",
       "sheetNewRoom": "Nova sala",
       "placeholderCapacity": "Kapacitet",

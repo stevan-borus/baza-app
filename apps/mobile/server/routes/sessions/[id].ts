@@ -69,9 +69,8 @@ export async function GET(request: Request, { id }: RouteParams) {
       roomId: true,
       trainerUserId: true,
       recurringScheduleId: true,
-      classType: {
-        select: { id: true, name: true, emptyBookingCutoffHours: true },
-      },
+      emptyBookingCutoffHours: true,
+      classType: { select: { id: true, name: true } },
       room: { select: { id: true, name: true } },
       trainer: { select: { id: true, firstName: true, lastName: true } },
       bookings: {
@@ -225,14 +224,13 @@ export async function GET(request: Request, { id }: RouteParams) {
   const emptyCutoffLocked = isEmptySessionCutoffLocked({
     startsAt: session.startsAt,
     activeBookingsCount: session.bookings.length,
-    cutoffHours: session.classType.emptyBookingCutoffHours,
+    cutoffHours: session.emptyBookingCutoffHours,
     at: now(),
   });
 
   const shaped = {
     ...session,
     emptyCutoffLocked,
-    emptyBookingCutoffHours: session.classType.emptyBookingCutoffHours,
     trainer: session.trainer
       ? {
           id: session.trainer.id,
@@ -379,6 +377,9 @@ export async function PATCH(request: Request, { id }: RouteParams) {
       isIntermediate: parsed.data.isIntermediate,
       // Same contract for the per-occurrence "mixed group" marking.
       isMixedGroup: parsed.data.isMixedGroup,
+      // Same contract for the per-occurrence empty-booking cutoff: omitted
+      // leaves the stored value alone, a number (including 0) sets it.
+      emptyBookingCutoffHours: parsed.data.emptyBookingCutoffHours,
     },
     select: {
       id: true,
@@ -391,6 +392,7 @@ export async function PATCH(request: Request, { id }: RouteParams) {
       isActive: true,
       isIntermediate: true,
       isMixedGroup: true,
+      emptyBookingCutoffHours: true,
       classTypeId: true,
       classType: { select: { id: true, name: true } },
       room: { select: { id: true, name: true } },

@@ -63,7 +63,8 @@ export async function POST(request: Request) {
       status: true,
       classTypeId: true,
       trainerUserId: true,
-      classType: { select: { name: true, emptyBookingCutoffHours: true } },
+      emptyBookingCutoffHours: true,
+      classType: { select: { name: true } },
     },
   });
   if (!session || session.status !== "SCHEDULED")
@@ -149,7 +150,7 @@ export async function POST(request: Request) {
         isEmptySessionCutoffLocked({
           startsAt: session.startsAt,
           activeBookingsCount,
-          cutoffHours: session.classType.emptyBookingCutoffHours,
+          cutoffHours: session.emptyBookingCutoffHours,
           at: now(),
         })
       ) {

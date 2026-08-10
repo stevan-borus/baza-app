@@ -6,7 +6,7 @@
  * so until now the calendar showed an ordinary empty 0/6 card with no hint
  * that clients can no longer sign up. `emptyCutoffLocked` is the display-only
  * signal for exactly that: true when the session is empty AND inside its
- * class type's cutoff window, on every role's payload.
+ * session's cutoff window, on every role's payload.
  *
  * Anchor: env.setup.ts pins TEST_ANCHOR_TIME to 2026-05-09T10:00:00Z, so the
  * hour offsets below all land in month 2026-05.
@@ -26,7 +26,7 @@ const HOUR_MS = 60 * 60 * 1000;
 const DAY_MS = 24 * HOUR_MS;
 const MONTH = "2026-05";
 
-async function baseFixtures(opts?: { emptyBookingCutoffHours?: number }) {
+async function baseFixtures() {
   const trainer = await prisma.user.create({
     data: { email: "tr@test.local", firstName: "T", lastName: "Trainer", role: "TRAINER" },
   });
@@ -44,15 +44,17 @@ async function baseFixtures(opts?: { emptyBookingCutoffHours?: number }) {
       name: "Reformer pilates",
       maxClients: 6,
       durationMins: 60,
-      ...(opts?.emptyBookingCutoffHours === undefined
-        ? {}
-        : { emptyBookingCutoffHours: opts.emptyBookingCutoffHours }),
     },
   });
   return { trainer, admin, client, clientProfile, reformer };
 }
 
-async function makeSession(classTypeId: string, trainerUserId: string, startsAt: Date) {
+async function makeSession(
+  classTypeId: string,
+  trainerUserId: string,
+  startsAt: Date,
+  emptyBookingCutoffHours?: number,
+) {
   return prisma.session.create({
     data: {
       classTypeId,
@@ -62,6 +64,9 @@ async function makeSession(classTypeId: string, trainerUserId: string, startsAt:
       capacity: 6,
       isActive: true,
       status: "SCHEDULED",
+      ...(emptyBookingCutoffHours === undefined
+        ? {}
+        : { emptyBookingCutoffHours }),
     },
   });
 }
@@ -207,11 +212,9 @@ describe("empty-cutoff visibility on GET /api/sessions/availability", () => {
     expect(json.sessions[0].emptyCutoffLocked).toBeFalsy();
   });
 
-  it("does not flag when the class type's cutoff is 0", async () => {
-    const { admin, trainer, reformer } = await baseFixtures({
-      emptyBookingCutoffHours: 0,
-    });
-    await makeSession(reformer.id, trainer.id, new Date(nowMs() + HOUR_MS));
+  it("does not flag when the session's cutoff is 0", async () => {
+    const { admin, trainer, reformer } = await baseFixtures();
+    await makeSession(reformer.id, trainer.id, new Date(nowMs() + HOUR_MS), 0);
 
     asAdmin(admin);
 
@@ -322,11 +325,14 @@ describe("empty-cutoff visibility on GET /api/sessions/[id]", () => {
     expect(json.session.emptyCutoffLocked).toBeFalsy();
   });
 
-  it("does not flag when the class type's cutoff is 0", async () => {
-    const { admin, trainer, reformer } = await baseFixtures({
-      emptyBookingCutoffHours: 0,
-    });
-    const session = await makeSession(reformer.id, trainer.id, new Date(nowMs() + HOUR_MS));
+  it("does not flag when the session's cutoff is 0", async () => {
+    const { admin, trainer, reformer } = await baseFixtures();
+    const session = await makeSession(
+      reformer.id,
+      trainer.id,
+      new Date(nowMs() + HOUR_MS),
+      0,
+    );
 
     asAdmin(admin);
 

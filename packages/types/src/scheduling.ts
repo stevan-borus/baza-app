@@ -62,7 +62,7 @@ export const availabilitySessionSchema = sessionFieldsSchema.pick({
    * - "FULLY_HELD"  — an eligible package exists, but every remaining session
    *                   is already committed to future bookings/waitlist holds;
    *                   booking would 409 until one of them is canceled.
-   * - "EMPTY_CUTOFF" — nobody has booked this session and the class type's
+   * - "EMPTY_CUTOFF" — nobody has booked this session and its own
    *                   empty-booking cutoff window has begun; the studio won't
    *                   open the room, so nobody can book it (not per-client).
    * PAUSED / NOT_STARTED / EMPTY_CUTOFF are additive (older clients that only
@@ -72,12 +72,12 @@ export const availabilitySessionSchema = sessionFieldsSchema.pick({
     .enum(["RENEW", "PAUSED", "NOT_STARTED", "FULLY_HELD", "EMPTY_CUTOFF"])
     .optional(),
   /**
-   * The class type's empty-booking cutoff in hours, so the sheet can name the
+   * This session's empty-booking cutoff in hours, so the sheet can name the
    * window in its copy. Present only when lockReason === "EMPTY_CUTOFF".
    */
   emptyBookingCutoffHours: z.number().optional(),
   /**
-   * True when the session has no active bookings AND its class type's
+   * True when the session has no active bookings AND its own
    * empty-booking cutoff window has begun — i.e. clients can no longer sign
    * up and the class will not run unless an admin books someone manually.
    *
@@ -109,9 +109,17 @@ export const createSessionInputSchema = z.object({
   startsAt: z.string().min(10),
   endsAt: z.string().min(10),
   capacity: z.number().int().positive(),
+  // Hours before start at which this occurrence, with zero active bookings,
+  // stops accepting client bookings. Nonnegative, not positive: 0 is the
+  // documented "rule off for this occurrence" value.
+  emptyBookingCutoffHours: z.number().int().nonnegative().default(4),
   isActive: z.boolean().default(true),
 });
 
+// Spelled out rather than `createSessionInputSchema.partial()`: .partial()
+// keeps the .default()s, so a PATCH that never mentions
+// emptyBookingCutoffHours would still parse to 4 and overwrite a configured
+// value. PATCH must only carry the keys the admin actually sent.
 export const updateSessionInputSchema = z.object({
   startsAt: z.string().min(10).optional(),
   endsAt: z.string().min(10).optional(),
@@ -119,6 +127,9 @@ export const updateSessionInputSchema = z.object({
   roomId: z.uuid().nullable().optional(),
   trainerUserId: z.uuid().optional(),
   isActive: z.boolean().optional(),
+  // Per-occurrence empty-booking cutoff; omitted = untouched. 0 turns the
+  // rule off for this session.
+  emptyBookingCutoffHours: z.number().int().nonnegative().optional(),
   status: z.enum(["SCHEDULED", "CANCELED", "COMPLETED"]).optional(),
   // Optional binary "intermediate" (srednji nivo) marking for this occurrence; omitted = untouched.
   isIntermediate: z.boolean().optional(),
@@ -164,6 +175,9 @@ export const sessionSchema = z.object({
   status: z.enum(["SCHEDULED", "CANCELED", "COMPLETED"]),
   isIntermediate: z.boolean().optional(),
   isMixedGroup: z.boolean().optional(),
+  // Per-occurrence empty-booking cutoff, echoed back so the edit sheet can
+  // rehydrate the field it just saved. Optional for older cached payloads.
+  emptyBookingCutoffHours: z.number().optional(),
   classType: z.object({ id: z.string(), name: z.string() }).optional(),
   room: z.object({ id: z.string(), name: z.string() }).nullable().optional(),
 });
@@ -223,15 +237,15 @@ export const sessionDetailSchema = z.object({
   bookedCount: z.number(),
   seriesBookedCount: z.number(),
   /**
-   * True when this session has no active bookings AND its class type's
+   * True when this session has no active bookings AND its own
    * empty-booking cutoff window has begun — clients can no longer sign up.
    * Display-only: the detail screen says so in words, so the trainer knows
    * the class won't run unless an admin books someone manually.
    */
   emptyCutoffLocked: z.boolean().optional(),
   /**
-   * The class type's empty-booking cutoff in hours, so the detail screen can
-   * name the window. Present only alongside `emptyCutoffLocked`.
+   * This session's empty-booking cutoff in hours, so the detail screen can
+   * name the window and the edit sheet can rehydrate the input.
    */
   emptyBookingCutoffHours: z.number().optional(),
   bookings: z.array(sessionClientSchema.extend({ createdAt: z.string() })),

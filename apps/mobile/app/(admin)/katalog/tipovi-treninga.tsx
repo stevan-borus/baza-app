@@ -40,14 +40,6 @@ const DOT_COLORS = [
   "#f97316", // orange
 ];
 
-// 0 is a meaningful value for the empty-session cutoff (it turns the rule off),
-// so the `parseInt(v) || fallback` idiom the other numeric fields use would
-// silently rewrite a deliberate "0" to 4. An empty box still parses NaN → 4.
-function parseCutoffHours(raw: string): number {
-  const parsed = parseInt(raw, 10);
-  return Number.isNaN(parsed) ? 4 : parsed;
-}
-
 export default function AdminSettingsClassTypes() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
@@ -58,18 +50,16 @@ export default function AdminSettingsClassTypes() {
   // Cache upkeep (list splice / invalidation) stays in the factory options;
   // the sheet choreography (open/close/reset) lives in the CRUD machine.
   const crud = useAdminCrud({
-    empty: { name: "", maxClients: "", durationMins: "", emptyBookingCutoffHours: "" },
+    empty: { name: "", maxClients: "", durationMins: "" },
     toForm: (ct: {
       id: string;
       name: string;
       maxClients: number;
       durationMins: number;
-      emptyBookingCutoffHours: number;
     }) => ({
       name: ct.name,
       maxClients: String(ct.maxClients),
       durationMins: String(ct.durationMins),
-      emptyBookingCutoffHours: String(ct.emptyBookingCutoffHours),
     }),
     create: createClassTypeMutationOptions(queryClient),
     update: updateClassTypeMutationOptions(queryClient),
@@ -187,22 +177,6 @@ export default function AdminSettingsClassTypes() {
                       {ct.maxClients}
                     </Text>
                   </View>
-                  {/* Only when the rule is on — a "0h" chip would read as a
-                      cutoff of zero hours rather than "no cutoff". */}
-                  {ct.emptyBookingCutoffHours > 0 ? (
-                    <View className="flex-row items-center gap-1">
-                      <Icon name="ban" size={11} color="#a1a1aa" />
-                      <Text
-                        testID={`class-type-row-cutoff-${ct.id}`}
-                        className="text-muted"
-                        style={{ fontSize: 12 }}
-                      >
-                        {t("admin.manage.emptyBookingCutoffChip", {
-                          hours: ct.emptyBookingCutoffHours,
-                        })}
-                      </Text>
-                    </View>
-                  ) : null}
                 </View>
               </View>
             </GlassCard>
@@ -272,16 +246,6 @@ export default function AdminSettingsClassTypes() {
             value={crud.form.durationMins}
             onChangeText={(v) => crud.setForm({ durationMins: v })}
           />
-          <Input
-            testID="class-type-empty-cutoff-input"
-            placeholder={t("admin.manage.placeholderEmptyBookingCutoff")}
-            keyboardType="numeric"
-            value={crud.form.emptyBookingCutoffHours}
-            onChangeText={(v) => crud.setForm({ emptyBookingCutoffHours: v })}
-          />
-          <Text className="text-muted" style={{ fontSize: 12, lineHeight: 17, marginTop: -8 }}>
-            {t("admin.manage.emptyBookingCutoffHelper")}
-          </Text>
           <Button
             testID="class-type-create-submit"
             disabled={crud.createMutation.isPending || !crud.form.name}
@@ -290,9 +254,6 @@ export default function AdminSettingsClassTypes() {
                 name: crud.form.name.trim(),
                 maxClients: parseInt(crud.form.maxClients, 10) || 8,
                 durationMins: parseInt(crud.form.durationMins, 10) || 60,
-                emptyBookingCutoffHours: parseCutoffHours(
-                  crud.form.emptyBookingCutoffHours,
-                ),
               })
             }
           >
@@ -346,16 +307,6 @@ export default function AdminSettingsClassTypes() {
             value={crud.editForm.durationMins}
             onChangeText={(v) => crud.setEditForm({ durationMins: v })}
           />
-          <Input
-            testID="class-type-edit-empty-cutoff-input"
-            placeholder={t("admin.manage.placeholderEmptyBookingCutoff")}
-            keyboardType="numeric"
-            value={crud.editForm.emptyBookingCutoffHours}
-            onChangeText={(v) => crud.setEditForm({ emptyBookingCutoffHours: v })}
-          />
-          <Text className="text-muted" style={{ fontSize: 12, lineHeight: 17, marginTop: -8 }}>
-            {t("admin.manage.emptyBookingCutoffHelper")}
-          </Text>
           <Button
             testID="class-type-edit-save-button"
             disabled={crud.updateMutation.isPending || !crud.editForm.name}
@@ -366,9 +317,6 @@ export default function AdminSettingsClassTypes() {
                 name: crud.editForm.name.trim(),
                 maxClients: parseInt(crud.editForm.maxClients, 10) || 8,
                 durationMins: parseInt(crud.editForm.durationMins, 10) || 60,
-                emptyBookingCutoffHours: parseCutoffHours(
-                  crud.editForm.emptyBookingCutoffHours,
-                ),
               });
             }}
           >

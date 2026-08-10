@@ -125,7 +125,7 @@ describe("BookingSheet renewal locks", () => {
     expect(screen.queryByTestId("booking-renewal-message")).toBeNull();
   });
 
-  it("EMPTY_CUTOFF copy uses the class type's own window, not a fixed 4h", async () => {
+  it("EMPTY_CUTOFF copy uses the session's own window, not a fixed 4h", async () => {
     const screen = renderSheet({
       session: makeSession({
         bookable: false,

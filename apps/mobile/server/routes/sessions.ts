@@ -122,6 +122,7 @@ export async function POST(request: Request) {
       startsAt,
       endsAt,
       capacity: parsed.data.capacity,
+      emptyBookingCutoffHours: parsed.data.emptyBookingCutoffHours,
       isActive: parsed.data.isActive,
     },
     select: {
@@ -133,6 +134,7 @@ export async function POST(request: Request) {
       isActive: true,
       isIntermediate: true,
       isMixedGroup: true,
+      emptyBookingCutoffHours: true,
       classTypeId: true,
       classType: { select: { id: true, name: true } },
       roomId: true,

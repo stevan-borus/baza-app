@@ -124,7 +124,6 @@ function classType(id: string, over: Partial<ClassType> = {}): ClassType {
     name: `Type ${id}`,
     maxClients: 8,
     durationMins: 60,
-    emptyBookingCutoffHours: 4,
     ...over,
   };
 }

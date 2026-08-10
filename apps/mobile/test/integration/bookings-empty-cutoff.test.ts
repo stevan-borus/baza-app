@@ -13,15 +13,12 @@ import { resetDb } from "./setup-db";
 const HOUR_MS = 60 * 60 * 1000;
 const DAY_MS = 24 * HOUR_MS;
 
-async function seedClassRoomTrainer(opts?: { emptyBookingCutoffHours?: number }) {
+async function seedClassRoomTrainer() {
   const classType = await prisma.classType.create({
     data: {
       name: "Reformer pilates",
       maxClients: 6,
       durationMins: 60,
-      ...(opts?.emptyBookingCutoffHours === undefined
-        ? {}
-        : { emptyBookingCutoffHours: opts.emptyBookingCutoffHours }),
     },
   });
   const room = await prisma.studioRoom.create({
@@ -92,6 +89,7 @@ async function seedSession(opts: {
   roomId: string;
   trainerUserId: string;
   startsAt: Date;
+  emptyBookingCutoffHours?: number;
 }) {
   return prisma.session.create({
     data: {
@@ -102,6 +100,9 @@ async function seedSession(opts: {
       endsAt: new Date(opts.startsAt.getTime() + HOUR_MS),
       capacity: 6,
       status: "SCHEDULED",
+      ...(opts.emptyBookingCutoffHours === undefined
+        ? {}
+        : { emptyBookingCutoffHours: opts.emptyBookingCutoffHours }),
     },
   });
 }
@@ -216,16 +217,15 @@ describe("POST /api/bookings — empty-session cutoff", () => {
     expect(body.error).toBe("EMPTY_SESSION_CUTOFF");
   });
 
-  it("honours a per-class-type cutoff of 8h", async () => {
-    const { classType, room, trainer } = await seedClassRoomTrainer({
-      emptyBookingCutoffHours: 8,
-    });
+  it("honours a per-session cutoff of 8h", async () => {
+    const { classType, room, trainer } = await seedClassRoomTrainer();
     await seedClientWithPackage(classType.id);
     const session = await seedSession({
       classTypeId: classType.id,
       roomId: room.id,
       trainerUserId: trainer.id,
       startsAt: new Date(nowMs() + 5 * HOUR_MS),
+      emptyBookingCutoffHours: 8,
     });
 
     const res = await bookingsPOST(makeReq("BOOK", session.id));
@@ -236,15 +236,14 @@ describe("POST /api/bookings — empty-session cutoff", () => {
   });
 
   it("disables the rule entirely when the cutoff is 0", async () => {
-    const { classType, room, trainer } = await seedClassRoomTrainer({
-      emptyBookingCutoffHours: 0,
-    });
+    const { classType, room, trainer } = await seedClassRoomTrainer();
     await seedClientWithPackage(classType.id);
     const session = await seedSession({
       classTypeId: classType.id,
       roomId: room.id,
       trainerUserId: trainer.id,
       startsAt: new Date(nowMs() + HOUR_MS),
+      emptyBookingCutoffHours: 0,
     });
 
     const res = await bookingsPOST(makeReq("BOOK", session.id));

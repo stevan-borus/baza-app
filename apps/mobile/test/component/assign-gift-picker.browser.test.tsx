@@ -57,9 +57,9 @@ const NON_GIFT = {
 };
 
 const CLASS_TYPES = [
-  { id: "ct-mat", name: "Mat", maxClients: 10, durationMins: 60, emptyBookingCutoffHours: 4 },
-  { id: "ct-reformer", name: "Reformer", maxClients: 6, durationMins: 60, emptyBookingCutoffHours: 4 },
-  { id: "ct-barre", name: "Barre", maxClients: 8, durationMins: 60, emptyBookingCutoffHours: 4 },
+  { id: "ct-mat", name: "Mat", maxClients: 10, durationMins: 60 },
+  { id: "ct-reformer", name: "Reformer", maxClients: 6, durationMins: 60 },
+  { id: "ct-barre", name: "Barre", maxClients: 8, durationMins: 60 },
 ];
 
 function renderSheet(initialClassTypeId?: string) {

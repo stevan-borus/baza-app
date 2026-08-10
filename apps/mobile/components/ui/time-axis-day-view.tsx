@@ -39,7 +39,7 @@ type SessionBlock = {
   isIntermediate?: boolean;
   isMixedGroup?: boolean;
   /**
-   * Nobody booked, and the class type's empty-booking cutoff has passed —
+   * Nobody booked, and the session's empty-booking cutoff has passed —
    * clients can no longer sign up. Display-only; staff still book freely.
    * Absent (older cached payloads) reads as open.
    */
