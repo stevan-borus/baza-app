@@ -30,6 +30,8 @@ import { CapsLabel } from "@/components/ui/studio";
 import { NumberRollup } from "@/components/ui/number-rollup";
 import { useThemeTokens } from "@/components/ui/tokens";
 import { reportsQueries } from "@/lib/queries/reports-queries-factory";
+import { payrollQueries } from "@/lib/queries/payroll-queries-factory";
+import { defaultPayrollMonth } from "@/lib/payroll-month-nav";
 import { ScreenContainerRaw, useTabBarBottomPadding } from "@/components/ui/screen-container";
 import { AdminTabLeftSlot } from "@/components/admin/admin-tab-left-slot";
 import { usePeriodPill } from "@/lib/admin/use-period-pill";
@@ -49,6 +51,7 @@ export default function AdminReportsLanding() {
   }
 
   const summaryQuery = useQuery(reportsQueries.summary(periodWindow));
+  const payrollQuery = useQuery(payrollQueries.summary(defaultPayrollMonth()));
   const utilizationQuery = useQuery(
     reportsQueries.utilization({ ...periodWindow, period: "month" }),
   );
@@ -95,6 +98,17 @@ export default function AdminReportsLanding() {
       headline: summary?.activeClients,
       unit: t("admin.izvestaji.cardUnits.clients"),
       target: "/(admin)/izvestaji/paketi",
+    },
+    {
+      // Payroll is settled per whole month, so this card ignores the period
+      // pill and always reports the month that is actually being paid — the
+      // previous one.
+      testID: "izvestaji-card-honorari",
+      title: t("payroll.title"),
+      headline: payrollQuery.data?.totalPayout,
+      unit: t("admin.izvestaji.cardUnits.rsd"),
+      target: "/(admin)/izvestaji/honorari",
+      formatter: (n) => Math.round(n).toLocaleString("sr-RS"),
     },
   ];
 
