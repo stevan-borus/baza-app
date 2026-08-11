@@ -134,17 +134,8 @@ export default function IzvestajiHonorari() {
                       </View>
                     </View>
 
-                    {(trainer.status === "LOCKED" ||
-                      trainer.unpricedCount > 0 ||
-                      trainer.giftCount > 0) && (
+                    {(trainer.unpricedCount > 0 || trainer.giftCount > 0) && (
                       <View className="mt-3 flex-row flex-wrap gap-2">
-                        {trainer.status === "LOCKED" && (
-                          <Chip
-                            label={t("payroll.statusLocked")}
-                            color={tokens.success}
-                            background={tokens.successSoft}
-                          />
-                        )}
                         {trainer.giftCount > 0 && (
                           <Chip
                             label={`${t("payroll.gift")} · ${trainer.giftCount}`}

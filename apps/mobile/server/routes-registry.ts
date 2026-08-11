@@ -59,7 +59,6 @@ import * as route_packages_pause from "@/server/routes/packages/pause";
 import * as route_packages_types from "@/server/routes/packages/types";
 import * as route_packages_types_id from "@/server/routes/packages/types/[id]";
 import * as route_payroll_adjustments from "@/server/routes/payroll/adjustments";
-import * as route_payroll_lock from "@/server/routes/payroll/lock";
 import * as route_payroll_month from "@/server/routes/payroll/month";
 import * as route_payroll_rates from "@/server/routes/payroll/rates";
 import * as route_payroll_summary from "@/server/routes/payroll/summary";
@@ -147,7 +146,6 @@ export const routesRegistry: Record<string, RouteModule> = {
   "packages/types": route_packages_types,
   "packages/types/[id]": route_packages_types_id,
   "payroll/adjustments": route_payroll_adjustments,
-  "payroll/lock": route_payroll_lock,
   "payroll/month": route_payroll_month,
   "payroll/rates": route_payroll_rates,
   "payroll/summary": route_payroll_summary,

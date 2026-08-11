@@ -1387,14 +1387,7 @@
     "rateNote": "Napomena",
     "saveRate": "Sačuvaj procenat",
     "status": "Status",
-    "statusOpen": "U toku",
-    "statusLocked": "Zaključan",
-    "lockPeriod": "Zaključaj mesec",
-    "unlockPeriod": "Otključaj mesec",
     "lockedAt": "Zaključano",
-    "lockHint": "Zaključavanjem se iznosi zamrzavaju — kasnije izmene cena paketa ih više ne menjaju.",
-    "lockConfirm": "Zaključati ovaj mesec?",
-    "unlockConfirm": "Otključati ovaj mesec? Iznosi će se ponovo računati iz trenutnih podataka.",
     "adjustments": "Korekcije",
     "addAdjustment": "Dodaj korekciju",
     "adjustmentAmount": "Iznos",
@@ -1406,7 +1399,6 @@
     "unpricedWarning_one": "{{count}} dolazak bez cene paketa — neće ući u obračun.",
     "unpricedWarning_few": "{{count}} dolaska bez cene paketa — neće ući u obračun.",
     "unpricedWarning_other": "{{count}} dolazaka bez cene paketa — neće ući u obračun.",
-    "unpricedBlocksLock": "Rešite pakete bez cene pre zaključavanja.",
     "noSessions": "Nema održanih termina u ovom mesecu.",
     "noTrainers": "Nema trenera.",
     "sessionAttendees": "Ko je bio",
@@ -1422,6 +1414,13 @@
     "a11yNextMonth": "Sledeći mesec",
     "ratesTitle": "Procenti trenera",
     "effectiveFromHint": "Novi procenat važi od ovog datuma. Prethodni meseci ostaju netaknuti.",
-    "rateNotePlaceholder": "npr. dogovor sa 01.09."
+    "rateNotePlaceholder": "npr. dogovor sa 01.09.",
+    "session": "Termin",
+    "sessionValue": "Vrednost termina",
+    "sessionNotFound": "Termin nije pronađen",
+    "noAttendees": "Nema polaznika na ovom terminu",
+    "noPackageValue": "Bez paketa",
+    "noPackageHint": "Dolazak nije pokriven paketom — ne ulazi u obračun.",
+    "loadMore": "Prikaži još ({{count}})"
   }
 }

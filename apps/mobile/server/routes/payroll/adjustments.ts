@@ -39,16 +39,10 @@ export async function POST(request: Request) {
     return fail("User is not a trainer", 400);
   }
 
-  const period = await prisma.payrollPeriod.upsert({
-    where: { trainerUserId_periodStart: { trainerUserId, periodStart: from } },
-    create: { trainerUserId, periodStart: from },
-    update: {},
-    select: { id: true },
-  });
-
   const adjustment = await prisma.payrollAdjustment.create({
     data: {
-      periodId: period.id,
+      trainerUserId,
+      periodStart: from,
       amount,
       note,
       createdByUserId: guard.user.id,

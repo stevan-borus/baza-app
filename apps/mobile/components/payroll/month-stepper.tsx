@@ -1,4 +1,5 @@
 import { useTranslation } from "react-i18next";
+import { getDateLocale } from "@/lib/i18n";
 import { Pressable, Text, View } from "react-native";
 import { Icon } from "@/components/ui/icon";
 import { useThemeTokens } from "@/components/ui/tokens";
@@ -24,7 +25,7 @@ export function MonthStepper({
   onChange: (next: PayrollMonthCursor) => void;
   testID?: string;
 }) {
-  const { i18n, t } = useTranslation();
+  const { t } = useTranslation();
   const tokens = useThemeTokens();
   const nextDisabled = isFutureMonth(stepMonth(cursor, 1));
 
@@ -49,7 +50,7 @@ export function MonthStepper({
         style={{ color: tokens.foreground }}
         testID={`${testID}-label`}
       >
-        {formatMonthLabel(cursor, i18n.language)}
+        {formatMonthLabel(cursor, getDateLocale())}
       </Text>
 
       <Pressable

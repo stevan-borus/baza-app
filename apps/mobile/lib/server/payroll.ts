@@ -95,11 +95,27 @@ export async function computePayrollMonth(
       // Only sessions that have actually happened can be paid for.
       endsAt: { lte: args.asOf },
     },
-    orderBy: { startsAt: "asc" },
+    // Newest first: reviewing a month means starting from the most recent
+    // training, not scrolling past four weeks to reach it.
+    orderBy: { startsAt: "desc" },
     select: {
       id: true,
       startsAt: true,
       classType: { select: { name: true } },
+      // The frozen payroll record. Present for every consumed attendance,
+      // which is everything the daily cron has caught up with.
+      consumptions: {
+        select: {
+          id: true,
+          clientName: true,
+          packageName: true,
+          sessionValue: true,
+          isGift: true,
+        },
+      },
+      // Fallback only: a session that ended but has not been consumed yet
+      // (the cron runs daily) still has to show something, so it is valued
+      // live until the snapshot lands.
       bookings: {
         where: { canceledAt: null },
         select: {
@@ -113,7 +129,9 @@ export async function computePayrollMonth(
               isGift: true,
               sessionsGranted: true,
               bonusSessions: true,
-              packageType: { select: { name: true, price: true } },
+              packageType: {
+                select: { name: true, price: true, sessionCount: true },
+              },
             },
           },
         },
@@ -122,23 +140,44 @@ export async function computePayrollMonth(
   });
 
   const breakdowns: PayrollSessionBreakdown[] = sessions.map((session) => {
-    const attendees: PayrollAttendee[] = session.bookings.map((booking) => {
-      const pkg = booking.clientPackage;
-      return {
-        bookingId: booking.id,
-        clientProfileId: booking.clientProfileId,
-        clientName: formatFullName(
-          booking.clientProfile.user.firstName,
-          booking.clientProfile.user.lastName,
-        ),
-        // A booking with no package at all (an unbacked attendance) is still
-        // shown, valued at nothing, and counted as unpriced.
-        packageName: pkg?.packageType.name ?? "—",
-        packagePrice: pkg?.packageType.price ?? null,
-        sessionsTotal: pkg ? packageSessionsTotal(pkg) : 0,
-        isGift: pkg?.isGift ?? false,
-      };
-    });
+    // Snapshots win outright. Mixing them with live bookings would let a
+    // deleted client's frozen line be "corrected" by the absence of its
+    // booking, which is exactly what the snapshot exists to prevent.
+    const attendees: PayrollAttendee[] = session.consumptions.length
+      ? session.consumptions.map((c) => ({
+          bookingId: c.id,
+          clientProfileId: "",
+          clientName: c.clientName,
+          packageName: c.packageName ?? "—",
+          // Already divided at consumption time; feed it through as a
+          // single-session package so the shared valuation stays one rule.
+          packagePrice: c.sessionValue,
+          sessionsTotal: c.sessionValue === null ? 0 : 1,
+          isGift: c.isGift,
+        }))
+      : session.bookings.map((booking) => {
+          const pkg = booking.clientPackage;
+          return {
+            bookingId: booking.id,
+            clientProfileId: booking.clientProfileId,
+            clientName: formatFullName(
+              booking.clientProfile.user.firstName,
+              booking.clientProfile.user.lastName,
+            ),
+            // A booking with no package at all (an unbacked attendance) is
+            // still shown, valued at nothing, and counted as unpriced.
+            packageName: pkg?.packageType.name ?? "—",
+            packagePrice: pkg?.packageType.price ?? null,
+            // Same rule as the snapshot: a gift is worth one session of the
+            // real package, so the price spreads over the SKU's own count.
+            sessionsTotal: pkg
+              ? pkg.isGift
+                ? pkg.packageType.sessionCount
+                : packageSessionsTotal(pkg)
+              : 0,
+            isGift: pkg?.isGift ?? false,
+          };
+        });
 
     const valued = valueSession(attendees);
     return {

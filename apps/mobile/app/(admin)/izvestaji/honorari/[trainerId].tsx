@@ -1,19 +1,22 @@
 /**
  * Izveštaji → Honorari → one trainer's month.
  *
- * The auditable breakdown the owner pays from: every held session, who
- * attended it, which package each attendee was on and what that session was
- * worth to them. Locking freezes those figures; adjustments correct them
- * without touching the underlying data.
+ * The auditable breakdown the owner pays from: every held session, what it was
+ * worth, and the trainer's cut. Each session opens its own page for the
+ * attendee-level detail — a row here is a summary, not a place to read names.
+ *
+ * There is no lock. A payout line is frozen when its session is consumed, so
+ * the figures below cannot be rewritten by a later price edit or package
+ * revoke, and nobody has to remember to press anything.
  */
 import { useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { RefreshControl, ScrollView, Text, View } from "react-native";
-import { useLocalSearchParams } from "expo-router";
+import { Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
+import { router, useLocalSearchParams } from "expo-router";
+import { Icon } from "@/components/ui/icon";
 import { Button } from "@/components/ui/button";
 import { GlassCard } from "@/components/ui/glass-card";
-import { ConfirmSheet } from "@/components/ui/confirm-sheet";
 import { EmptyState, ErrorState } from "@/components/ui/states";
 import { SkeletonList } from "@/components/ui/skeleton";
 import { CapsLabel } from "@/components/ui/studio";
@@ -23,19 +26,19 @@ import {
   useTabBarBottomPadding,
 } from "@/components/ui/screen-container";
 import { MonthStepper } from "@/components/payroll/month-stepper";
-import {
-  lockPayrollPeriodMutationOptions,
-  payrollQueries,
-} from "@/lib/queries/payroll-queries-factory";
+import { payrollQueries } from "@/lib/queries/payroll-queries-factory";
 import {
   defaultPayrollMonth,
   type PayrollMonthCursor,
 } from "@/lib/payroll-month-nav";
 import { formatRsd } from "@/lib/format";
-import { formatMutationError } from "@/lib/admin/format-mutation-error";
+import { getDateLocale } from "@/lib/i18n";
+
+/** How many session rows to add each time the list is extended. */
+const PAGE_SIZE = 30;
 
 export default function HonorariTrainerDetail() {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const tokens = useThemeTokens();
   const queryClient = useQueryClient();
   const bottomPad = useTabBarBottomPadding();
@@ -55,12 +58,11 @@ export default function HonorariTrainerDetail() {
     };
   });
   const [refreshing, setRefreshing] = useState(false);
-  const [confirmLock, setConfirmLock] = useState<null | "lock" | "unlock">(null);
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
   const monthQuery = useQuery(
     payrollQueries.month({ ...cursor, trainerUserId: params.trainerId }),
   );
-  const lockMutation = useMutation(lockPayrollPeriodMutationOptions(queryClient));
 
   async function handleRefresh() {
     setRefreshing(true);
@@ -68,12 +70,17 @@ export default function HonorariTrainerDetail() {
     setRefreshing(false);
   }
 
+  function changeMonth(next: PayrollMonthCursor) {
+    setCursor(next);
+    // A new month is a new list; keeping the old offset would show a partial
+    // slice of unrelated sessions.
+    setVisibleCount(PAGE_SIZE);
+  }
+
   const month = monthQuery.data?.month;
-  const isLocked = month?.status === "LOCKED";
-  // An unpriced attendance cannot be frozen into a money figure, so the server
-  // refuses the lock — surface that here instead of letting the user discover
-  // it via an error toast.
-  const lockBlocked = (month?.unpricedCount ?? 0) > 0;
+  const sessions = month?.sessions ?? [];
+  const visibleSessions = sessions.slice(0, visibleCount);
+  const hasMore = sessions.length > visibleCount;
 
   return (
     <ScreenContainerRaw
@@ -91,7 +98,7 @@ export default function HonorariTrainerDetail() {
         }
       >
         <View className="mb-4">
-          <MonthStepper cursor={cursor} onChange={setCursor} />
+          <MonthStepper cursor={cursor} onChange={changeMonth} />
         </View>
 
         {monthQuery.isError ? (
@@ -101,32 +108,14 @@ export default function HonorariTrainerDetail() {
         ) : (
           <>
             <GlassCard className="mb-4 p-4">
-              <View className="flex-row items-end justify-between">
-                <View>
-                  <CapsLabel>{t("payroll.netPayout")}</CapsLabel>
-                  <Text
-                    className="mt-1 text-3xl font-semibold"
-                    style={{ color: tokens.foreground }}
-                    testID="honorari-detail-payout"
-                  >
-                    {formatRsd(month.netPayout)}
-                  </Text>
-                </View>
-                <View
-                  className="rounded-full px-3 py-1"
-                  style={{
-                    backgroundColor: isLocked ? tokens.successSoft : tokens.surface2,
-                  }}
-                >
-                  <Text
-                    className="text-xs font-medium"
-                    style={{ color: isLocked ? tokens.success : tokens.muted }}
-                    testID="honorari-detail-status"
-                  >
-                    {isLocked ? t("payroll.statusLocked") : t("payroll.statusOpen")}
-                  </Text>
-                </View>
-              </View>
+              <CapsLabel>{t("payroll.netPayout")}</CapsLabel>
+              <Text
+                className="mt-1 text-3xl font-semibold"
+                style={{ color: tokens.foreground }}
+                testID="honorari-detail-payout"
+              >
+                {formatRsd(month.netPayout)}
+              </Text>
 
               <View className="mt-3 gap-1">
                 <SummaryRow
@@ -178,148 +167,93 @@ export default function HonorariTrainerDetail() {
               )}
             </GlassCard>
 
-            <View className="mb-4">
-              <Button
-                variant={isLocked ? "secondary" : "primary"}
-                disabled={!isLocked && (lockBlocked || month.percent === null)}
-                onPress={() => setConfirmLock(isLocked ? "unlock" : "lock")}
-                testID="honorari-lock-button"
-              >
-                {isLocked ? t("payroll.unlockPeriod") : t("payroll.lockPeriod")}
-              </Button>
-              <Text className="mt-2 text-xs" style={{ color: tokens.muted }}>
-                {lockBlocked && !isLocked
-                  ? t("payroll.unpricedBlocksLock")
-                  : t("payroll.lockHint")}
-              </Text>
-            </View>
-
             <CapsLabel>{t("payroll.sessionsHeld")}</CapsLabel>
-            {month.sessions.length === 0 ? (
+            {sessions.length === 0 ? (
               <EmptyState title={t("payroll.noSessions")} />
             ) : (
               <View className="mt-2 gap-3">
-                {month.sessions.map((session) => (
-                  <GlassCard key={session.sessionId} className="p-4">
-                    <View className="flex-row items-center justify-between">
-                      <Text
-                        className="text-base font-semibold"
-                        style={{ color: tokens.foreground }}
-                      >
-                        {session.classTypeName}
-                      </Text>
-                      <Text
-                        className="text-base font-semibold"
-                        style={{ color: tokens.foreground }}
-                      >
-                        {formatRsd(session.gross)}
-                      </Text>
-                    </View>
-                    <Text className="mt-0.5 text-xs" style={{ color: tokens.muted }}>
-                      {new Date(session.startsAt).toLocaleString(i18n.language, {
-                        day: "numeric",
-                        month: "short",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </Text>
-
-                    <View className="mt-3 gap-1.5">
-                      {session.attendees.map((attendee) => (
-                        <View
-                          key={attendee.bookingId}
-                          className="flex-row items-center justify-between"
-                        >
-                          <View className="flex-1 flex-row items-center gap-2 pr-2">
-                            <Text
-                              className="text-sm"
-                              style={{ color: tokens.foreground }}
-                              numberOfLines={1}
-                            >
-                              {attendee.clientName}
-                            </Text>
-                            {attendee.isGift && (
-                              <View
-                                className="rounded-full px-2 py-0.5"
-                                style={{ backgroundColor: tokens.accentSoft }}
-                              >
-                                <Text
-                                  className="text-[10px] font-medium"
-                                  style={{ color: tokens.accent }}
-                                >
-                                  {t("payroll.gift")}
-                                </Text>
-                              </View>
-                            )}
-                          </View>
-                          <Text className="text-xs" style={{ color: tokens.muted }}>
-                            {attendee.packageName}
-                          </Text>
+                {visibleSessions.map((session) => (
+                  <Pressable
+                    key={session.sessionId}
+                    testID={`honorari-session-${session.sessionId}`}
+                    accessibilityRole="button"
+                    android_ripple={null}
+                    className="active:opacity-70"
+                    onPress={() =>
+                      router.push({
+                        pathname: "/(admin)/izvestaji/honorari/sesija/[sessionId]",
+                        params: {
+                          sessionId: session.sessionId,
+                          trainerId: params.trainerId,
+                          year: String(cursor.year),
+                          month: String(cursor.month),
+                        },
+                      })
+                    }
+                  >
+                    <GlassCard style={{ padding: 0, borderRadius: 16, overflow: "hidden" }}>
+                      <View className="flex-row items-center gap-3 px-4 py-3.5">
+                        <View className="flex-1">
                           <Text
-                            className="ml-3 w-24 text-right text-sm"
-                            style={{
-                              color:
-                                attendee.sessionValue === null
-                                  ? tokens.warning
-                                  : tokens.foreground,
-                            }}
+                            className="text-foreground font-body-medium"
+                            style={{ fontSize: 16 }}
+                            numberOfLines={1}
                           >
-                            {attendee.sessionValue === null
-                              ? "—"
-                              : formatRsd(attendee.sessionValue)}
+                            {session.classTypeName}
                           </Text>
+                          <Text className="text-muted mt-0.5" style={{ fontSize: 13 }}>
+                            {new Date(session.startsAt).toLocaleString(getDateLocale(), {
+                              day: "numeric",
+                              month: "short",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                            {" · "}
+                            {t("payroll.attendeesShort", {
+                              count: session.attendees.length,
+                            })}
+                          </Text>
+                          {session.unpricedCount > 0 && (
+                            <Text
+                              className="mt-0.5"
+                              style={{ fontSize: 12, color: tokens.warning }}
+                            >
+                              {t("payroll.unpricedWarning", {
+                                count: session.unpricedCount,
+                              })}
+                            </Text>
+                          )}
                         </View>
-                      ))}
-                    </View>
-                  </GlassCard>
+                        <View className="flex-row items-center gap-1.5">
+                          <Text
+                            className="font-body-medium"
+                            style={{ fontSize: 15, color: tokens.foreground }}
+                          >
+                            {formatRsd(session.gross)}
+                          </Text>
+                          <Icon name="chevron-right" size={11} color="#52525b" />
+                        </View>
+                      </View>
+                    </GlassCard>
+                  </Pressable>
                 ))}
+
+                {hasMore && (
+                  <Button
+                    variant="secondary"
+                    testID="honorari-load-more"
+                    onPress={() => setVisibleCount((n) => n + PAGE_SIZE)}
+                  >
+                    {t("payroll.loadMore", {
+                      count: sessions.length - visibleCount,
+                    })}
+                  </Button>
+                )}
               </View>
             )}
           </>
         )}
       </ScrollView>
-
-      <ConfirmSheet
-        open={confirmLock !== null}
-        onOpenChange={(open) => !open && setConfirmLock(null)}
-        title={
-          confirmLock === "unlock"
-            ? t("payroll.unlockPeriod")
-            : t("payroll.lockPeriod")
-        }
-        message={
-          confirmLock === "unlock"
-            ? t("payroll.unlockConfirm")
-            : t("payroll.lockConfirm")
-        }
-        confirmLabel={
-          confirmLock === "unlock"
-            ? t("payroll.unlockPeriod")
-            : t("payroll.lockPeriod")
-        }
-        tone={confirmLock === "unlock" ? "danger" : "primary"}
-        loading={lockMutation.isPending}
-        errorMessage={
-          lockMutation.error
-            ? formatMutationError(
-                lockMutation.error,
-                t,
-                i18n.language === "en" ? "en" : "sr",
-                t("payroll.lockHint"),
-              )
-            : null
-        }
-        testID="honorari-lock-confirm"
-        onConfirm={async () => {
-          await lockMutation.mutateAsync({
-            trainerUserId: params.trainerId,
-            year: cursor.year,
-            month: cursor.month,
-            unlock: confirmLock === "unlock",
-          });
-          setConfirmLock(null);
-        }}
-      />
     </ScreenContainerRaw>
   );
 }

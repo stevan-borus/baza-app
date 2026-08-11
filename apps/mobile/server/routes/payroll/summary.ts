@@ -4,9 +4,8 @@ import { now } from "@/lib/now";
 import { studioMonthRange } from "@/lib/payroll-valuation";
 import { requireRole } from "@/lib/server/auth-guards";
 import { fail, respond } from "@/lib/server/http";
-import { computePayrollMonth } from "@/lib/server/payroll";
 import { parsePayrollMonthParams } from "@/lib/server/payroll-params";
-import { readPayrollPeriod } from "@/lib/server/payroll-period";
+import { readPayrollMonth } from "@/lib/server/payroll-month-read";
 import { prisma } from "@/lib/server/prisma";
 
 /**
@@ -37,12 +36,11 @@ export async function GET(request: Request) {
   // paying one round trip per trainer in series.
   const months = await Promise.all(
     trainers.map((trainer) =>
-      readPayrollPeriod(prisma, {
+      readPayrollMonth(prisma, {
         trainerUserId: trainer.id,
         year: params.year,
         month: params.month,
         asOf,
-        compute: computePayrollMonth,
       }),
     ),
   );
@@ -55,7 +53,6 @@ export async function GET(request: Request) {
       trainerUserId: m.trainerUserId,
       trainerName: m.trainerName,
       percent: m.percent,
-      status: m.status,
       sessionCount: m.sessionCount,
       attendeeCount: m.attendeeCount,
       gross: m.gross,

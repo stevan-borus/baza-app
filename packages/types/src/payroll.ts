@@ -34,8 +34,6 @@ export const payrollMonthSchema = z.object({
   // Null when no rate is configured for the trainer — the payout is then 0 and
   // the UI tells the admin to set a rate.
   percent: z.number().nullable(),
-  status: z.enum(["OPEN", "LOCKED"]),
-  lockedAt: z.string().nullable(),
   sessions: z.array(payrollSessionSchema),
   sessionCount: z.number(),
   attendeeCount: z.number(),
@@ -76,7 +74,6 @@ export const payrollSummaryResponseSchema = z.object({
       trainerUserId: z.string(),
       trainerName: z.string(),
       percent: z.number().nullable(),
-      status: z.enum(["OPEN", "LOCKED"]),
       sessionCount: z.number(),
       attendeeCount: z.number(),
       gross: z.number(),
@@ -125,23 +122,7 @@ export const createTrainerRateResponseSchema = z.object({
   rate: trainerRateSchema,
 });
 
-// ─── Period lock / adjustments ───────────────────────────────────────────────
-
-export const lockPayrollPeriodInputSchema = z.object({
-  trainerUserId: z.string().min(1),
-  year: z.number().int().min(2000).max(2100),
-  month: z.number().int().min(1).max(12),
-  // Unlocking is deliberately possible: month one will need corrections, and a
-  // one-way lock would force data surgery. The reason is recorded.
-  unlock: z.boolean().optional(),
-});
-
-export const lockPayrollPeriodResponseSchema = z.object({
-  success: z.boolean(),
-  status: z.enum(["OPEN", "LOCKED"]),
-  lineCount: z.number(),
-  payout: z.number(),
-});
+// ─── Adjustments ─────────────────────────────────────────────────────────────
 
 export const createPayrollAdjustmentInputSchema = z.object({
   trainerUserId: z.string().min(1),

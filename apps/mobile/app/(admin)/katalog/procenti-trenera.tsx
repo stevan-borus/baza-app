@@ -10,6 +10,7 @@ import { useState } from "react";
 import dayjs from "dayjs";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
+import { getDateLocale } from "@/lib/i18n";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { Icon } from "@/components/ui/icon";
 import { MotiView } from "@/components/ui/styled";
@@ -156,7 +157,7 @@ export default function ProcentiTrenera() {
                           <Text className="text-muted mt-0.5" style={{ fontSize: 13 }}>
                             {`${t("payroll.effectiveFrom")} ${new Date(
                               rate.effectiveFrom,
-                            ).toLocaleDateString(i18n.language)}`}
+                            ).toLocaleDateString(getDateLocale())}`}
                           </Text>
                         ) : (
                           <Text className="mt-0.5" style={{ fontSize: 13, color: tokens.warning }}>
@@ -254,9 +255,7 @@ export default function ProcentiTrenera() {
                       style={{ opacity: supersededSameDay ? 0.45 : 1 }}
                     >
                       <Text className="text-sm" style={{ color: tokens.muted }}>
-                        {new Date(rate.effectiveFrom).toLocaleDateString(
-                          i18n.language,
-                        )}
+                        {new Date(rate.effectiveFrom).toLocaleDateString(getDateLocale())}
                         {supersededSameDay
                           ? ` · ${t("payroll.rateSuperseded")}`
                           : ""}

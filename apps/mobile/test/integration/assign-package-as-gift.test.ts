@@ -245,12 +245,12 @@ describe("assign an existing package as a gift", () => {
       asOf: new Date("2026-08-05T10:00:00.000Z"),
     });
 
-    // A 1-session gift drawn from a 15.000 package: the grant IS the rate
-    // basis, so the house pays the trainer the full single-session value —
-    // never zero, which is what the old unpriced gift SKUs produced.
+    // A 1-session gift drawn from a 12-session, 15.000 package is worth one
+    // training — 15000/12 — so the trainer is paid the normal rate for the
+    // work, and never zero, which is what the old unpriced gift SKUs produced.
     expect(month.giftCount).toBe(1);
-    expect(month.gross).toBe(15000);
-    expect(month.payout).toBe(6000); // 40%
+    expect(month.gross).toBe(1250);
+    expect(month.payout).toBe(500); // 40%
     expect(month.unpricedCount).toBe(0);
   });
 });

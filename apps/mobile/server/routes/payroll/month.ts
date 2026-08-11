@@ -3,10 +3,9 @@ import { UserRole } from "@/generated/prisma";
 import { now } from "@/lib/now";
 import { requireRole } from "@/lib/server/auth-guards";
 import { fail, respond } from "@/lib/server/http";
-import { computePayrollMonth } from "@/lib/server/payroll";
 import { parsePayrollMonthParams } from "@/lib/server/payroll-params";
 import { prisma } from "@/lib/server/prisma";
-import { readPayrollPeriod } from "@/lib/server/payroll-period";
+import { readPayrollMonth } from "@/lib/server/payroll-month-read";
 
 /**
  * GET /api/payroll/month?year=&month=[&trainerUserId=]
@@ -34,12 +33,11 @@ export async function GET(request: Request) {
     ? (requestedTrainerId ?? guard.user.id)
     : guard.user.id;
 
-  const month = await readPayrollPeriod(prisma, {
+  const month = await readPayrollMonth(prisma, {
     trainerUserId,
     year: params.year,
     month: params.month,
     asOf: now(),
-    compute: computePayrollMonth,
   });
 
   return respond(payrollMonthResponseSchema, { success: true, month });

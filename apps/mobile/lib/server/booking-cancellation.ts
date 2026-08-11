@@ -3,6 +3,7 @@
  * no-show charge, and waitlist auto-promotion. `cancellation-policy.ts`
  * decides WHETHER a cancel is late; this module owns WHAT happens next.
  */
+import { formatFullName } from "@baza/types/common";
 import type { Prisma } from "@/generated/prisma";
 import { shouldApplyLateCancelPenalty } from "@/lib/server/cancellation-policy";
 import {
@@ -26,9 +27,71 @@ async function hasRecordedConsumption(
   return existing !== null;
 }
 
-function recordConsumption(db: Db, clientProfileId: string, sessionId: string) {
+/**
+ * Record the attendance AND freeze what it is worth to the trainer.
+ *
+ * The value and the display names are copied here rather than joined at read
+ * time: a payout is a fact about work already done, so a later price edit,
+ * package revoke or client deletion must not be able to rewrite it. This is
+ * the only place a consumption row is created, so it is the only place the
+ * snapshot has to be taken.
+ *
+ * `clientPackageId` is the package actually charged — null for an unbacked
+ * attendance, which leaves `sessionValue` null so the report can flag it
+ * instead of silently counting zero.
+ */
+async function recordConsumption(
+  db: Db,
+  clientProfileId: string,
+  sessionId: string,
+  clientPackageId: string | null,
+) {
+  const [profile, pkg] = await Promise.all([
+    db.clientProfile.findUnique({
+      where: { id: clientProfileId },
+      select: { user: { select: { firstName: true, lastName: true } } },
+    }),
+    clientPackageId
+      ? db.clientPackage.findUnique({
+          where: { id: clientPackageId },
+          select: {
+            sessionsGranted: true,
+            bonusSessions: true,
+            isGift: true,
+            packageType: {
+              select: { name: true, price: true, sessionCount: true },
+            },
+          },
+        })
+      : Promise.resolve(null),
+  ]);
+
+  // The rate is what ONE training on this package costs, so the price is
+  // always spread over the SKU's own session count — never over what a
+  // particular package handed out. A gift grants a single session of a real
+  // 12-session package: it is worth 15000/12, not the whole 15000.
+  //
+  // A "+1 termin" grant is the one thing that legitimately changes the
+  // divisor, because it grows the package the client actually bought.
+  const total = pkg
+    ? pkg.isGift
+      ? pkg.packageType.sessionCount
+      : pkg.sessionsGranted + pkg.bonusSessions
+    : 0;
+  const price = pkg?.packageType.price ?? null;
+
   return db.sessionConsumption.create({
-    data: { clientProfileId, sessionId },
+    data: {
+      clientProfileId,
+      sessionId,
+      sessionValue:
+        price === null || total <= 0 ? null : Math.round(price / total),
+      clientName: profile
+        ? formatFullName(profile.user.firstName, profile.user.lastName)
+        : "—",
+      packageName: pkg?.packageType.name ?? null,
+      isGift: pkg?.isGift ?? false,
+    },
   });
 }
 
@@ -110,7 +173,12 @@ export async function applyLateCancelForfeit(
     input.sessionId,
   );
   if (!alreadyRecorded) {
-    await recordConsumption(db, input.clientProfileId, input.sessionId);
+    await recordConsumption(
+      db,
+      input.clientProfileId,
+      input.sessionId,
+      input.clientPackageId,
+    );
   }
 
   if (input.clientPackageId) {
@@ -166,7 +234,7 @@ export async function chargeNoShowConsumption(
     return "NO_PACKAGE";
   }
 
-  await recordConsumption(tx, input.clientProfileId, input.sessionId);
+  await recordConsumption(tx, input.clientProfileId, input.sessionId, targetPackageId);
   return "CONSUMED";
 }
 

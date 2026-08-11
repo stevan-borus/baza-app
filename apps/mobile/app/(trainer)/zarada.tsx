@@ -5,12 +5,14 @@
  * The server derives the trainer from the session — this screen never sends a
  * trainer id — so there is no path from here to another trainer's figures.
  *
- * An open month is explicitly labelled preliminary: until the admin locks it,
- * a late booking or correction can still move the number.
+ * The month in progress is labelled preliminary, since a session held tomorrow
+ * still adds to it. Past months are settled: each line froze when its session
+ * was consumed.
  */
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
+import { getDateLocale } from "@/lib/i18n";
 import { RefreshControl, ScrollView, Text, View } from "react-native";
 import { GlassCard } from "@/components/ui/glass-card";
 import { EmptyState, ErrorState } from "@/components/ui/states";
@@ -28,7 +30,7 @@ import { defaultPayrollMonth, type PayrollMonthCursor } from "@/lib/payroll-mont
 import { formatRsd } from "@/lib/format";
 
 export default function TrainerZarada() {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const tokens = useThemeTokens();
   const queryClient = useQueryClient();
   const bottomPad = useTabBarBottomPadding();
@@ -45,6 +47,11 @@ export default function TrainerZarada() {
   }
 
   const month = monthQuery.data?.month;
+  // A month still in progress can still move: a session held tomorrow adds to
+  // it. Past months are settled, because each line freezes when it is consumed.
+  const today = defaultPayrollMonth();
+  const isCurrentMonth =
+    cursor.year === today.year && cursor.month === today.month;
 
   return (
     <ScreenContainerRaw
@@ -106,7 +113,7 @@ export default function TrainerZarada() {
                 </View>
               </View>
 
-              {month.status === "OPEN" && (
+              {isCurrentMonth && (
                 <View
                   className="mt-3 rounded-xl px-3 py-2"
                   style={{ backgroundColor: tokens.surface2 }}
@@ -154,7 +161,7 @@ export default function TrainerZarada() {
                       </Text>
                     </View>
                     <Text className="mt-0.5 text-xs" style={{ color: tokens.muted }}>
-                      {new Date(session.startsAt).toLocaleString(i18n.language, {
+                      {new Date(session.startsAt).toLocaleString(getDateLocale(), {
                         day: "numeric",
                         month: "short",
                         hour: "2-digit",

@@ -256,10 +256,13 @@ describe("GET /api/payroll/month", () => {
     );
     const body = await res.json();
 
-    // A 1-session grant of a 15.000 package: the grant IS the rate basis, so
-    // the house pays the trainer the full single-session value.
+    // A gift grants ONE session of a real 12-session package, so the trainer
+    // earns one training's worth — 15000/12 — not the package's whole price.
+    // The rate always comes from the SKU's session count; what a particular
+    // gift handed out changes how many sessions the client gets, not what one
+    // of them is worth.
     expect(body.month.giftCount).toBe(1);
-    expect(body.month.gross).toBe(15000);
+    expect(body.month.gross).toBe(1250);
     expect(body.month.sessions[0].attendees[0].isGift).toBe(true);
   });
 

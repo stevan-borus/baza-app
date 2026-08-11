@@ -130,9 +130,8 @@ model User {
   bookingsChargeWaived  Booking[]            @relation("BookingChargeWaivedBy")
   payrollRates          TrainerRate[]        @relation("TrainerRateTrainer")
   payrollRatesCreated   TrainerRate[]        @relation("TrainerRateCreatedBy")
-  payrollPeriods        PayrollPeriod[]      @relation("PayrollPeriodTrainer")
-  payrollPeriodsLocked  PayrollPeriod[]      @relation("PayrollPeriodLockedBy")
-  payrollAdjustments    PayrollAdjustment[]  @relation("PayrollAdjustmentCreatedBy")
+  payrollAdjustments    PayrollAdjustment[]  @relation("PayrollAdjustmentTrainer")
+  payrollAdjustmentsCreated PayrollAdjustment[] @relation("PayrollAdjustmentCreatedBy")
 
   @@index([lastName])
 }
@@ -162,14 +161,6 @@ model TrainerProfile {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
-
-enum PayrollPeriodStatus {
-  // Recomputed live from bookings on every read.
-  OPEN
-  // Frozen: the lines are snapshotted, so a later price edit or package revoke
-  // can never rewrite a month that has already been paid out.
-  LOCKED
 }
 
 /**
@@ -206,72 +197,24 @@ model TrainerRate {
 }
 
 /**
- * One trainer's pay for one calendar month (Belgrade). Created lazily the
- * first time the month is opened or locked.
- */
-model PayrollPeriod {
-  id            String              @id @default(uuid())
-  trainerUserId String
-  // The month's first day at the studio's opening hour — the same instant
-  // `studioMonthRange` computes, stored so a period is addressable.
-  periodStart   DateTime
-  status        PayrollPeriodStatus @default(OPEN)
-  // Snapshotted at lock time so the payout stays reproducible even if the
-  // trainer's rate is changed afterwards.
-  percent       Int?
-  grossAmount   Int?
-  payoutAmount  Int?
-  lockedAt      DateTime?
-  lockedByUserId String?
-  createdAt     DateTime            @default(now())
-  updatedAt     DateTime            @updatedAt
-  trainer       User                @relation("PayrollPeriodTrainer", fields: [trainerUserId], references: [id], onDelete: Cascade)
-  lockedBy      User?               @relation("PayrollPeriodLockedBy", fields: [lockedByUserId], references: [id], onDelete: SetNull)
-  lines         PayrollLine[]
-  adjustments   PayrollAdjustment[]
-
-  @@unique([trainerUserId, periodStart])
-  @@index([periodStart])
-}
-
-/**
- * A frozen per-attendee line, written only when a period locks. Names and
- * amounts are copied rather than joined: the whole point is that renaming a
- * package or deleting a client later cannot alter a paid month.
- */
-model PayrollLine {
-  id              String        @id @default(uuid())
-  periodId        String
-  sessionId       String?
-  sessionStartsAt DateTime
-  classTypeName   String
-  clientName      String
-  packageName     String
-  // The attendee's per-session value in RSD, and the trainer's cut of it.
-  sessionValue    Int
-  isGift          Boolean       @default(false)
-  period          PayrollPeriod @relation(fields: [periodId], references: [id], onDelete: Cascade)
-  session         Session?      @relation(fields: [sessionId], references: [id], onDelete: SetNull)
-
-  @@index([periodId])
-  @@index([sessionId])
-}
-
-/**
- * A manual correction on a period — a bonus, a deduction, a fix for something
- * the automatic calculation cannot know about. Signed: negative subtracts.
+ * A manual correction to a trainer's month — a bonus, a deduction, a fix for
+ * something the automatic calculation cannot know about. Signed: negative
+ * subtracts. Keyed straight to trainer + month; there is no period row,
+ * because a payout is frozen per attendance rather than per month.
  */
 model PayrollAdjustment {
-  id              String        @id @default(uuid())
-  periodId        String
+  id              String   @id @default(uuid())
+  trainerUserId   String
+  // The month's opening instant, as `studioMonthRange` computes it.
+  periodStart     DateTime
   amount          Int
   note            String
   createdByUserId String?
-  createdAt       DateTime      @default(now())
-  period          PayrollPeriod @relation(fields: [periodId], references: [id], onDelete: Cascade)
-  createdBy       User?         @relation("PayrollAdjustmentCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  createdAt       DateTime @default(now())
+  trainer         User     @relation("PayrollAdjustmentTrainer", fields: [trainerUserId], references: [id], onDelete: Cascade)
+  createdBy       User?    @relation("PayrollAdjustmentCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
 
-  @@index([periodId])
+  @@index([trainerUserId, periodStart])
 }
 
 model UserInvite {
@@ -405,7 +348,6 @@ model Session {
   waitlist             WaitlistEntry[]
   consumptions         SessionConsumption[]
   trainerNotes         TrainerNote[]
-  payrollLines         PayrollLine[]
 
   @@index([startsAt])
   @@index([trainerUserId, startsAt])
@@ -570,15 +512,38 @@ model PackagePause {
   @@index([clientProfileId])
 }
 
+/**
+ * One client's attendance charged against their package.
+ *
+ * Also the payroll record for that attendance. The value and the names below
+ * are SNAPSHOTS taken when the session is consumed, not fields to join back to
+ * — that is the whole point. The trainer's payout is a fact about work already
+ * done, so editing a package price, revoking a package or removing a client
+ * must not rewrite a month that has already been paid.
+ */
 model SessionConsumption {
   id                String        @id @default(uuid())
-  clientProfileId   String
+  // Nullable so a deleted client leaves the payroll record standing; the
+  // display name lives on the snapshot below.
+  clientProfileId   String?
   sessionId         String
   consumedAt        DateTime      @default(now())
-  clientProfile     ClientProfile @relation(fields: [clientProfileId], references: [id], onDelete: Cascade)
+  // ── Payroll snapshot, frozen at consumption ────────────────────────────
+  // The attendee's per-session package value in RSD: price / (granted +
+  // bonus). Null only when nothing backed the attendance (an unbacked
+  // reservation), which the report surfaces rather than counting as zero.
+  sessionValue      Int?
+  // Copied, not joined: these must survive the client or package row going
+  // away, so the owner can always see who was paid for and on what.
+  clientName        String
+  packageName       String?
+  isGift            Boolean       @default(false)
+  clientProfile     ClientProfile? @relation(fields: [clientProfileId], references: [id], onDelete: SetNull)
   session           Session       @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 
   @@unique([clientProfileId, sessionId])
+  // The payroll read: every consumption for a trainer's month, by session.
+  @@index([sessionId])
 }
 
 model NotificationPreference {

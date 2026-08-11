@@ -174,7 +174,7 @@ describe("POST /api/cron/sessions/consumption", () => {
       },
     });
     await prisma.sessionConsumption.create({
-      data: { clientProfileId: clientProfile.id, sessionId: session.id },
+      data: { clientName: "Seed Client", clientProfileId: clientProfile.id, sessionId: session.id },
     });
     await prisma.clientPackage.update({
       where: { id: clientPackage.id },

@@ -33,6 +33,23 @@ const PASSWORD = "Password123!";
 
 const HOUR_MS = 60 * 60 * 1000;
 const DAY_MS = 24 * HOUR_MS;
+
+/**
+ * Group-class regulars. They fill a session to capacity so the waitlist behind
+ * it is realistic — real names on real packages, because an unbacked
+ * attendance is not a thing that happens in the studio and it made the payout
+ * report show nameless, valueless rows.
+ */
+const FILLER_CLIENT_NAMES = [
+  { firstName: "Jovana", lastName: "Ilić" },
+  { firstName: "Marija", lastName: "Pavlović" },
+  { firstName: "Tamara", lastName: "Stojanović" },
+  { firstName: "Ana", lastName: "Ristić" },
+  { firstName: "Katarina", lastName: "Đorđević" },
+  { firstName: "Milica", lastName: "Kovačević" },
+  { firstName: "Sanja", lastName: "Popović" },
+  { firstName: "Ivana", lastName: "Lukić" },
+];
 const WEEK_MS = 7 * DAY_MS;
 
 const USERS = {
@@ -192,6 +209,10 @@ const ROOMS = [
  */
 async function wipe() {
   await prisma.consentRecord.deleteMany({});
+  // Payroll: rates and adjustments are per-trainer rows the seed re-creates,
+  // so a re-run must not stack duplicates on top of the previous one.
+  await prisma.payrollAdjustment.deleteMany({});
+  await prisma.trainerRate.deleteMany({});
   await prisma.sessionConsumption.deleteMany({});
   await prisma.trainerNote.deleteMany({});
   await prisma.waitlistEntry.deleteMany({});
@@ -585,7 +606,236 @@ export async function seedE2E() {
 
   await seedBookings({ clients: clientProfiles });
 
+  await seedPayrollHistory({
+    trainers: {
+      reformer: { id: seeded.get("trainerReformer")!.user.id },
+      energy: { id: seeded.get("trainerEnergy")!.user.id },
+    },
+  });
+
   await seedConsentRecords({ seeded });
+}
+
+/**
+ * A finished month of training, so the payout screens have something real to show.
+ *
+ * The rest of the seed only creates UPCOMING sessions, which meant every
+ * payroll screen rendered zeros — nothing to review, and no way to tell a
+ * working report from a broken one. This backfills the previous calendar month
+ * with the mix a real month has: several trainings a week per trainer, a
+ * roomful of clients on different packages, one gift, and one attendance
+ * nobody had a package for.
+ *
+ * Each attendance is CONSUMED, which is what freezes its payout value — so the
+ * seeded figures are the same shape the app produces in production.
+ */
+async function seedPayrollHistory(opts: {
+  trainers: { reformer: { id: string }; energy: { id: string } };
+}) {
+  const reformerCt = await prisma.classType.findFirst({
+    where: { name: "Reformer pilates" },
+    select: { id: true },
+  });
+  const energyCt = await prisma.classType.findFirst({
+    where: { name: "Energy pilates" },
+    select: { id: true },
+  });
+
+  // Commission percentages, so the payout screens show money rather than a
+  // "set a rate first" warning. Effective well before the seeded month.
+  for (const [trainerId, percent] of [
+    [opts.trainers.reformer.id, 40],
+    [opts.trainers.energy.id, 35],
+  ] as const) {
+    await prisma.trainerRate.create({
+      data: {
+        trainerUserId: trainerId,
+        percent,
+        effectiveFrom: new Date(now().getFullYear() - 1, 0, 1, 5, 0, 0, 0),
+      },
+    });
+  }
+  const packages = await prisma.packageType.findMany({
+    where: { name: { in: ["Reformer 12-pack", "Reformer 8-pack", "Energy 12-pack"] } },
+    select: { id: true, name: true, sessionCount: true, lateCancelHours: true },
+  });
+  const byName = new Map(packages.map((p) => [p.name, p]));
+  if (!reformerCt || !energyCt || byName.size < 3) return;
+
+  // The whole of last month, in studio-local terms.
+  const anchor = now();
+  const monthEnd = new Date(anchor.getFullYear(), anchor.getMonth(), 1, 5, 0, 0, 0);
+  const monthStart = new Date(anchor.getFullYear(), anchor.getMonth() - 1, 1, 5, 0, 0, 0);
+
+  // Regulars, each on the package they actually bought.
+  const roster = [
+    { first: "Jelena", last: "Marković", pkg: "Reformer 12-pack", ct: reformerCt.id },
+    { first: "Nevena", last: "Simić", pkg: "Reformer 12-pack", ct: reformerCt.id },
+    { first: "Dunja", last: "Vasić", pkg: "Reformer 8-pack", ct: reformerCt.id },
+    { first: "Teodora", last: "Janković", pkg: "Reformer 8-pack", ct: reformerCt.id },
+    { first: "Anđela", last: "Nikolić", pkg: "Energy 12-pack", ct: energyCt.id },
+    { first: "Sofija", last: "Blagojević", pkg: "Energy 12-pack", ct: energyCt.id },
+  ] as const;
+
+  const attendees: Array<{
+    clientProfileId: string;
+    clientPackageId: string;
+    classTypeId: string;
+    isGift: boolean;
+  }> = [];
+
+  for (const [i, person] of roster.entries()) {
+    const pkgType = byName.get(person.pkg)!;
+    const user = await prisma.user.create({
+      data: {
+        email: `klijent.mesec.${i}@e2e.test`,
+        firstName: person.first,
+        lastName: person.last,
+        role: UserRole.CLIENT,
+        clientProfile: { create: { dateOfBirth: new Date("1991-04-09") } },
+      },
+      include: { clientProfile: true },
+    });
+    // The last one is on a GIFT: a real, priced package granted for free, so
+    // the trainer is still paid for the work while the studio absorbs the cost.
+    const isGift = i === roster.length - 1;
+    const pkg = await prisma.clientPackage.create({
+      data: {
+        clientProfileId: user.clientProfile!.id,
+        packageTypeId: pkgType.id,
+        classTypes: { create: { classTypeId: person.ct } },
+        lateCancelHours: pkgType.lateCancelHours,
+        startsAt: monthStart,
+        expiresAt: new Date(monthEnd.getTime() + 30 * DAY_MS),
+        sessionsRemaining: isGift ? 1 : pkgType.sessionCount,
+        sessionsGranted: isGift ? 1 : pkgType.sessionCount,
+        isGift,
+      },
+      select: { id: true },
+    });
+    attendees.push({
+      clientProfileId: user.clientProfile!.id,
+      clientPackageId: pkg.id,
+      classTypeId: person.ct,
+      isGift,
+    });
+  }
+
+  // One client who trained without a package — the case the report must flag
+  // rather than quietly value at zero.
+  const unbacked = await prisma.user.create({
+    data: {
+      email: "klijent.bez.paketa@e2e.test",
+      firstName: "Bez",
+      lastName: "Paketa",
+      role: UserRole.CLIENT,
+      clientProfile: { create: { dateOfBirth: new Date("1989-02-02") } },
+    },
+    include: { clientProfile: true },
+  });
+
+  // Three trainings a week each, alternating trainers, across last month.
+  let dayCursor = new Date(monthStart);
+  let index = 0;
+  while (dayCursor < monthEnd) {
+    const dow = dayCursor.getDay();
+    if (dow === 1 || dow === 3 || dow === 5) {
+      const isReformer = index % 2 === 0;
+      const startsAt = new Date(dayCursor);
+      startsAt.setHours(isReformer ? 7 : 18, 30, 0, 0);
+
+      const session = await prisma.session.create({
+        data: {
+          classTypeId: isReformer ? reformerCt.id : energyCt.id,
+          trainerUserId: isReformer
+            ? opts.trainers.reformer.id
+            : opts.trainers.energy.id,
+          startsAt,
+          endsAt: new Date(startsAt.getTime() + HOUR_MS),
+          capacity: 6,
+          isActive: true,
+          status: "COMPLETED",
+        },
+        select: { id: true },
+      });
+
+      const going = attendees.filter((a) =>
+        a.classTypeId === (isReformer ? reformerCt.id : energyCt.id),
+      );
+      for (const attendee of going) {
+        await prisma.booking.create({
+          data: {
+            clientProfileId: attendee.clientProfileId,
+            sessionId: session.id,
+            clientPackageId: attendee.clientPackageId,
+          },
+        });
+      }
+
+      // Freeze each attendance the way the consumption cron would.
+      const backing = await prisma.clientPackage.findMany({
+        where: { id: { in: going.map((g) => g.clientPackageId) } },
+        select: {
+          id: true,
+          clientProfileId: true,
+          isGift: true,
+          sessionsGranted: true,
+          bonusSessions: true,
+          clientProfile: {
+            select: { user: { select: { firstName: true, lastName: true } } },
+          },
+          packageType: { select: { name: true, price: true, sessionCount: true } },
+        },
+      });
+      for (const pkg of backing) {
+        // Mirrors recordConsumption: a gift is worth ONE session of the real
+        // package, so its rate divides by the SKU's count, not by the single
+        // session it granted.
+        const total = pkg.isGift
+          ? pkg.packageType.sessionCount
+          : pkg.sessionsGranted + pkg.bonusSessions;
+        await prisma.sessionConsumption.create({
+          data: {
+            clientProfileId: pkg.clientProfileId,
+            sessionId: session.id,
+            consumedAt: new Date(startsAt.getTime() + 2 * HOUR_MS),
+            sessionValue:
+              pkg.packageType.price === null || total <= 0
+                ? null
+                : Math.round(pkg.packageType.price / total),
+            clientName: `${pkg.clientProfile.user.firstName} ${pkg.clientProfile.user.lastName}`,
+            packageName: pkg.packageType.name,
+            isGift: pkg.isGift,
+          },
+        });
+      }
+
+      // One session in the month also carries the unbacked attendance.
+      if (index === 4) {
+        await prisma.booking.create({
+          data: {
+            clientProfileId: unbacked.clientProfile!.id,
+            sessionId: session.id,
+            clientPackageId: null,
+          },
+        });
+        await prisma.sessionConsumption.create({
+          data: {
+            clientProfileId: unbacked.clientProfile!.id,
+            sessionId: session.id,
+            consumedAt: new Date(startsAt.getTime() + 2 * HOUR_MS),
+            sessionValue: null,
+            clientName: `${unbacked.firstName} ${unbacked.lastName}`,
+            packageName: null,
+            isGift: false,
+          },
+        });
+      }
+
+      index += 1;
+    }
+    dayCursor = new Date(dayCursor.getTime() + DAY_MS);
+  }
 }
 
 /**
@@ -700,22 +950,51 @@ async function seedBookings(opts: {
   //    it. The active reformer is unaffected.
   const waitlistTarget = reformerSessionsForExtra[2];
   if (futureClient && waitlistTarget) {
+    // Real clients on real packages, not placeholders. They exist to fill a
+    // session so the waitlist behind it is realistic — but an attendance with
+    // no package is itself unrealistic (nobody trains without one), and it
+    // showed up in the payout report as a nameless unpriced row.
+    const reformer12 = await prisma.packageType.findFirst({
+      where: { name: "Reformer 12-pack" },
+      select: { id: true, sessionCount: true, lateCancelHours: true },
+    });
     for (let i = 0; i < waitlistTarget.capacity; i++) {
+      const name = FILLER_CLIENT_NAMES[i % FILLER_CLIENT_NAMES.length]!;
       const filler = await prisma.user.create({
         data: {
-          email: `waitlist.filler.${i}@e2e.test`,
-          firstName: "Waitlist Filler",
-          lastName: String(i + 1),
+          email: `klijent.grupa.${i}@e2e.test`,
+          firstName: name.firstName,
+          lastName: name.lastName,
           role: UserRole.CLIENT,
           clientProfile: { create: { dateOfBirth: new Date("1990-01-01") } },
         },
         include: { clientProfile: true },
       });
+      const clientProfileId = filler.clientProfile!.id;
+
+      let clientPackageId: string | null = null;
+      if (reformer12 && reformerCt) {
+        const pkg = await prisma.clientPackage.create({
+          data: {
+            clientProfileId,
+            packageTypeId: reformer12.id,
+            classTypes: { create: { classTypeId: reformerCt.id } },
+            lateCancelHours: reformer12.lateCancelHours,
+            startsAt: new Date(waitlistTarget.startsAt.getTime() - 7 * DAY_MS),
+            expiresAt: new Date(waitlistTarget.startsAt.getTime() + 30 * DAY_MS),
+            sessionsRemaining: reformer12.sessionCount - 1,
+            sessionsGranted: reformer12.sessionCount,
+          },
+          select: { id: true },
+        });
+        clientPackageId = pkg.id;
+      }
+
       await prisma.booking.create({
         data: {
-          clientProfileId: filler.clientProfile!.id,
+          clientProfileId,
           sessionId: waitlistTarget.id,
-          clientPackageId: null,
+          clientPackageId,
         },
       });
     }

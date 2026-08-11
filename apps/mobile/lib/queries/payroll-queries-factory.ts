@@ -2,7 +2,6 @@ import { queryOptions, type QueryClient } from "@tanstack/react-query";
 import {
   createPayrollAdjustmentResponseSchema,
   createTrainerRateResponseSchema,
-  lockPayrollPeriodResponseSchema,
   payrollMonthResponseSchema,
   payrollSummaryResponseSchema,
   trainerRatesResponseSchema,
@@ -80,21 +79,6 @@ export const payrollQueries = {
       }),
   }),
 
-  lockPeriod: () => ({
-    mutationFn: (input: {
-      trainerUserId: string;
-      year: number;
-      month: number;
-      unlock?: boolean;
-    }) =>
-      apiRequest("/api/payroll/lock", {
-        method: "POST",
-        body: input,
-        schema: lockPayrollPeriodResponseSchema,
-        errorMessage: "Unable to lock the period",
-      }),
-  }),
-
   createAdjustment: () => ({
     mutationFn: (input: {
       trainerUserId: string;
@@ -121,13 +105,6 @@ export const payrollQueries = {
 export function createTrainerRateMutationOptions(queryClient: QueryClient) {
   return {
     ...payrollQueries.createRate(),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: payrollAll }),
-  };
-}
-
-export function lockPayrollPeriodMutationOptions(queryClient: QueryClient) {
-  return {
-    ...payrollQueries.lockPeriod(),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: payrollAll }),
   };
 }
