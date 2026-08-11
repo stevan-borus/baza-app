@@ -5,9 +5,9 @@
  * The server derives the trainer from the session — this screen never sends a
  * trainer id — so there is no path from here to another trainer's figures.
  *
- * The month in progress is labelled preliminary, since a session held tomorrow
- * still adds to it. Past months are settled: each line froze when its session
- * was consumed.
+ * Shows the SAME breakdown the admin sees for this trainer — gross, percent,
+ * sessions, attendees — because a payout figure a trainer cannot check is a
+ * figure they have to take on trust.
  */
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -25,9 +25,13 @@ import {
 } from "@/components/ui/screen-container";
 import { TrainerScheduleLeftSlot } from "@/components/trainer/trainer-tab-left-slot";
 import { MonthStepper } from "@/components/payroll/month-stepper";
+import { SummaryRow } from "@/components/payroll/summary-row";
+import { Button } from "@/components/ui/button";
 import { payrollQueries } from "@/lib/queries/payroll-queries-factory";
 import { defaultPayrollMonth, type PayrollMonthCursor } from "@/lib/payroll-month-nav";
 import { formatRsd } from "@/lib/format";
+
+const PAGE_SIZE = 30;
 
 export default function TrainerZarada() {
   const { t } = useTranslation();
@@ -36,6 +40,9 @@ export default function TrainerZarada() {
   const bottomPad = useTabBarBottomPadding();
   const [cursor, setCursor] = useState<PayrollMonthCursor>(defaultPayrollMonth);
   const [refreshing, setRefreshing] = useState(false);
+  // A busy month runs to ~70 sessions; render them a page at a time like the
+  // admin list does rather than mounting every card at once.
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
   // No trainerUserId: "my own month" is the only form a trainer may request.
   const monthQuery = useQuery(payrollQueries.month(cursor));
@@ -47,12 +54,9 @@ export default function TrainerZarada() {
   }
 
   const month = monthQuery.data?.month;
-  // A month still in progress can still move: a session held tomorrow adds to
-  // it. Past months are settled, because each line freezes when it is consumed.
-  const today = defaultPayrollMonth();
-  const isCurrentMonth =
-    cursor.year === today.year && cursor.month === today.month;
-
+  const sessions = month?.sessions ?? [];
+  const visibleSessions = sessions.slice(0, visibleCount);
+  const hasMore = sessions.length > visibleCount;
   return (
     <ScreenContainerRaw
       title={t("payroll.myEarnings")}
@@ -69,7 +73,10 @@ export default function TrainerZarada() {
         }
       >
         <View className="mb-4">
-          <MonthStepper cursor={cursor} onChange={setCursor} />
+          <MonthStepper cursor={cursor} onChange={(next) => {
+            setCursor(next);
+            setVisibleCount(PAGE_SIZE);
+          }} />
         </View>
 
         {monthQuery.isError ? (
@@ -88,48 +95,38 @@ export default function TrainerZarada() {
                 {formatRsd(month.netPayout)}
               </Text>
 
-              <View className="mt-3 flex-row gap-6">
-                <View>
-                  <Text className="text-xs" style={{ color: tokens.muted }}>
-                    {t("payroll.sessionsHeld")}
-                  </Text>
-                  <Text
-                    className="text-lg font-medium"
-                    style={{ color: tokens.foreground }}
-                  >
-                    {month.sessionCount}
-                  </Text>
-                </View>
-                <View>
-                  <Text className="text-xs" style={{ color: tokens.muted }}>
-                    {t("payroll.attendees")}
-                  </Text>
-                  <Text
-                    className="text-lg font-medium"
-                    style={{ color: tokens.foreground }}
-                  >
-                    {month.attendeeCount}
-                  </Text>
-                </View>
+              {/* Same breakdown the admin sees for this trainer. Showing the
+                  payout without the gross and the percentage behind it asked
+                  the trainer to trust a number they cannot check — and it is
+                  their own pay, agreed with them. */}
+              <View className="mt-3 gap-1">
+                <SummaryRow
+                  label={t("payroll.gross")}
+                  value={formatRsd(month.gross)}
+                />
+                <SummaryRow
+                  label={t("payroll.percent")}
+                  value={
+                    month.percent === null
+                      ? t("payroll.noRate")
+                      : `${month.percent}%`
+                  }
+                />
+                <SummaryRow
+                  label={t("payroll.sessionsHeld")}
+                  value={String(month.sessionCount)}
+                />
+                <SummaryRow
+                  label={t("payroll.attendees")}
+                  value={String(month.attendeeCount)}
+                />
+                {month.adjustmentTotal !== 0 && (
+                  <SummaryRow
+                    label={t("payroll.adjustments")}
+                    value={formatRsd(month.adjustmentTotal)}
+                  />
+                )}
               </View>
-
-              {isCurrentMonth && (
-                <View
-                  className="mt-3 rounded-xl px-3 py-2"
-                  style={{ backgroundColor: tokens.surface2 }}
-                >
-                  <Text
-                    className="text-xs font-medium"
-                    style={{ color: tokens.foreground }}
-                    testID="zarada-preliminary"
-                  >
-                    {t("payroll.preliminary")}
-                  </Text>
-                  <Text className="mt-0.5 text-xs" style={{ color: tokens.muted }}>
-                    {t("payroll.preliminaryHint")}
-                  </Text>
-                </View>
-              )}
 
               {month.percent === null && (
                 <Text
@@ -143,11 +140,11 @@ export default function TrainerZarada() {
             </GlassCard>
 
             <CapsLabel>{t("payroll.sessionsHeld")}</CapsLabel>
-            {month.sessions.length === 0 ? (
+            {sessions.length === 0 ? (
               <EmptyState title={t("payroll.noSessions")} />
             ) : (
               <View className="mt-2 gap-3">
-                {month.sessions.map((session) => (
+                {visibleSessions.map((session) => (
                   <GlassCard key={session.sessionId} className="p-4">
                     <View className="flex-row items-center justify-between">
                       <Text
@@ -190,6 +187,18 @@ export default function TrainerZarada() {
                     </View>
                   </GlassCard>
                 ))}
+
+                {hasMore && (
+                  <Button
+                    variant="secondary"
+                    testID="zarada-load-more"
+                    onPress={() => setVisibleCount((n) => n + PAGE_SIZE)}
+                  >
+                    {t("payroll.loadMore", {
+                      count: sessions.length - visibleCount,
+                    })}
+                  </Button>
+                )}
               </View>
             )}
           </>

@@ -26,6 +26,7 @@ import {
   useTabBarBottomPadding,
 } from "@/components/ui/screen-container";
 import { MonthStepper } from "@/components/payroll/month-stepper";
+import { SummaryRow } from "@/components/payroll/summary-row";
 import { payrollQueries } from "@/lib/queries/payroll-queries-factory";
 import {
   defaultPayrollMonth,
@@ -258,16 +259,3 @@ export default function HonorariTrainerDetail() {
   );
 }
 
-function SummaryRow({ label, value }: { label: string; value: string }) {
-  const tokens = useThemeTokens();
-  return (
-    <View className="flex-row items-center justify-between">
-      <Text className="text-sm" style={{ color: tokens.muted }}>
-        {label}
-      </Text>
-      <Text className="text-sm font-medium" style={{ color: tokens.foreground }}>
-        {value}
-      </Text>
-    </View>
-  );
-}
