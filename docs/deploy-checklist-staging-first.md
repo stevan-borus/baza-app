@@ -63,6 +63,32 @@ curl -X POST https://baza-pilates-staging.fly.dev/api/cron/notifications/reminde
 - [ ] supercronic visible in `fly logs`, endpoint returns 200
 - [ ] cron route accepts the token (200, not 401)
 
+### A3b. Reseed staging with demo data (pre-launch only)
+
+Staging carries seed/mock data, not real bookings, so it can be rebuilt freely.
+Do this **after** a deploy whose migrations changed the schema — a half-migrated
+seed reads as a broken app.
+
+```sh
+# Point at the NON-POOLED staging URL, same one A1 sets.
+DATABASE_URL="<NON-POOLED staging Neon URL>" pnpm exec prisma migrate reset --force
+DATABASE_URL="<NON-POOLED staging Neon URL>" TEST_ANCHOR_TIME='' \
+  pnpm exec tsx scripts/test/seed-e2e.ts
+```
+
+The seed builds a full current month: trainers, clients on priced packages, a
+gift, an unbacked attendance, and **trainer commission rates dated a year back**
+so the payout screens show money instead of a "set a rate first" warning. No
+manual data entry afterwards.
+
+Stop doing this once the studio has real data — from then on the rates live in
+Katalog → Procenti trenera, and an `effectiveFrom` must be at or before the
+first month it should cover (a rate dated today does not apply to sessions
+already held, which reads as a zero payout with no visible cause).
+
+- [ ] reset + seed ran against the staging URL, not dev/prod
+- [ ] Izveštaji → Honorari shows a non-zero total for the current month
+
 ### A4. Confirm the universal-link files are live (PR #74)
 Now that the server is up, the `.well-known/` files are served at the host:
 ```sh
