@@ -1382,6 +1382,7 @@
     "noRateHint": "Procenat nije podešen",
     "setRate": "Podesi procenat",
     "rateHistory": "Istorija procenata",
+    "rateSuperseded": "zamenjen",
     "effectiveFrom": "Važi od",
     "rateNote": "Napomena",
     "saveRate": "Sačuvaj procenat",

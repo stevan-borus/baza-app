@@ -1372,6 +1372,7 @@
     "noRateHint": "No percentage set",
     "setRate": "Set percentage",
     "rateHistory": "Percentage history",
+    "rateSuperseded": "replaced",
     "effectiveFrom": "Effective from",
     "rateNote": "Note",
     "saveRate": "Save percentage",

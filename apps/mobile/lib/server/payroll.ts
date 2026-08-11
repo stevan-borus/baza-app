@@ -56,7 +56,13 @@ export async function effectiveTrainerPercent(
 ): Promise<number | null> {
   const rate = await db.trainerRate.findFirst({
     where: { trainerUserId, effectiveFrom: { lte: at } },
-    orderBy: { effectiveFrom: "desc" },
+    // seq breaks the tie between rates sharing an effectiveFrom: every rate
+    // set on the same day starts at the same studio-day boundary, so without
+    // it a same-day correction loses to the row it was meant to replace and
+    // the payout uses an arbitrary percentage. createdAt is NOT enough —
+    // Postgres now() is transaction time, so rows written together tie there
+    // too.
+    orderBy: [{ effectiveFrom: "desc" }, { seq: "desc" }],
     select: { percent: true },
   });
   return rate?.percent ?? null;

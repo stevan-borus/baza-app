@@ -356,6 +356,45 @@ describe("GET /api/payroll/month", () => {
     expect(body.month.payout).toBe(500);
   });
 
+  it("uses the LAST rate entered when several share one effective date", async () => {
+    // Correcting a typo produces several rows with the same effectiveFrom,
+    // because a rate starts at the studio day boundary. Ordering by that field
+    // alone leaves them tied and the payout picks an arbitrary percentage —
+    // the admin sets 30% and keeps being paid out at the 20% they replaced.
+    const seeded = await seed();
+    // Comfortably before July, so the rate is unambiguously in force for the
+    // whole month (July's studio-day boundary is 03:00Z — Belgrade is UTC+2 in
+    // summer — so a "05:00Z" rate would land AFTER the month started).
+    const effectiveFrom = new Date("2026-06-01T05:00:00.000Z");
+    const first = await prisma.trainerRate.create({
+      data: { trainerUserId: seeded.trainer.id, percent: 20, effectiveFrom },
+    });
+    const corrected = await prisma.trainerRate.create({
+      data: { trainerUserId: seeded.trainer.id, percent: 30, effectiveFrom },
+    });
+    expect(corrected.createdAt.getTime()).toBeGreaterThanOrEqual(
+      first.createdAt.getTime(),
+    );
+
+    const session = await makeSession(seeded, seeded.trainer.id, JULY_SESSION);
+    const profileId = await makeClient("Ista");
+    const pkg = await givePackage(profileId, seeded.reformer12.id, seeded.classType.id, {
+      sessionsGranted: 12,
+    });
+    await prisma.booking.create({
+      data: { sessionId: session.id, clientProfileId: profileId, clientPackageId: pkg.id },
+    });
+
+    asUser(seeded.admin);
+    const res = await GET_MONTH(
+      monthRequest({ year: "2026", month: "7", trainerUserId: seeded.trainer.id }),
+    );
+    const body = await res.json();
+    expect(body.month.percent).toBe(30);
+    // 1250 gross at 30%
+    expect(body.month.payout).toBe(375);
+  });
+
   describe("authorization", () => {
     it("lets a trainer read their own month without passing an id", async () => {
       const seeded = await seed();

@@ -236,25 +236,41 @@ export default function ProcentiTrenera() {
             <View>
               <CapsLabel size={11} tracking={2.4} className="text-muted mb-1.5">{t("payroll.rateHistory")}</CapsLabel>
               <View className="mt-1 gap-1">
-                {historyFor(editing.id).map((rate) => (
-                  <View
-                    key={rate.id}
-                    className="flex-row items-center justify-between"
-                  >
-                    <Text className="text-sm" style={{ color: tokens.muted }}>
-                      {new Date(rate.effectiveFrom).toLocaleDateString(
-                        i18n.language,
-                      )}
-                      {rate.note ? ` · ${rate.note}` : ""}
-                    </Text>
-                    <Text
-                      className="text-sm font-medium"
-                      style={{ color: tokens.foreground }}
+                {historyFor(editing.id).map((rate, idx) => {
+                  // Several corrections on one day share a date, so the date
+                  // alone can't tell them apart — and only the newest is in
+                  // force. Dim the superseded ones and show WHEN each was
+                  // entered, otherwise the list reads as three identical rows.
+                  const supersededSameDay =
+                    idx > 0 &&
+                    new Date(rate.effectiveFrom).toDateString() ===
+                      new Date(
+                        historyFor(editing.id)[idx - 1]!.effectiveFrom,
+                      ).toDateString();
+                  return (
+                    <View
+                      key={rate.id}
+                      className="flex-row items-center justify-between"
+                      style={{ opacity: supersededSameDay ? 0.45 : 1 }}
                     >
-                      {rate.percent}%
-                    </Text>
-                  </View>
-                ))}
+                      <Text className="text-sm" style={{ color: tokens.muted }}>
+                        {new Date(rate.effectiveFrom).toLocaleDateString(
+                          i18n.language,
+                        )}
+                        {supersededSameDay
+                          ? ` · ${t("payroll.rateSuperseded")}`
+                          : ""}
+                        {rate.note ? ` · ${rate.note}` : ""}
+                      </Text>
+                      <Text
+                        className="text-sm font-medium"
+                        style={{ color: tokens.foreground }}
+                      >
+                        {rate.percent}%
+                      </Text>
+                    </View>
+                  );
+                })}
               </View>
             </View>
           )}

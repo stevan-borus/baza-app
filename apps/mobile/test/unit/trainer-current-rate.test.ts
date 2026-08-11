@@ -71,3 +71,45 @@ describe("trainerRateHistory", () => {
     expect(trainerRateHistory(RATES, "t2").map((r) => r.id)).toEqual(["r4"]);
   });
 });
+
+/**
+ * Same-day corrections. An admin who sets 20%, notices a typo and sets 30%
+ * produces several rows sharing ONE effectiveFrom (rates start at the studio
+ * day boundary, so every rate set today is the same instant). Ordering by
+ * effectiveFrom alone leaves those tied, and the winner is then whatever order
+ * the array happened to arrive in — so the screen kept showing the FIRST
+ * percentage entered and the payout used an arbitrary one.
+ */
+describe("several rates on the same day", () => {
+  const SAME_DAY = [
+    // Same createdAt on purpose: Postgres now() is transaction time, so rows
+    // written together really do tie there. Only `seq` separates them.
+    { id: "a", trainerUserId: "t1", percent: 20, effectiveFrom: "2026-08-11T05:00:00.000Z", note: null, createdAt: "2026-08-11T10:00:00.000Z", seq: 1 },
+    { id: "b", trainerUserId: "t1", percent: 0, effectiveFrom: "2026-08-11T05:00:00.000Z", note: null, createdAt: "2026-08-11T10:00:00.000Z", seq: 2 },
+    { id: "c", trainerUserId: "t1", percent: 30, effectiveFrom: "2026-08-11T05:00:00.000Z", note: null, createdAt: "2026-08-11T10:00:00.000Z", seq: 3 },
+  ];
+
+  beforeEach(() => {
+    process.env.TEST_ANCHOR_TIME = "2026-08-11T12:00:00.000Z";
+  });
+  afterEach(() => {
+    delete process.env.TEST_ANCHOR_TIME;
+  });
+
+  it("takes the one entered LAST, not the one entered first", () => {
+    expect(currentTrainerRate(SAME_DAY, "t1")?.percent).toBe(30);
+  });
+
+  it("does not depend on the order the rows arrive in", () => {
+    const reversed = [...SAME_DAY].reverse();
+    expect(currentTrainerRate(reversed, "t1")?.percent).toBe(30);
+  });
+
+  it("orders the history by entry time within the same day", () => {
+    expect(trainerRateHistory(SAME_DAY, "t1").map((r) => r.id)).toEqual([
+      "c",
+      "b",
+      "a",
+    ]);
+  });
+});

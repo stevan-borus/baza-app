@@ -98,6 +98,12 @@ export const trainerRateSchema = z.object({
   percent: z.number(),
   effectiveFrom: z.string(),
   note: z.string().nullable(),
+  createdAt: z.string(),
+  // Entry order — the tiebreaker between rates sharing an effectiveFrom, which
+  // every rate set on the same day does (a rate starts at the studio-day
+  // boundary). createdAt cannot serve: Postgres now() is transaction time, so
+  // rows written together carry the same timestamp.
+  seq: z.number(),
 });
 
 export const trainerRatesResponseSchema = z.object({

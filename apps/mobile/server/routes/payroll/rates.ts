@@ -27,13 +27,24 @@ export async function GET(request: Request) {
 
   const rates = await prisma.trainerRate.findMany({
     where: trainerUserId ? { trainerUserId } : undefined,
-    orderBy: [{ trainerUserId: "asc" }, { effectiveFrom: "desc" }],
+    // seq breaks the tie between rates sharing an effectiveFrom (every rate
+    // set on the same day starts at the same studio-day boundary), so a
+    // same-day correction wins over the row it replaces. createdAt can't do
+    // it — Postgres now() is transaction time, so rows written together are
+    // identical.
+    orderBy: [
+      { trainerUserId: "asc" },
+      { effectiveFrom: "desc" },
+      { seq: "desc" },
+    ],
     select: {
       id: true,
       trainerUserId: true,
       percent: true,
       effectiveFrom: true,
       note: true,
+      createdAt: true,
+      seq: true,
     },
   });
 
@@ -42,6 +53,7 @@ export async function GET(request: Request) {
     rates: rates.map((rate) => ({
       ...rate,
       effectiveFrom: rate.effectiveFrom.toISOString(),
+      createdAt: rate.createdAt.toISOString(),
     })),
   });
 }
@@ -88,6 +100,8 @@ export async function POST(request: Request) {
       percent: true,
       effectiveFrom: true,
       note: true,
+      createdAt: true,
+      seq: true,
     },
   });
 
@@ -95,7 +109,11 @@ export async function POST(request: Request) {
     createTrainerRateResponseSchema,
     {
       success: true,
-      rate: { ...rate, effectiveFrom: rate.effectiveFrom.toISOString() },
+      rate: {
+        ...rate,
+        effectiveFrom: rate.effectiveFrom.toISOString(),
+        createdAt: rate.createdAt.toISOString(),
+      },
     },
     201,
   );

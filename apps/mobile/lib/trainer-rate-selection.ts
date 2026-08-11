@@ -15,11 +15,33 @@ export type TrainerRateRow = {
   percent: number;
   effectiveFrom: string;
   note: string | null;
+  createdAt?: string;
+  /**
+   * Entry order. The reliable tiebreaker between rates sharing an
+   * effectiveFrom — `createdAt` ties too, because Postgres now() is
+   * transaction time.
+   */
+  seq?: number;
 };
 
+/**
+ * Newest first, and — crucially — most-recently-ENTERED first among rates that
+ * share an effectiveFrom.
+ *
+ * Rates start at the studio day boundary, so every rate an admin sets today
+ * carries the identical effectiveFrom. Comparing only that field leaves them
+ * tied, and a tie means the winner is whatever order the rows arrived in: the
+ * screen showed the FIRST percentage typed and the payout used an arbitrary
+ * one. Correcting a typo was impossible without waiting for tomorrow.
+ */
 function newestFirst(a: TrainerRateRow, b: TrainerRateRow) {
+  const byEffective =
+    new Date(b.effectiveFrom).getTime() - new Date(a.effectiveFrom).getTime();
+  if (byEffective !== 0) return byEffective;
+  const bySeq = (b.seq ?? 0) - (a.seq ?? 0);
+  if (bySeq !== 0) return bySeq;
   return (
-    new Date(b.effectiveFrom).getTime() - new Date(a.effectiveFrom).getTime()
+    new Date(b.createdAt ?? 0).getTime() - new Date(a.createdAt ?? 0).getTime()
   );
 }
 

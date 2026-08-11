@@ -190,11 +190,19 @@ model TrainerRate {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
   createdByUserId String?
+  // Entry order, and the ONLY reliable tiebreaker between rates that share an
+  // effectiveFrom — which every rate set on the same day does, since a rate
+  // starts at the studio-day boundary. `createdAt` cannot do it: Postgres
+  // now() is transaction time, so rows written together carry the identical
+  // timestamp and the "newest" one is then arbitrary. A sequence is monotonic
+  // by construction, so a same-day correction always wins over the row it
+  // replaces.
+  seq           Int      @default(autoincrement())
   trainer       User     @relation("TrainerRateTrainer", fields: [trainerUserId], references: [id], onDelete: Cascade)
   createdBy     User?    @relation("TrainerRateCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
 
-  // "Newest rate at or before X" is the only read pattern.
-  @@index([trainerUserId, effectiveFrom])
+  // "Newest rate at or before X" is the only read pattern; seq resolves ties.
+  @@index([trainerUserId, effectiveFrom, seq])
 }
 
 /**
