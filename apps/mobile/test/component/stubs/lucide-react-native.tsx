@@ -33,6 +33,7 @@ export const ChevronRight = icon("ChevronRight");
 export const Circle = icon("Circle");
 export const Clock = icon("Clock");
 export const CreditCard = icon("CreditCard");
+export const Wallet = icon("Wallet");
 export const DollarSign = icon("DollarSign");
 export const Edit2 = icon("Edit2");
 export const Eye = icon("Eye");

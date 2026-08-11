@@ -49,7 +49,7 @@ export default function TrainerLayout() {
           name="zarada"
           options={{
             title: t("tabs.earnings"),
-            tabBarIcon: ({ color }) => <TabIcon name="dollar-sign" color={color} />,
+            tabBarIcon: ({ color }) => <TabIcon name="wallet" color={color} />,
           }}
         />
         {/* Profile data + theme/language switcher live entirely in the
