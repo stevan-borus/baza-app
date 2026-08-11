@@ -32,13 +32,17 @@ describe("defaultPayrollMonth", () => {
     delete process.env.TEST_ANCHOR_TIME;
   });
 
-  it("opens on the previous month, the one about to be paid", () => {
-    expect(defaultPayrollMonth()).toEqual({ year: 2026, month: 7 });
+  // Opening on LAST month made every payroll screen land on a month that is
+  // over, so a studio checking "what have we run up so far" saw zeros and
+  // had to step forward to find the month they are actually in. The running
+  // month is the one being asked about; last month is one tap back.
+  it("opens on the current month, the one being accrued", () => {
+    expect(defaultPayrollMonth()).toEqual({ year: 2026, month: 8 });
   });
 
-  it("rolls back to December when the current month is January", () => {
+  it("stays inside the current month in January, with no year rollback", () => {
     process.env.TEST_ANCHOR_TIME = "2026-01-05T12:00:00.000Z";
-    expect(defaultPayrollMonth()).toEqual({ year: 2025, month: 12 });
+    expect(defaultPayrollMonth()).toEqual({ year: 2026, month: 1 });
   });
 });
 

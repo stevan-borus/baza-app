@@ -21,8 +21,18 @@ export function currentStudioMonth(): PayrollMonthCursor {
   return { year, month };
 }
 
+/**
+ * The month every payroll surface opens on: the one running right now.
+ *
+ * It used to open on the month just ended, on the theory that payroll is
+ * settled per whole month. In practice that meant the landing card and both
+ * payroll screens reported a finished month while the studio was asking about
+ * the one in progress — most visibly as a "0 RSD" honorari tile sitting beside
+ * cards that all tracked the current period. Accruing-so-far is the useful
+ * default; the closed month is one tap back.
+ */
 export function defaultPayrollMonth(): PayrollMonthCursor {
-  return stepMonth(currentStudioMonth(), -1);
+  return currentStudioMonth();
 }
 
 export function stepMonth(

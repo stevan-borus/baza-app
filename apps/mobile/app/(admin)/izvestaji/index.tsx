@@ -101,8 +101,8 @@ export default function AdminReportsLanding() {
     },
     {
       // Payroll is settled per whole month, so this card ignores the period
-      // pill and always reports the month that is actually being paid — the
-      // previous one.
+      // pill (there is no such thing as a quarter's payout) and reports the
+      // month currently being accrued.
       testID: "izvestaji-card-honorari",
       title: t("payroll.title"),
       headline: payrollQuery.data?.totalPayout,
