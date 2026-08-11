@@ -662,10 +662,14 @@ async function seedPayrollHistory(opts: {
   const byName = new Map(packages.map((p) => [p.name, p]));
   if (!reformerCt || !energyCt || byName.size < 3) return;
 
-  // The whole of last month, in studio-local terms.
+  // The CURRENT month so far, in studio-local terms: from the 1st up to now.
+  // Payroll only counts sessions that have already ended, so seeding last
+  // month left the screen empty on open — you had to step back a month to see
+  // anything. Starting on the 1st and stopping at the anchor fills the month
+  // you actually land on, and still leaves the rest of it bookable.
   const anchor = now();
-  const monthEnd = new Date(anchor.getFullYear(), anchor.getMonth(), 1, 5, 0, 0, 0);
-  const monthStart = new Date(anchor.getFullYear(), anchor.getMonth() - 1, 1, 5, 0, 0, 0);
+  const monthStart = new Date(anchor.getFullYear(), anchor.getMonth(), 1, 5, 0, 0, 0);
+  const monthEnd = anchor;
 
   // Regulars, each on the package they actually bought.
   const roster = [
@@ -734,15 +738,30 @@ async function seedPayrollHistory(opts: {
     include: { clientProfile: true },
   });
 
-  // Three trainings a week each, alternating trainers, across last month.
+  // Three trainings a week each, alternating trainers, across the month so far.
+  // Every weekday, BOTH trainers teach — reformer mornings, energy evenings,
+  // plus a second reformer slot. Seeding only three days a week left a
+  // half-finished month with a handful of sessions, too thin to judge the
+  // list, its ordering, or its paging against.
+  const SLOTS = [
+    { hour: 7, minute: 30, isReformer: true },
+    { hour: 10, minute: 0, isReformer: true },
+    { hour: 18, minute: 30, isReformer: false },
+  ] as const;
+
   let dayCursor = new Date(monthStart);
   let index = 0;
   while (dayCursor < monthEnd) {
     const dow = dayCursor.getDay();
-    if (dow === 1 || dow === 3 || dow === 5) {
-      const isReformer = index % 2 === 0;
+    // Weekdays only — the studio's real rhythm, and it keeps weekend gaps in
+    // the list so the date grouping is visibly doing something.
+    for (const slot of dow >= 1 && dow <= 5 ? SLOTS : []) {
+      const isReformer = slot.isReformer;
       const startsAt = new Date(dayCursor);
-      startsAt.setHours(isReformer ? 7 : 18, 30, 0, 0);
+      startsAt.setHours(slot.hour, slot.minute, 0, 0);
+      // Sessions later today have not happened yet; payroll must not count
+      // them, and seeding them as COMPLETED would be a lie.
+      if (startsAt >= monthEnd) continue;
 
       const session = await prisma.session.create({
         data: {
@@ -810,24 +829,19 @@ async function seedPayrollHistory(opts: {
         });
       }
 
-      // One session in the month also carries the unbacked attendance.
+      // One session in the month also carries the unbacked attendance:
+      // somebody trained with no package behind them. Deliberately a booking
+      // with NO consumption row, because that is what production produces —
+      // the cron bails out with NO_PACKAGE before it records anything, so its
+      // session-mates get frozen and this one does not. Writing a
+      // null-valued snapshot here instead would have hidden the bug where a
+      // part-snapshotted session dropped exactly this attendee.
       if (index === 4) {
         await prisma.booking.create({
           data: {
             clientProfileId: unbacked.clientProfile!.id,
             sessionId: session.id,
             clientPackageId: null,
-          },
-        });
-        await prisma.sessionConsumption.create({
-          data: {
-            clientProfileId: unbacked.clientProfile!.id,
-            sessionId: session.id,
-            consumedAt: new Date(startsAt.getTime() + 2 * HOUR_MS),
-            sessionValue: null,
-            clientName: `${unbacked.firstName} ${unbacked.lastName}`,
-            packageName: null,
-            isGift: false,
           },
         });
       }
@@ -944,9 +958,9 @@ async function seedBookings(opts: {
   // 3. Waitlist entry — on a FULL session, so the WaitlistBadge fixture is
   //    realistic (you can only wait for a class with no free spots; a waitlist
   //    on an open session is impossible in the product). Fill a dedicated
-  //    reformer session to capacity with throwaway "waitlist filler" clients —
-  //    NOT the named seed clients, whose booking/link state the trainer-scoping
-  //    and profile-access specs depend on — then queue the future client behind
+  //    reformer session to capacity with their OWN clients — not the named
+  //    seed clients, whose booking/link state the trainer-scoping and
+  //    profile-access specs depend on — then queue the future client behind
   //    it. The active reformer is unaffected.
   const waitlistTarget = reformerSessionsForExtra[2];
   if (futureClient && waitlistTarget) {

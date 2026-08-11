@@ -107,6 +107,9 @@ export async function computePayrollMonth(
       consumptions: {
         select: {
           id: true,
+          // Needed to tell which bookings this session has already frozen, so
+          // an un-snapshotted one can be shown without double-counting.
+          clientProfileId: true,
           clientName: true,
           packageName: true,
           sessionValue: true,
@@ -143,19 +146,35 @@ export async function computePayrollMonth(
     // Snapshots win outright. Mixing them with live bookings would let a
     // deleted client's frozen line be "corrected" by the absence of its
     // booking, which is exactly what the snapshot exists to prevent.
-    const attendees: PayrollAttendee[] = session.consumptions.length
-      ? session.consumptions.map((c) => ({
-          bookingId: c.id,
-          clientProfileId: "",
-          clientName: c.clientName,
-          packageName: c.packageName ?? "—",
-          // Already divided at consumption time; feed it through as a
-          // single-session package so the shared valuation stays one rule.
-          packagePrice: c.sessionValue,
-          sessionsTotal: c.sessionValue === null ? 0 : 1,
-          isGift: c.isGift,
-        }))
-      : session.bookings.map((booking) => {
+    //
+    // But a session can be PART-snapshotted: when a booking has no eligible
+    // package the cron writes no consumption row for it, while its
+    // session-mates are frozen normally. Choosing snapshots OR bookings
+    // dropped that attendee from the report — the one signal telling the
+    // studio somebody trained without a package. So: every snapshot, plus any
+    // booking that has none, matched on the client.
+    // A snapshot outlives its client (the FK nulls on delete), and a deleted
+    // client has no live booking to double-count anyway, so nulls are simply
+    // not worth matching on.
+    const snapshotted = new Set(
+      session.consumptions
+        .map((c) => c.clientProfileId)
+        .filter((id): id is string => id !== null),
+    );
+    const frozen: PayrollAttendee[] = session.consumptions.map((c) => ({
+      bookingId: c.id,
+      clientProfileId: c.clientProfileId ?? "",
+      clientName: c.clientName,
+      packageName: c.packageName ?? "—",
+      // Already divided at consumption time; feed it through as a
+      // single-session package so the shared valuation stays one rule.
+      packagePrice: c.sessionValue,
+      sessionsTotal: c.sessionValue === null ? 0 : 1,
+      isGift: c.isGift,
+    }));
+    const live: PayrollAttendee[] = session.bookings
+      .filter((booking) => !snapshotted.has(booking.clientProfileId))
+      .map((booking) => {
           const pkg = booking.clientPackage;
           return {
             bookingId: booking.id,
@@ -179,7 +198,7 @@ export async function computePayrollMonth(
           };
         });
 
-    const valued = valueSession(attendees);
+    const valued = valueSession([...frozen, ...live]);
     return {
       sessionId: session.id,
       startsAt: session.startsAt,

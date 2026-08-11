@@ -311,6 +311,58 @@ describe("GET /api/payroll/month", () => {
     expect(body.month.sessions[0].attendees[0].sessionValue).toBeNull();
   });
 
+  it("still shows an attendee the cron could not charge, next to consumed ones", async () => {
+    // Production shape: when a booking has no eligible package the consumption
+    // cron writes NO row for it at all (chargeNoShowConsumption returns
+    // NO_PACKAGE before recordConsumption). Its session-mates DO get frozen,
+    // so the session ends up part-snapshotted. Reading snapshots-or-bookings
+    // dropped that attendee from the report entirely — the studio lost the one
+    // signal telling them somebody trained without a package.
+    const seeded = await seed();
+    const session = await makeSession(seeded, seeded.trainer.id, JULY_SESSION);
+
+    const paidProfile = await makeClient("Placena");
+    const paidPkg = await givePackage(paidProfile, seeded.reformer12.id, seeded.classType.id, {
+      sessionsGranted: 12,
+    });
+    await prisma.booking.create({
+      data: { sessionId: session.id, clientProfileId: paidProfile, clientPackageId: paidPkg.id },
+    });
+    // Frozen, the way the cron would.
+    await prisma.sessionConsumption.create({
+      data: {
+        clientProfileId: paidProfile,
+        sessionId: session.id,
+        sessionValue: 1250,
+        clientName: "Placena Klijent",
+        packageName: "Reformer 12",
+        isGift: false,
+      },
+    });
+
+    // Attended, never charged, no consumption row.
+    const unbackedProfile = await makeClient("Bezpaketa");
+    await prisma.booking.create({
+      data: { sessionId: session.id, clientProfileId: unbackedProfile, clientPackageId: null },
+    });
+
+    asUser(seeded.admin);
+    const res = await GET_MONTH(
+      monthRequest({ year: "2026", month: "7", trainerUserId: seeded.trainer.id }),
+    );
+    const body = await res.json();
+
+    expect(body.month.attendeeCount).toBe(2);
+    expect(body.month.unpricedCount).toBe(1);
+    // The paid one still counts exactly once — no double-count from reading
+    // both the snapshot and its own booking.
+    expect(body.month.gross).toBe(1250);
+    const names = body.month.sessions[0].attendees.map(
+      (a: { clientName: string }) => a.clientName,
+    );
+    expect(names).toContain("Bezpaketa Klijent");
+  });
+
   it("reports a null percent (and a zero payout) when the trainer has no rate", async () => {
     const seeded = await seed();
     const session = await makeSession(seeded, seeded.trainer.id, JULY_SESSION);
