@@ -11,15 +11,16 @@ import dayjs from "dayjs";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Pressable, ScrollView, Text, View } from "react-native";
-import { router } from "expo-router";
 import { Icon } from "@/components/ui/icon";
+import { MotiView } from "@/components/ui/styled";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { AppSheet } from "@/components/ui/sheet";
 import { GlassCard } from "@/components/ui/glass-card";
 import { EmptyState, ErrorState } from "@/components/ui/states";
-import { SkeletonList } from "@/components/ui/skeleton";
+import { SkeletonCard } from "@/components/ui/skeleton";
 import { CapsLabel } from "@/components/ui/studio";
+import { SectionLabel } from "@/components/ui/typography";
 import { DateTimePicker } from "@/components/ui/date-time-picker";
 import { useThemeTokens } from "@/components/ui/tokens";
 import {
@@ -82,33 +83,31 @@ export default function ProcentiTrenera() {
     parsedPercent <= 100;
 
   return (
-    <ScreenContainerRaw>
+    <ScreenContainerRaw
+      title={t("payroll.ratesTitle")}
+      headerVariant="detail"
+    >
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ padding: 16, paddingBottom: bottomPad }}
+        keyboardShouldPersistTaps="handled"
+        contentContainerStyle={{
+          paddingTop: 16,
+          paddingHorizontal: 20,
+          paddingBottom: bottomPad,
+          gap: 12,
+        }}
       >
-        <View className="mb-4 flex-row items-center gap-2">
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={t("common.a11yGoBack")}
-            onPress={() => router.back()}
-            className="h-10 w-10 items-center justify-center rounded-xl"
-            testID="procenti-back"
-          >
-            <Icon name="chevron-left" size={22} color={tokens.foreground} />
-          </Pressable>
-          <View className="flex-1">
-            <Text
-              className="text-2xl font-semibold"
-              style={{ color: tokens.foreground }}
-            >
-              {t("payroll.ratesTitle")}
-            </Text>
-            <Text className="text-sm" style={{ color: tokens.muted }}>
-              {t("payroll.ratesSubtitle")}
-            </Text>
+        <MotiView
+          from={{ opacity: 0, translateY: -8 }}
+          animate={{ opacity: 1, translateY: 0 }}
+          transition={{ type: "timing", duration: 350 }}
+        >
+          <View className="mb-1 flex-row items-center justify-between">
+            <SectionLabel>
+              {t("payroll.ratesTitle")} · {trainers.length}
+            </SectionLabel>
           </View>
-        </View>
+        </MotiView>
 
         {trainersQuery.isError || ratesQuery.isError ? (
           <ErrorState
@@ -118,58 +117,73 @@ export default function ProcentiTrenera() {
             testID="procenti-error"
           />
         ) : trainersQuery.isLoading || ratesQuery.isLoading ? (
-          <SkeletonList count={3} />
+          <View style={{ gap: 8 }}>
+            <SkeletonCard />
+            <SkeletonCard />
+          </View>
         ) : trainers.length === 0 ? (
           <EmptyState title={t("payroll.noTrainers")} />
         ) : (
-          <View className="gap-3">
-            {trainers.map((trainer) => {
-              const rate = currentRate(trainer.id);
-              return (
+          trainers.map((trainer, idx) => {
+            const rate = currentRate(trainer.id);
+            return (
+              <MotiView
+                key={trainer.id}
+                from={{ opacity: 0, translateY: 16 }}
+                animate={{ opacity: 1, translateY: 0 }}
+                transition={{ type: "timing", duration: 380, delay: idx * 60 }}
+              >
                 <Pressable
-                  key={trainer.id}
                   accessibilityRole="button"
                   testID={`procenti-trainer-${trainer.id}`}
                   onPress={() => openEditor(trainer)}
+                  android_ripple={null}
+                  className="active:opacity-70"
                 >
-                  <GlassCard className="p-4">
-                    <View className="flex-row items-center justify-between">
-                      <View className="flex-1 pr-3">
+                  <GlassCard style={{ padding: 0, borderRadius: 16, overflow: "hidden" }}>
+                    <View className="flex-row items-center gap-3.5 px-4 py-3.5">
+                      <View className="flex-1">
                         <Text
-                          className="text-base font-semibold"
-                          style={{ color: tokens.foreground }}
+                          className="text-foreground font-body-medium"
+                          style={{ fontSize: 16 }}
+                          numberOfLines={1}
                         >
                           {trainer.fullName}
                         </Text>
-                        <Text className="mt-0.5 text-xs" style={{ color: tokens.muted }}>
-                          {rate
-                            ? `${t("payroll.effectiveFrom")} ${new Date(
-                                rate.effectiveFrom,
-                              ).toLocaleDateString(i18n.language)}`
-                            : t("payroll.noRateHint")}
-                        </Text>
+                        {/* Only say something when there IS something to say:
+                            an unset rate is the exception worth calling out. */}
+                        {rate ? (
+                          <Text className="text-muted mt-0.5" style={{ fontSize: 13 }}>
+                            {`${t("payroll.effectiveFrom")} ${new Date(
+                              rate.effectiveFrom,
+                            ).toLocaleDateString(i18n.language)}`}
+                          </Text>
+                        ) : (
+                          <Text className="mt-0.5" style={{ fontSize: 13, color: tokens.warning }}>
+                            {t("payroll.noRateHint")}
+                          </Text>
+                        )}
                       </View>
-                      <Text
-                        className="text-xl font-semibold"
-                        style={{
-                          color: rate ? tokens.foreground : tokens.warning,
-                        }}
-                        testID={`procenti-value-${trainer.id}`}
-                      >
-                        {rate ? `${rate.percent}%` : "—"}
-                      </Text>
-                      <Icon
-                        name="chevron-right"
-                        size={16}
-                        color={tokens.faint}
-                        style={{ marginLeft: 8 }}
-                      />
+
+                      <View className="flex-row items-center gap-1.5">
+                        <Text
+                          className="font-body-medium"
+                          style={{
+                            fontSize: 15,
+                            color: rate ? tokens.foreground : tokens.warning,
+                          }}
+                          testID={`procenti-value-${trainer.id}`}
+                        >
+                          {rate ? `${rate.percent}%` : "—"}
+                        </Text>
+                        <Icon name="chevron-right" size={11} color="#52525b" />
+                      </View>
                     </View>
                   </GlassCard>
                 </Pressable>
-              );
-            })}
-          </View>
+              </MotiView>
+            );
+          })
         )}
       </ScrollView>
 
@@ -185,7 +199,7 @@ export default function ProcentiTrenera() {
             {editing?.name ?? ""}
           </Text>
           <View>
-            <CapsLabel>{t("payroll.percent")}</CapsLabel>
+            <CapsLabel size={11} tracking={2.4} className="text-muted mb-1.5">{t("payroll.percent")}</CapsLabel>
             <Input
               value={percent}
               onChangeText={setPercent}
@@ -196,7 +210,7 @@ export default function ProcentiTrenera() {
           </View>
 
           <View>
-            <CapsLabel>{t("payroll.effectiveFrom")}</CapsLabel>
+            <CapsLabel size={11} tracking={2.4} className="text-muted mb-1.5">{t("payroll.effectiveFrom")}</CapsLabel>
             <DateTimePicker
               mode="date"
               value={effectiveFrom}
@@ -209,7 +223,7 @@ export default function ProcentiTrenera() {
           </View>
 
           <View>
-            <CapsLabel>{t("payroll.rateNote")}</CapsLabel>
+            <CapsLabel size={11} tracking={2.4} className="text-muted mb-1.5">{t("payroll.rateNote")}</CapsLabel>
             <Input
               value={note}
               onChangeText={setNote}
@@ -220,7 +234,7 @@ export default function ProcentiTrenera() {
 
           {editing && historyFor(editing.id).length > 0 && (
             <View>
-              <CapsLabel>{t("payroll.rateHistory")}</CapsLabel>
+              <CapsLabel size={11} tracking={2.4} className="text-muted mb-1.5">{t("payroll.rateHistory")}</CapsLabel>
               <View className="mt-1 gap-1">
                 {historyFor(editing.id).map((rate) => (
                   <View

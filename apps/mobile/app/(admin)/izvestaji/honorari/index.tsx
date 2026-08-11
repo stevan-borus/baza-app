@@ -13,7 +13,6 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
 import { router } from "expo-router";
-import { Icon } from "@/components/ui/icon";
 import { GlassCard } from "@/components/ui/glass-card";
 import { EmptyState, ErrorState } from "@/components/ui/states";
 import { SkeletonList } from "@/components/ui/skeleton";
@@ -47,36 +46,20 @@ export default function IzvestajiHonorari() {
   const trainers = summaryQuery.data?.trainers ?? [];
 
   return (
-    <ScreenContainerRaw>
+    <ScreenContainerRaw
+      headerVariant="detail"
+      title={t("payroll.title")}
+    >
       <ScrollView
-        contentContainerStyle={{ padding: 16, paddingBottom: bottomPad }}
+        contentContainerStyle={{
+          paddingTop: 16,
+          paddingHorizontal: 20,
+          paddingBottom: bottomPad,
+        }}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
         }
       >
-        <View className="mb-4 flex-row items-center gap-2">
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={t("common.a11yGoBack")}
-            onPress={() => router.back()}
-            className="h-10 w-10 items-center justify-center rounded-xl"
-            testID="honorari-back"
-          >
-            <Icon name="chevron-left" size={22} color={tokens.foreground} />
-          </Pressable>
-          <View className="flex-1">
-            <Text
-              className="text-2xl font-semibold"
-              style={{ color: tokens.foreground }}
-            >
-              {t("payroll.title")}
-            </Text>
-            <Text className="text-sm" style={{ color: tokens.muted }}>
-              {t("payroll.subtitle")}
-            </Text>
-          </View>
-        </View>
-
         <View className="mb-4">
           <MonthStepper cursor={cursor} onChange={setCursor} />
         </View>
@@ -127,8 +110,13 @@ export default function IzvestajiHonorari() {
                           {trainer.trainerName}
                         </Text>
                         <Text className="mt-0.5 text-sm" style={{ color: tokens.muted }}>
-                          {t("payroll.sessionsHeld")}: {trainer.sessionCount} ·{" "}
-                          {t("payroll.attendees")}: {trainer.attendeeCount}
+                          {t("payroll.sessionsHeldShort", {
+                            count: trainer.sessionCount,
+                          })}{" "}
+                          ·{" "}
+                          {t("payroll.attendeesShort", {
+                            count: trainer.attendeeCount,
+                          })}
                         </Text>
                       </View>
                       <View className="items-end">

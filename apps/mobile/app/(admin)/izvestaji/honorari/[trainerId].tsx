@@ -9,9 +9,8 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
-import { router, useLocalSearchParams } from "expo-router";
-import { Icon } from "@/components/ui/icon";
+import { RefreshControl, ScrollView, Text, View } from "react-native";
+import { useLocalSearchParams } from "expo-router";
 import { Button } from "@/components/ui/button";
 import { GlassCard } from "@/components/ui/glass-card";
 import { ConfirmSheet } from "@/components/ui/confirm-sheet";
@@ -30,7 +29,6 @@ import {
 } from "@/lib/queries/payroll-queries-factory";
 import {
   defaultPayrollMonth,
-  formatMonthLabel,
   type PayrollMonthCursor,
 } from "@/lib/payroll-month-nav";
 import { formatRsd } from "@/lib/format";
@@ -78,37 +76,20 @@ export default function HonorariTrainerDetail() {
   const lockBlocked = (month?.unpricedCount ?? 0) > 0;
 
   return (
-    <ScreenContainerRaw>
+    <ScreenContainerRaw
+      headerVariant="detail"
+      title={month?.trainerName ?? t("payroll.trainer")}
+    >
       <ScrollView
-        contentContainerStyle={{ padding: 16, paddingBottom: bottomPad }}
+        contentContainerStyle={{
+          paddingTop: 16,
+          paddingHorizontal: 20,
+          paddingBottom: bottomPad,
+        }}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
         }
       >
-        <View className="mb-4 flex-row items-center gap-2">
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={t("common.a11yGoBack")}
-            onPress={() => router.back()}
-            className="h-10 w-10 items-center justify-center rounded-xl"
-            testID="honorari-detail-back"
-          >
-            <Icon name="chevron-left" size={22} color={tokens.foreground} />
-          </Pressable>
-          <View className="flex-1">
-            <Text
-              className="text-2xl font-semibold"
-              style={{ color: tokens.foreground }}
-              testID="honorari-detail-name"
-            >
-              {month?.trainerName ?? t("payroll.trainer")}
-            </Text>
-            <Text className="text-sm" style={{ color: tokens.muted }}>
-              {formatMonthLabel(cursor, i18n.language)}
-            </Text>
-          </View>
-        </View>
-
         <View className="mb-4">
           <MonthStepper cursor={cursor} onChange={setCursor} />
         </View>

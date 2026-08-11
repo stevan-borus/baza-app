@@ -21,6 +21,7 @@ import {
   ScreenContainerRaw,
   useTabBarBottomPadding,
 } from "@/components/ui/screen-container";
+import { TrainerScheduleLeftSlot } from "@/components/trainer/trainer-tab-left-slot";
 import { MonthStepper } from "@/components/payroll/month-stepper";
 import { payrollQueries } from "@/lib/queries/payroll-queries-factory";
 import { defaultPayrollMonth, type PayrollMonthCursor } from "@/lib/payroll-month-nav";
@@ -46,25 +47,20 @@ export default function TrainerZarada() {
   const month = monthQuery.data?.month;
 
   return (
-    <ScreenContainerRaw>
+    <ScreenContainerRaw
+      title={t("payroll.myEarnings")}
+      leftSlot={<TrainerScheduleLeftSlot />}
+    >
       <ScrollView
-        contentContainerStyle={{ padding: 16, paddingBottom: bottomPad }}
+        contentContainerStyle={{
+          paddingTop: 16,
+          paddingHorizontal: 20,
+          paddingBottom: bottomPad,
+        }}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
         }
       >
-        <View className="mb-4">
-          <Text
-            className="text-2xl font-semibold"
-            style={{ color: tokens.foreground }}
-          >
-            {t("payroll.myEarnings")}
-          </Text>
-          <Text className="text-sm" style={{ color: tokens.muted }}>
-            {t("payroll.myEarningsSubtitle")}
-          </Text>
-        </View>
-
         <View className="mb-4">
           <MonthStepper cursor={cursor} onChange={setCursor} />
         </View>
