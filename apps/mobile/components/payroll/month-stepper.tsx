@@ -31,22 +31,27 @@ export function MonthStepper({
 
   return (
     <View
-      className="flex-row items-center justify-between rounded-2xl px-2 py-2"
-      style={{ backgroundColor: tokens.surface2 }}
+      // Same shell as SegmentedControl (the reports period pill): glass fill,
+      // hairline border, rounded-2xl, p-1. The two sit in the same position on
+      // sibling screens, so a different surface read as a different kind of
+      // control.
+      className="flex-row items-center justify-between rounded-2xl p-1 border bg-glass border-glass-border"
       testID={testID}
     >
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={t("payroll.a11yPrevMonth")}
         onPress={() => onChange(stepMonth(cursor, -1))}
-        className="h-10 w-10 items-center justify-center rounded-xl"
+        className="py-2 px-3 items-center justify-center rounded-xl"
         testID={`${testID}-prev`}
       >
         <Icon name="chevron-left" size={20} color={tokens.foreground} />
       </Pressable>
 
       <Text
-        className="text-base font-semibold"
+        // Matches the pill's segment label: same size, same weight, same
+        // family. `font-semibold` here was the system face, not the app's.
+        className="text-sm font-body-semibold"
         style={{ color: tokens.foreground }}
         testID={`${testID}-label`}
       >
@@ -59,7 +64,7 @@ export function MonthStepper({
         accessibilityState={{ disabled: nextDisabled }}
         disabled={nextDisabled}
         onPress={() => onChange(stepMonth(cursor, 1))}
-        className="h-10 w-10 items-center justify-center rounded-xl"
+        className="py-2 px-3 items-center justify-center rounded-xl"
         style={{ opacity: nextDisabled ? 0.3 : 1 }}
         testID={`${testID}-next`}
       >
