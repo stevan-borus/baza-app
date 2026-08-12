@@ -738,13 +738,14 @@
       "giftSessionsHintNoPackage": "Prvo izaberite paket."
     },
     "trainers": {
-      "inviteCta": "Pozovi trenera",
+      "screenTitle": "Treneri",
       "sheetInvite": "Pozovi trenera",
       "sendInvite": "Pošalji pozivnicu",
       "inviteError": "Slanje pozivnice nije uspelo.",
       "invitesTitle": "Pozivnice",
       "invitesEmpty": "Nema poslatih pozivnica.",
-      "inviteCtaA11y": "Pozovi novog trenera"
+      "inviteCtaA11y": "Pozovi novog trenera",
+      "percentPlaceholder": "Procenat (npr. 40)"
     },
     "clientDetail": {
       "title": "Klijent",

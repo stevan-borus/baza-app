@@ -734,13 +734,14 @@
       "giftSessionsHintNoPackage": "Pick a package first."
     },
     "trainers": {
-      "inviteCta": "Invite trainer",
+      "screenTitle": "Trainers",
       "sheetInvite": "Invite trainer",
       "sendInvite": "Send invite",
       "inviteError": "Sending the invite failed.",
       "invitesTitle": "Invites",
       "invitesEmpty": "No invites sent yet.",
-      "inviteCtaA11y": "Invite a new trainer"
+      "inviteCtaA11y": "Invite a new trainer",
+      "percentPlaceholder": "Percentage (e.g. 40)"
     },
     "clientDetail": {
       "title": "Client",

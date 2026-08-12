@@ -1,14 +1,15 @@
 /**
- * Katalog → Procenti trenera.
+ * Katalog → Treneri.
  *
- * Each trainer's commission percentage, and the history behind it. Rates are
- * append-only: setting a new one records it from a date rather than editing the
- * old value, so a raise in March cannot silently rewrite what February already
- * paid. The list shows the rate in force today; the sheet shows the trail.
+ * The studio's trainer roster: who trains here, what each one's commission is,
+ * and who has been invited but not yet joined. Rates are append-only — setting
+ * a new one records it from a date rather than editing the old value, so a
+ * raise in March cannot silently rewrite what February already paid. The list
+ * shows the rate in force today; the sheet shows the trail.
  *
- * This screen is also the studio's de-facto trainer roster, so onboarding a new
- * trainer starts here rather than behind the client list: the invite CTA and
- * the pending trainer invites sit next to the people they will become.
+ * Onboarding starts here rather than behind the client list, from the header
+ * `+` every other roster screen uses: the pending invites sit next to the
+ * people they will become.
  */
 import { useState } from "react";
 import dayjs from "dayjs";
@@ -28,6 +29,7 @@ import { CapsLabel } from "@/components/ui/studio";
 import { SectionLabel } from "@/components/ui/typography";
 import { DateTimePicker } from "@/components/ui/date-time-picker";
 import { useThemeTokens } from "@/components/ui/tokens";
+import { HeaderIconButton } from "@/components/ui/app-header";
 import {
   ScreenContainerRaw,
   useTabBarBottomPadding,
@@ -46,7 +48,7 @@ import {
 } from "@/lib/trainer-rate-selection";
 import { now } from "@/lib/now";
 
-export default function ProcentiTrenera() {
+export default function Treneri() {
   const { t, i18n } = useTranslation();
   const tokens = useThemeTokens();
   const queryClient = useQueryClient();
@@ -92,8 +94,16 @@ export default function ProcentiTrenera() {
 
   return (
     <ScreenContainerRaw
-      title={t("payroll.ratesTitle")}
+      title={t("admin.trainers.screenTitle")}
       headerVariant="detail"
+      rightSlot={
+        <HeaderIconButton
+          icon="plus"
+          onPress={() => setInviteOpen(true)}
+          testID="trainer-invite-open-button"
+          accessibilityLabel={t("admin.trainers.inviteCtaA11y")}
+        />
+      }
     >
       <ScrollView
         showsVerticalScrollIndicator={false}
@@ -116,16 +126,6 @@ export default function ProcentiTrenera() {
             </SectionLabel>
           </View>
         </MotiView>
-
-        <Button
-          variant="secondary"
-          size="small"
-          testID="trainer-invite-open-button"
-          accessibilityLabel={t("admin.trainers.inviteCtaA11y")}
-          onPress={() => setInviteOpen(true)}
-        >
-          {t("admin.trainers.inviteCta")}
-        </Button>
 
         {trainersQuery.isError || ratesQuery.isError ? (
           <ErrorState

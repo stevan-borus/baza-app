@@ -154,18 +154,18 @@ export default function KatalogLanding() {
           </Pressable>
           <View className="bg-glass-border" style={{ height: 1 }} />
           <Pressable
-            testID="katalog-row-trainer-rates"
-            onPress={() => router.push("/(admin)/katalog/procenti-trenera")}
+            testID="katalog-row-treneri"
+            onPress={() => router.push("/(admin)/katalog/treneri")}
             android_ripple={null}
             className="flex-row items-center justify-between py-4 active:opacity-60"
           >
             <View className="flex-row items-center gap-3 flex-1">
-              <Icon name="dollar-sign" size={16} color={tokens.muted} />
+              <Icon name="users" size={16} color={tokens.muted} />
               <Text
                 className="text-foreground font-body-medium"
                 style={{ fontSize: 15 }}
               >
-                {t("payroll.ratesTitle")}
+                {t("admin.trainers.screenTitle")}
               </Text>
             </View>
             <Icon name="chevron-right" size={16} color={tokens.faint} />
