@@ -1,5 +1,5 @@
 import { formatFullName } from "@baza/types/common";
-import { inviteClientInputSchema } from "@baza/types/auth";
+import { createInviteInputSchema } from "@baza/types/auth";
 import {
   inviteMutationResponseSchema,
   invitesResponseSchema,
@@ -44,7 +44,7 @@ export async function POST(request: Request) {
   const guard = await requireRole(request, [UserRole.ADMIN]);
   if (!guard.ok) return guard.response;
 
-  const parsed = await parseBody(request, inviteClientInputSchema);
+  const parsed = await parseBody(request, createInviteInputSchema);
   if (!parsed.ok) return parsed.response;
 
   const { email, firstName, lastName, phone, dateOfBirth } = parsed.data;

@@ -11,17 +11,36 @@ const userInviteFieldsSchema = z.object({
   phone: z.string().nullable(),
 });
 
-export const inviteClientInputSchema = userInviteFieldsSchema.pick({
-  email: true,
-  firstName: true,
-  lastName: true,
-  phone: true,
-}).extend({
-  firstName: nameFieldSchema,
-  lastName: nameFieldSchema,
-  phone: z.string().min(6).max(30).optional(),
-  dateOfBirth: dateOfBirthSchema,
-});
+// Role is capped at TRAINER by design: admin accounts are created
+// deliberately out-of-band (seed/DB), never through the invite path.
+export const inviteRoleSchema = z.enum(["CLIENT", "TRAINER"]);
+export type InviteRole = z.infer<typeof inviteRoleSchema>;
+
+export const createInviteInputSchema = userInviteFieldsSchema
+  .pick({
+    email: true,
+    firstName: true,
+    lastName: true,
+    phone: true,
+  })
+  .extend({
+    firstName: nameFieldSchema,
+    lastName: nameFieldSchema,
+    phone: z.string().min(6).max(30).optional(),
+    role: inviteRoleSchema.default("CLIENT"),
+    // Required for CLIENT (enforced below — it feeds clientProfile at
+    // redemption); a trainer has no clientProfile, so no DOB is collected.
+    dateOfBirth: dateOfBirthSchema.optional(),
+  })
+  .superRefine((value, ctx) => {
+    if (value.role === "CLIENT" && value.dateOfBirth === undefined) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["dateOfBirth"],
+        message: "dateOfBirth is required for client invites",
+      });
+    }
+  });
 
 export const completeInviteInputSchema = z.object({
   token: z.string().min(24),
