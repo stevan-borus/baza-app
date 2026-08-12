@@ -1,10 +1,11 @@
 /**
- * Trainer invites — the admin onboards a trainer from Katalog → Procenti
- * trenera, and that invite stays OFF the client-scoped Klijenti surface.
+ * Trainer invites — the admin onboards a trainer from Katalog → Treneri, and
+ * that invite stays OFF the client-scoped Klijenti surface.
  *
- * Two claims only e2e can settle: the invite the admin sends from the trainer
+ * Three claims only e2e can settle: the invite the admin sends from the trainer
  * roster actually lands in the roster's own "Pozivnice" list (role round-trips
- * through the API and back into the shared invites cache), and the Klijenti
+ * through the API and back into the shared invites cache), the agreed percent
+ * rides along and is visible while the invite is pending, and the Klijenti
  * invites tab filters it out, so a trainer never reads as a pending client.
  */
 import { test, expect, type Page } from "./helpers/fixtures";
@@ -22,10 +23,12 @@ const TRAINER_INVITE_LAST = "Kandidat";
 const CLIENT_INVITE_EMAIL = "e2e-client-invite@test.local";
 const CLIENT_INVITE_FIRST = "E2EClientInvite";
 
-async function openProcentiTrenera(page: Page) {
+const TRAINER_INVITE_PERCENT = "40";
+
+async function openTreneri(page: Page) {
   await page.getByTestId("tab-katalog").click();
-  await page.getByTestId("katalog-row-trainer-rates").dispatchEvent("click");
-  await page.waitForURL(/\/katalog\/procenti-trenera$/, { timeout: 10_000 });
+  await page.getByTestId("katalog-row-treneri").dispatchEvent("click");
+  await page.waitForURL(/\/katalog\/treneri$/, { timeout: 10_000 });
 }
 
 test.describe("admin — trainer invites", () => {
@@ -58,39 +61,45 @@ test.describe("admin — trainer invites", () => {
     await disconnect();
   });
 
-  test("inviting a trainer from Procenti trenera lists them under Pozivnice, not under Klijenti", async ({
+  test("inviting a trainer from Treneri lists them under Pozivnice with their percent, not under Klijenti", async ({
     page,
   }) => {
     await signInAs(page, "admin");
-    await openProcentiTrenera(page);
+    await openTreneri(page);
 
-    // The trainer roster owns the onboarding entry point.
+    // The trainer roster owns the onboarding entry point — from the header `+`,
+    // the same place every other roster screen puts it.
     await pressRNW(page.getByTestId("trainer-invite-open-button"));
     await expect(page.getByTestId("invite-trainer-submit-button")).toBeVisible({
       timeout: 10_000,
     });
 
-    // Reduced form: no DOB, phone optional (left empty here).
+    // Reduced form: no DOB, phone optional (left empty here), percent required.
     await page.getByTestId("invite-trainer-email-input").fill(TRAINER_INVITE_EMAIL);
     await page.getByTestId("invite-trainer-name-input").fill(TRAINER_INVITE_FIRST);
     await page.getByTestId("invite-trainer-lastname-input").fill(TRAINER_INVITE_LAST);
+    await page
+      .getByTestId("invite-trainer-percent-input")
+      .fill(TRAINER_INVITE_PERCENT);
     await pressRNW(page.getByTestId("invite-trainer-submit-button"));
 
-    // The new invite splices into the roster's own Pozivnice list, pending.
+    // The new invite splices into the roster's own Pozivnice list, pending,
+    // showing the agreed cut the trainer will start on.
     const inviteRow = page
       .locator('[data-testid^="trainer-invite-row-"]')
       .filter({ hasText: TRAINER_INVITE_FIRST });
     await expect(inviteRow).toHaveCount(1, { timeout: 15_000 });
     await expect(inviteRow).toContainText(TRAINER_INVITE_EMAIL);
     await expect(inviteRow).toContainText("Na čekanju");
+    await expect(inviteRow).toContainText(`${TRAINER_INVITE_PERCENT}%`);
 
     // Klijenti's invites tab is client-scoped: the trainer must not show up.
     await page.getByTestId("tab-klijenti").click();
     await page.getByTestId("admin-clients-tab-invites").click();
 
     // Scope the absence to Klijenti's own invite rows. A bare page-wide
-    // getByText would still find the trainer in the Procenti trenera screen
-    // that expo-router keeps mounted (hidden) behind this tab.
+    // getByText would still find the trainer in the Treneri screen that
+    // expo-router keeps mounted (hidden) behind this tab.
     const klijentiInviteRows = page.locator('[data-testid^="invite-row-"]');
     // The seeded CLIENT invite proves the tab actually rendered rows before we
     // assert an absence — otherwise an empty list would pass vacuously.

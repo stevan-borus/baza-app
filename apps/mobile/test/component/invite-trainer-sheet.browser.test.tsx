@@ -68,6 +68,9 @@ function fillRequiredFields(screen: ReturnType<typeof renderSheet>) {
   fireEvent.change(screen.getByTestId("invite-trainer-lastname-input"), {
     target: { value: "Milić" },
   });
+  fireEvent.change(screen.getByTestId("invite-trainer-percent-input"), {
+    target: { value: "40" },
+  });
 }
 
 afterEach(() => {
@@ -91,7 +94,7 @@ describe("InviteTrainerSheet", () => {
     expect(screen.queryByText("Datum rođenja")).toBeNull();
   });
 
-  it("requires email + first + last name before enabling submit", async () => {
+  it("requires email + first + last name + percent before enabling submit", async () => {
     const screen = renderSheet();
 
     const submit = await screen.findByTestId("invite-trainer-submit-button");
@@ -110,11 +113,34 @@ describe("InviteTrainerSheet", () => {
     fireEvent.change(screen.getByTestId("invite-trainer-lastname-input"), {
       target: { value: "Milić" },
     });
+    // The percent is the last gate: a trainer with no rate is exactly the
+    // state payroll nags about, so the form will not send one.
+    expect(isDisabled(submit)).toBe(true);
+
+    fireEvent.change(screen.getByTestId("invite-trainer-percent-input"), {
+      target: { value: "40" },
+    });
     // Phone is deliberately left empty — it is optional.
     expect(isDisabled(submit)).toBe(false);
   });
 
-  it("submits role TRAINER without dateOfBirth", async () => {
+  it.each(["101", "-5", "4.5", "abc"])(
+    "keeps submit disabled for the out-of-range percent %s",
+    async (percent) => {
+      const screen = renderSheet();
+      const submit = await screen.findByTestId("invite-trainer-submit-button");
+
+      fillRequiredFields(screen);
+      expect(isDisabled(submit)).toBe(false);
+
+      fireEvent.change(screen.getByTestId("invite-trainer-percent-input"), {
+        target: { value: percent },
+      });
+      expect(isDisabled(submit)).toBe(true);
+    },
+  );
+
+  it("submits role TRAINER with the percent and without dateOfBirth", async () => {
     const bodies = stubInviteEndpoint();
     const onOpenChange = vi.fn();
     const screen = renderSheet(onOpenChange);
@@ -129,6 +155,7 @@ describe("InviteTrainerSheet", () => {
       firstName: "Mila",
       lastName: "Milić",
       role: "TRAINER",
+      trainerPercent: 40,
     });
     expect(body.dateOfBirth).toBeUndefined();
 
@@ -138,5 +165,36 @@ describe("InviteTrainerSheet", () => {
       (screen.getByTestId("invite-trainer-email-input") as HTMLInputElement)
         .value,
     ).toBe("");
+  });
+
+  it("keeps the sheet open with the typed values when the POST fails", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response(JSON.stringify({ error: "boom" }), {
+            status: 500,
+            headers: { "content-type": "application/json" },
+          }),
+      ),
+    );
+    const onOpenChange = vi.fn();
+    const screen = renderSheet(onOpenChange);
+
+    fillRequiredFields(screen);
+    fireEvent.click(await screen.findByTestId("invite-trainer-submit-button"));
+
+    // The shipped Serbian failure copy, not a silent no-op.
+    expect(await screen.findByText("Slanje pozivnice nije uspelo.")).toBeTruthy();
+    // A network failure must not throw away what the admin typed.
+    expect(onOpenChange).not.toHaveBeenCalledWith(false);
+    expect(
+      (screen.getByTestId("invite-trainer-email-input") as HTMLInputElement)
+        .value,
+    ).toBe("trener@baza.test");
+    expect(
+      (screen.getByTestId("invite-trainer-percent-input") as HTMLInputElement)
+        .value,
+    ).toBe("40");
   });
 });

@@ -24,6 +24,7 @@ import { POST as POST_REVOKE } from "@/server/routes/invites/[id]/revoke";
 import { POST as POST_COMPLETE } from "@/server/routes/auth/complete-invite";
 import { generateRawToken, hashToken } from "@/lib/server/tokens";
 import { now, nowMs } from "@/lib/now";
+import { studioDayStartFor } from "@/lib/studio-time";
 import { prisma } from "@/lib/server/prisma";
 import { sendInviteEmail } from "@/lib/server/resend";
 
@@ -536,5 +537,190 @@ describe("invites API", () => {
     expect(
       await prisma.clientProfile.findFirst({ where: { userId: created!.id } }),
     ).toBeNull();
+  });
+
+  it("POST /api/invites persists trainerPercent on a TRAINER invite and returns it", async () => {
+    await seedAdmin();
+    const response = await POST_INVITE(
+      inviteRequest({
+        email: "trainer-percent@test.local",
+        firstName: "Trener",
+        lastName: "Procenat",
+        role: "TRAINER",
+        trainerPercent: 40,
+      }),
+    );
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as {
+      invite: { trainerPercent: number | null };
+    };
+    expect(body.invite.trainerPercent).toBe(40);
+
+    const persisted = await prisma.userInvite.findFirst({
+      where: { email: "trainer-percent@test.local" },
+    });
+    expect(persisted?.trainerPercent).toBe(40);
+  });
+
+  it("POST /api/invites rejects trainerPercent on a CLIENT invite with 400", async () => {
+    await seedAdmin();
+    const response = await POST_INVITE(
+      inviteRequest({
+        email: "client-percent@test.local",
+        firstName: "Klijent",
+        lastName: "Procenat",
+        dateOfBirth: "1990-05-14",
+        trainerPercent: 40,
+      }),
+    );
+    expect(response.status).toBe(400);
+    expect(
+      await prisma.userInvite.findFirst({
+        where: { email: "client-percent@test.local" },
+      }),
+    ).toBeNull();
+  });
+
+  it("complete-invite seeds the trainer's first rate from the invite's trainerPercent", async () => {
+    const admin = await seedAdmin();
+    const rawToken = generateRawToken();
+    await prisma.userInvite.create({
+      data: {
+        email: "trainer-rate-seed@test.local",
+        firstName: "Rate",
+        lastName: "Seed",
+        role: "TRAINER",
+        trainerPercent: 45,
+        tokenHash: hashToken(rawToken),
+        expiresAt: new Date(nowMs() + 24 * 60 * 60 * 1000),
+        createdById: admin.id,
+      },
+    });
+
+    const response = await POST_COMPLETE(
+      new Request("http://test.local/api/auth/complete-invite", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ token: rawToken, password: "Password123!" }),
+      }),
+    );
+    expect(response.status).toBe(200);
+
+    const created = await prisma.user.findUnique({
+      where: { email: "trainer-rate-seed@test.local" },
+    });
+    const rates = await prisma.trainerRate.findMany({
+      where: { trainerUserId: created!.id },
+    });
+    expect(rates).toHaveLength(1);
+    expect(rates[0]!.percent).toBe(45);
+    expect(rates[0]!.createdByUserId).toBe(admin.id);
+    // Same studio-day boundary the rates POST route stamps, so an
+    // invite-seeded rate is indistinguishable from a hand-set one.
+    expect(rates[0]!.effectiveFrom.toISOString()).toBe(
+      studioDayStartFor(now()).toISOString(),
+    );
+  });
+
+  it("complete-invite on a TRAINER invite without a percent creates no rate", async () => {
+    const admin = await seedAdmin();
+    const rawToken = generateRawToken();
+    await prisma.userInvite.create({
+      data: {
+        email: "trainer-no-rate@test.local",
+        firstName: "No",
+        lastName: "Rate",
+        role: "TRAINER",
+        tokenHash: hashToken(rawToken),
+        expiresAt: new Date(nowMs() + 24 * 60 * 60 * 1000),
+        createdById: admin.id,
+      },
+    });
+
+    const response = await POST_COMPLETE(
+      new Request("http://test.local/api/auth/complete-invite", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ token: rawToken, password: "Password123!" }),
+      }),
+    );
+    expect(response.status).toBe(200);
+
+    const created = await prisma.user.findUnique({
+      where: { email: "trainer-no-rate@test.local" },
+    });
+    expect(
+      await prisma.trainerRate.findMany({ where: { trainerUserId: created!.id } }),
+    ).toHaveLength(0);
+  });
+
+  it("GET /api/invites returns each invite's trainerPercent", async () => {
+    const admin = await seedAdmin();
+    await prisma.userInvite.create({
+      data: {
+        email: "listed-percent@test.local",
+        firstName: "Listed",
+        lastName: "Percent",
+        role: "TRAINER",
+        trainerPercent: 55,
+        tokenHash: hashToken(generateRawToken()),
+        expiresAt: new Date(nowMs() + 60_000),
+        createdById: admin.id,
+      },
+    });
+
+    const response = await GET_INVITES(new Request("http://test.local/api/invites"));
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as {
+      invites: Array<{ email: string; trainerPercent: number | null }>;
+    };
+    expect(
+      body.invites.find((i) => i.email === "listed-percent@test.local")
+        ?.trainerPercent,
+    ).toBe(55);
+  });
+
+  it("revoke and resend keep trainerPercent on the spliced row", async () => {
+    const admin = await seedAdmin();
+    const resendInvite = await prisma.userInvite.create({
+      data: {
+        email: "percent-resend@test.local",
+        firstName: "Percent",
+        lastName: "Resend",
+        role: "TRAINER",
+        trainerPercent: 30,
+        tokenHash: hashToken(generateRawToken()),
+        expiresAt: new Date(nowMs() + 60_000),
+        createdById: admin.id,
+      },
+    });
+    const revokeInvite = await prisma.userInvite.create({
+      data: {
+        email: "percent-revoke@test.local",
+        firstName: "Percent",
+        lastName: "Revoke",
+        role: "TRAINER",
+        trainerPercent: 35,
+        tokenHash: hashToken(generateRawToken()),
+        expiresAt: new Date(nowMs() + 60_000),
+        createdById: admin.id,
+      },
+    });
+
+    const resent = (await (
+      await POST_RESEND(
+        new Request("http://test.local/api/invites/x/resend", { method: "POST" }),
+        { id: resendInvite.id },
+      )
+    ).json()) as { invite: { trainerPercent: number | null } };
+    expect(resent.invite.trainerPercent).toBe(30);
+
+    const revoked = (await (
+      await POST_REVOKE(
+        new Request("http://test.local/api/invites/x/revoke", { method: "POST" }),
+        { id: revokeInvite.id },
+      )
+    ).json()) as { invite: { trainerPercent: number | null } };
+    expect(revoked.invite.trainerPercent).toBe(35);
   });
 });

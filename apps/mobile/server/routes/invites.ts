@@ -27,6 +27,7 @@ export async function GET(request: Request) {
       phone: true,
       status: true,
       role: true,
+      trainerPercent: true,
       createdAt: true,
     },
   });
@@ -48,7 +49,8 @@ export async function POST(request: Request) {
   const parsed = await parseBody(request, createInviteInputSchema);
   if (!parsed.ok) return parsed.response;
 
-  const { email, firstName, lastName, phone, dateOfBirth, role } = parsed.data;
+  const { email, firstName, lastName, phone, dateOfBirth, role, trainerPercent } =
+    parsed.data;
   const normalizedEmail = email.toLowerCase().trim();
 
   const existingUser = await prisma.user.findUnique({
@@ -74,6 +76,10 @@ export async function POST(request: Request) {
       // trainer has none, so drop a stray one rather than store it unread.
       dateOfBirth: role === "CLIENT" && dateOfBirth ? new Date(dateOfBirth) : null,
       role,
+      // Only a trainer redeems into a TrainerRate; the schema already rejects
+      // a percent on a client invite, so this is belt-and-braces for the
+      // stored row rather than the validation.
+      trainerPercent: role === "TRAINER" ? (trainerPercent ?? null) : null,
       tokenHash,
       expiresAt,
       createdById: guard.user.id,
@@ -86,6 +92,7 @@ export async function POST(request: Request) {
       phone: true,
       status: true,
       role: true,
+      trainerPercent: true,
       expiresAt: true,
       createdAt: true,
     },

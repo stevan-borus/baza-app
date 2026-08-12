@@ -133,6 +133,9 @@ export const inviteSchema = z.object({
   // Full UserRole enum, not the CLIENT|TRAINER creation subset — this parses
   // whatever is stored, including rows minted before the subset existed.
   role: userRoleSchema,
+  // The commission a trainer invite carries into their first rate. Optional so
+  // rows cached before the field existed still parse; null on client invites.
+  trainerPercent: z.number().nullable().optional(),
   createdAt: z.string(),
 });
 export type Invite = z.infer<typeof inviteSchema>;

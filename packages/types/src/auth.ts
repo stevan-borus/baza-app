@@ -5,7 +5,7 @@ import { dateOfBirthSchema, nameFieldSchema, userRoleSchema } from "./common";
 // extended below. Hand-written so this package no longer depends on the
 // generated prisma-zod tree for a single picked field-set.
 const userInviteFieldsSchema = z.object({
-  email: z.string(),
+  email: z.email(),
   firstName: z.string(),
   lastName: z.string(),
   phone: z.string().nullable(),
@@ -31,6 +31,12 @@ export const createInviteInputSchema = userInviteFieldsSchema
     // Required for CLIENT (enforced below — it feeds clientProfile at
     // redemption); a trainer has no clientProfile, so no DOB is collected.
     dateOfBirth: dateOfBirthSchema.optional(),
+    // The commission the studio agreed with the trainer, carried on the invite
+    // so redemption can seed their first TrainerRate — otherwise payroll shows
+    // them at 0 until an admin remembers to set a rate after the fact. Same
+    // whole-percent 0–100 range as `createTrainerRateInputSchema`, because it
+    // becomes exactly that kind of row.
+    trainerPercent: z.number().int().min(0).max(100).optional(),
   })
   .superRefine((value, ctx) => {
     if (value.role === "CLIENT" && value.dateOfBirth === undefined) {
@@ -38,6 +44,13 @@ export const createInviteInputSchema = userInviteFieldsSchema
         code: "custom",
         path: ["dateOfBirth"],
         message: "dateOfBirth is required for client invites",
+      });
+    }
+    if (value.role !== "TRAINER" && value.trainerPercent !== undefined) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["trainerPercent"],
+        message: "trainerPercent is only valid on trainer invites",
       });
     }
   });

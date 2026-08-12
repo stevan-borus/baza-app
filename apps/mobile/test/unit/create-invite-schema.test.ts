@@ -41,4 +41,49 @@ describe("createInviteInputSchema", () => {
     });
     expect(parsed.phone).toBe("+381601234567");
   });
+
+  it("rejects an email that is not an email address", () => {
+    const result = createInviteInputSchema.safeParse({
+      ...base,
+      email: "not-an-email",
+      dateOfBirth: "1990-05-14",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("accepts trainerPercent on a TRAINER invite", () => {
+    const parsed = createInviteInputSchema.parse({
+      ...base,
+      role: "TRAINER",
+      trainerPercent: 40,
+    });
+    expect(parsed.trainerPercent).toBe(40);
+  });
+
+  it("accepts a TRAINER invite without trainerPercent — the rate stays unset", () => {
+    const parsed = createInviteInputSchema.parse({ ...base, role: "TRAINER" });
+    expect(parsed.trainerPercent).toBeUndefined();
+  });
+
+  it.each([-1, 101, 40.5])(
+    "rejects trainerPercent %s — outside the 0–100 whole-percent range",
+    (percent) => {
+      const result = createInviteInputSchema.safeParse({
+        ...base,
+        role: "TRAINER",
+        trainerPercent: percent,
+      });
+      expect(result.success).toBe(false);
+    },
+  );
+
+  it("rejects trainerPercent on a CLIENT invite — a client has no commission", () => {
+    const result = createInviteInputSchema.safeParse({
+      ...base,
+      dateOfBirth: "1990-05-14",
+      trainerPercent: 40,
+    });
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.path).toEqual(["trainerPercent"]);
+  });
 });

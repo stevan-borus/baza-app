@@ -9,6 +9,11 @@
 // and reset only after a successful send. The invites-list cache splice lives
 // in createInviteMutationOptions (options-builder convention); the per-call
 // onSuccess here only closes the sheet and resets the form.
+//
+// The commission percent is optional on the API but REQUIRED here: an invite
+// without one produces a trainer payroll reads as 0% until someone remembers
+// to set a rate, and the moment the studio agrees the split is while they are
+// filling this form — not weeks later at the first payout.
 
 import React, { useState } from "react";
 import { Text, View } from "react-native";
@@ -30,6 +35,7 @@ type InviteTrainerForm = {
   firstName: string;
   lastName: string;
   phone: string;
+  percent: string;
 };
 
 const EMPTY_FORM: InviteTrainerForm = {
@@ -37,6 +43,7 @@ const EMPTY_FORM: InviteTrainerForm = {
   firstName: "",
   lastName: "",
   phone: "",
+  percent: "",
 };
 
 export function InviteTrainerSheet({ open, onOpenChange }: InviteTrainerSheetProps) {
@@ -48,6 +55,15 @@ export function InviteTrainerSheet({ open, onOpenChange }: InviteTrainerSheetPro
   const createInviteMutation = useMutation(
     createInviteMutationOptions(queryClient),
   );
+
+  // Same whole-percent 0–100 range the rates editor enforces — this becomes
+  // exactly that kind of row at redemption.
+  const parsedPercent = Number(form.percent);
+  const percentValid =
+    form.percent.trim() !== "" &&
+    Number.isInteger(parsedPercent) &&
+    parsedPercent >= 0 &&
+    parsedPercent <= 100;
 
   return (
     <AppSheet open={open} onOpenChange={onOpenChange}>
@@ -82,13 +98,21 @@ export function InviteTrainerSheet({ open, onOpenChange }: InviteTrainerSheetPro
           value={form.phone}
           onChangeText={(v) => setForm((s) => ({ ...s, phone: v }))}
         />
+        <Input
+          testID="invite-trainer-percent-input"
+          placeholder={t("admin.trainers.percentPlaceholder")}
+          keyboardType="number-pad"
+          value={form.percent}
+          onChangeText={(v) => setForm((s) => ({ ...s, percent: v }))}
+        />
         <Button
           testID="invite-trainer-submit-button"
           disabled={
             createInviteMutation.isPending ||
             !form.email ||
             !form.firstName ||
-            !form.lastName
+            !form.lastName ||
+            !percentValid
           }
           onPress={() => {
             createInviteMutation.mutate(
@@ -98,6 +122,7 @@ export function InviteTrainerSheet({ open, onOpenChange }: InviteTrainerSheetPro
                 lastName: form.lastName,
                 phone: form.phone || undefined,
                 role: "TRAINER",
+                trainerPercent: parsedPercent,
               },
               {
                 onSuccess: () => {

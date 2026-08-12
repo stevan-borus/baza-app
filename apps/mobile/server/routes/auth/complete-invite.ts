@@ -9,6 +9,7 @@ import { respond, fail, parseBody } from "@/lib/server/http";
 import { hashPassword } from "@/lib/server/password";
 import { prisma } from "@/lib/server/prisma";
 import { hashToken } from "@/lib/server/tokens";
+import { studioDayStartFor } from "@/lib/studio-time";
 
 export async function POST(request: Request) {
   const parsed = await parseBody(request, completeInviteInputSchema);
@@ -53,6 +54,22 @@ export async function POST(request: Request) {
         data: {
           userId: created.id,
           dateOfBirth: invite.dateOfBirth,
+        },
+      });
+    }
+
+    // A trainer invited with an agreed percent starts on it from day one —
+    // otherwise payroll reads them at 0% until an admin sets a rate after the
+    // fact. Stamped at the studio-day boundary exactly as the rates route
+    // does, so this row is indistinguishable from a hand-set one. `seq` comes
+    // from its default: the rate history is append-only.
+    if (created.role === UserRole.TRAINER && invite.trainerPercent != null) {
+      await tx.trainerRate.create({
+        data: {
+          trainerUserId: created.id,
+          percent: invite.trainerPercent,
+          effectiveFrom: studioDayStartFor(now()),
+          createdByUserId: invite.createdById,
         },
       });
     }

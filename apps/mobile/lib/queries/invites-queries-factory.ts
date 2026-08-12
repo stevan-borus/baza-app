@@ -10,10 +10,15 @@ import {
   type InvitesResponse,
   type InviteMutationResponse,
 } from "@baza/types/clients";
-import type { InviteRole } from "@baza/types/auth";
+import type { createInviteInputSchema } from "@baza/types/auth";
+import type { z } from "zod";
 import { apiRequest } from "@/lib/api-request";
 
 export type { Invite };
+
+/** What the caller sends — the schema's INPUT side, so `role` stays optional
+ *  (the server applies its CLIENT default). */
+type CreateInvitePayload = z.input<typeof createInviteInputSchema>;
 
 const invitesAll = ["invites"] as const;
 
@@ -34,7 +39,9 @@ export const invitesQueries = {
   create: () =>
     mutationOptions({
       mutationKey: [...invitesAll, "create"] as const,
-      mutationFn: (payload: { email: string; firstName: string; lastName: string; phone?: string; dateOfBirth?: string; role?: InviteRole }) =>
+      // Derived from the schema the route parses, so a new invite field can
+      // never be accepted here and rejected there (trainerPercent was).
+      mutationFn: (payload: CreateInvitePayload) =>
         apiRequest("/api/invites", {
           method: "POST",
           body: payload,

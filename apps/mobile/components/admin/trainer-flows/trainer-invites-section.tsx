@@ -73,19 +73,33 @@ export function TrainerInvitesSection() {
                   {invite.email}
                 </Text>
               </View>
-              <Badge
-                status={
-                  invite.status === "COMPLETED"
-                    ? "success"
-                    : invite.status === "PENDING"
-                      ? "warning"
-                      : "danger"
-                }
-              >
-                {inviteStatusKeys[invite.status]
-                  ? t(inviteStatusKeys[invite.status])
-                  : invite.status}
-              </Badge>
+              <View className="flex-row items-center gap-2">
+                {/* The agreed cut, visible while the invite is still pending —
+                    the admin should not have to wait for redemption to see
+                    what they promised. */}
+                {invite.trainerPercent != null ? (
+                  <Text
+                    className="text-muted"
+                    style={{ fontSize: 13 }}
+                    testID={`trainer-invite-percent-${invite.id}`}
+                  >
+                    {`${invite.trainerPercent}%`}
+                  </Text>
+                ) : null}
+                <Badge
+                  status={
+                    invite.status === "COMPLETED"
+                      ? "success"
+                      : invite.status === "PENDING"
+                        ? "warning"
+                        : "danger"
+                  }
+                >
+                  {inviteStatusKeys[invite.status]
+                    ? t(inviteStatusKeys[invite.status])
+                    : invite.status}
+                </Badge>
+              </View>
             </View>
             {invite.status === "PENDING" ? (
               <View className="flex-row gap-2">

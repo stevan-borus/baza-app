@@ -41,6 +41,7 @@ export async function POST(request: Request, { id }: RouteParams) {
       phone: true,
       status: true,
       role: true,
+      trainerPercent: true,
       createdAt: true,
       expiresAt: true,
     },
