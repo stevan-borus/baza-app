@@ -16,7 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { ConfirmSheet } from "@/components/ui/confirm-sheet";
 import { GlassCard } from "@/components/ui/glass-card";
 import { Icon } from "@/components/ui/icon";
-import { EmptyState } from "@/components/ui/states";
+import { EmptyState, ErrorState } from "@/components/ui/states";
 import { useThemeTokens } from "@/components/ui/tokens";
 import { SectionLabel } from "@/components/ui/typography";
 import {
@@ -51,6 +51,12 @@ export function TrainerInvitesSection() {
   return (
     <View className="gap-3">
       <SectionLabel>{t("admin.trainers.invitesTitle")}</SectionLabel>
+
+      {/* A failed load must say so rather than read as "no invites" — same
+          copy the Klijenti invites tab shows, since it is the same query. */}
+      {invitesQuery.isError ? (
+        <ErrorState message={t("admin.clients.invitesError")} />
+      ) : null}
 
       {/* "No invites yet" is only true once we know — while the query is in
           flight it would be a lie the admin has to watch flip. */}
