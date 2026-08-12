@@ -225,6 +225,10 @@ model UserInvite {
   phone          String?
   dateOfBirth    DateTime?   @db.Date
   role           UserRole    @default(CLIENT)
+  // The commission agreed before the trainer even has an account. Redemption
+  // turns it into their first TrainerRate, so payroll never reads them as 0%.
+  // Null on client invites, and on trainer invites sent without one.
+  trainerPercent Int?
   tokenHash      String      @unique
   status         InviteStatus @default(PENDING)
   expiresAt      DateTime

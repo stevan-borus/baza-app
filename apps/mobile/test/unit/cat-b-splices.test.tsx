@@ -328,6 +328,7 @@ function invite(id: string, over: Partial<Invite> = {}): Invite {
     fullName: "First Last",
     phone: null,
     status: "PENDING",
+    role: "CLIENT",
     createdAt: "2026-01-01T00:00:00.000Z",
     ...over,
   };

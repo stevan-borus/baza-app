@@ -733,6 +733,16 @@
       "giftSessionsHint": "At most {{count}} (what the package holds).",
       "giftSessionsHintNoPackage": "Pick a package first."
     },
+    "trainers": {
+      "screenTitle": "Trainers",
+      "sheetInvite": "Invite trainer",
+      "sendInvite": "Send invite",
+      "inviteError": "Sending the invite failed.",
+      "invitesTitle": "Invites",
+      "invitesEmpty": "No invites sent yet.",
+      "inviteCtaA11y": "Invite a new trainer",
+      "percentPlaceholder": "Percentage (e.g. 40)"
+    },
     "clientDetail": {
       "title": "Client",
       "openActions": "Client actions",

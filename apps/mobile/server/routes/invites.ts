@@ -1,5 +1,5 @@
 import { formatFullName } from "@baza/types/common";
-import { inviteClientInputSchema } from "@baza/types/auth";
+import { createInviteInputSchema } from "@baza/types/auth";
 import {
   inviteMutationResponseSchema,
   invitesResponseSchema,
@@ -26,6 +26,8 @@ export async function GET(request: Request) {
       lastName: true,
       phone: true,
       status: true,
+      role: true,
+      trainerPercent: true,
       createdAt: true,
     },
   });
@@ -44,10 +46,11 @@ export async function POST(request: Request) {
   const guard = await requireRole(request, [UserRole.ADMIN]);
   if (!guard.ok) return guard.response;
 
-  const parsed = await parseBody(request, inviteClientInputSchema);
+  const parsed = await parseBody(request, createInviteInputSchema);
   if (!parsed.ok) return parsed.response;
 
-  const { email, firstName, lastName, phone, dateOfBirth } = parsed.data;
+  const { email, firstName, lastName, phone, dateOfBirth, role, trainerPercent } =
+    parsed.data;
   const normalizedEmail = email.toLowerCase().trim();
 
   const existingUser = await prisma.user.findUnique({
@@ -69,8 +72,14 @@ export async function POST(request: Request) {
       firstName,
       lastName,
       phone,
-      dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : null,
-      role: UserRole.CLIENT,
+      // Only a client profile consumes the buffered DOB at redemption; a
+      // trainer has none, so drop a stray one rather than store it unread.
+      dateOfBirth: role === "CLIENT" && dateOfBirth ? new Date(dateOfBirth) : null,
+      role,
+      // Only a trainer redeems into a TrainerRate; the schema already rejects
+      // a percent on a client invite, so this is belt-and-braces for the
+      // stored row rather than the validation.
+      trainerPercent: role === "TRAINER" ? (trainerPercent ?? null) : null,
       tokenHash,
       expiresAt,
       createdById: guard.user.id,
@@ -82,6 +91,8 @@ export async function POST(request: Request) {
       lastName: true,
       phone: true,
       status: true,
+      role: true,
+      trainerPercent: true,
       expiresAt: true,
       createdAt: true,
     },

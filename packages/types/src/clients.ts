@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { dateOfBirthSchema, nameFieldSchema } from "./common";
+import { dateOfBirthSchema, nameFieldSchema, userRoleSchema } from "./common";
 import { consentDocumentKeySchema } from "./consent";
 import { healthIntakeResponseSchema } from "./health-intake";
 import { clientPackageStatusSchema } from "./packages";
@@ -130,6 +130,12 @@ export const inviteSchema = z.object({
   fullName: z.string(),
   phone: z.nullable(z.string()).optional(),
   status: z.enum(["PENDING", "COMPLETED", "REVOKED", "EXPIRED"]),
+  // Full UserRole enum, not the CLIENT|TRAINER creation subset — this parses
+  // whatever is stored, including rows minted before the subset existed.
+  role: userRoleSchema,
+  // The commission a trainer invite carries into their first rate. Optional so
+  // rows cached before the field existed still parse; null on client invites.
+  trainerPercent: z.number().nullable().optional(),
   createdAt: z.string(),
 });
 export type Invite = z.infer<typeof inviteSchema>;

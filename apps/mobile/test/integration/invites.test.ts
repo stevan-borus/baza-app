@@ -18,12 +18,13 @@ vi.mock("@/lib/server/auth", () => ({
   },
 }));
 
-import { POST as POST_INVITE } from "@/server/routes/invites";
+import { GET as GET_INVITES, POST as POST_INVITE } from "@/server/routes/invites";
 import { POST as POST_RESEND } from "@/server/routes/invites/[id]/resend";
 import { POST as POST_REVOKE } from "@/server/routes/invites/[id]/revoke";
 import { POST as POST_COMPLETE } from "@/server/routes/auth/complete-invite";
 import { generateRawToken, hashToken } from "@/lib/server/tokens";
 import { now, nowMs } from "@/lib/now";
+import { studioDayStartFor } from "@/lib/studio-time";
 import { prisma } from "@/lib/server/prisma";
 import { sendInviteEmail } from "@/lib/server/resend";
 
@@ -75,11 +76,18 @@ describe("invites API", () => {
     expect(response.status).toBe(200);
 
     const createBody = (await response.json()) as {
-      invite: { firstName: string; lastName: string; phone: string | null; fullName: string };
+      invite: {
+        firstName: string;
+        lastName: string;
+        phone: string | null;
+        fullName: string;
+        role: string;
+      };
     };
     expect(createBody.invite.firstName).toBe("New");
     expect(createBody.invite.lastName).toBe("Client");
     expect(createBody.invite.phone).toBe("+381 60 000 0000");
+    expect(createBody.invite.role).toBe("CLIENT");
     // The cache splice parses the response through the client invite row schema,
     // which requires a derived fullName — assert the server provides it.
     expect(createBody.invite.fullName).toBe("New Client");
@@ -229,6 +237,7 @@ describe("invites API", () => {
         phone: string | null;
         status: string;
         fullName: string;
+        role: string;
       };
     };
     expect(revokeBody.success).toBe(true);
@@ -239,6 +248,7 @@ describe("invites API", () => {
     expect(revokeBody.invite.status).toBe("REVOKED");
     // fullName must be present — the cache splice's schema parse requires it.
     expect(revokeBody.invite.fullName).toBe("To Revoke");
+    expect(revokeBody.invite.role).toBe("CLIENT");
     const updated = await prisma.userInvite.findUnique({ where: { id: invite.id } });
     expect(updated?.status).toBe("REVOKED");
   });
@@ -274,6 +284,7 @@ describe("invites API", () => {
         phone: string | null;
         status: string;
         fullName: string;
+        role: string;
       };
     };
     expect(resendBody.success).toBe(true);
@@ -283,6 +294,7 @@ describe("invites API", () => {
     expect(resendBody.invite.lastName).toBe("Resend");
     expect(resendBody.invite.status).toBe("PENDING");
     expect(resendBody.invite.fullName).toBe("To Resend");
+    expect(resendBody.invite.role).toBe("CLIENT");
     const updated = await prisma.userInvite.findUnique({ where: { id: invite.id } });
     expect(updated?.tokenHash).not.toBe(oldTokenHash);
     expect(updated?.expiresAt.getTime()).toBeGreaterThan(nowMs());
@@ -367,5 +379,348 @@ describe("invites API", () => {
       { id: invite.id },
     );
     expect(response.status).toBe(400);
+  });
+
+  it("POST /api/invites with role TRAINER creates a TRAINER invite without dateOfBirth", async () => {
+    await seedAdmin();
+    const response = await POST_INVITE(
+      inviteRequest({
+        email: "trainer@test.local",
+        firstName: "Trener",
+        lastName: "Novi",
+        phone: "+381601112222",
+        role: "TRAINER",
+      }),
+    );
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as { invite: { role: string; fullName: string } };
+    expect(body.invite.role).toBe("TRAINER");
+    expect(body.invite.fullName).toBe("Trener Novi");
+
+    const persisted = await prisma.userInvite.findFirst({
+      where: { email: "trainer@test.local" },
+    });
+    expect(persisted?.role).toBe("TRAINER");
+    expect(persisted?.dateOfBirth).toBeNull();
+    expect(sendInviteEmailMock).toHaveBeenCalledWith(
+      expect.objectContaining({ to: "trainer@test.local" }),
+    );
+  });
+
+  it("POST /api/invites ignores a stray dateOfBirth on a TRAINER invite (nothing consumes it)", async () => {
+    await seedAdmin();
+    const response = await POST_INVITE(
+      inviteRequest({
+        email: "trainer-dob@test.local",
+        firstName: "Trener",
+        lastName: "Rodjendan",
+        role: "TRAINER",
+        dateOfBirth: "1985-03-03",
+      }),
+    );
+    expect(response.status).toBe(200);
+    const persisted = await prisma.userInvite.findFirst({
+      where: { email: "trainer-dob@test.local" },
+    });
+    expect(persisted?.dateOfBirth).toBeNull();
+  });
+
+  it("POST /api/invites defaults to CLIENT and returns role on the response", async () => {
+    await seedAdmin();
+    const response = await POST_INVITE(
+      inviteRequest({
+        email: "defaulted@test.local",
+        firstName: "Default",
+        lastName: "Client",
+        dateOfBirth: "1992-02-02",
+      }),
+    );
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as { invite: { role: string } };
+    expect(body.invite.role).toBe("CLIENT");
+  });
+
+  it("POST /api/invites rejects role ADMIN with 400", async () => {
+    await seedAdmin();
+    const response = await POST_INVITE(
+      inviteRequest({
+        email: "sneaky@test.local",
+        firstName: "Sneaky",
+        lastName: "Admin",
+        role: "ADMIN",
+      }),
+    );
+    expect(response.status).toBe(400);
+    expect(await prisma.userInvite.count()).toBe(0);
+  });
+
+  it("POST /api/invites rejects a CLIENT invite missing dateOfBirth with 400", async () => {
+    await seedAdmin();
+    const response = await POST_INVITE(
+      inviteRequest({
+        email: "no-dob@test.local",
+        firstName: "No",
+        lastName: "Dob",
+      }),
+    );
+    expect(response.status).toBe(400);
+  });
+
+  it("POST /api/invites is forbidden for a TRAINER caller — trainers cannot mint invites", async () => {
+    const trainer = await prisma.user.create({
+      data: { email: "trainer-caller@test.local", firstName: "T", lastName: "C", role: "TRAINER" },
+    });
+    setMockUser({
+      id: trainer.id,
+      role: "TRAINER",
+      email: trainer.email,
+      isActive: true,
+      clientProfile: null,
+    });
+    const response = await POST_INVITE(
+      inviteRequest({
+        email: "victim@test.local",
+        firstName: "V",
+        lastName: "W",
+        role: "TRAINER",
+      }),
+    );
+    expect(response.status).toBe(403);
+    expect(await prisma.userInvite.count()).toBe(0);
+  });
+
+  it("GET /api/invites returns each invite's role", async () => {
+    const admin = await seedAdmin();
+    await prisma.userInvite.create({
+      data: {
+        email: "listed-trainer@test.local",
+        firstName: "Listed",
+        lastName: "Trainer",
+        role: "TRAINER",
+        tokenHash: hashToken(generateRawToken()),
+        expiresAt: new Date(nowMs() + 24 * 60 * 60 * 1000),
+        createdById: admin.id,
+      },
+    });
+    const response = await GET_INVITES(new Request("http://test.local/api/invites"));
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as { invites: Array<{ email: string; role: string }> };
+    expect(body.invites.find((i) => i.email === "listed-trainer@test.local")?.role).toBe("TRAINER");
+  });
+
+  it("POST /api/auth/complete-invite on a TRAINER invite creates a TRAINER user with no clientProfile", async () => {
+    const admin = await seedAdmin();
+    const rawToken = generateRawToken();
+    await prisma.userInvite.create({
+      data: {
+        email: "trainer-redeem@test.local",
+        firstName: "Redeem",
+        lastName: "Trainer",
+        role: "TRAINER",
+        tokenHash: hashToken(rawToken),
+        expiresAt: new Date(nowMs() + 24 * 60 * 60 * 1000),
+        createdById: admin.id,
+      },
+    });
+    const response = await POST_COMPLETE(
+      new Request("http://test.local/api/auth/complete-invite", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ token: rawToken, password: "Password123!" }),
+      }),
+    );
+    expect(response.status).toBe(200);
+    const created = await prisma.user.findUnique({
+      where: { email: "trainer-redeem@test.local" },
+    });
+    expect(created?.role).toBe("TRAINER");
+    expect(
+      await prisma.clientProfile.findFirst({ where: { userId: created!.id } }),
+    ).toBeNull();
+  });
+
+  it("POST /api/invites persists trainerPercent on a TRAINER invite and returns it", async () => {
+    await seedAdmin();
+    const response = await POST_INVITE(
+      inviteRequest({
+        email: "trainer-percent@test.local",
+        firstName: "Trener",
+        lastName: "Procenat",
+        role: "TRAINER",
+        trainerPercent: 40,
+      }),
+    );
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as {
+      invite: { trainerPercent: number | null };
+    };
+    expect(body.invite.trainerPercent).toBe(40);
+
+    const persisted = await prisma.userInvite.findFirst({
+      where: { email: "trainer-percent@test.local" },
+    });
+    expect(persisted?.trainerPercent).toBe(40);
+  });
+
+  it("POST /api/invites rejects trainerPercent on a CLIENT invite with 400", async () => {
+    await seedAdmin();
+    const response = await POST_INVITE(
+      inviteRequest({
+        email: "client-percent@test.local",
+        firstName: "Klijent",
+        lastName: "Procenat",
+        dateOfBirth: "1990-05-14",
+        trainerPercent: 40,
+      }),
+    );
+    expect(response.status).toBe(400);
+    expect(
+      await prisma.userInvite.findFirst({
+        where: { email: "client-percent@test.local" },
+      }),
+    ).toBeNull();
+  });
+
+  it("complete-invite seeds the trainer's first rate from the invite's trainerPercent", async () => {
+    const admin = await seedAdmin();
+    const rawToken = generateRawToken();
+    await prisma.userInvite.create({
+      data: {
+        email: "trainer-rate-seed@test.local",
+        firstName: "Rate",
+        lastName: "Seed",
+        role: "TRAINER",
+        trainerPercent: 45,
+        tokenHash: hashToken(rawToken),
+        expiresAt: new Date(nowMs() + 24 * 60 * 60 * 1000),
+        createdById: admin.id,
+      },
+    });
+
+    const response = await POST_COMPLETE(
+      new Request("http://test.local/api/auth/complete-invite", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ token: rawToken, password: "Password123!" }),
+      }),
+    );
+    expect(response.status).toBe(200);
+
+    const created = await prisma.user.findUnique({
+      where: { email: "trainer-rate-seed@test.local" },
+    });
+    const rates = await prisma.trainerRate.findMany({
+      where: { trainerUserId: created!.id },
+    });
+    expect(rates).toHaveLength(1);
+    expect(rates[0]!.percent).toBe(45);
+    expect(rates[0]!.createdByUserId).toBe(admin.id);
+    // Same studio-day boundary the rates POST route stamps, so an
+    // invite-seeded rate is indistinguishable from a hand-set one.
+    expect(rates[0]!.effectiveFrom.toISOString()).toBe(
+      studioDayStartFor(now()).toISOString(),
+    );
+  });
+
+  it("complete-invite on a TRAINER invite without a percent creates no rate", async () => {
+    const admin = await seedAdmin();
+    const rawToken = generateRawToken();
+    await prisma.userInvite.create({
+      data: {
+        email: "trainer-no-rate@test.local",
+        firstName: "No",
+        lastName: "Rate",
+        role: "TRAINER",
+        tokenHash: hashToken(rawToken),
+        expiresAt: new Date(nowMs() + 24 * 60 * 60 * 1000),
+        createdById: admin.id,
+      },
+    });
+
+    const response = await POST_COMPLETE(
+      new Request("http://test.local/api/auth/complete-invite", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ token: rawToken, password: "Password123!" }),
+      }),
+    );
+    expect(response.status).toBe(200);
+
+    const created = await prisma.user.findUnique({
+      where: { email: "trainer-no-rate@test.local" },
+    });
+    expect(
+      await prisma.trainerRate.findMany({ where: { trainerUserId: created!.id } }),
+    ).toHaveLength(0);
+  });
+
+  it("GET /api/invites returns each invite's trainerPercent", async () => {
+    const admin = await seedAdmin();
+    await prisma.userInvite.create({
+      data: {
+        email: "listed-percent@test.local",
+        firstName: "Listed",
+        lastName: "Percent",
+        role: "TRAINER",
+        trainerPercent: 55,
+        tokenHash: hashToken(generateRawToken()),
+        expiresAt: new Date(nowMs() + 60_000),
+        createdById: admin.id,
+      },
+    });
+
+    const response = await GET_INVITES(new Request("http://test.local/api/invites"));
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as {
+      invites: Array<{ email: string; trainerPercent: number | null }>;
+    };
+    expect(
+      body.invites.find((i) => i.email === "listed-percent@test.local")
+        ?.trainerPercent,
+    ).toBe(55);
+  });
+
+  it("revoke and resend keep trainerPercent on the spliced row", async () => {
+    const admin = await seedAdmin();
+    const resendInvite = await prisma.userInvite.create({
+      data: {
+        email: "percent-resend@test.local",
+        firstName: "Percent",
+        lastName: "Resend",
+        role: "TRAINER",
+        trainerPercent: 30,
+        tokenHash: hashToken(generateRawToken()),
+        expiresAt: new Date(nowMs() + 60_000),
+        createdById: admin.id,
+      },
+    });
+    const revokeInvite = await prisma.userInvite.create({
+      data: {
+        email: "percent-revoke@test.local",
+        firstName: "Percent",
+        lastName: "Revoke",
+        role: "TRAINER",
+        trainerPercent: 35,
+        tokenHash: hashToken(generateRawToken()),
+        expiresAt: new Date(nowMs() + 60_000),
+        createdById: admin.id,
+      },
+    });
+
+    const resent = (await (
+      await POST_RESEND(
+        new Request("http://test.local/api/invites/x/resend", { method: "POST" }),
+        { id: resendInvite.id },
+      )
+    ).json()) as { invite: { trainerPercent: number | null } };
+    expect(resent.invite.trainerPercent).toBe(30);
+
+    const revoked = (await (
+      await POST_REVOKE(
+        new Request("http://test.local/api/invites/x/revoke", { method: "POST" }),
+        { id: revokeInvite.id },
+      )
+    ).json()) as { invite: { trainerPercent: number | null } };
+    expect(revoked.invite.trainerPercent).toBe(35);
   });
 });

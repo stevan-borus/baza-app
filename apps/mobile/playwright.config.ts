@@ -1,3 +1,4 @@
+import { resolve } from "node:path";
 import { defineConfig, devices } from "@playwright/test";
 
 const PORT = Number(process.env.E2E_PORT ?? 8010);
@@ -11,6 +12,23 @@ const BASE_URL = process.env.E2E_BASE_URL ?? `http://127.0.0.1:${PORT}`;
  */
 const CRON_TOKEN = "test-admin-bootstrap-token";
 process.env.API_ADMIN_BOOTSTRAP_TOKEN = CRON_TOKEN;
+
+/**
+ * Where the server drops the raw invite token so a spec can chain "admin sends
+ * the invite" → "invitee opens the deep link" without an email inbox. The
+ * capture (lib/server/e2e-invite-token-capture.ts) is gated on this variable
+ * alone and no-ops when it is unset, which is every environment but this one.
+ *
+ * The path is FIXED rather than per-run because `reuseExistingServer` means the
+ * webServer may already be up from an earlier invocation: a fresh random path
+ * would leave the runner watching a file the running server never heard of.
+ * Both sides are set from this constant for the same reason.
+ */
+const E2E_INVITE_TOKEN_FILE = resolve(
+  __dirname,
+  ".playwright-tmp/invite-token.json",
+);
+process.env.E2E_INVITE_TOKEN_FILE = E2E_INVITE_TOKEN_FILE;
 
 /**
  * Anchor instant the entire stack pins to during E2E. Server reads
@@ -79,7 +97,7 @@ export default defineConfig({
     // so those flows keep their pre-existing login → tab behaviour. The one
     // intentionally unconsented user is client.unconsented@e2e.test,
     // which the consent-gate spec uses for the first-time flow.
-    command: `CI=1 EXPO_PUBLIC_API_URL=${BASE_URL} BASE_URL=${BASE_URL} APP_WEB_URL=${BASE_URL} DATABASE_URL=${TEST_DATABASE_URL} API_ADMIN_BOOTSTRAP_TOKEN=${CRON_TOKEN} TEST_ANCHOR_TIME=${TEST_ANCHOR_TIME} BAZA_CONSENT_GATE_ENABLED=true NODE_OPTIONS="--max-old-space-size=8192" expo start --web --port ${PORT}`,
+    command: `CI=1 EXPO_PUBLIC_API_URL=${BASE_URL} BASE_URL=${BASE_URL} APP_WEB_URL=${BASE_URL} DATABASE_URL=${TEST_DATABASE_URL} API_ADMIN_BOOTSTRAP_TOKEN=${CRON_TOKEN} TEST_ANCHOR_TIME=${TEST_ANCHOR_TIME} BAZA_CONSENT_GATE_ENABLED=true E2E_INVITE_TOKEN_FILE=${E2E_INVITE_TOKEN_FILE} NODE_OPTIONS="--max-old-space-size=8192" expo start --web --port ${PORT}`,
     url: `${BASE_URL}/api/health`,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
