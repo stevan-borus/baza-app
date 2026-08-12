@@ -10,6 +10,7 @@ import {
   type InvitesResponse,
   type InviteMutationResponse,
 } from "@baza/types/clients";
+import type { InviteRole } from "@baza/types/auth";
 import { apiRequest } from "@/lib/api-request";
 
 export type { Invite };
@@ -33,7 +34,7 @@ export const invitesQueries = {
   create: () =>
     mutationOptions({
       mutationKey: [...invitesAll, "create"] as const,
-      mutationFn: (payload: { email: string; firstName: string; lastName: string; phone?: string; dateOfBirth?: string }) =>
+      mutationFn: (payload: { email: string; firstName: string; lastName: string; phone?: string; dateOfBirth?: string; role?: InviteRole }) =>
         apiRequest("/api/invites", {
           method: "POST",
           body: payload,

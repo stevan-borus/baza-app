@@ -737,6 +737,15 @@
       "giftSessionsHint": "Najviše {{count}} (koliko paket ima).",
       "giftSessionsHintNoPackage": "Prvo izaberite paket."
     },
+    "trainers": {
+      "inviteCta": "Pozovi trenera",
+      "sheetInvite": "Pozovi trenera",
+      "sendInvite": "Pošalji pozivnicu",
+      "inviteError": "Slanje pozivnice nije uspelo.",
+      "invitesTitle": "Pozivnice",
+      "invitesEmpty": "Nema poslatih pozivnica.",
+      "inviteCtaA11y": "Pozovi novog trenera"
+    },
     "clientDetail": {
       "title": "Klijent",
       "openActions": "Akcije za klijenta",
