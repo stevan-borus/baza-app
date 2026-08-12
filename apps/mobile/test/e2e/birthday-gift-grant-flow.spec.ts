@@ -1,13 +1,13 @@
 /**
- * E2E: admin grants the birthday Poklon paket → client receives the bundled
- * "Srećan rođendan!" notification with the gift package's name, and the
- * resulting ClientPackage row carries the invariants we care about
- * (sessionsRemaining=1, expiresAt = startsAt + validityDays).
+ * E2E: admin grants a birthday gift → client receives the bundled "Srećan
+ * rođendan!" notification with the package's name, and the resulting
+ * ClientPackage carries the invariants we care about.
  *
- * The grant lands on the SYSTEM gift row ("🎂 Rođendanski poklon"): the
- * birthday prompt preselects it over any legacy admin-made gift SKU (isSystem
- * wins — see notification-routing). The legacy SKU seeded here still guards
- * that hand-made gifts remain listed in the sheet until deleted.
+ * A gift is now a REAL, priced package handed over without payment (isGift)
+ * rather than its own unpriced 🎂 SKU — that is what lets trainer payout value
+ * the session the client attends on it. The birthday deep-link opens the sheet
+ * with the gift toggle already on, and a gift grants ONE session by default
+ * even though the package itself holds many.
  *
  * Drives the full flow rather than poking the API directly so we catch any
  * regression in the sheet → submit → notification path.
@@ -18,17 +18,14 @@ import {
   disconnect,
   findBirthdayClientGiftFor,
   findLatestBirthdayGiftPackageFor,
+  findPricedPackageTypeFor,
   resetAndSeed,
-  seedBirthdayGiftPackageType,
   setClientBirthdayToToday,
 } from "./helpers/db";
 import { signInAs } from "./helpers/auth";
 import { computePackageExpiresAt } from "@/lib/package-expiry";
 
 const REFORMER_CLIENT_EMAIL = "client.active.reformer@e2e.test";
-
-// The self-healed system gift row the birthday flow grants from.
-const SYSTEM_GIFT_NAME = "🎂 Rođendanski poklon";
 
 const CRON_TOKEN =
   process.env.API_ADMIN_BOOTSTRAP_TOKEN ?? "test-admin-bootstrap-token";
@@ -41,16 +38,14 @@ async function postCron(page: Page, path: string) {
 }
 
 test.describe("birthday gift — grant flow", () => {
-  let giftPackageTypeId: string;
+  let giftPackage: { id: string; name: string; sessionCount: number };
 
   test.beforeAll(async () => {
     await resetAndSeed();
+    // The retired 🎂 SKUs must not be offered any more, so the gift is given
+    // on a real priced package.
     await clearBirthdayGiftPackageTypes();
-    const gift = await seedBirthdayGiftPackageType({
-      classTypeName: "Reformer pilates",
-      name: "Rođendanski poklon (Reformer)",
-    });
-    giftPackageTypeId = gift.id;
+    giftPackage = await findPricedPackageTypeFor("Reformer pilates");
     await setClientBirthdayToToday(REFORMER_CLIENT_EMAIL);
   });
 
@@ -86,15 +81,21 @@ test.describe("birthday gift — grant flow", () => {
     await expect(reformerRow).toBeVisible({ timeout: 8_000 });
     await reformerRow.dispatchEvent("click");
 
-    // Sheet opens for that client with the SYSTEM gift preselected; the legacy
-    // hand-made gift SKU must still be listed (it keeps working until deleted).
+    // Sheet opens for that client. A birthday deep-link is by definition a
+    // gift, so the toggle is already on; the admin picks which real package
+    // the gift is drawn from.
     await expect(page).toHaveURL(
       /\/\(admin\)\/klijenti(\?|$)|\/klijenti(\?|$)/,
       { timeout: 8_000 },
     );
-    await expect(
-      page.getByTestId(`assign-package-option-${giftPackageTypeId}`),
-    ).toBeVisible({ timeout: 8_000 });
+    const packageOption = page.getByTestId(
+      `assign-package-option-${giftPackage.id}`,
+    );
+    await expect(packageOption).toBeVisible({ timeout: 8_000 });
+    await packageOption.dispatchEvent("click");
+    await expect(page.getByTestId("assign-gift-sessions")).toBeVisible({
+      timeout: 5_000,
+    });
 
     // Pick today's day in the calendar (mode="date" picker).
     await page.getByTestId("assign-package-start-picker").dispatchEvent("click");
@@ -126,9 +127,15 @@ test.describe("birthday gift — grant flow", () => {
 
     const pkg = await findLatestBirthdayGiftPackageFor(REFORMER_CLIENT_EMAIL);
     expect(pkg).not.toBeNull();
-    expect(pkg!.packageType.isBirthdayGift).toBe(true);
-    expect(pkg!.packageType.name).toBe(SYSTEM_GIFT_NAME);
+    expect(pkg!.isGift).toBe(true);
+    // The REAL package, price intact — that is what makes the session the
+    // client attends on it worth something to the trainer.
+    expect(pkg!.packageType.name).toBe(giftPackage.name);
+    expect(pkg!.packageType.price).not.toBeNull();
+    // One session granted, NOT the whole pack.
     expect(pkg!.sessionsRemaining).toBe(1);
+    expect(pkg!.sessionsGranted).toBe(1);
+    expect(giftPackage.sessionCount).toBeGreaterThan(1);
     // The gift package obeys the same expiry rule as every other package:
     // it opens at the start of its studio day and dies at the close of the
     // last valid one. Asserted through the shared helper rather than
@@ -150,14 +157,14 @@ test.describe("birthday gift — grant flow", () => {
         },
         { timeout: 10_000 },
       )
-      .toContain(SYSTEM_GIFT_NAME);
+      .toContain(giftPackage.name);
 
     const giftNotif = await findBirthdayClientGiftFor(REFORMER_CLIENT_EMAIL);
     expect(giftNotif).not.toBeNull();
     expect(giftNotif!.title).toContain("Srećan rođendan");
-    expect(giftNotif!.body).toContain(SYSTEM_GIFT_NAME);
+    expect(giftNotif!.body).toContain(giftPackage.name);
     expect(giftNotif!.payload).toMatchObject({
-      packageTypeName: SYSTEM_GIFT_NAME,
+      packageTypeName: giftPackage.name,
       clientPackageId: pkg!.id,
     });
   });

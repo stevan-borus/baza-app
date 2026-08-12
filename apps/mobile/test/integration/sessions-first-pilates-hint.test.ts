@@ -56,6 +56,7 @@ async function fixtures() {
       startsAt: new Date(now().getTime() - 30 * DAY_MS),
       expiresAt: new Date(now().getTime() + 90 * DAY_MS),
       sessionsRemaining: 12,
+      sessionsGranted: 12,
     },
   });
   // Intake says "first time" (pilatesExperience contains "none") — without
@@ -286,6 +287,7 @@ describe("GET /api/sessions/[id] — showFirstPilatesHint cutoff", () => {
         startsAt: new Date(now().getTime() - DAY_MS),
         expiresAt: new Date(now().getTime() + 90 * DAY_MS),
         sessionsRemaining: 12,
+        sessionsGranted: 12,
       },
     });
     const session = await makeSession({

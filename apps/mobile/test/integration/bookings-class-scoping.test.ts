@@ -79,6 +79,7 @@ async function createPackage(opts: {
       expiresAt:
         opts.expiresAt ?? new Date(nowMs() + 60 * 24 * 60 * 60 * 1000),
       sessionsRemaining: opts.sessionsRemaining ?? 12,
+      sessionsGranted: opts.sessionsRemaining ?? 12,
     },
   });
 }

@@ -90,6 +90,7 @@ async function makePackage(opts: { clientProfileId: string; classTypeId: string 
       startsAt: new Date(nowMs() - 30 * DAY_MS),
       expiresAt: new Date(nowMs() + 90 * DAY_MS),
       sessionsRemaining: 12,
+      sessionsGranted: 12,
     },
   });
 }

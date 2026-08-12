@@ -54,6 +54,7 @@ async function seedClientPackage(
       classTypes: { create: { classTypeId } },
       lateCancelHours: 12,
       sessionsRemaining: 10,
+      sessionsGranted: 10,
       startsAt: new Date(nowMs() - 90 * DAY_MS),
       expiresAt: new Date(nowMs() + 90 * DAY_MS),
     },

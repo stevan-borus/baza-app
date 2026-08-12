@@ -43,6 +43,7 @@ async function seedTwoClientsTwoPackages() {
       startsAt,
       expiresAt,
       sessionsRemaining: 12,
+      sessionsGranted: 12,
     },
   });
   await prisma.clientPackage.create({
@@ -54,6 +55,7 @@ async function seedTwoClientsTwoPackages() {
       startsAt,
       expiresAt,
       sessionsRemaining: 8,
+      sessionsGranted: 8,
     },
   });
   return { admin, ana, milos };

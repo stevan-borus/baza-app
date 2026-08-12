@@ -86,6 +86,7 @@ async function createPackage(opts: {
       startsAt: new Date(nowMs() - DAY_MS),
       expiresAt: new Date(nowMs() + 60 * DAY_MS),
       sessionsRemaining: opts.sessionsRemaining,
+      sessionsGranted: opts.sessionsRemaining,
     },
   });
 }
@@ -255,6 +256,7 @@ describe("early cancel frees the hold (pilot rebook bug)", () => {
     // No holds yet: everything remaining is bookable.
     expect(await readPackage()).toMatchObject({
       sessionsRemaining: 3,
+      sessionsGranted: 3,
       heldCount: 0,
       bookable: 3,
     });
@@ -269,6 +271,7 @@ describe("early cancel frees the hold (pilot rebook bug)", () => {
     });
     expect(await readPackage()).toMatchObject({
       sessionsRemaining: 3,
+      sessionsGranted: 3,
       heldCount: 2,
       bookable: 1,
     });
@@ -278,6 +281,7 @@ describe("early cancel frees the hold (pilot rebook bug)", () => {
     expect((await POST(mutateReq(booked.id, "CANCEL"))).status).toBe(200);
     expect(await readPackage()).toMatchObject({
       sessionsRemaining: 3,
+      sessionsGranted: 3,
       heldCount: 1,
       bookable: 2,
     });

@@ -54,6 +54,7 @@ async function seedMatrix() {
       startsAt: new Date(current - 5 * DAY),
       expiresAt: new Date(current + 25 * DAY),
       sessionsRemaining: 8,
+      sessionsGranted: 8,
     },
   });
   await prisma.billingRecord.create({
@@ -76,6 +77,7 @@ async function seedMatrix() {
       startsAt: new Date(current - 2 * DAY),
       expiresAt: new Date(current + 28 * DAY),
       sessionsRemaining: 12,
+      sessionsGranted: 12,
     },
   });
   await prisma.billingRecord.create({
@@ -101,6 +103,7 @@ async function seedMatrix() {
       startsAt: new Date(current - 37 * DAY),
       expiresAt: new Date(current - 7 * DAY),
       sessionsRemaining: 4,
+      sessionsGranted: 4,
     },
   });
   await prisma.billingRecord.create({
@@ -123,6 +126,7 @@ async function seedMatrix() {
       startsAt: new Date(current - 5 * DAY),
       expiresAt: new Date(current + 25 * DAY),
       sessionsRemaining: 10,
+      sessionsGranted: 10,
     },
   });
   await prisma.packagePause.create({
@@ -144,6 +148,7 @@ async function seedMatrix() {
       startsAt: new Date(current + 7 * DAY),
       expiresAt: new Date(current + 37 * DAY),
       sessionsRemaining: 12,
+      sessionsGranted: 12,
     },
   });
 
@@ -271,6 +276,7 @@ describe("resolveCampaignAudience", () => {
         startsAt: new Date(current - 2 * DAY),
         expiresAt: new Date(current + 28 * DAY),
         sessionsRemaining: 12,
+        sessionsGranted: 12,
       },
     });
 
@@ -312,6 +318,7 @@ describe("resolveCampaignAudience", () => {
         startsAt: new Date(current - 20 * DAY),
         expiresAt: new Date(current + 3 * DAY),
         sessionsRemaining: 2,
+        sessionsGranted: 2,
       },
     });
     expect(await resolveCampaignAudience({ expiringSoonDays: 10 })).toEqual([

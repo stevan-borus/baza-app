@@ -47,9 +47,12 @@ test.describe.serial("trainer clients sticky header", () => {
     const rows = page.locator('[data-testid^="trainer-client-row-"]');
     await expect(rows.first()).toBeVisible();
 
-    // Capture the search input's Y coordinate before scrolling.
-    const beforeBox = await search.boundingBox();
-    expect(beforeBox).not.toBeNull();
+    // Capture the search input's Y coordinate before scrolling — AFTER its
+    // entrance animation settles. The header animates in from translateY: -6,
+    // so reading the box raw races that transition and compares a
+    // mid-animation "before" against a settled "after", which showed up as a
+    // ~4px phantom drift with nothing actually moving.
+    const beforeBox = await waitForStableBoundingBox(search);
 
     // Scroll the inner list to the bottom — walk up from a row to find the
     // scrollable ancestor. Same pattern as clients-pagination.spec.ts.
@@ -76,6 +79,6 @@ test.describe.serial("trainer clients sticky header", () => {
     // (state, not a fixed sleep — see waitForStableBoundingBox).
     const afterBox = await waitForStableBoundingBox(search);
     // 2px slack covers sub-pixel layout rounding on RN-Web.
-    expect(Math.abs(afterBox.y - beforeBox!.y)).toBeLessThan(2);
+    expect(Math.abs(afterBox.y - beforeBox.y)).toBeLessThan(2);
   });
 });

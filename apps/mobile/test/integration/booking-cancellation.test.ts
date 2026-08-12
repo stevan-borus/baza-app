@@ -42,6 +42,7 @@ async function seedBaseline() {
       startsAt: new Date(nowMs() - 5 * DAY_MS),
       expiresAt: new Date(nowMs() + 30 * DAY_MS),
       sessionsRemaining: 8,
+      sessionsGranted: 8,
     },
   });
   return { trainer, client, clientProfile, reformer, packageType, clientPackage };
@@ -88,6 +89,7 @@ async function seedClientWithPackage(opts: {
       startsAt: new Date(nowMs() - DAY_MS),
       expiresAt: new Date(nowMs() + 30 * DAY_MS),
       sessionsRemaining: opts.sessionsRemaining ?? 8,
+      sessionsGranted: opts.sessionsRemaining ?? 8,
     },
   });
   return { user, profile, clientPackage };

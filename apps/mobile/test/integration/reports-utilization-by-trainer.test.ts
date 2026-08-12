@@ -74,6 +74,7 @@ async function seedSessionsAcrossTrainers() {
         startsAt: new Date("2026-04-01T00:00:00Z"),
         expiresAt: new Date("2026-05-01T00:00:00Z"),
         sessionsRemaining: 12,
+        sessionsGranted: 12,
       },
     });
     await prisma.booking.create({
@@ -94,6 +95,7 @@ async function seedSessionsAcrossTrainers() {
         startsAt: new Date("2026-04-01T00:00:00Z"),
         expiresAt: new Date("2026-05-01T00:00:00Z"),
         sessionsRemaining: 12,
+        sessionsGranted: 12,
       },
     });
     await prisma.booking.create({

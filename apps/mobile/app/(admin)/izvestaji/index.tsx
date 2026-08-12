@@ -6,6 +6,10 @@
  * The period pill at the top drives the headline numbers shown on each
  * card so the hub gives a one-glance overview without scrolling.
  *
+ * Honorari sits BELOW that grid in its own month-headed section: payroll is
+ * settled per calendar month, so it cannot answer a quarter or a year, and
+ * inside the grid it read as a card ignoring the pill.
+ *
  * Card visual: bordered square (`aspectRatio: 1`), hairline border, no fill.
  * Caps overline label top-left, big numeral vertically anchored to the
  * bottom, unit underneath. No icon, no chevron — the press affordance is
@@ -30,6 +34,9 @@ import { CapsLabel } from "@/components/ui/studio";
 import { NumberRollup } from "@/components/ui/number-rollup";
 import { useThemeTokens } from "@/components/ui/tokens";
 import { reportsQueries } from "@/lib/queries/reports-queries-factory";
+import { payrollQueries } from "@/lib/queries/payroll-queries-factory";
+import { defaultPayrollMonth, formatMonthLabel } from "@/lib/payroll-month-nav";
+import { getDateLocale } from "@/lib/i18n";
 import { ScreenContainerRaw, useTabBarBottomPadding } from "@/components/ui/screen-container";
 import { AdminTabLeftSlot } from "@/components/admin/admin-tab-left-slot";
 import { usePeriodPill } from "@/lib/admin/use-period-pill";
@@ -49,6 +56,7 @@ export default function AdminReportsLanding() {
   }
 
   const summaryQuery = useQuery(reportsQueries.summary(periodWindow));
+  const payrollQuery = useQuery(payrollQueries.summary(defaultPayrollMonth()));
   const utilizationQuery = useQuery(
     reportsQueries.utilization({ ...periodWindow, period: "month" }),
   );
@@ -97,6 +105,21 @@ export default function AdminReportsLanding() {
       target: "/(admin)/izvestaji/paketi",
     },
   ];
+
+  // Payroll is settled per whole CALENDAR MONTH — a quarter's or a year's
+  // payout is not a thing — so this one cannot follow the period pill. Sitting
+  // as a fifth tile in the pill-driven grid, it looked like it was ignoring
+  // the pill (or worse, broken, when the month it showed happened to be
+  // empty). It gets its own section, under its own month heading, so the
+  // scope it actually reports is stated rather than inferred.
+  const payrollCard: LandingCardProps = {
+    testID: "izvestaji-card-honorari",
+    title: t("payroll.title"),
+    headline: payrollQuery.data?.totalPayout,
+    unit: t("admin.izvestaji.cardUnits.rsd"),
+    target: "/(admin)/izvestaji/honorari",
+    formatter: (n) => Math.round(n).toLocaleString("sr-RS"),
+  };
 
   return (
     <ScreenContainerRaw title={t("tabs.reports")} leftSlot={<AdminTabLeftSlot />}>
@@ -157,6 +180,29 @@ export default function AdminReportsLanding() {
               </MotiView>
             </View>
           ))}
+        </View>
+
+        {/* Payroll — its own section, because it is month-scoped no matter
+            what the pill above says. The heading names the month so the
+            number is never ambiguous. */}
+        <View style={{ gap: 12 }}>
+          <CapsLabel>
+            {formatMonthLabel(defaultPayrollMonth(), getDateLocale())}
+          </CapsLabel>
+          <View className="flex-row" style={{ marginHorizontal: -6 }}>
+            <View style={{ width: "50%", paddingHorizontal: 6 }}>
+              <MotiView
+                from={{ opacity: 0, translateY: 12 }}
+                animate={{ opacity: 1, translateY: 0 }}
+                transition={{ type: "timing", duration: 350, delay: 320 }}
+              >
+                <LandingCard
+                  {...payrollCard}
+                  isLoading={payrollQuery.isLoading}
+                />
+              </MotiView>
+            </View>
+          </View>
         </View>
       </ScrollView>
     </ScreenContainerRaw>

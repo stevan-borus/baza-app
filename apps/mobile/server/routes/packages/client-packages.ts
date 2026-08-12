@@ -7,6 +7,7 @@ import { formatFullName } from "@baza/types/common";
 import { NOTIFICATION_MESSAGE_KEYS } from "@baza/i18n";
 import { UserRole } from "@/generated/prisma";
 import { now } from "@/lib/now";
+import { packageSessionsTotal } from "@/lib/package-total";
 import { requireRole } from "@/lib/server/auth-guards";
 import { createClientPackageFromType } from "@/lib/server/client-package-create";
 import { linkPackagesToBilling } from "@/lib/server/billing-package-link";
@@ -64,8 +65,7 @@ export async function GET(request: Request) {
     const packages = packageRows.map((row) => ({
       ...row,
       classTypes: row.classTypes.map((link) => link.classType),
-      // Grant-aware total: SKU sessionCount + this package's snapshotted bonus.
-      sessionsTotal: row.packageType.sessionCount + row.bonusSessions,
+      sessionsTotal: packageSessionsTotal(row),
     }));
 
     const pendingBilling =
@@ -229,7 +229,7 @@ export async function GET(request: Request) {
     const shaped = pagePackages.map((p) => ({
       ...p,
       classTypes: p.classTypes.map((link) => link.classType),
-      sessionsTotal: p.packageType.sessionCount + p.bonusSessions,
+      sessionsTotal: packageSessionsTotal(p),
       client: {
         ...p.clientProfile.user,
         fullName: formatFullName(
@@ -300,7 +300,7 @@ export async function GET(request: Request) {
     return {
       ...p,
       classTypes: p.classTypes.map((link) => link.classType),
-      sessionsTotal: p.packageType.sessionCount + p.bonusSessions,
+      sessionsTotal: packageSessionsTotal(p),
       billingRecord: match
         ? {
             id: match.id,
@@ -371,11 +371,29 @@ export async function POST(request: Request) {
     }
   }
 
+  // A gift hands over a REAL package: the SKU keeps its price (so payroll can
+  // value the sessions) but grants a single session by default, since gifting
+  // "Reformer 12" must not hand over all twelve. An explicit count above the
+  // SKU's own is a client error rather than a silently clamped value.
+  const isGift = parsed.data.isGift ?? false;
+  if (!isGift && parsed.data.sessionsGranted !== undefined) {
+    return fail("sessionsGranted is only valid for a gift", 400);
+  }
+  const sessionsGranted = isGift ? (parsed.data.sessionsGranted ?? 1) : undefined;
+  if (sessionsGranted !== undefined && sessionsGranted > packageType.sessionCount) {
+    return fail(
+      "sessionsGranted cannot exceed the package type's session count",
+      400,
+    );
+  }
+
   const clientPackage = await createClientPackageFromType(prisma, {
     clientProfileId: parsed.data.clientProfileId,
     // Snapshot the override set when present (gift only); otherwise the SKU's.
     packageType: override ? { ...packageType, classTypeIds: override } : packageType,
     startsAt,
+    isGift,
+    sessionsGranted,
   });
 
   const clientProfile = await prisma.clientProfile.findUnique({
@@ -383,7 +401,12 @@ export async function POST(request: Request) {
     select: { user: { select: { id: true } } },
   });
   if (clientProfile) {
-    if (packageType.isBirthdayGift) {
+    // Follow the ASSIGNMENT's gift flag, not the SKU's: a gift is now a real
+    // priced package handed over without payment, so keying off
+    // packageType.isBirthdayGift would send the flat "package assigned" copy
+    // to someone who was just given a birthday present. The legacy gift SKUs
+    // still count while they exist.
+    if (isGift || packageType.isBirthdayGift) {
       void createSystemNotification(
         clientProfile.user.id,
         NOTIFICATION_MESSAGE_KEYS.BIRTHDAY_CLIENT_GIFT,
@@ -410,7 +433,18 @@ export async function POST(request: Request) {
 
   return respond(
     createClientPackageResponseSchema,
-    { success: true, clientPackage },
+    {
+      success: true,
+      clientPackage: {
+        ...clientPackage,
+        // A fresh package has no grant yet, but route the total through the
+        // one helper anyway so a gift never reports the SKU's count.
+        sessionsTotal: packageSessionsTotal({
+          sessionsGranted: clientPackage.sessionsGranted,
+          bonusSessions: 0,
+        }),
+      },
+    },
     201,
   );
 }

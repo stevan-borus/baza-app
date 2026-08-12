@@ -128,6 +128,10 @@ model User {
   trainerSchedules      RecurringSchedule[]  @relation("ScheduleTrainer")
   bookingsCreated       Booking[]            @relation("BookingCreatedBy")
   bookingsChargeWaived  Booking[]            @relation("BookingChargeWaivedBy")
+  payrollRates          TrainerRate[]        @relation("TrainerRateTrainer")
+  payrollRatesCreated   TrainerRate[]        @relation("TrainerRateCreatedBy")
+  payrollAdjustments    PayrollAdjustment[]  @relation("PayrollAdjustmentTrainer")
+  payrollAdjustmentsCreated PayrollAdjustment[] @relation("PayrollAdjustmentCreatedBy")
 
   @@index([lastName])
 }
@@ -157,6 +161,60 @@ model TrainerProfile {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+/**
+ * A trainer's commission percentage, valid from a moment until superseded.
+ *
+ * History rather than one field on TrainerProfile: raising someone's rate in
+ * March must not silently change what February already computed. The rate in
+ * force for a period is the newest row whose effectiveFrom is at or before the
+ * period's start.
+ */
+model TrainerRate {
+  id            String   @id @default(uuid())
+  trainerUserId String
+  // Whole percent of the session gross (e.g. 40 = 40%).
+  percent       Int
+  effectiveFrom DateTime
+  note          String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  createdByUserId String?
+  // Entry order, and the ONLY reliable tiebreaker between rates that share an
+  // effectiveFrom — which every rate set on the same day does, since a rate
+  // starts at the studio-day boundary. `createdAt` cannot do it: Postgres
+  // now() is transaction time, so rows written together carry the identical
+  // timestamp and the "newest" one is then arbitrary. A sequence is monotonic
+  // by construction, so a same-day correction always wins over the row it
+  // replaces.
+  seq           Int      @default(autoincrement())
+  trainer       User     @relation("TrainerRateTrainer", fields: [trainerUserId], references: [id], onDelete: Cascade)
+  createdBy     User?    @relation("TrainerRateCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  // "Newest rate at or before X" is the only read pattern; seq resolves ties.
+  @@index([trainerUserId, effectiveFrom, seq])
+}
+
+/**
+ * A manual correction to a trainer's month — a bonus, a deduction, a fix for
+ * something the automatic calculation cannot know about. Signed: negative
+ * subtracts. Keyed straight to trainer + month; there is no period row,
+ * because a payout is frozen per attendance rather than per month.
+ */
+model PayrollAdjustment {
+  id              String   @id @default(uuid())
+  trainerUserId   String
+  // The month's opening instant, as `studioMonthRange` computes it.
+  periodStart     DateTime
+  amount          Int
+  note            String
+  createdByUserId String?
+  createdAt       DateTime @default(now())
+  trainer         User     @relation("PayrollAdjustmentTrainer", fields: [trainerUserId], references: [id], onDelete: Cascade)
+  createdBy       User?    @relation("PayrollAdjustmentCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  @@index([trainerUserId, periodStart])
 }
 
 model UserInvite {
@@ -409,11 +467,23 @@ model ClientPackage {
   startsAt          DateTime
   expiresAt         DateTime
   sessionsRemaining Int
+  // How many sessions this package actually granted at activation. Snapshotted
+  // rather than derived from packageType.sessionCount because a gift assigns a
+  // REAL (priced) package but hands over only a session or two — a 1-session
+  // gift on a 12-session SKU would otherwise render "1/12" everywhere. Backfilled
+  // from the SKU's sessionCount, so paid packages are unchanged.
+  sessionsGranted   Int
   // Admin "+1 termin" grants snapshot here so a grant grows the TOTAL, not
-  // past it: effective total = packageType.sessionCount + bonusSessions. Every
+  // past it: effective total = sessionsGranted + bonusSessions. Every
   // "x/y" site reads that sum, so an unused 12/12 → +1 → 13/13. Existing rows
-  // default 0 (no grant yet), so the SKU's sessionCount stays the total.
+  // default 0 (no grant yet), so the granted count stays the total.
   bonusSessions     Int                 @default(0)
+  // A gift/comp package: activated without payment, so it never carries a
+  // BillingRecord and stays out of revenue. It keeps its real packageTypeId
+  // (and therefore its real price) so trainer payout can value the sessions
+  // the same way it values a paid one — the studio absorbs the cost, but the
+  // trainer is paid for the work.
+  isGift            Boolean             @default(false)
   // Keep-the-trace revoke: a revoked package stops granting booking rights,
   // but the row (and its past bookings/consumption) stays for the record.
   revokedAt         DateTime?
@@ -442,15 +512,38 @@ model PackagePause {
   @@index([clientProfileId])
 }
 
+/**
+ * One client's attendance charged against their package.
+ *
+ * Also the payroll record for that attendance. The value and the names below
+ * are SNAPSHOTS taken when the session is consumed, not fields to join back to
+ * — that is the whole point. The trainer's payout is a fact about work already
+ * done, so editing a package price, revoking a package or removing a client
+ * must not rewrite a month that has already been paid.
+ */
 model SessionConsumption {
   id                String        @id @default(uuid())
-  clientProfileId   String
+  // Nullable so a deleted client leaves the payroll record standing; the
+  // display name lives on the snapshot below.
+  clientProfileId   String?
   sessionId         String
   consumedAt        DateTime      @default(now())
-  clientProfile     ClientProfile @relation(fields: [clientProfileId], references: [id], onDelete: Cascade)
+  // ── Payroll snapshot, frozen at consumption ────────────────────────────
+  // The attendee's per-session package value in RSD: price / (granted +
+  // bonus). Null only when nothing backed the attendance (an unbacked
+  // reservation), which the report surfaces rather than counting as zero.
+  sessionValue      Int?
+  // Copied, not joined: these must survive the client or package row going
+  // away, so the owner can always see who was paid for and on what.
+  clientName        String
+  packageName       String?
+  isGift            Boolean       @default(false)
+  clientProfile     ClientProfile? @relation(fields: [clientProfileId], references: [id], onDelete: SetNull)
   session           Session       @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 
   @@unique([clientProfileId, sessionId])
+  // The payroll read: every consumption for a trainer's month, by session.
+  @@index([sessionId])
 }
 
 model NotificationPreference {

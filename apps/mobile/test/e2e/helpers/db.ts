@@ -566,6 +566,7 @@ export async function getSessionsRemaining(clientPackageId: string) {
 export async function setSessionsRemainingFor(
   clientEmail: string,
   sessionsRemaining: number,
+  sessionsGranted: number,
 ) {
   const user = await db().user.findUnique({
     where: { email: clientEmail.toLowerCase() },
@@ -693,6 +694,7 @@ export async function seedExtraClientPackages(count: number) {
         startsAt,
         expiresAt,
         sessionsRemaining: packageType.sessionCount,
+        sessionsGranted: packageType.sessionCount,
       },
       select: { id: true, clientProfileId: true },
     });
@@ -904,6 +906,29 @@ export async function clearBirthdayGiftPackageTypes() {
  * that was granted from a birthday-gift PackageType. Used by the grant-flow
  * spec to assert sessionsRemaining + expiresAt invariants.
  */
+/**
+ * A real, priced PackageType covering the named class type — what a gift is
+ * now drawn from. Picks the largest pack so the "gift grants ONE session, not
+ * the whole pack" assertion is meaningful.
+ */
+export async function findPricedPackageTypeFor(classTypeName: string) {
+  const packageType = await db().packageType.findFirst({
+    where: {
+      price: { not: null },
+      isBirthdayGift: false,
+      isSystem: false,
+      sessionCount: { gt: 1 },
+      classTypes: { some: { classType: { name: classTypeName } } },
+    },
+    orderBy: { sessionCount: "desc" },
+    select: { id: true, name: true, sessionCount: true },
+  });
+  if (!packageType) {
+    throw new Error(`No priced package type covers "${classTypeName}"`);
+  }
+  return packageType;
+}
+
 export async function findLatestBirthdayGiftPackageFor(userEmail: string) {
   const user = await db().user.findUnique({
     where: { email: userEmail.toLowerCase() },
@@ -913,15 +938,19 @@ export async function findLatestBirthdayGiftPackageFor(userEmail: string) {
   return db().clientPackage.findFirst({
     where: {
       clientProfileId: user.clientProfile.id,
-      packageType: { isBirthdayGift: true },
+      // A gift is now a flag on a REAL package rather than its own SKU, so it
+      // is found by isGift — not by the retired packageType.isBirthdayGift.
+      isGift: true,
     },
     orderBy: { createdAt: "desc" },
     select: {
       id: true,
       sessionsRemaining: true,
+      sessionsGranted: true,
+      isGift: true,
       startsAt: true,
       expiresAt: true,
-      packageType: { select: { name: true, validityDays: true, isBirthdayGift: true } },
+      packageType: { select: { name: true, validityDays: true, price: true } },
     },
   });
 }

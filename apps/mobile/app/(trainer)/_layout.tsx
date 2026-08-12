@@ -45,6 +45,13 @@ export default function TrainerLayout() {
             tabBarIcon: ({ color }) => <TabIcon name="pencil" color={color} />,
           }}
         />
+        <Tabs.Screen
+          name="zarada"
+          options={{
+            title: t("tabs.earnings"),
+            tabBarIcon: ({ color }) => <TabIcon name="wallet" color={color} />,
+          }}
+        />
         {/* Profile data + theme/language switcher live entirely in the
             ProfileSheet (header avatar tap). No dedicated tab/route. */}
       </Tabs>

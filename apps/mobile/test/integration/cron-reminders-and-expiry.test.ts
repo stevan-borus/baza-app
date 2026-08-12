@@ -180,6 +180,7 @@ describe("cron: reminders + package-expiry", () => {
           startsAt: new Date(nowMs() - 5 * DAY_MS),
           expiresAt: new Date(nowMs() + 5 * DAY_MS),
           sessionsRemaining: 4,
+          sessionsGranted: 4,
         },
       });
 
@@ -222,6 +223,7 @@ describe("cron: reminders + package-expiry", () => {
           startsAt: new Date(nowMs() - DAY_MS),
           expiresAt: new Date(nowMs() + 5 * DAY_MS),
           sessionsRemaining: 0,
+          sessionsGranted: 0,
         },
       });
       await prisma.clientPackage.create({
@@ -233,6 +235,7 @@ describe("cron: reminders + package-expiry", () => {
           startsAt: new Date(nowMs() - DAY_MS),
           expiresAt: new Date(nowMs() + 90 * DAY_MS),
           sessionsRemaining: 8,
+          sessionsGranted: 8,
         },
       });
 

@@ -43,6 +43,18 @@ export async function createClientPackageFromType(
     clientProfileId: string;
     packageType: PackageTypeSnapshot;
     startsAt: Date;
+    /**
+     * Gift/comp activation: no payment, so no BillingRecord follows. The
+     * package still points at the real (priced) SKU so trainer payout values
+     * its sessions like any other.
+     */
+    isGift?: boolean;
+    /**
+     * How many sessions to actually grant. Defaults to the SKU's own count —
+     * the paid case. A gift passes fewer (typically 1) without pretending the
+     * SKU is a 1-session product.
+     */
+    sessionsGranted?: number;
   },
 ) {
   const startsAt = studioDayStartFor(args.startsAt);
@@ -50,6 +62,7 @@ export async function createClientPackageFromType(
     startsAt,
     args.packageType.validityDays,
   );
+  const sessionsGranted = args.sessionsGranted ?? args.packageType.sessionCount;
   const { classTypes, ...row } = await db.clientPackage.create({
     data: {
       clientProfileId: args.clientProfileId,
@@ -57,7 +70,9 @@ export async function createClientPackageFromType(
       lateCancelHours: args.packageType.lateCancelHours,
       startsAt,
       expiresAt,
-      sessionsRemaining: args.packageType.sessionCount,
+      isGift: args.isGift ?? false,
+      sessionsGranted,
+      sessionsRemaining: sessionsGranted,
       classTypes: {
         create: args.packageType.classTypeIds.map((classTypeId) => ({
           classTypeId,
@@ -74,6 +89,8 @@ export async function createClientPackageFromType(
       startsAt: true,
       expiresAt: true,
       sessionsRemaining: true,
+      sessionsGranted: true,
+      isGift: true,
       classTypes: { select: { classTypeId: true } },
     },
   });

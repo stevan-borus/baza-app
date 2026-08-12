@@ -66,6 +66,7 @@ async function createClient(
       startsAt: now(),
       expiresAt: new Date(now().getTime() + 30 * DAY_MS),
       sessionsRemaining: 12,
+      sessionsGranted: 12,
     },
   });
   return { user, profile, pkg };

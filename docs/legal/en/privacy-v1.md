@@ -118,7 +118,7 @@ Withdrawal of consent does not affect the lawfulness of processing carried out o
 
 ## 6. Is my personal data transferred to other countries?
 
-6.1. Your personal data is processed and stored on servers located in the European Union (EU), in accordance with the purpose set out in Section 3. Such transfer is permitted given that the condition of an adequate level of protection is met, meaning that the level of personal data protection is equivalent to the level guaranteed by the Law on the Protection of Personal Data.
+6.1. Your personal data, including backups, is processed and stored on servers located in the European Union (EU) — currently in the Federal Republic of Germany (Frankfurt) — in accordance with the purpose set out in Section 3. Such transfer is permitted given that the condition of an adequate level of protection is met, meaning that the level of personal data protection is equivalent to the level guaranteed by the Law on the Protection of Personal Data.
 
 6.2. For the purpose of providing and maintaining the Application, personal data may also be processed by trusted technical and business partners (e.g. cloud infrastructure providers, IT support or other technical service providers) which may have their seat or servers in the EU/EEA or other countries. In the case of transfer of data outside the EU/EEA, such transfer will be carried out solely with the application of appropriate safeguards in accordance with applicable personal data protection regulations, such as standard contractual clauses or other recognised protection mechanisms. We take reasonable technical, organisational and legal measures to ensure an adequate level of protection of personal data regardless of where it is processed.
 

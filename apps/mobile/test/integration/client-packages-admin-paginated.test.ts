@@ -74,6 +74,7 @@ async function seedClientPackages(count: number) {
         startsAt,
         expiresAt,
         sessionsRemaining: 12,
+        sessionsGranted: 12,
       },
     });
     rows.push({
@@ -215,6 +216,7 @@ describe("GET /api/packages/client-packages — admin pagination", () => {
         startsAt,
         expiresAt: new Date(startsAt.getTime() + 30 * 24 * 60 * 60 * 1000),
         sessionsRemaining: 12,
+        sessionsGranted: 12,
       },
     });
     asAdmin();

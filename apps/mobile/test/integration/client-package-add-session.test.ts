@@ -68,6 +68,7 @@ async function createPackage(
       startsAt: new Date(nowMs() - DAY),
       expiresAt: opts?.expiresAt ?? new Date(nowMs() + 60 * DAY),
       sessionsRemaining: opts?.sessionsRemaining ?? 3,
+      sessionsGranted: opts?.sessionsRemaining ?? 3,
       revokedAt: opts?.revokedAt ?? null,
     },
   });
@@ -134,6 +135,9 @@ async function createTwelveSessionPackage(
       startsAt: new Date(nowMs() - DAY),
       expiresAt: new Date(nowMs() + 60 * DAY),
       sessionsRemaining,
+      // Always a full 12-session grant; `sessionsRemaining` varies because
+      // these fixtures model a partly-used package.
+      sessionsGranted: 12,
     },
   });
 }

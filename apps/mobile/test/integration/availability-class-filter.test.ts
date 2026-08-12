@@ -65,6 +65,7 @@ async function makePackage(opts: {
       startsAt: opts.startsAt ?? new Date("2026-05-01T00:00:00Z"),
       expiresAt: opts.expiresAt ?? new Date("2026-12-01T00:00:00Z"),
       sessionsRemaining: opts.sessionsRemaining ?? 12,
+      sessionsGranted: opts.sessionsRemaining ?? 12,
     },
   });
 }

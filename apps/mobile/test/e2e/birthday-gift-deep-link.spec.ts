@@ -109,12 +109,18 @@ test.describe("birthday gift deep-link", () => {
       { timeout: 8_000 },
     );
 
-    // 7. AssignPackage sheet renders the gift PackageType option. This proves
-    //    the sheet opened for the targeted client (packageTypes load is
-    //    client-aware) AND the gift PT is in the filtered list (mode=comp).
+    // 7. AssignPackage sheet opened in gift mode. A birthday deep-link is by
+    //    definition a gift, so the toggle is already on — and the retired 🎂
+    //    SKU is NOT offered, because a gift is now a real priced package.
+    await expect(page.getByTestId("assign-gift-toggle")).toBeVisible({
+      timeout: 8_000,
+    });
+    await expect(page.getByTestId("assign-gift-sessions")).toBeVisible({
+      timeout: 8_000,
+    });
     await expect(
       page.getByTestId(`assign-package-option-${giftPackageTypeId}`),
-    ).toBeVisible({ timeout: 8_000 });
+    ).toHaveCount(0);
 
     // 8. Submit button is visible (sheet is fully mounted, not mid-transition).
     await expect(page.getByTestId("assign-package-submit")).toBeVisible();

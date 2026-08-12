@@ -233,6 +233,7 @@ describe("session intermediate read paths", () => {
         startsAt: new Date(now().getTime() - DAY_MS),
         expiresAt: new Date(now().getTime() + 365 * DAY_MS),
         sessionsRemaining: 12,
+        sessionsGranted: 12,
       },
     });
     setMockUser({

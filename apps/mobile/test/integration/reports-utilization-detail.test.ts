@@ -107,6 +107,7 @@ async function seedSessionWithBookings(opts: {
         startsAt: new Date("2026-01-01T00:00:00Z"),
         expiresAt: new Date("2030-01-01T00:00:00Z"),
         sessionsRemaining: 12,
+        sessionsGranted: 12,
       },
     });
     await prisma.booking.create({

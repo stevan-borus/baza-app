@@ -337,6 +337,7 @@ describe("packages/types CRUD", () => {
         startsAt: now(),
         expiresAt: new Date(nowMs() + 30 * 24 * 60 * 60 * 1000),
         sessionsRemaining: 12,
+        sessionsGranted: 12,
       },
     });
 

@@ -52,6 +52,7 @@ async function makeClientPackage(opts: {
       startsAt: new Date(Date.now() - DAY_MS),
       expiresAt: new Date(Date.now() + 30 * DAY_MS),
       sessionsRemaining: 8,
+      sessionsGranted: 8,
       ...(opts.createdAt ? { createdAt: opts.createdAt } : {}),
     },
   });

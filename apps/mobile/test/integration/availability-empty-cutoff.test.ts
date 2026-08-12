@@ -94,6 +94,7 @@ async function makePackage(opts: {
       startsAt: opts.startsAt ?? new Date(nowMs() - 30 * DAY_MS),
       expiresAt: opts.expiresAt ?? new Date(nowMs() + 90 * DAY_MS),
       sessionsRemaining: opts.sessionsRemaining ?? 12,
+      sessionsGranted: opts.sessionsRemaining ?? 12,
     },
   });
 }

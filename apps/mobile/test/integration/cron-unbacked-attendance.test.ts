@@ -145,6 +145,7 @@ describe("cron:sessions unbacked-attendance notification", () => {
         startsAt: new Date(nowMs() - 24 * 60 * 60 * 1000),
         expiresAt: new Date(nowMs() + 30 * 24 * 60 * 60 * 1000),
         sessionsRemaining: 12,
+        sessionsGranted: 12,
       },
     });
     const session = await prisma.session.create({

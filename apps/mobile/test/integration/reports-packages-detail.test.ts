@@ -109,6 +109,7 @@ async function makePackage(opts: {
       startsAt: opts.startsAt,
       expiresAt: opts.expiresAt,
       sessionsRemaining: opts.sessionsRemaining,
+      sessionsGranted: opts.sessionsRemaining,
     },
   });
 }

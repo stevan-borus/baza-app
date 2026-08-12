@@ -116,7 +116,7 @@ Povlačenje saglasnosti ne utiče na zakonitost obrade koja je vršena na osnovu
 
 ## 6. Prenose li se moji lični podaci u druge države?
 
-6.1. Vaši lični podaci se obrađuju i čuvaju na serverima koji se nalaze u Evropskoj uniji (EU), a u skladu sa svrhom navedenom u Odeljku 3. Ovakav prenos je dozvoljen imajući u vidu da je ispunjen uslov primerenog nivoa zaštite što znači da je nivo zaštite podataka o ličnosti jednak nivou koji garantuje Zakon o zaštiti podataka o ličnosti.
+6.1. Vaši lični podaci, uključujući rezervne kopije (backup), obrađuju se i čuvaju na serverima koji se nalaze u Evropskoj uniji (EU) — trenutno u Saveznoj Republici Nemačkoj (Frankfurt) — a u skladu sa svrhom navedenom u Odeljku 3. Ovakav prenos je dozvoljen imajući u vidu da je ispunjen uslov primerenog nivoa zaštite što znači da je nivo zaštite podataka o ličnosti jednak nivou koji garantuje Zakon o zaštiti podataka o ličnosti.
 
 6.2. U svrhu pružanja i održavanja Aplikacije, lični podaci mogu biti obrađivani i od strane pouzdanih tehničkih i poslovnih partnera (npr. pružaoci cloud infrastrukture, IT podrške ili drugih tehničkih usluga) koji mogu imati sedište ili servere u EU/EEA ili drugim državama. U slučaju prenosa podataka van EU/EEA, takav prenos će se vršiti isključivo uz primenu odgovarajućih zaštitnih mera u skladu sa važećim propisima o zaštiti podataka o ličnosti, kao što su standardne ugovorne klauzule ili drugi priznati mehanizmi zaštite. Preduzimamo razumne tehničke, organizacione i pravne mere kako bismo obezbedili adekvatan nivo zaštite ličnih podataka bez obzira na lokaciju njihove obrade.
 

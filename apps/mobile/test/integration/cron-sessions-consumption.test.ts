@@ -38,6 +38,7 @@ async function seed() {
       startsAt: new Date(nowMs() - 10 * 24 * 60 * 60 * 1000),
       expiresAt: new Date(nowMs() + 30 * 24 * 60 * 60 * 1000),
       sessionsRemaining: 8,
+      sessionsGranted: 8,
     },
   });
   return { trainer, clientProfile, reformer, clientPackage };
@@ -173,7 +174,7 @@ describe("POST /api/cron/sessions/consumption", () => {
       },
     });
     await prisma.sessionConsumption.create({
-      data: { clientProfileId: clientProfile.id, sessionId: session.id },
+      data: { clientName: "Seed Client", clientProfileId: clientProfile.id, sessionId: session.id },
     });
     await prisma.clientPackage.update({
       where: { id: clientPackage.id },

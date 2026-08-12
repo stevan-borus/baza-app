@@ -71,6 +71,7 @@ async function seedPackagesAndAssignments() {
       startsAt: seedAt,
       expiresAt,
       sessionsRemaining: 12,
+      sessionsGranted: 12,
     },
   });
   await prisma.billingRecord.create({
@@ -94,6 +95,7 @@ async function seedPackagesAndAssignments() {
       startsAt: seedAt,
       expiresAt,
       sessionsRemaining: 12,
+      sessionsGranted: 12,
     },
   });
 
@@ -106,6 +108,7 @@ async function seedPackagesAndAssignments() {
       startsAt: seedAt,
       expiresAt,
       sessionsRemaining: 8,
+      sessionsGranted: 8,
     },
   });
   await prisma.billingRecord.create({
@@ -135,6 +138,7 @@ async function seedPackagesAndAssignments() {
       startsAt: seedAt,
       expiresAt,
       sessionsRemaining: 12,
+      sessionsGranted: 12,
     },
   });
   await prisma.billingRecord.create({
