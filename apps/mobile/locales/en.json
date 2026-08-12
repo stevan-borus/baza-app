@@ -1417,7 +1417,6 @@
     "sessionNotFound": "Session not found",
     "noAttendees": "Nobody attended this session",
     "noPackageValue": "No package",
-    "noPackageHint": "Attendance not covered by a package — excluded from the payout.",
-    "loadMore": "Show more ({{count}})"
+    "noPackageHint": "Attendance not covered by a package — excluded from the payout."
   }
 }
