@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { dateOfBirthSchema, nameFieldSchema } from "./common";
+import { dateOfBirthSchema, nameFieldSchema, userRoleSchema } from "./common";
 import { consentDocumentKeySchema } from "./consent";
 import { healthIntakeResponseSchema } from "./health-intake";
 import { clientPackageStatusSchema } from "./packages";
@@ -130,6 +130,9 @@ export const inviteSchema = z.object({
   fullName: z.string(),
   phone: z.nullable(z.string()).optional(),
   status: z.enum(["PENDING", "COMPLETED", "REVOKED", "EXPIRED"]),
+  // Full UserRole enum, not the CLIENT|TRAINER creation subset — this parses
+  // whatever is stored, including rows minted before the subset existed.
+  role: userRoleSchema,
   createdAt: z.string(),
 });
 export type Invite = z.infer<typeof inviteSchema>;

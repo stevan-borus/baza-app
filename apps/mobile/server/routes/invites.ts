@@ -26,6 +26,7 @@ export async function GET(request: Request) {
       lastName: true,
       phone: true,
       status: true,
+      role: true,
       createdAt: true,
     },
   });
@@ -47,7 +48,7 @@ export async function POST(request: Request) {
   const parsed = await parseBody(request, createInviteInputSchema);
   if (!parsed.ok) return parsed.response;
 
-  const { email, firstName, lastName, phone, dateOfBirth } = parsed.data;
+  const { email, firstName, lastName, phone, dateOfBirth, role } = parsed.data;
   const normalizedEmail = email.toLowerCase().trim();
 
   const existingUser = await prisma.user.findUnique({
@@ -69,8 +70,10 @@ export async function POST(request: Request) {
       firstName,
       lastName,
       phone,
-      dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : null,
-      role: UserRole.CLIENT,
+      // Only a client profile consumes the buffered DOB at redemption; a
+      // trainer has none, so drop a stray one rather than store it unread.
+      dateOfBirth: role === "CLIENT" && dateOfBirth ? new Date(dateOfBirth) : null,
+      role,
       tokenHash,
       expiresAt,
       createdById: guard.user.id,
@@ -82,6 +85,7 @@ export async function POST(request: Request) {
       lastName: true,
       phone: true,
       status: true,
+      role: true,
       expiresAt: true,
       createdAt: true,
     },
