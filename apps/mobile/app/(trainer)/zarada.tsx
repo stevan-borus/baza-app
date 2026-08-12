@@ -26,12 +26,10 @@ import {
 import { TrainerScheduleLeftSlot } from "@/components/trainer/trainer-tab-left-slot";
 import { MonthStepper } from "@/components/payroll/month-stepper";
 import { SummaryRow } from "@/components/payroll/summary-row";
-import { Button } from "@/components/ui/button";
 import { payrollQueries } from "@/lib/queries/payroll-queries-factory";
 import { defaultPayrollMonth, type PayrollMonthCursor } from "@/lib/payroll-month-nav";
 import { formatRsd } from "@/lib/format";
-
-const PAGE_SIZE = 30;
+import { useRevealOnScroll } from "@/lib/use-reveal-on-scroll";
 
 export default function TrainerZarada() {
   const { t } = useTranslation();
@@ -40,12 +38,16 @@ export default function TrainerZarada() {
   const bottomPad = useTabBarBottomPadding();
   const [cursor, setCursor] = useState<PayrollMonthCursor>(defaultPayrollMonth);
   const [refreshing, setRefreshing] = useState(false);
-  // A busy month runs to ~70 sessions; render them a page at a time like the
-  // admin list does rather than mounting every card at once.
-  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
   // No trainerUserId: "my own month" is the only form a trainer may request.
   const monthQuery = useQuery(payrollQueries.month(cursor));
+
+  const month = monthQuery.data?.month;
+  const sessions = month?.sessions ?? [];
+  // A busy month runs to ~70 sessions; render them a page at a time like the
+  // admin list does rather than mounting every card at once.
+  const reveal = useRevealOnScroll(sessions.length);
+  const visibleSessions = sessions.slice(0, reveal.visibleCount);
 
   async function handleRefresh() {
     setRefreshing(true);
@@ -53,16 +55,13 @@ export default function TrainerZarada() {
     setRefreshing(false);
   }
 
-  const month = monthQuery.data?.month;
-  const sessions = month?.sessions ?? [];
-  const visibleSessions = sessions.slice(0, visibleCount);
-  const hasMore = sessions.length > visibleCount;
   return (
     <ScreenContainerRaw
       title={t("payroll.myEarnings")}
       leftSlot={<TrainerScheduleLeftSlot />}
     >
       <ScrollView
+        testID="payroll-session-scroll"
         contentContainerStyle={{
           paddingTop: 16,
           paddingHorizontal: 20,
@@ -71,11 +70,13 @@ export default function TrainerZarada() {
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
         }
+        {...reveal.scrollProps}
       >
         <View className="mb-4">
           <MonthStepper cursor={cursor} onChange={(next) => {
             setCursor(next);
-            setVisibleCount(PAGE_SIZE);
+            // A new month is a new list; start it back at one page.
+            reveal.reset();
           }} />
         </View>
 
@@ -145,7 +146,11 @@ export default function TrainerZarada() {
             ) : (
               <View className="mt-2 gap-3">
                 {visibleSessions.map((session) => (
-                  <GlassCard key={session.sessionId} className="p-4">
+                  <GlassCard
+                    key={session.sessionId}
+                    testID={`zarada-session-${session.sessionId}`}
+                    className="p-4"
+                  >
                     <View className="flex-row items-center justify-between">
                       <Text
                         className="text-base font-semibold"
@@ -187,18 +192,6 @@ export default function TrainerZarada() {
                     </View>
                   </GlassCard>
                 ))}
-
-                {hasMore && (
-                  <Button
-                    variant="secondary"
-                    testID="zarada-load-more"
-                    onPress={() => setVisibleCount((n) => n + PAGE_SIZE)}
-                  >
-                    {t("payroll.loadMore", {
-                      count: sessions.length - visibleCount,
-                    })}
-                  </Button>
-                )}
               </View>
             )}
           </>
