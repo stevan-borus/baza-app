@@ -6,6 +6,7 @@ import { BookingChangeEmail } from "@/emails/booking-change-email";
 import { CampaignEmail } from "@/emails/campaign-email";
 import { InviteEmail } from "@/emails/invite-email";
 import { ResetEmail } from "@/emails/reset-email";
+import { captureInviteTokenForE2E } from "@/lib/server/e2e-invite-token-capture";
 import { captureResetTokenForE2E } from "@/lib/server/e2e-reset-token-capture";
 import { buildInviteUrl, buildResetUrl } from "@/lib/server/email-urls";
 import { env } from "@/lib/server/env";
@@ -53,6 +54,10 @@ export async function sendInviteEmail(params: {
   lastName: string;
   inviteToken: string;
 }) {
+  await captureInviteTokenForE2E({
+    email: params.to,
+    token: params.inviteToken,
+  });
   const inviteUrl = buildInviteUrl(env.APP_WEB_URL, params.inviteToken);
   const fullName = formatFullName(params.firstName, params.lastName);
   const html = await render(

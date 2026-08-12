@@ -44,6 +44,8 @@ yarn-error.*
 /test-results
 /playwright-report
 /playwright/.cache
+# E2E-only invite token the server drops for the accept-invite chain
+/.playwright-tmp
 
 # Maestro (E2E) — captured reset token from password-reset flow
 .maestro/.tmp/
