@@ -258,7 +258,13 @@ export default function AdminClients() {
   // stays in sync with the visible list as the search narrows. Every page
   // carries the same total; the first is always present.
   const clientsTotal = clientsQuery.data?.pages[0]?.total ?? clients.length;
-  const invites = invitesQuery.data?.invites ?? [];
+  // Client-scoped by design: trainer invites are sent and managed from Katalog →
+  // Procenti trenera (the trainer roster), and they share this cache. Without the
+  // filter a pending trainer would read as a pending client here — and inflate
+  // the tab's count with people this screen can do nothing about.
+  const invites = (invitesQuery.data?.invites ?? []).filter(
+    (invite) => invite.role === "CLIENT",
+  );
 
   // ── Flow targets derived from the loaded pages ────────────────────────────
   // Same live `clients.find` the old inline sheets did in their render-props.

@@ -5,6 +5,10 @@
  * append-only: setting a new one records it from a date rather than editing the
  * old value, so a raise in March cannot silently rewrite what February already
  * paid. The list shows the rate in force today; the sheet shows the trail.
+ *
+ * This screen is also the studio's de-facto trainer roster, so onboarding a new
+ * trainer starts here rather than behind the client list: the invite CTA and
+ * the pending trainer invites sit next to the people they will become.
  */
 import { useState } from "react";
 import dayjs from "dayjs";
@@ -33,6 +37,8 @@ import {
   payrollQueries,
 } from "@/lib/queries/payroll-queries-factory";
 import { usersQueries } from "@/lib/queries/users-queries-factory";
+import { InviteTrainerSheet } from "@/components/admin/trainer-flows/invite-trainer-sheet";
+import { TrainerInvitesSection } from "@/components/admin/trainer-flows/trainer-invites-section";
 import { formatMutationError } from "@/lib/admin/format-mutation-error";
 import {
   currentTrainerRate,
@@ -50,6 +56,7 @@ export default function ProcentiTrenera() {
   const [percent, setPercent] = useState("");
   const [effectiveFrom, setEffectiveFrom] = useState<Date>(() => now());
   const [note, setNote] = useState("");
+  const [inviteOpen, setInviteOpen] = useState(false);
 
   const trainersQuery = useQuery(usersQueries.trainers());
   const ratesQuery = useQuery(payrollQueries.rates());
@@ -109,6 +116,16 @@ export default function ProcentiTrenera() {
             </SectionLabel>
           </View>
         </MotiView>
+
+        <Button
+          variant="secondary"
+          size="small"
+          testID="trainer-invite-open-button"
+          accessibilityLabel={t("admin.trainers.inviteCtaA11y")}
+          onPress={() => setInviteOpen(true)}
+        >
+          {t("admin.trainers.inviteCta")}
+        </Button>
 
         {trainersQuery.isError || ratesQuery.isError ? (
           <ErrorState
@@ -186,7 +203,13 @@ export default function ProcentiTrenera() {
             );
           })
         )}
+
+        <View className="mt-4">
+          <TrainerInvitesSection />
+        </View>
       </ScrollView>
+
+      <InviteTrainerSheet open={inviteOpen} onOpenChange={setInviteOpen} />
 
       <AppSheet
         open={editing !== null}
