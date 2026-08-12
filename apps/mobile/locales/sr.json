@@ -1428,7 +1428,6 @@
     "sessionNotFound": "Termin nije pronađen",
     "noAttendees": "Nema polaznika na ovom terminu",
     "noPackageValue": "Bez paketa",
-    "noPackageHint": "Dolazak nije pokriven paketom — ne ulazi u obračun.",
-    "loadMore": "Prikaži još ({{count}})"
+    "noPackageHint": "Dolazak nije pokriven paketom — ne ulazi u obračun."
   }
 }

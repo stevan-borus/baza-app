@@ -15,7 +15,6 @@ import { useTranslation } from "react-i18next";
 import { Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { Icon } from "@/components/ui/icon";
-import { Button } from "@/components/ui/button";
 import { GlassCard } from "@/components/ui/glass-card";
 import { EmptyState, ErrorState } from "@/components/ui/states";
 import { SkeletonList } from "@/components/ui/skeleton";
@@ -34,9 +33,7 @@ import {
 } from "@/lib/payroll-month-nav";
 import { formatRsd } from "@/lib/format";
 import { getDateLocale } from "@/lib/i18n";
-
-/** How many session rows to add each time the list is extended. */
-const PAGE_SIZE = 30;
+import { useRevealOnScroll } from "@/lib/use-reveal-on-scroll";
 
 export default function HonorariTrainerDetail() {
   const { t } = useTranslation();
@@ -59,11 +56,15 @@ export default function HonorariTrainerDetail() {
     };
   });
   const [refreshing, setRefreshing] = useState(false);
-  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
   const monthQuery = useQuery(
     payrollQueries.month({ ...cursor, trainerUserId: params.trainerId }),
   );
+
+  const month = monthQuery.data?.month;
+  const sessions = month?.sessions ?? [];
+  const reveal = useRevealOnScroll(sessions.length);
+  const visibleSessions = sessions.slice(0, reveal.visibleCount);
 
   async function handleRefresh() {
     setRefreshing(true);
@@ -75,13 +76,8 @@ export default function HonorariTrainerDetail() {
     setCursor(next);
     // A new month is a new list; keeping the old offset would show a partial
     // slice of unrelated sessions.
-    setVisibleCount(PAGE_SIZE);
+    reveal.reset();
   }
-
-  const month = monthQuery.data?.month;
-  const sessions = month?.sessions ?? [];
-  const visibleSessions = sessions.slice(0, visibleCount);
-  const hasMore = sessions.length > visibleCount;
 
   return (
     <ScreenContainerRaw
@@ -89,6 +85,7 @@ export default function HonorariTrainerDetail() {
       title={month?.trainerName ?? t("payroll.trainer")}
     >
       <ScrollView
+        testID="payroll-session-scroll"
         contentContainerStyle={{
           paddingTop: 16,
           paddingHorizontal: 20,
@@ -97,6 +94,7 @@ export default function HonorariTrainerDetail() {
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
         }
+        {...reveal.scrollProps}
       >
         <View className="mb-4">
           <MonthStepper cursor={cursor} onChange={changeMonth} />
@@ -238,18 +236,6 @@ export default function HonorariTrainerDetail() {
                     </GlassCard>
                   </Pressable>
                 ))}
-
-                {hasMore && (
-                  <Button
-                    variant="secondary"
-                    testID="honorari-load-more"
-                    onPress={() => setVisibleCount((n) => n + PAGE_SIZE)}
-                  >
-                    {t("payroll.loadMore", {
-                      count: sessions.length - visibleCount,
-                    })}
-                  </Button>
-                )}
               </View>
             )}
           </>
