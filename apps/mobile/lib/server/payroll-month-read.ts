@@ -37,7 +37,7 @@ export async function readPayrollMonth(
     trainerName: computed.trainerName,
     periodStart: from.toISOString(),
     periodEnd: to.toISOString(),
-    percent: computed.percent,
+    buckets: computed.buckets,
     sessions: computed.sessions.map((session) => ({
       sessionId: session.sessionId,
       startsAt: session.startsAt.toISOString(),

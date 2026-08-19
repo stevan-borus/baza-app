@@ -53,8 +53,20 @@ export type ValuedSession = {
   gross: number;
   /** Lines that could not be valued — surfaced, never silently zero. */
   unpricedCount: number;
-  /** The trainer's cut of `gross` at `percent`, rounded to whole dinars. */
-  payout: (percent: number) => number;
+};
+
+/**
+ * One slice of a month's payout: either a class type the trainer holds an
+ * override on, or the default bucket (`classTypeId === null`) that everything
+ * else falls into.
+ */
+export type PayrollBucket = {
+  classTypeId: string | null;
+  classTypeName: string | null;
+  /** Null when the trainer has no rate covering this bucket — it pays 0. */
+  percent: number | null;
+  gross: number;
+  payout: number;
 };
 
 /**
@@ -72,11 +84,82 @@ export function valueSession(attendees: PayrollAttendee[]): ValuedSession {
   const gross = lines.reduce((sum, line) => sum + (line.sessionValue ?? 0), 0);
   const unpricedCount = lines.filter((line) => line.sessionValue === null).length;
 
+  return { lines, gross, unpricedCount };
+}
+
+/**
+ * Roll a month's valued sessions up into what the trainer is paid.
+ *
+ * The studio does not pay one percentage: an individual or a duo is worth a
+ * different cut than a group slot, so a trainer can hold a per-class-type
+ * override. Sessions of a class type WITH an override each form their own
+ * bucket; everything else collapses into one default bucket.
+ *
+ * The multiplication happens here and nowhere else, once per bucket. Rounding
+ * per bucket rather than on the month total is deliberate: the breakdown is
+ * shown to the person being paid, and a total that doesn't equal the sum of the
+ * lines above it reads as an error even when it's a rounding cent.
+ */
+export function bucketPayout(
+  sessions: Array<{ classTypeId: string; classTypeName: string; gross: number }>,
+  resolve: (classTypeId: string) => { percent: number | null; overridden: boolean },
+): { buckets: PayrollBucket[]; payout: number; gross: number } {
+  const overrides = new Map<string, { name: string; percent: number | null; gross: number }>();
+  let defaultGross = 0;
+  let defaultPercent: number | null = null;
+  let hasDefault = false;
+
+  for (const session of sessions) {
+    const rate = resolve(session.classTypeId);
+    if (rate.overridden) {
+      const existing = overrides.get(session.classTypeId);
+      if (existing) {
+        existing.gross += session.gross;
+      } else {
+        overrides.set(session.classTypeId, {
+          name: session.classTypeName,
+          percent: rate.percent,
+          gross: session.gross,
+        });
+      }
+      continue;
+    }
+    // Everything without an override shares the trainer's default rate, so the
+    // percent resolved here is the same for every session in this branch.
+    defaultGross += session.gross;
+    defaultPercent = rate.percent;
+    hasDefault = true;
+  }
+
+  const toBucket = (
+    classTypeId: string | null,
+    classTypeName: string | null,
+    percent: number | null,
+    exactGross: number,
+  ): PayrollBucket => ({
+    classTypeId,
+    classTypeName,
+    percent,
+    gross: Math.round(exactGross),
+    payout: percent === null ? 0 : Math.round((exactGross * percent) / 100),
+  });
+
+  const buckets = [...overrides.entries()]
+    // Alphabetical by the name the studio reads, so the breakdown is stable
+    // between months instead of following whatever order sessions landed in.
+    .sort(([, a], [, b]) => a.name.localeCompare(b.name))
+    .map(([classTypeId, o]) => toBucket(classTypeId, o.name, o.percent, o.gross));
+
+  if (hasDefault) {
+    // Last: "everything else" reads as the remainder, not as a peer of the
+    // named overrides.
+    buckets.push(toBucket(null, null, defaultPercent, defaultGross));
+  }
+
   return {
-    lines,
-    gross,
-    unpricedCount,
-    payout: (percent: number) => Math.round((gross * percent) / 100),
+    buckets,
+    payout: buckets.reduce((sum, b) => sum + b.payout, 0),
+    gross: buckets.reduce((sum, b) => sum + b.gross, 0),
   };
 }
 

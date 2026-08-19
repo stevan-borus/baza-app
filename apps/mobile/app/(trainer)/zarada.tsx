@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/screen-container";
 import { TrainerScheduleLeftSlot } from "@/components/trainer/trainer-tab-left-slot";
 import { MonthStepper } from "@/components/payroll/month-stepper";
+import { RateBreakdown } from "@/components/payroll/rate-breakdown";
 import { SummaryRow } from "@/components/payroll/summary-row";
 import { payrollQueries } from "@/lib/queries/payroll-queries-factory";
 import { defaultPayrollMonth, type PayrollMonthCursor } from "@/lib/payroll-month-nav";
@@ -97,21 +98,13 @@ export default function TrainerZarada() {
               </Text>
 
               {/* Same breakdown the admin sees for this trainer. Showing the
-                  payout without the gross and the percentage behind it asked
+                  payout without the gross and the percentages behind it asked
                   the trainer to trust a number they cannot check — and it is
                   their own pay, agreed with them. */}
               <View className="mt-3 gap-1">
                 <SummaryRow
                   label={t("payroll.gross")}
                   value={formatRsd(month.gross)}
-                />
-                <SummaryRow
-                  label={t("payroll.percent")}
-                  value={
-                    month.percent === null
-                      ? t("payroll.noRate")
-                      : `${month.percent}%`
-                  }
                 />
                 <SummaryRow
                   label={t("payroll.sessionsHeld")}
@@ -129,7 +122,7 @@ export default function TrainerZarada() {
                 )}
               </View>
 
-              {month.percent === null && (
+              {month.buckets.some((bucket) => bucket.percent === null) && (
                 <Text
                   className="mt-3 text-sm"
                   style={{ color: tokens.warning }}
@@ -139,6 +132,12 @@ export default function TrainerZarada() {
                 </Text>
               )}
             </GlassCard>
+
+            {month.buckets.length > 0 && (
+              <GlassCard className="mb-4 p-4">
+                <RateBreakdown buckets={month.buckets} testIDPrefix="zarada" />
+              </GlassCard>
+            )}
 
             <CapsLabel>{t("payroll.sessionsHeld")}</CapsLabel>
             {sessions.length === 0 ? (

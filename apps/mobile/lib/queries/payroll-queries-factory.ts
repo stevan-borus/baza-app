@@ -67,7 +67,10 @@ export const payrollQueries = {
   createRate: () => ({
     mutationFn: (input: {
       trainerUserId: string;
-      percent: number;
+      /** Null ends a class-type override — only valid alongside classTypeId. */
+      percent: number | null;
+      /** Omitted = the trainer's default rate. */
+      classTypeId?: string;
       effectiveFrom: string;
       note?: string;
     }) =>

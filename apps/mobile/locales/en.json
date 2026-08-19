@@ -1380,6 +1380,8 @@
     "totalPayout": "Total to be paid",
     "noRate": "No percentage set",
     "noRateHint": "No percentage set",
+    "breakdownTitle": "Breakdown by class type",
+    "defaultBucket": "Other sessions",
     "setRate": "Set percentage",
     "rateHistory": "Percentage history",
     "rateSuperseded": "replaced",

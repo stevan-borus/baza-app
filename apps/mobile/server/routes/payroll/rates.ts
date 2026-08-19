@@ -16,6 +16,11 @@ import { studioDayStartForKey } from "@/lib/studio-time";
  * trainer's percentage in March must not silently change what February already
  * computed. A month reads the newest rate effective at or before its start.
  *
+ * A rate is either the trainer's DEFAULT (no classTypeId) or an override for
+ * one class type — an individual is worth a different cut than a group slot.
+ * An override ends the same append-only way it started: a row with a NULL
+ * percent, which hands that class type back to the default from its date on.
+ *
  * ADMIN only in both directions — what a trainer is paid is owner-level data,
  * and a trainer must not see (or set) anyone's rate including their own.
  */
@@ -32,8 +37,12 @@ export async function GET(request: Request) {
     // same-day correction wins over the row it replaces. createdAt can't do
     // it — Postgres now() is transaction time, so rows written together are
     // identical.
+    // Scope before date: the screen reads one trainer's rates as a default
+    // history plus a history per override, so grouping them is the natural
+    // order to hand back.
     orderBy: [
       { trainerUserId: "asc" },
+      { classTypeId: "asc" },
       { effectiveFrom: "desc" },
       { seq: "desc" },
     ],
@@ -41,6 +50,10 @@ export async function GET(request: Request) {
       id: true,
       trainerUserId: true,
       percent: true,
+      classTypeId: true,
+      // Joined so the rate list can label an override without also loading the
+      // whole class-type catalogue.
+      classType: { select: { name: true } },
       effectiveFrom: true,
       note: true,
       createdAt: true,
@@ -50,8 +63,9 @@ export async function GET(request: Request) {
 
   return respond(trainerRatesResponseSchema, {
     success: true,
-    rates: rates.map((rate) => ({
+    rates: rates.map(({ classType, ...rate }) => ({
       ...rate,
+      classTypeName: classType?.name ?? null,
       effectiveFrom: rate.effectiveFrom.toISOString(),
       createdAt: rate.createdAt.toISOString(),
     })),
@@ -84,10 +98,21 @@ export async function POST(request: Request) {
     return fail("effectiveFrom must be a YYYY-MM-DD date", 400);
   }
 
+  // An override priced against a class type that does not exist would be a
+  // rate nothing can ever resolve to.
+  if (parsed.data.classTypeId) {
+    const classType = await prisma.classType.findUnique({
+      where: { id: parsed.data.classTypeId },
+      select: { id: true },
+    });
+    if (!classType) return fail("Class type not found", 404);
+  }
+
   const rate = await prisma.trainerRate.create({
     data: {
       trainerUserId: parsed.data.trainerUserId,
       percent: parsed.data.percent,
+      classTypeId: parsed.data.classTypeId ?? null,
       // The studio day boundary the rest of the app uses, so a rate "from the
       // 1st" covers that whole day's sessions.
       effectiveFrom: studioDayStartForKey(dayKey),
@@ -98,6 +123,8 @@ export async function POST(request: Request) {
       id: true,
       trainerUserId: true,
       percent: true,
+      classTypeId: true,
+      classType: { select: { name: true } },
       effectiveFrom: true,
       note: true,
       createdAt: true,
@@ -105,12 +132,14 @@ export async function POST(request: Request) {
     },
   });
 
+  const { classType, ...created } = rate;
   return respond(
     createTrainerRateResponseSchema,
     {
       success: true,
       rate: {
-        ...rate,
+        ...created,
+        classTypeName: classType?.name ?? null,
         effectiveFrom: rate.effectiveFrom.toISOString(),
         createdAt: rate.createdAt.toISOString(),
       },

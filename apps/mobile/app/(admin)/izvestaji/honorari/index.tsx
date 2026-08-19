@@ -126,10 +126,11 @@ export default function IzvestajiHonorari() {
                         >
                           {formatRsd(trainer.netPayout)}
                         </Text>
+                        {/* No single percentage to show any more: a trainer
+                            can be on a different rate per class type, and the
+                            split lives on their detail screen. */}
                         <Text className="text-xs" style={{ color: tokens.muted }}>
-                          {trainer.percent === null
-                            ? t("payroll.noRate")
-                            : `${trainer.percent}% · ${formatRsd(trainer.gross)}`}
+                          {formatRsd(trainer.gross)}
                         </Text>
                       </View>
                     </View>

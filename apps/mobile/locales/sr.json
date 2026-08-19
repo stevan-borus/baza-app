@@ -1390,6 +1390,8 @@
     "totalPayout": "Ukupno za isplatu",
     "noRate": "Procenat nije podešen",
     "noRateHint": "Procenat nije podešen",
+    "breakdownTitle": "Obračun po tipu treninga",
+    "defaultBucket": "Ostali treninzi",
     "setRate": "Podesi procenat",
     "rateHistory": "Istorija procenata",
     "rateSuperseded": "zamenjen",

@@ -174,8 +174,16 @@ model TrainerProfile {
 model TrainerRate {
   id            String   @id @default(uuid())
   trainerUserId String
-  // Whole percent of the session gross (e.g. 40 = 40%).
-  percent       Int
+  // Whole percent of the session gross (e.g. 40 = 40%). Null is a tombstone,
+  // valid only on class-type-scoped rows: "from effectiveFrom, this class
+  // type reverts to the default rate". Default-scope rows always carry a
+  // number — the route enforces it.
+  percent       Int?
+  // The scope. Null = the trainer's default rate (every pre-existing row).
+  // Set = an override for sessions of this class type only. Cascade is safe:
+  // a class type is only deletable while no session ever used it, so a
+  // scoped rate being deleted with it never priced anything.
+  classTypeId   String?
   effectiveFrom DateTime
   note          String?
   createdAt     DateTime @default(now())
@@ -191,9 +199,12 @@ model TrainerRate {
   seq           Int      @default(autoincrement())
   trainer       User     @relation("TrainerRateTrainer", fields: [trainerUserId], references: [id], onDelete: Cascade)
   createdBy     User?    @relation("TrainerRateCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  classType     ClassType? @relation(fields: [classTypeId], references: [id], onDelete: Cascade)
 
-  // "Newest rate at or before X" is the only read pattern; seq resolves ties.
-  @@index([trainerUserId, effectiveFrom, seq])
+  // "Newest rate in scope at or before X" is the only read pattern; seq
+  // resolves ties. classTypeId sits after trainerUserId so both the per-scope
+  // and the all-scopes-for-a-trainer reads use the same index prefix.
+  @@index([trainerUserId, classTypeId, effectiveFrom, seq])
 }
 
 /**
@@ -307,6 +318,7 @@ model ClassType {
   sessions           Session[]
   packageTypeLinks   PackageTypeClassType[]
   clientPackageLinks ClientPackageClassType[]
+  trainerRates       TrainerRate[]
 }
 
 model StudioRoom {

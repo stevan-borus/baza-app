@@ -36,7 +36,15 @@ function makeMonth(sessionCount: number): PayrollMonth {
     trainerName: "Ana Trener",
     periodStart: "2026-08-01T00:00:00.000Z",
     periodEnd: "2026-08-31T23:59:59.000Z",
-    percent: 50,
+    buckets: [
+      {
+        classTypeId: null,
+        classTypeName: null,
+        percent: 50,
+        gross: sessionCount * 1000,
+        payout: sessionCount * 500,
+      },
+    ],
     sessions: Array.from({ length: sessionCount }, (_, i) => ({
       sessionId: `s-${i}`,
       startsAt: `2026-08-${String((i % 28) + 1).padStart(2, "0")}T09:00:00.000Z`,

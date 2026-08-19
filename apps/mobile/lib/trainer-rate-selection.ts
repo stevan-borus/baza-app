@@ -12,7 +12,15 @@ import { now } from "@/lib/now";
 export type TrainerRateRow = {
   id: string;
   trainerUserId: string;
-  percent: number;
+  /**
+   * Null is a TOMBSTONE, and only ever appears on a class-type-scoped row:
+   * "from effectiveFrom, this class type goes back to the default rate".
+   * Ending an override by deleting its row would rewrite settled months, so
+   * the end is another append-only entry.
+   */
+  percent: number | null;
+  /** Null (or absent) = the trainer's default rate; set = one class type. */
+  classTypeId?: string | null;
   effectiveFrom: string;
   note: string | null;
   createdAt?: string;
@@ -23,6 +31,11 @@ export type TrainerRateRow = {
    */
   seq?: number;
 };
+
+/** Rows in one scope only — an absent classTypeId means the default scope. */
+function inScope(rate: TrainerRateRow, classTypeId: string | null) {
+  return (rate.classTypeId ?? null) === classTypeId;
+}
 
 /**
  * Newest first, and — crucially — most-recently-ENTERED first among rates that
@@ -48,26 +61,89 @@ function newestFirst(a: TrainerRateRow, b: TrainerRateRow) {
 export function currentTrainerRate(
   rates: TrainerRateRow[],
   trainerUserId: string,
+  classTypeId: string | null = null,
 ): TrainerRateRow | undefined {
-  const today = now().getTime();
-  return rates
-    .filter(
-      (rate) =>
-        rate.trainerUserId === trainerUserId &&
-        new Date(rate.effectiveFrom).getTime() <= today,
-    )
-    .sort(newestFirst)[0];
+  return newestRateAt(rates, trainerUserId, classTypeId, now());
 }
 
 /**
- * Every rate for one trainer, newest first — including any scheduled for the
- * future, which the admin needs to see so they don't set the same raise twice.
+ * Every rate for one trainer in one scope, newest first — including any
+ * scheduled for the future, which the admin needs to see so they don't set the
+ * same raise twice.
  */
 export function trainerRateHistory(
   rates: TrainerRateRow[],
   trainerUserId: string,
+  classTypeId: string | null = null,
 ): TrainerRateRow[] {
   return rates
-    .filter((rate) => rate.trainerUserId === trainerUserId)
+    .filter(
+      (rate) => rate.trainerUserId === trainerUserId && inScope(rate, classTypeId),
+    )
     .sort(newestFirst);
+}
+
+/**
+ * What a session of `classTypeId` pays at `at`, as a whole percent.
+ *
+ * A trainer's cut is not one number: an individual or a duo is worth a
+ * different percentage to the studio than a group slot. So each class type may
+ * carry its own override, and everything without one is paid the default.
+ *
+ * Two scopes, checked in order:
+ *   1. The newest row scoped to this class type that has taken effect. A real
+ *      percent wins outright; a NULL one is a tombstone that says "this
+ *      override is over" and hands the question back to —
+ *   2. the newest default-scope row that has taken effect, or null when the
+ *      trainer has no rate at all (which the caller surfaces rather than
+ *      inventing a percentage).
+ */
+export function effectiveTrainerPercentFor(
+  rates: TrainerRateRow[],
+  trainerUserId: string,
+  classTypeId: string | null,
+  at: Date,
+): number | null {
+  if (classTypeId !== null) {
+    const override = newestRateAt(rates, trainerUserId, classTypeId, at);
+    if (override && override.percent !== null) return override.percent;
+  }
+  return newestRateAt(rates, trainerUserId, null, at)?.percent ?? null;
+}
+
+/**
+ * Whether this class type is priced by an override of its own at `at`, as
+ * opposed to inheriting the default.
+ *
+ * The scope is what makes an override, not the number: one deliberately set to
+ * the same percentage as the default is still its own agreement, and folding it
+ * away would hide a rate the admin can see on the trainer's screen — and
+ * silently un-fold it the day the default moved. A tombstoned scope is NOT an
+ * override; it has been handed back.
+ */
+export function hasLiveOverride(
+  rates: TrainerRateRow[],
+  trainerUserId: string,
+  classTypeId: string,
+  at: Date,
+): boolean {
+  return newestRateAt(rates, trainerUserId, classTypeId, at)?.percent != null;
+}
+
+/** The newest row in one scope that has taken effect by `at`. */
+function newestRateAt(
+  rates: TrainerRateRow[],
+  trainerUserId: string,
+  classTypeId: string | null,
+  at: Date,
+): TrainerRateRow | undefined {
+  const atMs = at.getTime();
+  return rates
+    .filter(
+      (rate) =>
+        rate.trainerUserId === trainerUserId &&
+        inScope(rate, classTypeId) &&
+        new Date(rate.effectiveFrom).getTime() <= atMs,
+    )
+    .sort(newestFirst)[0];
 }

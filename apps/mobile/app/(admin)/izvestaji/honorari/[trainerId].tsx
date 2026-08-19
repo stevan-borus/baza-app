@@ -25,6 +25,7 @@ import {
   useTabBarBottomPadding,
 } from "@/components/ui/screen-container";
 import { MonthStepper } from "@/components/payroll/month-stepper";
+import { RateBreakdown } from "@/components/payroll/rate-breakdown";
 import { SummaryRow } from "@/components/payroll/summary-row";
 import { payrollQueries } from "@/lib/queries/payroll-queries-factory";
 import {
@@ -122,10 +123,6 @@ export default function HonorariTrainerDetail() {
                   value={formatRsd(month.gross)}
                 />
                 <SummaryRow
-                  label={t("payroll.percent")}
-                  value={month.percent === null ? t("payroll.noRate") : `${month.percent}%`}
-                />
-                <SummaryRow
                   label={t("payroll.sessionsHeld")}
                   value={String(month.sessionCount)}
                 />
@@ -141,7 +138,7 @@ export default function HonorariTrainerDetail() {
                 )}
               </View>
 
-              {month.percent === null && (
+              {month.buckets.some((bucket) => bucket.percent === null) && (
                 <Text
                   className="mt-3 text-sm"
                   style={{ color: tokens.warning }}
@@ -165,6 +162,12 @@ export default function HonorariTrainerDetail() {
                 </Text>
               )}
             </GlassCard>
+
+            {month.buckets.length > 0 && (
+              <GlassCard className="mb-4 p-4">
+                <RateBreakdown buckets={month.buckets} testIDPrefix="honorari" />
+              </GlassCard>
+            )}
 
             <CapsLabel>{t("payroll.sessionsHeld")}</CapsLabel>
             {sessions.length === 0 ? (
