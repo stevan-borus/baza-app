@@ -990,6 +990,118 @@ export async function findBirthdayAdminPromptFor(userEmail: string) {
   });
 }
 
+/**
+ * Give a trainer a SECOND class type's worth of finished, consumed sessions in
+ * the current payroll month.
+ *
+ * The rich seed pairs each trainer with exactly one class type — the Reformer
+ * lead teaches only Reformer, the Energy lead only Energy — so no seeded
+ * trainer's month splits into more than one bucket. A per-class-type override
+ * is only observable when the OTHER class types are still there to stay at the
+ * default rate, so the rate-override spec needs a trainer whose month spans
+ * two. This adds that second class type rather than re-pointing the seed's
+ * existing sessions, which would move the figures every other payroll surface
+ * is read against.
+ *
+ * Each attendance is written with its SessionConsumption, the way the
+ * consumption cron freezes it, so these sessions are valued exactly like the
+ * seeded ones rather than as an unpriced special case.
+ */
+export async function seedSecondClassTypeMonth(input: {
+  trainerEmail: string;
+  classTypeName: string;
+  /** Studio-local start instants, all inside the current payroll month. */
+  startsAt: Date[];
+}) {
+  const [trainer, classType] = await Promise.all([
+    db().user.findUnique({
+      where: { email: input.trainerEmail.toLowerCase() },
+      select: { id: true },
+    }),
+    db().classType.findFirst({
+      where: { name: input.classTypeName },
+      select: { id: true },
+    }),
+  ]);
+  if (!trainer || !classType) {
+    throw new Error(
+      `Trainer ${input.trainerEmail} or class type ${input.classTypeName} not found`,
+    );
+  }
+
+  // Any priced package scoped to this class type will do — the point is that
+  // these sessions carry real money, not which SKU produced it.
+  const pkg = await db().clientPackage.findFirst({
+    where: {
+      isGift: false,
+      classTypes: { some: { classTypeId: classType.id } },
+      packageType: { price: { not: null } },
+    },
+    select: {
+      id: true,
+      clientProfileId: true,
+      sessionsGranted: true,
+      bonusSessions: true,
+      clientProfile: {
+        select: { user: { select: { firstName: true, lastName: true } } },
+      },
+      packageType: { select: { name: true, price: true } },
+    },
+  });
+  if (!pkg) {
+    throw new Error(`No priced ${input.classTypeName} package to attend with`);
+  }
+
+  const total = pkg.sessionsGranted + pkg.bonusSessions;
+  const sessionValue =
+    pkg.packageType.price === null || total <= 0
+      ? null
+      : Math.round(pkg.packageType.price / total);
+
+  const sessionIds: string[] = [];
+  for (const startsAt of input.startsAt) {
+    const session = await db().session.create({
+      data: {
+        classTypeId: classType.id,
+        trainerUserId: trainer.id,
+        startsAt,
+        endsAt: new Date(startsAt.getTime() + 60 * 60 * 1000),
+        capacity: 6,
+        isActive: true,
+        status: "COMPLETED",
+      },
+      select: { id: true },
+    });
+    await db().booking.create({
+      data: {
+        sessionId: session.id,
+        clientProfileId: pkg.clientProfileId,
+        clientPackageId: pkg.id,
+      },
+    });
+    await db().sessionConsumption.create({
+      data: {
+        clientProfileId: pkg.clientProfileId,
+        sessionId: session.id,
+        consumedAt: new Date(startsAt.getTime() + 2 * 60 * 60 * 1000),
+        sessionValue,
+        clientName: `${pkg.clientProfile.user.firstName} ${pkg.clientProfile.user.lastName}`,
+        packageName: pkg.packageType.name,
+        isGift: false,
+      },
+    });
+    sessionIds.push(session.id);
+  }
+
+  return {
+    classTypeId: classType.id,
+    trainerUserId: trainer.id,
+    sessionIds,
+    /** What these sessions add to the month's gross, in RSD. */
+    gross: (sessionValue ?? 0) * input.startsAt.length,
+  };
+}
+
 export async function disconnect() {
   if (prismaClient) {
     await prismaClient.$disconnect();
