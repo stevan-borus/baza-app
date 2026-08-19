@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/session-edit-sheet";
 import { sessionsQueries } from "@/lib/queries/sessions-queries-factory";
 import { reportsQueries } from "@/lib/queries/reports-queries-factory";
+import { currentStudioMonthWindow } from "@/lib/admin/studio-month-window";
 import { activeClientRate } from "@/lib/format";
 import { useWeekNavigation, weekRangeLabel } from "@/lib/use-week-navigation";
 
@@ -54,7 +55,15 @@ export default function AdminSchedule() {
   const availabilityQuery = useQuery(
     sessionsQueries.availabilityByMonth(month),
   );
+  // Two summaries on purpose. The unscoped one is all-time (the route drops
+  // its time filter when no range is sent) and feeds the client tiles, whose
+  // meaning has been all-time since they shipped. The revenue hero is labelled
+  // "this month", so it gets its own month-scoped window — it was reading the
+  // unscoped query and showing lifetime revenue under a month label.
   const summaryQuery = useQuery(reportsQueries.summary());
+  const monthSummaryQuery = useQuery(
+    reportsQueries.summary(currentStudioMonthWindow()),
+  );
   const summary = summaryQuery.data?.summary;
 
   const sessions = availabilityQuery.data?.sessions ?? [];
@@ -83,13 +92,15 @@ export default function AdminSchedule() {
     router.push(`/(admin)/pregled/sessions/${session.id}`);
   }
 
-  const revenueValue = summary?.revenue ?? 0;
+  const revenueValue = monthSummaryQuery.data?.summary.revenue ?? 0;
   const attendanceRate = summary
     ? activeClientRate(summary.activeClients, summary.totalClients)
     : undefined;
 
   const isDashboardLoading =
-    summaryQuery.isLoading || availabilityQuery.isLoading;
+    summaryQuery.isLoading ||
+    monthSummaryQuery.isLoading ||
+    availabilityQuery.isLoading;
 
   if (isDashboardLoading) {
     return (
@@ -127,7 +138,7 @@ export default function AdminSchedule() {
           animate={{ opacity: 1, translateY: 0 }}
           transition={{ type: "timing", duration: 350 }}
         >
-          <View className="px-5 pb-6">
+          <View className="px-5 pb-6" testID="pregled-revenue-hero">
             <CapsLabel size={11} tracking={1.6} className="text-muted">
               {t("admin.dashboard.revenueThisMonth")}
             </CapsLabel>
