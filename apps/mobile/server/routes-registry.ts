@@ -22,6 +22,7 @@ import * as route_billing from "@/server/routes/billing";
 import * as route_billing_id from "@/server/routes/billing/[id]";
 import * as route_billing_summary from "@/server/routes/billing/summary";
 import * as route_bookings from "@/server/routes/bookings";
+import * as route_bookings_id_confirm_trial from "@/server/routes/bookings/[id]/confirm-trial";
 import * as route_campaigns from "@/server/routes/campaigns";
 import * as route_campaigns_id from "@/server/routes/campaigns/[id]";
 import * as route_campaigns_id_recipients from "@/server/routes/campaigns/[id]/recipients";
@@ -109,6 +110,7 @@ export const routesRegistry: Record<string, RouteModule> = {
   "billing/[id]": route_billing_id,
   "billing/summary": route_billing_summary,
   bookings: route_bookings,
+  "bookings/[id]/confirm-trial": route_bookings_id_confirm_trial,
   campaigns: route_campaigns,
   "campaigns/[id]": route_campaigns_id,
   "campaigns/[id]/recipients": route_campaigns_id_recipients,

@@ -15,6 +15,12 @@ export const payrollAttendeeSchema = z.object({
   // a warning rather than silently counted as zero.
   sessionValue: z.number().nullable(),
   isGift: z.boolean(),
+  // A confirmed trial (probni) attendance, valued at the class type's trial
+  // value rather than any package.
+  isTrial: z.boolean(),
+  // True only while an unbacked attendance is still confirmable: no package,
+  // and the class type carries a trial value. False once it is frozen.
+  canConfirmTrial: z.boolean(),
 });
 
 export const payrollSessionSchema = z.object({
@@ -80,6 +86,7 @@ export const payrollMonthSchema = z.object({
   netPayout: z.number(),
   unpricedCount: z.number(),
   giftCount: z.number(),
+  trialCount: z.number(),
   adjustments: z.array(
     z.object({
       id: z.string(),
@@ -116,6 +123,7 @@ export const payrollSummaryResponseSchema = z.object({
       netPayout: z.number(),
       unpricedCount: z.number(),
       giftCount: z.number(),
+      trialCount: z.number(),
     }),
   ),
   totalPayout: z.number(),
@@ -177,6 +185,19 @@ export const createTrainerRateResponseSchema = z.object({
   success: z.boolean(),
   rate: trainerRateSchema,
 });
+
+// ─── POST /api/bookings/[id]/confirm-trial ───────────────────────────────────
+
+export const confirmTrialResponseSchema = z.object({
+  success: z.boolean(),
+  consumption: z.object({
+    sessionId: z.string(),
+    clientProfileId: z.string(),
+    sessionValue: z.number(),
+    isTrial: z.boolean(),
+  }),
+});
+export type ConfirmTrialResponse = z.infer<typeof confirmTrialResponseSchema>;
 
 // ─── Adjustments ─────────────────────────────────────────────────────────────
 

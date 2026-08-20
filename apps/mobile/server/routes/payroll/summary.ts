@@ -59,6 +59,7 @@ export async function GET(request: Request) {
       netPayout: m.netPayout,
       unpricedCount: m.unpricedCount,
       giftCount: m.giftCount,
+      trialCount: m.trialCount,
     })),
     totalPayout: months.reduce((sum, m) => sum + m.netPayout, 0),
   });

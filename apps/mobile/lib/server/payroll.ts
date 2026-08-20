@@ -30,6 +30,8 @@ export type PayrollSessionBreakdown = {
     packageName: string;
     sessionValue: number | null;
     isGift: boolean;
+    isTrial: boolean;
+    canConfirmTrial: boolean;
   }>;
   gross: number;
   unpricedCount: number;
@@ -50,6 +52,8 @@ export type PayrollMonth = {
   /** Attendances whose package carries no price — shown, never hidden. */
   unpricedCount: number;
   giftCount: number;
+  /** Confirmed trial attendances — what the studio gave away as probni. */
+  trialCount: number;
 };
 
 /**
@@ -130,7 +134,9 @@ export async function computePayrollMonth(
       id: true,
       startsAt: true,
       classTypeId: true,
-      classType: { select: { name: true } },
+      // trialSessionValue decides whether an unbacked attendance is still
+      // confirmable as a trial — without a value there is nothing to freeze.
+      classType: { select: { name: true, trialSessionValue: true } },
       // The frozen payroll record. Present for every consumed attendance,
       // which is everything the daily cron has caught up with.
       consumptions: {
@@ -143,6 +149,7 @@ export async function computePayrollMonth(
           packageName: true,
           sessionValue: true,
           isGift: true,
+          isTrial: true,
         },
       },
       // Fallback only: a session that ended but has not been consumed yet
@@ -200,6 +207,9 @@ export async function computePayrollMonth(
       packagePrice: c.sessionValue,
       sessionsTotal: c.sessionValue === null ? 0 : 1,
       isGift: c.isGift,
+      isTrial: c.isTrial,
+      // Frozen: the value is settled, so there is nothing left to confirm.
+      canConfirmTrial: false,
     }));
     const live: PayrollAttendee[] = session.bookings
       .filter((booking) => !snapshotted.has(booking.clientProfileId))
@@ -224,6 +234,13 @@ export async function computePayrollMonth(
                 : packageSessionsTotal(pkg)
               : 0,
             isGift: pkg?.isGift ?? false,
+            // Only a snapshot can carry a trial value, and a live line has
+            // none by definition.
+            isTrial: false,
+            // An unbacked attendance the admin can still value — but only on a
+            // class type that says what a trial is worth.
+            canConfirmTrial:
+              !pkg && session.classType.trialSessionValue !== null,
           };
         });
 
@@ -239,6 +256,8 @@ export async function computePayrollMonth(
         packageName: line.packageName,
         sessionValue: line.sessionValue === null ? null : Math.round(line.sessionValue),
         isGift: line.isGift,
+        isTrial: line.isTrial,
+        canConfirmTrial: line.canConfirmTrial,
       })),
       gross: valued.gross,
       unpricedCount: valued.unpricedCount,
@@ -272,6 +291,10 @@ export async function computePayrollMonth(
     unpricedCount: breakdowns.reduce((sum, s) => sum + s.unpricedCount, 0),
     giftCount: breakdowns.reduce(
       (sum, s) => sum + s.attendees.filter((a) => a.isGift).length,
+      0,
+    ),
+    trialCount: breakdowns.reduce(
+      (sum, s) => sum + s.attendees.filter((a) => a.isTrial).length,
       0,
     ),
   };

@@ -22,6 +22,8 @@ function attendee(overrides: Partial<PayrollAttendee> = {}): PayrollAttendee {
     packagePrice: 15000,
     sessionsTotal: 12,
     isGift: false,
+    isTrial: false,
+    canConfirmTrial: false,
     ...overrides,
   };
 }

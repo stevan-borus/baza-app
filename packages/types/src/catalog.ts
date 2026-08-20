@@ -14,6 +14,7 @@ const classTypeFieldsSchema = z.object({
   name: z.string(),
   maxClients: z.number().int(),
   durationMins: z.number().int(),
+  trialSessionValue: z.number().int().positive(),
 });
 const studioRoomFieldsSchema = z.object({
   name: z.string(),
@@ -70,10 +71,16 @@ export const classTypeInputSchema = classTypeFieldsSchema.pick({
   name: true,
   maxClients: true,
   durationMins: true,
+  trialSessionValue: true,
 }).extend({
   name: z.string().trim().min(2).max(100),
   maxClients: z.number().int().positive(),
   durationMins: z.number().int().positive(),
+  // RSD payroll value for a confirmed trial attendance — required at
+  // creation, and PATCH can never clear it back to null. An unvalued type
+  // silently drops confirmed trials out of the trainer payout, so the only
+  // null rows left are legacy ones awaiting a DB backfill.
+  trialSessionValue: z.number().int().positive(),
 });
 
 export const studioRoomInputSchema = studioRoomFieldsSchema.pick({
@@ -155,6 +162,7 @@ export const classTypeSchema = z.object({
   name: z.string(),
   maxClients: z.number(),
   durationMins: z.number(),
+  trialSessionValue: z.number().nullable(),
 });
 export type ClassType = z.infer<typeof classTypeSchema>;
 

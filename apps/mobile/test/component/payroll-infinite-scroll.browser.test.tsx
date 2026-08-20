@@ -56,6 +56,8 @@ function makeMonth(sessionCount: number): PayrollMonth {
           packageName: "Paket 10",
           sessionValue: 1000,
           isGift: false,
+          isTrial: false,
+          canConfirmTrial: false,
         },
       ],
       gross: 1000,
@@ -69,6 +71,7 @@ function makeMonth(sessionCount: number): PayrollMonth {
     netPayout: sessionCount * 500,
     unpricedCount: 0,
     giftCount: 0,
+    trialCount: 0,
     adjustments: [],
   };
 }

@@ -315,6 +315,9 @@ model ClassType {
   name         String
   maxClients   Int
   durationMins Int
+  // Optional RSD payroll value of a confirmed trial (probni) attendance. Null
+  // = trials stay unvalued and keep the report's unpriced warning.
+  trialSessionValue Int?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   sessions           Session[]
@@ -556,6 +559,9 @@ model SessionConsumption {
   clientName        String
   packageName       String?
   isGift            Boolean       @default(false)
+  // A trial (probni) attendance an admin confirmed, valued at the class type's
+  // trialSessionValue rather than any package.
+  isTrial           Boolean       @default(false)
   clientProfile     ClientProfile? @relation(fields: [clientProfileId], references: [id], onDelete: SetNull)
   session           Session       @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 

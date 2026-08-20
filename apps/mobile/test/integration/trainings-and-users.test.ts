@@ -63,6 +63,7 @@ describe("trainings + users/trainers", () => {
           name: "Moms&Minis",
           maxClients: 8,
           durationMins: 50,
+          trialSessionValue: 1200,
         }),
       }),
     );
@@ -71,6 +72,7 @@ describe("trainings + users/trainers", () => {
       where: { name: "Moms&Minis" },
     });
     expect(persisted).not.toBeNull();
+    expect(persisted?.trialSessionValue).toBe(1200);
   });
 
   it("GET /api/users/trainers returns only active trainers and admins, sorted by lastName", async () => {

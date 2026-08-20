@@ -74,6 +74,7 @@ test.describe("admin — list splices on write (no refetch)", () => {
     await page.getByTestId("class-type-name-input").fill("E2E Splice Class");
     await page.getByTestId("class-type-max-clients-input").fill("6");
     await page.getByTestId("class-type-duration-input").fill("50");
+    await page.getByTestId("class-type-trial-value-input").fill("1200");
     await page.getByTestId("class-type-create-submit").click();
     await expect(page.getByText("E2E Splice Class")).toBeVisible();
 
