@@ -26,11 +26,10 @@ import { useThemeTokens } from "@/components/ui/tokens";
 import { createTrainerRateMutationOptions } from "@/lib/queries/payroll-queries-factory";
 import { formatMutationError } from "@/lib/admin/format-mutation-error";
 import {
-  currentTrainerRate,
   trainerRateHistory,
   type TrainerRateRow,
 } from "@/lib/trainer-rate-selection";
-import { decimalSeparator, getDateLocale } from "@/lib/i18n";
+import { getDateLocale } from "@/lib/i18n";
 import { formatPercent } from "@/lib/format";
 import { now } from "@/lib/now";
 
@@ -48,13 +47,27 @@ export type RateSheetProps = {
   /** Omitted = the trainer's base percentage. */
   scope?: RateSheetScope | null;
   /**
+   * The percentage field, owned by the caller.
+   *
+   * The sheet stays mounted for the life of the screen — unmounting a
+   * presented modal wedges it — so it cannot seed itself from `rates` on
+   * mount the way a remount-per-open sheet would. The caller derives this
+   * from the live rates instead, falling back to whatever has been typed.
+   */
+  percent: string;
+  onPercentChange: (percent: string) => void;
+  /**
    * Whether this scope currently carries a live override — i.e. whether there
    * is anything to hand back to the base rate. False on the base sheet: there
    * is no base to fall back to.
    */
   canRevert?: boolean;
-  /** Advance to the confirm step that ends the override. */
-  onRevert?: () => void;
+  /**
+   * Advance to the confirm step that ends the override, for the scope this
+   * sheet is showing. The scope is handed back rather than re-read by the
+   * caller, which may be holding a render-old copy of it.
+   */
+  onRevert?: (scope: RateSheetScope) => void;
 };
 
 export function RateSheet({
@@ -64,6 +77,8 @@ export function RateSheet({
   trainerName,
   rates,
   scope = null,
+  percent,
+  onPercentChange,
   canRevert = false,
   onRevert,
 }: RateSheetProps) {
@@ -75,17 +90,22 @@ export function RateSheet({
   const classTypeId = scope?.classTypeId ?? null;
   const history = trainerRateHistory(rates, trainerUserId, classTypeId);
 
-  // Remounting per open (see the `key` at every call site) is what seeds the
-  // form from the scope's current rate without an effect syncing state to
-  // props.
-  const [percent, setPercent] = useState(() => {
-    const current = currentTrainerRate(rates, trainerUserId, classTypeId)?.percent;
-    // Seeded in the separator the admin will type back — editing "22,5" must
-    // not require retyping it as "22.5".
-    return current == null ? "" : String(current).replace(".", decimalSeparator());
-  });
   const [effectiveFrom, setEffectiveFrom] = useState<Date>(() => now());
   const [note, setNote] = useState("");
+
+  // The date and the note belong to ONE opening of the sheet — a note typed
+  // for last month's correction must not be waiting in the field the next
+  // time the sheet is opened. The sheet never unmounts, so they are cleared
+  // on the open transition instead of by a remount.
+  const [wasOpen, setWasOpen] = useState(open);
+  if (open !== wasOpen) {
+    setWasOpen(open);
+    if (open) {
+      setEffectiveFrom(now());
+      setNote("");
+      createRate.reset();
+    }
+  }
 
   // The studio types 22,5 — a comma is what a Serbian keyboard puts under the
   // thumb — so both separators parse to the same rate.
@@ -120,7 +140,7 @@ export function RateSheet({
           </CapsLabel>
           <Input
             value={percent}
-            onChangeText={setPercent}
+            onChangeText={onPercentChange}
             keyboardType="decimal-pad"
             placeholder="40"
             testID="procenti-percent-input"
@@ -243,7 +263,7 @@ export function RateSheet({
           <Pressable
             accessibilityRole="button"
             testID={`procenti-revert-${scope.classTypeId}`}
-            onPress={onRevert}
+            onPress={() => onRevert(scope)}
             android_ripple={null}
             className="active:opacity-70"
           >
@@ -286,6 +306,18 @@ export function RevertRateSheet({
   const queryClient = useQueryClient();
   const createRate = useMutation(createTrainerRateMutationOptions(queryClient));
   const [effectiveFrom, setEffectiveFrom] = useState<Date>(() => now());
+
+  // Mounted for the life of the screen (unmounting a presented modal wedges
+  // it), so the date resets on the OPEN transition rather than on a remount —
+  // otherwise the second revert would silently reuse the first one's date.
+  const [wasOpen, setWasOpen] = useState(open);
+  if (open !== wasOpen) {
+    setWasOpen(open);
+    if (open) {
+      setEffectiveFrom(now());
+      createRate.reset();
+    }
+  }
 
   return (
     <AppSheet open={open} onOpenChange={onOpenChange}>

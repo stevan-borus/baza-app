@@ -321,6 +321,76 @@ describe("Saving a rate from the trainer's screen", () => {
     expect(postBodies).toHaveLength(0);
   });
 
+  it("reopens the reverted class type on a sheet that knows the override is over", async () => {
+    // Reopening a class type after ending its override must show the state
+    // that is now in force: no seeded 22,5 and nothing left to revert.
+    //
+    // This locks the SCREEN's state logic — which scope the reopened sheet is
+    // for, and what it derives from the refetched rates. It does NOT reproduce
+    // the shipped bug, which was the real gorhom modal staying wedged in its
+    // host when the screen unmounted it mid-presentation; the stub here mounts
+    // children only while presented and tears down cleanly, so it passed
+    // before the fix too. That regression is held by
+    // test/e2e/trainer-rate-overrides.spec.ts.
+    ratesRows = [
+      RATES[0]!,
+      {
+        id: "rate-half",
+        trainerUserId: TRAINER.id,
+        percent: 22.5,
+        classTypeId: "ct-individual",
+        effectiveFrom: "2026-02-01T00:00:00.000Z",
+        note: null,
+        seq: 5,
+      },
+    ];
+
+    const screen = renderWithQueryClient(<TrainerRates />);
+
+    fireEvent.click(
+      await screen.findByTestId("procenti-class-type-row-ct-individual"),
+    );
+    expect(
+      ((await screen.findByTestId("procenti-percent-input")) as HTMLInputElement)
+        .value,
+    ).toBe("22,5");
+
+    fireEvent.click(await screen.findByTestId("procenti-revert-ct-individual"));
+    // The tombstone the confirm writes is what the refetch will hand back.
+    ratesRows = [
+      ...ratesRows,
+      {
+        id: "rate-individual-end",
+        trainerUserId: TRAINER.id,
+        percent: null,
+        classTypeId: "ct-individual",
+        effectiveFrom: "2026-08-19T00:00:00.000Z",
+        note: null,
+        seq: 6,
+      },
+    ];
+    fireEvent.click(await screen.findByTestId("procenti-revert-confirm"));
+
+    // The row follows the effective state first — inherited, at the base.
+    await waitFor(() =>
+      expect(
+        screen.getByTestId("procenti-class-type-row-ct-individual").textContent,
+      ).toContain("40% (osnovni)"),
+    );
+
+    fireEvent.click(screen.getByTestId("procenti-class-type-row-ct-individual"));
+    await screen.findByTestId("procenti-percent-input");
+
+    // ONE sheet — the pre-revert one is gone rather than stacked underneath —
+    // and it neither seeds the percentage that was just ended nor offers to
+    // end an override that is already over.
+    expect(screen.getAllByTestId("stub-bottom-sheet")).toHaveLength(1);
+    expect(
+      (screen.getByTestId("procenti-percent-input") as HTMLInputElement).value,
+    ).not.toBe("22,5");
+    expect(screen.queryByTestId("procenti-revert-ct-individual")).toBeNull();
+  });
+
   it("offers no revert in the base-rate sheet — there is no base to fall back to", async () => {
     const screen = renderWithQueryClient(<TrainerRates />);
 
@@ -341,7 +411,7 @@ describe("Trainer roster override hint", () => {
     const hint = await screen.findByTestId(
       `procenti-overrides-hint-${TRAINER.id}`,
     );
-    expect(hint.textContent).toContain("+1 posebna");
+    expect(hint.textContent).toContain("+1 posebni procenat");
     // The row still leads with the BASE percentage — the hint is a count, not
     // a replacement for the number the admin came to read.
     expect(
@@ -350,14 +420,16 @@ describe("Trainer roster override hint", () => {
   });
 
   it.each([
-    { count: 1, expected: "+1 posebna" },
-    { count: 2, expected: "+2 posebne" },
-    { count: 5, expected: "+5 posebnih" },
+    { count: 1, expected: "+1 posebni procenat" },
+    { count: 2, expected: "+2 posebna procenta" },
+    { count: 5, expected: "+5 posebnih procenata" },
   ])(
     "declines the Serbian chip for $count overrides ($expected)",
     async ({ count, expected }) => {
-      // "+2 posebna" is not Serbian. The count drives three forms — the same
-      // thing every other counted string in the app already does.
+      // "+2 posebna" was not Serbian, and a bare adjective is not a phrase:
+      // procenat is masculine, so the chip carries the noun it counts. The
+      // count drives three forms — the thing every other counted string in
+      // the app already does.
       // The roster counts overrides against the class-type CATALOGUE, so the
       // scoped rates need class types that actually exist.
       classTypeRows = Array.from({ length: count }, (_, i) => ({

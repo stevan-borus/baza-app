@@ -1428,8 +1428,8 @@
     "revertToBase": "Revert to base percentage",
     "revertToBaseHint": "{{classType}} is paid at the base percentage from the selected date.",
     "revertedToBase": "base",
-    "overridesHint_one": "+{{count}} special",
-    "overridesHint_other": "+{{count}} special",
+    "overridesHint_one": "+{{count}} special rate",
+    "overridesHint_other": "+{{count}} special rates",
     "overridesHintA11y_one": "{{count}} special percentage",
     "overridesHintA11y_other": "{{count}} special percentages"
   }
