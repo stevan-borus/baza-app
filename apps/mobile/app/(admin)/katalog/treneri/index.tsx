@@ -19,6 +19,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { getDateLocale } from "@/lib/i18n";
+import { formatPercent } from "@/lib/format";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { router } from "expo-router";
 import { Icon } from "@/components/ui/icon";
@@ -191,7 +192,7 @@ export default function Treneri() {
                           }}
                           testID={`procenti-value-${trainer.id}`}
                         >
-                          {rate ? `${rate.percent}%` : "—"}
+                          {rate?.percent != null ? formatPercent(rate.percent) : "—"}
                         </Text>
                         <Icon name="chevron-right" size={11} color="#52525b" />
                       </View>

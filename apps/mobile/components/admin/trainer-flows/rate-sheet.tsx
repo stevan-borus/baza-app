@@ -16,7 +16,7 @@ import { useState } from "react";
 import dayjs from "dayjs";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { AppSheet } from "@/components/ui/sheet";
@@ -30,7 +30,8 @@ import {
   trainerRateHistory,
   type TrainerRateRow,
 } from "@/lib/trainer-rate-selection";
-import { getDateLocale } from "@/lib/i18n";
+import { decimalSeparator, getDateLocale } from "@/lib/i18n";
+import { formatPercent } from "@/lib/format";
 import { now } from "@/lib/now";
 
 export type RateSheetScope = {
@@ -46,6 +47,14 @@ export type RateSheetProps = {
   rates: TrainerRateRow[];
   /** Omitted = the trainer's base percentage. */
   scope?: RateSheetScope | null;
+  /**
+   * Whether this scope currently carries a live override — i.e. whether there
+   * is anything to hand back to the base rate. False on the base sheet: there
+   * is no base to fall back to.
+   */
+  canRevert?: boolean;
+  /** Advance to the confirm step that ends the override. */
+  onRevert?: () => void;
 };
 
 export function RateSheet({
@@ -55,6 +64,8 @@ export function RateSheet({
   trainerName,
   rates,
   scope = null,
+  canRevert = false,
+  onRevert,
 }: RateSheetProps) {
   const { t, i18n } = useTranslation();
   const tokens = useThemeTokens();
@@ -67,18 +78,26 @@ export function RateSheet({
   // Remounting per open (see the `key` at every call site) is what seeds the
   // form from the scope's current rate without an effect syncing state to
   // props.
-  const [percent, setPercent] = useState(() =>
-    String(currentTrainerRate(rates, trainerUserId, classTypeId)?.percent ?? ""),
-  );
+  const [percent, setPercent] = useState(() => {
+    const current = currentTrainerRate(rates, trainerUserId, classTypeId)?.percent;
+    // Seeded in the separator the admin will type back — editing "22,5" must
+    // not require retyping it as "22.5".
+    return current == null ? "" : String(current).replace(".", decimalSeparator());
+  });
   const [effectiveFrom, setEffectiveFrom] = useState<Date>(() => now());
   const [note, setNote] = useState("");
 
-  const parsedPercent = Number(percent);
+  // The studio types 22,5 — a comma is what a Serbian keyboard puts under the
+  // thumb — so both separators parse to the same rate.
+  const parsedPercent = Number(percent.trim().replace(",", "."));
   const percentValid =
     percent.trim() !== "" &&
-    Number.isInteger(parsedPercent) &&
+    Number.isFinite(parsedPercent) &&
     parsedPercent >= 0 &&
-    parsedPercent <= 100;
+    parsedPercent <= 100 &&
+    // At most ONE decimal place. Compared after scaling rather than on the
+    // string, because 22.5 is not exactly representable in binary.
+    Math.abs(parsedPercent * 10 - Math.round(parsedPercent * 10)) < 1e-9;
 
   return (
     <AppSheet open={open} onOpenChange={onOpenChange}>
@@ -102,7 +121,7 @@ export function RateSheet({
           <Input
             value={percent}
             onChangeText={setPercent}
-            keyboardType="number-pad"
+            keyboardType="decimal-pad"
             placeholder="40"
             testID="procenti-percent-input"
           />
@@ -172,7 +191,7 @@ export function RateSheet({
                           than naming what it did. */}
                       {rate.percent === null
                         ? t("payroll.revertedToBase")
-                        : `${rate.percent}%`}
+                        : formatPercent(rate.percent)}
                     </Text>
                   </View>
                 );
@@ -214,6 +233,27 @@ export function RateSheet({
         >
           {t("payroll.saveRate")}
         </Button>
+
+        {/* Quieter than the save button and below it, because setting the
+            percentage is what the sheet is for and ending the override is the
+            exception. A sibling of the button, never nested inside it —
+            nesting one press target in another is invalid on web and the
+            outer one swallows the tap. */}
+        {canRevert && scope && onRevert && (
+          <Pressable
+            accessibilityRole="button"
+            testID={`procenti-revert-${scope.classTypeId}`}
+            onPress={onRevert}
+            android_ripple={null}
+            className="active:opacity-70"
+          >
+            <View className="items-center py-1">
+              <Text className="text-sm" style={{ color: tokens.muted }}>
+                {t("payroll.revertToBase")}
+              </Text>
+            </View>
+          </Pressable>
+        )}
       </View>
     </AppSheet>
   );

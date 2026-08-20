@@ -102,7 +102,10 @@ describe("/api/payroll/rates", () => {
       where: { id: body.rate.id },
       select: { classTypeId: true, percent: true },
     });
-    expect(stored).toEqual({ classTypeId: seeded.individual.id, percent: 60 });
+    // percent is Decimal(5,2) in the DB, so the stored value is a Decimal
+    // object — the route is what turns it back into a number on the wire.
+    expect(stored?.classTypeId).toBe(seeded.individual.id);
+    expect(Number(stored?.percent)).toBe(60);
   });
 
   it("accepts a null percent on a scoped rate as the tombstone that ends it", async () => {
@@ -191,6 +194,89 @@ describe("/api/payroll/rates", () => {
     expect(scoped.percent).toBe(60);
     expect(fallback.classTypeName).toBeNull();
     expect(fallback.percent).toBe(40);
+  });
+
+  it("persists a half point and reads it back as a number, not a Decimal string", async () => {
+    // The column is Decimal now — the studio negotiates in half points, not
+    // whole ones. Prisma hands Decimal objects back, and one serialised
+    // straight into the response would reach the client as "22.5" (a string)
+    // or as {s,e,d} and fail the response schema.
+    const seeded = await seed();
+    asUser(seeded.admin);
+
+    const created = await POST(
+      postRate({
+        trainerUserId: seeded.trainer.id,
+        percent: 22.5,
+        effectiveFrom: "2026-09-01",
+      }),
+    );
+    expect(created.status).toBe(201);
+    const createdBody = await created.json();
+    expect(createdBody.rate.percent).toBe(22.5);
+    expect(typeof createdBody.rate.percent).toBe("number");
+
+    const listed = await GET(
+      new Request(
+        `http://test.local/api/payroll/rates?trainerUserId=${seeded.trainer.id}`,
+      ),
+    );
+    const listedBody = await listed.json();
+    expect(listedBody.rates[0].percent).toBe(22.5);
+    expect(typeof listedBody.rates[0].percent).toBe("number");
+  });
+
+  it("persists a half point on a class-type override too", async () => {
+    const seeded = await seed();
+    asUser(seeded.admin);
+
+    const res = await POST(
+      postRate({
+        trainerUserId: seeded.trainer.id,
+        classTypeId: seeded.individual.id,
+        percent: 47.5,
+        effectiveFrom: "2026-09-01",
+      }),
+    );
+    expect(res.status).toBe(201);
+    expect((await res.json()).rate.percent).toBe(47.5);
+  });
+
+  it("rejects a percent with two decimal places", async () => {
+    // 22.55% is a number nobody agreed to, and every payout would carry the
+    // rounding of it forever.
+    const seeded = await seed();
+    asUser(seeded.admin);
+
+    const res = await POST(
+      postRate({
+        trainerUserId: seeded.trainer.id,
+        percent: 22.55,
+        effectiveFrom: "2026-09-01",
+      }),
+    );
+    expect(res.status).toBe(400);
+  });
+
+  it("keeps existing whole-number rates reading as whole numbers", async () => {
+    // The Int → Decimal widening must not turn 40 into 40.00 on the wire.
+    const seeded = await seed();
+    await prisma.trainerRate.create({
+      data: {
+        trainerUserId: seeded.trainer.id,
+        percent: 40,
+        effectiveFrom: new Date("2026-01-01"),
+      },
+    });
+
+    asUser(seeded.admin);
+    const res = await GET(
+      new Request(
+        `http://test.local/api/payroll/rates?trainerUserId=${seeded.trainer.id}`,
+      ),
+    );
+    const body = await res.json();
+    expect(body.rates[0].percent).toBe(40);
   });
 
   it("keeps rates admin-only in both directions", async () => {

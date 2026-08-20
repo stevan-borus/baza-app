@@ -613,7 +613,8 @@ describe("invites API", () => {
       where: { trainerUserId: created!.id },
     });
     expect(rates).toHaveLength(1);
-    expect(rates[0]!.percent).toBe(45);
+    // Decimal(5,2) column — compare numerically, not by identity.
+    expect(Number(rates[0]!.percent)).toBe(45);
     expect(rates[0]!.createdByUserId).toBe(admin.id);
     // Same studio-day boundary the rates POST route stamps, so an
     // invite-seeded rate is indistinguishable from a hand-set one.

@@ -65,6 +65,9 @@ export async function GET(request: Request) {
     success: true,
     rates: rates.map(({ classType, ...rate }) => ({
       ...rate,
+      // Decimal(5,2) in the DB, a plain number on the wire — a Decimal
+      // serialises as an object and would fail the response contract.
+      percent: rate.percent === null ? null : Number(rate.percent),
       classTypeName: classType?.name ?? null,
       effectiveFrom: rate.effectiveFrom.toISOString(),
       createdAt: rate.createdAt.toISOString(),
@@ -139,6 +142,7 @@ export async function POST(request: Request) {
       success: true,
       rate: {
         ...created,
+        percent: created.percent === null ? null : Number(created.percent),
         classTypeName: classType?.name ?? null,
         effectiveFrom: rate.effectiveFrom.toISOString(),
         createdAt: rate.createdAt.toISOString(),

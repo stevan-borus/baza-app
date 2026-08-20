@@ -174,11 +174,13 @@ model TrainerProfile {
 model TrainerRate {
   id            String   @id @default(uuid())
   trainerUserId String
-  // Whole percent of the session gross (e.g. 40 = 40%). Null is a tombstone,
-  // valid only on class-type-scoped rows: "from effectiveFrom, this class
-  // type reverts to the default rate". Default-scope rows always carry a
-  // number — the route enforces it.
-  percent       Int?
+  // Percent of the session gross (e.g. 40 = 40%, 22.5 = 22.5%). One decimal
+  // place: the studio was assumed to negotiate in whole points and doesn't —
+  // a trainer moving 22% → 22.5% has to be representable. Null is a
+  // tombstone, valid only on class-type-scoped rows: "from effectiveFrom,
+  // this class type reverts to the default rate". Default-scope rows always
+  // carry a number — the route enforces it.
+  percent       Decimal? @db.Decimal(5, 2)
   // The scope. Null = the trainer's default rate (every pre-existing row).
   // Set = an override for sessions of this class type only. Cascade is safe:
   // a class type is only deletable while no session ever used it, so a

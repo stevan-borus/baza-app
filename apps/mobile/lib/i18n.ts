@@ -79,4 +79,13 @@ export function getDateLocale(): string {
   return i18n.language === "en" ? "en-US" : "sr-Latn-RS";
 }
 
+/**
+ * The decimal separator the current UI language writes — "," in Serbian, "."
+ * in English. Used to seed and read number inputs in the notation the person
+ * typing actually uses.
+ */
+export function decimalSeparator(): string {
+  return (1.1).toLocaleString(getDateLocale()).replace(/\d/g, "");
+}
+
 export { STORAGE_KEY };

@@ -1,3 +1,5 @@
+import { getDateLocale } from "@/lib/i18n";
+
 /**
  * Currency formatting shared across admin + client surfaces.
  *
@@ -10,6 +12,25 @@
  */
 export function formatRsd(n: number): string {
   return `${Math.round(n).toLocaleString("sr-RS")} RSD`;
+}
+
+/**
+ * A trainer's commission, as it reads on screen.
+ *
+ * Rates carry one decimal place — a trainer moving 22% to 22.5% has to be
+ * representable — but almost all of them are still whole points, and printing
+ * "35.0%" everywhere would be noise dressed as precision. So the decimal
+ * appears only when there is one.
+ *
+ * The separator follows the UI language the way the rest of the app's numbers
+ * do: Serbian writes 22,5 and English writes 22.5.
+ */
+export function formatPercent(percent: number): string {
+  const decimals = Number.isInteger(percent) ? 0 : 1;
+  return `${percent.toLocaleString(getDateLocale(), {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
+  })}%`;
 }
 
 /**

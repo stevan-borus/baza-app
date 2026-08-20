@@ -86,6 +86,11 @@ async function trainerRatesAsOf(
   });
   return rates.map((rate) => ({
     ...rate,
+    // percent is Decimal(5,2) in the DB — rates carry half points. Everything
+    // downstream (selection, bucketing, the wire) works in plain numbers, so
+    // the Decimal stops here rather than leaking into arithmetic that would
+    // silently concatenate it or into JSON as an object.
+    percent: rate.percent === null ? null : Number(rate.percent),
     effectiveFrom: rate.effectiveFrom.toISOString(),
     createdAt: rate.createdAt.toISOString(),
   }));

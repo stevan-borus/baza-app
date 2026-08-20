@@ -112,6 +112,42 @@ describe("bucketPayout", () => {
     return { classTypeId, classTypeName, gross };
   }
 
+  it("pays a half-point rate in whole dinars", () => {
+    // Rates carry one decimal now. The money must not: nobody pays 0.5 RSD,
+    // and a fractional payout would print as a rounding artefact next to a
+    // gross that is whole.
+    const { buckets, payout } = bucketPayout(
+      [session("ct-1", "Grupni", 12_345)],
+      DEFAULT_RATE(22.5),
+    );
+    expect(buckets[0]!.percent).toBe(22.5);
+    expect(buckets[0]!.payout).toBe(2778); // 12345 * 0.225 = 2777.625
+    expect(Number.isInteger(payout)).toBe(true);
+    expect(payout).toBe(2778);
+  });
+
+  it("keeps the buckets summing to the payout with fractional percents", () => {
+    // The breakdown is shown to the person being paid, so a total that does
+    // not equal the sum of the rows above it reads as an error.
+    const { buckets, payout } = bucketPayout(
+      [
+        session("ct-individual", "Individualni", 8_333),
+        session("ct-group", "Grupni", 12_345),
+        session("ct-group", "Grupni", 4_111),
+      ],
+      (classTypeId) =>
+        classTypeId === "ct-individual"
+          ? { percent: 47.5, overridden: true }
+          : { percent: 22.5, overridden: false },
+    );
+
+    for (const bucket of buckets) {
+      expect(Number.isInteger(bucket.payout), `${bucket.classTypeName}`).toBe(true);
+    }
+    expect(payout).toBe(buckets.reduce((sum, b) => sum + b.payout, 0));
+    expect(Number.isInteger(payout)).toBe(true);
+  });
+
   it("collapses a month with no overrides into one default bucket", () => {
     const result = bucketPayout(
       [

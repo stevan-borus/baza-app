@@ -41,6 +41,7 @@ import {
   hasLiveOverride,
 } from "@/lib/trainer-rate-selection";
 import { getDateLocale } from "@/lib/i18n";
+import { formatPercent } from "@/lib/format";
 import { now } from "@/lib/now";
 
 export default function TrainerRates() {
@@ -139,7 +140,9 @@ export default function TrainerRates() {
                       }}
                       testID="procenti-default-value"
                     >
-                      {defaultRate ? `${defaultRate.percent}%` : "—"}
+                      {defaultRate?.percent != null
+                        ? formatPercent(defaultRate.percent)
+                        : "—"}
                     </Text>
                     <Icon name="chevron-right" size={11} color="#52525b" />
                   </View>
@@ -169,9 +172,12 @@ export default function TrainerRates() {
                 classTypeName: classType.name,
               };
               return (
-                // The revert action is a SIBLING of the row press target, not
-                // a child: nesting one button inside another is invalid on web
-                // and the outer one swallows the inner tap.
+                // ONE tap target, end to end. The row used to carry a second
+                // "Vrati na osnovni procenat" press area, which was the only
+                // labelled text on it — so reverting read as the only thing
+                // an admin could do here and changing the percentage looked
+                // impossible. Reverting now lives inside the sheet the row
+                // opens.
                 <GlassCard
                   key={classType.id}
                   style={{ padding: 0, borderRadius: 16, overflow: "hidden" }}
@@ -208,29 +214,15 @@ export default function TrainerRates() {
                           {percent === null
                             ? "—"
                             : overridden
-                              ? `${percent}%`
-                              : t("payroll.inheritedPercent", { percent })}
+                              ? formatPercent(percent)
+                              : t("payroll.inheritedPercent", {
+                                  percent: formatPercent(percent).replace("%", ""),
+                                })}
                         </Text>
                         <Icon name="chevron-right" size={11} color="#52525b" />
                       </View>
                     </View>
                   </Pressable>
-
-                  {overridden && (
-                    <Pressable
-                      accessibilityRole="button"
-                      testID={`procenti-revert-${classType.id}`}
-                      onPress={() => setReverting(scope)}
-                      android_ripple={null}
-                      className="active:opacity-70"
-                    >
-                      <View className="px-4 pb-3">
-                        <Text className="text-xs" style={{ color: tokens.muted }}>
-                          {t("payroll.revertToBase")}
-                        </Text>
-                      </View>
-                    </Pressable>
-                  )}
                 </GlassCard>
               );
             })}
@@ -249,6 +241,19 @@ export default function TrainerRates() {
           trainerName={trainerName}
           rates={rates}
           scope={editing}
+          // Only a scope that is actually overridden has anything to hand
+          // back; the base rate has no base to fall back to.
+          canRevert={
+            editing
+              ? hasLiveOverride(rates, trainerUserId, editing.classTypeId, at)
+              : false
+          }
+          onRevert={() => {
+            // Advance to the confirm step: the two sheets swap rather than
+            // stack, so the revert date is asked for on a screen of its own.
+            setEditing(undefined);
+            if (editing) setReverting(editing);
+          }}
         />
       )}
 

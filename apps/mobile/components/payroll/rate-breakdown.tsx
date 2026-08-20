@@ -3,7 +3,7 @@ import { Text, View } from "react-native";
 import type { PayrollBucket } from "@baza/types/payroll";
 import { CapsLabel } from "@/components/ui/studio";
 import { useThemeTokens } from "@/components/ui/tokens";
-import { formatRsd } from "@/lib/format";
+import { formatPercent, formatRsd } from "@/lib/format";
 
 /**
  * The month's payout, split by the rate that produced it.
@@ -56,7 +56,7 @@ export function RateBreakdown({
               >
                 {bucket.percent === null
                   ? t("payroll.noRate")
-                  : `${formatRsd(bucket.gross)} · ${bucket.percent}%`}
+                  : `${formatRsd(bucket.gross)} · ${formatPercent(bucket.percent)}`}
               </Text>
             </View>
             <Text

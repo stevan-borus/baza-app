@@ -39,7 +39,7 @@ import { t } from "./helpers/locales";
  * buckets to tell apart.
  */
 const BASE_PERCENT = 40;
-const OVERRIDE_PERCENT = 55;
+const OVERRIDE_PERCENT = 22.5;
 
 /**
  * The class type that gets the override. Everything else the trainer holds
@@ -51,8 +51,16 @@ const OVERRIDE_CLASS_TYPE = "Energy pilates";
 let trainerUserId: string;
 let overrideClassTypeId: string;
 
-/** "55%" etc — what an overridden row and its bucket both render. */
-const pct = (n: number) => `${n}%`;
+/**
+ * What a percentage renders as: "40%" whole, "22,5%" with the Serbian comma.
+ * The override below is deliberately a half point — whole points were the
+ * assumption that turned out to be wrong.
+ */
+const pct = (n: number) =>
+  `${n.toLocaleString("sr-Latn-RS", {
+    minimumFractionDigits: Number.isInteger(n) ? 0 : 1,
+    maximumFractionDigits: Number.isInteger(n) ? 0 : 1,
+  })}%`;
 
 /** Parse "73.500 RSD" (sr-RS grouping) back into a number. */
 function parseRsd(text: string): number {
@@ -180,11 +188,6 @@ test.describe.serial("per-class-type trainer rate overrides", () => {
     await expect(
       page.getByTestId(`procenti-class-type-row-${overrideClassTypeId}`),
     ).toContainText(inheritedLabel);
-    // And with nothing overridden yet there is no revert affordance at all.
-    await expect(
-      page.getByTestId(`procenti-revert-${overrideClassTypeId}`),
-    ).toHaveCount(0);
-
     // Opening the sheet FROM the class-type row is what scopes the write; the
     // same sheet opened from the base row would move the trainer's default.
     await pressRNW(
@@ -193,6 +196,11 @@ test.describe.serial("per-class-type trainer rate overrides", () => {
     await expect(page.getByTestId("procenti-percent-input")).toBeVisible({
       timeout: 10_000,
     });
+    // With nothing overridden yet the sheet offers no revert — there is
+    // nothing to hand back.
+    await expect(
+      page.getByTestId(`procenti-revert-${overrideClassTypeId}`),
+    ).toHaveCount(0);
     await page.getByTestId("procenti-percent-input").fill(String(OVERRIDE_PERCENT));
 
     // Backdated to the 1st ON PURPOSE: rates resolve at month start, so an
@@ -286,7 +294,7 @@ test.describe.serial("per-class-type trainer rate overrides", () => {
     // there are; the screen behind it says what they are.
     await expect(
       page.getByTestId(`procenti-overrides-hint-${trainerUserId}`),
-    ).toHaveText(t.payroll.overridesHint.replace("{{count}}", "1"), {
+    ).toHaveText(t.payroll.overridesHint_one.replace("{{count}}", "1"), {
       timeout: 15_000,
     });
     // The headline number stays the BASE rate — the overrides are the
@@ -302,6 +310,16 @@ test.describe.serial("per-class-type trainer rate overrides", () => {
     test.setTimeout(120_000);
     await signInAs(page, "admin");
     await openTrainerRates(page);
+
+    // The row is ONE tap into the sheet now — reverting lives inside it,
+    // below the save button, rather than being the only labelled thing on the
+    // row (which made changing the percentage look impossible).
+    await pressRNW(
+      page.getByTestId(`procenti-class-type-row-${overrideClassTypeId}`),
+    );
+    await expect(
+      page.getByTestId(`procenti-revert-${overrideClassTypeId}`),
+    ).toBeVisible({ timeout: 10_000 });
 
     // Ending an override is a dated decision, not a formality — the confirm
     // step asks for the date, and it is backdated to the 1st so the running
@@ -322,6 +340,14 @@ test.describe.serial("per-class-type trainer rate overrides", () => {
       t.payroll.inheritedPercent.replace("{{percent}}", String(BASE_PERCENT)),
       { timeout: 15_000 },
     );
+    // And its sheet no longer offers one either — the class type is back on
+    // the base rate.
+    await pressRNW(
+      page.getByTestId(`procenti-class-type-row-${overrideClassTypeId}`),
+    );
+    await expect(page.getByTestId("procenti-percent-input")).toBeVisible({
+      timeout: 10_000,
+    });
     await expect(
       page.getByTestId(`procenti-revert-${overrideClassTypeId}`),
     ).toHaveCount(0);

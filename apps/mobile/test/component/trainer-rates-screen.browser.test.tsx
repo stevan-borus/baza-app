@@ -28,6 +28,10 @@ const CLASS_TYPES = [
   { id: "ct-individual", name: "Individualni", maxClients: 1, durationMins: 55 },
 ];
 
+/** The catalogue the screen renders rows from — a spec may widen it. */
+let classTypeRows: { id: string; name: string; maxClients: number; durationMins: number }[] =
+  CLASS_TYPES;
+
 /** The default 40% plus a live 60% override on the individual class type. */
 const RATES: TrainerRateRow[] = [
   {
@@ -68,13 +72,13 @@ const apiRequestMock = vi.fn(
         rates: ratesRows.map((rate) => ({
           ...rate,
           classTypeName:
-            CLASS_TYPES.find((ct) => ct.id === rate.classTypeId)?.name ?? null,
+            classTypeRows.find((ct) => ct.id === rate.classTypeId)?.name ?? null,
           createdAt: rate.createdAt ?? rate.effectiveFrom,
         })),
       };
     }
     if (path === "/api/trainings/class-types") {
-      return { success: true, classTypes: CLASS_TYPES };
+      return { success: true, classTypes: classTypeRows };
     }
     if (path === "/api/users/trainers") {
       return { success: true, users: [TRAINER] };
@@ -105,6 +109,7 @@ beforeEach(() => {
   process.env.TEST_ANCHOR_TIME = TODAY;
   postBodies.length = 0;
   ratesRows = RATES;
+  classTypeRows = CLASS_TYPES;
   apiRequestMock.mockClear();
 });
 
@@ -129,6 +134,41 @@ describe("Trainer rates screen", () => {
     // admin must not read it as an agreement they made.
     const group = await screen.findByTestId("procenti-class-type-row-ct-group");
     expect(group.textContent).toContain("Grupni pilates");
+    expect(group.textContent).toContain("40% (osnovni)");
+  });
+});
+
+describe("Rendering a half-point rate", () => {
+  it("renders 22,5% on the row and 40% undecorated for a whole base", async () => {
+    ratesRows = [
+      RATES[0]!,
+      {
+        id: "rate-half",
+        trainerUserId: TRAINER.id,
+        percent: 22.5,
+        classTypeId: "ct-individual",
+        effectiveFrom: "2026-02-01T00:00:00.000Z",
+        note: null,
+        seq: 5,
+      },
+    ];
+
+    const screen = renderWithQueryClient(<TrainerRates />);
+
+    const individual = await screen.findByTestId(
+      "procenti-class-type-row-ct-individual",
+    );
+    // Serbian writes the decimal with a comma, like every other number here.
+    expect(individual.textContent).toContain("22,5%");
+
+    // A whole percent stays whole — "40,0%" would be precision nobody asked
+    // for on the overwhelming majority of rates.
+    const defaultRow = await screen.findByTestId("procenti-default-row");
+    expect(defaultRow.textContent).toContain("40%");
+    expect(defaultRow.textContent).not.toContain("40,0");
+
+    // And the inheritor still says it inherits, at the base figure.
+    const group = await screen.findByTestId("procenti-class-type-row-ct-group");
     expect(group.textContent).toContain("40% (osnovni)");
   });
 });
@@ -186,9 +226,30 @@ describe("Saving a rate from the trainer's screen", () => {
     expect(postBodies[0]!.body.classTypeId).toBeUndefined();
   });
 
-  it("appends a dated tombstone when an override is reverted", async () => {
+  it("puts no revert affordance on the row itself — the row is one tap into the sheet", async () => {
+    // The row used to carry "Vrati na osnovni procenat" as its only labelled
+    // text, so reverting looked like the ONLY thing an admin could do to it
+    // and changing the percentage looked impossible. Changing the percentage
+    // is the point of the row.
     const screen = renderWithQueryClient(<TrainerRates />);
 
+    const row = await screen.findByTestId(
+      "procenti-class-type-row-ct-individual",
+    );
+    expect(row.textContent).not.toContain("Vrati na osnovni procenat");
+    // Nothing to press on the row but the row.
+    expect(screen.queryByTestId("procenti-revert-ct-individual")).toBeNull();
+  });
+
+  it("offers the revert INSIDE the scoped sheet, and appends a dated tombstone", async () => {
+    const screen = renderWithQueryClient(<TrainerRates />);
+
+    fireEvent.click(
+      await screen.findByTestId("procenti-class-type-row-ct-individual"),
+    );
+
+    // Below the save button, quieter than it: the sheet is for setting the
+    // percentage first, ending the override second.
     fireEvent.click(await screen.findByTestId("procenti-revert-ct-individual"));
     fireEvent.click(await screen.findByTestId("procenti-revert-confirm"));
 
@@ -202,12 +263,74 @@ describe("Saving a rate from the trainer's screen", () => {
     });
   });
 
-  it("offers no revert on a class type that only inherits the base", async () => {
+  it("offers no revert in the sheet of a class type that only inherits the base", async () => {
     const screen = renderWithQueryClient(<TrainerRates />);
 
-    await screen.findByTestId("procenti-class-type-row-ct-group");
-    // There is nothing to revert — the row already pays the base.
+    fireEvent.click(await screen.findByTestId("procenti-class-type-row-ct-group"));
+    await screen.findByTestId("procenti-percent-input");
+
+    // There is nothing to revert — the class type already pays the base.
     expect(screen.queryByTestId("procenti-revert-ct-group")).toBeNull();
+  });
+
+  it("accepts a half point typed with a Serbian decimal comma", async () => {
+    // The studio types 22,5 — a comma is what a Serbian keyboard puts under
+    // the thumb, and rejecting it would read as "half points aren't allowed".
+    const screen = renderWithQueryClient(<TrainerRates />);
+
+    fireEvent.click(await screen.findByTestId("procenti-class-type-row-ct-group"));
+    fireEvent.change(await screen.findByTestId("procenti-percent-input"), {
+      target: { value: "22,5" },
+    });
+    fireEvent.click(screen.getByTestId("procenti-save"));
+
+    await waitFor(() => expect(postBodies).toHaveLength(1));
+    expect(postBodies[0]!.body).toMatchObject({
+      classTypeId: "ct-group",
+      percent: 22.5,
+    });
+  });
+
+  it("accepts a half point typed with a dot", async () => {
+    const screen = renderWithQueryClient(<TrainerRates />);
+
+    fireEvent.click(await screen.findByTestId("procenti-class-type-row-ct-group"));
+    fireEvent.change(await screen.findByTestId("procenti-percent-input"), {
+      target: { value: "47.5" },
+    });
+    fireEvent.click(screen.getByTestId("procenti-save"));
+
+    await waitFor(() => expect(postBodies).toHaveLength(1));
+    expect(postBodies[0]!.body).toMatchObject({ percent: 47.5 });
+  });
+
+  it("refuses to save two decimal places", async () => {
+    // 22.55% is a number nobody agreed to; every payout would carry its
+    // rounding forever.
+    const screen = renderWithQueryClient(<TrainerRates />);
+
+    fireEvent.click(await screen.findByTestId("procenti-class-type-row-ct-group"));
+    fireEvent.change(await screen.findByTestId("procenti-percent-input"), {
+      target: { value: "22,55" },
+    });
+    fireEvent.click(screen.getByTestId("procenti-save"));
+
+    // Nothing was written — the save is inert, the way it already is for a
+    // blank or out-of-range percent.
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(postBodies).toHaveLength(0);
+  });
+
+  it("offers no revert in the base-rate sheet — there is no base to fall back to", async () => {
+    const screen = renderWithQueryClient(<TrainerRates />);
+
+    fireEvent.click(await screen.findByTestId("procenti-default-row"));
+    await screen.findByTestId("procenti-percent-input");
+
+    expect(screen.queryByTestId("procenti-revert-default")).toBeNull();
+    expect(
+      screen.queryByTestId("procenti-revert-ct-individual"),
+    ).toBeNull();
   });
 });
 
@@ -225,6 +348,45 @@ describe("Trainer roster override hint", () => {
       (await screen.findByTestId(`procenti-value-${TRAINER.id}`)).textContent,
     ).toContain("40%");
   });
+
+  it.each([
+    { count: 1, expected: "+1 posebna" },
+    { count: 2, expected: "+2 posebne" },
+    { count: 5, expected: "+5 posebnih" },
+  ])(
+    "declines the Serbian chip for $count overrides ($expected)",
+    async ({ count, expected }) => {
+      // "+2 posebna" is not Serbian. The count drives three forms — the same
+      // thing every other counted string in the app already does.
+      // The roster counts overrides against the class-type CATALOGUE, so the
+      // scoped rates need class types that actually exist.
+      classTypeRows = Array.from({ length: count }, (_, i) => ({
+        id: `ct-extra-${i}`,
+        name: `Tip ${i}`,
+        maxClients: 6,
+        durationMins: 55,
+      }));
+      ratesRows = [
+        RATES[0]!,
+        ...Array.from({ length: count }, (_, i) => ({
+          id: `rate-override-${i}`,
+          trainerUserId: TRAINER.id,
+          percent: 50 + i,
+          classTypeId: `ct-extra-${i}`,
+          effectiveFrom: "2026-02-01T00:00:00.000Z",
+          note: null,
+          seq: 10 + i,
+        })),
+      ];
+
+      const screen = renderWithQueryClient(<TrainerRoster />);
+
+      const hint = await screen.findByTestId(
+        `procenti-overrides-hint-${TRAINER.id}`,
+      );
+      expect(hint.textContent).toContain(expected);
+    },
+  );
 
   it("drops the hint once the override has been reverted", async () => {
     // A tombstone ENDS the override without deleting its history. The row must
