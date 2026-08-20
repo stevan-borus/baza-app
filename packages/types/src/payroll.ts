@@ -26,14 +26,50 @@ export const payrollSessionSchema = z.object({
   unpricedCount: z.number(),
 });
 
+/**
+ * A commission, 0–100, to at most ONE decimal place.
+ *
+ * The studio was assumed to negotiate in whole points and it doesn't — moving
+ * a trainer 22% → 22.5% has to be representable. It stops there: 22.55% is a
+ * number nobody agrees to, and every payout would carry the rounding of it
+ * forever.
+ *
+ * The precision check multiplies by ten and rounds, rather than counting the
+ * digits of a string: 22.5 is not exactly representable in binary, so
+ * `(v * 10) % 1 === 0` is a coin flip on values the studio actually types.
+ */
+const commissionPercent = z
+  .number()
+  .min(0)
+  .max(100)
+  .refine((value) => Math.abs(value * 10 - Math.round(value * 10)) < 1e-9, {
+    message: "percent may have at most one decimal place",
+  });
+
+/**
+ * One slice of the month's payout. A trainer's cut is not one number — an
+ * individual pays a different percentage than a group — so a class type they
+ * hold an override on gets its own bucket, and everything else falls into the
+ * single default bucket (`classTypeId === null`).
+ */
+export const payrollBucketSchema = z.object({
+  classTypeId: z.string().nullable(),
+  classTypeName: z.string().nullable(),
+  // Null when the trainer has no rate covering this bucket: it pays 0, and the
+  // UI tells the admin to set a rate rather than inventing a percentage.
+  percent: commissionPercent.nullable(),
+  gross: z.number(),
+  payout: z.number(),
+});
+export type PayrollBucket = z.infer<typeof payrollBucketSchema>;
+
 export const payrollMonthSchema = z.object({
   trainerUserId: z.string(),
   trainerName: z.string(),
   periodStart: z.string(),
   periodEnd: z.string(),
-  // Null when no rate is configured for the trainer — the payout is then 0 and
-  // the UI tells the admin to set a rate.
-  percent: z.number().nullable(),
+  // The payout, broken down by rate. Empty when the month held no sessions.
+  buckets: z.array(payrollBucketSchema),
   sessions: z.array(payrollSessionSchema),
   sessionCount: z.number(),
   attendeeCount: z.number(),
@@ -73,7 +109,6 @@ export const payrollSummaryResponseSchema = z.object({
     z.object({
       trainerUserId: z.string(),
       trainerName: z.string(),
-      percent: z.number().nullable(),
       sessionCount: z.number(),
       attendeeCount: z.number(),
       gross: z.number(),
@@ -92,7 +127,13 @@ export type PayrollSummaryResponse = z.infer<typeof payrollSummaryResponseSchema
 export const trainerRateSchema = z.object({
   id: z.string(),
   trainerUserId: z.string(),
-  percent: z.number(),
+  // Null is a TOMBSTONE — only ever on a scoped row — meaning "from here this
+  // class type is paid the default rate again". Ending an override this way
+  // keeps the history append-only, so settled months never move.
+  percent: commissionPercent.nullable(),
+  // Null = the trainer's default rate; set = an override for one class type.
+  classTypeId: z.string().nullable(),
+  classTypeName: z.string().nullable(),
   effectiveFrom: z.string(),
   note: z.string().nullable(),
   createdAt: z.string(),
@@ -109,13 +150,28 @@ export const trainerRatesResponseSchema = z.object({
 });
 export type TrainerRatesResponse = z.infer<typeof trainerRatesResponseSchema>;
 
-export const createTrainerRateInputSchema = z.object({
-  trainerUserId: z.string().min(1),
-  // A commission, so 0–100. Whole percent: the studio negotiates in points.
-  percent: z.number().int().min(0).max(100),
-  effectiveFrom: z.string().min(10),
-  note: z.string().max(300).optional(),
-});
+export const createTrainerRateInputSchema = z
+  .object({
+    trainerUserId: z.string().min(1),
+    // Null ends a class-type override — see the superRefine below.
+    percent: commissionPercent.nullable(),
+    // Omitted = the trainer's default rate; set = an override for one class
+    // type.
+    classTypeId: z.string().min(1).optional(),
+    effectiveFrom: z.string().min(10),
+    note: z.string().max(300).optional(),
+  })
+  .superRefine((input, ctx) => {
+    // A null percent means "revert to the default". On the default scope there
+    // is nothing to revert to, and the month would quietly pay zero.
+    if (input.percent === null && !input.classTypeId) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["percent"],
+        message: "percent may only be null on a class-type override",
+      });
+    }
+  });
 
 export const createTrainerRateResponseSchema = z.object({
   success: z.boolean(),

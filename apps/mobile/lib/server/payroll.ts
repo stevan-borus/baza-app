@@ -2,10 +2,16 @@ import type { Prisma, PrismaClient } from "@/generated/prisma";
 import { packageSessionsTotal } from "@/lib/package-total";
 import { formatFullName } from "@baza/types/common";
 import {
+  bucketPayout,
   studioMonthRange,
   valueSession,
   type PayrollAttendee,
+  type PayrollBucket,
 } from "@/lib/payroll-valuation";
+import {
+  effectiveTrainerPercentFor,
+  hasLiveOverride,
+} from "@/lib/trainer-rate-selection";
 
 /**
  * Trainer payroll, the data half: which bookings count as attendance, and how
@@ -16,6 +22,7 @@ import {
 export type PayrollSessionBreakdown = {
   sessionId: string;
   startsAt: Date;
+  classTypeId: string;
   classTypeName: string;
   attendees: Array<{
     bookingId: string;
@@ -33,7 +40,8 @@ export type PayrollMonth = {
   trainerName: string;
   periodStart: Date;
   periodEnd: Date;
-  percent: number | null;
+  /** The payout split by rate — one row per override, plus the default. */
+  buckets: PayrollBucket[];
   sessions: PayrollSessionBreakdown[];
   sessionCount: number;
   attendeeCount: number;
@@ -45,27 +53,47 @@ export type PayrollMonth = {
 };
 
 /**
- * The rate in force at `at`: the newest rate starting at or before it. Returns
- * null when the trainer has no rate configured, which the caller surfaces
- * rather than defaulting to some invented percentage.
+ * Every rate of the trainer's that had taken effect by `at`, across all scopes
+ * — the default one and each per-class-type override.
+ *
+ * One query rather than one per class type: a month touches a handful of class
+ * types, and the resolution rule (override, tombstone, default) is a pure
+ * function that only needs the rows.
  */
-export async function effectiveTrainerPercent(
+async function trainerRatesAsOf(
   db: PrismaClient | Prisma.TransactionClient,
   trainerUserId: string,
   at: Date,
-): Promise<number | null> {
-  const rate = await db.trainerRate.findFirst({
+) {
+  const rates = await db.trainerRate.findMany({
     where: { trainerUserId, effectiveFrom: { lte: at } },
-    // seq breaks the tie between rates sharing an effectiveFrom: every rate
-    // set on the same day starts at the same studio-day boundary, so without
-    // it a same-day correction loses to the row it was meant to replace and
-    // the payout uses an arbitrary percentage. createdAt is NOT enough —
-    // Postgres now() is transaction time, so rows written together tie there
-    // too.
-    orderBy: [{ effectiveFrom: "desc" }, { seq: "desc" }],
-    select: { percent: true },
+    select: {
+      id: true,
+      trainerUserId: true,
+      classTypeId: true,
+      percent: true,
+      effectiveFrom: true,
+      note: true,
+      createdAt: true,
+      // seq breaks the tie between rates sharing an effectiveFrom: every rate
+      // set on the same day starts at the same studio-day boundary, so without
+      // it a same-day correction loses to the row it was meant to replace and
+      // the payout uses an arbitrary percentage. createdAt is NOT enough —
+      // Postgres now() is transaction time, so rows written together tie there
+      // too.
+      seq: true,
+    },
   });
-  return rate?.percent ?? null;
+  return rates.map((rate) => ({
+    ...rate,
+    // percent is Decimal(5,2) in the DB — rates carry half points. Everything
+    // downstream (selection, bucketing, the wire) works in plain numbers, so
+    // the Decimal stops here rather than leaking into arithmetic that would
+    // silently concatenate it or into JSON as an object.
+    percent: rate.percent === null ? null : Number(rate.percent),
+    effectiveFrom: rate.effectiveFrom.toISOString(),
+    createdAt: rate.createdAt.toISOString(),
+  }));
 }
 
 /**
@@ -101,6 +129,7 @@ export async function computePayrollMonth(
     select: {
       id: true,
       startsAt: true,
+      classTypeId: true,
       classType: { select: { name: true } },
       // The frozen payroll record. Present for every consumed attendance,
       // which is everything the daily cron has caught up with.
@@ -202,6 +231,7 @@ export async function computePayrollMonth(
     return {
       sessionId: session.id,
       startsAt: session.startsAt,
+      classTypeId: session.classTypeId,
       classTypeName: session.classType.name,
       attendees: valued.lines.map((line) => ({
         bookingId: line.bookingId,
@@ -215,8 +245,16 @@ export async function computePayrollMonth(
     };
   });
 
-  const percent = await effectiveTrainerPercent(db, args.trainerUserId, from);
-  const gross = breakdowns.reduce((sum, s) => sum + s.gross, 0);
+  // Rates are read ONCE, at the month's start: a percentage agreed on the 15th
+  // starts on the 15th, and a month already settled at the old one must not
+  // move. Same rule the single default rate has always followed.
+  const rates = await trainerRatesAsOf(db, args.trainerUserId, from);
+  const { buckets, gross, payout } = bucketPayout(breakdowns, (classTypeId) => ({
+    percent: effectiveTrainerPercentFor(rates, args.trainerUserId, classTypeId, from),
+    // A class type earns its own bucket when a LIVE scoped rate covers it; a
+    // tombstoned one has been handed back to the default and belongs there.
+    overridden: hasLiveOverride(rates, args.trainerUserId, classTypeId, from),
+  }));
 
   return {
     trainerUserId: args.trainerUserId,
@@ -225,12 +263,12 @@ export async function computePayrollMonth(
       : "—",
     periodStart: from,
     periodEnd: to,
-    percent,
+    buckets,
     sessions: breakdowns,
     sessionCount: breakdowns.length,
     attendeeCount: breakdowns.reduce((sum, s) => sum + s.attendees.length, 0),
-    gross: Math.round(gross),
-    payout: percent === null ? 0 : Math.round((gross * percent) / 100),
+    gross,
+    payout,
     unpricedCount: breakdowns.reduce((sum, s) => sum + s.unpricedCount, 0),
     giftCount: breakdowns.reduce(
       (sum, s) => sum + s.attendees.filter((a) => a.isGift).length,

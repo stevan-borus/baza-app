@@ -1380,6 +1380,8 @@
     "totalPayout": "Total to be paid",
     "noRate": "No percentage set",
     "noRateHint": "No percentage set",
+    "breakdownTitle": "Breakdown by class type",
+    "defaultBucket": "Other sessions",
     "setRate": "Set percentage",
     "rateHistory": "Percentage history",
     "rateSuperseded": "replaced",
@@ -1417,6 +1419,18 @@
     "sessionNotFound": "Session not found",
     "noAttendees": "Nobody attended this session",
     "noPackageValue": "No package",
-    "noPackageHint": "Attendance not covered by a package — excluded from the payout."
+    "noPackageHint": "Attendance not covered by a package — excluded from the payout.",
+    "baseRate": "Base percentage",
+    "baseRateA11y": "Set the base percentage for {{name}}",
+    "specialRates": "Special percentages",
+    "inheritedPercent": "{{percent}}% (base)",
+    "classTypeRateA11y": "Set the percentage for {{classType}}",
+    "revertToBase": "Revert to base percentage",
+    "revertToBaseHint": "{{classType}} is paid at the base percentage from the selected date.",
+    "revertedToBase": "base",
+    "overridesHint_one": "+{{count}} special",
+    "overridesHint_other": "+{{count}} special",
+    "overridesHintA11y_one": "{{count}} special percentage",
+    "overridesHintA11y_other": "{{count}} special percentages"
   }
 }

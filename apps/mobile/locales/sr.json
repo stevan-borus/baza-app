@@ -1390,6 +1390,8 @@
     "totalPayout": "Ukupno za isplatu",
     "noRate": "Procenat nije podešen",
     "noRateHint": "Procenat nije podešen",
+    "breakdownTitle": "Obračun po tipu treninga",
+    "defaultBucket": "Ostali treninzi",
     "setRate": "Podesi procenat",
     "rateHistory": "Istorija procenata",
     "rateSuperseded": "zamenjen",
@@ -1428,6 +1430,20 @@
     "sessionNotFound": "Termin nije pronađen",
     "noAttendees": "Nema polaznika na ovom terminu",
     "noPackageValue": "Bez paketa",
-    "noPackageHint": "Dolazak nije pokriven paketom — ne ulazi u obračun."
+    "noPackageHint": "Dolazak nije pokriven paketom — ne ulazi u obračun.",
+    "baseRate": "Osnovni procenat",
+    "baseRateA11y": "Podesi osnovni procenat za {{name}}",
+    "specialRates": "Posebni procenti",
+    "inheritedPercent": "{{percent}}% (osnovni)",
+    "classTypeRateA11y": "Podesi procenat za {{classType}}",
+    "revertToBase": "Vrati na osnovni procenat",
+    "revertToBaseHint": "{{classType}} se od izabranog datuma plaća po osnovnom procentu.",
+    "revertedToBase": "osnovni",
+    "overridesHint_one": "+{{count}} posebna",
+    "overridesHint_few": "+{{count}} posebne",
+    "overridesHint_other": "+{{count}} posebnih",
+    "overridesHintA11y_one": "{{count}} poseban procenat",
+    "overridesHintA11y_few": "{{count}} posebna procenta",
+    "overridesHintA11y_other": "{{count}} posebnih procenata"
   }
 }

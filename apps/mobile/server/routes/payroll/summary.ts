@@ -52,7 +52,6 @@ export async function GET(request: Request) {
     trainers: months.map((m) => ({
       trainerUserId: m.trainerUserId,
       trainerName: m.trainerName,
-      percent: m.percent,
       sessionCount: m.sessionCount,
       attendeeCount: m.attendeeCount,
       gross: m.gross,

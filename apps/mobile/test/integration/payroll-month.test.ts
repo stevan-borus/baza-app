@@ -176,6 +176,18 @@ describe("GET /api/payroll/month", () => {
     expect(body.month.payout).toBe(1550); // 40%
     expect(body.month.sessionCount).toBe(1);
     expect(body.month.attendeeCount).toBe(3);
+    // No overrides in play, so the whole month sits in one default bucket.
+    expect(body.month.buckets).toEqual([
+      {
+        classTypeId: null,
+        classTypeName: null,
+        percent: 40,
+        gross: 3875,
+        payout: 1550,
+      },
+    ]);
+    // The old single `percent` field is gone — the breakdown replaced it.
+    expect(body.month.percent).toBeUndefined();
   });
 
   it("counts a charged no-show, because the package was still consumed", async () => {
@@ -363,7 +375,7 @@ describe("GET /api/payroll/month", () => {
     expect(names).toContain("Bezpaketa Klijent");
   });
 
-  it("reports a null percent (and a zero payout) when the trainer has no rate", async () => {
+  it("reports a null-percent bucket (and a zero payout) when the trainer has no rate", async () => {
     const seeded = await seed();
     const session = await makeSession(seeded, seeded.trainer.id, JULY_SESSION);
     const profileId = await makeClient("Rate");
@@ -379,7 +391,15 @@ describe("GET /api/payroll/month", () => {
       monthRequest({ year: "2026", month: "7", trainerUserId: seeded.trainer.id }),
     );
     const body = await res.json();
-    expect(body.month.percent).toBeNull();
+    expect(body.month.buckets).toEqual([
+      {
+        classTypeId: null,
+        classTypeName: null,
+        percent: null,
+        gross: 1250,
+        payout: 0,
+      },
+    ]);
     expect(body.month.gross).toBe(1250);
     expect(body.month.payout).toBe(0);
   });
@@ -407,7 +427,7 @@ describe("GET /api/payroll/month", () => {
       monthRequest({ year: "2026", month: "7", trainerUserId: seeded.trainer.id }),
     );
     const body = await res.json();
-    expect(body.month.percent).toBe(40);
+    expect(body.month.buckets[0].percent).toBe(40);
     expect(body.month.payout).toBe(500);
   });
 
@@ -445,9 +465,268 @@ describe("GET /api/payroll/month", () => {
       monthRequest({ year: "2026", month: "7", trainerUserId: seeded.trainer.id }),
     );
     const body = await res.json();
-    expect(body.month.percent).toBe(30);
+    expect(body.month.buckets[0].percent).toBe(30);
     // 1250 gross at 30%
     expect(body.month.payout).toBe(375);
+  });
+
+  /**
+   * Per-class-type overrides. The studio pays a different cut on an individual
+   * than on a group slot, so a rate row can be scoped to one class type — and
+   * a NULL-percent row on that scope is a tombstone ending the override.
+   */
+  describe("per-class-type overrides", () => {
+    /** A second class type, so a month can contain both. */
+    async function addIndividual() {
+      return prisma.classType.create({
+        data: { name: "Individualni", maxClients: 1, durationMins: 60 },
+      });
+    }
+
+    /** One attended session of `classTypeId`, worth 15000/12 = 1250. */
+    async function heldSession(
+      seeded: Awaited<ReturnType<typeof seed>>,
+      classTypeId: string,
+      clientName: string,
+      startsAt: Date,
+    ) {
+      const session = await prisma.session.create({
+        data: {
+          classTypeId,
+          trainerUserId: seeded.trainer.id,
+          startsAt,
+          endsAt: new Date(startsAt.getTime() + HOUR),
+          capacity: 6,
+        },
+      });
+      const profileId = await makeClient(clientName);
+      const pkg = await givePackage(profileId, seeded.reformer12.id, classTypeId, {
+        sessionsGranted: 12,
+      });
+      await prisma.booking.create({
+        data: { sessionId: session.id, clientProfileId: profileId, clientPackageId: pkg.id },
+      });
+      return session;
+    }
+
+    it("pays only the overridden class type at its own rate", async () => {
+      const seeded = await seed();
+      const individual = await addIndividual();
+      await prisma.trainerRate.create({
+        data: { trainerUserId: seeded.trainer.id, percent: 40, effectiveFrom: new Date("2026-01-01") },
+      });
+      await prisma.trainerRate.create({
+        data: {
+          trainerUserId: seeded.trainer.id,
+          classTypeId: individual.id,
+          percent: 60,
+          effectiveFrom: new Date("2026-01-01"),
+        },
+      });
+
+      await heldSession(seeded, seeded.classType.id, "Grupa", JULY_SESSION);
+      await heldSession(seeded, individual.id, "Solo", new Date("2026-07-16T08:00:00.000Z"));
+
+      asUser(seeded.admin);
+      const res = await GET_MONTH(
+        monthRequest({ year: "2026", month: "7", trainerUserId: seeded.trainer.id }),
+      );
+      const body = await res.json();
+
+      expect(body.month.buckets).toEqual([
+        {
+          classTypeId: individual.id,
+          classTypeName: "Individualni",
+          percent: 60,
+          gross: 1250,
+          payout: 750,
+        },
+        {
+          classTypeId: null,
+          classTypeName: null,
+          percent: 40,
+          gross: 1250,
+          payout: 500,
+        },
+      ]);
+      // 750 + 500 — the group session is untouched by the override.
+      expect(body.month.payout).toBe(1250);
+      expect(body.month.gross).toBe(2500);
+    });
+
+    it("does not reprice a month from an override agreed mid-month", async () => {
+      // The whole point of append-only rates: a percentage agreed on the 15th
+      // starts on the 15th, and July was already settled at the old one.
+      const seeded = await seed();
+      const individual = await addIndividual();
+      await prisma.trainerRate.create({
+        data: { trainerUserId: seeded.trainer.id, percent: 40, effectiveFrom: new Date("2026-01-01") },
+      });
+      await prisma.trainerRate.create({
+        data: {
+          trainerUserId: seeded.trainer.id,
+          classTypeId: individual.id,
+          percent: 60,
+          effectiveFrom: new Date("2026-07-15T03:00:00.000Z"),
+        },
+      });
+
+      await heldSession(seeded, individual.id, "Solo", new Date("2026-07-20T08:00:00.000Z"));
+
+      asUser(seeded.admin);
+      const res = await GET_MONTH(
+        monthRequest({ year: "2026", month: "7", trainerUserId: seeded.trainer.id }),
+      );
+      const body = await res.json();
+
+      // The rate is read once, at the month's start — where the override did
+      // not exist yet — so July stays on the default 40%.
+      expect(body.month.buckets).toEqual([
+        {
+          classTypeId: null,
+          classTypeName: null,
+          percent: 40,
+          gross: 1250,
+          payout: 500,
+        },
+      ]);
+    });
+
+    it("applies an override backdated to the 1st for the whole month", async () => {
+      const seeded = await seed();
+      const individual = await addIndividual();
+      await prisma.trainerRate.create({
+        data: { trainerUserId: seeded.trainer.id, percent: 40, effectiveFrom: new Date("2026-01-01") },
+      });
+      await prisma.trainerRate.create({
+        data: {
+          trainerUserId: seeded.trainer.id,
+          classTypeId: individual.id,
+          percent: 60,
+          // July's studio-day boundary: 03:00Z (Belgrade is UTC+2 in summer).
+          effectiveFrom: new Date("2026-07-01T03:00:00.000Z"),
+        },
+      });
+
+      await heldSession(seeded, individual.id, "Solo", new Date("2026-07-20T08:00:00.000Z"));
+
+      asUser(seeded.admin);
+      const res = await GET_MONTH(
+        monthRequest({ year: "2026", month: "7", trainerUserId: seeded.trainer.id }),
+      );
+      const body = await res.json();
+
+      expect(body.month.buckets[0].classTypeId).toBe(individual.id);
+      expect(body.month.buckets[0].percent).toBe(60);
+      expect(body.month.payout).toBe(750);
+    });
+
+    it("hands a tombstoned class type back to the default rate", async () => {
+      const seeded = await seed();
+      const individual = await addIndividual();
+      await prisma.trainerRate.create({
+        data: { trainerUserId: seeded.trainer.id, percent: 40, effectiveFrom: new Date("2026-01-01") },
+      });
+      await prisma.trainerRate.create({
+        data: {
+          trainerUserId: seeded.trainer.id,
+          classTypeId: individual.id,
+          percent: 60,
+          effectiveFrom: new Date("2026-02-01"),
+        },
+      });
+      // The override ends before July: percent NULL on the same scope.
+      await prisma.trainerRate.create({
+        data: {
+          trainerUserId: seeded.trainer.id,
+          classTypeId: individual.id,
+          percent: null,
+          effectiveFrom: new Date("2026-06-01"),
+        },
+      });
+
+      await heldSession(seeded, individual.id, "Solo", new Date("2026-07-20T08:00:00.000Z"));
+
+      asUser(seeded.admin);
+      const res = await GET_MONTH(
+        monthRequest({ year: "2026", month: "7", trainerUserId: seeded.trainer.id }),
+      );
+      const body = await res.json();
+
+      // Back in the default bucket entirely — a tombstoned type is not an
+      // override any more, so it does not get a row of its own.
+      expect(body.month.buckets).toEqual([
+        {
+          classTypeId: null,
+          classTypeName: null,
+          percent: 40,
+          gross: 1250,
+          payout: 500,
+        },
+      ]);
+    });
+
+    it("pays an override even when the trainer has no default rate", async () => {
+      const seeded = await seed();
+      const individual = await addIndividual();
+      await prisma.trainerRate.create({
+        data: {
+          trainerUserId: seeded.trainer.id,
+          classTypeId: individual.id,
+          percent: 60,
+          effectiveFrom: new Date("2026-01-01"),
+        },
+      });
+
+      await heldSession(seeded, individual.id, "Solo", new Date("2026-07-20T08:00:00.000Z"));
+      await heldSession(seeded, seeded.classType.id, "Grupa", JULY_SESSION);
+
+      asUser(seeded.admin);
+      const res = await GET_MONTH(
+        monthRequest({ year: "2026", month: "7", trainerUserId: seeded.trainer.id }),
+      );
+      const body = await res.json();
+
+      expect(body.month.buckets).toEqual([
+        {
+          classTypeId: individual.id,
+          classTypeName: "Individualni",
+          percent: 60,
+          gross: 1250,
+          payout: 750,
+        },
+        // The group session has no rate to pay it — shown, never quietly zero.
+        {
+          classTypeId: null,
+          classTypeName: null,
+          percent: null,
+          gross: 1250,
+          payout: 0,
+        },
+      ]);
+      expect(body.month.payout).toBe(750);
+    });
+
+    it("drops percent from the studio-wide summary rows", async () => {
+      const seeded = await seed();
+      await prisma.trainerRate.create({
+        data: { trainerUserId: seeded.trainer.id, percent: 40, effectiveFrom: new Date("2026-01-01") },
+      });
+      await heldSession(seeded, seeded.classType.id, "Grupa", JULY_SESSION);
+
+      asUser(seeded.admin);
+      const res = await GET_SUMMARY(
+        new Request("http://test.local/api/payroll/summary?year=2026&month=7"),
+      );
+      const body = await res.json();
+      const row = body.trainers.find(
+        (t: { trainerUserId: string }) => t.trainerUserId === seeded.trainer.id,
+      );
+      // A trainer no longer has ONE percentage, so the row shows money only.
+      expect(row.percent).toBeUndefined();
+      expect(row.gross).toBe(1250);
+      expect(row.payout).toBe(500);
+    });
   });
 
   describe("authorization", () => {
