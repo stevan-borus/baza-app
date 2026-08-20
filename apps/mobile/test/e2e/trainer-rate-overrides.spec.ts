@@ -254,9 +254,15 @@ test.describe.serial("per-class-type trainer rate overrides", () => {
     );
     expect(hero).toBe(override.payout + fallback.payout);
 
-    // The override is worth more than the base rate on the same money, which
-    // is the whole point of having set it.
-    expect(override.payout).toBeGreaterThan(
+    // The override — not the base rate — is what priced this bucket, which is
+    // the whole point of having set it. Asserted as a difference rather than a
+    // direction: the override here is deliberately BELOW the base rate (a half
+    // point at that), because an override that only ever moved up would let a
+    // fallback-to-base bug pass unnoticed.
+    expect(override.payout).toBe(
+      Math.round((override.gross * OVERRIDE_PERCENT) / 100),
+    );
+    expect(override.payout).not.toBe(
       Math.round((override.gross * BASE_PERCENT) / 100),
     );
   });
