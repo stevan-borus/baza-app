@@ -40,7 +40,7 @@ import {
   effectiveTrainerPercentFor,
   hasLiveOverride,
 } from "@/lib/trainer-rate-selection";
-import { getDateLocale } from "@/lib/i18n";
+import { decimalSeparator, getDateLocale } from "@/lib/i18n";
 import { formatPercent } from "@/lib/format";
 import { now } from "@/lib/now";
 
@@ -51,11 +51,33 @@ export default function TrainerRates() {
   const params = useLocalSearchParams<{ trainerId: string }>();
   const trainerUserId = params.trainerId;
 
-  /** Null scope = the base rate; a scope = that class type's override. */
-  const [editing, setEditing] = useState<RateSheetScope | null | undefined>(
-    undefined,
-  );
-  const [reverting, setReverting] = useState<RateSheetScope | null>(null);
+  /**
+   * Both sheets stay MOUNTED and close by driving `open` to false, so
+   * AppSheet's dismiss reconciliation actually runs. Unmounting a presented
+   * gorhom modal skips it and leaves the sheet wedged in the modal host —
+   * which is what made a reopened class type show its pre-revert state.
+   *
+   * Because they stay mounted, `editing` holds the scope even while the sheet
+   * animates shut: `open` is what closes it, not the absence of a scope.
+   */
+  const [editing, setEditing] = useState<{
+    /** Null scope = the base rate; a scope = that class type's override. */
+    scope: RateSheetScope | null;
+    open: boolean;
+    /**
+     * What the admin has TYPED, or null while the field is untouched.
+     *
+     * Null rather than a value captured when the sheet opened: the seed is
+     * derived below from the live rates on every render, so a class type
+     * reopened after its override was tombstoned reads the tombstone instead
+     * of the percentage that was just ended.
+     */
+    typed: string | null;
+  }>({ scope: null, open: false, typed: null });
+  const [reverting, setReverting] = useState<{
+    scope: RateSheetScope | null;
+    open: boolean;
+  }>({ scope: null, open: false });
 
   const trainersQuery = useQuery(usersQueries.trainers());
   const ratesQuery = useQuery(payrollQueries.rates());
@@ -75,6 +97,32 @@ export default function TrainerRates() {
   );
 
   const defaultRate = currentTrainerRate(rates, trainerUserId);
+
+  const openRate = (scope: RateSheetScope | null) =>
+    setEditing({ scope, open: true, typed: null });
+
+  /**
+   * The percentage in force for the scope on show, in the separator the admin
+   * will type back — editing "22,5" must not require retyping it as "22.5".
+   *
+   * Derived on every render rather than captured when the sheet opened. The
+   * sheet is mounted for the life of the screen (unmounting a presented modal
+   * wedges it), and the handler that opens it can be holding a render's worth
+   * of stale rates, so reading the rates HERE is what makes a reopened sheet
+   * honest: a tombstoned class type has no percent of its own, and the field
+   * comes back empty rather than showing the override that was just ended.
+   */
+  const editingSeed = currentTrainerRate(
+    rates,
+    trainerUserId,
+    editing.scope?.classTypeId ?? null,
+  )?.percent;
+  const editingPercent =
+    editing.typed ??
+    (editingSeed == null
+      ? ""
+      : String(editingSeed).replace(".", decimalSeparator()));
+
   const isLoading =
     ratesQuery.isLoading || classTypesQuery.isLoading || trainersQuery.isLoading;
   const error = ratesQuery.error ?? classTypesQuery.error ?? trainersQuery.error;
@@ -102,7 +150,7 @@ export default function TrainerRates() {
                 name: trainerName,
               })}
               testID="procenti-default-row"
-              onPress={() => setEditing(null)}
+              onPress={() => openRate(null)}
               android_ripple={null}
               className="active:opacity-70"
             >
@@ -188,7 +236,7 @@ export default function TrainerRates() {
                       classType: classType.name,
                     })}
                     testID={`procenti-class-type-row-${classType.id}`}
-                    onPress={() => setEditing(scope)}
+                    onPress={() => openRate(scope)}
                     android_ripple={null}
                     className="active:opacity-70"
                   >
@@ -230,43 +278,47 @@ export default function TrainerRates() {
         )}
       </ScrollView>
 
-      {/* Remounting per scope is what seeds the form from that scope's current
-          rate — no effect syncing state to props. */}
-      {editing !== undefined && (
-        <RateSheet
-          key={editing?.classTypeId ?? "default"}
-          open
-          onOpenChange={(open) => !open && setEditing(undefined)}
-          trainerUserId={trainerUserId}
-          trainerName={trainerName}
-          rates={rates}
-          scope={editing}
-          // Only a scope that is actually overridden has anything to hand
-          // back; the base rate has no base to fall back to.
-          canRevert={
-            editing
-              ? hasLiveOverride(rates, trainerUserId, editing.classTypeId, at)
-              : false
-          }
-          onRevert={() => {
-            // Advance to the confirm step: the two sheets swap rather than
-            // stack, so the revert date is asked for on a screen of its own.
-            setEditing(undefined);
-            if (editing) setReverting(editing);
-          }}
-        />
-      )}
+      {/* Mounted for the life of the screen. Closing is `open=false`, never an
+          unmount — see the state comment above. */}
+      <RateSheet
+        open={editing.open}
+        onOpenChange={(open) =>
+          !open && setEditing((prev) => ({ ...prev, open: false }))
+        }
+        trainerUserId={trainerUserId}
+        trainerName={trainerName}
+        rates={rates}
+        scope={editing.scope}
+        percent={editingPercent}
+        onPercentChange={(typed) => setEditing((prev) => ({ ...prev, typed }))}
+        // Only a scope that is actually overridden has anything to hand back;
+        // the base rate has no base to fall back to. Read from the live rates,
+        // so a sheet reopened after the revert refetch knows it is gone.
+        canRevert={
+          editing.scope
+            ? hasLiveOverride(rates, trainerUserId, editing.scope.classTypeId, at)
+            : false
+        }
+        // The scope comes back from the sheet rather than out of this
+        // closure: the sheet is the thing that knows which one it is showing,
+        // and the compiler can hand this handler a render-old `editing`.
+        onRevert={(scope) => {
+          // Advance to the confirm step: the two sheets swap rather than
+          // stack, so the revert date is asked for on a screen of its own.
+          setEditing((prev) => ({ ...prev, open: false }));
+          setReverting({ scope, open: true });
+        }}
+      />
 
-      {reverting && (
-        <RevertRateSheet
-          key={`revert-${reverting.classTypeId}`}
-          open
-          onOpenChange={(open) => !open && setReverting(null)}
-          trainerUserId={trainerUserId}
-          classTypeId={reverting.classTypeId}
-          classTypeName={reverting.classTypeName}
-        />
-      )}
+      <RevertRateSheet
+        open={reverting.open}
+        onOpenChange={(open) =>
+          !open && setReverting((prev) => ({ ...prev, open: false }))
+        }
+        trainerUserId={trainerUserId}
+        classTypeId={reverting.scope?.classTypeId ?? ""}
+        classTypeName={reverting.scope?.classTypeName ?? ""}
+      />
     </ScreenContainerRaw>
   );
 }
