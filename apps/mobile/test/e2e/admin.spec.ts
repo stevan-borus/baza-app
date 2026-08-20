@@ -129,6 +129,7 @@ test.describe("admin (Serbian)", () => {
     await page.getByTestId("class-type-name-input").fill(name);
     await page.getByTestId("class-type-max-clients-input").fill("8");
     await page.getByTestId("class-type-duration-input").fill("60");
+    await page.getByTestId("class-type-trial-value-input").fill("1200");
     await page.getByTestId("class-type-create-submit").dispatchEvent("click");
 
     await expect(page.getByText(name).first()).toBeVisible();
@@ -146,6 +147,9 @@ test.describe("admin (Serbian)", () => {
 
     const newName = `Edited ClassType ${Date.now()}`;
     await page.getByTestId("class-type-edit-name-input").fill(newName);
+    // Seeded rows predate the required trial value, so the save stays shut
+    // until this box holds a positive number — fill it like an admin would.
+    await page.getByTestId("class-type-edit-trial-value-input").fill("1500");
     await page
       .getByTestId("class-type-edit-save-button")
       .dispatchEvent("click");
@@ -165,6 +169,7 @@ test.describe("admin (Serbian)", () => {
     await page.getByTestId("class-type-name-input").fill(name);
     await page.getByTestId("class-type-max-clients-input").fill("8");
     await page.getByTestId("class-type-duration-input").fill("60");
+    await page.getByTestId("class-type-trial-value-input").fill("1200");
     await page.getByTestId("class-type-create-submit").dispatchEvent("click");
 
     await expect(page.getByText(name).first()).toBeVisible();

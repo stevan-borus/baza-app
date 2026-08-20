@@ -41,6 +41,7 @@ describe("catalog name fields trim on parse", () => {
       name: "  Reformer ",
       maxClients: 6,
       durationMins: 50,
+      trialSessionValue: 1200,
     });
     expect(parsed.name).toBe("Reformer");
   });

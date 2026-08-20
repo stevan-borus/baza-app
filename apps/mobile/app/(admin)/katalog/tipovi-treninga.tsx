@@ -40,6 +40,17 @@ const DOT_COLORS = [
   "#f97316", // orange
 ];
 
+/**
+ * Blank or nonsense means the form is INCOMPLETE — null, not the 8/60 fallback
+ * idiom the other fields use. The trial value is required: a 0 or a silent
+ * fallback would value a confirmed trial at nothing without the admin saying
+ * so, so instead we return null and the submit button stays shut.
+ */
+function parseTrialSessionValue(raw: string): number | null {
+  const parsed = parseInt(raw, 10);
+  return parsed > 0 ? parsed : null;
+}
+
 export default function AdminSettingsClassTypes() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
@@ -50,16 +61,18 @@ export default function AdminSettingsClassTypes() {
   // Cache upkeep (list splice / invalidation) stays in the factory options;
   // the sheet choreography (open/close/reset) lives in the CRUD machine.
   const crud = useAdminCrud({
-    empty: { name: "", maxClients: "", durationMins: "" },
+    empty: { name: "", maxClients: "", durationMins: "", trialSessionValue: "" },
     toForm: (ct: {
       id: string;
       name: string;
       maxClients: number;
       durationMins: number;
+      trialSessionValue: number | null;
     }) => ({
       name: ct.name,
       maxClients: String(ct.maxClients),
       durationMins: String(ct.durationMins),
+      trialSessionValue: String(ct.trialSessionValue ?? ""),
     }),
     create: createClassTypeMutationOptions(queryClient),
     update: updateClassTypeMutationOptions(queryClient),
@@ -92,6 +105,11 @@ export default function AdminSettingsClassTypes() {
           .map((ct) => ct.name),
       )
     : null;
+
+  // Required field: null here narrows the submit handlers to a real number,
+  // so neither call site needs a `?? 0` fallback or a non-null assertion.
+  const createTrialValue = parseTrialSessionValue(crud.form.trialSessionValue);
+  const editTrialValue = parseTrialSessionValue(crud.editForm.trialSessionValue);
 
   return (
     <ScreenContainerRaw
@@ -246,16 +264,32 @@ export default function AdminSettingsClassTypes() {
             value={crud.form.durationMins}
             onChangeText={(v) => crud.setForm({ durationMins: v })}
           />
+          <Input
+            testID="class-type-trial-value-input"
+            placeholder={t("admin.manage.placeholderTrialValue")}
+            keyboardType="numeric"
+            value={crud.form.trialSessionValue}
+            onChangeText={(v) => crud.setForm({ trialSessionValue: v })}
+          />
+          <Text className="text-muted" style={{ fontSize: 12, lineHeight: 17, marginTop: -8 }}>
+            {t("admin.manage.trialValueHelper")}
+          </Text>
           <Button
             testID="class-type-create-submit"
-            disabled={crud.createMutation.isPending || !crud.form.name}
-            onPress={() =>
+            disabled={
+              crud.createMutation.isPending ||
+              !crud.form.name ||
+              createTrialValue === null
+            }
+            onPress={() => {
+              if (createTrialValue === null) return;
               crud.submitCreate({
                 name: crud.form.name.trim(),
                 maxClients: parseInt(crud.form.maxClients, 10) || 8,
                 durationMins: parseInt(crud.form.durationMins, 10) || 60,
-              })
-            }
+                trialSessionValue: createTrialValue,
+              });
+            }}
           >
             {t("admin.manage.create")}
           </Button>
@@ -307,16 +341,31 @@ export default function AdminSettingsClassTypes() {
             value={crud.editForm.durationMins}
             onChangeText={(v) => crud.setEditForm({ durationMins: v })}
           />
+          <Input
+            testID="class-type-edit-trial-value-input"
+            placeholder={t("admin.manage.placeholderTrialValue")}
+            keyboardType="numeric"
+            value={crud.editForm.trialSessionValue}
+            onChangeText={(v) => crud.setEditForm({ trialSessionValue: v })}
+          />
+          <Text className="text-muted" style={{ fontSize: 12, lineHeight: 17, marginTop: -8 }}>
+            {t("admin.manage.trialValueHelper")}
+          </Text>
           <Button
             testID="class-type-edit-save-button"
-            disabled={crud.updateMutation.isPending || !crud.editForm.name}
+            disabled={
+              crud.updateMutation.isPending ||
+              !crud.editForm.name ||
+              editTrialValue === null
+            }
             onPress={() => {
-              if (!crud.editingId) return;
+              if (!crud.editingId || editTrialValue === null) return;
               crud.submitUpdate({
                 id: crud.editingId,
                 name: crud.editForm.name.trim(),
                 maxClients: parseInt(crud.editForm.maxClients, 10) || 8,
                 durationMins: parseInt(crud.editForm.durationMins, 10) || 60,
+                trialSessionValue: editTrialValue,
               });
             }}
           >

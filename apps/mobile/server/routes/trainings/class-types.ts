@@ -11,7 +11,16 @@ import { prisma } from "@/lib/server/prisma";
 export async function GET(request: Request) {
   const guard = await requireRole(request, [UserRole.ADMIN, UserRole.TRAINER]);
   if (!guard.ok) return guard.response;
-  const classTypes = await prisma.classType.findMany({ orderBy: { name: "asc" } });
+  const classTypes = await prisma.classType.findMany({
+    orderBy: { name: "asc" },
+    select: {
+      id: true,
+      name: true,
+      maxClients: true,
+      durationMins: true,
+      trialSessionValue: true,
+    },
+  });
   return respond(classTypesResponseSchema, { success: true, classTypes });
 }
 
@@ -23,6 +32,13 @@ export async function POST(request: Request) {
 
   const classType = await prisma.classType.create({
     data: parsed.data,
+    select: {
+      id: true,
+      name: true,
+      maxClients: true,
+      durationMins: true,
+      trialSessionValue: true,
+    },
   });
   return respond(
     classTypeMutationResponseSchema,

@@ -10,9 +10,10 @@
  * was worth when it happened, not what today's price list would make of it.
  */
 import { useTranslation } from "react-i18next";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ScrollView, Text, View } from "react-native";
 import { useLocalSearchParams } from "expo-router";
+import { Button } from "@/components/ui/button";
 import { GlassCard } from "@/components/ui/glass-card";
 import { EmptyState, ErrorState } from "@/components/ui/states";
 import { SkeletonList } from "@/components/ui/skeleton";
@@ -22,14 +23,19 @@ import {
   ScreenContainerRaw,
   useTabBarBottomPadding,
 } from "@/components/ui/screen-container";
-import { payrollQueries } from "@/lib/queries/payroll-queries-factory";
+import {
+  confirmTrialMutationOptions,
+  payrollQueries,
+} from "@/lib/queries/payroll-queries-factory";
+import { formatMutationError } from "@/lib/admin/format-mutation-error";
 import { defaultPayrollMonth } from "@/lib/payroll-month-nav";
 import { formatRsd } from "@/lib/format";
 import { getDateLocale } from "@/lib/i18n";
 
 export default function HonorariSessionDetail() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const tokens = useThemeTokens();
+  const queryClient = useQueryClient();
   const bottomPad = useTabBarBottomPadding();
   const params = useLocalSearchParams<{
     sessionId: string;
@@ -54,6 +60,17 @@ export default function HonorariSessionDetail() {
   const session = monthQuery.data?.month.sessions.find(
     (s) => s.sessionId === params.sessionId,
   );
+
+  // One mutation for the whole page, but its pending/error state belongs to
+  // the line it was fired from — `variables` names that line, so a failure on
+  // one attendee does not put a message under every other one.
+  const confirmTrial = useMutation(confirmTrialMutationOptions(queryClient));
+  const pendingBookingId = confirmTrial.isPending
+    ? confirmTrial.variables?.bookingId
+    : undefined;
+  const failedBookingId = confirmTrial.isError
+    ? confirmTrial.variables?.bookingId
+    : undefined;
 
   return (
     <ScreenContainerRaw
@@ -146,11 +163,28 @@ export default function HonorariSessionDetail() {
                     </View>
 
                     <View className="flex-row items-center gap-2">
+                      {/* A trial carries a value but no package, so the slot
+                          that normally names the package names the trial. */}
                       <Text className="text-muted flex-1" style={{ fontSize: 13 }}>
-                        {attendee.sessionValue === null
-                          ? t("payroll.noPackageHint")
-                          : attendee.packageName}
+                        {attendee.isTrial
+                          ? t("payroll.trialLabel")
+                          : attendee.sessionValue === null
+                            ? t("payroll.noPackageHint")
+                            : attendee.packageName}
                       </Text>
+                      {attendee.isTrial && (
+                        <View
+                          className="rounded-full px-2 py-0.5"
+                          style={{ backgroundColor: tokens.accentSoft }}
+                        >
+                          <Text
+                            className="text-[10px] font-medium"
+                            style={{ color: tokens.accent }}
+                          >
+                            {t("payroll.trial")}
+                          </Text>
+                        </View>
+                      )}
                       {attendee.isGift && (
                         <View
                           className="rounded-full px-2 py-0.5"
@@ -165,6 +199,38 @@ export default function HonorariSessionDetail() {
                         </View>
                       )}
                     </View>
+
+                    {attendee.canConfirmTrial && (
+                      <View className="mt-2 gap-1">
+                        <Button
+                          size="small"
+                          variant="secondary"
+                          testID={`confirm-trial-${attendee.bookingId}`}
+                          disabled={pendingBookingId === attendee.bookingId}
+                          onPress={() =>
+                            confirmTrial.mutate({
+                              bookingId: attendee.bookingId,
+                            })
+                          }
+                        >
+                          {t("payroll.confirmTrial")}
+                        </Button>
+                        {failedBookingId === attendee.bookingId && (
+                          <Text
+                            className="text-sm"
+                            style={{ color: tokens.danger }}
+                            testID={`confirm-trial-error-${attendee.bookingId}`}
+                          >
+                            {formatMutationError(
+                              confirmTrial.error,
+                              t,
+                              i18n.language === "en" ? "en" : "sr",
+                              t("payroll.confirmTrialError"),
+                            )}
+                          </Text>
+                        )}
+                      </View>
+                    )}
                   </View>
                 </GlassCard>
               ))

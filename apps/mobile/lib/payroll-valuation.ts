@@ -40,6 +40,16 @@ export type PayrollAttendee = {
    * so the studio can see what it absorbed.
    */
   isGift: boolean;
+  /**
+   * A confirmed trial (probni) attendance. Valued from the class type rather
+   * than a package, and only ever after an admin confirmed the visitor came.
+   */
+  isTrial: boolean;
+  /**
+   * Still confirmable as a trial: nothing backed the attendance, nothing is
+   * frozen yet, and the class type carries a trial value to freeze.
+   */
+  canConfirmTrial: boolean;
 };
 
 export type PayrollLine = PayrollAttendee & {

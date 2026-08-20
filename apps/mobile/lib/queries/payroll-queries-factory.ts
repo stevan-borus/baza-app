@@ -1,5 +1,6 @@
 import { queryOptions, type QueryClient } from "@tanstack/react-query";
 import {
+  confirmTrialResponseSchema,
   createPayrollAdjustmentResponseSchema,
   createTrainerRateResponseSchema,
   payrollMonthResponseSchema,
@@ -82,6 +83,20 @@ export const payrollQueries = {
       }),
   }),
 
+  /**
+   * Value a trial (probni) attendance at the class type's trial value. Takes
+   * the BOOKING id — a frozen line is identified by its consumption instead,
+   * and is never confirmable.
+   */
+  confirmTrial: () => ({
+    mutationFn: (input: { bookingId: string }) =>
+      apiRequest(`/api/bookings/${input.bookingId}/confirm-trial`, {
+        method: "POST",
+        schema: confirmTrialResponseSchema,
+        errorMessage: "Unable to confirm the trial attendance",
+      }),
+  }),
+
   createAdjustment: () => ({
     mutationFn: (input: {
       trainerUserId: string;
@@ -108,6 +123,13 @@ export const payrollQueries = {
 export function createTrainerRateMutationOptions(queryClient: QueryClient) {
   return {
     ...payrollQueries.createRate(),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: payrollAll }),
+  };
+}
+
+export function confirmTrialMutationOptions(queryClient: QueryClient) {
+  return {
+    ...payrollQueries.confirmTrial(),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: payrollAll }),
   };
 }

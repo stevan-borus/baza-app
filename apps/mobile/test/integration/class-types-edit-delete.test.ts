@@ -5,6 +5,7 @@ import { resetDb } from "./setup-db";
 vi.mock("@/lib/server/auth-guards", async () => (await import("./auth-mock")).authGuardsMock());
 
 import { PATCH, DELETE } from "@/server/routes/trainings/class-types/[id]";
+import { POST as CREATE_CLASS_TYPE } from "@/server/routes/trainings/class-types";
 import { prisma } from "@/lib/server/prisma";
 
 function asAdmin() {
@@ -180,5 +181,141 @@ describe("class-types PATCH + DELETE", () => {
     expect(
       await prisma.classType.findUnique({ where: { id: snapshotOnly.id } }),
     ).not.toBeNull();
+  });
+
+  it("POST then PATCH round-trips trialSessionValue between positive values", async () => {
+    asAdmin();
+    const created = await CREATE_CLASS_TYPE(
+      new Request("http://test.local/api/trainings/class-types", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          name: "Probni Reformer",
+          maxClients: 6,
+          durationMins: 60,
+          trialSessionValue: 2500,
+        }),
+      }),
+    );
+    expect(created.status).toBe(201);
+    const createdBody = await created.json();
+    expect(createdBody.classType.trialSessionValue).toBe(2500);
+
+    const id = createdBody.classType.id;
+    const raised = await PATCH(
+      new Request(`http://test.local/api/trainings/class-types/${id}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ trialSessionValue: 3000 }),
+      }),
+      { id },
+    );
+    expect(raised.status).toBe(200);
+    expect((await raised.json()).classType.trialSessionValue).toBe(3000);
+    expect(
+      (await prisma.classType.findUnique({ where: { id } }))?.trialSessionValue,
+    ).toBe(3000);
+  });
+
+  it("PATCH rejects clearing trialSessionValue back to null", async () => {
+    asAdmin();
+    const created = await CREATE_CLASS_TYPE(
+      new Request("http://test.local/api/trainings/class-types", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          name: "Ne moze bez vrednosti",
+          maxClients: 6,
+          durationMins: 60,
+          trialSessionValue: 2500,
+        }),
+      }),
+    );
+    expect(created.status).toBe(201);
+    const id = (await created.json()).classType.id;
+
+    // A valued type can never go back to unvalued: an unvalued type silently
+    // drops confirmed trials out of the trainer payout, so the only way back
+    // is a deliberate DB backfill, not a PATCH.
+    const cleared = await PATCH(
+      new Request(`http://test.local/api/trainings/class-types/${id}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ trialSessionValue: null }),
+      }),
+      { id },
+    );
+    expect(cleared.status).toBe(400);
+    expect(
+      (await prisma.classType.findUnique({ where: { id } }))?.trialSessionValue,
+    ).toBe(2500);
+  });
+
+  it("PATCH may omit trialSessionValue and leaves the stored value untouched", async () => {
+    asAdmin();
+    const created = await CREATE_CLASS_TYPE(
+      new Request("http://test.local/api/trainings/class-types", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          name: "Samo preimenovanje",
+          maxClients: 6,
+          durationMins: 60,
+          trialSessionValue: 1800,
+        }),
+      }),
+    );
+    expect(created.status).toBe(201);
+    const id = (await created.json()).classType.id;
+
+    const renamed = await PATCH(
+      new Request(`http://test.local/api/trainings/class-types/${id}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ name: "Preimenovan" }),
+      }),
+      { id },
+    );
+    expect(renamed.status).toBe(200);
+    expect((await renamed.json()).classType.trialSessionValue).toBe(1800);
+  });
+
+  it("POST rejects a class type created without trialSessionValue", async () => {
+    asAdmin();
+    const created = await CREATE_CLASS_TYPE(
+      new Request("http://test.local/api/trainings/class-types", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          name: "Bez probnog",
+          maxClients: 6,
+          durationMins: 60,
+        }),
+      }),
+    );
+    expect(created.status).toBe(400);
+    expect(
+      await prisma.classType.findFirst({ where: { name: "Bez probnog" } }),
+    ).toBeNull();
+  });
+
+  it("POST rejects an explicitly null trialSessionValue", async () => {
+    asAdmin();
+    const created = await CREATE_CLASS_TYPE(
+      new Request("http://test.local/api/trainings/class-types", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          name: "Izricito null",
+          maxClients: 6,
+          durationMins: 60,
+          trialSessionValue: null,
+        }),
+      }),
+    );
+    expect(created.status).toBe(400);
+    expect(
+      await prisma.classType.findFirst({ where: { name: "Izricito null" } }),
+    ).toBeNull();
   });
 });

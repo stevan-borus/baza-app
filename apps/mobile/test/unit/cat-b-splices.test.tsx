@@ -124,6 +124,7 @@ function classType(id: string, over: Partial<ClassType> = {}): ClassType {
     name: `Type ${id}`,
     maxClients: 8,
     durationMins: 60,
+    trialSessionValue: null,
     ...over,
   };
 }
@@ -137,7 +138,12 @@ describe("trainings (class types) cache splice", () => {
       ...createClassTypeMutationOptions(client),
       mutationFn: async () => ({ success: true, classType: created }),
     });
-    await observer.mutate({ name: "Reformer", maxClients: 8, durationMins: 60 });
+    await observer.mutate({
+      name: "Reformer",
+      maxClients: 8,
+      durationMins: 60,
+      trialSessionValue: 1200,
+    });
 
     const list = client.getQueryData<{ classTypes: ClassType[] }>(classTypesKey);
     expect(list?.classTypes.map((c) => c.id)).toEqual(["1", "2"]);

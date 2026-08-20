@@ -54,6 +54,7 @@ export async function readPayrollMonth(
     netPayout: computed.payout + adjustmentTotal,
     unpricedCount: computed.unpricedCount,
     giftCount: computed.giftCount,
+    trialCount: computed.trialCount,
     adjustments: adjustments.map((a) => ({
       id: a.id,
       amount: a.amount,

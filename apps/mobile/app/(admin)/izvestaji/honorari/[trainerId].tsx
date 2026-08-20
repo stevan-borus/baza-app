@@ -161,6 +161,11 @@ export default function HonorariTrainerDetail() {
                   {t("payroll.giftHint")}
                 </Text>
               )}
+              {month.trialCount > 0 && (
+                <Text className="mt-2 text-sm" style={{ color: tokens.muted }}>
+                  {t("payroll.trialHint")}
+                </Text>
+              )}
             </GlassCard>
 
             {month.buckets.length > 0 && (
