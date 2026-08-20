@@ -1439,9 +1439,9 @@
     "revertToBase": "Vrati na osnovni procenat",
     "revertToBaseHint": "{{classType}} se od izabranog datuma plaća po osnovnom procentu.",
     "revertedToBase": "osnovni",
-    "overridesHint_one": "+{{count}} posebna",
-    "overridesHint_few": "+{{count}} posebne",
-    "overridesHint_other": "+{{count}} posebnih",
+    "overridesHint_one": "+{{count}} posebni procenat",
+    "overridesHint_few": "+{{count}} posebna procenta",
+    "overridesHint_other": "+{{count}} posebnih procenata",
     "overridesHintA11y_one": "{{count}} poseban procenat",
     "overridesHintA11y_few": "{{count}} posebna procenta",
     "overridesHintA11y_other": "{{count}} posebnih procenata"

@@ -341,7 +341,7 @@ describe("Trainer roster override hint", () => {
     const hint = await screen.findByTestId(
       `procenti-overrides-hint-${TRAINER.id}`,
     );
-    expect(hint.textContent).toContain("+1 posebna");
+    expect(hint.textContent).toContain("+1 posebni procenat");
     // The row still leads with the BASE percentage — the hint is a count, not
     // a replacement for the number the admin came to read.
     expect(
@@ -350,14 +350,16 @@ describe("Trainer roster override hint", () => {
   });
 
   it.each([
-    { count: 1, expected: "+1 posebna" },
-    { count: 2, expected: "+2 posebne" },
-    { count: 5, expected: "+5 posebnih" },
+    { count: 1, expected: "+1 posebni procenat" },
+    { count: 2, expected: "+2 posebna procenta" },
+    { count: 5, expected: "+5 posebnih procenata" },
   ])(
     "declines the Serbian chip for $count overrides ($expected)",
     async ({ count, expected }) => {
-      // "+2 posebna" is not Serbian. The count drives three forms — the same
-      // thing every other counted string in the app already does.
+      // "+2 posebna" was not Serbian, and a bare adjective is not a phrase:
+      // procenat is masculine, so the chip carries the noun it counts. The
+      // count drives three forms — the thing every other counted string in
+      // the app already does.
       // The roster counts overrides against the class-type CATALOGUE, so the
       // scoped rates need class types that actually exist.
       classTypeRows = Array.from({ length: count }, (_, i) => ({
