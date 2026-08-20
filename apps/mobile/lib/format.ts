@@ -1,4 +1,12 @@
+import dayjs from "dayjs";
+import timezone from "dayjs/plugin/timezone";
+import utc from "dayjs/plugin/utc";
+
 import { getDateLocale } from "@/lib/i18n";
+import { STUDIO_TIMEZONE, startOfStudioDay } from "@/lib/studio-time";
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
 
 /**
  * Currency formatting shared across admin + client surfaces.
@@ -54,24 +62,42 @@ export function formatClassTypeList(names: string[]): string {
  *
  * The year is shown only when the range crosses a calendar-year boundary:
  * otherwise a single-year window like "13. maj – 13. maj" on the Godina period
- * would read as the same day with no way to tell the two endpoints apart. The
- * boundary check uses UTC years to stay stable regardless of the viewer's
- * timezone. `locale` is passed straight to `toLocaleDateString`, so callers
- * keep whatever locale string they already use (e.g. `sr-RS` vs `sr-Latn-RS`).
+ * would read as the same day with no way to tell the two endpoints apart.
+ *
+ * Both endpoints are read in `STUDIO_TIMEZONE` — not the viewer's zone, not
+ * UTC — so the label names the same days on a phone in Belgrade, a UTC server
+ * and a CI runner.
+ *
+ * The two ends are resolved differently, on purpose. `from` is named by its
+ * own studio-zone calendar date. The END is named by the studio DAY holding
+ * the last included instant: a studio month closes at 05:00 Belgrade on the
+ * 1st, so that instant is 04:59 that morning, which still belongs to the
+ * previous studio day because the studio has not opened yet. Taking its bare
+ * calendar date is how the Mesec pill came to read "1. maj – 1. jun" instead
+ * of "1. maj – 31. maj".
+ *
+ * Rolling `from` back the same way would be wrong: windows that start at
+ * local midnight (the Naplata month, a day-sized revenue bucket) begin before
+ * opening, so a symmetric rule would label them a day early — "30. apr" for a
+ * May window, or a one-day bucket spanning two dates.
+ *
+ * `locale` is passed straight to the formatter, so callers keep whatever
+ * locale string they already use (e.g. `sr-RS` vs `sr-Latn-RS`).
  */
 export function formatDateRange(
   from: string | number | Date,
   toExclusive: string | number | Date,
   locale: string,
 ): string {
-  const fromD = new Date(from);
-  const inclusiveTo = new Date(new Date(toExclusive).getTime() - 1);
-  const crossesYear =
-    fromD.getUTCFullYear() !== inclusiveTo.getUTCFullYear();
+  const fromD = dayjs(new Date(from)).tz(STUDIO_TIMEZONE);
+  const inclusiveTo = dayjs(
+    startOfStudioDay(new Date(new Date(toExclusive).getTime() - 1)),
+  ).tz(STUDIO_TIMEZONE);
+  const crossesYear = fromD.year() !== inclusiveTo.year();
   const fmt: Intl.DateTimeFormatOptions = crossesYear
-    ? { day: "numeric", month: "short", year: "numeric" }
-    : { day: "numeric", month: "short" };
-  return `${fromD.toLocaleDateString(locale, fmt)} – ${inclusiveTo.toLocaleDateString(locale, fmt)}`;
+    ? { day: "numeric", month: "short", year: "numeric", timeZone: STUDIO_TIMEZONE }
+    : { day: "numeric", month: "short", timeZone: STUDIO_TIMEZONE };
+  return `${fromD.toDate().toLocaleDateString(locale, fmt)} – ${inclusiveTo.toDate().toLocaleDateString(locale, fmt)}`;
 }
 
 /**
