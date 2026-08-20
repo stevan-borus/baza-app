@@ -1,25 +1,18 @@
-import dayjs from "dayjs";
-import timezone from "dayjs/plugin/timezone";
-import utc from "dayjs/plugin/utc";
-import { studioMonthRange } from "@/lib/payroll-valuation";
-import { STUDIO_TIMEZONE, startOfStudioDay } from "@/lib/studio-time";
+import { computePeriodWindow } from "@/lib/admin/use-period-pill";
 import { now } from "@/lib/now";
 
-dayjs.extend(utc);
-dayjs.extend(timezone);
-
 /**
- * The `{ from, to }` window a report query needs for "this month" to mean
- * what the studio owner means: the calendar month containing the CURRENT
- * studio day, bounded by the 05:00 Belgrade opening hour the rest of the app
- * already uses for day edges.
+ * The `{ from, to }` window a report query needs for "this month" to mean what
+ * the studio owner means: the calendar month containing the CURRENT studio
+ * day, bounded by the 05:00 Belgrade opening hour.
  *
- * The month is read off `startOfStudioDay(now())` rather than the raw
- * instant, so 02:00 on the 1st still reports the month that is closing —
- * the studio is shut and yesterday's day has not ended yet.
+ * This is the report pills' own month window with the period fixed — the
+ * dashboard hero and Izveštaji → Mesec have to agree on where a month starts,
+ * and two implementations of that is how they stopped agreeing in the first
+ * place.
  */
 export function currentStudioMonthWindow(): { from: string; to: string } {
-  const studioDay = dayjs(startOfStudioDay(now())).tz(STUDIO_TIMEZONE);
-  const { from, to } = studioMonthRange(studioDay.year(), studioDay.month() + 1);
-  return { from: from.toISOString(), to: to.toISOString() };
+  const { from, to } = computePeriodWindow("month", now());
+  // Only "all" yields an open-ended window, and this is always "month".
+  return { from: from as string, to: to as string };
 }
