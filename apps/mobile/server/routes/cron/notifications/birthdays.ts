@@ -1,5 +1,6 @@
 import { cronBirthdaysResponseSchema } from "@baza/types/cron";
 import { now } from "@/lib/now";
+import { studioDayKey } from "@/lib/studio-time";
 import { requireCronAuth } from "@/lib/server/cron-auth";
 import { respond } from "@/lib/server/http";
 import { notifyOperators } from "@/lib/server/notify-operators";
@@ -8,10 +9,12 @@ import { formatFullName } from "@baza/types/common";
 import { UserRole, Prisma } from "@/generated/prisma";
 import { prisma } from "@/lib/server/prisma";
 
+// Read in STUDIO_TIMEZONE, not UTC — the studio's calendar day is the one a
+// birthday belongs to. Off the UTC clock the date rolls over at 22:00
+// Belgrade, so the day's first run landed late at night and, by claiming the
+// per-day dedupe key, silenced the daytime one.
 function getTodayMatchSet(currentInstant: Date): Array<{ month: number; day: number }> {
-  const month = currentInstant.getUTCMonth() + 1;
-  const day = currentInstant.getUTCDate();
-  const year = currentInstant.getUTCFullYear();
+  const [year, month, day] = studioDayKey(currentInstant).split("-").map(Number);
   const isLeapYear = (y: number) => (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0;
   const matches: Array<{ month: number; day: number }> = [{ month, day }];
   if (!isLeapYear(year) && month === 3 && day === 1) {
@@ -27,7 +30,7 @@ export async function POST(request: Request) {
   const url = new URL(request.url);
   const dryRun = url.searchParams.get("dryRun") === "true";
   const currentInstant = now();
-  const todayIso = currentInstant.toISOString().slice(0, 10);
+  const todayIso = studioDayKey(currentInstant);
   const matchSet = getTodayMatchSet(currentInstant);
 
   const conditions = matchSet.map(
@@ -79,9 +82,10 @@ export async function POST(request: Request) {
         suggestedClassTypeId,
         today: todayIso,
       },
-      // Keyed per client+day+recipient (mirrors unbacked-attendance): every
-      // admin gets their own NotificationLog row, while cron retries stay
-      // idempotent — same recipient, same client, same day → no duplicate.
+      // Keyed per client+studio-day+recipient (mirrors unbacked-attendance):
+      // every admin gets their own NotificationLog row, while cron retries
+      // stay idempotent — same recipient, same client, same day → no
+      // duplicate.
       dedupeKey: (recipientUserId) => `birthday:${client.userId}:${todayIso}:${recipientUserId}`,
     });
     sent += admins.length;

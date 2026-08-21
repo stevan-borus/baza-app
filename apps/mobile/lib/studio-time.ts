@@ -45,6 +45,24 @@ export function startOfStudioDay(at: Date): Date {
 }
 
 /**
+ * The `YYYY-MM-DD` calendar day the instant `at` falls on in
+ * `STUDIO_TIMEZONE` — the day the studio itself is living in.
+ *
+ * This is what "today" means for anything the business reasons about, and
+ * it is emphatically NOT the server's UTC day: Fly runs UTC, where the date
+ * rolls over at 22:00 Belgrade in summer (23:00 in winter). A cron job that
+ * derives "today" from `toISOString().slice(0, 10)` therefore thinks a
+ * client's birthday has started while the studio is closed for the night —
+ * which is how an admin got a birthday push at 23:xx local.
+ *
+ * The offset is resolved per-date rather than fixed, so CET and CEST both
+ * land on the right day.
+ */
+export function studioDayKey(at: Date): string {
+  return dayjs(at).tz(STUDIO_TIMEZONE).format("YYYY-MM-DD");
+}
+
+/**
  * When the studio day *named by* `pickedDay` opens — that calendar date at
  * 05:00 Belgrade.
  *
@@ -68,9 +86,7 @@ export function startOfStudioDay(at: Date): Date {
  * Belgrade is where the admin, the studio and the calendar day all agree.
  */
 export function studioDayStartFor(pickedDay: Date): Date {
-  return studioDayStartForKey(
-    dayjs(pickedDay).tz(STUDIO_TIMEZONE).format("YYYY-MM-DD"),
-  );
+  return studioDayStartForKey(studioDayKey(pickedDay));
 }
 
 /**
