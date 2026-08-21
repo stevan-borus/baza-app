@@ -44,6 +44,7 @@ export async function POST(request: Request, { id }: RouteParams) {
         select: {
           endsAt: true,
           status: true,
+          trainer: { select: { role: true } },
           classType: { select: { trialSessionValue: true } },
         },
       },
@@ -62,6 +63,17 @@ export async function POST(request: Request, { id }: RouteParams) {
   }
   if (booking.session.endsAt > now()) {
     return fail("Session has not ended yet", 400);
+  }
+  // An admin who teaches is the owner covering a class, not staff owed a cut of
+  // it, so nothing they taught belongs on payroll. Without this the confirm
+  // would freeze a snapshot no payout surface can ever read — /payroll/month
+  // 404s for a non-TRAINER subject — leaving an orphan row behind.
+  //
+  // `fail` rather than a throw: a Response never reaches
+  // Sentry.setupExpressErrorHandler, which captures status >= 500, so a boring
+  // rejection doesn't page anyone.
+  if (booking.session.trainer?.role !== UserRole.TRAINER) {
+    return fail("Session is not taught by a trainer", 400);
   }
 
   const trialSessionValue = booking.session.classType.trialSessionValue;

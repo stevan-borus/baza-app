@@ -35,6 +35,12 @@ process.env.E2E_INVITE_TOKEN_FILE = E2E_INVITE_TOKEN_FILE;
  * TEST_ANCHOR_TIME via `lib/now.ts`; helpers and the browser fixture
  * resolve it from this same env var so seed/server/helpers/browser all
  * agree on "current time". See CONTEXT.md → "Anchor time".
+ *
+ * `test/e2e/helpers/fixtures.ts` and `scripts/test/seed-e2e-env.ts` repeat this
+ * literal as their own fallback for running outside this config. Keep all three
+ * identical — a mismatch pins the browser to a different instant than the
+ * server, and the symptom is seeded rows mysteriously landing outside the
+ * window a spec asserts on.
  */
 const TEST_ANCHOR_TIME = process.env.TEST_ANCHOR_TIME ?? "2026-05-11T09:00:00Z";
 process.env.TEST_ANCHOR_TIME = TEST_ANCHOR_TIME;
