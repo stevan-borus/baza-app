@@ -279,6 +279,34 @@ describe("/api/payroll/rates", () => {
     expect(body.rates[0].percent).toBe(40);
   });
 
+  it("refuses a rate for an admin — an admin who teaches is not on payroll", async () => {
+    const seeded = await seed();
+    asUser(seeded.admin);
+
+    const res = await POST(
+      postRate({
+        trainerUserId: seeded.admin.id,
+        percent: 40,
+        effectiveFrom: "2026-09-01",
+      }),
+    );
+    expect(res.status).toBe(400);
+  });
+
+  it("refuses a rate for a trainerUserId that belongs to nobody", async () => {
+    const seeded = await seed();
+    asUser(seeded.admin);
+
+    const res = await POST(
+      postRate({
+        trainerUserId: "00000000-0000-0000-0000-000000000000",
+        percent: 40,
+        effectiveFrom: "2026-09-01",
+      }),
+    );
+    expect(res.status).toBe(404);
+  });
+
   it("keeps rates admin-only in both directions", async () => {
     const seeded = await seed();
     asUser(seeded.trainer);

@@ -763,6 +763,91 @@ describe("GET /api/payroll/month", () => {
       expect(res.status).toBe(403);
     });
 
+    /**
+     * An admin who teaches is the owner covering a class, not a trainer owed a
+     * cut of it. Payroll must not have a month for them at all — the owner
+     * chose invisible over a zeroed row, so the route answers 404 rather than
+     * handing back an empty breakdown that reads like a real, unpaid month.
+     */
+    async function adminTaughtSession(seeded: Awaited<ReturnType<typeof seed>>) {
+      const session = await makeSession(seeded, seeded.admin.id, JULY_SESSION);
+      const profileId = await makeClient("AdminGost");
+      const pkg = await givePackage(profileId, seeded.reformer12.id, seeded.classType.id, {
+        sessionsGranted: 12,
+      });
+      await prisma.booking.create({
+        data: { sessionId: session.id, clientProfileId: profileId, clientPackageId: pkg.id },
+      });
+      return session;
+    }
+
+    it("has no payroll month for an admin who taught a real, priced session", async () => {
+      const seeded = await seed();
+      // A rate row on the admin would be the worst case: something to pay with.
+      await prisma.trainerRate.create({
+        data: { trainerUserId: seeded.admin.id, percent: 40, effectiveFrom: new Date("2026-01-01") },
+      });
+      await adminTaughtSession(seeded);
+
+      asUser(seeded.admin);
+      const res = await GET_MONTH(
+        monthRequest({ year: "2026", month: "7", trainerUserId: seeded.admin.id }),
+      );
+      expect(res.status).toBe(404);
+    });
+
+    it("gives an admin no month of their own when they pass no id", async () => {
+      const seeded = await seed();
+      await adminTaughtSession(seeded);
+
+      asUser(seeded.admin);
+      const res = await GET_MONTH(monthRequest({ year: "2026", month: "7" }));
+      expect(res.status).toBe(404);
+    });
+
+    it("still 403s a trainer probing another trainer, rather than 404ing", async () => {
+      // Order matters: the ownership check must run before the role lookup, or
+      // a trainer could map out who exists by reading the status code.
+      const seeded = await seed();
+
+      asUser(seeded.trainer);
+      const res = await GET_MONTH(
+        monthRequest({ year: "2026", month: "7", trainerUserId: seeded.otherTrainer.id }),
+      );
+      expect(res.status).toBe(403);
+    });
+
+    it("404s a trainerUserId that belongs to nobody", async () => {
+      const seeded = await seed();
+
+      asUser(seeded.admin);
+      const res = await GET_MONTH(
+        monthRequest({
+          year: "2026",
+          month: "7",
+          trainerUserId: "00000000-0000-0000-0000-000000000000",
+        }),
+      );
+      expect(res.status).toBe(404);
+    });
+
+    it("omits an admin who taught sessions from the studio-wide summary", async () => {
+      const seeded = await seed();
+      await adminTaughtSession(seeded);
+
+      asUser(seeded.admin);
+      const res = await GET_SUMMARY(
+        new Request("http://test.local/api/payroll/summary?year=2026&month=7"),
+      );
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(
+        body.trainers.some(
+          (t: { trainerUserId: string }) => t.trainerUserId === seeded.admin.id,
+        ),
+      ).toBe(false);
+    });
+
     it("keeps the studio-wide summary admin-only", async () => {
       const seeded = await seed();
 

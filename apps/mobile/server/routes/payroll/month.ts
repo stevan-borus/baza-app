@@ -15,6 +15,9 @@ import { readPayrollMonth } from "@/lib/server/payroll-month-read";
  * session rather than the query string — #123 removed TRAINER from the
  * studio-wide report routes precisely because they leaked other trainers'
  * figures, and the same boundary applies here.
+ *
+ * The subject must be a TRAINER: only trainers are on payroll, so any other
+ * id — an admin who teaches, or one that matches nobody — has no month.
  */
 export async function GET(request: Request) {
   const guard = await requireRole(request, [UserRole.ADMIN, UserRole.TRAINER]);
@@ -32,6 +35,18 @@ export async function GET(request: Request) {
   const trainerUserId = isAdmin
     ? (requestedTrainerId ?? guard.user.id)
     : guard.user.id;
+
+  // An admin who teaches is the owner covering a class, not staff owed a cut
+  // of it, so payroll has no month for them at all. This runs after the
+  // ownership check above so a trainer probing another id still gets 403 —
+  // otherwise the status code would tell them who exists.
+  const trainer = await prisma.user.findUnique({
+    where: { id: trainerUserId },
+    select: { role: true },
+  });
+  if (trainer?.role !== UserRole.TRAINER) {
+    return fail("Trainer not found", 404);
+  }
 
   const month = await readPayrollMonth(prisma, {
     trainerUserId,

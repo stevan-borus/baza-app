@@ -344,6 +344,23 @@ describe("POST /api/bookings/[id]/confirm-trial", () => {
     expect(after.unpricedCount).toBe(1);
   });
 
+  it("returns 400 and writes nothing when the session was taught by an admin", async () => {
+    const seeded = await seed({ trialSessionValue: 2000 });
+    const clientProfileId = await makeClient("Mila");
+    const session = await makeEndedSession(seeded.classType.id, seeded.admin.id);
+    const booking = await prisma.booking.create({
+      data: { sessionId: session.id, clientProfileId },
+    });
+
+    asUser(seeded.admin);
+    const res = await CONFIRM_TRIAL(confirmRequest(booking.id), { id: booking.id });
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toBe("Session is not taught by a trainer");
+    expect(
+      await prisma.sessionConsumption.count({ where: { sessionId: session.id } }),
+    ).toBe(0);
+  });
+
   it("is forbidden for a trainer", async () => {
     const seeded = await seed({ trialSessionValue: 2000 });
     const clientProfileId = await makeClient("Mila");

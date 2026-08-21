@@ -12,8 +12,17 @@ import { test as base, expect } from "@playwright/test";
 
 export type { Page, APIResponse, Locator, BrowserContext } from "@playwright/test";
 
+/**
+ * `playwright.config.ts` sets TEST_ANCHOR_TIME before any spec loads, so the
+ * env var is the value in every real run and this literal is only a fallback
+ * for loading a fixture outside the runner. It must therefore MATCH the
+ * config's default: when the two drifted (09 vs 11 May) a stray import would
+ * have pinned the browser two days off the server it is asserting against,
+ * which is exactly the seed-vs-app anchor divergence this stack has hit
+ * before. Change both, or neither.
+ */
 export const ANCHOR_TIME =
-  process.env.TEST_ANCHOR_TIME ?? "2026-05-09T10:00:00Z";
+  process.env.TEST_ANCHOR_TIME ?? "2026-05-11T09:00:00Z";
 
 export const test = base.extend({
   page: async ({ page }, use) => {

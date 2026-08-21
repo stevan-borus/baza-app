@@ -9,5 +9,10 @@
     "resolveJsonModule": true
   },
   "include": ["**/*.ts", "**/*.tsx", ".expo/types/**/*.ts", "expo-env.d.ts"],
-  "exclude": ["node_modules"]
+  // `generated/prisma` (the client) is deliberately NOT excluded — 110 files
+  // import it and it type-checks clean. The two below are dead prisma-zod
+  // output from before the generator moved to packages/types; nothing imports
+  // them, nothing regenerates them, and a stale copy left on disk used to fail
+  // the gate with ~104 errors that had nothing to do with the working tree.
+  "exclude": ["node_modules", "generated/schemas", "generated/helpers"]
 }
