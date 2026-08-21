@@ -362,41 +362,67 @@ export async function PATCH(request: Request, { id }: RouteParams) {
     );
   }
 
-  const session = await prisma.session.update({
-    where: { id },
-    data: {
-      startsAt,
-      endsAt,
-      capacity: parsed.data.capacity,
-      roomId: parsed.data.roomId,
-      status: parsed.data.status,
-      isActive: parsed.data.isActive,
-      trainerUserId: parsed.data.trainerUserId,
-      // Per-occurrence "intermediate" (srednji nivo) marking. `undefined`
-      // (field omitted) leaves it untouched; a boolean sets or clears it.
-      isIntermediate: parsed.data.isIntermediate,
-      // Same contract for the per-occurrence "mixed group" marking.
-      isMixedGroup: parsed.data.isMixedGroup,
-      // Same contract for the per-occurrence empty-booking cutoff: omitted
-      // leaves the stored value alone, a number (including 0) sets it.
-      emptyBookingCutoffHours: parsed.data.emptyBookingCutoffHours,
-    },
-    select: {
-      id: true,
-      startsAt: true,
-      endsAt: true,
-      capacity: true,
-      status: true,
-      roomId: true,
-      trainerUserId: true,
-      isActive: true,
-      isIntermediate: true,
-      isMixedGroup: true,
-      emptyBookingCutoffHours: true,
-      classTypeId: true,
-      classType: { select: { id: true, name: true } },
-      room: { select: { id: true, name: true } },
-    },
+  // A studio-initiated cancel has to take the bookings and the waitlist with
+  // it, in one commit. Left half-applied, the client keeps a CONFIRMED ghost
+  // they can't clear (self-cancel rejects a non-SCHEDULED session) and the
+  // session can never be deleted (DELETE 409s on active bookings).
+  const becomesCanceled =
+    parsed.data.status === "CANCELED" && existing.status !== "CANCELED";
+  const cancellationTime = now();
+
+  const session = await prisma.$transaction(async (tx) => {
+    const updated = await tx.session.update({
+      where: { id },
+      data: {
+        startsAt,
+        endsAt,
+        capacity: parsed.data.capacity,
+        roomId: parsed.data.roomId,
+        status: parsed.data.status,
+        isActive: parsed.data.isActive,
+        trainerUserId: parsed.data.trainerUserId,
+        // Per-occurrence "intermediate" (srednji nivo) marking. `undefined`
+        // (field omitted) leaves it untouched; a boolean sets or clears it.
+        isIntermediate: parsed.data.isIntermediate,
+        // Same contract for the per-occurrence "mixed group" marking.
+        isMixedGroup: parsed.data.isMixedGroup,
+        // Same contract for the per-occurrence empty-booking cutoff: omitted
+        // leaves the stored value alone, a number (including 0) sets it.
+        emptyBookingCutoffHours: parsed.data.emptyBookingCutoffHours,
+      },
+      select: {
+        id: true,
+        startsAt: true,
+        endsAt: true,
+        capacity: true,
+        status: true,
+        roomId: true,
+        trainerUserId: true,
+        isActive: true,
+        isIntermediate: true,
+        isMixedGroup: true,
+        emptyBookingCutoffHours: true,
+        classTypeId: true,
+        classType: { select: { id: true, name: true } },
+        room: { select: { id: true, name: true } },
+      },
+    });
+
+    if (becomesCanceled) {
+      // No forfeit: the studio called the class off, so the client keeps their
+      // session however close to the start time this lands. No consumption row,
+      // no package decrement.
+      await tx.booking.updateMany({
+        where: { sessionId: id, canceledAt: null },
+        data: { canceledAt: cancellationTime },
+      });
+      // No promotion either — there is nothing to promote into. The entries go
+      // because countHeldSessions treats a waitlist row as a held slot, so
+      // leaving them would keep capacity reserved on a dead session.
+      await tx.waitlistEntry.deleteMany({ where: { sessionId: id } });
+    }
+
+    return updated;
   });
 
   // Distinguish WHAT changed — the client-facing message depends on it:
