@@ -158,10 +158,74 @@ describe("cron:birthdays", () => {
     expect(createSystemNotificationMock).not.toHaveBeenCalled();
   });
 
+  it("uses the Belgrade calendar day, not the server's UTC day", async () => {
+    // 22:30Z on 21 Aug is already 00:30 on the 22nd in Belgrade (CEST,
+    // UTC+2). Reading "today" off the UTC clock is what let a birthday
+    // prompt fire at 23:xx local: the UTC date rolls over first, wins the
+    // per-day dedupe key, and suppresses the sensible daytime send.
+    const previousAnchor = process.env.TEST_ANCHOR_TIME;
+    process.env.TEST_ANCHOR_TIME = "2026-08-21T22:30:00Z";
+    try {
+      const admin = await seedAdmin();
+      const belgradeBirthday = await seedClientWithBirthday({
+        email: "belgrade-day@test.local",
+        fullName: "Belgrade Day",
+        dateOfBirth: "1990-08-22",
+      });
+      await seedClientWithBirthday({
+        email: "utc-day@test.local",
+        fullName: "Utc Day",
+        dateOfBirth: "1990-08-21",
+      });
+
+      const res = await POST_BIRTHDAYS(buildCronRequest());
+      expect(res.status).toBe(200);
+
+      const promptCalls = createSystemNotificationMock.mock.calls.filter(
+        (call) => call[2] === "BIRTHDAY_ADMIN_PROMPT",
+      );
+      expect(promptCalls).toHaveLength(1);
+      expect(promptCalls[0][3]).toMatchObject({
+        clientProfileId: belgradeBirthday.clientProfile!.id,
+        clientFullName: "Belgrade Day",
+        today: "2026-08-22",
+      });
+      expect((promptCalls[0][4] as { dedupeKey?: string })?.dedupeKey).toBe(
+        `birthday:${belgradeBirthday.id}:2026-08-22:${admin.id}`,
+      );
+    } finally {
+      process.env.TEST_ANCHOR_TIME = previousAnchor;
+    }
+  });
+
   it("falls back to Mar 1 for Feb 29 birthday in non-leap year (2026)", async () => {
-    const isLeapYear = (y: number) => (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0;
-    const currentYear = now().getUTCFullYear();
-    if (isLeapYear(currentYear)) return;
-    expect(true).toBe(true); // placeholder; see implementation note
+    const previousAnchor = process.env.TEST_ANCHOR_TIME;
+    process.env.TEST_ANCHOR_TIME = "2026-03-01T10:00:00Z";
+    try {
+      const isLeapYear = (y: number) => (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0;
+      expect(isLeapYear(now().getUTCFullYear())).toBe(false);
+
+      const admin = await seedAdmin();
+      const leaplingClient = await seedClientWithBirthday({
+        email: "leapling@test.local",
+        fullName: "Leap Ling",
+        dateOfBirth: "1996-02-29",
+      });
+
+      const res = await POST_BIRTHDAYS(buildCronRequest());
+      expect(res.status).toBe(200);
+
+      const adminCalls = createSystemNotificationMock.mock.calls.filter(
+        (call) => call[0] === admin.id && call[2] === "BIRTHDAY_ADMIN_PROMPT",
+      );
+      expect(adminCalls).toHaveLength(1);
+      expect(adminCalls[0][3]).toMatchObject({
+        clientProfileId: leaplingClient.clientProfile!.id,
+        clientFullName: "Leap Ling",
+        today: "2026-03-01",
+      });
+    } finally {
+      process.env.TEST_ANCHOR_TIME = previousAnchor;
+    }
   });
 });

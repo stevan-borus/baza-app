@@ -43,8 +43,10 @@ export const CRON_JOBS: CronJob[] = [
   {
     name: "birthdays",
     endpointPath: "/api/cron/notifications/birthdays",
-    schedule: "0 * * * *",
-    rationale: "Hourly — matches the old 1h interval; catches each timezone's morning.",
+    schedule: "0 7 * * *",
+    rationale:
+      "Daily 07:00 UTC — one studio, Europe/Belgrade, so 09:00 CEST / 08:00 CET. " +
+      "Hourly was an interval-loop artifact: its first run of the day sat near UTC midnight = late evening local.",
   },
   {
     name: "campaigns-dispatch",

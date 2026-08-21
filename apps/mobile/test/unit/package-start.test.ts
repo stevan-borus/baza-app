@@ -6,6 +6,7 @@ import {
   STUDIO_DAY_START_HOUR,
   STUDIO_TIMEZONE,
   startOfStudioDay,
+  studioDayKey,
   studioDayStartFor,
 } from "@/lib/studio-time";
 
@@ -133,5 +134,36 @@ describe("STUDIO_DAY_START_HOUR", () => {
     // The constant exists so this relationship is checkable rather than a
     // magic number: the day must open at or before the 06:00 first class.
     expect(STUDIO_DAY_START_HOUR).toBeLessThan(6);
+  });
+});
+
+// "Today" for anything the business reasons about is the studio's calendar
+// day, not the UTC day the server happens to be living in. The two disagree
+// for the last two hours of every Belgrade evening.
+describe("studioDayKey", () => {
+  it("returns the Belgrade day when it has already rolled past the UTC day", () => {
+    // 22:30Z on 21 Aug is 00:30 on the 22nd in Belgrade (CEST, UTC+2).
+    expect(studioDayKey(new Date("2026-08-21T22:30:00.000Z"))).toBe("2026-08-22");
+  });
+
+  it("returns the Belgrade day when it still trails the UTC day", () => {
+    // 23:30Z on 14 Jan is 00:30 on the 15th local — the winter offset is
+    // only +1, so the rollover happens an hour later than in summer.
+    expect(studioDayKey(new Date("2026-01-14T23:30:00.000Z"))).toBe("2026-01-15");
+    // An hour earlier the studio is still on the 14th, which a fixed +2
+    // offset would get wrong.
+    expect(studioDayKey(new Date("2026-01-14T22:30:00.000Z"))).toBe("2026-01-14");
+  });
+
+  it("agrees with UTC during the studio's waking hours", () => {
+    expect(studioDayKey(new Date("2026-08-21T10:00:00.000Z"))).toBe("2026-08-21");
+    expect(studioDayKey(new Date("2026-01-15T10:00:00.000Z"))).toBe("2026-01-15");
+  });
+
+  it("names the same day the picked-day helper opens", () => {
+    const localMidnight = new Date("2026-07-31T22:00:00.000Z");
+    expect(studioDayKey(studioDayStartFor(localMidnight))).toBe(
+      studioDayKey(localMidnight),
+    );
   });
 });

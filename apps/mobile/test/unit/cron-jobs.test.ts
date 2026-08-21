@@ -31,4 +31,16 @@ describe("CRON_JOBS manifest", () => {
       expect(job.endpointPath.startsWith("/api/cron/")).toBe(true);
     }
   });
+
+  test("birthdays runs once a day at a concrete wall-clock time", () => {
+    // Baza is one studio in Europe/Belgrade, so the birthday prompt wants a
+    // single run inside local business hours. A wildcard or stepped hour
+    // fires around UTC midnight too, which is late evening in Belgrade —
+    // that firing wins the per-day dedupe key and buries the daytime one.
+    const birthdays = CRON_JOBS.find((job) => job.name === "birthdays");
+    expect(birthdays).toBeDefined();
+    const [minute, hour] = birthdays!.schedule.trim().split(/\s+/);
+    expect(hour).toMatch(/^\d+$/);
+    expect(minute).toMatch(/^\d+$/);
+  });
 });
