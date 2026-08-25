@@ -1,5 +1,4 @@
 import { test, expect } from "./helpers/fixtures";
-import { now } from "../../lib/now";
 import { signInAs } from "./helpers/auth";
 import { navigateWeekStripTo, nextReformerDayKey } from "./helpers/dates";
 import {
@@ -14,31 +13,6 @@ import {
   findSessionConsumption,
   resetAndSeed,
 } from "./helpers/db";
-
-/**
- * Compute the next upcoming Reformer Mon/Wed/Fri date from "today". The
- * rich seed schedules Reformer pilates on weekdays 1, 3, 5 (Mon, Wed, Fri)
- * for two weeks at 10:00. Returns YYYY-MM-DD.
- */
-function nextReformerDate(): string {
-  const reformerDays = new Set([1, 3, 5]);
-  const d = now();
-  for (let i = 0; i < 14; i++) {
-    if (reformerDays.has(d.getDay())) {
-      // If today is a Reformer day but the 10:00 slot has passed, skip.
-      if (i === 0 && d.getHours() >= 10) {
-        d.setDate(d.getDate() + 1);
-        continue;
-      }
-      const yyyy = d.getFullYear();
-      const mm = String(d.getMonth() + 1).padStart(2, "0");
-      const dd = String(d.getDate()).padStart(2, "0");
-      return `${yyyy}-${mm}-${dd}`;
-    }
-    d.setDate(d.getDate() + 1);
-  }
-  throw new Error("No Reformer day found in next 14 days");
-}
 
 /**
  * Client (Serbian). Test-plan items 52-63.
@@ -74,15 +48,7 @@ test.describe("client (Serbian)", () => {
     await signInAs(page, "client.active.reformer@e2e.test");
     await page.goto("/calendar");
 
-    const target = nextReformerDate();
-    const dayPill = page
-      .locator(`[data-testid="week-strip-day-${target}"]:visible`)
-      .first();
-    await expect(dayPill).toBeVisible();
-    // Bypass the stability check — react-native-web Pressables nested in
-    // Moti enter animations cause Playwright's stability heuristic to time
-    // out. dispatchEvent fires a synthetic click directly on the element.
-    await dayPill.dispatchEvent("click");
+    await navigateWeekStripTo(page, nextReformerDayKey());
 
     await expect(
       page.locator('[data-testid^="schedule-row-"]').first(),
@@ -96,11 +62,8 @@ test.describe("client (Serbian)", () => {
     await signInAs(page, "client.active.reformer@e2e.test");
     await page.goto("/calendar");
 
-    const target = nextReformerDate();
-    await page
-      .locator(`[data-testid="week-strip-day-${target}"]:visible`)
-      .first()
-      .dispatchEvent("click");
+    const target = nextReformerDayKey();
+    await navigateWeekStripTo(page, target);
 
     const sessionBlock = page
       .locator('[data-testid^="schedule-row-"]')
@@ -124,11 +87,8 @@ test.describe("client (Serbian)", () => {
     await signInAs(page, "client.active.reformer@e2e.test");
     await page.goto("/calendar");
 
-    const target = nextReformerDate();
-    await page
-      .locator(`[data-testid="week-strip-day-${target}"]:visible`)
-      .first()
-      .dispatchEvent("click");
+    const target = nextReformerDayKey();
+    await navigateWeekStripTo(page, target);
 
     await page
       .locator('[data-testid^="schedule-row-"]')
@@ -167,11 +127,8 @@ test.describe("client (Serbian)", () => {
     await signInAs(page, "client.active.reformer@e2e.test");
     await page.goto("/calendar");
 
-    const target = nextReformerDate();
-    await page
-      .locator(`[data-testid="week-strip-day-${target}"]:visible`)
-      .first()
-      .dispatchEvent("click");
+    const target = nextReformerDayKey();
+    await navigateWeekStripTo(page, target);
 
     // Open the same Reformer session booked in spec 55.
     await page
@@ -217,10 +174,7 @@ test.describe("client (Serbian)", () => {
     const targetDate = `${session.startsAt.getFullYear()}-${String(
       session.startsAt.getMonth() + 1,
     ).padStart(2, "0")}-${String(session.startsAt.getDate()).padStart(2, "0")}`;
-    await page
-      .locator(`[data-testid="week-strip-day-${targetDate}"]:visible`)
-      .first()
-      .dispatchEvent("click");
+    await navigateWeekStripTo(page, targetDate);
 
     // Find this specific session block and book it.
     await page
@@ -311,10 +265,7 @@ test.describe("client (Serbian)", () => {
     const targetDate = `${startsAt.getFullYear()}-${String(
       startsAt.getMonth() + 1,
     ).padStart(2, "0")}-${String(startsAt.getDate()).padStart(2, "0")}`;
-    await page
-      .locator(`[data-testid="week-strip-day-${targetDate}"]:visible`)
-      .first()
-      .dispatchEvent("click");
+    await navigateWeekStripTo(page, targetDate);
 
     await page.getByTestId(`schedule-row-${sessionId}`).dispatchEvent("click");
 
@@ -347,10 +298,7 @@ test.describe("client (Serbian)", () => {
     const targetDate = `${session.startsAt.getFullYear()}-${String(
       session.startsAt.getMonth() + 1,
     ).padStart(2, "0")}-${String(session.startsAt.getDate()).padStart(2, "0")}`;
-    await page
-      .locator(`[data-testid="week-strip-day-${targetDate}"]:visible`)
-      .first()
-      .dispatchEvent("click");
+    await navigateWeekStripTo(page, targetDate);
 
     await page
       .getByTestId(`schedule-row-${session.id}`)
@@ -396,10 +344,7 @@ test.describe("client (Serbian)", () => {
     const targetDate = `${session.startsAt.getFullYear()}-${String(
       session.startsAt.getMonth() + 1,
     ).padStart(2, "0")}-${String(session.startsAt.getDate()).padStart(2, "0")}`;
-    await page
-      .locator(`[data-testid="week-strip-day-${targetDate}"]:visible`)
-      .first()
-      .dispatchEvent("click");
+    await navigateWeekStripTo(page, targetDate);
 
     // Promotion happens server-side when the booked client cancels. We
     // simulate via direct API: the booking holder is the synthetic filler
@@ -451,10 +396,7 @@ test.describe("client (Serbian)", () => {
     const targetDate = `${session.startsAt.getFullYear()}-${String(
       session.startsAt.getMonth() + 1,
     ).padStart(2, "0")}-${String(session.startsAt.getDate()).padStart(2, "0")}`;
-    await page
-      .locator(`[data-testid="week-strip-day-${targetDate}"]:visible`)
-      .first()
-      .dispatchEvent("click");
+    await navigateWeekStripTo(page, targetDate);
     await page.getByTestId(`schedule-row-${session.id}`).dispatchEvent("click");
 
     // Full class → join-waitlist button, with the always-on reserve note.
@@ -575,11 +517,8 @@ test.describe("client (Serbian)", () => {
     await signInAs(page, "client.empty@e2e.test");
 
     await page.goto("/calendar");
-    const target = nextReformerDate();
-    await page
-      .locator(`[data-testid="week-strip-day-${target}"]:visible`)
-      .first()
-      .dispatchEvent("click");
+    const target = nextReformerDayKey();
+    await navigateWeekStripTo(page, target);
 
     // No session blocks should appear — the server filters availability by the
     // client's class-type entitlement and an empty-pack client has none.
@@ -604,11 +543,8 @@ test.describe("client (Serbian)", () => {
     // Pick a Reformer day in the home week strip, then tap one of that day's
     // session rows. The same booking sheet as the calendar opens right here —
     // no bounce to the calendar tab — exposing the detail testIDs.
-    const target = nextReformerDate();
-    await page
-      .locator(`[data-testid="week-strip-day-${target}"]:visible`)
-      .first()
-      .dispatchEvent("click");
+    const target = nextReformerDayKey();
+    await navigateWeekStripTo(page, target);
 
     const overviewRow = page
       .locator('[data-testid^="schedule-row-"]')
