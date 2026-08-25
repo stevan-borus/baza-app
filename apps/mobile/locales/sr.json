@@ -138,6 +138,7 @@
     "otherPlaceholder": "Drugo (opišite)",
     "freeTextPlaceholder": "Opišite ukratko",
     "saveFailed": "Slanje nije uspelo — pokušajte ponovo.",
+    "requiredHint": "Odgovorite na obavezno pitanje da biste sačuvali.",
     "sectionHealthHistory": "Zdravstvena istorija",
     "sectionPilatesExperience": "Pilates iskustvo",
     "sectionLifestyle": "Životni stil i aktivnost",

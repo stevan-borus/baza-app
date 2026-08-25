@@ -138,6 +138,7 @@
     "otherPlaceholder": "Other (please describe)",
     "freeTextPlaceholder": "Briefly describe",
     "saveFailed": "Saving failed — please try again.",
+    "requiredHint": "Answer the required question to save.",
     "sectionHealthHistory": "Health History",
     "sectionPilatesExperience": "Pilates Experience",
     "sectionLifestyle": "Lifestyle & Activity",

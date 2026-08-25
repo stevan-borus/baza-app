@@ -4,6 +4,7 @@ import { Text, View } from "react-native";
 import dayjs from "dayjs";
 import { SectionLabel } from "@/components/ui/typography";
 import { clientsQueries } from "@/lib/queries/clients-queries-factory";
+import type { HealthIntakeResponse } from "@baza/types/health-intake";
 
 type Props = {
   clientUserId: string;
@@ -19,6 +20,8 @@ export function ClientHealthPanel({ clientUserId, lang }: Props) {
     intake: null,
     withdrawnAt: null,
   };
+
+  const blocks = intake ? buildBlocks(intake, t) : [];
 
   return (
     <View testID="client-health-panel" className="gap-2">
@@ -41,67 +44,15 @@ export function ClientHealthPanel({ clientUserId, lang }: Props) {
           />
 
           <View>
-            {intake.underMedicalTreatment ? (
+            {blocks.map((block, idx) => (
               <Block
-                isFirst
-                label={t("intake.q.underMedicalTreatment")}
-                value={t("intake.yes")}
-                detail={intake.medicalTreatmentDetails}
+                key={block.key}
+                isFirst={idx === 0}
+                label={block.label}
+                value={block.value}
+                detail={block.detail}
               />
-            ) : null}
-
-            <Block
-              isFirst={!intake.underMedicalTreatment}
-              label={t("intake.q.pilatesExperience")}
-              value={intake.pilatesExperience
-                .map((c) => t(`intake.pilatesExperience.${c}`))
-                .join(", ")}
-              detail={intake.pilatesExperienceDuration}
-            />
-
-            <Block
-              label={t("intake.q.activityLevel")}
-              value={t(`intake.activityLevel.${intake.activityLevel}`, {
-                defaultValue: intake.activityLevel,
-              })}
-            />
-
-            <Block
-              label={t("intake.q.exerciseFrequency")}
-              value={t(`intake.exerciseFrequency.${intake.exerciseFrequency}`, {
-                defaultValue: intake.exerciseFrequency,
-              })}
-            />
-
-            {intake.goals.length > 0 || intake.goalsOther ? (
-              <Block
-                label={t("intake.q.goals")}
-                value={[
-                  ...intake.goals.map((c) =>
-                    t(`intake.goals.${c}`, { defaultValue: c }),
-                  ),
-                  ...(intake.goalsOther ? [intake.goalsOther] : []),
-                ].join(", ")}
-              />
-            ) : null}
-
-            {intake.discomfortDuring.length > 0 ? (
-              <Block
-                label={t("intake.q.discomfortDuring")}
-                value={intake.discomfortDuring
-                  .map((c) =>
-                    t(`intake.discomfortDuring.${c}`, { defaultValue: c }),
-                  )
-                  .join(", ")}
-              />
-            ) : null}
-
-            {intake.additionalNotes ? (
-              <Block
-                label={t("intake.q.additionalNotes")}
-                value={intake.additionalNotes}
-              />
-            ) : null}
+            ))}
           </View>
 
           <Text className="text-[11px] text-muted">
@@ -113,6 +64,96 @@ export function ClientHealthPanel({ clientUserId, lang }: Props) {
       )}
     </View>
   );
+}
+
+type TFn = (key: string, opts?: Record<string, unknown>) => string;
+
+type BlockData = {
+  key: string;
+  label: string;
+  value: string;
+  detail?: string | null;
+};
+
+/**
+ * Only the medical-treatment answer is guaranteed present — every other field
+ * is optional for the client, so a block is built only when it has a value.
+ * Returning one flat list keeps the top-border logic honest: whichever block
+ * lands at index 0 is the first one drawn.
+ */
+function buildBlocks(intake: HealthIntakeResponse, t: TFn): BlockData[] {
+  const blocks: BlockData[] = [];
+
+  if (intake.underMedicalTreatment) {
+    blocks.push({
+      key: "underMedicalTreatment",
+      label: t("intake.q.underMedicalTreatment"),
+      value: t("intake.yes"),
+      detail: intake.medicalTreatmentDetails,
+    });
+  }
+
+  if (intake.pilatesExperience.length > 0) {
+    blocks.push({
+      key: "pilatesExperience",
+      label: t("intake.q.pilatesExperience"),
+      value: intake.pilatesExperience
+        .map((c) => t(`intake.pilatesExperience.${c}`, { defaultValue: c }))
+        .join(", "),
+      detail: intake.pilatesExperienceDuration,
+    });
+  }
+
+  if (intake.activityLevel) {
+    blocks.push({
+      key: "activityLevel",
+      label: t("intake.q.activityLevel"),
+      value: t(`intake.activityLevel.${intake.activityLevel}`, {
+        defaultValue: intake.activityLevel,
+      }),
+    });
+  }
+
+  if (intake.exerciseFrequency) {
+    blocks.push({
+      key: "exerciseFrequency",
+      label: t("intake.q.exerciseFrequency"),
+      value: t(`intake.exerciseFrequency.${intake.exerciseFrequency}`, {
+        defaultValue: intake.exerciseFrequency,
+      }),
+    });
+  }
+
+  if (intake.goals.length > 0 || intake.goalsOther) {
+    blocks.push({
+      key: "goals",
+      label: t("intake.q.goals"),
+      value: [
+        ...intake.goals.map((c) => t(`intake.goals.${c}`, { defaultValue: c })),
+        ...(intake.goalsOther ? [intake.goalsOther] : []),
+      ].join(", "),
+    });
+  }
+
+  if (intake.discomfortDuring.length > 0) {
+    blocks.push({
+      key: "discomfortDuring",
+      label: t("intake.q.discomfortDuring"),
+      value: intake.discomfortDuring
+        .map((c) => t(`intake.discomfortDuring.${c}`, { defaultValue: c }))
+        .join(", "),
+    });
+  }
+
+  if (intake.additionalNotes) {
+    blocks.push({
+      key: "additionalNotes",
+      label: t("intake.q.additionalNotes"),
+      value: intake.additionalNotes,
+    });
+  }
+
+  return blocks;
 }
 
 function ConditionChips({
