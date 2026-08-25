@@ -776,6 +776,7 @@ function BillingClientPickerSheet({
             className="flex-row items-center gap-3 py-3 active:opacity-70"
             accessibilityRole="button"
             accessibilityState={{ selected: isSelected }}
+            aria-pressed={isSelected}
           >
             <View className="flex-1 gap-0.5">
               <Text

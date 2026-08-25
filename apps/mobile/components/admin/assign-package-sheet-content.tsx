@@ -253,6 +253,7 @@ export function AssignPackageSheetContent({
               testID={`assign-package-option-${pt.id}`}
               accessibilityRole="button"
               accessibilityState={{ selected }}
+              aria-pressed={selected}
               android_ripple={null}
               onPress={() => {
                 setPackageTypeId(pt.id);
@@ -312,6 +313,7 @@ export function AssignPackageSheetContent({
             testID="assign-gift-toggle"
             accessibilityRole="switch"
             accessibilityState={{ checked: giftMode }}
+            aria-checked={giftMode}
             android_ripple={null}
             onPress={() => setGiftMode((prev) => !prev)}
             className="active:opacity-70"

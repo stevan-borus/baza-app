@@ -42,6 +42,7 @@ export function ClientDetailTabBar({
             onPress={() => onChange(tab)}
             accessibilityRole="tab"
             accessibilityState={{ selected: isActive }}
+            aria-selected={isActive}
             android_ripple={null}
             className={`flex-row items-center px-3.5 py-2 rounded-full border active:opacity-80 ${
               isActive
