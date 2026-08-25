@@ -9,13 +9,13 @@ describe("resolveNotificationHref", () => {
       const href = resolveNotificationHref({
         type: "BIRTHDAY_ADMIN_PROMPT",
         payload: {
-          clientProfileId: "cp-123",
+          clientUserId: "user-123",
           suggestedClassTypeId: "ct-reformer",
         },
         giftPackageTypes: [{ id: "pt-gift", classTypeIds: ["ct-mat"] }],
       });
       expect(href).toBe(
-        "/(admin)/klijenti?openAssignPackage=cp-123&mode=comp&initialPackageTypeId=pt-gift&initialClassTypeId=ct-reformer",
+        "/(admin)/klijenti?openAssignPackage=user-123&mode=comp&initialPackageTypeId=pt-gift&initialClassTypeId=ct-reformer",
       );
     });
 
@@ -23,7 +23,7 @@ describe("resolveNotificationHref", () => {
       const href = resolveNotificationHref({
         type: "BIRTHDAY_ADMIN_PROMPT",
         payload: {
-          clientProfileId: "cp-123",
+          clientUserId: "user-123",
           suggestedClassTypeId: "ct-reformer",
         },
         giftPackageTypes: [
@@ -33,7 +33,7 @@ describe("resolveNotificationHref", () => {
         ],
       });
       expect(href).toBe(
-        "/(admin)/klijenti?openAssignPackage=cp-123&mode=comp&initialPackageTypeId=pt-gift-reformer&initialClassTypeId=ct-reformer",
+        "/(admin)/klijenti?openAssignPackage=user-123&mode=comp&initialPackageTypeId=pt-gift-reformer&initialClassTypeId=ct-reformer",
       );
     });
 
@@ -41,7 +41,7 @@ describe("resolveNotificationHref", () => {
       const href = resolveNotificationHref({
         type: "BIRTHDAY_ADMIN_PROMPT",
         payload: {
-          clientProfileId: "cp-123",
+          clientUserId: "user-123",
           suggestedClassTypeId: "ct-unknown",
         },
         giftPackageTypes: [
@@ -50,7 +50,7 @@ describe("resolveNotificationHref", () => {
         ],
       });
       expect(href).toBe(
-        "/(admin)/klijenti?openAssignPackage=cp-123&mode=comp&initialPackageTypeId=pt-gift-mat&initialClassTypeId=ct-unknown",
+        "/(admin)/klijenti?openAssignPackage=user-123&mode=comp&initialPackageTypeId=pt-gift-mat&initialClassTypeId=ct-unknown",
       );
     });
 
@@ -58,13 +58,13 @@ describe("resolveNotificationHref", () => {
       const href = resolveNotificationHref({
         type: "BIRTHDAY_ADMIN_PROMPT",
         payload: {
-          clientProfileId: "cp-123",
+          clientUserId: "user-123",
           suggestedClassTypeId: "ct-reformer",
         },
         giftPackageTypes: [],
       });
       expect(href).toBe(
-        "/(admin)/klijenti?openAssignPackage=cp-123&mode=comp&initialClassTypeId=ct-reformer",
+        "/(admin)/klijenti?openAssignPackage=user-123&mode=comp&initialClassTypeId=ct-reformer",
       );
     });
 
@@ -72,7 +72,7 @@ describe("resolveNotificationHref", () => {
       const href = resolveNotificationHref({
         type: "BIRTHDAY_ADMIN_PROMPT",
         payload: {
-          clientProfileId: "cp-123",
+          clientUserId: "user-123",
           suggestedClassTypeId: "ct-reformer",
         },
         giftPackageTypes: [
@@ -84,7 +84,7 @@ describe("resolveNotificationHref", () => {
       // The system gift wins even though a legacy SKU covers the suggested
       // class type and the system row has no covered set of its own.
       expect(href).toBe(
-        "/(admin)/klijenti?openAssignPackage=cp-123&mode=comp&initialPackageTypeId=pt-system&initialClassTypeId=ct-reformer",
+        "/(admin)/klijenti?openAssignPackage=user-123&mode=comp&initialPackageTypeId=pt-system&initialClassTypeId=ct-reformer",
       );
     });
 
@@ -92,7 +92,7 @@ describe("resolveNotificationHref", () => {
       const href = resolveNotificationHref({
         type: "BIRTHDAY_ADMIN_PROMPT",
         payload: {
-          clientProfileId: "cp-123",
+          clientUserId: "user-123",
           suggestedClassTypeId: "ct-reformer",
         },
         giftPackageTypes: [
@@ -101,7 +101,7 @@ describe("resolveNotificationHref", () => {
         ],
       });
       expect(href).toBe(
-        "/(admin)/klijenti?openAssignPackage=cp-123&mode=comp&initialPackageTypeId=pt-legacy-reformer&initialClassTypeId=ct-reformer",
+        "/(admin)/klijenti?openAssignPackage=user-123&mode=comp&initialPackageTypeId=pt-legacy-reformer&initialClassTypeId=ct-reformer",
       );
     });
 
@@ -109,23 +109,55 @@ describe("resolveNotificationHref", () => {
       const href = resolveNotificationHref({
         type: "BIRTHDAY_ADMIN_PROMPT",
         payload: {
-          clientProfileId: "cp-123",
+          clientUserId: "user-123",
           suggestedClassTypeId: null,
         },
         giftPackageTypes: [{ id: "pt-gift", classTypeIds: ["ct-reformer"] }],
       });
       expect(href).toBe(
-        "/(admin)/klijenti?openAssignPackage=cp-123&mode=comp&initialPackageTypeId=pt-gift",
+        "/(admin)/klijenti?openAssignPackage=user-123&mode=comp&initialPackageTypeId=pt-gift",
       );
     });
 
-    test("with missing clientProfileId → returns null", () => {
+    test("with missing clientUserId → returns null", () => {
       const href = resolveNotificationHref({
         type: "BIRTHDAY_ADMIN_PROMPT",
         payload: { suggestedClassTypeId: "ct-reformer" },
         giftPackageTypes: [{ id: "pt-gift", classTypeIds: ["ct-reformer"] }],
       });
       expect(href).toBeNull();
+    });
+
+    test("legacy payload (clientProfileId only) still produces a tappable href", () => {
+      // NotificationLog rows written before the cron emitted `clientUserId`
+      // carry only the profile id. They must keep routing — dropping the
+      // fallback would strand every birthday prompt already in an inbox.
+      const href = resolveNotificationHref({
+        type: "BIRTHDAY_ADMIN_PROMPT",
+        payload: {
+          clientProfileId: "cp-legacy",
+          suggestedClassTypeId: "ct-reformer",
+        },
+        giftPackageTypes: [{ id: "pt-gift", classTypeIds: ["ct-reformer"] }],
+      });
+      expect(href).toBe(
+        "/(admin)/klijenti?openAssignPackage=cp-legacy&mode=comp&initialPackageTypeId=pt-gift&initialClassTypeId=ct-reformer",
+      );
+    });
+
+    test("clientUserId wins when a payload carries both ids", () => {
+      const href = resolveNotificationHref({
+        type: "BIRTHDAY_ADMIN_PROMPT",
+        payload: {
+          clientProfileId: "cp-legacy",
+          clientUserId: "user-123",
+          suggestedClassTypeId: "ct-reformer",
+        },
+        giftPackageTypes: [{ id: "pt-gift", classTypeIds: ["ct-reformer"] }],
+      });
+      expect(href).toBe(
+        "/(admin)/klijenti?openAssignPackage=user-123&mode=comp&initialPackageTypeId=pt-gift&initialClassTypeId=ct-reformer",
+      );
     });
   });
 

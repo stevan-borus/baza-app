@@ -23,6 +23,7 @@ export const router = {
   navigate: record("navigate"),
   back: record("back"),
   dismiss: record("dismiss"),
+  setParams: record("setParams"),
   canGoBack: () => true,
 };
 

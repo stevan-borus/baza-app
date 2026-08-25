@@ -37,8 +37,21 @@ export function resolveNotificationHref(input: NotificationRoutingInput): string
 
   switch (type) {
     case "BIRTHDAY_ADMIN_PROMPT": {
-      const clientProfileId = getString(payload, "clientProfileId");
-      if (!clientProfileId) return null;
+      // Routed by USER id, not clientProfile id: the klijenti screen resolves
+      // the deep-link target through `clientsQueries.byId`, which keys on
+      // userId. A clientProfile id can only be resolved by scanning the
+      // paginated list, which misses anyone past the first page.
+      //
+      // The clientProfileId fallback is NOT dead code: NotificationLog rows
+      // written before the cron started emitting `clientUserId` carry only the
+      // profile id, and dropping it would make every already-delivered
+      // birthday prompt untappable. Those rows still hit the pagination bug
+      // for a page-2 client — no worse than before — and age out on their own.
+      // Delete this fallback only once no such rows remain.
+      const target =
+        getString(payload, "clientUserId") ??
+        getString(payload, "clientProfileId");
+      if (!target) return null;
       const suggestedClassTypeId = getString(payload, "suggestedClassTypeId");
       // Built-in system gift always wins — it's the one row admins are meant to
       // use. Otherwise fall back to the legacy rule: one gift SKU → preselect
@@ -58,7 +71,7 @@ export function resolveNotificationHref(input: NotificationRoutingInput): string
                 : undefined) ?? giftPackageTypes[0]
             : undefined);
       const params = new URLSearchParams({
-        openAssignPackage: clientProfileId,
+        openAssignPackage: target,
         mode: "comp",
       });
       if (gift) params.set("initialPackageTypeId", gift.id);
