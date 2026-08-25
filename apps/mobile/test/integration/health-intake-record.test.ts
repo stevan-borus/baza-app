@@ -108,4 +108,46 @@ describe("/api/health-intake — record + read", () => {
     const res = await GET(makeReq("GET"));
     expect(res.status).toBe(404);
   });
+
+  it("POST saves a partial intake — empty pilatesExperience, no activityLevel/exerciseFrequency — persisting nulls", async () => {
+    const res = await POST(
+      makeReq("POST", {
+        conditions: [],
+        underMedicalTreatment: false,
+        pilatesExperience: [],
+        goals: [],
+        discomfortDuring: [],
+      }),
+    );
+    expect(res.status).toBe(200);
+
+    const intake = await prisma.clientHealthIntake.findFirstOrThrow({
+      where: { clientProfileId },
+    });
+    expect(intake.pilatesExperience).toEqual([]);
+    expect(intake.activityLevel).toBeNull();
+    expect(intake.exerciseFrequency).toBeNull();
+
+    const body = await GET(makeReq("GET")).then((r) => r.json());
+    expect(body.activityLevel).toBeNull();
+    expect(body.exerciseFrequency).toBeNull();
+    expect(body.pilatesExperience).toEqual([]);
+  });
+
+  it("POST still rejects underMedicalTreatment=true with empty details on an otherwise partial intake", async () => {
+    const res = await POST(
+      makeReq("POST", {
+        conditions: [],
+        underMedicalTreatment: true,
+        medicalTreatmentDetails: "   ",
+        pilatesExperience: [],
+        goals: [],
+        discomfortDuring: [],
+      }),
+    );
+    expect(res.status).toBe(400);
+    expect(
+      await prisma.clientHealthIntake.count({ where: { clientProfileId } }),
+    ).toBe(0);
+  });
 });

@@ -96,16 +96,10 @@ export function isIntakeValid(
     state.medicalTreatmentDetails.trim().length === 0
   )
     return false;
-  if (state.pilatesExperience.length === 0) return false;
-  if (state.activityLevel === null) return false;
-  if (state.exerciseFrequency === null) return false;
   return true;
 }
 
 export function intakeToInput(state: HealthIntakeState): HealthIntakeInput {
-  // The form gates Save behind isIntakeValid(), which guarantees these
-  // single-select fields are non-null. The non-null assertions encode that
-  // invariant for the type system.
   return {
     conditions: state.conditions,
     conditionsOther:
@@ -121,8 +115,8 @@ export function intakeToInput(state: HealthIntakeState): HealthIntakeInput {
       state.pilatesExperienceDuration.trim().length > 0
         ? state.pilatesExperienceDuration.trim()
         : undefined,
-    activityLevel: state.activityLevel!,
-    exerciseFrequency: state.exerciseFrequency!,
+    activityLevel: state.activityLevel ?? undefined,
+    exerciseFrequency: state.exerciseFrequency ?? undefined,
     goals: state.goals,
     goalsOther:
       state.goalsOther.trim().length > 0 ? state.goalsOther.trim() : undefined,
@@ -187,12 +181,17 @@ export function HealthIntakeForm({
           </View>
         </Question>
 
-        <Question label={t("intake.q.underMedicalTreatment")}>
+        <Question label={t("intake.q.underMedicalTreatment")} required>
           <YesNoToggle
             testID="underMedicalTreatment"
             value={state.underMedicalTreatment}
             onChange={(v) => patch({ underMedicalTreatment: v })}
           />
+          {state.underMedicalTreatment === null ? (
+            <Body size={12} className="mt-1 text-muted">
+              {t("intake.requiredHint")}
+            </Body>
+          ) : null}
           {state.underMedicalTreatment ? (
             <View className="mt-2">
               <Body size={13} className="text-muted mb-1.5">
@@ -258,7 +257,11 @@ export function HealthIntakeForm({
                 testID={`activityLevel-${code}`}
                 label={t(`intake.activityLevel.${code}`)}
                 selected={state.activityLevel === code}
-                onPress={() => patch({ activityLevel: code })}
+                onPress={() =>
+                  patch({
+                    activityLevel: state.activityLevel === code ? null : code,
+                  })
+                }
               />
             ))}
           </View>
@@ -274,7 +277,10 @@ export function HealthIntakeForm({
                   testID={`exerciseFrequency-${code}`}
                   accessibilityRole="radio"
                   accessibilityState={{ selected }}
-                  onPress={() => patch({ exerciseFrequency: code })}
+                  aria-checked={selected}
+                  onPress={() =>
+                    patch({ exerciseFrequency: selected ? null : code })
+                  }
                   className={`flex-1 h-11 rounded-xl items-center justify-center ${
                     selected
                       ? "bg-accent"
@@ -397,15 +403,25 @@ function SectionHeader({ title }: { title: string }) {
 function Question({
   label,
   children,
+  required,
 }: {
   label: string;
   children: React.ReactNode;
+  required?: boolean;
 }) {
+  const { t } = useTranslation();
   return (
     <View className="gap-2">
-      <Body size={14} className="text-foreground font-body-medium">
-        {label}
-      </Body>
+      <View className="flex-row items-baseline gap-2">
+        <Body size={14} className="flex-1 text-foreground font-body-medium">
+          {label}
+        </Body>
+        {required ? (
+          <CapsLabel size={10} tracking={1} className="text-accent">
+            {t("validation.required")}
+          </CapsLabel>
+        ) : null}
+      </View>
       {children}
     </View>
   );
@@ -430,6 +446,7 @@ function ChipRow({
       testID={testID}
       accessibilityRole="checkbox"
       accessibilityState={{ checked: selected }}
+      aria-checked={selected}
       onPress={onPress}
       className={`flex-row items-center gap-3 h-11 active:opacity-60 ${
         isFirst ? "" : "border-t border-glass-border"

@@ -717,9 +717,9 @@ model ClientHealthIntake {
   pilatesExperience         String[]
   pilatesExperienceDuration String?
   // Q4: daily activity level (single-select enum code).
-  activityLevel             String
+  activityLevel             String?
   // Q5: weekly exercise frequency (single-select bucket).
-  exerciseFrequency         String
+  exerciseFrequency         String?
   // Q6: training goals (multi-select + free-text other).
   goals                     String[]
   goalsOther                String?
