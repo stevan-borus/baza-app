@@ -410,6 +410,7 @@
       "confirm": "Confirm",
       "cancelWarning": "Are you sure you want to cancel?",
       "cancelWarningLate": "Canceling less than {{hours}} hours before the session uses one session from your package. Continue?",
+      "sameDayBookingWarning": "You already have a session booked that day. Are you sure you want to book another one?",
       "joinWaitlist": "Join waitlist",
       "leaveWaitlist": "Leave waitlist",
       "confirmLeaveWaitlist": "Leave the waitlist?",

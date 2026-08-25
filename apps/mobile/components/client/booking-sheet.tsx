@@ -45,6 +45,10 @@ type Props = {
   /** Step to open on for a freshly-opened session. "confirmCancel" lets the
    * overview's OTKAŽI jump straight to cancel confirmation. Defaults "idle". */
   initialStep?: BookingStep;
+  /** The client already holds a confirmed booking on another session that
+   * studio day. Surfaces a "sure you want a second one?" line at confirm
+   * time — booking twice a day is allowed, just rarely intended. */
+  hasOtherBookingSameDay?: boolean;
 };
 
 export function BookingSheet({
@@ -57,6 +61,7 @@ export function BookingSheet({
   successState,
   errorCode,
   initialStep = "idle",
+  hasOtherBookingSameDay = false,
 }: Props) {
   const { t, i18n } = useTranslation();
   const tokens = useThemeTokens();
@@ -397,6 +402,17 @@ export function BookingSheet({
                     <Icon name="info-circle" size={16} color="#a17d3a" />
                     <Text className="flex-1 text-[13px] text-warning font-body-medium">
                       {t("client.renewal.lastSessionWarning")}
+                    </Text>
+                  </View>
+                ) : null}
+                {hasOtherBookingSameDay ? (
+                  <View
+                    testID="booking-same-day-warning"
+                    className="flex-row items-start gap-2 px-3 py-3 rounded-xl border border-warning/40 bg-warning-soft"
+                  >
+                    <Icon name="info-circle" size={16} color="#a17d3a" />
+                    <Text className="flex-1 text-[13px] text-warning font-body-medium">
+                      {t("client.dayView.sameDayBookingWarning")}
                     </Text>
                   </View>
                 ) : null}
