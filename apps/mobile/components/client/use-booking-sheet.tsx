@@ -14,6 +14,7 @@ import * as Haptics from "expo-haptics";
 import { BookingSheet } from "@/components/client/booking-sheet";
 import { mapResultStateToSuccessState } from "@/lib/booking-success-state";
 import { useMutateBookingMutation } from "@/lib/queries/bookings-queries-factory";
+import { hasOtherBookingOnStudioDay } from "@/lib/same-day-booking";
 import type { AvailabilitySession } from "@baza/types/scheduling";
 
 /** Which step the sheet opens on. "cancel" jumps a booked session straight to
@@ -80,11 +81,16 @@ export function ClientBookingSheet({
     ? (sessions.find((s) => s.id === selectedSession.id) ?? selectedSession)
     : null;
 
+  const hasOtherBookingSameDay =
+    freshSelectedSession !== null &&
+    hasOtherBookingOnStudioDay(freshSelectedSession, sessions);
+
   const resultState = mutation.data?.state as string | undefined;
 
   return (
     <BookingSheet
       session={freshSelectedSession}
+      hasOtherBookingSameDay={hasOtherBookingSameDay}
       initialStep={
         intent === "cancel" && freshSelectedSession?.isBookedByMe
           ? "confirmCancel"
