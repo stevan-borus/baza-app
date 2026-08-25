@@ -73,7 +73,18 @@ type FilterType = "all" | "active" | "expiring" | "paused" | "expired";
 // paid, and the optional deep-link PackageType pre-selection.
 
 type AssignFor = {
-  clientId: string;
+  /**
+   * User id of the target. This is what resolves the sheet's client, via
+   * `clientsQueries.byId` (which keys on userId) — so a target that isn't in
+   * the loaded list pages still opens.
+   */
+  clientUserId: string;
+  /**
+   * ClientProfile id, when the flow was entered from a loaded row. Only used
+   * to hand "back" to the actions sheet; null for deep links, which have no
+   * actions sheet behind them.
+   */
+  clientProfileId: string | null;
   mode: AssignPackageMode;
   initialPackageTypeId: string | null;
   // Birthday-gift deep link: the class type the gift picker opens prefilled to.
@@ -209,7 +220,8 @@ export default function AdminClients() {
     }
     if (linkParams.openAssignPackage) {
       setAssignFor({
-        clientId: linkParams.openAssignPackage,
+        clientUserId: linkParams.openAssignPackage,
+        clientProfileId: null,
         mode: linkParams.mode === "paid" ? "paid" : "comp",
         initialPackageTypeId: linkParams.initialPackageTypeId ?? null,
         initialClassTypeId: linkParams.initialClassTypeId ?? null,
@@ -271,9 +283,15 @@ export default function AdminClients() {
   const actionsClient = actionsClientId
     ? (clients.find((c) => c.id === actionsClientId) ?? null)
     : null;
-  const assignClient = assignFor
-    ? (clients.find((c) => c.id === assignFor.clientId) ?? null)
-    : null;
+  // The assign target is addressed by USER id so it can be resolved whether or
+  // not its row happens to sit in the pages loaded so far. Deep links (birthday
+  // prompts) routinely point at a client on page 2+, where a `clients.find`
+  // over the loaded pages silently returned null and the sheet never opened.
+  const assignClientQuery = useQuery({
+    ...clientsQueries.byId(assignFor?.clientUserId ?? ""),
+    enabled: !!assignFor?.clientUserId,
+  });
+  const assignClient = assignFor ? (assignClientQuery.data?.client ?? null) : null;
 
   // ── Status filter (q is already server-side) ──────────────────────────────
   // The package-status chip still narrows client-side — applying it as
@@ -569,17 +587,19 @@ export default function AdminClients() {
         onEditClient={(id) =>
           setEditClient(clients.find((c) => c.id === id) ?? null)
         }
-        onNewPayment={(id) =>
+        onNewPayment={({ clientProfileId, clientUserId }) =>
           setAssignFor({
-            clientId: id,
+            clientUserId,
+            clientProfileId,
             mode: "paid",
             initialPackageTypeId: null,
             initialClassTypeId: null,
           })
         }
-        onAssignPackage={(id) =>
+        onAssignPackage={({ clientProfileId, clientUserId }) =>
           setAssignFor({
-            clientId: id,
+            clientUserId,
+            clientProfileId,
             mode: "comp",
             initialPackageTypeId: null,
             initialClassTypeId: null,
@@ -601,7 +621,7 @@ export default function AdminClients() {
         initialClassTypeId={assignFor?.initialClassTypeId ?? undefined}
         onClose={() => setAssignFor(null)}
         onBack={() => {
-          const id = assignFor?.clientId ?? null;
+          const id = assignFor?.clientProfileId ?? null;
           setAssignFor(null);
           if (id) setActionsClientId(id);
         }}

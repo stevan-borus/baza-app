@@ -61,6 +61,14 @@ fix it — a green PR check does **not** cover these, so a broken spec will only
 surface here. (This is the drift the project kept hitting when these suites had
 no gate at all.)
 
+Never run two suites against the test DB at once. Integration and e2e both
+reseed `baza_app_test`, and every worktree on the machine shares it — a second
+run truncating tables under the first produces failures that look like real
+bugs and rotate between runs. This includes agents working in parallel
+worktrees. Before believing any integration/e2e failure, re-run it with nothing
+else touching the DB; a failure that survives an exclusive run is real, one
+that doesn't was never there.
+
 Anti-flake:
 
 - Wait for state, not time. `expect.poll()` / `waitFor({ state: "visible" })` / `findBy*`. No `setTimeout` / `waitForTimeout` as a primary wait.
@@ -68,6 +76,10 @@ Anti-flake:
 - WeekStrip-driven specs must navigate. Use `helpers/dates.ts:navigateWeekStripTo(page, dateKey)` — don't assume the target date is in the visible week.
 - Each test passes in isolation, or the file's `beforeAll` sets up its dependencies.
 - `testID` convention: `<context>-<element>` (e.g. `client-row-${id}`).
+- A `testID` must not encode mutating state. `notification-row-${id}-${unread|read}`
+  renames the element when the row is marked read, so any spec selecting the
+  `-unread` variant races that update. Keep the id stable and put state on a
+  separate attribute.
 - Date-touching code: import `now()` / `nowMs()` from `@/lib/now` instead of calling `new Date()` / `Date.now()` whenever the value semantically means "current time". The test stack pins those helpers to a fixed instant via `TEST_ANCHOR_TIME` — see CONTEXT.md → "Anchor time".
 
 ## Worktrees

@@ -47,8 +47,14 @@ export type ClientActionsSheetProps = {
   client: ClientActionsSheetClient | null;
   onClose: () => void;
   onEditClient: (clientProfileId: string) => void;
-  onNewPayment: (clientProfileId: string) => void;
-  onAssignPackage: (clientProfileId: string) => void;
+  /**
+   * The assign-package flows resolve their target by USER id (so a client
+   * outside the loaded list pages still opens), and hand the ClientProfile id
+   * back for the "back to actions" step. The row already holds both — passing
+   * them avoids re-deriving one from the other by scanning loaded pages.
+   */
+  onNewPayment: (ids: { clientProfileId: string; clientUserId: string }) => void;
+  onAssignPackage: (ids: { clientProfileId: string; clientUserId: string }) => void;
   onPause: (clientProfileId: string) => void;
 };
 
@@ -116,7 +122,10 @@ export function ClientActionsSheet({
               label={t("admin.clients.newPaymentAction")}
               onPress={() => {
                 onClose();
-                onNewPayment(client.id);
+                onNewPayment({
+                  clientProfileId: client.id,
+                  clientUserId: client.user.id,
+                });
               }}
             />
             <ActionRow
@@ -125,7 +134,10 @@ export function ClientActionsSheet({
               label={t("admin.clients.assignPackage")}
               onPress={() => {
                 onClose();
-                onAssignPackage(client.id);
+                onAssignPackage({
+                  clientProfileId: client.id,
+                  clientUserId: client.user.id,
+                });
               }}
             />
             <ActionRow
