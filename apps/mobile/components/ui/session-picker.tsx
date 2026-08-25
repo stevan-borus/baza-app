@@ -130,6 +130,8 @@ export function SessionPicker(props: SingleProps | MultiProps) {
         accessibilityState={
           isMulti ? { checked: selected } : { selected }
         }
+        aria-checked={isMulti ? selected : undefined}
+        aria-pressed={isMulti ? undefined : selected}
         accessibilityLabel={`${className} ${time}`}
         className="active:opacity-80"
         style={{ marginBottom: 8 }}

@@ -40,6 +40,7 @@ export function SocialMediaQuestion({ value, onChange, disabled }: Props) {
                 testID={`social-media-${choice}`}
                 accessibilityRole="radio"
                 accessibilityState={{ selected, disabled }}
+                aria-checked={selected}
                 disabled={disabled}
                 onPress={() => onChange(choice)}
                 className={`flex-1 h-11 rounded-xl items-center justify-center ${

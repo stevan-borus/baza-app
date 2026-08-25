@@ -65,7 +65,10 @@ export function FloatingTabBar(
         paddingBottom: insets.bottom,
       }}
     >
-      <View style={{ flexDirection: "row", height: 56 }}>
+      <View
+        accessibilityRole="tablist"
+        style={{ flexDirection: "row", height: 56 }}
+      >
         {visibleRoutes.map((route) => {
           const index = state.routes.indexOf(route);
           const isFocused = state.index === index;
@@ -104,8 +107,9 @@ export function FloatingTabBar(
             <Pressable
               key={route.key}
               testID={`tab-${route.name}`}
-              accessibilityRole="button"
-              accessibilityState={isFocused ? { selected: true } : {}}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: isFocused }}
+              aria-selected={isFocused}
               accessibilityLabel={label}
               onPress={() => {
                 const event = navigation.emit({

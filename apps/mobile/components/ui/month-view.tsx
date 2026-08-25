@@ -134,6 +134,7 @@ export function MonthView({
                   className={`flex-1 items-center justify-center rounded ${containerCls}`}
                   accessibilityRole="button"
                   accessibilityState={{ selected: isSelected }}
+                  aria-pressed={isSelected}
                   accessibilityLabel={d.format("dddd, D MMMM YYYY")}
                   style={{ aspectRatio: 1 }}
                 >

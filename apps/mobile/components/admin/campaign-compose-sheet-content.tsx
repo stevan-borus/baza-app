@@ -475,6 +475,7 @@ function ChipGroup({
               android_ripple={null}
               accessibilityRole="button"
               accessibilityState={{ selected }}
+              aria-pressed={selected}
               className={`px-3 py-2 rounded-xl border active:opacity-70 ${
                 selected ? "bg-accent border-accent" : "bg-surface border-glass-border"
               }`}
@@ -513,6 +514,7 @@ function SwitchRow({
       android_ripple={null}
       accessibilityRole="switch"
       accessibilityState={{ checked }}
+      aria-checked={checked}
       accessibilityLabel={a11yLabel}
       className="flex-row items-center justify-between active:opacity-70"
     >

@@ -132,6 +132,7 @@ function FilterChip({
       onPress={onPress}
       accessibilityRole="button"
       accessibilityState={{ selected: active }}
+      aria-pressed={active}
       android_ripple={null}
       className={`flex-row items-center px-3.5 py-2 rounded-full border active:opacity-80 ${
         active ? "bg-foreground border-foreground" : "border-glass-border"

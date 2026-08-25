@@ -320,6 +320,8 @@ function ClientRow({
       onPress={onPress}
       accessibilityRole={multi ? "checkbox" : "button"}
       accessibilityState={multi ? { checked: isSelected } : { selected: isSelected }}
+      aria-checked={multi ? isSelected : undefined}
+      aria-pressed={multi ? undefined : isSelected}
       accessibilityLabel={c.user.fullName}
       className="active:opacity-80"
       style={{ marginBottom: 8 }}
