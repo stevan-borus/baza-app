@@ -1,5 +1,4 @@
 import { test, expect } from "./helpers/fixtures";
-import { now } from "../../lib/now";
 import { signInAs } from "./helpers/auth";
 import {
   countTrainerNotesFor,
@@ -8,27 +7,12 @@ import {
   linkTrainerToClient,
   resetAndSeed,
 } from "./helpers/db";
-import { navigateWeekStripTo } from "./helpers/dates";
+import { navigateWeekStripTo, nextReformerDayKey } from "./helpers/dates";
 import { t } from "./helpers/locales";
 
 const REFORMER_TRAINER_EMAIL = "trainer.reformer@e2e.test";
 const ENERGY_TRAINER_EMAIL = "trainer.energy@e2e.test";
 const ACTIVE_REFORMER_CLIENT_EMAIL = "client.active.reformer@e2e.test";
-
-function nextReformerDate(): string {
-  const days = new Set([1, 3, 5]);
-  const d = now();
-  for (let i = 0; i < 14; i++) {
-    if (days.has(d.getDay()) && !(i === 0 && d.getHours() >= 10)) {
-      const yyyy = d.getFullYear();
-      const mm = String(d.getMonth() + 1).padStart(2, "0");
-      const dd = String(d.getDate()).padStart(2, "0");
-      return `${yyyy}-${mm}-${dd}`;
-    }
-    d.setDate(d.getDate() + 1);
-  }
-  throw new Error("No Reformer day in next 14 days");
-}
 
 /**
  * Trainer (Serbian). Test-plan items 40-51, all green.
@@ -48,11 +32,7 @@ test.describe("trainer (Serbian)", () => {
 
     // Reformer is scheduled Mon/Wed/Fri. Pick the next Reformer day
     // explicitly so the assertion is independent of weekday-of-test-run.
-    const target = nextReformerDate();
-    await page
-      .locator(`[data-testid="week-strip-day-${target}"]:visible`)
-      .first()
-      .dispatchEvent("click");
+    await navigateWeekStripTo(page, nextReformerDayKey());
 
     await expect(page.getByText("Reformer pilates").first()).toBeVisible();
     expect(await page.getByText("Energy pilates").count()).toBe(0);

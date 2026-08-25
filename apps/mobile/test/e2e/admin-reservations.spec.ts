@@ -16,6 +16,7 @@
 import { test, expect } from "./helpers/fixtures";
 import { ADMIN_EMAIL, signInAs } from "./helpers/auth";
 import { disconnect, resetAndSeed } from "./helpers/db";
+import { navigateWeekStripTo, nextFutureReformerDayKey } from "./helpers/dates";
 import { PrismaClient } from "../../generated/prisma";
 import { Pool } from "pg";
 import { PrismaPg } from "@prisma/adapter-pg";
@@ -67,14 +68,12 @@ test.describe("admin reservations", () => {
     });
     await page.goto(`/klijenti/rezervisi?${qs.toString()}`);
 
-    // Wait for the week strip then pick a day that has sessions. The
-    // anchor is Mon 2026-05-11 09:00 (just before the seeded 10:00 Reformer
-    // session) so today + Wed + Fri all have Reformer; Tue + Thu have Energy.
-    // Pick Wednesday (May 13) — it has a single 10:00 Reformer session.
-    await page
-      .locator('[data-testid="week-strip-day-2026-05-13"]')
-      .first()
-      .click();
+    // Pick a Reformer day whose sessions are all still in the future. The
+    // seed runs Reformer at 06:30, 07:30 and 10:00 on Mon/Wed/Fri, so *today*
+    // is no good: its early sessions are already past and render as disabled
+    // cards that `.first()` would grab and fail to select. The next Reformer
+    // day after today has every session ahead of the anchor.
+    await navigateWeekStripTo(page, nextFutureReformerDayKey());
 
     // Find any upcoming session card in the calendar.
     const card = page

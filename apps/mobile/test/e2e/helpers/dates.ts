@@ -41,6 +41,22 @@ export function nextReformerDayKey(): string {
 }
 
 /**
+ * Pick the next Reformer weekday strictly AFTER today. Use this when the spec
+ * needs a day on which *every* seeded session is still in the future — the
+ * seed runs Reformer at 06:30, 07:30 and 10:00, so on a Reformer "today" the
+ * early slots are already past and render as disabled cards.
+ */
+export function nextFutureReformerDayKey(): string {
+  const d = now();
+  d.setDate(d.getDate() + 1);
+  for (let i = 0; i < 14; i++) {
+    if (REFORMER_WEEKDAYS.has(d.getDay())) return dateKeyFromDate(d);
+    d.setDate(d.getDate() + 1);
+  }
+  throw new Error("No Reformer day in next 14 days");
+}
+
+/**
  * Tap a session card and wait for the edit sheet to appear. The tap-card
  * action navigates to the session detail page; tap the pencil icon to push
  * back to the dashboard with ?editSessionId= which mounts the edit sheet.
