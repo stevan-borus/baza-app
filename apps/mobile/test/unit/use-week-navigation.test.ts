@@ -8,6 +8,8 @@
  * - `weekStart` is owned by the arrow buttons (and month-cell/deep-link
  *   jumps) ONLY — picking a day inside the visible week must never page
  *   the calendar.
+ * - The week arrows also move `selectedDate` to the new week's first day,
+ *   so the focused day is always one of the visible pills.
  * - `month` (the availability query key) follows whichever anchor moved
  *   last, and only changes when a boundary is actually crossed.
  * - `monthDate` (the month-view grid anchor) is owned by the month arrows
@@ -96,17 +98,39 @@ describe("selectDay", () => {
 });
 
 describe("week arrows", () => {
-  it("page the strip by exactly one week, selectedDate untouched", () => {
+  it("page the strip by one week and select the new week's first day", () => {
     dayjs.locale("sr");
     const state = createWeekNavState(dayjs("2026-06-10"));
     const next = goToNextWeek(state);
     expect(next.weekStart.format("YYYY-MM-DD")).toBe("2026-06-15");
-    expect(next.selectedDate).toBe("2026-06-10");
+    expect(next.selectedDate).toBe("2026-06-15");
     expect(next.month).toBe("2026-06");
+    // The month-view grid anchor is owned by the month arrows.
     expect(next.monthDate).toBe(state.monthDate);
+  });
 
-    const back = goToPreviousWeek(next);
+  it("selects the new week's first day when paging backwards too", () => {
+    dayjs.locale("sr");
+    const prev = goToPreviousWeek(createWeekNavState(dayjs("2026-06-10")));
+    expect(prev.weekStart.format("YYYY-MM-DD")).toBe("2026-06-01");
+    expect(prev.selectedDate).toBe("2026-06-01");
+  });
+
+  it("en locale: the first day of the new week is Sunday", () => {
+    dayjs.locale("en");
+    const next = goToNextWeek(createWeekNavState(dayjs("2026-06-10")));
+    expect(next.weekStart.format("YYYY-MM-DD")).toBe("2026-06-14");
+    expect(next.selectedDate).toBe("2026-06-14");
+    expect(next.weekStart.day()).toBe(0); // Sunday
+  });
+
+  it("next-then-previous round-trips back to the original week", () => {
+    dayjs.locale("sr");
+    const state = createWeekNavState(dayjs("2026-06-10"));
+    const back = goToPreviousWeek(goToNextWeek(state));
     expect(back.weekStart.format("YYYY-MM-DD")).toBe("2026-06-08");
+    expect(back.selectedDate).toBe("2026-06-08");
+    expect(back.month).toBe("2026-06");
   });
 
   it("update the query month when the new week start crosses a boundary", () => {
@@ -123,13 +147,33 @@ describe("week arrows", () => {
     expect(prev.month).toBe("2026-06");
   });
 
+  it("keeps month and selectedDate in the same month across a boundary", () => {
+    dayjs.locale("sr");
+    // The bug this pins: with a stale selection, month moved to July while
+    // selectedDate stayed in June, so availabilityByMonth never contained
+    // the focused day and the list rendered empty.
+    const next = goToNextWeek(createWeekNavState(dayjs("2026-06-29")));
+    expect(next.selectedDate).toBe("2026-07-06");
+    expect(next.month).toBe("2026-07");
+    expect(next.selectedDate.slice(0, 7)).toBe(next.month);
+  });
+
   it("month follows the WEEK START, not the week's contents", () => {
     dayjs.locale("sr");
     // From week of Jun 22, paging to the week of Jun 29 (which contains
-    // July days) keeps month=June — the start is still in June.
+    // July days) keeps month=June — the start, and now the selection, is
+    // still in June.
     const state = goToNextWeek(createWeekNavState(dayjs("2026-06-22")));
     expect(state.weekStart.format("YYYY-MM-DD")).toBe("2026-06-29");
+    expect(state.selectedDate).toBe("2026-06-29");
     expect(state.month).toBe("2026-06");
+  });
+
+  it("never moves monthDate", () => {
+    dayjs.locale("sr");
+    const state = createWeekNavState(dayjs("2026-06-29"));
+    expect(goToNextWeek(state).monthDate).toBe(state.monthDate);
+    expect(goToPreviousWeek(state).monthDate).toBe(state.monthDate);
   });
 });
 

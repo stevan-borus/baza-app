@@ -11,6 +11,10 @@
  * - `weekStart` is owned by the week arrows — plus month-cell selection
  *   and deep-link jumps, which re-anchor the strip so the chosen day is
  *   in the visible week.
+ * - Paging a week also re-selects that week's first day, so the selection
+ *   is always one of the visible pills — a selection left outside the
+ *   visible week highlighted nothing and rendered a stale (or, across a
+ *   month boundary, empty) day list.
  * - `month` ("YYYY-MM", the availability query key) follows whichever
  *   anchor moved last, and only changes when a month boundary is crossed.
  * - `monthDate` (the month-view grid anchor) is owned by the month arrows
@@ -77,9 +81,9 @@ export function selectDay(state: WeekNavState, d: dayjs.Dayjs): WeekNavState {
 }
 
 /**
- * Week arrows — page the strip by one week; `selectedDate` and `monthDate`
- * stay put. The query month follows the new WEEK START (not the week's
- * contents), so it only changes when the start crosses a month boundary.
+ * Week arrows — page the strip by one week and focus its first day;
+ * `monthDate` stays put. The query month follows the new WEEK START, which
+ * is also the new selection, so the two can never disagree.
  */
 export function goToPreviousWeek(state: WeekNavState): WeekNavState {
   return pageWeek(state, -1);
@@ -91,7 +95,12 @@ export function goToNextWeek(state: WeekNavState): WeekNavState {
 
 function pageWeek(state: WeekNavState, delta: 1 | -1): WeekNavState {
   const weekStart = state.weekStart.add(delta, "week");
-  return { ...state, weekStart, month: monthKeyFromDate(weekStart) };
+  return {
+    ...state,
+    weekStart,
+    selectedDate: weekStart.format("YYYY-MM-DD"),
+    month: monthKeyFromDate(weekStart),
+  };
 }
 
 /**
