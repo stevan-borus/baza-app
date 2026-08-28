@@ -52,6 +52,11 @@ test.describe.serial("trainer clients sticky header", () => {
     // so reading the box raw races that transition and compares a
     // mid-animation "before" against a settled "after", which showed up as a
     // ~4px phantom drift with nothing actually moving.
+    //
+    // waitForStableBoundingBox requires SEVERAL consecutive unmoved reads for
+    // exactly this reason: an earlier two-read version bounded how fast the
+    // animation was moving rather than proving it had stopped, so the same
+    // ~4px drift still slipped through intermittently.
     const beforeBox = await waitForStableBoundingBox(search);
 
     // Scroll the inner list to the bottom — walk up from a row to find the

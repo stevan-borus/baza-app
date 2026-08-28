@@ -34,8 +34,9 @@ export async function pressRNW(locator: Locator): Promise<void> {
 }
 
 /**
- * Resolve once a locator's bounding box has stopped moving — i.e. two
- * consecutive reads agree within `tolerance` px. Returns the settled box.
+ * Resolve once a locator's bounding box has stopped moving — i.e. it holds the
+ * same position across `SETTLED_READS` consecutive reads, within `tolerance`
+ * px. Returns the settled box.
  *
  * Replaces the `await page.waitForTimeout(150)` "let the scroll settle" sleeps
  * the sticky-header specs used: a fixed sleep is both too long on a quiet
@@ -45,22 +46,38 @@ export async function pressRNW(locator: Locator): Promise<void> {
  * over `waitForTimeout`. `expect.poll` retries against the configured expect
  * timeout, so a settled box returns immediately and a never-settling one fails
  * with a real diagnostic instead of a silent bad read.
+ *
+ * Why several reads and not two: comparing ONE pair only bounds how fast the
+ * element is moving, not whether it has stopped. An entrance transition
+ * (the trainer/naplata headers animate in from translateY: -6) crosses less
+ * than half a pixel between two adjacent polls near its tail, so a two-read
+ * check reports "settled" while the element is still travelling — and the
+ * caller banks a mid-animation "before" that later reads ~4px off its true
+ * resting place. That is the phantom drift these specs kept failing on.
+ * Requiring the position to survive several polls unchanged distinguishes
+ * "stopped" from merely "slow".
  */
+const SETTLED_READS = 3;
+
 export async function waitForStableBoundingBox(
   locator: Locator,
   tolerance = 0.5,
 ): Promise<{ x: number; y: number; width: number; height: number }> {
   let prev = await locator.boundingBox();
+  let steady = 0;
   await expect
     .poll(async () => {
       const next = await locator.boundingBox();
-      const stable =
+      const unmoved =
         !!next &&
         !!prev &&
         Math.abs(next.y - prev.y) < tolerance &&
         Math.abs(next.x - prev.x) < tolerance;
+      // Any movement restarts the count, so the run of quiet reads has to be
+      // consecutive — a slow crawl can never accumulate its way to settled.
+      steady = unmoved ? steady + 1 : 0;
       prev = next;
-      return stable;
+      return steady >= SETTLED_READS;
     })
     .toBe(true);
   // `prev` now holds the last (settled) read.
