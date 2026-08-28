@@ -155,9 +155,11 @@ test.describe.serial("klijenti pagination (admin)", () => {
     const rows = page.locator('[data-testid^="client-row-"]');
     await expect(rows.first()).toBeVisible();
 
-    // Capture the search input's Y coordinate before scrolling.
-    const beforeBox = await search.boundingBox();
-    expect(beforeBox).not.toBeNull();
+    // Capture the search input's Y coordinate before scrolling — settled, not
+    // raw. A raw read races the header's entrance animation and banks a
+    // mid-flight Y, which then reads as several px of "drift" after the
+    // scroll even though nothing moved. Same guard as the trainer spec.
+    const beforeBox = await waitForStableBoundingBox(search);
 
     // Scroll the inner list to the bottom — same pattern as the pagination
     // test above. The sticky header MUST stay at the same Y coordinate.
@@ -181,6 +183,6 @@ test.describe.serial("klijenti pagination (admin)", () => {
     // Wait for the post-scroll reflow to settle (state, not a fixed sleep).
     const afterBox = await waitForStableBoundingBox(search);
     // 2px slack covers sub-pixel layout rounding on RN-Web.
-    expect(Math.abs(afterBox.y - beforeBox!.y)).toBeLessThan(2);
+    expect(Math.abs(afterBox.y - beforeBox.y)).toBeLessThan(2);
   });
 });

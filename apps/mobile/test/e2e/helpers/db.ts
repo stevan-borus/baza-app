@@ -1102,6 +1102,87 @@ export async function seedSecondClassTypeMonth(input: {
   };
 }
 
+/**
+ * Book a client onto a session directly, backed by whichever package of theirs
+ * covers the session's class type (null when they hold none — the admin-
+ * reservation shape). Used by the pause specs to plant an upcoming reservation
+ * inside the window a pause is about to open, without driving the booking UI
+ * first (the pause, not the booking, is what's under test).
+ */
+export async function bookClientOnSession(
+  clientEmail: string,
+  sessionId: string,
+) {
+  const [user, session] = await Promise.all([
+    db().user.findUnique({
+      where: { email: clientEmail.toLowerCase() },
+      select: { clientProfile: { select: { id: true } } },
+    }),
+    db().session.findUnique({
+      where: { id: sessionId },
+      select: { classTypeId: true },
+    }),
+  ]);
+  if (!user?.clientProfile) throw new Error(`Client not found: ${clientEmail}`);
+  if (!session) throw new Error(`Session not found: ${sessionId}`);
+
+  const pkg = await db().clientPackage.findFirst({
+    where: {
+      clientProfileId: user.clientProfile.id,
+      revokedAt: null,
+      classTypes: { some: { classTypeId: session.classTypeId } },
+    },
+    select: { id: true },
+  });
+
+  const booking = await db().booking.upsert({
+    where: {
+      sessionId_clientProfileId: {
+        sessionId,
+        clientProfileId: user.clientProfile.id,
+      },
+    },
+    create: {
+      sessionId,
+      clientProfileId: user.clientProfile.id,
+      clientPackageId: pkg?.id ?? null,
+    },
+    update: { canceledAt: null, clientPackageId: pkg?.id ?? null },
+    select: { id: true, canceledAt: true },
+  });
+  return { bookingId: booking.id, clientPackageId: pkg?.id ?? null };
+}
+
+/** The booking row itself, cancelled or not — `countActiveBookingsFor` can't
+ *  distinguish "cancelled" from "deleted", and the pause cancels rather than
+ *  deletes. */
+export async function findBookingById(bookingId: string) {
+  return db().booking.findUnique({
+    where: { id: bookingId },
+    select: { id: true, canceledAt: true, sessionId: true },
+  });
+}
+
+/** Every pause the client holds, oldest first. */
+export async function findPackagePausesFor(clientEmail: string) {
+  const user = await db().user.findUnique({
+    where: { email: clientEmail.toLowerCase() },
+    select: { clientProfile: { select: { id: true } } },
+  });
+  if (!user?.clientProfile) return [];
+  return db().packagePause.findMany({
+    where: { clientProfileId: user.clientProfile.id },
+    orderBy: { startsAt: "asc" },
+    select: { id: true, startsAt: true, endsAt: true, reason: true },
+  });
+}
+
+/** Active (non-cancelled) bookings on a session — the seat count the admin
+ *  schedule's `bookedCount/capacity` chip is rendered from. */
+export async function countActiveBookingsOnSession(sessionId: string) {
+  return db().booking.count({ where: { sessionId, canceledAt: null } });
+}
+
 export async function disconnect() {
   if (prismaClient) {
     await prismaClient.$disconnect();

@@ -78,6 +78,16 @@ export const clientByIdResponseSchema = z.object({
     notes: z.nullable(z.string()),
     dateOfBirth: z.nullable(z.string()),
     packageStatus: clientPackageStatusSchema,
+    // The PackagePause whose window contains "now", or null. `packageStatus`
+    // only says a pause exists; the admin screen needs the row's id to end
+    // it, and the dates to show which window it is ending.
+    activePause: z.nullable(
+      z.object({
+        id: z.string(),
+        startsAt: z.string(),
+        endsAt: z.string(),
+      }),
+    ),
     user: z.object({
       id: z.string(),
       firstName: z.string(),

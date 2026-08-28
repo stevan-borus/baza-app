@@ -28,6 +28,10 @@
       "title": "Package revoked",
       "body": "Your package has been revoked and your upcoming sessions were canceled. Contact us for more information."
     },
+    "package_paused": {
+      "title": "Package paused",
+      "body": "Your package has been paused and your reservations in that period were canceled. Your package validity was extended by the length of the pause."
+    },
     "session_reminder": {
       "title": "Session reminder",
       "body": "You have an upcoming session."
@@ -712,6 +716,8 @@
       "pauseReason": "Reason (optional)",
       "pauseSubmit": "Pause",
       "pauseError": "Pausing failed.",
+      "pauseOverlapError": "This client already has a pause in that period. Pick different dates.",
+      "pauseHint": "Reservations inside the pause are canceled with no session charged. The package validity is extended by the length of the pause.",
       "searchPlaceholder": "Search clients…",
       "filterAll": "All",
       "filterActive": "Active",
@@ -782,6 +788,12 @@
       "revokeError": "Could not revoke the package. Try again.",
       "addSessionAction": "+1 session",
       "addSessionError": "Could not add a session. Try again.",
+      "endPauseAction": "End pause",
+      "endPauseTitle": "End the pause?",
+      "endPauseMessage": "The pause ends today. Package validity is shortened by the unused part of the pause, so the package expires earlier than it currently shows. Reservations the pause canceled are not restored — the client books them again.",
+      "endPauseConfirm": "End pause",
+      "endPauseError": "Ending the pause failed. Try again.",
+      "endPauseFinishedError": "This pause has already finished.",
       "status": {
         "active": "Active",
         "paused": "Paused",

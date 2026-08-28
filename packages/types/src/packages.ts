@@ -222,7 +222,10 @@ export const addSessionResponseSchema = z.object({
   }),
 });
 
-// POST /api/packages/pause — the PackagePause row as selected by the handler.
+// POST /api/packages/pause — the PackagePause row as selected by the handler,
+// plus what the pause DID: reservations cancelled in the window, waitlist
+// seats released, and how many packages had their expiry pushed out. The
+// counts let the admin UI confirm the blast radius without a refetch.
 export const packagePauseResponseSchema = z.object({
   success: z.boolean(),
   pause: z.object({
@@ -232,4 +235,20 @@ export const packagePauseResponseSchema = z.object({
     endsAt: z.string(),
     reason: z.string().nullable(),
   }),
+  canceledBookings: z.number(),
+  removedWaitlistEntries: z.number(),
+  extendedPackages: z.number(),
+});
+
+// POST /api/packages/pauses/[id]/end — ending a pause early. `pause` carries
+// the truncated row's new end; it is null when the pause had not started yet
+// and was therefore deleted outright rather than truncated.
+export const endPackagePauseResponseSchema = z.object({
+  success: z.boolean(),
+  pause: z.nullable(
+    z.object({
+      id: z.string(),
+      endsAt: z.string(),
+    }),
+  ),
 });

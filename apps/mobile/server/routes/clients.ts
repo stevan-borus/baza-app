@@ -109,10 +109,13 @@ export async function GET(request: Request) {
             expiresAt: true,
           },
         },
+        // Half-open [startsAt, endsAt) — same bound as the detail route, so a
+        // pause truncated to exactly now stops counting on BOTH surfaces at
+        // once and the list chip can't disagree with the detail pill.
         packagePauses: {
           where: {
             startsAt: { lte: currentInstant },
-            endsAt: { gte: currentInstant },
+            endsAt: { gt: currentInstant },
           },
           select: { id: true },
           take: 1,

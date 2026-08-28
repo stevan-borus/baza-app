@@ -26,6 +26,7 @@ import {
   packagesQueries,
   assignClientPackageMutationOptions,
   pausePackageMutationOptions,
+  endPackagePauseMutationOptions,
   revokeClientPackageMutationOptions,
 } from "@/lib/queries/packages-queries-factory";
 import {
@@ -103,10 +104,21 @@ describe("client package assignment (comp)", () => {
 });
 
 describe("package pause", () => {
-  it("marks clients stale — packageStatus flips to paused", async () => {
-    // PackagePause rows aren't in any ["packages"] response; the visible
-    // effect is the derived packageStatus under ["clients"].
-    seed(clientsListKey);
+  it("marks clients + packages + bookings + sessions + timeline stale", async () => {
+    // A pause is not just a status flip any more: it cancels the client's
+    // reservations in the window (freeing seats, promoting waitlisters) and
+    // pushes every live package's expiresAt out. Every surface showing those
+    // has to refetch, or the app keeps rendering seats and expiry dates the
+    // server no longer agrees with.
+    seed(
+      clientsListKey,
+      packageTypesKey,
+      reportsSummaryKey,
+      bookingsUpcomingKey,
+      availabilityKey,
+      timelineKey,
+      unrelatedKey,
+    );
     const observer = new MutationObserver(client, {
       ...pausePackageMutationOptions(client),
       mutationFn: async () => ({ success: true }),
@@ -118,6 +130,28 @@ describe("package pause", () => {
     });
 
     expect(isStale(clientsListKey)).toBe(true);
+    expect(isStale(packageTypesKey)).toBe(true);
+    expect(isStale(reportsSummaryKey)).toBe(true);
+    expect(isStale(bookingsUpcomingKey)).toBe(true);
+    expect(isStale(availabilityKey)).toBe(true);
+    expect(isStale(timelineKey)).toBe(true);
+    expect(isStale(unrelatedKey)).toBe(false);
+  });
+
+  it("ending a pause refreshes expiry surfaces but leaves bookings alone", async () => {
+    // Ending early gives expiry time back; it deliberately restores no
+    // bookings, so the booking/session caches have nothing to refetch.
+    seed(clientsListKey, packageTypesKey, timelineKey, bookingsUpcomingKey);
+    const observer = new MutationObserver(client, {
+      ...endPackagePauseMutationOptions(client),
+      mutationFn: async () => ({ success: true }),
+    });
+    await observer.mutate("pause-1");
+
+    expect(isStale(clientsListKey)).toBe(true);
+    expect(isStale(packageTypesKey)).toBe(true);
+    expect(isStale(timelineKey)).toBe(true);
+    expect(isStale(bookingsUpcomingKey)).toBe(false);
   });
 });
 

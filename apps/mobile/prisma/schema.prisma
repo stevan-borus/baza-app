@@ -515,6 +515,7 @@ model ClientPackage {
   classTypes        ClientPackageClassType[]
   bookings          Booking[]
   billingRecord     BillingRecord?
+  pauseCredits      PackagePauseCredit[]
 
   @@index([clientProfileId])
 }
@@ -527,10 +528,35 @@ model PackagePause {
   reason          String?
   createdAt       DateTime      @default(now())
   clientProfile   ClientProfile @relation(fields: [clientProfileId], references: [id], onDelete: Cascade)
+  credits         PackagePauseCredit[]
 
   // Pauses are read in every eligibility check (availability, booking, cancel,
   // waitlist promotion), always filtered by clientProfileId.
   @@index([clientProfileId])
+}
+
+/**
+ * How much expiry time one pause handed to one package.
+ *
+ * The extension is written straight into ClientPackage.expiresAt when the
+ * pause is created, so every surface reading the raw column is correct. That
+ * makes the grant unrecoverable from the dates alone — the column no longer
+ * says how it got there — so the amount is recorded here. Ending a pause early
+ * subtracts exactly what this row says was given, which is the only way the
+ * refund can't drift from the grant.
+ */
+model PackagePauseCredit {
+  id              String        @id @default(uuid())
+  packagePauseId  String
+  clientPackageId String
+  grantedMs       BigInt
+  createdAt       DateTime      @default(now())
+  packagePause    PackagePause  @relation(fields: [packagePauseId], references: [id], onDelete: Cascade)
+  clientPackage   ClientPackage @relation(fields: [clientPackageId], references: [id], onDelete: Cascade)
+
+  // One pause credits a given package at most once.
+  @@unique([packagePauseId, clientPackageId])
+  @@index([clientPackageId])
 }
 
 /**
