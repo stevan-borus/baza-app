@@ -20,6 +20,7 @@ export type NotificationMessageKey =
   | "SPOT_OPENED_FROM_WAITLIST"
   | "PACKAGE_EXPIRING_SOON"
   | "PACKAGE_REVOKED"
+  | "PACKAGE_PAUSED"
   | "SESSION_REMINDER"
   | "BOOKING_CANCELED_ADMIN"
   | "BOOKING_CANCELED_TRAINER"
@@ -41,6 +42,7 @@ export const NOTIFICATION_MESSAGE_KEYS = {
   SPOT_OPENED_FROM_WAITLIST: "SPOT_OPENED_FROM_WAITLIST",
   PACKAGE_EXPIRING_SOON: "PACKAGE_EXPIRING_SOON",
   PACKAGE_REVOKED: "PACKAGE_REVOKED",
+  PACKAGE_PAUSED: "PACKAGE_PAUSED",
   SESSION_REMINDER: "SESSION_REMINDER",
   BOOKING_CANCELED_ADMIN: "BOOKING_CANCELED_ADMIN",
   BOOKING_CANCELED_TRAINER: "BOOKING_CANCELED_TRAINER",
@@ -94,6 +96,21 @@ const messages: Record<
     en: {
       title: "Package revoked",
       body: "Your package has been revoked and your upcoming sessions were canceled. Contact us for more information.",
+    },
+  },
+  // The pause is the studio's action, so the copy explains the consequence
+  // the client will notice — their reservations are gone — and reassures them
+  // the days are not lost. Placeholder-free for the same reason as
+  // PACKAGE_REVOKED: an unfilled {{var}} must never reach a client inbox, and
+  // the counts/dates ride in the payload for the app to render.
+  PACKAGE_PAUSED: {
+    sr: {
+      title: "Paket je pauziran",
+      body: "Vaš paket je pauziran, a rezervacije u tom periodu su otkazane. Trajanje paketa je produženo za dužinu pauze.",
+    },
+    en: {
+      title: "Package paused",
+      body: "Your package has been paused and your reservations in that period were canceled. Your package validity was extended by the length of the pause.",
     },
   },
   SESSION_REMINDER: {

@@ -187,6 +187,16 @@ export const packagesQueries = {
           errorMessage: "Unable to pause package",
         }),
     }),
+
+  endPause: () =>
+    mutationOptions({
+      mutationKey: [...packagesAll, "pauses", "end"] as const,
+      mutationFn: (id: string) =>
+        apiRequest(`/api/packages/pauses/${id}/end`, {
+          method: "POST",
+          errorMessage: "Unable to end the pause",
+        }),
+    }),
 };
 
 // ── Mutation hooks ──────────────────────────────────────────────────────────
@@ -240,9 +250,21 @@ export function assignClientPackageMutationOptions(queryClient: QueryClient) {
   };
 }
 
-// A PackagePause row isn't part of any ["packages"] response — its visible
-// effect is the derived packageStatus ("paused") under ["clients"], on the
-// list chip and the detail-header pill.
+// Pausing is nearly as wide-reaching as revoking: one transaction cancels the
+// client's reservations inside the window (freeing seats, promoting waitlisted
+// clients) and pushes every live package's expiresAt out. So it invalidates the
+// same superset revoke does, minus billing — a pause moves no money:
+//
+//   ["packages"]        → admin package rows + the new expiry dates
+//   ["clients"]         → clients-list chip + detail-header packageStatus pill
+//   ["reports"]         → package report figures shift with the new expiries
+//   ["bookings"]        → the client's (now cancelled) reservations, plus any
+//                         promoted client's list
+//   ["sessions"]        → availability bookedCount/spots + attendee lists
+//   ["client-packages"] → the client-facing "Moji paketi" timeline expiry
+//
+// Literal keys for the last three for the same reason revoke uses them: their
+// factories import THIS module, so importing back would be circular.
 export function pausePackageMutationOptions(queryClient: QueryClient) {
   return {
     ...packagesQueries.pause(),
@@ -250,6 +272,26 @@ export function pausePackageMutationOptions(queryClient: QueryClient) {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: packagesQueries.all }),
         queryClient.invalidateQueries({ queryKey: clientsQueries.all }),
+        queryClient.invalidateQueries({ queryKey: reportsQueries.all }),
+        queryClient.invalidateQueries({ queryKey: ["bookings"] }),
+        queryClient.invalidateQueries({ queryKey: ["sessions"] }),
+        queryClient.invalidateQueries({ queryKey: ["client-packages"] }),
+      ]);
+    },
+  };
+}
+
+// Ending a pause moves expiry dates back and clears the "paused" chip. It
+// restores no bookings, so the booking/session surfaces are untouched.
+export function endPackagePauseMutationOptions(queryClient: QueryClient) {
+  return {
+    ...packagesQueries.endPause(),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: packagesQueries.all }),
+        queryClient.invalidateQueries({ queryKey: clientsQueries.all }),
+        queryClient.invalidateQueries({ queryKey: reportsQueries.all }),
+        queryClient.invalidateQueries({ queryKey: ["client-packages"] }),
       ]);
     },
   };
@@ -328,4 +370,8 @@ export function useRevokeClientPackageMutation() {
 
 export function usePausePackageMutation() {
   return useMutation(pausePackageMutationOptions(useQueryClient()));
+}
+
+export function useEndPackagePauseMutation() {
+  return useMutation(endPackagePauseMutationOptions(useQueryClient()));
 }

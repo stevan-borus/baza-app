@@ -12,7 +12,7 @@
 // - onSuccess awaits the packages invalidation BEFORE closing and resetting.
 
 import React, { useState } from "react";
-import { View } from "react-native";
+import { Text, View } from "react-native";
 
 import { useTranslation } from "react-i18next";
 import { AppSheet } from "@/components/ui/sheet";
@@ -21,6 +21,7 @@ import { DateTimePicker } from "@/components/ui/date-time-picker";
 import { ErrorState } from "@/components/ui/states";
 import { Input } from "@/components/ui/input";
 import { SheetHeader } from "@/components/admin/client-flows/sheet-header";
+import { ApiError } from "@/lib/api-error";
 import { startOfLocalDay } from "@/lib/dates";
 import { now } from "@/lib/now";
 import { usePausePackageMutation } from "@/lib/queries/packages-queries-factory";
@@ -98,6 +99,13 @@ export function PauseSheet({ clientProfileId, onClose, onBack }: PauseSheetProps
           numberOfLines={3}
           style={{ minHeight: 80, textAlignVertical: "top" }}
         />
+        <Text
+          testID="pause-consequences-hint"
+          className="text-muted"
+          style={{ fontSize: 12 }}
+        >
+          {t("admin.clients.pauseHint")}
+        </Text>
         <Button
           testID="pause-submit-button"
           disabled={pauseMutation.isPending || !form.startsAt || !form.endsAt}
@@ -122,7 +130,20 @@ export function PauseSheet({ clientProfileId, onClose, onBack }: PauseSheetProps
         >
           {t("admin.clients.pauseSubmit")}
         </Button>
-        {pauseMutation.isError ? <ErrorState message={t("admin.clients.pauseError")} /> : null}
+        {pauseMutation.isError ? (
+          <ErrorState
+            message={
+              // A 409 is the one failure the admin can act on: the window
+              // collides with a pause this client already has. Everything else
+              // stays on the generic copy — see lib/admin/format-mutation-error
+              // for why a server message is never shown raw.
+              pauseMutation.error instanceof ApiError &&
+              pauseMutation.error.status === 409
+                ? t("admin.clients.pauseOverlapError")
+                : t("admin.clients.pauseError")
+            }
+          />
+        ) : null}
       </View>
     </AppSheet>
   );

@@ -45,12 +45,17 @@ export async function GET(request: Request, { id }: RouteParams) {
         where: { revokedAt: null },
         select: { sessionsRemaining: true, expiresAt: true },
       },
+      // Half-open [startsAt, endsAt), matching `isInPauseWindow` and the
+      // create-pause overlap check. `endsAt` must be EXCLUSIVE: ending a pause
+      // early truncates it to exactly `now()`, and an inclusive bound would
+      // still report that pause as running — the admin ends it, and the pill
+      // stays "Pauziran" over a button that now 409s.
       packagePauses: {
         where: {
           startsAt: { lte: currentInstant },
-          endsAt: { gte: currentInstant },
+          endsAt: { gt: currentInstant },
         },
-        select: { id: true },
+        select: { id: true, startsAt: true, endsAt: true },
         take: 1,
       },
     },
@@ -72,8 +77,10 @@ export async function GET(request: Request, { id }: RouteParams) {
     currentInstant.getTime() + EXPIRING_WINDOW_DAYS * 24 * 60 * 60 * 1000,
   );
 
+  const activePause = clientProfile.packagePauses[0] ?? null;
+
   let packageStatus: ClientPackageStatus = "none";
-  if (clientProfile.packagePauses.length > 0) {
+  if (activePause) {
     packageStatus = "paused";
   } else {
     let hasExpired = false;
@@ -101,6 +108,13 @@ export async function GET(request: Request, { id }: RouteParams) {
         ? clientProfile.dateOfBirth.toISOString().slice(0, 10)
         : null,
       packageStatus,
+      activePause: activePause
+        ? {
+            id: activePause.id,
+            startsAt: activePause.startsAt.toISOString(),
+            endsAt: activePause.endsAt.toISOString(),
+          }
+        : null,
       user: {
         ...clientProfile.user,
         fullName: formatFullName(

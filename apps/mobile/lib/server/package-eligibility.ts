@@ -33,30 +33,6 @@ export function toEligibilityPackage<
   return { ...rest, classTypeIds: classTypes.map((link) => link.classTypeId) };
 }
 
-function getPauseOverlapMs(
-  pause: Pick<PackagePause, "startsAt" | "endsAt">,
-  periodStart: Date,
-  periodEnd: Date,
-) {
-  const overlapStart = Math.max(
-    pause.startsAt.getTime(),
-    periodStart.getTime(),
-  );
-  const overlapEnd = Math.min(pause.endsAt.getTime(), periodEnd.getTime());
-  return Math.max(overlapEnd - overlapStart, 0);
-}
-
-export function getEffectiveExpiresAt(
-  pkg: Pick<ClientPackage, "startsAt" | "expiresAt">,
-  pauses: Pick<PackagePause, "startsAt" | "endsAt">[],
-  at: Date,
-) {
-  const extensionMs = pauses.reduce((total, pause) => {
-    return total + getPauseOverlapMs(pause, pkg.startsAt, at);
-  }, 0);
-  return new Date(pkg.expiresAt.getTime() + extensionMs);
-}
-
 export function isInPauseWindow(
   pauses: Pick<PackagePause, "startsAt" | "endsAt">[],
   at: Date,
@@ -78,45 +54,42 @@ export function clientOwnsPackageForClass(
   return packages.some((pkg) => pkg.classTypeIds.includes(classTypeId));
 }
 
-export type EligiblePackage = EligibilityPackage & {
-  effectiveExpiresAt: Date;
-};
-
 /**
  * Returns the pack the client should spend on a session at `at` whose class
  * is `classTypeId`. Eligible = ClassType set covers the class, started, has
- * sessions, effective expiry (pause-extended) in the future, `at` not in a
- * pause, and not revoked. `revokedAt` is a REQUIRED input field on purpose —
- * every call site must select it, so a new query can't silently treat a
- * revoked package as bookable.
+ * sessions, `expiresAt` in the future, `at` not in a pause, and not revoked.
+ * `revokedAt` is a REQUIRED input field on purpose — every call site must
+ * select it, so a new query can't silently treat a revoked package as
+ * bookable.
+ *
+ * `expiresAt` is read raw: the pause routes write the pause extension INTO
+ * the column when the pause is created (and take the unused tail back when
+ * one ends early), so re-deriving an extension here would double-count it.
+ * `pauses` still gates booking — being inside a live pause blocks the spend.
  *
  * Spend priority when several packs are eligible (ADR-0010): the NARROWEST
  * ClassType set wins — a single-type pack is spent before a mix pack, so the
- * mix pack's flexibility survives — then the soonest effective expiry, so the
- * dying pack is burned first.
+ * mix pack's flexibility survives — then the soonest expiry, so the dying
+ * pack is burned first.
  */
 export function findEligibleClientPackage(
   packages: EligibilityPackage[],
   pauses: Pick<PackagePause, "startsAt" | "endsAt">[],
   at: Date,
   classTypeId: string,
-): EligiblePackage | null {
-  const candidates = packages
+): EligibilityPackage | null {
+  const candidates = [...packages]
     .filter((pkg) => pkg.classTypeIds.includes(classTypeId))
-    .map((pkg) => ({
-      ...pkg,
-      effectiveExpiresAt: getEffectiveExpiresAt(pkg, pauses, at),
-    }))
     .sort(
       (a, b) =>
         a.classTypeIds.length - b.classTypeIds.length ||
-        a.effectiveExpiresAt.getTime() - b.effectiveExpiresAt.getTime(),
+        a.expiresAt.getTime() - b.expiresAt.getTime(),
     );
   for (const pkg of candidates) {
     if (pkg.revokedAt) continue;
     if (pkg.sessionsRemaining <= 0) continue;
     if (pkg.startsAt > at) continue;
-    if (pkg.effectiveExpiresAt < at) continue;
+    if (pkg.expiresAt < at) continue;
     if (isInPauseWindow(pauses, at)) continue;
     return pkg;
   }
@@ -152,12 +125,12 @@ export function classifyRenewalLockReason(
     (pkg) => pkg.classTypeIds.includes(classTypeId) && !pkg.revokedAt,
   );
 
-  // A "would-be-bookable" pack: has sessions and its pause-extended expiry is
-  // still in the future. (Pause state itself is handled separately below.)
+  // A "would-be-bookable" pack: has sessions and its expiry is still in the
+  // future. `expiresAt` already carries any pause extension (written at pause
+  // time), so no extension is re-derived here. Pause state itself is handled
+  // separately below.
   const hasLivePack = matching.some(
-    (pkg) =>
-      pkg.sessionsRemaining > 0 &&
-      getEffectiveExpiresAt(pkg, pauses, at) >= at,
+    (pkg) => pkg.sessionsRemaining > 0 && pkg.expiresAt >= at,
   );
   if (hasLivePack && isInPauseWindow(pauses, at)) {
     return "PAUSED";

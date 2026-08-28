@@ -166,6 +166,71 @@ describe("findEligibleClientPackage class-scoped behaviour", () => {
     expect(result).toBeNull();
   });
 
+  // The extension model, stated where the eligibility rules live: the pause
+  // routes fold the credit into ClientPackage.expiresAt when the pause is
+  // created, so this module reads the column raw. Re-deriving an extension
+  // here (the old getEffectiveExpiresAt) would count the same pause twice.
+  it("does not re-extend expiry from a pause — the column already carries it", () => {
+    // Expired yesterday, with a 10-day pause overlapping its whole life. Under
+    // the old derived extension this pack looked bookable; now it is dead
+    // until the pause route writes a later expiresAt.
+    const pkg = makePackage({
+      startsAt: new Date("2026-05-01T00:00:00Z"),
+      expiresAt: new Date("2026-05-14T00:00:00Z"),
+    });
+    const pauses = [
+      {
+        startsAt: new Date("2026-05-01T00:00:00Z"),
+        endsAt: new Date("2026-05-11T00:00:00Z"),
+      },
+    ];
+    expect(
+      findEligibleClientPackage([pkg], pauses, baseAt, REFORMER_CLASS_TYPE_ID),
+    ).toBeNull();
+    expect(
+      classifyRenewalLockReason([pkg], pauses, baseAt, REFORMER_CLASS_TYPE_ID),
+    ).toBe("RENEW");
+  });
+
+  it("books on the extended date the pause route wrote into expiresAt", () => {
+    // Same pack after the pause credited its 10 days: expiresAt is now past
+    // `at`, the pause window has closed, and it books.
+    const pkg = makePackage({
+      startsAt: new Date("2026-05-01T00:00:00Z"),
+      expiresAt: new Date("2026-05-24T00:00:00Z"),
+    });
+    const pauses = [
+      {
+        startsAt: new Date("2026-05-01T00:00:00Z"),
+        endsAt: new Date("2026-05-11T00:00:00Z"),
+      },
+    ];
+    expect(
+      findEligibleClientPackage([pkg], pauses, baseAt, REFORMER_CLASS_TYPE_ID)?.id,
+    ).toBe("pkg-1");
+  });
+
+  it("spends the pack whose written expiry is soonest, extensions included", () => {
+    // The tie-break reads the same column the pause route writes, so a pack
+    // whose expiry a pause pushed out is correctly burned LAST.
+    const extendedByPause = makePackage({
+      id: "extended",
+      expiresAt: new Date("2026-06-20T00:00:00Z"),
+    });
+    const neverPaused = makePackage({
+      id: "never-paused",
+      expiresAt: new Date("2026-06-01T00:00:00Z"),
+    });
+    expect(
+      findEligibleClientPackage(
+        [extendedByPause, neverPaused],
+        [],
+        baseAt,
+        REFORMER_CLASS_TYPE_ID,
+      )?.id,
+    ).toBe("never-paused");
+  });
+
   it("ignores matching-class packs while inside an active pause window", () => {
     const pkg = makePackage({});
     const pauses = [

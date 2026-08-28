@@ -28,6 +28,10 @@
       "title": "Paket je opozvan",
       "body": "Vaš paket je opozvan i budući termini su otkazani. Za više informacija javite nam se."
     },
+    "package_paused": {
+      "title": "Paket je pauziran",
+      "body": "Vaš paket je pauziran, a rezervacije u tom periodu su otkazane. Trajanje paketa je produženo za dužinu pauze."
+    },
     "session_reminder": {
       "title": "Podsetnik",
       "body": "Imate zakazan termin uskoro."
@@ -716,6 +720,8 @@
       "pauseReason": "Razlog (opciono)",
       "pauseSubmit": "Pauziraj",
       "pauseError": "Pauziranje nije uspelo.",
+      "pauseOverlapError": "Klijent već ima pauzu u tom periodu. Izaberi drugi datum.",
+      "pauseHint": "Rezervacije u periodu pauze biće otkazane, bez naplate termina. Trajanje paketa se produžava za dužinu pauze.",
       "searchPlaceholder": "Pretraži klijente…",
       "filterAll": "Svi",
       "filterActive": "Aktivni",
@@ -786,6 +792,12 @@
       "revokeError": "Opoziv paketa nije uspeo. Pokušaj ponovo.",
       "addSessionAction": "+1 termin",
       "addSessionError": "Dodavanje termina nije uspelo. Pokušaj ponovo.",
+      "endPauseAction": "Prekini pauzu",
+      "endPauseTitle": "Prekini pauzu?",
+      "endPauseMessage": "Pauza se završava danas. Važenje paketa se skraćuje za neiskorišćeni deo pauze, pa paket ističe ranije nego što sada piše. Rezervacije otkazane zbog pauze neće biti vraćene — klijent ih zakazuje ponovo.",
+      "endPauseConfirm": "Prekini pauzu",
+      "endPauseError": "Prekid pauze nije uspeo. Pokušaj ponovo.",
+      "endPauseFinishedError": "Ova pauza je već završena.",
       "status": {
         "active": "Aktivan",
         "paused": "Pauziran",

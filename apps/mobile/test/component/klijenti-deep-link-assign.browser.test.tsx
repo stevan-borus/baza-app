@@ -133,13 +133,17 @@ function renderScreen() {
     // trip it can serve from cache.
     client.setQueryData(clientsQueries.byId(PAGE_2_CLIENT.user.id).queryKey, {
       success: true,
-      client: { ...PAGE_2_CLIENT, dateOfBirth: "1990-05-11" },
+      client: {
+        ...PAGE_2_CLIENT,
+        dateOfBirth: "1990-05-11",
+        activePause: null,
+      },
     });
     // Same resolution path for an already-loaded row.
     for (const c of PAGE_1_CLIENTS) {
       client.setQueryData(clientsQueries.byId(c.user.id).queryKey, {
         success: true,
-        client: { ...c, dateOfBirth: null },
+        client: { ...c, dateOfBirth: null, activePause: null },
       });
       client.setQueryData(packagesQueries.clientPackages(c.id).queryKey, {
         success: true,

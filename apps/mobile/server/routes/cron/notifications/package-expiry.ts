@@ -4,7 +4,6 @@ import { requireCronAuth } from "@/lib/server/cron-auth";
 import { respond } from "@/lib/server/http";
 import { createSystemNotification } from "@/lib/server/notifications";
 import { NOTIFICATION_MESSAGE_KEYS } from "@baza/i18n";
-import { getEffectiveExpiresAt } from "@/lib/server/package-eligibility";
 import { prisma } from "@/lib/server/prisma";
 
 export async function POST(request: Request) {
@@ -27,44 +26,25 @@ export async function POST(request: Request) {
 
   // Only active packages that have started and have sessions left. Revoked
   // packages can't expire in any way the client should hear about.
+  // `expiresAt` is read raw: the pause routes fold the pause extension into
+  // the column, so a paused client's package already carries its later date.
   const packages = await prisma.clientPackage.findMany({
     where: {
       sessionsRemaining: { gt: 0 },
       startsAt: { lte: currentInstant },
       revokedAt: null,
+      expiresAt: { gte: currentInstant, lte: soon },
     },
     select: {
       id: true,
-      startsAt: true,
       expiresAt: true,
       sessionsRemaining: true,
-      clientProfile: {
-        select: {
-          userId: true,
-          packagePauses: {
-            select: {
-              startsAt: true,
-              endsAt: true,
-            },
-          },
-        },
-      },
+      clientProfile: { select: { userId: true } },
     },
   });
 
   let sent = 0;
   for (const pkg of packages) {
-    const effectiveExpiresAt = getEffectiveExpiresAt(
-      {
-        startsAt: pkg.startsAt,
-        expiresAt: pkg.expiresAt,
-      },
-      pkg.clientProfile.packagePauses,
-      currentInstant,
-    );
-    // Skip if already expired or outside the notification window.
-    if (effectiveExpiresAt < currentInstant || effectiveExpiresAt > soon) continue;
-
     if (dryRun) {
       sent += 1;
       continue;
@@ -77,9 +57,9 @@ export async function POST(request: Request) {
       {
         clientPackageId: pkg.id,
         sessionsRemaining: pkg.sessionsRemaining,
-        effectiveExpiresAt: effectiveExpiresAt.toISOString(),
+        effectiveExpiresAt: pkg.expiresAt.toISOString(),
       },
-      { dedupeKey: `package-expiry:${pkg.id}:${effectiveExpiresAt.toISOString().slice(0, 10)}` },
+      { dedupeKey: `package-expiry:${pkg.id}:${pkg.expiresAt.toISOString().slice(0, 10)}` },
     );
     sent += 1;
   }
@@ -94,6 +74,9 @@ export async function POST(request: Request) {
       to: soon,
     },
     sent,
+    // Packages that landed IN the window — the expiry filter moved into the
+    // query once expiresAt became authoritative, so nothing is scanned and
+    // then discarded any more.
     scannedPackages: packages.length,
   });
 }

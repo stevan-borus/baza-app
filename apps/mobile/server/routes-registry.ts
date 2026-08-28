@@ -57,6 +57,7 @@ import * as route_packages_client_packages from "@/server/routes/packages/client
 import * as route_packages_client_packages_id_add_session from "@/server/routes/packages/client-packages/[id]/add-session";
 import * as route_packages_client_packages_id_revoke from "@/server/routes/packages/client-packages/[id]/revoke";
 import * as route_packages_pause from "@/server/routes/packages/pause";
+import * as route_packages_pauses_id_end from "@/server/routes/packages/pauses/[id]/end";
 import * as route_packages_types from "@/server/routes/packages/types";
 import * as route_packages_types_id from "@/server/routes/packages/types/[id]";
 import * as route_payroll_adjustments from "@/server/routes/payroll/adjustments";
@@ -145,6 +146,7 @@ export const routesRegistry: Record<string, RouteModule> = {
   "packages/client-packages/[id]/add-session": route_packages_client_packages_id_add_session,
   "packages/client-packages/[id]/revoke": route_packages_client_packages_id_revoke,
   "packages/pause": route_packages_pause,
+  "packages/pauses/[id]/end": route_packages_pauses_id_end,
   "packages/types": route_packages_types,
   "packages/types/[id]": route_packages_types_id,
   "payroll/adjustments": route_payroll_adjustments,

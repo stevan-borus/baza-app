@@ -15,18 +15,22 @@ function packageStatePredicate(
     sessionsRemaining: { gt: 0 },
   };
   switch (state) {
+    // Half-open [startsAt, endsAt) on both branches, matching every other
+    // pause-window read. They are complements — `none` vs `some` of the same
+    // predicate — so the bound has to move on both at once, or a client whose
+    // pause ends at exactly `current` would land in neither audience.
     case "active":
       return {
         packages: { some: activePkg },
         packagePauses: {
-          none: { startsAt: { lte: current }, endsAt: { gte: current } },
+          none: { startsAt: { lte: current }, endsAt: { gt: current } },
         },
       };
     case "paused":
       return {
         packages: { some: activePkg },
         packagePauses: {
-          some: { startsAt: { lte: current }, endsAt: { gte: current } },
+          some: { startsAt: { lte: current }, endsAt: { gt: current } },
         },
       };
     case "expired":
