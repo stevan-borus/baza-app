@@ -22,6 +22,7 @@ export const AlertTriangle = icon("AlertTriangle");
 export const Ban = icon("Ban");
 export const BarChart3 = icon("BarChart3");
 export const Bell = icon("Bell");
+export const BellOff = icon("BellOff");
 export const Calendar = icon("Calendar");
 export const Camera = icon("Camera");
 export const CameraOff = icon("CameraOff");

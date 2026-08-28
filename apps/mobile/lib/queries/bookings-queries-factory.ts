@@ -9,6 +9,7 @@ import {
   bookingMutationResultSchema,
   clientBookingsResponseSchema,
   type ClientBooking,
+  type ClientBookingOutcome,
   type ClientBookingsResponse,
 } from "@baza/types/bookings";
 import { ApiError } from "@/lib/api-error";
@@ -18,18 +19,24 @@ import { packagesQueries } from "@/lib/queries/packages-queries-factory";
 import { sessionsQueries } from "@/lib/queries/sessions-queries-factory";
 
 export { clientBookingsResponseSchema };
-export type { ClientBooking, ClientBookingsResponse };
+export type { ClientBooking, ClientBookingOutcome, ClientBookingsResponse };
 
 function fetchClientBookingsPage(params: {
   clientUserId: string;
   period: "upcoming" | "past";
+  outcome?: ClientBookingOutcome;
   limit?: number;
   cursor?: string | null;
 }) {
   return apiRequest(
     `/api/clients/${encodeURIComponent(params.clientUserId)}/bookings`,
     {
-      params: { period: params.period, limit: params.limit, cursor: params.cursor },
+      params: {
+        period: params.period,
+        outcome: params.outcome,
+        limit: params.limit,
+        cursor: params.cursor,
+      },
       schema: clientBookingsResponseSchema,
       errorMessage: "Unable to load client bookings",
     },
@@ -102,6 +109,12 @@ export const bookingsQueries = {
   byClient: (params: {
     clientUserId: string;
     period: "upcoming" | "past";
+    /**
+     * Narrows `past` to the Održani / Otkazani tabs. Filtering happens on the
+     * server: the list is cursor-paginated, so dropping rows here would hand
+     * the user short pages.
+     */
+    outcome?: ClientBookingOutcome;
     limit?: number;
   }) =>
     infiniteQueryOptions({
@@ -112,12 +125,14 @@ export const bookingsQueries = {
         "by-client",
         params.clientUserId,
         params.period,
+        params.outcome ?? "all",
         params.limit ?? 0,
       ] as const,
       queryFn: ({ pageParam }) =>
         fetchClientBookingsPage({
           clientUserId: params.clientUserId,
           period: params.period,
+          outcome: params.outcome,
           limit: params.limit,
           cursor: pageParam,
         }),

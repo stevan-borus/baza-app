@@ -30,7 +30,8 @@ export type NotificationMessageKey =
   | "BULK_RESERVATION_CANCEL_ADMIN"
   | "BULK_RESERVATION_CANCEL_TRAINER"
   | "PACKAGE_PURCHASED"
-  | "PACKAGE_ASSIGNED";
+  | "PACKAGE_ASSIGNED"
+  | "TRAINER_DAILY_SCHEDULE";
 
 export const NOTIFICATION_MESSAGE_KEYS = {
   BOOKING_CONFIRMED: "BOOKING_CONFIRMED",
@@ -51,6 +52,7 @@ export const NOTIFICATION_MESSAGE_KEYS = {
   BULK_RESERVATION_CANCEL_TRAINER: "BULK_RESERVATION_CANCEL_TRAINER",
   PACKAGE_PURCHASED: "PACKAGE_PURCHASED",
   PACKAGE_ASSIGNED: "PACKAGE_ASSIGNED",
+  TRAINER_DAILY_SCHEDULE: "TRAINER_DAILY_SCHEDULE",
 } as const satisfies Record<NotificationMessageKey, NotificationMessageKey>;
 
 const messages: Record<
@@ -200,6 +202,20 @@ const messages: Record<
     en: {
       title: "Package assigned",
       body: "You've been assigned the {{packageTypeName}} package.",
+    },
+  },
+  // One digest per trainer per studio day, not one push per session — a
+  // trainer with six classes would otherwise get six separate buzzes for a
+  // single workday. Leads with the count, then the first start time, which is
+  // the only detail that changes what time they need to be in.
+  TRAINER_DAILY_SCHEDULE: {
+    sr: {
+      title: "Raspored za sutra",
+      body: "Sutra imate {{count}} termina, prvi u {{firstStartsAt}}.",
+    },
+    en: {
+      title: "Tomorrow's schedule",
+      body: "You have {{count}} sessions tomorrow, starting at {{firstStartsAt}}.",
     },
   },
 };

@@ -5,7 +5,8 @@
  * CALENDAR DAY — unlike istorija, which bands by month — because a client
  * cares "what am I doing today / tomorrow", not "which month". The band
  * label reads "Danas" / "Sutra" for the two near days and a weekday-date
- * ("Sre, 15.7.") beyond that, mirroring the home hero's day label.
+ * ("Četvrtak 16.7.") beyond that, mirroring the home hero's day label. Full
+ * weekday, no comma — the studio was explicit about both.
  *
  * The helper is pure and takes `now` + `todayLabel`/`tomorrowLabel` so the
  * test pins the instant instead of racing wall-clock.
@@ -81,17 +82,36 @@ describe("buildUpcomingListItems", () => {
     expect(headers(items)).toEqual(["Danas", "Sutra"]);
   });
 
-  it("labels a day beyond tomorrow with a weekday-date band", () => {
+  it("labels a day beyond tomorrow with a full-weekday date band", () => {
     const items = buildUpcomingListItems(
       [booking("c", "2026-07-16T09:00:00.000Z")],
       "sr",
       now,
       labels,
     );
-    // Not "Danas"/"Sutra" — a formatted date band.
-    expect(headers(items)[0]).not.toBe("Danas");
-    expect(headers(items)[0]).not.toBe("Sutra");
-    expect(headers(items)[0]).toMatch(/16/);
+    // Full weekday + "D.M.", no comma between them.
+    expect(headers(items)).toEqual(["Četvrtak 16.7."]);
+  });
+
+  it("never abbreviates the weekday in the band", () => {
+    const items = buildUpcomingListItems(
+      [booking("c", "2026-07-16T09:00:00.000Z")],
+      "sr",
+      now,
+      labels,
+    );
+    expect(headers(items)[0]).not.toContain("Čet.");
+    expect(headers(items)[0]).not.toContain(",");
+  });
+
+  it("uses the English weekday name when the language is en", () => {
+    const items = buildUpcomingListItems(
+      [booking("c", "2026-07-16T09:00:00.000Z")],
+      "en",
+      now,
+      labels,
+    );
+    expect(headers(items)).toEqual(["Thursday 16.7."]);
   });
 
   it("returns an empty array for no bookings", () => {

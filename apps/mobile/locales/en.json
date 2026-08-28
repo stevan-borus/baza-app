@@ -43,6 +43,10 @@
     "minor_paper_needed": {
       "title": "Guardian signature needed",
       "body": "A minor client completed their first session — collect the paper signature."
+    },
+    "trainer_daily_schedule": {
+      "title": "Tomorrow's schedule",
+      "body": "You have {{count}} sessions tomorrow, starting at {{firstStartsAt}}."
     }
   },
   "auth": {
@@ -316,6 +320,8 @@
       "browseSchedule": "Browse schedule",
       "sessionsLeft": "{{used}}/{{total}} sessions used",
       "yourPackage": "Your package",
+      "yourPackages": "Your packages",
+      "showAllPackages": "Show all packages",
       "thisWeek": "This week",
       "seeAll": "See all",
       "today": "Today",
@@ -337,8 +343,6 @@
       "book": "Book",
       "booked": "Booked",
       "package": "Package",
-      "onAccount": "On account",
-      "bookableLabel": "Left to book",
       "expiresOn": "Expires {{date}}",
       "expiresToday": "Expires today · last day to book",
       "expiresWithCountdown_one": "Expires {{date}} · {{count}} day left",
@@ -386,8 +390,11 @@
       "saveError": "Could not save settings."
     },
     "history": {
-      "empty": "No past sessions yet.",
-      "error": "Unable to load history."
+      "error": "Unable to load history.",
+      "tabAttended": "Attended",
+      "tabCanceled": "Canceled",
+      "emptyAttended": "No attended trainings yet.",
+      "emptyCanceled": "No canceled sessions."
     },
     "upcoming": {
       "title": "Upcoming sessions",
@@ -451,7 +458,9 @@
       "empty": {
         "noPackage": "You don't have an active package. Contact the studio.",
         "noPackageCta": "Contact us"
-      }
+      },
+      "a11yBookedDay": "You have a booking",
+      "a11yHasSessions": "Has sessions"
     },
     "notifications": {
       "title": "Notifications",
@@ -798,7 +807,8 @@
         "confirmDeleteBody": "This permanently removes the note. The trainer who wrote it will not be notified.",
         "confirm": "Delete",
         "unknownTrainer": "Trainer"
-      }
+      },
+      "canceledAtLine": "Canceled {{when}}"
     },
     "packages": {
       "classType": "Class type",
@@ -1263,7 +1273,14 @@
     "packageExpiring": {
       "title": "Package expiring soon",
       "body": "Your package will expire soon. Please renew to keep booking sessions."
-    }
+    },
+    "permissionDenied": {
+      "title": "Notifications are off",
+      "body": "Your phone is blocking notifications from the app, so we can't tell you about sessions or changes.",
+      "openSettings": "Open settings",
+      "dismiss": "Not now"
+    },
+    "noDetails": "No further details."
   },
   "notif": {
     "consentRefused": {

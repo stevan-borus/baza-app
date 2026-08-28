@@ -26,6 +26,12 @@ type Props = {
   onPrevMonth: () => void;
   onNextMonth: () => void;
   activity?: Record<string, ActivityValue>;
+  /**
+   * YYYY-MM-DD → true when the viewing client has a booking that day.
+   * Separate from `activity` ("the studio runs classes that day") because a
+   * day is commonly both. Staff callers omit it and keep the plain dot.
+   */
+  bookedDates?: Record<string, boolean>;
 };
 
 export function MonthView({
@@ -35,9 +41,10 @@ export function MonthView({
   onPrevMonth,
   onNextMonth,
   activity = {},
+  bookedDates,
 }: Props) {
   const tokens = useThemeTokens();
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation();
   const lang = i18n.language === "en" ? "en" : "sr";
   const localizedMonth = month.locale(lang);
   const todayKey = dayjs().format("YYYY-MM-DD");
@@ -111,6 +118,7 @@ export function MonthView({
               const isToday = dateKey === todayKey;
               const inMonth = d.month() === currentMonthIndex;
               const hasActivity = !!activity[dateKey];
+              const isBooked = !!bookedDates?.[dateKey];
 
               const containerCls = isSelected
                 ? "bg-foreground"
@@ -129,13 +137,18 @@ export function MonthView({
               return (
                 <Pressable
                   key={dateKey}
+                  testID={`month-day-${dateKey}`}
                   onPress={() => onSelectDate(dateKey)}
                   android_ripple={null}
                   className={`flex-1 items-center justify-center rounded ${containerCls}`}
                   accessibilityRole="button"
                   accessibilityState={{ selected: isSelected }}
                   aria-pressed={isSelected}
-                  accessibilityLabel={d.format("dddd, D MMMM YYYY")}
+                  accessibilityLabel={
+                    isBooked
+                      ? `${d.format("dddd, D MMMM YYYY")} — ${t("client.calendar.a11yBookedDay")}`
+                      : d.format("dddd, D MMMM YYYY")
+                  }
                   style={{ aspectRatio: 1 }}
                 >
                   <Text
@@ -148,19 +161,39 @@ export function MonthView({
                   >
                     {d.format("D")}
                   </Text>
-                  <View
-                    style={{
-                      width: 4,
-                      height: 4,
-                      borderRadius: 2,
-                      marginTop: 4,
-                      backgroundColor: hasActivity
-                        ? isSelected
-                          ? tokens.background
-                          : tokens.accent
-                        : "transparent",
-                    }}
-                  />
+                  {/*
+                    Same two-indicator language as StudioWeekStrip: a booked
+                    day is a larger hollow RING, a day that only has sessions
+                    stays a small solid dot. Shape + size carry the meaning so
+                    it survives colour-blindness and low vision.
+                  */}
+                  {isBooked ? (
+                    <View
+                      testID="month-booked-marker"
+                      style={{
+                        width: 8,
+                        height: 8,
+                        borderRadius: 4,
+                        marginTop: 2,
+                        borderWidth: 2,
+                        borderColor: isSelected ? tokens.background : tokens.accent,
+                        backgroundColor: "transparent",
+                      }}
+                    />
+                  ) : hasActivity ? (
+                    <View
+                      testID="month-sessions-dot"
+                      style={{
+                        width: 4,
+                        height: 4,
+                        borderRadius: 2,
+                        marginTop: 4,
+                        backgroundColor: isSelected ? tokens.background : tokens.accent,
+                      }}
+                    />
+                  ) : (
+                    <View style={{ width: 4, height: 4, marginTop: 4 }} />
+                  )}
                 </Pressable>
               );
             })}

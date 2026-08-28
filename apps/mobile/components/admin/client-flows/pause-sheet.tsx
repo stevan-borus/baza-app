@@ -17,9 +17,12 @@ import { View } from "react-native";
 import { useTranslation } from "react-i18next";
 import { AppSheet } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
+import { DateTimePicker } from "@/components/ui/date-time-picker";
 import { ErrorState } from "@/components/ui/states";
 import { Input } from "@/components/ui/input";
 import { SheetHeader } from "@/components/admin/client-flows/sheet-header";
+import { startOfLocalDay } from "@/lib/dates";
+import { now } from "@/lib/now";
 import { usePausePackageMutation } from "@/lib/queries/packages-queries-factory";
 
 export type PauseSheetProps = {
@@ -36,16 +39,24 @@ export type PauseSheetProps = {
   onBack?: () => void;
 };
 
-const EMPTY_FORM = { startsAt: "", endsAt: "", reason: "" };
+type PauseForm = {
+  startsAt: Date | null;
+  endsAt: Date | null;
+  reason: string;
+};
+
+const EMPTY_FORM: PauseForm = { startsAt: null, endsAt: null, reason: "" };
 
 export function PauseSheet({ clientProfileId, onClose, onBack }: PauseSheetProps) {
   const { t } = useTranslation();
 
-  const [form, setForm] = useState(EMPTY_FORM);
+  const [form, setForm] = useState<PauseForm>(EMPTY_FORM);
 
   // Cache upkeep (packages + clients packageStatus) is baked into the
   // factory hook; close/reset ride per-call so they can't clobber it.
   const pauseMutation = usePausePackageMutation();
+
+  const today = startOfLocalDay(now());
 
   return (
     <AppSheet
@@ -55,17 +66,29 @@ export function PauseSheet({ clientProfileId, onClose, onBack }: PauseSheetProps
     >
       <View className="flex-col gap-4">
         <SheetHeader title={t("admin.clients.sheetPause")} onBack={onBack} />
-        <Input
+        <DateTimePicker
           testID="pause-start-input"
-          placeholder={t("admin.clients.pauseStart")}
+          mode="date"
           value={form.startsAt}
-          onChangeText={(v) => setForm((s) => ({ ...s, startsAt: v }))}
+          onChange={(d) =>
+            setForm((s) => ({
+              ...s,
+              startsAt: d,
+              // A start moved to or past the chosen end leaves a range the
+              // server rejects, so drop the now-stale end.
+              endsAt: s.endsAt && s.endsAt <= d ? null : s.endsAt,
+            }))
+          }
+          placeholder={t("admin.clients.pauseStart")}
+          minimumDate={today}
         />
-        <Input
+        <DateTimePicker
           testID="pause-end-input"
-          placeholder={t("admin.clients.pauseEnd")}
+          mode="date"
           value={form.endsAt}
-          onChangeText={(v) => setForm((s) => ({ ...s, endsAt: v }))}
+          onChange={(d) => setForm((s) => ({ ...s, endsAt: d }))}
+          placeholder={t("admin.clients.pauseEnd")}
+          minimumDate={form.startsAt ?? today}
         />
         <Input
           placeholder={t("admin.clients.pauseReason")}
@@ -78,13 +101,14 @@ export function PauseSheet({ clientProfileId, onClose, onBack }: PauseSheetProps
         <Button
           testID="pause-submit-button"
           disabled={pauseMutation.isPending || !form.startsAt || !form.endsAt}
-          onPress={() =>
-            clientProfileId &&
+          onPress={() => {
+            const { startsAt, endsAt } = form;
+            if (!clientProfileId || !startsAt || !endsAt) return;
             pauseMutation.mutate(
               {
                 clientProfileId,
-                startsAt: form.startsAt,
-                endsAt: form.endsAt,
+                startsAt: startsAt.toISOString(),
+                endsAt: endsAt.toISOString(),
                 reason: form.reason || undefined,
               },
               {
@@ -93,8 +117,8 @@ export function PauseSheet({ clientProfileId, onClose, onBack }: PauseSheetProps
                   setForm(EMPTY_FORM);
                 },
               },
-            )
-          }
+            );
+          }}
         >
           {t("admin.clients.pauseSubmit")}
         </Button>

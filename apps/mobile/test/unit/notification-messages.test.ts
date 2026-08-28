@@ -57,3 +57,41 @@ describe("getNotificationMessage — interpolation", () => {
     expect(en.body).not.toContain("{{");
   });
 });
+
+/**
+ * Guards the drift that let 7 message keys ship with no locale entry at all:
+ * those notifications silently fell back to the DB-stored string, so the
+ * inbox showed server copy that never followed the user's language.
+ *
+ * Scoped to the keys that are actually rendered through the app inbox — the
+ * pre-existing gap is tracked separately and is not this test's job to fix.
+ */
+describe("notification message keys have app locale entries", () => {
+  it("TRAINER_DAILY_SCHEDULE resolves in both locales without leaking placeholders", () => {
+    for (const locale of ["sr", "en"] as const) {
+      const { title, body } = getNotificationMessage(
+        "TRAINER_DAILY_SCHEDULE",
+        locale,
+        { count: 3, firstStartsAt: "07:30" },
+      );
+      expect(title.length).toBeGreaterThan(0);
+      expect(body).toContain("3");
+      expect(body).toContain("07:30");
+      expect(body).not.toContain("{{");
+    }
+  });
+
+  it("TRAINER_DAILY_SCHEDULE has an entry in both app locale files", async () => {
+    const [sr, en] = await Promise.all([
+      import("@/locales/sr.json"),
+      import("@/locales/en.json"),
+    ]);
+    for (const bundle of [sr.default, en.default] as Array<
+      Record<string, Record<string, { title?: string; body?: string }>>
+    >) {
+      const entry = bundle.notification?.trainer_daily_schedule;
+      expect(entry?.title).toBeTruthy();
+      expect(entry?.body).toBeTruthy();
+    }
+  });
+});

@@ -41,8 +41,14 @@ describe("TimeAxisDayView empty-cutoff chip", () => {
       />,
     );
 
-    expect(screen.getByTestId("session-block-empty-cutoff-s1")).toBeTruthy();
-    expect(screen.getByText("Zatvoreno")).toBeTruthy();
+    // The closed state reads as a lock on the capacity pill, not a word — so
+    // the assertion is the mark's presence and its a11y label, which is what
+    // has to survive however the mark is drawn.
+    const mark = screen.getByTestId("session-block-empty-cutoff-s1");
+    expect(mark).toBeTruthy();
+    expect(mark.getAttribute("aria-label")).toBe(
+      "Prijave zatvorene — nema prijavljenih klijenata",
+    );
   });
 
   it("shows no chip when the session is not locked", () => {
@@ -55,7 +61,6 @@ describe("TimeAxisDayView empty-cutoff chip", () => {
     );
 
     expect(screen.queryByTestId("session-block-empty-cutoff-s1")).toBeNull();
-    expect(screen.queryByText("Zatvoreno")).toBeNull();
   });
 
   it("shows no chip when the field is absent (older cached payloads)", () => {

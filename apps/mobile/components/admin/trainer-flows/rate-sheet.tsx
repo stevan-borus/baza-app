@@ -125,6 +125,7 @@ export function RateSheet({
         <Text
           className="text-foreground font-body-bold"
           style={{ fontSize: 20, letterSpacing: -0.3 }}
+          numberOfLines={2}
         >
           {scope ? scope.classTypeName : trainerName}
         </Text>

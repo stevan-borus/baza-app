@@ -28,6 +28,7 @@ import { TrainerScheduleLeftSlot } from "@/components/trainer/trainer-tab-left-s
 import { CapsLabel, StudioWeekStrip } from "@/components/ui/studio";
 import { authQueries } from "@/lib/queries/auth-queries-factory";
 import { sessionsQueries } from "@/lib/queries/sessions-queries-factory";
+import { computeTrainerDayStats } from "@/lib/trainer-day-stats";
 import { useWeekNavigation, weekRangeLabel } from "@/lib/use-week-navigation";
 
 type ScheduleTab = "day" | "month";
@@ -50,13 +51,10 @@ export default function TrainerSchedule() {
     (s) => dayjs(s.startsAt).format("YYYY-MM-DD") === selectedDate,
   );
 
-  // Hero stats — sessions, booked clients, hours.
-  const clientsToday = daySessions.reduce((sum, s) => sum + s.bookedCount, 0);
-  const minsToday = daySessions.reduce((sum, s) => {
-    return sum + dayjs(s.endsAt).diff(dayjs(s.startsAt), "minute");
-  }, 0);
-  const hoursToday = minsToday / 60;
-  const hoursDisplay = hoursToday > 0 ? hoursToday.toFixed(1) : "0";
+  // Hero stats — sessions, booked clients, hours. Sessions the empty-booking
+  // cutoff closed are excluded: the trainer will not work them. They still
+  // render in the schedule below, badged "Zatvoreno".
+  const dayStats = computeTrainerDayStats(daySessions);
 
   // YYYY-MM-DD → number of sessions on that day (drives the dot indicator
   // under each StudioWeekStrip pill).
@@ -119,17 +117,17 @@ export default function TrainerSchedule() {
           <View className="mx-5 mb-6 flex-row">
             <StatColumn
               label={t("trainer.schedule.sessions")}
-              value={daySessions.length}
+              value={dayStats.sessionCount}
             />
             <View className="bg-glass-border" style={{ width: 1, marginVertical: 10 }} />
             <StatColumn
               label={t("trainer.schedule.clients")}
-              value={clientsToday}
+              value={dayStats.clientCount}
             />
             <View className="bg-glass-border" style={{ width: 1, marginVertical: 10 }} />
             <StatColumn
               label={t("trainer.schedule.hours")}
-              value={hoursDisplay}
+              value={dayStats.hoursDisplay}
               accent
             />
           </View>

@@ -186,18 +186,15 @@ export function ReservationMode() {
     nowMs: nowMs(),
     alreadyBookedSessionIds,
   };
-  // Dot density on the cancel-mode week strip reflects the bound client's
-  // own bookings, not the studio's overall sessions — admins want to
-  // navigate weeks based on "where does this client have stuff", not
-  // "how busy is the studio".
-  const bookingsByDay = activeBookings.reduce<Record<string, number>>(
-    (acc, b) => {
-      const k = dayjs(b.session.startsAt).format("YYYY-MM-DD");
-      acc[k] = (acc[k] ?? 0) + 1;
-      return acc;
-    },
-    {},
-  );
+  // The cancel-mode week strip marks the bound client's OWN booked days —
+  // admins navigate weeks by "where does this client have stuff", not "how
+  // busy is the studio". This rides `bookedByDay` (the booking-state prop)
+  // rather than passing bookings in as `sessionsByDay`, so the strip's two
+  // indicators keep their real meanings.
+  const bookedByDay = activeBookings.reduce<Record<string, boolean>>((acc, b) => {
+    acc[dayjs(b.session.startsAt).format("YYYY-MM-DD")] = true;
+    return acc;
+  }, {});
   // Bookings filtered by the active ClassType chip and grouped by date.
   const filteredBookings = classTypeFilter
     ? activeBookings.filter((b) => b.session.classType.name === classTypeFilter)
@@ -409,7 +406,8 @@ export function ReservationMode() {
                 weekStart={weekStart}
                 selected={dayjs(selectedDate)}
                 onSelect={nav.selectDay}
-                sessionsByDay={bookingsByDay}
+                sessionsByDay={{}}
+                bookedByDay={bookedByDay}
                 onPrevWeek={nav.goToPreviousWeek}
                 onNextWeek={nav.goToNextWeek}
                 rangeLabel={weekRangeLabel(weekStart, lang)}

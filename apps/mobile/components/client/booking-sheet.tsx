@@ -150,7 +150,14 @@ export function BookingSheet({
             transition={{ type: "timing", duration: 250 }}
           >
             <View className="gap-1.5">
-              <Text className="text-xs font-body-semibold text-muted uppercase tracking-wider">
+              {/* Clamped: uppercase + wide tracking makes a long class name
+                  ("StrongHer (funkcionalni trening)") wrap to 2-3 lines, which
+                  shoved the 34px time headline down the sheet. Two lines is
+                  enough for any real name at this size. */}
+              <Text
+                className="text-xs font-body-semibold text-muted uppercase tracking-wider"
+                numberOfLines={2}
+              >
                 {session.classTypeName}
               </Text>
               <Text

@@ -18,6 +18,7 @@ import { notificationsQueries, type Notification } from "@/lib/queries/notificat
 import { useNotificationTapHandler } from "@/lib/notification-tap";
 import { shouldOpenDetailSheet } from "@/lib/notification-detail-sheet";
 import { clearAppBadge } from "@/lib/badge";
+import { PushPermissionBanner } from "@/components/notifications/push-permission-banner";
 import dayjs from "dayjs";
 
 type NotificationsInboxContext = "client" | "admin" | "trainer";
@@ -38,6 +39,61 @@ type GroupedNotifications = {
 type ListItem =
   | { kind: "header"; groupKey: NotificationGroup; labelKey: string }
   | { kind: "row"; notification: Notification };
+
+/**
+ * LegendList item type for a row. The list is heterogeneous — ~30pt group
+ * headers interleaved with ~90pt+ GlassCards whose height varies with body
+ * length and avatar presence. LegendList keys both its recycling pool and
+ * its running average-size map by this value, so returning a distinct type
+ * per kind lets it estimate each independently. With one flat
+ * `estimatedItemSize` across both kinds it sizes every container by a single
+ * blended average, which mis-positions cells during scroll and paints them
+ * blank until the list is rebuilt (the reported "blank cards until I reload").
+ */
+export function notificationItemType(item: ListItem): "header" | "row" {
+  return item.kind;
+}
+
+/**
+ * Returns the body to display, or null when there is nothing worth rendering.
+ *
+ * Bodies reach a row from two places and either can be empty:
+ * `notification.general.body` is "" in both locales (and GENERAL is the
+ * DEFAULT type), and CAMPAIGN bodies are admin free text that never passes
+ * through i18n. An empty string used to render as a blank line under the
+ * title — a card that looks broken. Null instead means the row renders
+ * title-only, which reads as a deliberate short notice.
+ */
+export function resolveDisplayBody(
+  translatedBody: string | null,
+  bodyKey: string | null,
+  storedBody: string,
+): string | null {
+  const translated =
+    translatedBody && translatedBody !== bodyKey ? translatedBody.trim() : "";
+  if (translated.length > 0) return translated;
+  const stored = storedBody.trim();
+  return stored.length > 0 ? stored : null;
+}
+
+/**
+ * Group headers are a fixed-height label row (`px-6 pt-4 pb-1` around an
+ * 11pt caps label), so their size is known exactly rather than estimated.
+ */
+const HEADER_ITEM_SIZE = 34;
+
+/**
+ * First-render estimate for a notification card. LegendList replaces this
+ * with the measured per-type average once rows have laid out; it only needs
+ * to be close enough for the initial frame.
+ */
+const ROW_ITEM_SIZE = 96;
+
+/**
+ * Below this length a 13px body cannot reach a third line at any supported
+ * width, so the hidden truncation-measuring Text is skipped entirely.
+ */
+const BODY_TRUNCATION_PROBE_MIN_CHARS = 60;
 
 // Stable viewabilityConfig reference — recreating this object on each render
 // would cause LegendList (like RN FlatList) to throw "Changing onViewableItemsChanged
@@ -263,6 +319,12 @@ export function NotificationsInbox({ context, bottomPad = 0 }: Props) {
         transition={{ type: "timing", duration: 350, delay: 100 }}
         style={{ flex: 1 }}
       >
+        {/*
+          Sits above the list rather than inside it: someone looking at an
+          empty inbox because push was declined needs to see the fix first.
+        */}
+        <PushPermissionBanner />
+
         {notificationsQuery.isLoading ? (
           <View className="px-6 pt-4"><SkeletonList count={3} /></View>
         ) : notificationsQuery.isError ? (
@@ -303,10 +365,7 @@ export function NotificationsInbox({ context, bottomPad = 0 }: Props) {
                 translatedTitle && translatedTitle !== titleKey
                   ? translatedTitle
                   : n.title;
-              const displayBody =
-                translatedBody && translatedBody !== bodyKey
-                  ? translatedBody
-                  : n.body;
+              const displayBody = resolveDisplayBody(translatedBody, bodyKey, n.body);
               const personName = personNameFromPayload(n.payload);
               // Campaigns are studio broadcasts, not transactional pings — they
               // carry a megaphone badge and keep the green accent rail even once
@@ -327,7 +386,7 @@ export function NotificationsInbox({ context, bottomPad = 0 }: Props) {
                     ) {
                       setDetailNotification({
                         title: displayTitle,
-                        body: displayBody,
+                        body: displayBody ?? "",
                         createdAt: n.createdAt,
                         isCampaign,
                       });
@@ -369,33 +428,48 @@ export function NotificationsInbox({ context, bottomPad = 0 }: Props) {
                           </Text>
                           <Text className="text-[11px] text-muted">{formatRelativeTime(n.createdAt, lang)}</Text>
                         </View>
-                        <Text className="text-[13px] text-muted" numberOfLines={2}>
-                          {displayBody}
-                        </Text>
-                        {/*
-                          Truncation probe. iOS reports `onTextLayout` *after*
-                          the `numberOfLines` clamp, so a clamped Text always
-                          reports exactly 2 lines — we can't tell "fits in 2"
-                          from "clipped to 2". So we measure the SAME text with
-                          NO clamp in an absolutely-positioned, invisible twin
-                          (out of flow → adds no height, pointer-transparent →
-                          never steals the row's tap). If the unclamped text
-                          needs >2 lines, the visible body is truncated, which
-                          is the signal the detail sheet keys off.
-                        */}
-                        <Text
-                          className="text-[13px]"
-                          style={{ position: "absolute", left: 0, right: 0, opacity: 0 }}
-                          pointerEvents="none"
-                          accessibilityElementsHidden
-                          importantForAccessibility="no-hide-descendants"
-                          onTextLayout={(e: NativeSyntheticEvent<TextLayoutEventData>) => {
-                            if (e.nativeEvent.lines.length > 2) truncatedIdsRef.current.add(n.id);
-                            else truncatedIdsRef.current.delete(n.id);
-                          }}
-                        >
-                          {displayBody}
-                        </Text>
+                        {displayBody ? (
+                          <>
+                            <Text
+                              testID={`notification-body-${n.id}`}
+                              className="text-[13px] text-muted"
+                              numberOfLines={2}
+                            >
+                              {displayBody}
+                            </Text>
+                            {/*
+                              Truncation probe. iOS reports `onTextLayout`
+                              *after* the `numberOfLines` clamp, so a clamped
+                              Text always reports exactly 2 lines — we can't
+                              tell "fits in 2" from "clipped to 2". So we
+                              measure the SAME text with NO clamp in an
+                              absolutely-positioned, invisible twin (out of
+                              flow → adds no height, pointer-transparent →
+                              never steals the row's tap).
+
+                              Only mounted when the body could plausibly wrap
+                              past two lines: below that length the answer is
+                              always "not truncated", and skipping the twin
+                              keeps the duplicate text-layout pass off most
+                              cells of a long list.
+                            */}
+                            {displayBody.length > BODY_TRUNCATION_PROBE_MIN_CHARS ? (
+                              <Text
+                                className="text-[13px]"
+                                style={{ position: "absolute", left: 0, right: 0, opacity: 0 }}
+                                pointerEvents="none"
+                                accessibilityElementsHidden
+                                importantForAccessibility="no-hide-descendants"
+                                onTextLayout={(e: NativeSyntheticEvent<TextLayoutEventData>) => {
+                                  if (e.nativeEvent.lines.length > 2) truncatedIdsRef.current.add(n.id);
+                                  else truncatedIdsRef.current.delete(n.id);
+                                }}
+                              >
+                                {displayBody}
+                              </Text>
+                            ) : null}
+                          </>
+                        ) : null}
                       </View>
                     </View>
                   </GlassCard>
@@ -409,7 +483,25 @@ export function NotificationsInbox({ context, bottomPad = 0 }: Props) {
             ListFooterComponent={
               notificationsQuery.isFetchingNextPage ? <ActivityIndicator style={{ padding: 16 }} /> : null
             }
-            estimatedItemSize={90}
+            /*
+              Heterogeneous list: ~30pt group headers interleaved with ~90pt+
+              notification cards. `getItemType` gives LegendList a separate
+              recycling pool AND a separate running average-size per kind, so
+              a header container is never sized by a card's average (and vice
+              versa) — the mis-sizing that left recycled cells blank mid-scroll.
+            */
+            getItemType={notificationItemType}
+            /*
+              Explicitly false: rows own per-item refs (the truncation probe
+              writes into `truncatedIdsRef` keyed by notification id), so
+              remount-on-reuse is the semantics we want. Left implicit,
+              LegendList warns and the intent reads as an oversight.
+            */
+            recycleItems={false}
+            getFixedItemSize={(item) =>
+              item.kind === "header" ? HEADER_ITEM_SIZE : undefined
+            }
+            estimatedItemSize={ROW_ITEM_SIZE}
           />
         )}
       </MotiView>
@@ -468,18 +560,31 @@ export function NotificationsInbox({ context, bottomPad = 0 }: Props) {
               contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 16, paddingBottom: 40 }}
               showsVerticalScrollIndicator={false}
             >
-              {detailNotification.body
-                .split(/\n{2,}/)
-                .map((para) => para.trim())
-                .filter(Boolean)
-                .map((para, i) => (
+              {(() => {
+                const paragraphs = detailNotification.body
+                  .split(/\n{2,}/)
+                  .map((para) => para.trim())
+                  .filter(Boolean);
+                // An all-whitespace body would filter down to zero paragraphs
+                // and render an empty sheet under the title. The sheet only
+                // opens for clamped bodies today, so this is a guard rather
+                // than a live path — but it makes "empty sheet" unreachable.
+                if (paragraphs.length === 0) {
+                  return (
+                    <Text className="text-[15px] text-muted leading-[24px]">
+                      {t("notifications.noDetails")}
+                    </Text>
+                  );
+                }
+                return paragraphs.map((para, i) => (
                   <Text
                     key={i}
                     className={`text-[15px] text-foreground leading-[24px] ${i > 0 ? "mt-3" : ""}`}
                   >
                     {para}
                   </Text>
-                ))}
+                ));
+              })()}
             </BottomSheetScrollView>
           </View>
         ) : null}

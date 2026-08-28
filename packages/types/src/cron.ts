@@ -54,6 +54,8 @@ export const cronRemindersResponseSchema = z.object({
   window: cronWindowSchema,
   sent: z.number(),
   sessionsChecked: z.number(),
+  /** Trainer daily-schedule digests dispatched (one per trainer, not per session). */
+  trainerDigestsSent: z.number(),
 });
 
 /** POST /api/cron/sessions/consumption */

@@ -120,6 +120,11 @@ export function WebDateTimeSheet({
               mode="single"
               selected={draftDate ?? undefined}
               onSelect={(d) => d && setDraftDate(d)}
+              // Open on the picked date's month, falling back to today when
+              // nothing is picked. Without this the calendar always opened on
+              // the current month, so editing an existing date (a 1990 date of
+              // birth, say) meant paging back through every month by hand.
+              defaultMonth={value ?? now()}
               locale={dpLocale}
               weekStartsOn={1}
               showOutsideDays

@@ -2,12 +2,16 @@ import { expect, type Page } from "./fixtures";
 import { pressRNW } from "./interactions";
 
 /**
- * Opens a DOB DateTimePicker (identified by its trigger testID) and selects a
- * valid past day. Shared DayPicker driving pattern: open → wait for the
- * calendar → click a day cell by its text → confirm. Day 15 exists in every
- * month, so it's safe regardless of the month shown.
+ * Opens a DateTimePicker (identified by its trigger testID) and selects a day.
+ * Shared DayPicker driving pattern: open → wait for the calendar → click a day
+ * cell by its text → confirm. Day 15 exists in every month, so the default is
+ * safe regardless of the month shown.
+ *
+ * Picks only days the calendar actually offers: a cell disabled by
+ * `minimumDate` / `maximumDate` won't take the click, so callers driving a
+ * constrained picker must pass a day inside the allowed range.
  */
-export async function pickDob(
+export async function pickDate(
   page: Page,
   triggerTestId: string,
   day = "15",
@@ -46,10 +50,13 @@ export async function pickDob(
     .toBeLessThan(backdropsWhileOpen);
 }
 
+/** Back-compat alias for the DOB call sites. */
+export const pickDob = pickDate;
+
 /**
  * Drives the admin invite-form DOB picker (required to enable "send invite",
- * consent gate #32). Thin wrapper over pickDob for the invite trigger.
+ * consent gate #32). Thin wrapper over pickDate for the invite trigger.
  */
 export async function pickInviteDob(page: Page, day = "15"): Promise<void> {
-  return pickDob(page, "invite-create-dob-input", day);
+  return pickDate(page, "invite-create-dob-input", day);
 }

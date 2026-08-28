@@ -25,10 +25,9 @@ import relativeTime from "dayjs/plugin/relativeTime";
 import { now } from "@/lib/now";
 import { packageDaysLeft } from "@/lib/package-expiry";
 import {
-  isActiveClientPackage,
-  isFullyBookedActivePackage,
-  packageUsedFraction,
-} from "@/lib/package-fully-booked";
+  summarizeActivePackages,
+  type ActivePackageSummary,
+} from "@/lib/active-package-summary";
 import { authQueries } from "@/lib/queries/auth-queries-factory";
 import {
   packagesQueries,
@@ -38,6 +37,7 @@ import { sessionsQueries } from "@/lib/queries/sessions-queries-factory";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { AppHeader } from "@/components/ui/app-header";
 import { StudioWeekStrip } from "@/components/ui/studio";
+import { startOfMondayWeek } from "@/lib/use-week-navigation";
 import { ScheduleRow } from "@/components/ui/schedule-row";
 import { EmptyState } from "@/components/ui/states";
 import {
@@ -46,6 +46,7 @@ import {
 } from "@/components/client/use-booking-sheet";
 import { useThemeTokens } from "@/components/ui/tokens";
 import { formatClassTypeList } from "@/lib/format";
+import { formatDayMonth, type DateLang } from "@/lib/format-date";
 
 dayjs.extend(relativeTime);
 
@@ -56,6 +57,28 @@ const PHOTO_HERO = require("@/assets/studio/group.webp");      // BAZA neon, 4 w
 // hard-coded because they sit on top of an image and must read regardless
 // of theme.
 const ACCENT_LIGHT = "#9ED6B5"; // sage glow used on dark photo overlays
+
+/**
+ * Shadow for white text sitting directly on a photograph.
+ *
+ * The gradient scrims carry most of the contrast, but they're tuned to one
+ * image; the studio swaps hero photography, and a pale frame (the sunlit
+ * curtain) leaves white-on-white. This is the per-glyph floor that holds no
+ * matter what's behind it — a soft dark halo tight enough to read as depth
+ * rather than a drop shadow.
+ */
+const ON_PHOTO_TEXT_SHADOW = {
+  textShadowColor: "rgba(15,15,13,0.55)",
+  textShadowOffset: { width: 0, height: 1 },
+  textShadowRadius: 6,
+} as const;
+
+/**
+ * How many package cards the home screen shows before it links out instead.
+ * Layout, not data: `summarizeActivePackages` returns every pool and Moji
+ * paketi renders all of them.
+ */
+const HOME_PACKAGE_CARDS = 2;
 
 function currentMonthKey() {
   const today = now();
@@ -98,7 +121,7 @@ function SectionRow({
   action,
 }: {
   title: string;
-  action?: { label: string; onPress: () => void };
+  action?: { label: string; onPress: () => void; testID?: string };
 }) {
   const tokens = useThemeTokens();
   return (
@@ -115,7 +138,12 @@ function SectionRow({
         {title}
       </CapsLabel>
       {action ? (
-        <Pressable onPress={action.onPress} hitSlop={8}>
+        <Pressable
+          testID={action.testID}
+          onPress={action.onPress}
+          hitSlop={8}
+          accessibilityRole="link"
+        >
           <Text
             style={{
               fontFamily: "AlbertSans-Medium",
@@ -184,7 +212,7 @@ function BlackPill({
 // ────────────────────────────────────────────────────────────────────────
 // Hero — full-bleed photo card with glass info ribbon (Heartcore + Alo)
 
-function NextClassHero({
+export function NextClassHero({
   session,
   lang,
   onPress,
@@ -230,38 +258,40 @@ function NextClassHero({
           opacity: pressed ? 0.97 : 1,
         })}
       >
+        {/* minHeight, not height. The ribbon below is a normal flex child
+            pushed down by a spacer rather than an absolutely-positioned
+            overlay, so a long class name ("StrongHer (funkcionalni trening)"
+            wraps to two lines at fontSize 30) GROWS the card instead of
+            growing the ribbon upward into the greeting — which is what put
+            "SUTRA · 15:00-15:55" on top of "DOBRO VEČE, SLAVICA". 260 stays
+            the floor so the common short-name card looks unchanged. */}
         <ImageBackground
+          testID="home-hero-card"
           source={PHOTO_HERO}
-          style={{ width: "100%", height: 260 }}
+          style={{ width: "100%", minHeight: 260 }}
           resizeMode="cover"
         >
-          {/* Top overlay — ink fade for status legibility */}
+          {/* Top overlay — ink fade for status legibility. Tuned against the
+              BRIGHTEST hero photo (the sunlit curtain), not an average one: at
+              0.55 fading out by 110px the greeting landed on the weakest part
+              of its own scrim and washed out. Holding near-full strength
+              through the greeting's band and fading after keeps the photo
+              readable below while the text always has ink under it. */}
           <LinearGradient
-            colors={["rgba(15,15,13,0.55)", "rgba(15,15,13,0)"]}
+            colors={[
+              "rgba(15,15,13,0.62)",
+              "rgba(15,15,13,0.42)",
+              "rgba(15,15,13,0)",
+            ]}
+            locations={[0, 0.55, 1]}
             style={{
               position: "absolute",
               top: 0,
               left: 0,
               right: 0,
-              height: 110,
+              height: 132,
             }}
           />
-          {/* Bottom overlay — deep ink so the info ribbon reads */}
-          <LinearGradient
-            colors={[
-              "rgba(15,15,13,0)",
-              "rgba(15,15,13,0.55)",
-              "rgba(15,15,13,0.92)",
-            ]}
-            style={{
-              position: "absolute",
-              bottom: 0,
-              left: 0,
-              right: 0,
-              height: 200,
-            }}
-          />
-
           {/* Top — greeting + status chip */}
           <View
             style={{
@@ -286,6 +316,7 @@ function NextClassHero({
                   color: "#FFFFFF",
                   letterSpacing: 1.6,
                   textTransform: "uppercase",
+                  ...ON_PHOTO_TEXT_SHADOW,
                 }}
                 numberOfLines={1}
               >
@@ -320,14 +351,29 @@ function NextClassHero({
             ) : null}
           </View>
 
-          {/* Bottom — class info ribbon */}
-          <View
+          {/* Spacer — holds the ribbon at the bottom on a short name, and
+              simply collapses when a long one needs the room. Replaces the
+              absolute positioning that let the ribbon escape the card. */}
+          <View style={{ flex: 1, minHeight: 40 }} />
+
+          {/* Bottom — class info ribbon. The ink scrim IS the ribbon (it used
+              to be a separate 200px-tall absolute layer), so it always covers
+              exactly the content it has to make legible — a two-line class
+              name can't outgrow it onto the bare photo. Extra top padding
+              gives the gradient room to fade in above the first line. */}
+          <LinearGradient
+            testID="home-hero-ribbon"
+            colors={[
+              "rgba(15,15,13,0)",
+              "rgba(15,15,13,0.42)",
+              "rgba(15,15,13,0.78)",
+              "rgba(15,15,13,0.94)",
+            ]}
+            locations={[0, 0.28, 0.55, 1]}
             style={{
-              position: "absolute",
-              left: 0,
-              right: 0,
-              bottom: 0,
-              padding: 20,
+              paddingTop: 56,
+              paddingHorizontal: 20,
+              paddingBottom: 20,
               gap: 12,
             }}
           >
@@ -337,6 +383,7 @@ function NextClassHero({
                 fontSize: 12,
                 color: "#FFFFFF",
                 letterSpacing: 1.6,
+                ...ON_PHOTO_TEXT_SHADOW,
               }}
             >
               {dayLabel}  ·  {start.format("HH:mm")}–{end.format("HH:mm")}
@@ -348,6 +395,7 @@ function NextClassHero({
                 color: "#FFFFFF",
                 letterSpacing: -0.6,
                 lineHeight: 34,
+                ...ON_PHOTO_TEXT_SHADOW,
               }}
               numberOfLines={2}
             >
@@ -364,6 +412,7 @@ function NextClassHero({
                     fontSize: 13,
                     color: "#FFFFFF",
                     letterSpacing: 0.4,
+                    ...ON_PHOTO_TEXT_SHADOW,
                   }}
                 >
                   {session.roomName}
@@ -407,7 +456,7 @@ function NextClassHero({
                 </Text>
               </Pressable>
             </View>
-          </View>
+          </LinearGradient>
         </ImageBackground>
       </Pressable>
     </View>
@@ -419,38 +468,41 @@ function NextClassHero({
 // Package — confident card with brand mark
 
 function PackageCard({
-  pkg,
+  summary,
   lang,
   onPress,
 }: {
-  pkg: ClientPackage;
-  lang: string;
+  summary: ActivePackageSummary;
+  lang: DateLang;
   onPress: () => void;
 }) {
   const { t } = useTranslation();
-  // Grant-aware total (SKU sessionCount + bonusSessions), computed server-side
-  // so a "+1 termin" grant reads 13/13, not 13/12.
-  const total = pkg.sessionsTotal ?? 0;
-  // "Left to book" — remaining credits minus sessions already held (future
-  // bookings + waitlist seats), computed server-side. Raw sessionsRemaining
-  // is consumed-at-attendance credits, which clients misread as bookable.
-  const left = pkg.bookable ?? pkg.sessionsRemaining;
+  // Every number here is the AGGREGATE across one SPENDABLE POOL — packages
+  // sharing a covered ClassType set. The studio's 1-session "Nadoknada" adds
+  // +1 to the headline instead of getting a card of its own; a StrongHer pack
+  // gets its own card, because its credits can't buy a Reformer class. Only
+  // the name comes from one package (`primary`). See lib/active-package-summary.ts.
+  const pkg = summary.primary;
+  const total = summary.total;
+  const left = summary.remaining;
   // Bar is usage-driven (owner decision): it FILLS UP as sessions are booked
-  // and attended — used / total, using bookable (falling back to
-  // sessionsRemaining). A fully-booked package reads full; a fresh one, empty.
-  // The NUMBER below stays "bookable / total".
-  const pct = packageUsedFraction(left, total);
-  const expires = dayjs(pkg.expiresAt);
+  // and attended — used / total. A fully-booked package reads full; a fresh
+  // one, empty. The NUMBER below stays "bookable / total".
+  const pct = summary.usedFraction;
+  // The SOONEST expiry in the pool, not the primary's own — the count above is
+  // the merged pool, so the deadline that matters is the first date that takes
+  // credits out of it.
+  const expires = dayjs(summary.expiresAt);
   // Calendar-day distance, not a truncated duration — so this number and
   // the expiry date beside it never contradict each other. See
   // lib/package-expiry.ts.
-  const daysLeft = packageDaysLeft(new Date(pkg.expiresAt), now());
+  const daysLeft = packageDaysLeft(new Date(summary.expiresAt), now());
   const expiringSoon = daysLeft <= 14;
   // Active-but-fully-reserved ("0 / 12"): a real owner read this as broken.
   // Show a one-line explanation of why it's 0 and where renewal happens. This
   // is NOT the lapsed case (that routes to RenewalCard), so the normal card
   // and its count logic stay intact.
-  const fullyBooked = isFullyBookedActivePackage(left, pkg.sessionsRemaining);
+  const fullyBooked = summary.fullyBooked;
 
   return (
     <View style={{ paddingHorizontal: 16 }}>
@@ -472,21 +524,17 @@ function PackageCard({
           }}
         >
           <View>
-            <CapsLabel size={10} color="rgba(255,255,255,0.5)" tracking={2.2}>
-              {t("client.home.onAccount")}
-            </CapsLabel>
             <Text
               style={{
                 fontFamily: "AlbertSans-SemiBold",
                 fontSize: 16,
                 color: "#FFFFFF",
-                marginTop: 8,
                 letterSpacing: -0.2,
               }}
             >
               {pkg.packageType?.name ?? t("client.home.package")}
             </Text>
-            {(pkg.classTypes ?? []).length > 0 ? (
+            {summary.classTypeNames.length > 0 ? (
               <Text
                 style={{
                   fontFamily: "AlbertSans-Regular",
@@ -496,47 +544,33 @@ function PackageCard({
                 }}
                 numberOfLines={1}
               >
-                {formatClassTypeList((pkg.classTypes ?? []).map((ct) => ct.name))}
+                {formatClassTypeList(summary.classTypeNames)}
               </Text>
             ) : null}
           </View>
-          <View style={{ alignItems: "flex-end" }}>
-            <View
-              style={{ flexDirection: "row", alignItems: "baseline", gap: 4 }}
-            >
-              <Text
-                testID="package-sessions-remaining"
-                style={{
-                  fontFamily: "AlbertSans-Bold",
-                  fontSize: 40,
-                  color: "#FFFFFF",
-                  letterSpacing: -1,
-                  lineHeight: 40,
-                }}
-              >
-                {left}
-              </Text>
-              <Text
-                style={{
-                  fontFamily: "AlbertSans-Regular",
-                  fontSize: 14,
-                  color: "rgba(255,255,255,0.5)",
-                }}
-              >
-                / {total}
-              </Text>
-            </View>
+          <View
+            style={{ flexDirection: "row", alignItems: "baseline", gap: 4 }}
+          >
             <Text
+              testID="package-sessions-remaining"
               style={{
-                fontFamily: "AlbertSans-SemiBold",
-                fontSize: 9,
-                color: "rgba(255,255,255,0.5)",
-                letterSpacing: 1.4,
-                textTransform: "uppercase",
-                marginTop: 2,
+                fontFamily: "AlbertSans-Bold",
+                fontSize: 40,
+                color: "#FFFFFF",
+                letterSpacing: -1,
+                lineHeight: 40,
               }}
             >
-              {t("client.home.bookableLabel")}
+              {left}
+            </Text>
+            <Text
+              style={{
+                fontFamily: "AlbertSans-Regular",
+                fontSize: 14,
+                color: "rgba(255,255,255,0.5)",
+              }}
+            >
+              / {total}
             </Text>
           </View>
         </View>
@@ -570,11 +604,11 @@ function PackageCard({
             ? t("client.home.expiresToday")
             : expiringSoon
               ? t("client.home.expiresWithCountdown", {
-                  date: expires.locale(lang).format("D MMMM"),
+                  date: formatDayMonth(expires, lang),
                   count: daysLeft,
                 })
               : t("client.home.expiresOn", {
-                  date: expires.locale(lang).format("D MMMM"),
+                  date: formatDayMonth(expires, lang),
                 })}
         </Text>
 
@@ -596,7 +630,7 @@ function PackageCard({
         {/* Pay-later: the package activated but is unpaid. Amber so it reads
             as an action-needed notice, not just muted info. Coexists with the
             fully-booked hint above — both are independent trailing lines. */}
-        {pkg.paymentPending ? (
+        {summary.paymentPending ? (
           <Text
             testID="package-payment-pending"
             style={{
@@ -702,16 +736,22 @@ export default function HomeStudio() {
   const booking = useBookingSheet();
 
   const packages = packagesQuery.data?.packages ?? [];
-  // A revoked package keeps its credits and future expiry (keep-the-trace),
-  // so it must be excluded here too — otherwise it renders as the bookable
-  // active card while the server 409s every booking. A revoked-only client
-  // falls through to the RenewalCard, same as a lapsed client.
-  const activePackage = packages.find((p: ClientPackage) =>
-    isActiveClientPackage(p, now()),
-  );
+  // One card per SPENDABLE POOL — packages that share a covered ClassType set
+  // merge, disjoint sets do not. Picking one with `.find()` was arbitrary
+  // (clients hold up to seven at once, so a 1-session Nadoknada could headline
+  // "1" over a real 12-pack) and folding everything into one card was a lie
+  // (a Personalni credit can't buy a StrongHer class). Revoked packages stay
+  // excluded (they keep credits and a future expiry but the server 409s every
+  // booking), so a revoked-only client still falls through to the RenewalCard
+  // exactly like a lapsed one.
+  const packageGroups = summarizeActivePackages(packages, now());
+  // Two cards, then a link. The third card would push the hero and the week
+  // strip below the fold on the screen this was reported from, and only one of
+  // the studio's clients holds a third pool. Moji paketi itemises all of them.
+  const shownPackageGroups = packageGroups.slice(0, HOME_PACKAGE_CARDS);
   // No active package but a purchase history → renewal state. The most
   // recently expiring package names what the client would be renewing.
-  const lastLapsedPackage = activePackage
+  const lastLapsedPackage = packageGroups.length > 0
     ? null
     : ([...packages].sort(
         (a: ClientPackage, b: ClientPackage) =>
@@ -740,6 +780,13 @@ export default function HomeStudio() {
   const sessionsByDay = sessions.reduce<Record<string, number>>((acc, s) => {
     const k = dayjs(s.startsAt).format("YYYY-MM-DD");
     acc[k] = (acc[k] ?? 0) + 1;
+    return acc;
+  }, {});
+
+  // Days this client already reserved — marked with a ring in the strip so
+  // "where am I booked this week" is answerable at a glance.
+  const bookedByDay = sessions.reduce<Record<string, boolean>>((acc, s) => {
+    if (s.isBookedByMe) acc[dayjs(s.startsAt).format("YYYY-MM-DD")] = true;
     return acc;
   }, {});
 
@@ -928,14 +975,37 @@ export default function HomeStudio() {
 
         {/* Package — above the week list: a client's own balance is the
             first thing they want to see, before browsing the schedule. */}
-        {activePackage ? (
-          <View>
-            <SectionRow title={t("client.home.yourPackage")} />
-            <PackageCard
-              pkg={activePackage}
-              lang={lang}
-              onPress={() => router.push("/(client)/profile")}
+        {shownPackageGroups.length > 0 ? (
+          <View style={{ gap: 12 }}>
+            {/* The count lives on the header, not on a card. A card that has
+                to explain how many OTHER cards exist is a card that failed.
+                The overflow link rides the header too, matching "Ova nedelja ·
+                Pogledaj sve" directly below — a link dangling under the last
+                card reads as belonging to that card rather than the section. */}
+            <SectionRow
+              title={
+                packageGroups.length > 1
+                  ? t("client.home.yourPackages")
+                  : t("client.home.yourPackage")
+              }
+              action={
+                packageGroups.length > shownPackageGroups.length
+                  ? {
+                      label: t("client.home.showAllPackages"),
+                      onPress: () => router.push("/(client)/profile"),
+                      testID: "home-show-all-packages",
+                    }
+                  : undefined
+              }
             />
+            {shownPackageGroups.map((group) => (
+              <PackageCard
+                key={group.primary.id}
+                summary={group}
+                lang={lang}
+                onPress={() => router.push("/(client)/profile")}
+              />
+            ))}
           </View>
         ) : lastLapsedPackage ? (
           <View>
@@ -954,9 +1024,11 @@ export default function HomeStudio() {
             }}
           />
           <StudioWeekStrip
+            weekStart={startOfMondayWeek(selectedDay)}
             selected={selectedDay}
             onSelect={setSelectedDay}
             sessionsByDay={sessionsByDay}
+            bookedByDay={bookedByDay}
           />
           <View style={{ height: 18 }} />
           {daySessions.length === 0 ? (
@@ -979,7 +1051,7 @@ export default function HomeStudio() {
                 overflow: "hidden",
               }}
             >
-              {daySessions.slice(0, 5).map((s, i) => (
+              {daySessions.map((s, i) => (
                 <View key={s.id}>
                   <View style={{ marginHorizontal: -4 }}>
                     <ScheduleRow
@@ -987,7 +1059,7 @@ export default function HomeStudio() {
                       onPress={() => booking.open(s)}
                     />
                   </View>
-                  {i < Math.min(daySessions.length, 5) - 1 ? (
+                  {i < daySessions.length - 1 ? (
                     <View
                       style={{
                         height: 1,

@@ -4,19 +4,21 @@
  * Provides the keyboard-aware scroll container. Auth screens are responsible
  * for vertically centering their hero+form within the available space using
  * `<View className="flex-1 justify-center">`.
+ *
+ * Keyboard handling uses `KeyboardAwareScrollView` — the same mechanism as
+ * the health-intake screen. RN's own `KeyboardAvoidingView` only avoids on
+ * iOS (Android needs a separate behavior), takes no account of the global
+ * `<KeyboardToolbar/>`, and needs a hand-tuned `keyboardVerticalOffset` per
+ * screen; the password field on sign-in ended up under the keyboard as a
+ * result.
  */
 import React from "react";
-import {
-  Image,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  View,
-} from "react-native";
+import { Image, Pressable, View } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { StatusBar } from "expo-status-bar";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Icon } from "@/components/ui/icon";
+import { KEYBOARD_BOTTOM_OFFSET } from "@/lib/keyboard-offset";
 import { useRouter } from "expo-router";
 import { useThemeTokens } from "@/components/ui/tokens";
 import { useThemePreference } from "@/lib/theme-preference";
@@ -47,48 +49,45 @@ export function AuthBackground({
   return (
     <View className="flex-1 bg-background">
       <StatusBar style={resolvedTheme === "dark" ? "light" : "dark"} />
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-        className="flex-1"
+      <KeyboardAwareScrollView
+        style={{ flex: 1 }}
+        // mode="layout" appends a real spacer below the content, so the last
+        // field can be lifted even when the form is only as tall as the
+        // viewport — which is exactly the auth screens' shape.
+        mode="layout"
+        contentContainerStyle={{
+          flexGrow: 1,
+          paddingTop: insets.top + 12,
+          paddingHorizontal: 24,
+          paddingBottom: insets.bottom + 24,
+        }}
+        bottomOffset={KEYBOARD_BOTTOM_OFFSET}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
       >
-        <ScrollView
-          contentContainerStyle={{
-            flexGrow: 1,
-            paddingTop: insets.top + 12,
-            paddingHorizontal: 24,
-            paddingBottom: insets.bottom + 24,
-          }}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-          {showLogo ? (
-            <View className="flex-row items-center justify-center mb-2 relative h-9">
-              {showBack ? (
-                <Pressable
-                  onPress={onBack ?? (() => router.back())}
-                  hitSlop={12}
-                  android_ripple={null}
-                  className="absolute left-0 top-0 bottom-0 justify-center active:opacity-60"
-                >
-                  <Icon
-                    name="chevron-left"
-                    size={26}
-                    color={tokens.foreground}
-                  />
-                </Pressable>
-              ) : null}
-              <Image
-                source={
-                  resolvedTheme === "dark" ? LOGO_BAZA_CREAM : LOGO_BAZA_INK
-                }
-                style={{ width: 130, height: 38 }}
-                resizeMode="contain"
-              />
-            </View>
-          ) : null}
-          {children}
-        </ScrollView>
-      </KeyboardAvoidingView>
+        {showLogo ? (
+          <View className="flex-row items-center justify-center mb-2 relative h-9">
+            {showBack ? (
+              <Pressable
+                onPress={onBack ?? (() => router.back())}
+                hitSlop={12}
+                android_ripple={null}
+                className="absolute left-0 top-0 bottom-0 justify-center active:opacity-60"
+              >
+                <Icon name="chevron-left" size={26} color={tokens.foreground} />
+              </Pressable>
+            ) : null}
+            <Image
+              source={
+                resolvedTheme === "dark" ? LOGO_BAZA_CREAM : LOGO_BAZA_INK
+              }
+              style={{ width: 130, height: 38 }}
+              resizeMode="contain"
+            />
+          </View>
+        ) : null}
+        {children}
+      </KeyboardAwareScrollView>
     </View>
   );
 }

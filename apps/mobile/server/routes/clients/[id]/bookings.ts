@@ -1,4 +1,8 @@
-import { clientBookingsResponseSchema } from "@baza/types/bookings";
+import {
+  clientBookingOutcomeSchema,
+  clientBookingsResponseSchema,
+  type ClientBookingOutcome,
+} from "@baza/types/bookings";
 import { formatFullName } from "@baza/types/common";
 import { UserRole } from "@/generated/prisma";
 import { now } from "@/lib/now";
@@ -8,6 +12,19 @@ import { prisma } from "@/lib/server/prisma";
 import { trainerLinkedToClientProfile } from "@/lib/server/trainer-scope";
 
 type RouteParams = Record<string, string>;
+
+/** Which of `sessionIds` this client holds a SessionConsumption row for. */
+async function consumedSessionIdsFor(
+  clientProfileId: string,
+  sessionIds: string[],
+): Promise<Set<string>> {
+  if (sessionIds.length === 0) return new Set();
+  const rows = await prisma.sessionConsumption.findMany({
+    where: { clientProfileId, sessionId: { in: sessionIds } },
+    select: { sessionId: true },
+  });
+  return new Set(rows.map((row) => row.sessionId));
+}
 
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 50;
@@ -21,6 +38,27 @@ const MAX_LIMIT = 50;
  * Booking state is derived from the Booking.canceledAt column (the schema has
  * no BookingStatus enum) — the response shape exposes a CONFIRMED | CANCELED
  * status so the UI doesn't have to know about that.
+ *
+ * `outcome` narrows `past` for the client's Održani / Otkazani tabs. It is a
+ * SERVER-side filter on purpose: the list is cursor-paginated, so dropping
+ * rows in the UI would hand the user short and inconsistent pages.
+ *
+ * ── "Did this cancellation cost a session?" ────────────────────────────────
+ * The answer is the presence of a SessionConsumption row for
+ * (clientProfileId, sessionId), not a recomputation of the late-cancel window.
+ * `applyLateCancelForfeit` writes that row at exactly the moment the forfeit
+ * lands, and returns early — writing nothing — for both an early cancel and an
+ * admin charge waiver, so the row IS the fact rather than a proxy for it.
+ * Recomputing `shouldApplyLateCancelPenalty` instead would be wrong twice
+ * over: `Booking.clientPackageId` is `onDelete: SetNull`, so a deleted package
+ * drops `lateCancelHours` to 0 and retroactively reclassifies every past
+ * forfeit as "early"; and a waived cancel is late by the clock yet cost the
+ * client nothing. `waivedByUserId` therefore needs no separate check — a
+ * waiver simply never produced a row.
+ *
+ * The row alone is not sufficient either: `cron:sessions` writes one for a
+ * no-show too. So `canceled` requires BOTH `canceledAt is not null` AND a
+ * consumption row.
  */
 export async function GET(request: Request, { id }: RouteParams) {
   const guard = await requireRole(request, [
@@ -41,6 +79,19 @@ export async function GET(request: Request, { id }: RouteParams) {
   const period = url.searchParams.get("period");
   if (period !== "upcoming" && period !== "past") {
     return fail("Invalid 'period' (must be 'upcoming' or 'past')", 400);
+  }
+
+  const outcomeParam = url.searchParams.get("outcome");
+  let outcome: ClientBookingOutcome | null = null;
+  if (outcomeParam !== null) {
+    if (period !== "past") {
+      return fail("'outcome' is only valid with period=past", 400);
+    }
+    const parsed = clientBookingOutcomeSchema.safeParse(outcomeParam);
+    if (!parsed.success) {
+      return fail("Invalid 'outcome' (must be 'attended' or 'canceled')", 400);
+    }
+    outcome = parsed.data;
   }
 
   const cursor = url.searchParams.get("cursor") ?? undefined;
@@ -82,6 +133,18 @@ export async function GET(request: Request, { id }: RouteParams) {
     }
   }
 
+  // Sessions this client was actually charged for. Only needed for the
+  // canceled tab; scoped to the one client so it stays a small index read.
+  const consumedSessionIds =
+    outcome === "canceled"
+      ? (
+          await prisma.sessionConsumption.findMany({
+            where: { clientProfileId: clientProfile.id },
+            select: { sessionId: true },
+          })
+        ).map((row) => row.sessionId)
+      : [];
+
   // Period filter expressed on the joined session, plus the booking's own
   // canceledAt column.
   const periodWhere = period === "upcoming"
@@ -89,12 +152,28 @@ export async function GET(request: Request, { id }: RouteParams) {
         canceledAt: null,
         session: { startsAt: { gte: currentInstant } },
       }
-    : {
-        OR: [
-          { session: { startsAt: { lt: currentInstant } } },
-          { canceledAt: { not: null } },
-        ],
-      };
+    : outcome === "attended"
+      ? {
+          // Održani: it happened and they didn't cancel out of it. A no-show
+          // belongs here too — the client was charged and the session ran.
+          canceledAt: null,
+          session: { startsAt: { lt: currentInstant } },
+        }
+      : outcome === "canceled"
+        ? {
+            // Otkazani: cancelled AND forfeited. A cancelled FUTURE session
+            // qualifies — the forfeit already happened, so the client wants to
+            // see it. An early or waived cancel has no consumption row and
+            // drops out here.
+            canceledAt: { not: null },
+            sessionId: { in: consumedSessionIds },
+          }
+        : {
+            OR: [
+              { session: { startsAt: { lt: currentInstant } } },
+              { canceledAt: { not: null } },
+            ],
+          };
 
   // For pagination, we want rows STRICTLY after the cursor in the chosen
   // ordering. Direction-aware: upcoming = ASC, past = DESC.
@@ -140,6 +219,7 @@ export async function GET(request: Request, { id }: RouteParams) {
       id: true,
       createdAt: true,
       canceledAt: true,
+      sessionId: true,
       session: {
         select: {
           id: true,
@@ -159,11 +239,24 @@ export async function GET(request: Request, { id }: RouteParams) {
   const page = hasMore ? rows.slice(0, limit) : rows;
   const nextCursor = hasMore ? page[page.length - 1]!.id : null;
 
+  // The `canceled` tab already proved every row consumed; any other query has
+  // to look the rows up, but only for the cancelled bookings on this page.
+  const consumedOnPage =
+    outcome === "canceled"
+      ? new Set(page.map((b) => b.sessionId))
+      : await consumedSessionIdsFor(
+          clientProfile.id,
+          page.filter((b) => b.canceledAt).map((b) => b.sessionId),
+        );
+
   const bookings = page.map((b) => ({
     id: b.id,
     status: b.canceledAt ? ("CANCELED" as const) : ("CONFIRMED" as const),
     bookedAt: b.createdAt.toISOString(),
     canceledAt: b.canceledAt ? b.canceledAt.toISOString() : null,
+    // Only meaningful on a cancelled row: an uncancelled past booking was
+    // consumed by definition, so reporting it would be noise.
+    consumedSession: b.canceledAt ? consumedOnPage.has(b.sessionId) : undefined,
     session: {
       id: b.session.id,
       startsAt: b.session.startsAt.toISOString(),

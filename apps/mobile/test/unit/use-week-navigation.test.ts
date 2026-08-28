@@ -29,6 +29,7 @@ import {
   selectDay,
   selectMonthCell,
   startOfLocaleWeek,
+  startOfMondayWeek,
   weekRangeLabel,
 } from "@/lib/use-week-navigation";
 
@@ -57,6 +58,93 @@ describe("startOfLocaleWeek", () => {
     const out = startOfLocaleWeek(dayjs("2026-06-10T15:42:11"));
     expect(out.hour()).toBe(0);
     expect(out.minute()).toBe(0);
+  });
+});
+
+describe("startOfMondayWeek", () => {
+  // The client home strip is labelled "OVA NEDELJA" and must render a real
+  // calendar week, Monday through Sunday, whatever the app language is. That
+  // rules out `startOfLocaleWeek`, whose answer flips to Sunday under `en`.
+  const MONDAY = "2026-06-08";
+
+  it("returns the same Monday from every day of that week", () => {
+    dayjs.locale("sr");
+    const week = [
+      "2026-06-08", // Mon
+      "2026-06-09",
+      "2026-06-10",
+      "2026-06-11",
+      "2026-06-12",
+      "2026-06-13",
+      "2026-06-14", // Sun
+    ];
+    for (const day of week) {
+      expect(startOfMondayWeek(dayjs(day)).format("YYYY-MM-DD")).toBe(MONDAY);
+    }
+  });
+
+  it("today is Monday: the week starts on today", () => {
+    dayjs.locale("sr");
+    expect(startOfMondayWeek(dayjs("2026-06-08")).format("YYYY-MM-DD")).toBe(
+      "2026-06-08",
+    );
+  });
+
+  it("today is Friday: the week starts on the Monday behind it", () => {
+    dayjs.locale("sr");
+    expect(startOfMondayWeek(dayjs("2026-06-12")).format("YYYY-MM-DD")).toBe(
+      "2026-06-08",
+    );
+  });
+
+  it("today is Sunday: the week starts on the Monday six days back, not tomorrow", () => {
+    dayjs.locale("sr");
+    // The Sunday trap: `day()` is 0, so any naive `subtract(day(), "day")`
+    // leaves Sunday anchoring its own week.
+    const out = startOfMondayWeek(dayjs("2026-06-14"));
+    expect(out.format("YYYY-MM-DD")).toBe("2026-06-08");
+    expect(out.day()).toBe(1);
+  });
+
+  it("spans a month boundary", () => {
+    dayjs.locale("sr");
+    // Wed 2026-07-01 sits in the week of Mon 2026-06-29.
+    expect(startOfMondayWeek(dayjs("2026-07-01")).format("YYYY-MM-DD")).toBe(
+      "2026-06-29",
+    );
+    // And a year boundary, for the same reason.
+    expect(startOfMondayWeek(dayjs("2027-01-01")).format("YYYY-MM-DD")).toBe(
+      "2026-12-28",
+    );
+  });
+
+  it("is Monday under the en locale too, unlike startOfLocaleWeek", () => {
+    dayjs.locale("en");
+    expect(startOfMondayWeek(dayjs("2026-06-12")).format("YYYY-MM-DD")).toBe(
+      "2026-06-08",
+    );
+    // Guard the reason this function exists at all.
+    expect(startOfLocaleWeek(dayjs("2026-06-12")).format("YYYY-MM-DD")).toBe(
+      "2026-06-07",
+    );
+  });
+
+  it("does not vary with the instance locale either", () => {
+    dayjs.locale("en");
+    expect(
+      startOfMondayWeek(dayjs("2026-06-12").locale("en")).format("YYYY-MM-DD"),
+    ).toBe("2026-06-08");
+    expect(
+      startOfMondayWeek(dayjs("2026-06-12").locale("sr")).format("YYYY-MM-DD"),
+    ).toBe("2026-06-08");
+  });
+
+  it("strips time-of-day", () => {
+    dayjs.locale("sr");
+    const out = startOfMondayWeek(dayjs("2026-06-12T15:42:11"));
+    expect(out.hour()).toBe(0);
+    expect(out.minute()).toBe(0);
+    expect(out.second()).toBe(0);
   });
 });
 

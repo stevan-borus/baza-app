@@ -3,6 +3,7 @@ import { Pressable, ScrollView, Text, View } from "react-native";
 import { useTranslation } from "react-i18next";
 import dayjs from "dayjs";
 import { Badge } from "@/components/ui/badge";
+import { Icon } from "@/components/ui/icon";
 import { IntermediateBadge } from "@/components/ui/intermediate-badge";
 import { MixedGroupBadge } from "@/components/ui/mixed-group-badge";
 import { useThemeTokens } from "@/components/ui/tokens";
@@ -149,6 +150,19 @@ export function TimeAxisDayView({
             // shared layout helper. Full-width when alone.
             const { col, cols } = columns.get(s.id) ?? { col: 0, cols: 1 };
             const widthPct = 100 / cols;
+            // Closed slots always read as a lock on the capacity pill, never as
+            // a "Zatvoreno" word. One representation per state: mixing the two
+            // down a single day made the grid harder to scan than either alone,
+            // because the eye has to learn that a word and a glyph mean the
+            // same thing. The pill is also where the fact already lives — the
+            // cutoff only fires on an empty session, so a locked block always
+            // reads "0/N" and the word was restating its neighbour.
+            const cutoffMarkProps = s.emptyCutoffLocked
+              ? {
+                  testID: `session-block-empty-cutoff-${s.id}`,
+                  accessibilityLabel: t("admin.dayView.emptyCutoffChipA11y"),
+                }
+              : {};
             return (
               <Pressable
                 key={s.id}
@@ -178,12 +192,27 @@ export function TimeAxisDayView({
                   }}
                 >
                   <View className="px-2.5 flex-row items-center gap-2">
-                    <View className="flex-1 gap-0.5">
-                      <View className="flex-row items-center gap-1.5">
+                    {/* The class name is the highest-value thing on the card —
+                        it's the only element that says WHICH session this is —
+                        so its column takes every pixel the badges don't claim
+                        (flexGrow 1) and is the last to give any back.
+                        minWidth 0 has to be on EVERY level of this chain: a
+                        flex item's default min-width is its content, so one
+                        missing level and a long name ("StrongHer (funkcionalni
+                        trening)") pushes the column past the card and runs
+                        under the capacity badge instead of ellipsizing. */}
+                    <View
+                      className="flex-1 gap-0.5"
+                      style={{ flexGrow: 1, flexShrink: 1, minWidth: 0 }}
+                    >
+                      <View
+                        className="flex-row items-center gap-1.5"
+                        style={{ minWidth: 0 }}
+                      >
                         <Text
                           className="font-body-semibold text-sm text-foreground"
                           numberOfLines={1}
-                          style={{ flexShrink: 1 }}
+                          style={{ flexShrink: 1, minWidth: 0 }}
                         >
                           {s.classTypeName}
                         </Text>
@@ -217,33 +246,53 @@ export function TimeAxisDayView({
                         </View>
                       )}
                     </View>
-                    {/* Always-visible capacity, vertically centered. Full →
-                        danger pill (red); otherwise an opaque on-block pill
-                        tinted from the class color so it stays legible against
-                        the green fill (the shared neutral Badge's glass bg +
-                        muted text washed out here). */}
-                    {/* Signup closed on an empty slot — the reason the cutoff
-                        exists is that staff can plan around it, so it has to
-                        read from the grid without opening the session. */}
-                    {s.emptyCutoffLocked ? (
-                      <View
-                        testID={`session-block-empty-cutoff-${s.id}`}
-                        accessibilityLabel={t("admin.dayView.emptyCutoffChipA11y")}
-                      >
-                        <Badge status="warning">
-                          {t("admin.dayView.emptyCutoffChip")}
+                    {/* Signup closed on an empty slot. Staff planning around
+                        the empty slot is the whole reason the cutoff exists,
+                        so it has to read from the grid without opening the
+                        session — but the class name is what identifies WHICH
+                        session, so the name outranks it.
+
+                        So the state is a lock glyph merged into the capacity
+                        pill — ~55pt for both, against ~110pt for a separate
+                        word badge, which is the difference between "Reformer
+                        pilates" and "R." on a shared row. Nothing is lost:
+                        isEmptySessionCutoffLocked() returns false as soon as
+                        anyone books, so a locked block always reads "0/N" and
+                        the word only restated its neighbour. The a11y label
+                        carries the meaning the glyph can't.
+
+                        Capacity is always visible and vertically centered.
+                        Full → danger pill (red); otherwise an opaque on-block
+                        pill tinted from the class color so it stays legible
+                        against the green fill (the shared neutral Badge's
+                        glass bg + muted text washed out here). */}
+                    {isFull ? (
+                      // Locked-and-full can't happen from the server (the
+                      // cutoff needs zero bookings), but a stale cached payload
+                      // can still land here, so the mark keeps its testID and
+                      // label rather than vanishing.
+                      <View {...cutoffMarkProps} style={{ flexShrink: 0 }}>
+                        <Badge status="danger">
+                          {s.bookedCount}/{s.capacity}
                         </Badge>
                       </View>
-                    ) : null}
-                    {isFull ? (
-                      <Badge status="danger">
-                        {s.bookedCount}/{s.capacity}
-                      </Badge>
                     ) : (
                       <View
-                        className="px-2.5 py-1 rounded-full"
-                        style={{ backgroundColor: tintBg(color, tokens.background, 0.32) }}
+                        {...cutoffMarkProps}
+                        className="px-2.5 py-1 rounded-full flex-row items-center gap-1"
+                        style={{
+                          backgroundColor: tintBg(color, tokens.background, 0.32),
+                          flexShrink: 0,
+                        }}
                       >
+                        {s.emptyCutoffLocked ? (
+                          <Icon
+                            name="lock"
+                            size={11}
+                            color={tintText(color, tokens.foreground)}
+                            strokeWidth={2.5}
+                          />
+                        ) : null}
                         <Text
                           className="text-xs font-body-semibold"
                           style={{ color: tintText(color, tokens.foreground) }}

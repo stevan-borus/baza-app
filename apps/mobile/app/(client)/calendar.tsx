@@ -85,6 +85,15 @@ export default function ClientCalendar() {
     return acc;
   }, {});
 
+  // YYYY-MM-DD → true when this client already booked something that day.
+  // The server sets `isBookedByMe` per session for CLIENT callers, so this
+  // needs no extra request. Drives the ring marker in both the week strip
+  // and the month grid.
+  const bookedByDay = sessions.reduce<Record<string, boolean>>((acc, s) => {
+    if (s.isBookedByMe) acc[dayjs(s.startsAt).format("YYYY-MM-DD")] = true;
+    return acc;
+  }, {});
+
   function handleDateSelect(d: dayjs.Dayjs) {
     Haptics.selectionAsync();
     // Picking a day must NOT shift the visible week. The week boundary is
@@ -130,6 +139,7 @@ export default function ClientCalendar() {
               selected={dayjs(selectedDate)}
               onSelect={handleDateSelect}
               sessionsByDay={sessionsByDay}
+              bookedByDay={bookedByDay}
               onPrevWeek={nav.goToPreviousWeek}
               onNextWeek={nav.goToNextWeek}
               rangeLabel={weekRangeLabel(weekStart, lang)}
@@ -151,6 +161,7 @@ export default function ClientCalendar() {
               onPrevMonth={nav.goToPreviousMonth}
               onNextMonth={nav.goToNextMonth}
               activity={sessionsByDay}
+              bookedDates={bookedByDay}
             />
           </View>
         </MotiView>

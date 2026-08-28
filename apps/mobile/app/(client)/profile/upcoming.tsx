@@ -36,6 +36,7 @@ import {
   useBookingSheet,
   ClientBookingSheet,
 } from "@/components/client/use-booking-sheet";
+import { formatFullDayDateTime } from "@/lib/format-date";
 import { now } from "@/lib/now";
 import {
   buildUpcomingListItems,
@@ -187,9 +188,10 @@ export default function ClientUpcomingSessions() {
           fallbackBooking
             ? t("client.upcoming.cancelMessage", {
                 session: fallbackBooking.session.classType.name,
-                date: dayjs(fallbackBooking.session.startsAt)
-                  .locale(lang)
-                  .format("ddd, D.M. HH:mm"),
+                date: formatFullDayDateTime(
+                  fallbackBooking.session.startsAt,
+                  lang,
+                ),
               })
             : undefined
         }

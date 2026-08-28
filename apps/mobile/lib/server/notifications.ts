@@ -77,7 +77,34 @@ type NotificationPayload = {
 };
 
 /**
- * Sends push notifications to Expo and returns a simplified delivery state.
+ * Expo's per-ticket `details.error` for a token that no longer belongs to a
+ * live install (app uninstalled, or the token was invalidated). It is the only
+ * error that means "stop using this token" — every other one (rate limits,
+ * credential problems, message-too-big) is either transient or about the
+ * message, so deactivating on those would silently un-enroll healthy devices.
+ */
+const DEVICE_NOT_REGISTERED = "DeviceNotRegistered";
+
+type ExpoTicket = {
+  status?: string;
+  message?: string;
+  details?: { error?: string };
+};
+
+type PushDispatchResult = {
+  sent: boolean;
+  status: string;
+  /** Tokens Expo says are dead — the caller flips these to isActive: false. */
+  deadTokens: string[];
+};
+
+/**
+ * Sends push notifications to Expo and returns a per-token delivery state.
+ *
+ * Expo answers with one ticket per message, in request order, so the ticket at
+ * index i belongs to expoPushTokens[i]. Delivery status reflects that reality:
+ * a mixed batch used to record a flat DELIVERED as long as ANY device
+ * succeeded, which hid the fact that others got nothing.
  */
 async function sendExpoPushNotifications(
   expoPushTokens: string[],
@@ -86,9 +113,9 @@ async function sendExpoPushNotifications(
   payload: Record<string, unknown> | undefined,
   type: NotificationType,
   badge: number,
-) {
+): Promise<PushDispatchResult> {
   if (expoPushTokens.length === 0) {
-    return { sent: false, status: "NO_ACTIVE_PUSH_TOKENS" };
+    return { sent: false, status: "NO_ACTIVE_PUSH_TOKENS", deadTokens: [] };
   }
 
   // `__notificationType` lets the mobile push-tap handler route without a
@@ -117,7 +144,7 @@ async function sendExpoPushNotifications(
   );
 
   if (fetchResult.error) {
-    return { sent: false, status: "EXPO_NETWORK_ERROR" };
+    return { sent: false, status: "EXPO_NETWORK_ERROR", deadTokens: [] };
   }
 
   const response = fetchResult.data;
@@ -125,18 +152,54 @@ async function sendExpoPushNotifications(
     return {
       sent: false,
       status: `EXPO_HTTP_${response.status}`,
+      deadTokens: [],
     };
   }
 
   const jsonResult = await tryCatch(response.json());
   const json = jsonResult.error
     ? null
-    : (jsonResult.data as { data?: Array<{ status?: string }> } | null);
+    : (jsonResult.data as { data?: ExpoTicket[] } | null);
   const tickets = json?.data ?? [];
-  const sent = tickets.some((ticket) => ticket.status === "ok");
+
+  if (tickets.length === 0) {
+    return { sent: false, status: "EXPO_NO_TICKETS", deadTokens: [] };
+  }
+
+  const deadTokens: string[] = [];
+  const errorReasons: string[] = [];
+  let okCount = 0;
+
+  tickets.forEach((ticket, index) => {
+    // Tickets come back positionally, so index maps to the token we sent.
+    const token = expoPushTokens[index];
+    if (ticket?.status === "ok") {
+      okCount += 1;
+      return;
+    }
+    const reason = ticket?.details?.error ?? ticket?.message ?? "UNKNOWN";
+    errorReasons.push(reason);
+    if (token && ticket?.details?.error === DEVICE_NOT_REGISTERED) {
+      deadTokens.push(token);
+    }
+  });
+
+  const total = tickets.length;
+  if (okCount === total) {
+    return { sent: true, status: "DELIVERED", deadTokens };
+  }
+
+  // Keep the concrete Expo reason(s) — the old opaque "FAILED" made it
+  // impossible to tell a dead device from bad FCM credentials. Deduped so a
+  // large batch failing the same way doesn't blow up the column.
+  const uniqueReasons = [...new Set(errorReasons)].join(",");
+  if (okCount === 0) {
+    return { sent: false, status: `FAILED:${uniqueReasons}`, deadTokens };
+  }
   return {
-    sent,
-    status: sent ? "DELIVERED" : "FAILED",
+    sent: true,
+    status: `PARTIAL:${okCount}/${total}:${uniqueReasons}`,
+    deadTokens,
   };
 }
 
@@ -236,6 +299,16 @@ export async function createAndDispatchUserNotification(input: NotificationPaylo
         input.type,
         unreadCount,
       );
+
+      // Retire tokens Expo reported as dead so they stop being retried on
+      // every future notification (and stop dragging the batch into PARTIAL).
+      if (result.deadTokens.length > 0) {
+        await prisma.pushToken.updateMany({
+          where: { expoPushToken: { in: result.deadTokens } },
+          data: { isActive: false },
+        });
+      }
+
       return prisma.notificationLog.update({
         where: { id: log.id },
         data: {
