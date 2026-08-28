@@ -85,3 +85,28 @@ Anti-flake:
 ## Worktrees
 
 When working in a git worktree, ALL operations use the worktree path. Never `cd` into or reference the main checkout.
+
+## Deploying
+
+Order matters when a change includes a migration: **Fly first, then OTA.** The
+Fly app process runs `prisma migrate deploy` on boot, so deploying it first puts
+the new schema live before any client can run code that expects it. Publishing
+the OTA first ships clients querying columns that don't exist yet.
+
+```sh
+fly deploy --config fly.staging.toml --local-only   # must be --local-only
+pnpm --filter mobile ota:staging --message "..."    # only after Fly is up
+```
+
+Never call `eas update` directly. It does **not** read the `env` block in
+`eas.json` — that only applies to `eas build` — and its `--environment` flag
+pulls *server-side* vars from the EAS dashboard, a different store that holds
+only `SENTRY_AUTH_TOKEN`. A bare `eas update` therefore ships an app with no
+`EXPO_PUBLIC_API_URL`, and nothing fails at publish time; you find out when the
+app can't reach the API. `scripts/ota-update.mjs` (behind `ota:staging` /
+`ota:prod`) reads the profile's env out of `eas.json` and passes it inline, so
+an update and the build it lands on can't disagree.
+
+OTA only ships JavaScript. A change to `app.json`, `app.config.ts`,
+`package.json`, the lockfile, `android/`, or `ios/` needs a new native build —
+check those paths before assuming an OTA is enough.
