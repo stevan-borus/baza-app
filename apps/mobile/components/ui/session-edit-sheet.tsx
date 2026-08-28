@@ -370,6 +370,7 @@ export function SessionEditSheet(props: SessionEditSheetBoundProps) {
           <Text
             className="text-foreground font-body-bold"
             style={{ fontSize: 20, letterSpacing: -0.3 }}
+            numberOfLines={2}
           >
             {showEdit
               ? t("admin.schedule.editTitle", {

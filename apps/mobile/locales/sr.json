@@ -43,6 +43,10 @@
     "minor_paper_needed": {
       "title": "Potreban potpis roditelja",
       "body": "Klijent je odradio/la prvu sesiju i potreban je potpis roditelja."
+    },
+    "trainer_daily_schedule": {
+      "title": "Raspored za sutra",
+      "body": "Sutra imate {{count}} termina, prvi u {{firstStartsAt}}."
     }
   },
   "auth": {
@@ -316,6 +320,8 @@
       "browseSchedule": "Pogledaj raspored",
       "sessionsLeft": "{{used}}/{{total}} termina iskorišćeno",
       "yourPackage": "Tvoj paket",
+      "yourPackages": "Tvoji paketi",
+      "showAllPackages": "Prikaži sve pakete",
       "thisWeek": "Ova nedelja",
       "seeAll": "Pogledaj sve",
       "today": "Danas",
@@ -338,8 +344,6 @@
       "book": "Rezerviši",
       "booked": "Rezervisano",
       "package": "Paket",
-      "onAccount": "Na nalogu",
-      "bookableLabel": "Za zakazivanje",
       "expiresOn": "Ističe {{date}}",
       "expiresToday": "Ističe danas · poslednji dan za zakazivanje",
       "expiresWithCountdown_one": "Ističe {{date}} · još {{count}} dan",
@@ -388,8 +392,11 @@
       "saveError": "Nije moguće sačuvati podešavanja."
     },
     "history": {
-      "empty": "Još nema završenih treninga.",
-      "error": "Nije moguće učitati istoriju."
+      "error": "Nije moguće učitati istoriju.",
+      "tabAttended": "Održani",
+      "tabCanceled": "Otkazani",
+      "emptyAttended": "Još nema održanih treninga.",
+      "emptyCanceled": "Nema otkazanih termina."
     },
     "upcoming": {
       "title": "Predstojeći termini",
@@ -455,7 +462,9 @@
       "empty": {
         "noPackage": "Nemate aktivan paket. Kontaktirajte studio.",
         "noPackageCta": "Kontaktiraj nas"
-      }
+      },
+      "a11yBookedDay": "Imate zakazan termin",
+      "a11yHasSessions": "Ima termina"
     },
     "notifications": {
       "title": "Obaveštenja",
@@ -802,7 +811,8 @@
       },
       "quickActions": {
         "title": "Brze akcije"
-      }
+      },
+      "canceledAtLine": "Otkazano {{when}}"
     },
     "packages": {
       "classType": "Tip treninga",
@@ -1271,7 +1281,14 @@
     "packageExpiring": {
       "title": "Paket uskoro ističe",
       "body": "Vaš paket uskoro ističe. Obnovite ga da biste nastavili sa zakazivanjem."
-    }
+    },
+    "permissionDenied": {
+      "title": "Obaveštenja su isključena",
+      "body": "Telefon blokira obaveštenja iz aplikacije, pa vam ne možemo javiti za termine i izmene.",
+      "openSettings": "Otvori podešavanja",
+      "dismiss": "Ne sada"
+    },
+    "noDetails": "Nema dodatnih detalja."
   },
   "notif": {
     "consentRefused": {

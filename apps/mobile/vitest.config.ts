@@ -115,6 +115,13 @@ export default defineConfig({
               ),
             },
             {
+              find: "expo-linear-gradient",
+              replacement: path.resolve(
+                __dirname,
+                "test/component/stubs/expo-linear-gradient.tsx",
+              ),
+            },
+            {
               find: "react-native-modal-datetime-picker",
               replacement: path.resolve(
                 __dirname,

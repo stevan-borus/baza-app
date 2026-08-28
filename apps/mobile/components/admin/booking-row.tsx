@@ -14,6 +14,8 @@ import { Icon } from "@/components/ui/icon";
 import { IntermediateBadge } from "@/components/ui/intermediate-badge";
 import { MixedGroupBadge } from "@/components/ui/mixed-group-badge";
 import { useThemeTokens } from "@/components/ui/tokens";
+import { formatCancellationWhen, formatFullDayDate } from "@/lib/format-date";
+import { now } from "@/lib/now";
 import type { ClientBooking } from "@/lib/queries/bookings-queries-factory";
 
 export function BookingRow({
@@ -50,7 +52,7 @@ export function BookingRow({
         {/* Date·time meta — the 🔥 mark rides at the end (time never truncates). */}
         <View className="flex-row items-center gap-1.5">
           <Text className="text-muted" style={{ fontSize: 12 }}>
-            {`${dayjs(booking.session.startsAt).locale(lang).format("ddd, D.M.")} · ${dayjs(booking.session.startsAt).format("HH:mm")}–${dayjs(booking.session.endsAt).format("HH:mm")}`}
+            {`${formatFullDayDate(booking.session.startsAt, lang)} · ${dayjs(booking.session.startsAt).format("HH:mm")}–${dayjs(booking.session.endsAt).format("HH:mm")}`}
           </Text>
           <IntermediateBadge isIntermediate={booking.session.isIntermediate} />
           <MixedGroupBadge isMixedGroup={booking.session.isMixedGroup} />
@@ -60,6 +62,22 @@ export function BookingRow({
             .filter(Boolean)
             .join(" · ")}
         </Text>
+        {/* WHEN they cancelled — the studio judges a cancellation by how late
+            it came, and the "Otkazano" badge alone doesn't say. Weekday only:
+            the meta line two rows up already prints the class date, so a
+            second full date read as the same information twice. Rides with the
+            badge, so the surfaces that hide the badge stay unchanged. */}
+        {showCanceledTag && canceled && booking.canceledAt ? (
+          <Text
+            testID="booking-row-canceled-at"
+            className="text-faint"
+            style={{ fontSize: 12 }}
+          >
+            {t("admin.clientDetail.canceledAtLine", {
+              when: formatCancellationWhen(booking.canceledAt, lang, now()),
+            })}
+          </Text>
+        ) : null}
       </View>
       {showCanceledTag && canceled ? (
         <Badge status="danger">{t("admin.clientDetail.canceledTag")}</Badge>

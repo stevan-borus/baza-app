@@ -7,22 +7,40 @@
  * white on the active day.
  *
  * Optional prev/next arrows let callers paginate the visible week (e.g.
- * the Calendar tab); the home tab uses the default fixed-window mode.
+ * the Calendar tab). Callers own the week boundary: the paginated surfaces
+ * pass `useWeekNavigation`'s `weekStart`, and the client home tab passes
+ * `startOfMondayWeek(selectedDay)` so its "OVA NEDELJA" strip is a real
+ * Monday-to-Sunday calendar week rather than a rolling 7-day window.
  */
 import dayjs from "dayjs";
 import { Pressable, Text, View } from "react-native";
+import { useTranslation } from "react-i18next";
 import { Icon } from "@/components/ui/icon";
 import { useThemeTokens } from "@/components/ui/tokens";
 import { CapsLabel } from "./typography";
 
 export type StudioWeekStripProps = {
-  /** Anchor day; the strip shows this day plus 6 days forward. */
+  /**
+   * First day of the visible week; the strip shows this day plus 6 days
+   * forward. Defaults to today, which yields a rolling window — pass a real
+   * week start (see `startOfMondayWeek` / `startOfLocaleWeek`) for a
+   * calendar week.
+   */
   weekStart?: dayjs.Dayjs;
   /** Currently selected day (filled in ink). */
   selected: dayjs.Dayjs;
   onSelect: (d: dayjs.Dayjs) => void;
   /** YYYY-MM-DD → 1+ if there are sessions on that day. */
   sessionsByDay: Record<string, number>;
+  /**
+   * YYYY-MM-DD → true when the viewing client has a booking that day.
+   *
+   * Deliberately separate from `sessionsByDay`: "the studio runs classes
+   * today" and "you reserved one" are different facts and a day is commonly
+   * both. Only the client surfaces pass it; staff screens omit it and keep
+   * the plain sessions dot.
+   */
+  bookedByDay?: Record<string, boolean>;
   /** When set, prev/next arrows render above the row. */
   onPrevWeek?: () => void;
   onNextWeek?: () => void;
@@ -35,11 +53,13 @@ export function StudioWeekStrip({
   selected,
   onSelect,
   sessionsByDay,
+  bookedByDay,
   onPrevWeek,
   onNextWeek,
   rangeLabel,
 }: StudioWeekStripProps) {
   const tokens = useThemeTokens();
+  const { t } = useTranslation();
   const start = (weekStart ?? dayjs()).startOf("day");
   const days = Array.from({ length: 7 }, (_, i) => start.add(i, "day"));
   const showHeader = !!(onPrevWeek || onNextWeek || rangeLabel);
@@ -92,7 +112,9 @@ export function StudioWeekStrip({
         {days.map((d) => {
           const isSelected = d.isSame(selected, "day");
           const isToday = d.isSame(dayjs(), "day");
-          const count = sessionsByDay[d.format("YYYY-MM-DD")] ?? 0;
+          const dateKey = d.format("YYYY-MM-DD");
+          const count = sessionsByDay[dateKey] ?? 0;
+          const isBooked = !!bookedByDay?.[dateKey];
           // Selected wins; today (when unselected) gets a green border so
           // the brand color marks "today" without competing with selection.
           const containerCls = isSelected
@@ -113,10 +135,22 @@ export function StudioWeekStrip({
           return (
             <Pressable
               key={d.toString()}
-              testID={`week-strip-day-${d.format("YYYY-MM-DD")}`}
+              testID={`week-strip-day-${dateKey}`}
               onPress={() => onSelect(d)}
               android_ripple={null}
               className={`flex-1 py-3 items-center rounded ${containerCls}`}
+              accessibilityRole="button"
+              accessibilityState={{ selected: isSelected }}
+              accessibilityLabel={[
+                d.format("dddd, D MMMM"),
+                isBooked
+                  ? t("client.calendar.a11yBookedDay")
+                  : count > 0
+                    ? t("client.calendar.a11yHasSessions")
+                    : null,
+              ]
+                .filter(Boolean)
+                .join(" — ")}
             >
               <Text
                 className={dowCls}
@@ -140,20 +174,42 @@ export function StudioWeekStrip({
               >
                 {d.format("D")}
               </Text>
-              <View
-                style={{
-                  marginTop: 6,
-                  width: 4,
-                  height: 4,
-                  borderRadius: 2,
-                  backgroundColor:
-                    count > 0
-                      ? isSelected
-                        ? tokens.background
-                        : tokens.accent
-                      : "transparent",
-                }}
-              />
+              {/*
+                Two distinct indicators, told apart by SHAPE and SIZE — not
+                colour alone. A booked day gets a larger hollow ring; a day
+                that merely has sessions keeps the small solid dot.
+                Colour-only encoding would be invisible
+                to the studio's older and low-vision clients.
+              */}
+              {isBooked ? (
+                <View
+                  testID="week-strip-booked-marker"
+                  style={{
+                    marginTop: 4,
+                    width: 8,
+                    height: 8,
+                    borderRadius: 4,
+                    borderWidth: 2,
+                    borderColor: isSelected ? tokens.background : tokens.accent,
+                    // Hollow centre — the ring is what distinguishes "booked"
+                    // from the solid has-sessions dot at a glance.
+                    backgroundColor: "transparent",
+                  }}
+                />
+              ) : count > 0 ? (
+                <View
+                  testID="week-strip-sessions-dot"
+                  style={{
+                    marginTop: 6,
+                    width: 4,
+                    height: 4,
+                    borderRadius: 2,
+                    backgroundColor: isSelected ? tokens.background : tokens.accent,
+                  }}
+                />
+              ) : (
+                <View style={{ marginTop: 6, width: 4, height: 4 }} />
+              )}
             </Pressable>
           );
         })}

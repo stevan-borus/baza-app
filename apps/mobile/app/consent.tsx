@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
-import { Pressable, ScrollView, Switch, Text, View } from "react-native";
+import { Pressable, Switch, Text, View } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { authQueries } from "@/lib/queries/auth-queries-factory";
 import {
@@ -20,6 +21,7 @@ import { Button } from "@/components/ui/button";
 import { GlassCard } from "@/components/ui/glass-card";
 import { useThemeTokens } from "@/components/ui/tokens";
 import { Body } from "@/components/ui/studio";
+import { KEYBOARD_BOTTOM_OFFSET } from "@/lib/keyboard-offset";
 import type { ConsentDocumentKey } from "@baza/types/consent";
 
 const DOC_LABEL_KEY: Partial<Record<ConsentDocumentKey, string>> = {
@@ -125,12 +127,19 @@ export default function ConsentScreen() {
 
   return (
     <View className="flex-1 bg-background">
-      <ScrollView
+      <KeyboardAwareScrollView
+        style={{ flex: 1 }}
+        // mode="layout" appends a real spacer below the content so the guardian
+        // name field can be lifted even though the pinned footer overlays the
+        // bottom of this scroll view.
+        mode="layout"
         contentContainerStyle={{
           paddingTop: insets.top + 24,
           paddingBottom: insets.bottom + FOOTER_HEIGHT + 32,
           gap: 24,
         }}
+        bottomOffset={KEYBOARD_BOTTOM_OFFSET}
+        keyboardShouldPersistTaps="handled"
       >
         {/* Header */}
         <View className="px-6">
@@ -230,7 +239,7 @@ export default function ConsentScreen() {
           </View>
         ) : null}
 
-      </ScrollView>
+      </KeyboardAwareScrollView>
 
       {/* Pinned footer: CTA + sign-out */}
       <View

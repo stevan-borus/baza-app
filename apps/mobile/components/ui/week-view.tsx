@@ -189,8 +189,9 @@ export function WeekView({ weekStart, sessions, onSessionPress }: Props) {
                     >
                       <Text
                         className="text-foreground"
-                        style={{ fontSize: 10, fontWeight: "700" }}
+                        style={{ fontSize: 10, fontWeight: "700", minWidth: 0 }}
                         numberOfLines={1}
+                        ellipsizeMode="tail"
                       >
                         {s.classTypeName ?? ""}
                       </Text>

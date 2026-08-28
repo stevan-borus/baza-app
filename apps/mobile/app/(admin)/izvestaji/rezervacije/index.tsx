@@ -380,14 +380,27 @@ export default function IzvestajiRezervacije() {
                 >
                   <View className="flex-row justify-between items-center">
                     <View style={{ flex: 1, gap: 2, paddingRight: 12 }}>
+                      {/* Name and room used to share ONE clamped Text, so a
+                          long class name consumed the whole line and the room
+                          vanished entirely. Separate Texts: the name takes the
+                          space it needs and ellipsizes on its own, the room
+                          always renders. */}
                       <Text
                         className="text-foreground font-body-semibold"
                         style={{ fontSize: 14 }}
                         numberOfLines={1}
                       >
                         {s.classTypeName}
-                        {s.roomName ? ` · ${s.roomName}` : ""}
                       </Text>
+                      {s.roomName ? (
+                        <Text
+                          className="text-muted"
+                          style={{ fontSize: 12 }}
+                          numberOfLines={1}
+                        >
+                          {s.roomName}
+                        </Text>
+                      ) : null}
                       <Text className="text-muted" style={{ fontSize: 12 }}>
                         {new Date(s.startsAt).toLocaleString(dateLocale, {
                           day: "numeric",

@@ -151,13 +151,19 @@ export default function TrainerZarada() {
                     className="p-4"
                   >
                     <View className="flex-row items-center justify-between">
+                      {/* The amount must stay whole and readable, so the name
+                          is what yields on a narrow screen. */}
                       <Text
                         className="text-base font-semibold"
-                        style={{ color: tokens.foreground }}
+                        style={{ color: tokens.foreground, flexShrink: 1, minWidth: 0 }}
+                        numberOfLines={1}
                       >
                         {session.classTypeName}
                       </Text>
-                      <Text className="text-sm" style={{ color: tokens.muted }}>
+                      <Text
+                        className="text-sm"
+                        style={{ color: tokens.muted, flexShrink: 0 }}
+                      >
                         {session.attendees.length} · {formatRsd(session.gross)}
                       </Text>
                     </View>

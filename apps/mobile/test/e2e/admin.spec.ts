@@ -18,7 +18,7 @@ import {
 } from "./helpers/dates";
 import { t } from "./helpers/locales";
 import { signInAs } from "./helpers/auth";
-import { pickInviteDob } from "./helpers/forms";
+import { pickDate, pickInviteDob } from "./helpers/forms";
 import { pressRNW } from "./helpers/interactions";
 
 /**
@@ -820,15 +820,16 @@ test.describe("admin (Serbian)", () => {
 
     await page.getByTestId("client-action-pause").dispatchEvent("click");
 
-    // Fill ISO dates spanning a 7-day window starting tomorrow.
+    // Both dates are calendar pickers now (the studio typed them by hand
+    // before, and the keyboard covered the fields). Pick a window inside the
+    // anchor month so one calendar page holds both days and neither is
+    // disabled by the pickers' `minimumDate` (today / the chosen start).
     const start = now();
     start.setDate(start.getDate() + 1);
     const end = now();
-    end.setDate(end.getDate() + 8);
-    const fmt = (d: Date) =>
-      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-    await page.getByTestId("pause-start-input").fill(fmt(start));
-    await page.getByTestId("pause-end-input").fill(fmt(end));
+    end.setDate(end.getDate() + 2);
+    await pickDate(page, "pause-start-input", String(start.getDate()));
+    await pickDate(page, "pause-end-input", String(end.getDate()));
     await page.getByTestId("pause-submit-button").dispatchEvent("click");
 
     // After submit the actions sheet closes; the row's status badge will

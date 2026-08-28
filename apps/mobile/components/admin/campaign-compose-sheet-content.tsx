@@ -13,7 +13,7 @@
  */
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ActivityIndicator, Pressable, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Pressable, Text, View } from "react-native";
 import { useQuery } from "@tanstack/react-query";
 import type { CampaignAudienceSpec } from "@baza/types/campaigns";
 import { Icon } from "@/components/ui/icon";
@@ -272,7 +272,6 @@ export function CampaignComposeSheetContent({
                   value={axes.expiringSoonDays}
                   fallback={DEFAULT_EXPIRING_SOON}
                   onCommit={(d) => setAxes((a) => ({ ...a, expiringSoonDays: d }))}
-                  tokens={tokens}
                 />
               ) : null}
             </View>
@@ -292,7 +291,6 @@ export function CampaignComposeSheetContent({
                   value={axes.lapsedDays}
                   fallback={DEFAULT_LAPSED}
                   onCommit={(d) => setAxes((a) => ({ ...a, lapsedDays: d }))}
-                  tokens={tokens}
                 />
               ) : null}
             </View>
@@ -312,7 +310,6 @@ export function CampaignComposeSheetContent({
                   value={axes.idlePackageDays}
                   fallback={DEFAULT_IDLE}
                   onCommit={(d) => setAxes((a) => ({ ...a, idlePackageDays: d }))}
-                  tokens={tokens}
                 />
               ) : null}
             </View>
@@ -532,20 +529,23 @@ function SwitchRow({
   );
 }
 
+/**
+ * Uses the shared <Input>, not a raw TextInput: inside a sheet that swaps in
+ * gorhom's BottomSheetTextInput, which is what lets the sheet lift this field
+ * clear of the keyboard. A raw TextInput here stayed covered.
+ */
 function DaysInput({
   testID,
   label,
   value,
   fallback,
   onCommit,
-  tokens,
 }: {
   testID: string;
   label: string;
   value: number;
   fallback: number;
   onCommit: (clamped: number) => void;
-  tokens: ReturnType<typeof useThemeTokens>;
 }) {
   const [text, setText] = useState(String(value));
   function commit() {
@@ -558,17 +558,17 @@ function DaysInput({
       <Text className="text-muted" style={{ fontSize: 12 }}>
         {label}
       </Text>
-      <TextInput
-        testID={testID}
-        value={text}
-        onChangeText={setText}
-        onBlur={commit}
-        onEndEditing={commit}
-        keyboardType="number-pad"
-        placeholderTextColor={tokens.faint}
-        className="bg-surface border border-glass-border rounded-xl px-3 text-foreground"
-        style={{ height: 40, width: 80 }}
-      />
+      <View style={{ width: 96 }}>
+        <Input
+          testID={testID}
+          accessibilityLabel={label}
+          value={text}
+          onChangeText={setText}
+          onBlur={commit}
+          onEndEditing={commit}
+          keyboardType="number-pad"
+        />
+      </View>
     </View>
   );
 }

@@ -43,6 +43,24 @@ export function startOfLocaleWeek(d: dayjs.Dayjs): dayjs.Dayjs {
   return d.weekday(0).startOf("day");
 }
 
+/**
+ * Returns the Monday of the calendar week containing `d`, regardless of the
+ * active dayjs locale.
+ *
+ * `startOfLocaleWeek` answers "Sunday" under `en`, which is correct for a
+ * paginated calendar that follows the reader's convention but wrong for the
+ * client home strip: that one is labelled "OVA NEDELJA" and the studio reads
+ * it as a fixed Monday-to-Sunday block, so the boundary must not move when the
+ * app language does.
+ *
+ * `day()` is 0 for Sunday, so Sunday needs the full 6-day step back rather
+ * than the 0-day one a bare subtraction would give it.
+ */
+export function startOfMondayWeek(d: dayjs.Dayjs): dayjs.Dayjs {
+  const daysSinceMonday = (d.day() + 6) % 7;
+  return d.subtract(daysSinceMonday, "day").startOf("day");
+}
+
 export type WeekNavState = {
   /** Focused day, "YYYY-MM-DD". */
   selectedDate: string;

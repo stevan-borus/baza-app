@@ -12,6 +12,7 @@
  * anything further out gets a weekday-date band like the home hero.
  */
 import dayjs from "dayjs";
+import { formatFullDayDate } from "@/lib/format-date";
 import type { ClientBooking } from "@/lib/queries/bookings-queries-factory";
 
 export type UpcomingListItem =
@@ -39,10 +40,9 @@ export function buildUpcomingListItems(
           ? labels.today
           : key === tomorrow
             ? labels.tomorrow
-            : // "Sre, 15.7." — weekday + numeric day.month, matching the
-              // compact date style the BookingRow already uses for the time
-              // line.
-              date.format("ddd, D.M.");
+            : // "Sreda 15.7." — full weekday + numeric day.month, matching
+              // the compact date style the BookingRow uses for its time line.
+              formatFullDayDate(date, lang);
       items.push({ kind: "header", id: `header-${key}`, label });
     }
     items.push({ kind: "booking", id: booking.id, booking });

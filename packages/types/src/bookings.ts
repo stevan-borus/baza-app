@@ -59,6 +59,11 @@ export const clientBookingItemSchema = z.object({
   status: z.enum(["CONFIRMED", "CANCELED"]),
   bookedAt: z.string(),
   canceledAt: z.nullable(z.string()),
+  // Whether this booking cost the client a session. Set on CANCELED rows so
+  // the client history can separate a forfeited late cancel (worth showing
+  // in "Otkazani") from a free early one (noise the studio asked us to drop).
+  // Optional: existing consumers that never asked for it keep validating.
+  consumedSession: z.boolean().optional(),
   session: z.object({
     id: z.string(),
     startsAt: z.string(),
@@ -73,6 +78,13 @@ export const clientBookingItemSchema = z.object({
   }),
 });
 export type ClientBooking = z.infer<typeof clientBookingItemSchema>;
+
+// Which slice of the `past` period to return. Omitted = the whole period,
+// which is what the admin history and every pre-existing caller wants.
+//   attended — past, not cancelled (the "Održani" tab).
+//   canceled — cancelled AND the cancellation consumed a session ("Otkazani").
+export const clientBookingOutcomeSchema = z.enum(["attended", "canceled"]);
+export type ClientBookingOutcome = z.infer<typeof clientBookingOutcomeSchema>;
 
 export const clientBookingsResponseSchema = z.object({
   success: z.boolean(),

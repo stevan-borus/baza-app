@@ -1,9 +1,16 @@
 /**
- * Client training history — paginated past bookings, grouped by month.
+ * Client training history — paginated past bookings, grouped by month, split
+ * into Održani / Otkazani tabs.
  *
  * Replaces the earlier notes-driven 'Istorija treninga' surface (removed in
  * PR #41 so clients no longer see trainer notes). Past sessions stay
  * visible because they're the client's own record of what they did.
+ *
+ * The Otkazani tab shows ONLY cancellations that cost the client a session.
+ * A free early cancel is noise the studio explicitly asked us to drop — a
+ * client who cancelled a week ahead didn't lose anything and doesn't need a
+ * row about it. The filter runs SERVER-side (`outcome=`) because the list is
+ * cursor-paginated: dropping rows here would hand out short, uneven pages.
  *
  * Layout: each month gets a CapsLabel band ("MAJ 2026") followed by that
  * month's session cards. The month bands are inlined into the LegendList's
@@ -23,11 +30,13 @@ import {
   useTabBarBottomPadding,
 } from "@/components/ui/screen-container";
 import { PaginatedList } from "@/components/ui/paginated-list";
+import { SegmentedControl } from "@/components/ui/segmented-control";
 import { BookingRow } from "@/components/admin/booking-row";
 import { authQueries } from "@/lib/queries/auth-queries-factory";
 import {
   bookingsQueries,
   type ClientBooking,
+  type ClientBookingOutcome,
 } from "@/lib/queries/bookings-queries-factory";
 
 type ListItem =
@@ -69,11 +78,14 @@ export default function ClientTrainingHistory() {
   const bottomPad = useTabBarBottomPadding();
   const meQuery = useQuery(authQueries.me());
   const userId = meQuery.data?.user.id;
+  const [outcome, setOutcome] =
+    React.useState<ClientBookingOutcome>("attended");
 
   const pastQuery = useInfiniteQuery({
     ...bookingsQueries.byClient({
       clientUserId: userId ?? "",
       period: "past",
+      outcome,
       limit: 20,
     }),
     enabled: !!userId,
@@ -91,6 +103,25 @@ export default function ClientTrainingHistory() {
       headerVariant="detail"
     >
       <View style={{ flex: 1 }}>
+        {/* Tabs live OUTSIDE the list so they stay put while rows scroll. */}
+        <View style={{ paddingHorizontal: 20, paddingTop: 12, paddingBottom: 8 }}>
+          <SegmentedControl<ClientBookingOutcome>
+            value={outcome}
+            onValueChange={setOutcome}
+            segments={[
+              {
+                value: "attended",
+                label: t("client.history.tabAttended"),
+                testID: "client-history-tab-attended",
+              },
+              {
+                value: "canceled",
+                label: t("client.history.tabCanceled"),
+                testID: "client-history-tab-canceled",
+              },
+            ]}
+          />
+        </View>
         <PaginatedList<ListItem>
           query={pastQuery}
           data={items}
@@ -107,7 +138,10 @@ export default function ClientTrainingHistory() {
                 className="bg-surface rounded-lg overflow-hidden"
                 style={{ marginBottom: 8 }}
               >
-                <BookingRow booking={item.booking} showCanceledTag />
+                <BookingRow
+                  booking={item.booking}
+                  showCanceledTag={outcome === "canceled"}
+                />
               </View>
             )
           }
@@ -116,7 +150,15 @@ export default function ClientTrainingHistory() {
             paddingBottom: bottomPad,
           }}
           errorState={<ErrorState message={t("client.history.error")} />}
-          emptyState={<EmptyState title={t("client.history.empty")} />}
+          emptyState={
+            <EmptyState
+              title={
+                outcome === "canceled"
+                  ? t("client.history.emptyCanceled")
+                  : t("client.history.emptyAttended")
+              }
+            />
+          }
         />
       </View>
     </ScreenContainerRaw>

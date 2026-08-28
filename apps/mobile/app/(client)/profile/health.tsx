@@ -33,17 +33,10 @@ import {
   ScreenContainerRaw,
   useTabBarBottomPadding,
 } from "@/components/ui/screen-container";
+import { KEYBOARD_BOTTOM_OFFSET } from "@/lib/keyboard-offset";
 import type { HealthIntakeResponse } from "@baza/types/health-intake";
 
 const ARM_TIMEOUT_MS = 3000;
-
-// The global <KeyboardToolbar/> (mounted in _layout) sits above the keyboard
-// and is NOT part of the keyboard height the scroll view measures, so we add
-// its height to bottomOffset by hand — otherwise the focused field lands
-// *behind* the toolbar. Mirrors the library's own KEYBOARD_TOOLBAR_HEIGHT
-// (react-native-keyboard-controller, not publicly exported). 24 = desired gap.
-const KEYBOARD_TOOLBAR_HEIGHT = 42;
-const KEYBOARD_BOTTOM_OFFSET = 24 + KEYBOARD_TOOLBAR_HEIGHT;
 
 function intakeToState(intake: HealthIntakeResponse): HealthIntakeState {
   return {

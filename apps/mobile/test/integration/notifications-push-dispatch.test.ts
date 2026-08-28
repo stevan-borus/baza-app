@@ -347,3 +347,158 @@ describe("notifications dispatch — real module + stubbed Expo HTTP", () => {
     ).resolves.not.toThrow();
   });
 });
+
+/**
+ * Per-token delivery accounting.
+ *
+ * Two bugs this locks down:
+ *  1. `sent` was `tickets.some(t => t.status === "ok")`, so a mixed batch
+ *     (one live device, one dead) recorded a flat DELIVERED even though a
+ *     device got nothing.
+ *  2. Per-ticket `details.error` was never read, so a token Expo reports as
+ *     DeviceNotRegistered stayed isActive forever and was retried on every
+ *     future notification.
+ */
+describe("per-token delivery accounting + dead-token deactivation", () => {
+  beforeEach(async () => {
+    await resetDb();
+    captured = [];
+  });
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
+  });
+
+  /** Expo replies with one ticket per message, in request order. */
+  function installTicketStub(
+    ticketsFor: (messages: ExpoPushMessage[]) => Array<Record<string, unknown>>,
+  ) {
+    globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = typeof input === "string" ? input : input.toString();
+      if (!url.startsWith("https://exp.host/")) return originalFetch(input, init);
+      const body = init?.body ? (JSON.parse(init.body as string) as ExpoPushMessage[]) : [];
+      captured.push({ url, method: init?.method ?? "GET", headers: {}, body });
+      return new Response(JSON.stringify({ data: ticketsFor(body) }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    }) as typeof fetch;
+  }
+
+  it("deactivates a token Expo reports as DeviceNotRegistered", async () => {
+    const user = await makeUser("dead-token@test.local");
+    await registerToken(user.id, { deviceId: "dead-1" });
+
+    installTicketStub(() => [
+      { status: "error", message: "not registered", details: { error: "DeviceNotRegistered" } },
+    ]);
+
+    await createAndDispatchUserNotification({
+      userId: user.id,
+      type: "GENERAL",
+      title: "x",
+      body: "y",
+    });
+
+    const token = await prisma.pushToken.findUnique({
+      where: { expoPushToken: "ExpoPushToken[dead-1]" },
+    });
+    expect(token?.isActive).toBe(false);
+  });
+
+  it("keeps a healthy token active and only deactivates the dead one in a mixed batch", async () => {
+    const user = await makeUser("mixed@test.local");
+    await registerToken(user.id, { deviceId: "live-1" });
+    await registerToken(user.id, { deviceId: "dead-1" });
+
+    installTicketStub((messages) =>
+      messages.map((m) =>
+        m.to === "ExpoPushToken[dead-1]"
+          ? { status: "error", details: { error: "DeviceNotRegistered" } }
+          : { status: "ok", id: "ticket-1" },
+      ),
+    );
+
+    const log = await createAndDispatchUserNotification({
+      userId: user.id,
+      type: "GENERAL",
+      title: "x",
+      body: "y",
+    });
+
+    const live = await prisma.pushToken.findUnique({
+      where: { expoPushToken: "ExpoPushToken[live-1]" },
+    });
+    const dead = await prisma.pushToken.findUnique({
+      where: { expoPushToken: "ExpoPushToken[dead-1]" },
+    });
+    expect(live?.isActive).toBe(true);
+    expect(dead?.isActive).toBe(false);
+
+    // A partial delivery must not read as a clean DELIVERED.
+    const persisted = await prisma.notificationLog.findUnique({ where: { id: log.id } });
+    expect(persisted?.pushSent).toBe(true);
+    expect(persisted?.pushStatus).not.toBe("DELIVERED");
+    expect(persisted?.pushStatus).toMatch(/1\/2|PARTIAL/i);
+  });
+
+  it("records the concrete Expo error reason rather than an opaque FAILED", async () => {
+    const user = await makeUser("reason@test.local");
+    await registerToken(user.id, { deviceId: "bad-creds" });
+
+    installTicketStub(() => [
+      { status: "error", details: { error: "MismatchSenderId" } },
+    ]);
+
+    const log = await createAndDispatchUserNotification({
+      userId: user.id,
+      type: "GENERAL",
+      title: "x",
+      body: "y",
+    });
+
+    const persisted = await prisma.notificationLog.findUnique({ where: { id: log.id } });
+    expect(persisted?.pushSent).toBe(false);
+    expect(persisted?.pushStatus).toContain("MismatchSenderId");
+  });
+
+  it("does not deactivate a token for a non-DeviceNotRegistered error", async () => {
+    const user = await makeUser("transient@test.local");
+    await registerToken(user.id, { deviceId: "transient-1" });
+
+    installTicketStub(() => [
+      { status: "error", details: { error: "MessageRateExceeded" } },
+    ]);
+
+    await createAndDispatchUserNotification({
+      userId: user.id,
+      type: "GENERAL",
+      title: "x",
+      body: "y",
+    });
+
+    const token = await prisma.pushToken.findUnique({
+      where: { expoPushToken: "ExpoPushToken[transient-1]" },
+    });
+    // Rate limiting is transient — the device is still real.
+    expect(token?.isActive).toBe(true);
+  });
+
+  it("marks an all-ok batch DELIVERED", async () => {
+    const user = await makeUser("all-ok@test.local");
+    await registerToken(user.id, { deviceId: "ok-1" });
+    await registerToken(user.id, { deviceId: "ok-2" });
+
+    installTicketStub((messages) => messages.map(() => ({ status: "ok", id: "t" })));
+
+    const log = await createAndDispatchUserNotification({
+      userId: user.id,
+      type: "GENERAL",
+      title: "x",
+      body: "y",
+    });
+
+    const persisted = await prisma.notificationLog.findUnique({ where: { id: log.id } });
+    expect(persisted?.pushSent).toBe(true);
+    expect(persisted?.pushStatus).toBe("DELIVERED");
+  });
+});
