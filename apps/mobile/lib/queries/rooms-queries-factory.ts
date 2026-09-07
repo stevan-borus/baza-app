@@ -12,6 +12,7 @@ import {
 } from "@baza/types/catalog";
 import { apiRequest } from "@/lib/api-request";
 import { sessionsQueries } from "@/lib/queries/sessions-queries-factory";
+import { writeThroughList } from "@/lib/queries/write-through-list";
 
 export type { Room } from "@baza/types/catalog";
 
@@ -73,16 +74,16 @@ export const roomsQueries = {
 };
 
 // ── Mutation hooks ──────────────────────────────────────────────────────────
-// create/update return the full Room (server widened in Layer 4), so we splice
-// the returned row into the list cache instead of invalidating (refetching).
-// Append on create (admin list is creation-ordered), replace-by-id on update.
+// create/update return the full Room (server widened in Layer 4), so the write
+// goes straight into the list cache. Append on create (admin list is
+// creation-ordered), replace-by-id on update. writeThroughList decides how: a
+// warm list is spliced with no refetch, a cold one refetches once.
 
 type RoomsListData = RoomsResponse;
 const roomsListKey = roomsQueries.list().queryKey;
 
 function spliceRoom(queryClient: QueryClient, room: Room) {
-  queryClient.setQueryData<RoomsListData>(roomsListKey, (prev) => {
-    if (!prev) return prev;
+  return writeThroughList<RoomsListData>(queryClient, roomsListKey, (prev) => {
     const exists = prev.rooms.some((r) => r.id === room.id);
     const rooms = exists
       ? prev.rooms.map((r) => (r.id === room.id ? room : r))
@@ -102,10 +103,12 @@ export function updateRoomMutationOptions(queryClient: QueryClient) {
   return {
     ...roomsQueries.update(),
     onSuccess: async (data: RoomMutationResponse) => {
-      spliceRoom(queryClient, data.room);
-      // Session caches (availability/list/byId) embed a server-joined
-      // roomName — a rename must refetch them or calendars keep the old name.
-      await queryClient.invalidateQueries({ queryKey: sessionsQueries.all });
+      await Promise.all([
+        spliceRoom(queryClient, data.room),
+        // Session caches (availability/list/byId) embed a server-joined
+        // roomName — a rename must refetch them or calendars keep the old name.
+        queryClient.invalidateQueries({ queryKey: sessionsQueries.all }),
+      ]);
     },
   };
 }
