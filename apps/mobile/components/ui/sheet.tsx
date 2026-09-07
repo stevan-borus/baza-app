@@ -213,7 +213,10 @@ export function AppSheet({
       enablePanDownToClose
       keyboardBehavior="interactive"
       keyboardBlurBehavior="restore"
-      android_keyboardInputMode="adjustResize"
+      // With adjustResize gorhom skips its own sheet-lifting on Android and
+      // trusts the OS to shrink the window, which edge-to-edge Android no
+      // longer does — the keyboard sat over the pause sheet's textarea.
+      android_keyboardInputMode="adjustPan"
       onDismiss={handleDismiss}
       backdropComponent={renderBackdrop}
       backgroundStyle={{ backgroundColor: tokens.surface }}
