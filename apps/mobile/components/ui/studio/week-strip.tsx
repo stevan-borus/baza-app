@@ -17,6 +17,7 @@ import { Pressable, Text, View } from "react-native";
 import { useTranslation } from "react-i18next";
 import { Icon } from "@/components/ui/icon";
 import { useThemeTokens } from "@/components/ui/tokens";
+import { now } from "@/lib/now";
 import { CapsLabel } from "./typography";
 
 export type StudioWeekStripProps = {
@@ -60,7 +61,7 @@ export function StudioWeekStrip({
 }: StudioWeekStripProps) {
   const tokens = useThemeTokens();
   const { t } = useTranslation();
-  const start = (weekStart ?? dayjs()).startOf("day");
+  const start = (weekStart ?? dayjs(now())).startOf("day");
   const days = Array.from({ length: 7 }, (_, i) => start.add(i, "day"));
   const showHeader = !!(onPrevWeek || onNextWeek || rangeLabel);
 
@@ -111,7 +112,7 @@ export function StudioWeekStrip({
       <View className="flex-row px-5" style={{ gap: 6 }}>
         {days.map((d) => {
           const isSelected = d.isSame(selected, "day");
-          const isToday = d.isSame(dayjs(), "day");
+          const isToday = d.isSame(dayjs(now()), "day");
           const dateKey = d.format("YYYY-MM-DD");
           const count = sessionsByDay[dateKey] ?? 0;
           const isBooked = !!bookedByDay?.[dateKey];
