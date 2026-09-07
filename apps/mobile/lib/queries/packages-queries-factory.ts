@@ -15,6 +15,7 @@ import {
 } from "@baza/types/catalog";
 import { clientPackagesResponseSchema } from "@baza/types/packages";
 import { apiRequest } from "@/lib/api-request";
+import { writeThroughList } from "@/lib/queries/write-through-list";
 import { clientsQueries } from "@/lib/queries/clients-queries-factory";
 import { reportsQueries } from "@/lib/queries/reports-queries-factory";
 
@@ -188,6 +189,27 @@ export const packagesQueries = {
         }),
     }),
 
+  updatePause: () =>
+    mutationOptions({
+      mutationKey: [...packagesAll, "pauses", "update"] as const,
+      mutationFn: async ({
+        id,
+        startsAt,
+        endsAt,
+        reason,
+      }: {
+        id: string;
+        startsAt: string;
+        endsAt: string;
+        reason?: string | null;
+      }) =>
+        apiRequest(`/api/packages/pauses/${id}`, {
+          method: "PATCH",
+          body: { startsAt, endsAt, reason },
+          errorMessage: "Unable to update the pause",
+        }),
+    }),
+
   endPause: () =>
     mutationOptions({
       mutationKey: [...packagesAll, "pauses", "end"] as const,
@@ -201,15 +223,15 @@ export const packagesQueries = {
 
 // ── Mutation hooks ──────────────────────────────────────────────────────────
 // createType/updateType return the full PackageType (incl. isBirthdayGift after
-// the Layer 4 server widening), so splice the returned row into the types list
-// cache instead of invalidating. Append on create, replace-by-id on update.
+// the Layer 4 server widening), so the write goes straight into the types list
+// cache. Append on create, replace-by-id on update; writeThroughList splices a
+// warm list with no refetch and refetches a cold one once.
 
 type PackageTypesListData = PackageTypesResponse;
 const packageTypesListKey = packagesQueries.types().queryKey;
 
 function splicePackageType(queryClient: QueryClient, packageType: PackageType) {
-  queryClient.setQueryData<PackageTypesListData>(packageTypesListKey, (prev) => {
-    if (!prev) return prev;
+  return writeThroughList<PackageTypesListData>(queryClient, packageTypesListKey, (prev) => {
     const exists = prev.packageTypes.some((p) => p.id === packageType.id);
     const packageTypes = exists
       ? prev.packageTypes.map((p) => (p.id === packageType.id ? packageType : p))
@@ -268,6 +290,25 @@ export function assignClientPackageMutationOptions(queryClient: QueryClient) {
 export function pausePackageMutationOptions(queryClient: QueryClient) {
   return {
     ...packagesQueries.pause(),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: packagesQueries.all }),
+        queryClient.invalidateQueries({ queryKey: clientsQueries.all }),
+        queryClient.invalidateQueries({ queryKey: reportsQueries.all }),
+        queryClient.invalidateQueries({ queryKey: ["bookings"] }),
+        queryClient.invalidateQueries({ queryKey: ["sessions"] }),
+        queryClient.invalidateQueries({ queryKey: ["client-packages"] }),
+      ]);
+    },
+  };
+}
+
+// Editing a pause window does everything creating one does — it cancels the
+// client's reservations inside the NEW window and re-grants the expiry from
+// scratch — so it invalidates the identical set.
+export function updatePackagePauseMutationOptions(queryClient: QueryClient) {
+  return {
+    ...packagesQueries.updatePause(),
     onSuccess: async () => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: packagesQueries.all }),
@@ -370,6 +411,10 @@ export function useRevokeClientPackageMutation() {
 
 export function usePausePackageMutation() {
   return useMutation(pausePackageMutationOptions(useQueryClient()));
+}
+
+export function useUpdatePackagePauseMutation() {
+  return useMutation(updatePackagePauseMutationOptions(useQueryClient()));
 }
 
 export function useEndPackagePauseMutation() {

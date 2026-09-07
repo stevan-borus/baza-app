@@ -295,22 +295,48 @@ export async function GET(request: Request) {
   // any leftover legacy rows (FK still NULL pending backfill) are matched
   // by the chronological-zip fallback inside linkPackagesToBilling.
   const linkMap = linkPackagesToBilling(packages, billingRecords);
-  const shaped = packages.map((p) => {
-    const match = linkMap.get(p.id) ?? null;
-    return {
-      ...p,
-      classTypes: p.classTypes.map((link) => link.classType),
-      sessionsTotal: packageSessionsTotal(p),
-      billingRecord: match
-        ? {
-            id: match.id,
-            amount: match.amount,
-            method: match.method,
-            status: match.status,
-          }
-        : null,
-    };
-  });
+  // Same held/bookable math the client's own list runs. The admin row used to
+  // show raw credits only, so a client who had already reserved two of eight
+  // sessions read as "8 termina" on the admin screen and "6" on their own —
+  // the two surfaces have to agree before an admin can answer a question
+  // about it.
+  const currentInstant = now();
+  const shaped = await Promise.all(
+    packages.map(async (p) => {
+      const classTypes = p.classTypes.map((link) => link.classType);
+      const match = linkMap.get(p.id) ?? null;
+      // A revoked package grants nothing (booking 409s), so it can never
+      // report headroom, whatever sessionsRemaining still says.
+      const heldCount = p.revokedAt
+        ? 0
+        : await countHeldSessions(prisma, {
+            clientProfileId,
+            classTypeIds: classTypes.map((classType) => classType.id),
+            clientPackageId: p.id,
+            at: currentInstant,
+          });
+      return {
+        ...p,
+        classTypes,
+        sessionsTotal: packageSessionsTotal(p),
+        heldCount,
+        bookable: p.revokedAt
+          ? 0
+          : bookableSessions({
+              sessionsRemaining: p.sessionsRemaining,
+              heldCount,
+            }),
+        billingRecord: match
+          ? {
+              id: match.id,
+              amount: match.amount,
+              method: match.method,
+              status: match.status,
+            }
+          : null,
+      };
+    }),
+  );
 
   return respond(clientPackagesResponseSchema, {
     success: true,

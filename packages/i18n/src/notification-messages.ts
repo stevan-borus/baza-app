@@ -21,6 +21,7 @@ export type NotificationMessageKey =
   | "PACKAGE_EXPIRING_SOON"
   | "PACKAGE_REVOKED"
   | "PACKAGE_PAUSED"
+  | "PACKAGE_PAUSE_UPDATED"
   | "SESSION_REMINDER"
   | "BOOKING_CANCELED_ADMIN"
   | "BOOKING_CANCELED_TRAINER"
@@ -43,6 +44,7 @@ export const NOTIFICATION_MESSAGE_KEYS = {
   PACKAGE_EXPIRING_SOON: "PACKAGE_EXPIRING_SOON",
   PACKAGE_REVOKED: "PACKAGE_REVOKED",
   PACKAGE_PAUSED: "PACKAGE_PAUSED",
+  PACKAGE_PAUSE_UPDATED: "PACKAGE_PAUSE_UPDATED",
   SESSION_REMINDER: "SESSION_REMINDER",
   BOOKING_CANCELED_ADMIN: "BOOKING_CANCELED_ADMIN",
   BOOKING_CANCELED_TRAINER: "BOOKING_CANCELED_TRAINER",
@@ -111,6 +113,20 @@ const messages: Record<
     en: {
       title: "Package paused",
       body: "Your package has been paused and your reservations in that period were canceled. Your package validity was extended by the length of the pause.",
+    },
+  },
+  // An edited window is a second, different disruption: reservations the
+  // client made inside the NEW period are gone too, and the expiry date they
+  // were told at pause time has moved. Placeholder-free like PACKAGE_PAUSED;
+  // the new dates ride in the payload.
+  PACKAGE_PAUSE_UPDATED: {
+    sr: {
+      title: "Pauza je izmenjena",
+      body: "Period pauze vašeg paketa je promenjen. Rezervacije u novom periodu su otkazane, a trajanje paketa je preračunato prema novoj dužini pauze.",
+    },
+    en: {
+      title: "Pause updated",
+      body: "The pause period of your package has changed. Reservations inside the new period were canceled and your package validity was recalculated for the new pause length.",
     },
   },
   SESSION_REMINDER: {

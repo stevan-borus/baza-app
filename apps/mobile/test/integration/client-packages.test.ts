@@ -251,6 +251,96 @@ describe("packages/client-packages", () => {
     expect(body.packages).toHaveLength(2);
   });
 
+  // The admin package row used to speak raw credits only, so it showed "8
+  // termina" for a client who had already reserved two of them. Held/bookable
+  // now ride along on the per-client branch too, so admin and client read the
+  // same number.
+  it("GET as admin for one client reports heldCount and bookable per package", async () => {
+    const { reformer, packageType } = await seedReformerWithPackageType();
+    const trainer = await prisma.user.create({
+      data: { email: "held-tr@test.local", firstName: "Held", lastName: "Tr", role: "TRAINER" },
+    });
+    const client = await makeClient("held@test.local");
+    const pkg = await prisma.clientPackage.create({
+      data: {
+        clientProfileId: client.profile.id,
+        packageTypeId: packageType.id,
+        classTypes: { create: { classTypeId: reformer.id } },
+        lateCancelHours: 12,
+        startsAt: new Date(nowMs() - DAY_MS),
+        expiresAt: new Date(nowMs() + 25 * DAY_MS),
+        sessionsRemaining: 8,
+        sessionsGranted: 8,
+      },
+    });
+    const revoked = await prisma.clientPackage.create({
+      data: {
+        clientProfileId: client.profile.id,
+        packageTypeId: packageType.id,
+        classTypes: { create: { classTypeId: reformer.id } },
+        lateCancelHours: 12,
+        startsAt: new Date(nowMs() - 2 * DAY_MS),
+        expiresAt: new Date(nowMs() + 25 * DAY_MS),
+        sessionsRemaining: 5,
+        sessionsGranted: 5,
+        revokedAt: now(),
+      },
+    });
+
+    const booked = await prisma.session.create({
+      data: {
+        classTypeId: reformer.id,
+        trainerUserId: trainer.id,
+        startsAt: new Date(nowMs() + 2 * DAY_MS),
+        endsAt: new Date(nowMs() + 2 * DAY_MS + 60 * 60 * 1000),
+        capacity: 6,
+        isActive: true,
+        status: "SCHEDULED",
+      },
+    });
+    await prisma.booking.create({
+      data: {
+        sessionId: booked.id,
+        clientProfileId: client.profile.id,
+        clientPackageId: pkg.id,
+      },
+    });
+    const waitlisted = await prisma.session.create({
+      data: {
+        classTypeId: reformer.id,
+        trainerUserId: trainer.id,
+        startsAt: new Date(nowMs() + 3 * DAY_MS),
+        endsAt: new Date(nowMs() + 3 * DAY_MS + 60 * 60 * 1000),
+        capacity: 1,
+        isActive: true,
+        status: "SCHEDULED",
+      },
+    });
+    await prisma.waitlistEntry.create({
+      data: {
+        sessionId: waitlisted.id,
+        clientProfileId: client.profile.id,
+        position: 1,
+      },
+    });
+
+    asAdmin();
+    const response = await GET(
+      new Request(
+        `http://test.local/api/packages/client-packages?clientProfileId=${client.profile.id}`,
+      ),
+    );
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as {
+      packages: { id: string; heldCount: number; bookable: number }[];
+    };
+    const live = body.packages.find((p) => p.id === pkg.id);
+    expect(live).toMatchObject({ heldCount: 2, bookable: 6 });
+    // A revoked package grants nothing, so it can never advertise headroom.
+    const dead = body.packages.find((p) => p.id === revoked.id);
+    expect(dead).toMatchObject({ heldCount: 0, bookable: 0 });
+  });
+
   describe("packages/pause", () => {
     it("POST creates a pause window for a client", async () => {
       const client = await makeClient("pause@test.local");

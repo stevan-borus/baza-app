@@ -38,6 +38,7 @@ Session cookies are HttpOnly and managed by Better Auth (`/api/auth/*`).
 - `GET /api/packages/client-packages` - role: `ADMIN | TRAINER | CLIENT` - response: client package history/active package
 - `POST /api/packages/client-packages` - role: `ADMIN | TRAINER` - request: `{ clientProfileId, packageTypeId, startsAt }` - response: created client package
 - `POST /api/packages/pause` - role: `ADMIN | TRAINER` - request: pause range for client package validity freeze
+- `PATCH /api/packages/pauses/[id]` - role: `ADMIN | TRAINER` - request: new pause range (+ optional reason); refunds the old grant and re-grants the new window. Ending early is `POST /api/packages/pauses/[id]/end`
 
 ## Billing and Reports
 

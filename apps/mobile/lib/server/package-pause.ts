@@ -1,6 +1,6 @@
 /**
- * What a pause DOES to a client's packages — the extension arithmetic shared
- * by the create-pause and end-pause routes.
+ * What a pause DOES to a client's packages and reservations — the arithmetic
+ * and the window sweep shared by the create-, edit- and end-pause routes.
  *
  * The extension is written into `ClientPackage.expiresAt` at pause time rather
  * than derived on read. Derived extension was only ever half real: it grew as
@@ -91,6 +91,58 @@ export async function extendPackagesForPause(
     extended.push({ id: pkg.id, expiresAt });
   }
   return extended;
+}
+
+/**
+ * Clears the client's reservations out of a pause window, in one transaction
+ * with whatever created or moved that window.
+ *
+ * Both the create and the edit route need exactly this, and the two drifting
+ * apart is how a moved window would end up leaving reservations standing
+ * inside it. Rules, in the order they bite:
+ *   - Bookings are fetched before being cancelled, because the freed session
+ *     ids feed post-commit waitlist promotion (one booking per session per
+ *     client, so the ids are unique).
+ *   - `gt: currentInstant` keeps a session that ALREADY started inside the
+ *     window out of it: that attendance is history.
+ *   - Nothing is consumed. No SessionConsumption row, no late-cancel forfeit,
+ *     however close the class was — the studio froze the membership.
+ *   - Waitlist entries go regardless of class type. A PackagePause is
+ *     per-CLIENT, so the client is paused for everything.
+ */
+export async function cancelReservationsInWindow(
+  db: Db,
+  clientProfileId: string,
+  startsAt: Date,
+  endsAt: Date,
+  currentInstant: Date,
+) {
+  const sessionInWindow = {
+    startsAt: { gte: startsAt, lt: endsAt, gt: currentInstant },
+  };
+
+  const bookings = await db.booking.findMany({
+    where: {
+      clientProfileId,
+      canceledAt: null,
+      session: sessionInWindow,
+    },
+    select: { id: true, sessionId: true },
+  });
+  const canceled = await db.booking.updateMany({
+    where: { id: { in: bookings.map((b) => b.id) } },
+    data: { canceledAt: currentInstant },
+  });
+
+  const removedWaitlist = await db.waitlistEntry.deleteMany({
+    where: { clientProfileId, session: sessionInWindow },
+  });
+
+  return {
+    canceledBookings: canceled.count,
+    freedSessionIds: bookings.map((b) => b.sessionId),
+    removedWaitlistEntries: removedWaitlist.count,
+  };
 }
 
 /**

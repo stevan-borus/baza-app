@@ -41,6 +41,10 @@ import {
   type EditClientSheetClient,
 } from "@/components/admin/client-flows/edit-client-sheet";
 import { PauseSheet } from "@/components/admin/client-flows/pause-sheet";
+import {
+  EditPauseSheet,
+  type EditablePause,
+} from "@/components/admin/client-flows/edit-pause-sheet";
 import { AssignPackageSheetContent } from "@/components/admin/assign-package-sheet-content";
 import { ReturnToPill } from "@/components/admin/return-to-pill";
 import { nowMs } from "@/lib/now";
@@ -92,6 +96,7 @@ export function ClientDetail({ id }: { id: string }) {
   // pause sheet while `pauseClientId` is non-null.
   const [editClient, setEditClient] = useState<EditClientSheetClient | null>(null);
   const [pauseClientId, setPauseClientId] = useState<string | null>(null);
+  const [editPause, setEditPause] = useState<EditablePause | null>(null);
 
   const clientQuery = useQuery(clientsQueries.byId(id));
   const client = clientQuery.data?.client;
@@ -231,6 +236,9 @@ export function ClientDetail({ id }: { id: string }) {
                 bottomPad={bottomPad}
                 clientUserId={id}
                 clientFullName={client.user.fullName}
+                activePause={client.activePause}
+                upcomingPause={client.upcomingPause}
+                onEditPause={(pause) => setEditPause(pause)}
               />
             ) : null}
 
@@ -359,6 +367,8 @@ export function ClientDetail({ id }: { id: string }) {
         clientProfileId={pauseClientId}
         onClose={() => setPauseClientId(null)}
       />
+
+      <EditPauseSheet pause={editPause} onClose={() => setEditPause(null)} />
 
       <AppSheet open={showDelete} onOpenChange={setShowDelete} stackBehavior="push">
         {client ? (

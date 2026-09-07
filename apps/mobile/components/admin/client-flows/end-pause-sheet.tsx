@@ -1,5 +1,5 @@
-// End-pause flow — the "Prekini pauzu" action plus its confirmation, offered
-// on the client-detail header while a pause is running.
+// End-pause flow — the "Prekini pauzu" / "Otkaži pauzu" action plus its
+// confirmation, offered on the PauseCard on the client-detail Pregled tab.
 //
 // Why the confirm step: ending a pause is not an undo. The server refunds the
 // unused tail of the window, so every package's expiresAt moves BACK — the
@@ -8,10 +8,10 @@
 // may already belong to a promoted waitlist client. Both are invisible from
 // the button, so the copy says them out loud before anything is written.
 //
-// The action renders nothing without an `activePause`: the pause id is the
-// only thing the endpoint takes, and a payload cached before the field existed
-// carries the "paused" status without it. Offering a button that cannot fire
-// is worse than not offering one.
+// One endpoint, two consequences. On a RUNNING pause it closes the window
+// today. On a pause that has not started it DELETES the row outright — there
+// is no elapsed part to keep. "Prekini" would be a lie for the second case, so
+// `kind` swaps the label and the whole confirm copy while the testIDs stay put.
 
 import React, { useState } from "react";
 import { Pressable, Text } from "react-native";
@@ -27,9 +27,31 @@ export type ActivePause = {
   endsAt: string;
 };
 
-export function EndPauseAction({ pause }: { pause: ActivePause }) {
+const COPY = {
+  active: {
+    action: "admin.clientDetail.endPauseAction",
+    title: "admin.clientDetail.endPauseTitle",
+    message: "admin.clientDetail.endPauseMessage",
+    confirm: "admin.clientDetail.endPauseConfirm",
+  },
+  upcoming: {
+    action: "admin.clientDetail.cancelPauseAction",
+    title: "admin.clientDetail.cancelPauseTitle",
+    message: "admin.clientDetail.cancelPauseMessage",
+    confirm: "admin.clientDetail.cancelPauseConfirm",
+  },
+} as const;
+
+export function EndPauseAction({
+  pause,
+  kind = "active",
+}: {
+  pause: ActivePause;
+  kind?: "active" | "upcoming";
+}) {
   const { t } = useTranslation();
   const [confirming, setConfirming] = useState(false);
+  const copy = COPY[kind];
 
   // Cache upkeep (packages + clients packageStatus + reports + the client's
   // own "Moji paketi" timeline) is baked into the factory hook.
@@ -44,13 +66,13 @@ export function EndPauseAction({ pause }: { pause: ActivePause }) {
         android_ripple={null}
         className="active:opacity-60"
         accessibilityRole="button"
-        accessibilityLabel={t("admin.clientDetail.endPauseAction")}
+        accessibilityLabel={t(copy.action)}
       >
         <Text
-          className="text-accent font-body-semibold"
+          className="text-danger font-body-semibold"
           style={{ fontSize: 13 }}
         >
-          {t("admin.clientDetail.endPauseAction")}
+          {t(copy.action)}
         </Text>
       </Pressable>
 
@@ -60,9 +82,9 @@ export function EndPauseAction({ pause }: { pause: ActivePause }) {
         onOpenChange={(open) => {
           if (!open) setConfirming(false);
         }}
-        title={t("admin.clientDetail.endPauseTitle")}
-        message={t("admin.clientDetail.endPauseMessage")}
-        confirmLabel={t("admin.clientDetail.endPauseConfirm")}
+        title={t(copy.title)}
+        message={t(copy.message)}
+        confirmLabel={t(copy.confirm)}
         loading={endPauseMutation.isPending}
         errorMessage={
           endPauseMutation.isError

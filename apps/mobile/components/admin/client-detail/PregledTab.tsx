@@ -10,6 +10,7 @@ import { BookingRow } from "@/components/admin/booking-row";
 import { ClientLegalPanel } from "@/components/admin/client-legal-panel";
 import { ClientHealthPanel } from "@/components/admin/client-health-panel";
 import { formatClassTypeList } from "@/lib/format";
+import { PauseCard, type ClientPause } from "@/components/admin/client-detail/PauseCard";
 
 export function PregledTab({
   activePackage,
@@ -19,6 +20,9 @@ export function PregledTab({
   bottomPad,
   clientUserId,
   clientFullName,
+  activePause,
+  upcomingPause,
+  onEditPause,
 }: {
   activePackage: ClientPackage | null;
   packagesLoading: boolean;
@@ -27,8 +31,20 @@ export function PregledTab({
   bottomPad: number;
   clientUserId: string;
   clientFullName: string;
+  activePause: ClientPause | null;
+  /** Optional: a client payload cached before the field shipped has none. */
+  upcomingPause?: ClientPause | null;
+  onEditPause: (pause: ClientPause, kind: "active" | "upcoming") => void;
 }) {
   const { t } = useTranslation();
+  // A running pause outranks a scheduled one: it is what the client is living
+  // with today, and the scheduled one surfaces again once this one is over.
+  const pause: { pause: ClientPause; kind: "active" | "upcoming" } | null =
+    activePause
+      ? { pause: activePause, kind: "active" }
+      : upcomingPause
+        ? { pause: upcomingPause, kind: "upcoming" }
+        : null;
   return (
     <ScrollView
       testID="client-detail-tab-content-pregled"
@@ -39,6 +55,15 @@ export function PregledTab({
         gap: 16,
       }}
     >
+      {pause ? (
+        <PauseCard
+          pause={pause.pause}
+          kind={pause.kind}
+          lang={lang}
+          onEditPause={onEditPause}
+        />
+      ) : null}
+
       <View className="gap-2">
         <SectionLabel>{t("admin.clientDetail.currentPackage")}</SectionLabel>
         {packagesLoading ? (
@@ -59,14 +84,34 @@ export function PregledTab({
                 )}
               </Text>
             ) : null}
-            <Text className="text-muted" style={{ fontSize: 13 }}>
-              {t("admin.clientDetail.sessionsRemaining", {
-                remaining: activePackage.sessionsRemaining,
-                // Grant-aware total (server: sessionCount + bonusSessions), so a
-                // "+1 termin" grant reads 13/13, not 13/12.
-                total: activePackage.sessionsTotal ?? "—",
-              })}
-            </Text>
+            {typeof activePackage.bookable === "number" ? (
+              // Held plus remaining answers "can this client book?" on its own:
+              // the admin sees the seats future reservations already hold and
+              // what the package still carries. "Bookable" is just remaining
+              // minus held, and a second line stating that difference read as a
+              // repeat of this one.
+              <Text
+                testID="client-package-held"
+                className="text-foreground"
+                style={{ fontSize: 13 }}
+              >
+                {t("admin.clientDetail.sessionsHeldBreakdown", {
+                  held: activePackage.heldCount ?? 0,
+                  remaining: activePackage.sessionsRemaining,
+                  // Grant-aware total (server: sessionCount + bonusSessions).
+                  total: activePackage.sessionsTotal ?? "—",
+                })}
+              </Text>
+            ) : (
+              <Text className="text-muted" style={{ fontSize: 13 }}>
+                {t("admin.clientDetail.sessionsRemaining", {
+                  remaining: activePackage.sessionsRemaining,
+                  // Grant-aware total (server: sessionCount + bonusSessions), so
+                  // a "+1 termin" grant reads 13/13, not 13/12.
+                  total: activePackage.sessionsTotal ?? "—",
+                })}
+              </Text>
+            )}
             <Text className="text-muted" style={{ fontSize: 13 }}>
               {t("admin.clientDetail.validUntil", {
                 date: dayjs(activePackage.expiresAt).locale(lang).format("D.M.YYYY."),
