@@ -12,8 +12,64 @@ import { ClientHealthPanel } from "@/components/admin/client-health-panel";
 import { formatClassTypeList } from "@/lib/format";
 import { PauseCard, type ClientPause } from "@/components/admin/client-detail/PauseCard";
 
+function ActivePackageCard({
+  pkg,
+  lang,
+  countTestID,
+}: {
+  pkg: ClientPackage;
+  lang: "sr" | "en";
+  countTestID: string;
+}) {
+  const { t } = useTranslation();
+  return (
+    <View className="bg-surface rounded-lg p-4 gap-1">
+      <Text
+        className="text-foreground font-body-semibold"
+        style={{ fontSize: 15 }}
+        numberOfLines={1}
+      >
+        {pkg.packageType?.name ?? "—"}
+      </Text>
+      {(pkg.classTypes ?? []).length > 0 ? (
+        <Text className="text-muted" style={{ fontSize: 13 }} numberOfLines={1}>
+          {formatClassTypeList((pkg.classTypes ?? []).map((ct) => ct.name))}
+        </Text>
+      ) : null}
+      {typeof pkg.bookable === "number" ? (
+        // sessionsRemaining only drops when a session is CONSUMED, so a
+        // client with an upcoming reservation still shows the full count.
+        // Printing it beside a reserved count reads as a contradiction
+        // ("Rezervisano: 1" next to 12/12). Bookable — remaining minus
+        // held seats — is the number that answers whether they can book.
+        <Text testID={countTestID} className="text-foreground" style={{ fontSize: 13 }}>
+          {t("admin.clientDetail.sessionsBookable", {
+            bookable: pkg.bookable,
+            // Grant-aware total (server: sessionCount + bonusSessions).
+            total: pkg.sessionsTotal ?? "—",
+          })}
+        </Text>
+      ) : (
+        <Text className="text-muted" style={{ fontSize: 13 }}>
+          {t("admin.clientDetail.sessionsRemaining", {
+            remaining: pkg.sessionsRemaining,
+            // Grant-aware total (server: sessionCount + bonusSessions), so
+            // a "+1 termin" grant reads 13/13, not 13/12.
+            total: pkg.sessionsTotal ?? "—",
+          })}
+        </Text>
+      )}
+      <Text className="text-muted" style={{ fontSize: 13 }}>
+        {t("admin.clientDetail.validUntil", {
+          date: dayjs(pkg.expiresAt).locale(lang).format("D.M.YYYY."),
+        })}
+      </Text>
+    </View>
+  );
+}
+
 export function PregledTab({
-  activePackage,
+  activePackages,
   packagesLoading,
   upcomingBookings,
   lang,
@@ -24,7 +80,8 @@ export function PregledTab({
   upcomingPause,
   onEditPause,
 }: {
-  activePackage: ClientPackage | null;
+  /** Every package the client can book against now, soonest expiry first. */
+  activePackages: ClientPackage[];
   packagesLoading: boolean;
   upcomingBookings: ClientBooking[];
   lang: "sr" | "en";
@@ -65,58 +122,31 @@ export function PregledTab({
       ) : null}
 
       <View className="gap-2">
-        <SectionLabel>{t("admin.clientDetail.currentPackage")}</SectionLabel>
+        <SectionLabel>
+          {t(
+            activePackages.length > 1
+              ? "admin.clientDetail.currentPackages"
+              : "admin.clientDetail.currentPackage",
+          )}
+        </SectionLabel>
         {packagesLoading ? (
           <SkeletonCard />
-        ) : activePackage ? (
-          <View className="bg-surface rounded-lg p-4 gap-1">
-            <Text
-              className="text-foreground font-body-semibold"
-              style={{ fontSize: 15 }}
-              numberOfLines={1}
-            >
-              {activePackage.packageType?.name ?? "—"}
-            </Text>
-            {(activePackage.classTypes ?? []).length > 0 ? (
-              <Text className="text-muted" style={{ fontSize: 13 }} numberOfLines={1}>
-                {formatClassTypeList(
-                  (activePackage.classTypes ?? []).map((ct) => ct.name),
-                )}
-              </Text>
-            ) : null}
-            {typeof activePackage.bookable === "number" ? (
-              // sessionsRemaining only drops when a session is CONSUMED, so a
-              // client with an upcoming reservation still shows the full count.
-              // Printing it beside a reserved count reads as a contradiction
-              // ("Rezervisano: 1" next to 12/12). Bookable — remaining minus
-              // held seats — is the number that answers whether they can book.
-              <Text
-                testID="client-package-bookable"
-                className="text-foreground"
-                style={{ fontSize: 13 }}
-              >
-                {t("admin.clientDetail.sessionsBookable", {
-                  bookable: activePackage.bookable,
-                  // Grant-aware total (server: sessionCount + bonusSessions).
-                  total: activePackage.sessionsTotal ?? "—",
-                })}
-              </Text>
-            ) : (
-              <Text className="text-muted" style={{ fontSize: 13 }}>
-                {t("admin.clientDetail.sessionsRemaining", {
-                  remaining: activePackage.sessionsRemaining,
-                  // Grant-aware total (server: sessionCount + bonusSessions), so
-                  // a "+1 termin" grant reads 13/13, not 13/12.
-                  total: activePackage.sessionsTotal ?? "—",
-                })}
-              </Text>
-            )}
-            <Text className="text-muted" style={{ fontSize: 13 }}>
-              {t("admin.clientDetail.validUntil", {
-                date: dayjs(activePackage.expiresAt).locale(lang).format("D.M.YYYY."),
-              })}
-            </Text>
-          </View>
+        ) : activePackages.length > 0 ? (
+          activePackages.map((pkg) => (
+            <ActivePackageCard
+              key={pkg.id}
+              pkg={pkg}
+              lang={lang}
+              // The count testID stays bare while there is a single package —
+              // suffixing it unconditionally would break every selector that
+              // predates multi-package support.
+              countTestID={
+                activePackages.length > 1
+                  ? `client-package-bookable-${pkg.id}`
+                  : "client-package-bookable"
+              }
+            />
+          ))
         ) : (
           <EmptyState title={t("admin.clientDetail.noActivePackage")} />
         )}

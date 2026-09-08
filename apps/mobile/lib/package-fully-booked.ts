@@ -44,8 +44,8 @@ export function isFullyBookedActivePackage(
 
 /**
  * Whether a package should present as the client's ACTIVE package on the home
- * card and the profile "Moji paketi" list — credits remaining, not past expiry,
- * and NOT revoked.
+ * card and the profile "Moji paketi" list — started, credits remaining, not
+ * past expiry, and NOT revoked.
  *
  * `revokedAt` is the load-bearing addition: a revoked package keeps its credits
  * and future expiry (keep-the-trace semantics), so the old `sessionsRemaining >
@@ -54,16 +54,30 @@ export function isFullyBookedActivePackage(
  * through to the RenewalCard / "no active package" state exactly like a lapsed
  * client. The greyed-calendar visibility path deliberately still shows revoked
  * packages and is unaffected.
+ *
+ * `startsAt` is the same bug one field over: a package bought ahead carries its
+ * credits and a far-off expiry from the day it is assigned, so without this
+ * check a package dated to start in November reads as the client's current one
+ * in September. A not-yet-started package is UPCOMING, not active, and booking
+ * against it is what the server refuses. Admin client-detail already excludes
+ * it, so leaving it in here made the two surfaces disagree about one package.
+ *
+ * A missing or null `startsAt` counts as already started. The field is required
+ * on the wire, so absence means an older cached payload — and a client's own
+ * package vanishing from their screen is worse than briefly showing one that
+ * starts a day early.
  */
 export function isActiveClientPackage(
   pkg: {
     sessionsRemaining: number;
     expiresAt: string;
     revokedAt?: string | null;
+    startsAt?: string | null;
   },
   now: Date,
 ): boolean {
   if (pkg.revokedAt) return false;
   if (pkg.sessionsRemaining <= 0) return false;
+  if (pkg.startsAt && new Date(pkg.startsAt) > now) return false;
   return new Date(pkg.expiresAt) > now;
 }

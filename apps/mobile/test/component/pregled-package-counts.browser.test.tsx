@@ -19,6 +19,7 @@ vi.mock("@/lib/api-request", () => ({
 }));
 
 import { PregledTab } from "@/components/admin/client-detail/PregledTab";
+import { activePackages } from "@/components/admin/client-detail";
 import { PaketiTab } from "@/components/admin/client-detail/PaketiTab";
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -37,10 +38,13 @@ function makePackage(overrides: Partial<ClientPackage> = {}): ClientPackage {
   };
 }
 
-function renderPregled(activePackage: ClientPackage | null) {
+// Packages go through the SAME filter the screen uses, so a card that should
+// have been dropped (not started, expired, revoked) fails here too.
+function renderPregled(active: ClientPackage | ClientPackage[] | null) {
+  const all = active === null ? [] : Array.isArray(active) ? active : [active];
   return renderWithQueryClient(
     <PregledTab
-      activePackage={activePackage}
+      activePackages={activePackages(all)}
       packagesLoading={false}
       upcomingBookings={[]}
       lang="sr"
@@ -148,5 +152,99 @@ describe("admin package counts", () => {
     expect(
       screen.queryByTestId("package-history-row-pkg-1-bookable"),
     ).toBeNull();
+  });
+});
+
+describe("Trenutni paketi — every active package, none that has not started", () => {
+  it("renders a card per active package and pluralizes the label", () => {
+    // The reported bug: an admin saw one package on this card while the
+    // client's own screen listed three. The card must agree with the client.
+    const screen = renderPregled([
+      makePackage({
+        id: "pkg-reformer",
+        sessionsRemaining: 12,
+        sessionsTotal: 12,
+        heldCount: 1,
+        bookable: 11,
+        packageType: { name: "Reformer 12", sessionCount: 12, validityDays: 60 },
+      }),
+      makePackage({
+        id: "pkg-strongher",
+        expiresAt: new Date(Date.now() + 40 * DAY).toISOString(),
+        heldCount: 0,
+        bookable: 8,
+        packageType: { name: "StrongHer", sessionCount: 8, validityDays: 60 },
+      }),
+    ]);
+    expect(screen.container.textContent).toContain("Trenutni paketi");
+    expect(screen.container.textContent).toContain("Reformer 12");
+    expect(screen.container.textContent).toContain("StrongHer");
+    expect(
+      screen.getByTestId("client-package-bookable-pkg-reformer").textContent,
+    ).toContain("Slobodno za zakazivanje: 11/12");
+    expect(
+      screen.getByTestId("client-package-bookable-pkg-strongher").textContent,
+    ).toContain("Slobodno za zakazivanje: 8/8");
+  });
+
+  it("keeps the singular label and the bare testID for a lone package", () => {
+    const screen = renderPregled([
+      makePackage({ sessionsRemaining: 8, sessionsTotal: 8, heldCount: 2, bookable: 6 }),
+    ]);
+    expect(screen.container.textContent).toContain("Trenutni paket");
+    expect(screen.container.textContent).not.toContain("Trenutni paketi");
+    expect(screen.getByTestId("client-package-bookable").textContent).toContain(
+      "Slobodno za zakazivanje: 6/8",
+    );
+  });
+
+  it("excludes a package whose startsAt is still in the future", () => {
+    const screen = renderPregled([
+      makePackage({
+        id: "pkg-started",
+        packageType: { name: "Reformer 12", sessionCount: 12, validityDays: 60 },
+      }),
+      makePackage({
+        id: "pkg-future",
+        startsAt: new Date(Date.now() + 30 * DAY).toISOString(),
+        expiresAt: new Date(Date.now() + 90 * DAY).toISOString(),
+        packageType: { name: "Decembarski paket", sessionCount: 8, validityDays: 60 },
+      }),
+    ]);
+    expect(screen.container.textContent).toContain("Reformer 12");
+    expect(screen.container.textContent).not.toContain("Decembarski paket");
+    expect(screen.container.textContent).toContain("Trenutni paket");
+    expect(screen.container.textContent).not.toContain("Trenutni paketi");
+  });
+
+  it("shows the empty state when the only package has not started yet", () => {
+    const screen = renderPregled([
+      makePackage({
+        id: "pkg-future",
+        startsAt: new Date(Date.now() + 30 * DAY).toISOString(),
+        expiresAt: new Date(Date.now() + 90 * DAY).toISOString(),
+        packageType: { name: "Decembarski paket", sessionCount: 8, validityDays: 60 },
+      }),
+    ]);
+    expect(screen.container.textContent).not.toContain("Decembarski paket");
+    expect(screen.container.textContent).toContain("Nema aktivnog paketa.");
+  });
+
+  it("orders the cards by soonest expiry — that is the one to spend first", () => {
+    const screen = renderPregled([
+      makePackage({
+        id: "pkg-later",
+        expiresAt: new Date(Date.now() + 60 * DAY).toISOString(),
+        packageType: { name: "Kasniji paket", sessionCount: 8, validityDays: 60 },
+      }),
+      makePackage({
+        id: "pkg-sooner",
+        expiresAt: new Date(Date.now() + 5 * DAY).toISOString(),
+        packageType: { name: "Raniji paket", sessionCount: 8, validityDays: 60 },
+      }),
+    ]);
+    const text = screen.container.textContent ?? "";
+    expect(text.indexOf("Raniji paket")).toBeGreaterThan(-1);
+    expect(text.indexOf("Raniji paket")).toBeLessThan(text.indexOf("Kasniji paket"));
   });
 });

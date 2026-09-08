@@ -765,6 +765,7 @@
       "openActions": "Client actions",
       "loadError": "Unable to load client.",
       "currentPackage": "Current package",
+      "currentPackages": "Current packages",
       "noActivePackage": "No active package.",
       "packageHistory": "Package history",
       "noPackages": "No packages yet.",

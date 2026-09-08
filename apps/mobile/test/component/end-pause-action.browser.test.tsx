@@ -60,7 +60,7 @@ function renderPregled(pauses: {
 }) {
   return renderWithQueryClient(
     <PregledTab
-      activePackage={null}
+      activePackages={[]}
       packagesLoading={false}
       upcomingBookings={[]}
       lang="sr"

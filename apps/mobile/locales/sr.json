@@ -769,6 +769,7 @@
       "openActions": "Akcije za klijenta",
       "loadError": "Nije moguće učitati klijenta.",
       "currentPackage": "Trenutni paket",
+      "currentPackages": "Trenutni paketi",
       "noActivePackage": "Nema aktivnog paketa.",
       "packageHistory": "Istorija paketa",
       "noPackages": "Još nema paketa.",
