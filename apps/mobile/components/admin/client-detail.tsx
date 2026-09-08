@@ -41,6 +41,10 @@ import {
   type EditClientSheetClient,
 } from "@/components/admin/client-flows/edit-client-sheet";
 import { PauseSheet } from "@/components/admin/client-flows/pause-sheet";
+import {
+  EditPauseSheet,
+  type EditablePause,
+} from "@/components/admin/client-flows/edit-pause-sheet";
 import { AssignPackageSheetContent } from "@/components/admin/assign-package-sheet-content";
 import { ReturnToPill } from "@/components/admin/return-to-pill";
 import { nowMs } from "@/lib/now";
@@ -56,15 +60,30 @@ import { PaketiTab } from "@/components/admin/client-detail/PaketiTab";
 import { TreninziTab } from "@/components/admin/client-detail/TreninziTab";
 import { BeleskeTab } from "@/components/admin/client-detail/BeleskeTab";
 
-function pickActivePackage(packages: ClientPackage[]): ClientPackage | null {
+// Every package the client can book against right now, soonest expiry first —
+// that is the one an admin should spend before it lapses.
+//
+// This replaced a `pickActivePackage` that carried two defects. It returned on
+// the FIRST match, so a client holding Reformer 12 + Reformer Personal +
+// StrongHer at once saw one package here while their own profile screen listed
+// all three — the two surfaces disagreeing is what got reported. And it never
+// looked at `startsAt`, so a package that begins in December counted as
+// current today.
+export function activePackages(packages: ClientPackage[]): ClientPackage[] {
   const msNow = nowMs();
-  for (const p of packages) {
-    if (p.revokedAt) continue;
-    if (p.sessionsRemaining <= 0) continue;
-    if (new Date(p.expiresAt).getTime() < msNow) continue;
-    return p;
-  }
-  return null;
+  return packages
+    .filter((p) => {
+      if (p.revokedAt) return false;
+      if (p.sessionsRemaining <= 0) return false;
+      if (new Date(p.expiresAt).getTime() < msNow) return false;
+      // A payload cached before `startsAt` shipped has none; treat it as
+      // already started so an old cache never blanks the card.
+      if (p.startsAt && new Date(p.startsAt).getTime() > msNow) return false;
+      return true;
+    })
+    .sort(
+      (a, b) => new Date(a.expiresAt).getTime() - new Date(b.expiresAt).getTime(),
+    );
 }
 
 export function ClientDetail({ id }: { id: string }) {
@@ -92,6 +111,7 @@ export function ClientDetail({ id }: { id: string }) {
   // pause sheet while `pauseClientId` is non-null.
   const [editClient, setEditClient] = useState<EditClientSheetClient | null>(null);
   const [pauseClientId, setPauseClientId] = useState<string | null>(null);
+  const [editPause, setEditPause] = useState<EditablePause | null>(null);
 
   const clientQuery = useQuery(clientsQueries.byId(id));
   const client = clientQuery.data?.client;
@@ -107,7 +127,7 @@ export function ClientDetail({ id }: { id: string }) {
   });
 
   const allPackages = packagesQuery.data?.packages ?? [];
-  const activePackage = pickActivePackage(allPackages);
+  const currentPackages = activePackages(allPackages);
 
   // Treninzi tab + Pregled-preview both read from the same infinite query.
   // Pregled shows the first three; Treninzi shows the full paginated list.
@@ -224,13 +244,16 @@ export function ClientDetail({ id }: { id: string }) {
                 cached, no measured layouts to preserve. */}
             {activeTab === "pregled" ? (
               <PregledTab
-                activePackage={activePackage}
+                activePackages={currentPackages}
                 packagesLoading={packagesQuery.isLoading}
                 upcomingBookings={upcomingBookings.slice(0, 1)}
                 lang={lang}
                 bottomPad={bottomPad}
                 clientUserId={id}
                 clientFullName={client.user.fullName}
+                activePause={client.activePause}
+                upcomingPause={client.upcomingPause}
+                onEditPause={(pause) => setEditPause(pause)}
               />
             ) : null}
 
@@ -359,6 +382,8 @@ export function ClientDetail({ id }: { id: string }) {
         clientProfileId={pauseClientId}
         onClose={() => setPauseClientId(null)}
       />
+
+      <EditPauseSheet pause={editPause} onClose={() => setEditPause(null)} />
 
       <AppSheet open={showDelete} onOpenChange={setShowDelete} stackBehavior="push">
         {client ? (

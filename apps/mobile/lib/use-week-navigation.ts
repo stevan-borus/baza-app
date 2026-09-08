@@ -27,6 +27,7 @@
 import { useState } from "react";
 import dayjs from "dayjs";
 import weekday from "dayjs/plugin/weekday";
+import { now } from "@/lib/now";
 
 // Idempotent — also registered app-wide in lib/i18n, but the pure math
 // must work when this module is imported alone (unit tests).
@@ -177,7 +178,7 @@ export function weekRangeLabel(weekStart: dayjs.Dayjs, lang: string): string {
  */
 export function useWeekNavigation(anchor?: dayjs.Dayjs) {
   const [state, setState] = useState<WeekNavState>(() =>
-    createWeekNavState(anchor ?? dayjs()),
+    createWeekNavState(anchor ?? dayjs(now())),
   );
   return {
     ...state,

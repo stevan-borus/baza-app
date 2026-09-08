@@ -16,6 +16,7 @@ import {
   type CampaignsListResponse,
 } from "@baza/types/campaigns";
 import { apiRequest } from "@/lib/api-request";
+import { writeThroughList } from "@/lib/queries/write-through-list";
 
 // The wire schemas live in @baza/types/campaigns — the same objects the API
 // routes validate against via respond(). Re-export the types consumers use.
@@ -172,9 +173,10 @@ export const campaignsQueries = {
 // `mutate(vars, { onSuccess })`, which runs in addition to the baked-in one.
 //
 // The API returns the full campaign for create/update/cancel/send and delete
-// only needs the id, so these splice the list + detail caches directly instead
-// of invalidating — no refetch round-trip. (The preview/audience queries are
-// spec-derived and left to refetch naturally on their own staleTime.)
+// only needs the id, so these write the list + detail caches directly. The list
+// goes through writeThroughList: a warm list is spliced with no refetch, a cold
+// one refetches once. (The preview/audience queries are spec-derived and left
+// to refetch naturally on their own staleTime.)
 
 type ListData = CampaignsListResponse;
 const listKey = campaignsQueries.list().queryKey;
@@ -182,23 +184,23 @@ const oneKey = (id: string) => campaignsQueries.one(id).queryKey;
 
 /** Insert (prepend) or replace a campaign in the list cache, and set its detail. */
 function spliceCampaign(queryClient: QueryClient, campaign: Campaign) {
-  queryClient.setQueryData<ListData>(listKey, (prev) => {
-    if (!prev) return prev;
-    const exists = prev.campaigns.some((c) => c.id === campaign.id);
-    const campaigns = exists
-      ? prev.campaigns.map((c) => (c.id === campaign.id ? campaign : c))
-      : [campaign, ...prev.campaigns];
-    return { campaigns };
-  });
   queryClient.setQueryData(oneKey(campaign.id), { campaign });
-  // The recipients answer is status/spec-derived (projected audience before
-  // send, frozen NotificationLog rows after; audienceSpec edits change the
-  // projection) — a cached copy must not survive any campaign write. Returned
-  // so onSuccess awaits the refetch: the mutation must not report success
-  // over a still-projected list.
-  return queryClient.invalidateQueries({
-    queryKey: campaignsQueries.recipients(campaign.id).queryKey,
-  });
+  return Promise.all([
+    writeThroughList<ListData>(queryClient, listKey, (prev) => {
+      const exists = prev.campaigns.some((c) => c.id === campaign.id);
+      const campaigns = exists
+        ? prev.campaigns.map((c) => (c.id === campaign.id ? campaign : c))
+        : [campaign, ...prev.campaigns];
+      return { campaigns };
+    }),
+    // The recipients answer is status/spec-derived (projected audience before
+    // send, frozen NotificationLog rows after; audienceSpec edits change the
+    // projection) — a cached copy must not survive any campaign write. Awaited
+    // so the mutation never reports success over a still-projected list.
+    queryClient.invalidateQueries({
+      queryKey: campaignsQueries.recipients(campaign.id).queryKey,
+    }),
+  ]);
 }
 
 export function createCampaignMutationOptions(queryClient: QueryClient) {
@@ -232,16 +234,18 @@ export function sendCampaignMutationOptions(queryClient: QueryClient) {
 export function removeCampaignMutationOptions(queryClient: QueryClient) {
   return {
     ...campaignsQueries.remove(),
-    onSuccess: (_data: unknown, id: string) => {
-      queryClient.setQueryData<ListData>(listKey, (prev) =>
-        prev ? { campaigns: prev.campaigns.filter((c) => c.id !== id) } : prev,
-      );
+    onSuccess: async (_data: unknown, id: string) => {
       queryClient.removeQueries({ queryKey: oneKey(id) });
       // The recipients cache is keyed per campaign — drop it with the
       // campaign, or a recreate/lingering observer renders the stale list.
       queryClient.removeQueries({
         queryKey: campaignsQueries.recipients(id).queryKey,
       });
+      // Through the helper like every other list write: a refetch already in
+      // flight would otherwise land afterwards and resurrect the deleted row.
+      await writeThroughList<ListData>(queryClient, listKey, (prev) => ({
+        campaigns: prev.campaigns.filter((c) => c.id !== id),
+      }));
     },
   };
 }

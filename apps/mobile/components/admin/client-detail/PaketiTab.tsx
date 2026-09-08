@@ -179,6 +179,20 @@ export function PaketiTab({
                         : t("admin.clientDetail.comp")}
                     </Text>
                   </View>
+                  {!revoked && !expired && typeof p.bookable === "number" ? (
+                    // Only on a package that can still be booked against — on a
+                    // revoked or expired row "bookable" is always zero and the
+                    // line is noise.
+                    <Text
+                      testID={`package-history-row-${p.id}-bookable`}
+                      className="text-muted"
+                      style={{ fontSize: 12 }}
+                    >
+                      {t("admin.clientDetail.sessionsBookableShort", {
+                        bookable: p.bookable,
+                      })}
+                    </Text>
+                  ) : null}
                 </View>
               </React.Fragment>
             );

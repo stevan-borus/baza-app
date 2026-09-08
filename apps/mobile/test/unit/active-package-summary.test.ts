@@ -59,6 +59,26 @@ describe("summarizeActivePackages — which packages are eligible at all", () =>
     ).toEqual([]);
   });
 
+  it("excludes a package whose startsAt has not arrived yet", () => {
+    // Bought ahead: credits and a far expiry, but it does not start until
+    // November. Upcoming is not active, and booking against it would fail.
+    expect(
+      summarizeActivePackages(
+        [
+          pkg({
+            id: "upcoming",
+            sessionsRemaining: 10,
+            sessionsTotal: 12,
+            startsAt: "2026-11-01T00:00:00Z",
+            expiresAt: "2026-12-01T00:00:00Z",
+            classTypes: [REFORMER],
+          }),
+        ],
+        NOW,
+      ),
+    ).toEqual([]);
+  });
+
   it("drops a revoked package from a group without dropping the group", () => {
     const groups = summarizeActivePackages(
       [

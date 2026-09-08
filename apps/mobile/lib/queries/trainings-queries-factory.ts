@@ -15,6 +15,7 @@ import {
 } from "@baza/types/catalog";
 import { apiRequest } from "@/lib/api-request";
 import { sessionsQueries } from "@/lib/queries/sessions-queries-factory";
+import { writeThroughList } from "@/lib/queries/write-through-list";
 
 export type { ClassType } from "@baza/types/catalog";
 
@@ -72,15 +73,16 @@ export const trainingsQueries = {
 };
 
 // ── Mutation hooks ──────────────────────────────────────────────────────────
-// create/update return the full ClassType, so splice the returned row into the
-// list cache instead of invalidating. Append on create, replace-by-id on update.
+// create/update return the full ClassType, so the write goes straight into the
+// list cache. Append on create, replace-by-id on update. writeThroughList
+// decides how: a warm list is spliced with no refetch, a cold one refetches
+// once.
 
 type ClassTypesListData = ClassTypesResponse;
 const classTypesListKey = trainingsQueries.classTypes().queryKey;
 
 function spliceClassType(queryClient: QueryClient, classType: ClassType) {
-  queryClient.setQueryData<ClassTypesListData>(classTypesListKey, (prev) => {
-    if (!prev) return prev;
+  return writeThroughList<ClassTypesListData>(queryClient, classTypesListKey, (prev) => {
     const exists = prev.classTypes.some((c) => c.id === classType.id);
     const classTypes = exists
       ? prev.classTypes.map((c) => (c.id === classType.id ? classType : c))
@@ -101,11 +103,13 @@ export function updateClassTypeMutationOptions(queryClient: QueryClient) {
   return {
     ...trainingsQueries.updateClassType(),
     onSuccess: async (data: ClassTypeMutationResponse) => {
-      spliceClassType(queryClient, data.classType);
-      // Session caches (availability/list/byId) embed a server-joined
-      // classTypeName — a rename must refetch them or calendars keep the
-      // old name and color mapping.
-      await queryClient.invalidateQueries({ queryKey: sessionsQueries.all });
+      await Promise.all([
+        spliceClassType(queryClient, data.classType),
+        // Session caches (availability/list/byId) embed a server-joined
+        // classTypeName — a rename must refetch them or calendars keep the
+        // old name and color mapping.
+        queryClient.invalidateQueries({ queryKey: sessionsQueries.all }),
+      ]);
     },
   };
 }

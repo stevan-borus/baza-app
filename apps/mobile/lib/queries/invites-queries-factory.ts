@@ -13,6 +13,7 @@ import {
 import type { createInviteInputSchema } from "@baza/types/auth";
 import type { z } from "zod";
 import { apiRequest } from "@/lib/api-request";
+import { writeThroughList } from "@/lib/queries/write-through-list";
 
 export type { Invite };
 
@@ -75,15 +76,15 @@ export const invitesQueries = {
 
 // ── Mutation hooks ──────────────────────────────────────────────────────────
 // create/revoke/resend all return the full Invite row (server widened in
-// Layer 4), so splice the returned row into the list cache instead of
-// invalidating. Append on create, replace-by-id on revoke/resend.
+// Layer 4), so the write goes straight into the list cache. Append on create,
+// replace-by-id on revoke/resend. writeThroughList decides how: a warm list is
+// spliced with no refetch, a cold one refetches once (see its doc comment).
 
 type InvitesListData = InvitesResponse;
 const invitesListKey = invitesQueries.list().queryKey;
 
 function spliceInvite(queryClient: QueryClient, invite: Invite) {
-  queryClient.setQueryData<InvitesListData>(invitesListKey, (prev) => {
-    if (!prev) return prev;
+  return writeThroughList<InvitesListData>(queryClient, invitesListKey, (prev) => {
     const exists = prev.invites.some((i) => i.id === invite.id);
     const invites = exists
       ? prev.invites.map((i) => (i.id === invite.id ? invite : i))
