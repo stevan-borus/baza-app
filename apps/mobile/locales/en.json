@@ -806,8 +806,8 @@
       "editPauseHint": "Reservations inside the new pause period will be canceled without charging a session. Package validity is recalculated for the new pause length.",
       "editPauseSubmit": "Save",
       "editPauseError": "Updating the pause failed. Try again.",
-      "sessionsHeldBreakdown": "Reserved: {{held}} · Left on package: {{remaining}}/{{total}}",
-      "sessionsHeldShort": "Reserved: {{held}}",
+      "sessionsBookable": "Free to book: {{bookable}}/{{total}}",
+      "sessionsBookableShort": "Bookable: {{bookable}}",
       "status": {
         "active": "Active",
         "paused": "Paused",

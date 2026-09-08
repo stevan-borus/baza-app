@@ -184,12 +184,12 @@ export function PaketiTab({
                     // revoked or expired row "bookable" is always zero and the
                     // line is noise.
                     <Text
-                      testID={`package-history-row-${p.id}-held`}
+                      testID={`package-history-row-${p.id}-bookable`}
                       className="text-muted"
                       style={{ fontSize: 12 }}
                     >
-                      {t("admin.clientDetail.sessionsHeldShort", {
-                        held: p.heldCount ?? 0,
+                      {t("admin.clientDetail.sessionsBookableShort", {
+                        bookable: p.bookable,
                       })}
                     </Text>
                   ) : null}

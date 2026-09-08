@@ -85,19 +85,18 @@ export function PregledTab({
               </Text>
             ) : null}
             {typeof activePackage.bookable === "number" ? (
-              // Held plus remaining answers "can this client book?" on its own:
-              // the admin sees the seats future reservations already hold and
-              // what the package still carries. "Bookable" is just remaining
-              // minus held, and a second line stating that difference read as a
-              // repeat of this one.
+              // sessionsRemaining only drops when a session is CONSUMED, so a
+              // client with an upcoming reservation still shows the full count.
+              // Printing it beside a reserved count reads as a contradiction
+              // ("Rezervisano: 1" next to 12/12). Bookable — remaining minus
+              // held seats — is the number that answers whether they can book.
               <Text
-                testID="client-package-held"
+                testID="client-package-bookable"
                 className="text-foreground"
                 style={{ fontSize: 13 }}
               >
-                {t("admin.clientDetail.sessionsHeldBreakdown", {
-                  held: activePackage.heldCount ?? 0,
-                  remaining: activePackage.sessionsRemaining,
+                {t("admin.clientDetail.sessionsBookable", {
+                  bookable: activePackage.bookable,
                   // Grant-aware total (server: sessionCount + bonusSessions).
                   total: activePackage.sessionsTotal ?? "—",
                 })}

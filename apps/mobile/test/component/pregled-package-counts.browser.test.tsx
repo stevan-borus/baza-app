@@ -2,11 +2,11 @@
  * Admin package counts on client detail — Vitest Browser Mode (real Chromium,
  * real RNW, real i18n with the shipped Serbian copy).
  *
- * The admin needs to see what is already reserved and what is left on the
- * package. A separate "free to book" line stated the difference of those two
- * numbers and read as a repeat, so the card carries one count line. These
- * tests pin that line, and the fallback for a payload cached before
- * `bookable` shipped.
+ * The card carries one count line: bookable. sessionsRemaining only drops on
+ * consumption, so a reserved count printed next to it reads as a contradiction
+ * (Rezervisano: 1 beside 12/12). These tests pin the bookable line, the
+ * fallback for a payload cached before `bookable` shipped, and the 12/12 trap
+ * that returns if someone collapses this back to remaining.
  */
 import { describe, it, expect, vi } from "vitest";
 import React from "react";
@@ -69,15 +69,33 @@ function renderPaketi(packages: ClientPackage[]) {
 }
 
 describe("admin package counts", () => {
-  it("shows one held-plus-remaining count line on the Trenutni paket card", () => {
+  it("shows one bookable count line on the Trenutni paket card", () => {
     const screen = renderPregled(
       makePackage({ sessionsRemaining: 8, sessionsTotal: 8, heldCount: 2, bookable: 6 }),
     );
-    expect(screen.queryByTestId("client-package-bookable")).toBeNull();
-    expect(screen.getByTestId("client-package-held").textContent).toContain(
-      "Rezervisano: 2 · Preostalo na paketu: 8/8",
+    expect(screen.queryByTestId("client-package-held")).toBeNull();
+    expect(screen.getByTestId("client-package-bookable").textContent).toContain(
+      "Slobodno za zakazivanje: 6/8",
     );
-    expect(screen.container.textContent).not.toContain("Slobodno za zakazivanje");
+    expect(screen.container.textContent).not.toContain("Rezervisano");
+  });
+
+  it("shows bookable, not remaining, when a reservation holds a seat", () => {
+    // The trap: sessionsRemaining is untouched until a session is consumed, so
+    // this package still reads 12 remaining while one seat is held. Printing
+    // 12/12 here is the regression.
+    const screen = renderPregled(
+      makePackage({
+        sessionsRemaining: 12,
+        sessionsTotal: 12,
+        heldCount: 1,
+        bookable: 11,
+      }),
+    );
+    expect(screen.getByTestId("client-package-bookable").textContent).toContain(
+      "Slobodno za zakazivanje: 11/12",
+    );
+    expect(screen.container.textContent).not.toContain("12/12");
   });
 
   it("keeps the old single line when bookable is missing (payload cached pre-field)", () => {
@@ -88,18 +106,18 @@ describe("admin package counts", () => {
     expect(screen.container.textContent).toContain("8/8 termina");
   });
 
-  it("adds a reserved line to an active package-history row", () => {
+  it("adds a bookable line to an active package-history row", () => {
     const screen = renderPaketi([
       makePackage({ sessionsRemaining: 8, sessionsTotal: 8, heldCount: 2, bookable: 6 }),
     ]);
-    const line = screen.getByTestId("package-history-row-pkg-1-held");
-    expect(line.textContent).toContain("Rezervisano: 2");
-    expect(line.textContent).not.toContain("Za zakazivanje");
+    const line = screen.getByTestId("package-history-row-pkg-1-bookable");
+    expect(line.textContent).toContain("Za zakazivanje: 6");
+    expect(line.textContent).not.toContain("Rezervisano");
     // The remaining/total line stays — it is the package's own arithmetic.
     expect(screen.container.textContent).toContain("8/8 termina");
   });
 
-  it("omits the reserved line on a revoked row", () => {
+  it("omits the bookable line on a revoked row", () => {
     const screen = renderPaketi([
       makePackage({
         heldCount: 2,
@@ -108,11 +126,11 @@ describe("admin package counts", () => {
       }),
     ]);
     expect(
-      screen.queryByTestId("package-history-row-pkg-1-held"),
+      screen.queryByTestId("package-history-row-pkg-1-bookable"),
     ).toBeNull();
   });
 
-  it("omits the reserved line on an expired row", () => {
+  it("omits the bookable line on an expired row", () => {
     const screen = renderPaketi([
       makePackage({
         heldCount: 2,
@@ -121,14 +139,14 @@ describe("admin package counts", () => {
       }),
     ]);
     expect(
-      screen.queryByTestId("package-history-row-pkg-1-held"),
+      screen.queryByTestId("package-history-row-pkg-1-bookable"),
     ).toBeNull();
   });
 
-  it("omits the reserved line when the server sent no bookable", () => {
+  it("omits the bookable line when the server sent no bookable", () => {
     const screen = renderPaketi([makePackage()]);
     expect(
-      screen.queryByTestId("package-history-row-pkg-1-held"),
+      screen.queryByTestId("package-history-row-pkg-1-bookable"),
     ).toBeNull();
   });
 });

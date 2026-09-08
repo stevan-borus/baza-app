@@ -810,8 +810,8 @@
       "editPauseHint": "Rezervacije u novom periodu pauze biće otkazane, bez naplate termina. Trajanje paketa se preračunava prema novoj dužini pauze.",
       "editPauseSubmit": "Sačuvaj",
       "editPauseError": "Izmena pauze nije uspela. Pokušaj ponovo.",
-      "sessionsHeldBreakdown": "Rezervisano: {{held}} · Preostalo na paketu: {{remaining}}/{{total}}",
-      "sessionsHeldShort": "Rezervisano: {{held}}",
+      "sessionsBookable": "Slobodno za zakazivanje: {{bookable}}/{{total}}",
+      "sessionsBookableShort": "Za zakazivanje: {{bookable}}",
       "status": {
         "active": "Aktivan",
         "paused": "Pauziran",
