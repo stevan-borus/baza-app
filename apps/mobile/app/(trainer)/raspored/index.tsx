@@ -28,6 +28,7 @@ import { TrainerScheduleLeftSlot } from "@/components/trainer/trainer-tab-left-s
 import { CapsLabel, StudioWeekStrip } from "@/components/ui/studio";
 import { authQueries } from "@/lib/queries/auth-queries-factory";
 import { sessionsQueries } from "@/lib/queries/sessions-queries-factory";
+import { now } from "@/lib/now";
 import { computeTrainerDayStats } from "@/lib/trainer-day-stats";
 import { useWeekNavigation, weekRangeLabel } from "@/lib/use-week-navigation";
 
@@ -97,7 +98,7 @@ export default function TrainerSchedule() {
         >
           <View className="px-5 pb-5">
             <CapsLabel size={11} tracking={1.6} className="text-muted">
-              {dayjs().locale(lang).format("dddd, D MMMM").toUpperCase()}
+              {dayjs(now()).locale(lang).format("dddd, D MMMM").toUpperCase()}
             </CapsLabel>
             <Text
               className="text-foreground font-body-bold mt-1.5"
@@ -116,16 +117,19 @@ export default function TrainerSchedule() {
         >
           <View className="mx-5 mb-6 flex-row">
             <StatColumn
+              testID="trainer-stat-sessions"
               label={t("trainer.schedule.sessions")}
               value={dayStats.sessionCount}
             />
             <View className="bg-glass-border" style={{ width: 1, marginVertical: 10 }} />
             <StatColumn
+              testID="trainer-stat-clients"
               label={t("trainer.schedule.clients")}
               value={dayStats.clientCount}
             />
             <View className="bg-glass-border" style={{ width: 1, marginVertical: 10 }} />
             <StatColumn
+              testID="trainer-stat-hours"
               label={t("trainer.schedule.hours")}
               value={dayStats.hoursDisplay}
               accent
@@ -239,10 +243,12 @@ function StatColumn({
   label,
   value,
   accent = false,
+  testID,
 }: {
   label: string;
   value: number | string;
   accent?: boolean;
+  testID?: string;
 }) {
   // Empty data renders an em-dash so the strip stays elegant on quiet days.
   const display =
@@ -267,6 +273,7 @@ function StatColumn({
         {label}
       </Text>
       <Text
+        testID={testID}
         className={accent ? "text-accent" : "text-foreground"}
         style={{
           fontFamily: "AlbertSans-Bold",

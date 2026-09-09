@@ -11,7 +11,7 @@
  * Mounts the real screen against a seeded availability cache, so the whole
  * cache → filter → StatColumn path runs the way production does.
  */
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, afterEach, beforeEach } from "vitest";
 import { waitFor } from "@testing-library/react";
 import React from "react";
 import dayjs from "dayjs";
@@ -21,9 +21,23 @@ import { authQueries } from "@/lib/queries/auth-queries-factory";
 import { renderWithQueryClient } from "./helpers";
 import TrainerSchedule from "@/app/(trainer)/raspored/index";
 
-// The screen anchors on the wall-clock day, so the fixtures do too.
-const today = dayjs().startOf("day");
+/**
+ * The screen resolves "today" through `@/lib/now`, so the spec pins
+ * `TEST_ANCHOR_TIME` and builds its fixtures off the same instant. Day 19 is
+ * deliberate: no stat value in this file is 19, so a day numeral in the week
+ * strip can never be mistaken for a stat.
+ */
+const TODAY = dayjs("2026-05-19T09:00:00");
+const today = TODAY.startOf("day");
 const month = today.format("YYYY-MM");
+
+beforeEach(() => {
+  process.env.TEST_ANCHOR_TIME = TODAY.toISOString();
+});
+
+afterEach(() => {
+  delete process.env.TEST_ANCHOR_TIME;
+});
 
 function availabilitySession(opts: {
   id: string;
@@ -106,12 +120,12 @@ describe("trainer schedule stats exclude auto-closed sessions", () => {
     const screen = renderSchedule([OPEN_MORNING, OPEN_EVENING]);
 
     await waitFor(() => {
-      expect(screen.getByText("2")).toBeTruthy();
+      expect(screen.getByTestId("trainer-stat-sessions").textContent).toBe("2");
     });
-    // 50 + 60 minutes of real work.
-    expect(screen.getByText("1.8")).toBeTruthy();
     // 4 + 3 booked clients.
-    expect(screen.getByText("7")).toBeTruthy();
+    expect(screen.getByTestId("trainer-stat-clients").textContent).toBe("7");
+    // 50 + 60 minutes of real work.
+    expect(screen.getByTestId("trainer-stat-hours").textContent).toBe("1.8");
   });
 
   it("drops the closed session from TERMINI and SATI but still shows it", async () => {
@@ -119,11 +133,11 @@ describe("trainer schedule stats exclude auto-closed sessions", () => {
 
     await waitFor(() => {
       // Three sessions on the wire, two the trainer will work.
-      expect(screen.getByText("2")).toBeTruthy();
+      expect(screen.getByTestId("trainer-stat-sessions").textContent).toBe("2");
     });
     // The closed hour is not in the total.
-    expect(screen.getByText("1.8")).toBeTruthy();
-    expect(screen.queryByText("2.8")).toBeNull();
+    // 2.8 would mean the closed hour was counted.
+    expect(screen.getByTestId("trainer-stat-hours").textContent).toBe("1.8");
 
     // …and the slot is still on the schedule, marked closed.
     expect(screen.getByTestId("session-block-empty-cutoff-s2")).toBeTruthy();
@@ -145,6 +159,8 @@ describe("trainer schedule stats exclude auto-closed sessions", () => {
       expect(screen.getByTestId("session-block-empty-cutoff-s2")).toBeTruthy();
     });
     // StatColumn renders zero as an em-dash — all three columns are quiet.
-    expect(screen.getAllByText("—")).toHaveLength(3);
+    expect(screen.getByTestId("trainer-stat-sessions").textContent).toBe("—");
+    expect(screen.getByTestId("trainer-stat-clients").textContent).toBe("—");
+    expect(screen.getByTestId("trainer-stat-hours").textContent).toBe("—");
   });
 });

@@ -80,14 +80,32 @@ export const clientByIdResponseSchema = z.object({
     packageStatus: clientPackageStatusSchema,
     // The PackagePause whose window contains "now", or null. `packageStatus`
     // only says a pause exists; the admin screen needs the row's id to end
-    // it, and the dates to show which window it is ending.
+    // it, and the dates to show which window it is ending. `reason` is what
+    // the admin typed when creating it — without it the screen can show the
+    // window but not why the client is frozen.
     activePause: z.nullable(
       z.object({
         id: z.string(),
         startsAt: z.string(),
         endsAt: z.string(),
+        reason: z.nullable(z.string()),
       }),
     ),
+    // The next pause that has NOT started yet (earliest by startsAt), or null.
+    // A pause booked for next month is invisible until it bites otherwise:
+    // `packageStatus` stays unpaused (correctly — the client trains today), so
+    // nothing on the screen shows it exists or lets the admin move it.
+    // Optional so payloads cached before this field shipped still validate.
+    upcomingPause: z
+      .nullable(
+        z.object({
+          id: z.string(),
+          startsAt: z.string(),
+          endsAt: z.string(),
+          reason: z.nullable(z.string()),
+        }),
+      )
+      .optional(),
     user: z.object({
       id: z.string(),
       firstName: z.string(),

@@ -10,10 +10,6 @@ import { nowMs } from "@/lib/now";
 import { useUnlockUserMutation } from "@/lib/queries/admin-users-queries-factory";
 import { InitialsAvatar } from "@/components/admin/client-detail/InitialsAvatar";
 import { PackageStatusPill } from "@/components/admin/client-detail/PackageStatusPill";
-import {
-  EndPauseAction,
-  type ActivePause,
-} from "@/components/admin/client-flows/end-pause-sheet";
 
 type HeaderClient = {
   user: {
@@ -27,9 +23,6 @@ type HeaderClient = {
   };
   dateOfBirth: string | null;
   packageStatus: "active" | "expiring" | "paused" | "expired" | "none";
-  /** The running PackagePause, or null. Optional so a payload cached before
-   *  the field shipped still renders — it just offers no end-pause action. */
-  activePause?: ActivePause | null;
 };
 
 export function ClientDetailHeaderCard({
@@ -134,14 +127,7 @@ export function ClientDetailHeaderCard({
             </View>
           ) : null}
         </View>
-        {/* The pill says "Pauziran"; the action right under it is how the
-            admin undoes that, so the two sit in one column. */}
-        <View className="items-end gap-1.5">
-          <PackageStatusPill status={client.packageStatus} />
-          {client.packageStatus === "paused" && client.activePause ? (
-            <EndPauseAction pause={client.activePause} />
-          ) : null}
-        </View>
+        <PackageStatusPill status={client.packageStatus} />
       </View>
     </GlassCard>
   );

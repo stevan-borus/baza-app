@@ -22,6 +22,7 @@ import {
   type SessionDetail,
 } from "@baza/types/scheduling";
 import { apiRequest } from "@/lib/api-request";
+import { writeThroughList } from "@/lib/queries/write-through-list";
 
 export type { Session, SessionDetail };
 
@@ -145,9 +146,10 @@ export const sessionsQueries = {
 
 // ── Mutation hooks ──────────────────────────────────────────────────────────
 // Single-session create/update return the full Session (incl. classType/room
-// after the Layer 4 server widening), so splice the returned row into the
-// `list` cache instead of invalidating. Append on create, replace-by-id on
-// update. The byId DETAIL is deliberately left alone here — its shape carries
+// after the Layer 4 server widening), so the write goes straight into the
+// `list` cache. Append on create, replace-by-id on update; writeThroughList
+// splices a warm list with no refetch and refetches a cold one once. The byId
+// DETAIL is deliberately left alone here — its shape carries
 // extra nested bookings/waitlist this mutation doesn't return, so the caller
 // invalidates just that one id's detail key as a separate side-effect.
 // (availabilityByMonth is never spliced — create invalidates it so the Pregled
@@ -159,8 +161,7 @@ type SessionMutationResponse = z.infer<typeof sessionMutationResponseSchema>;
 const sessionsListKey = sessionsQueries.list().queryKey;
 
 function spliceSession(queryClient: QueryClient, session: Session) {
-  queryClient.setQueryData<SessionsListData>(sessionsListKey, (prev) => {
-    if (!prev) return prev;
+  return writeThroughList<SessionsListData>(queryClient, sessionsListKey, (prev) => {
     const exists = prev.sessions.some((s) => s.id === session.id);
     const sessions = exists
       ? prev.sessions.map((s) => (s.id === session.id ? session : s))
@@ -173,13 +174,15 @@ export function createSessionMutationOptions(queryClient: QueryClient) {
   return {
     ...sessionsQueries.create(),
     onSuccess: async (data: SessionMutationResponse) => {
-      spliceSession(queryClient, data.session);
-      // The Pregled overview calendar renders from availabilityByMonth, not
-      // the list cache — without this invalidation a new one-off termin stays
-      // invisible until app restart (no focus-refetch wiring in RN).
-      await queryClient.invalidateQueries({
-        queryKey: [...sessionsAll, "availability"],
-      });
+      await Promise.all([
+        spliceSession(queryClient, data.session),
+        // The Pregled overview calendar renders from availabilityByMonth, not
+        // the list cache — without this invalidation a new one-off termin stays
+        // invisible until app restart (no focus-refetch wiring in RN).
+        queryClient.invalidateQueries({
+          queryKey: [...sessionsAll, "availability"],
+        }),
+      ]);
     },
   };
 }

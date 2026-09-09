@@ -40,6 +40,7 @@ import { promoteNextWaitlistEntry } from "@/lib/server/booking-cancellation";
 import { respond, fail, parseBody } from "@/lib/server/http";
 import { createSystemNotification } from "@/lib/server/notifications";
 import {
+  cancelReservationsInWindow,
   extendPackagesForPause,
   findPackagesExtendableByPause,
 } from "@/lib/server/package-pause";
@@ -104,29 +105,13 @@ export async function POST(request: Request) {
       },
     });
 
-    // Fetch before cancelling: the freed sessions feed post-commit waitlist
-    // promotion (one booking per session per client, so ids are unique).
-    // `gt: currentInstant` is what keeps an already-started session in the
-    // window out of it.
-    const bookings = await tx.booking.findMany({
-      where: {
-        clientProfileId,
-        canceledAt: null,
-        session: { startsAt: { gte: startsAt, lt: endsAt, gt: currentInstant } },
-      },
-      select: { id: true, sessionId: true },
-    });
-    const canceled = await tx.booking.updateMany({
-      where: { id: { in: bookings.map((b) => b.id) } },
-      data: { canceledAt: currentInstant },
-    });
-
-    const removedWaitlist = await tx.waitlistEntry.deleteMany({
-      where: {
-        clientProfileId,
-        session: { startsAt: { gte: startsAt, lt: endsAt, gt: currentInstant } },
-      },
-    });
+    const cleared = await cancelReservationsInWindow(
+      tx,
+      clientProfileId,
+      startsAt,
+      endsAt,
+      currentInstant,
+    );
 
     const extendable = await findPackagesExtendableByPause(
       tx,
@@ -141,13 +126,7 @@ export async function POST(request: Request) {
       endsAt,
     );
 
-    return {
-      pause,
-      canceledBookings: canceled.count,
-      freedSessionIds: bookings.map((b) => b.sessionId),
-      removedWaitlistEntries: removedWaitlist.count,
-      extended,
-    };
+    return { pause, ...cleared, extended };
   });
 
   // Waitlist promotion per freed session — post-commit, exactly like the

@@ -27,6 +27,7 @@ import {
   assignClientPackageMutationOptions,
   pausePackageMutationOptions,
   endPackagePauseMutationOptions,
+  updatePackagePauseMutationOptions,
   revokeClientPackageMutationOptions,
 } from "@/lib/queries/packages-queries-factory";
 import {
@@ -47,6 +48,7 @@ import { clientPackagesTimelineQueries } from "@/lib/queries/client-packages-tim
 import { reportsQueries } from "@/lib/queries/reports-queries-factory";
 import {
   campaignsQueries,
+  createCampaignMutationOptions,
   sendCampaignMutationOptions,
 } from "@/lib/queries/campaigns-queries-factory";
 
@@ -125,6 +127,37 @@ describe("package pause", () => {
     });
     await observer.mutate({
       clientProfileId: "cp1",
+      startsAt: "2026-01-01T00:00:00.000Z",
+      endsAt: "2026-01-08T00:00:00.000Z",
+    });
+
+    expect(isStale(clientsListKey)).toBe(true);
+    expect(isStale(packageTypesKey)).toBe(true);
+    expect(isStale(reportsSummaryKey)).toBe(true);
+    expect(isStale(bookingsUpcomingKey)).toBe(true);
+    expect(isStale(availabilityKey)).toBe(true);
+    expect(isStale(timelineKey)).toBe(true);
+    expect(isStale(unrelatedKey)).toBe(false);
+  });
+
+  it("editing a pause window marks the same surfaces stale as creating one", async () => {
+    // An edit cancels reservations inside the NEW window and re-grants the
+    // expiry from scratch, so it is as wide-reaching as the original pause.
+    seed(
+      clientsListKey,
+      packageTypesKey,
+      reportsSummaryKey,
+      bookingsUpcomingKey,
+      availabilityKey,
+      timelineKey,
+      unrelatedKey,
+    );
+    const observer = new MutationObserver(client, {
+      ...updatePackagePauseMutationOptions(client),
+      mutationFn: async () => ({ success: true }),
+    });
+    await observer.mutate({
+      id: "pause-1",
       startsAt: "2026-01-01T00:00:00.000Z",
       endsAt: "2026-01-08T00:00:00.000Z",
     });
@@ -351,6 +384,92 @@ describe("campaign send", () => {
     releaseRefetch();
     await mutatePromise;
     expect(completed).toBe(2);
+    unsubscribe();
+  });
+});
+
+describe("campaign create — cold list cache", () => {
+  const draft = {
+    id: "camp-new",
+    title: "Fresh",
+    body: "B",
+    audienceSpec: {},
+    recipientCount: 0,
+    status: "DRAFT" as const,
+    createdAt: "2026-01-01T00:00:00.000Z",
+  };
+  const listKey = campaignsQueries.list().queryKey;
+
+  function createObserver() {
+    return new MutationObserver(client, {
+      ...createCampaignMutationOptions(client),
+      mutationFn: async () => ({ campaign: draft }),
+    });
+  }
+
+  it("ends on the server's post-write list when the list cache has not loaded yet", async () => {
+    // The campaigns screen creates from the same screen that renders the list,
+    // so a create can settle before the list query has ever resolved. The cold
+    // path refetches instead of seeding a lone row: the mutation settles only
+    // once the real list — which already contains the new campaign — is in.
+    const serverList = {
+      campaigns: [draft, { ...draft, id: "camp-old", title: "Old" }],
+    };
+    const listObserver = new QueryObserver(client, {
+      queryKey: listKey,
+      queryFn: async () => serverList,
+      retry: false,
+    });
+    const unsubscribe = listObserver.subscribe(() => {});
+
+    await createObserver().mutate({ title: "Fresh", body: "B", audienceSpec: {} });
+
+    expect(
+      client.getQueryData<typeof serverList>(listKey)?.campaigns.map((c) => c.id),
+    ).toEqual(["camp-new", "camp-old"]);
+    unsubscribe();
+  });
+
+  it("does not leave a partial one-row list behind when nobody is watching", async () => {
+    // Seeding a lone row was the previous fix; it left the screen able to mount
+    // over a one-item list and skip the fetch that fills in the rest.
+    expect(client.getQueryData(listKey)).toBeUndefined();
+
+    await createObserver().mutate({ title: "Fresh", body: "B", audienceSpec: {} });
+
+    expect(client.getQueryData(listKey)).toBeUndefined();
+  });
+
+  it("prepends to a populated list without disturbing existing rows or refetching", async () => {
+    const existing = {
+      id: "camp-old",
+      title: "Old",
+      body: "B",
+      audienceSpec: {},
+      recipientCount: 1,
+      status: "SENT" as const,
+      createdAt: "2025-12-01T00:00:00.000Z",
+    };
+    let fetches = 0;
+    const listObserver = new QueryObserver(client, {
+      queryKey: listKey,
+      queryFn: async () => {
+        fetches += 1;
+        return { campaigns: [existing] };
+      },
+      retry: false,
+      staleTime: 30_000,
+    });
+    const unsubscribe = listObserver.subscribe(() => {});
+    await vi.waitFor(() => expect(fetches).toBe(1));
+
+    await createObserver().mutate({ title: "Fresh", body: "B", audienceSpec: {} });
+
+    const list = client.getQueryData<{ campaigns: (typeof existing)[] }>(listKey);
+    expect(list?.campaigns.map((c) => c.id)).toEqual(["camp-new", "camp-old"]);
+    expect(list?.campaigns[1]).toEqual(existing);
+    // The warm path keeps the no-refetch contract.
+    expect(fetches).toBe(1);
     unsubscribe();
   });
 });

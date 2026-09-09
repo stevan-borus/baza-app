@@ -33,6 +33,7 @@ vi.mock("@/lib/server/notifications", async () => (await import("./notifications
 
 import { POST as POST_PAUSE } from "@/server/routes/packages/pause";
 import { POST as POST_END_PAUSE } from "@/server/routes/packages/pauses/[id]/end";
+import { PATCH as PATCH_PAUSE } from "@/server/routes/packages/pauses/[id]";
 import { GET as GET_CLIENT } from "@/server/routes/clients/[id]";
 import { prisma } from "@/lib/server/prisma";
 import { createSystemNotification } from "@/lib/server/notifications";
@@ -156,6 +157,14 @@ function pauseRequest(body: Record<string, unknown>) {
 function endPauseRequest(id: string) {
   return new Request(`http://test.local/api/packages/pauses/${id}/end`, {
     method: "POST",
+  });
+}
+
+function updatePauseRequest(id: string, body: Record<string, unknown>) {
+  return new Request(`http://test.local/api/packages/pauses/${id}`, {
+    method: "PATCH",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body),
   });
 }
 
@@ -836,6 +845,103 @@ describe("GET /api/clients/[id] exposes the active pause", () => {
     expect(stored?.endsAt.toISOString()).toBe(now().toISOString());
   });
 
+  it("returns the running pause's reason", async () => {
+    const seeded = await seed();
+    await createPackage(seeded);
+    await prisma.packagePause.create({
+      data: {
+        clientProfileId: seeded.clientProfile.id,
+        startsAt: new Date(nowMs() - DAY),
+        endsAt: new Date(nowMs() + 7 * DAY),
+        reason: "Odmor",
+      },
+    });
+
+    asAdmin(seeded);
+    const res = await GET_CLIENT(clientRequest(seeded.clientUser.id), {
+      id: seeded.clientUser.id,
+    });
+    const body = await res.json();
+    expect(body.client.activePause.reason).toBe("Odmor");
+  });
+
+  it("returns the next SCHEDULED pause as upcomingPause, without calling the client paused", async () => {
+    // A pause the admin booked for next month must be visible and editable
+    // before it starts — but the client is training today, so the status pill
+    // stays whatever their packages say.
+    const seeded = await seed();
+    await createPackage(seeded);
+    const upcoming = await prisma.packagePause.create({
+      data: {
+        clientProfileId: seeded.clientProfile.id,
+        startsAt: new Date(nowMs() + 10 * DAY),
+        endsAt: new Date(nowMs() + 17 * DAY),
+        reason: "Put",
+      },
+    });
+
+    asAdmin(seeded);
+    const res = await GET_CLIENT(clientRequest(seeded.clientUser.id), {
+      id: seeded.clientUser.id,
+    });
+    const body = await res.json();
+
+    expect(body.client.packageStatus).not.toBe("paused");
+    expect(body.client.activePause).toBeNull();
+    expect(body.client.upcomingPause).toMatchObject({
+      id: upcoming.id,
+      startsAt: upcoming.startsAt.toISOString(),
+      endsAt: upcoming.endsAt.toISOString(),
+      reason: "Put",
+    });
+  });
+
+  it("returns the EARLIEST upcoming pause when several are scheduled", async () => {
+    const seeded = await seed();
+    await createPackage(seeded);
+    const soonest = await prisma.packagePause.create({
+      data: {
+        clientProfileId: seeded.clientProfile.id,
+        startsAt: new Date(nowMs() + 5 * DAY),
+        endsAt: new Date(nowMs() + 8 * DAY),
+      },
+    });
+    await prisma.packagePause.create({
+      data: {
+        clientProfileId: seeded.clientProfile.id,
+        startsAt: new Date(nowMs() + 20 * DAY),
+        endsAt: new Date(nowMs() + 25 * DAY),
+      },
+    });
+
+    asAdmin(seeded);
+    const res = await GET_CLIENT(clientRequest(seeded.clientUser.id), {
+      id: seeded.clientUser.id,
+    });
+    const body = await res.json();
+    expect(body.client.upcomingPause.id).toBe(soonest.id);
+  });
+
+  it("returns upcomingPause null when nothing is scheduled ahead", async () => {
+    const seeded = await seed();
+    await createPackage(seeded);
+    await prisma.packagePause.create({
+      data: {
+        clientProfileId: seeded.clientProfile.id,
+        startsAt: new Date(nowMs() - DAY),
+        endsAt: new Date(nowMs() + 7 * DAY),
+      },
+    });
+
+    asAdmin(seeded);
+    const res = await GET_CLIENT(clientRequest(seeded.clientUser.id), {
+      id: seeded.clientUser.id,
+    });
+    const body = await res.json();
+    expect(body.client.activePause).not.toBeNull();
+    expect(body.client.upcomingPause).toBeNull();
+  });
+
   it("drops activePause for a pause that was deleted by ending it before it started", async () => {
     const seeded = await seed();
     await createPackage(seeded);
@@ -855,5 +961,571 @@ describe("GET /api/clients/[id] exposes the active pause", () => {
     });
     const body = await res.json();
     expect(body.client.activePause).toBeNull();
+  });
+});
+
+// Editing a pause is the third window operation, and the only one that both
+// gives time back and takes it: the old grant is refunded in full, then the
+// new window is granted from scratch. Everything below pins that arithmetic
+// plus the guards that keep an edit from rewriting history.
+describe("PATCH /api/packages/pauses/[id]", () => {
+  it("moving an upcoming pause's start forward shrinks the extension by the days it lost", async () => {
+    const seeded = await seed();
+    const expiresAt = new Date(nowMs() + 40 * DAY);
+    const pkg = await createPackage(seeded, {
+      startsAt: new Date(nowMs() - 30 * DAY),
+      expiresAt,
+    });
+
+    asAdmin(seeded);
+    const created = await POST_PAUSE(
+      pauseRequest({
+        clientProfileId: seeded.clientProfile.id,
+        startsAt: new Date(nowMs() + 2 * DAY).toISOString(),
+        endsAt: new Date(nowMs() + 12 * DAY).toISOString(),
+      }),
+    );
+    expect(created.status).toBe(201);
+    const { pause } = await created.json();
+    const afterCreate = await prisma.clientPackage.findUniqueOrThrow({ where: { id: pkg.id } });
+    expect(afterCreate.expiresAt.getTime()).toBe(expiresAt.getTime() + 10 * DAY);
+
+    const res = await PATCH_PAUSE(
+      updatePauseRequest(pause.id, {
+        startsAt: new Date(nowMs() + 4 * DAY).toISOString(),
+        endsAt: new Date(nowMs() + 12 * DAY).toISOString(),
+      }),
+      { id: pause.id },
+    );
+    expect(res.status).toBe(200);
+
+    const afterEdit = await prisma.clientPackage.findUniqueOrThrow({ where: { id: pkg.id } });
+    expect(afterEdit.expiresAt.getTime()).toBe(afterCreate.expiresAt.getTime() - 2 * DAY);
+    const row = await prisma.packagePause.findUniqueOrThrow({ where: { id: pause.id } });
+    expect(row.startsAt.getTime()).toBe(nowMs() + 4 * DAY);
+    expect(row.endsAt.getTime()).toBe(nowMs() + 12 * DAY);
+  });
+
+  it("extending a RUNNING pause's end grows the extension and re-grants the whole new overlap", async () => {
+    const seeded = await seed();
+    const expiresAt = new Date(nowMs() + 40 * DAY);
+    const pkg = await createPackage(seeded, {
+      startsAt: new Date(nowMs() - 30 * DAY),
+      expiresAt,
+    });
+
+    asAdmin(seeded);
+    const created = await POST_PAUSE(
+      pauseRequest({
+        clientProfileId: seeded.clientProfile.id,
+        startsAt: new Date(nowMs() - 2 * DAY).toISOString(),
+        endsAt: new Date(nowMs() + 5 * DAY).toISOString(),
+      }),
+    );
+    expect(created.status).toBe(201);
+    const { pause } = await created.json();
+    const afterCreate = await prisma.clientPackage.findUniqueOrThrow({ where: { id: pkg.id } });
+    expect(afterCreate.expiresAt.getTime()).toBe(expiresAt.getTime() + 7 * DAY);
+
+    const res = await PATCH_PAUSE(
+      updatePauseRequest(pause.id, {
+        startsAt: new Date(nowMs() - 2 * DAY).toISOString(),
+        endsAt: new Date(nowMs() + 8 * DAY).toISOString(),
+      }),
+      { id: pause.id },
+    );
+    expect(res.status).toBe(200);
+    expect((await res.json()).extendedPackages).toBe(1);
+
+    const afterEdit = await prisma.clientPackage.findUniqueOrThrow({ where: { id: pkg.id } });
+    expect(afterEdit.expiresAt.getTime()).toBe(afterCreate.expiresAt.getTime() + 3 * DAY);
+    // One credit row, carrying the FULL new overlap — not the old grant plus a
+    // top-up, which is what a naive "extend by the difference" would leave.
+    const credits = await prisma.packagePauseCredit.findMany({
+      where: { packagePauseId: pause.id },
+    });
+    expect(credits).toHaveLength(1);
+    expect(Number(credits[0].grantedMs)).toBe(10 * DAY);
+  });
+
+  it("moving a RUNNING pause's start forward re-grants only the new, shorter overlap", async () => {
+    // The client came in for the first two days after all: the admin moves the
+    // start forward instead of ending the pause and creating a replacement.
+    const seeded = await seed();
+    const expiresAt = new Date(nowMs() + 40 * DAY);
+    const pkg = await createPackage(seeded, {
+      startsAt: new Date(nowMs() - 30 * DAY),
+      expiresAt,
+    });
+
+    asAdmin(seeded);
+    const created = await POST_PAUSE(
+      pauseRequest({
+        clientProfileId: seeded.clientProfile.id,
+        startsAt: new Date(nowMs() - 2 * DAY).toISOString(),
+        endsAt: new Date(nowMs() + 8 * DAY).toISOString(),
+      }),
+    );
+    expect(created.status).toBe(201);
+    const { pause } = await created.json();
+    const afterCreate = await prisma.clientPackage.findUniqueOrThrow({ where: { id: pkg.id } });
+    expect(afterCreate.expiresAt.getTime()).toBe(expiresAt.getTime() + 10 * DAY);
+
+    const res = await PATCH_PAUSE(
+      updatePauseRequest(pause.id, {
+        startsAt: new Date(nowMs() + 2 * DAY).toISOString(),
+        endsAt: new Date(nowMs() + 8 * DAY).toISOString(),
+      }),
+      { id: pause.id },
+    );
+    expect(res.status).toBe(200);
+    expect((await res.json()).extendedPackages).toBe(1);
+
+    const row = await prisma.packagePause.findUniqueOrThrow({ where: { id: pause.id } });
+    expect(row.startsAt.getTime()).toBe(nowMs() + 2 * DAY);
+    expect(row.endsAt.getTime()).toBe(nowMs() + 8 * DAY);
+
+    // The whole 10-day grant went back and a 6-day one replaced it, so the
+    // package keeps only what the new window freezes.
+    const afterEdit = await prisma.clientPackage.findUniqueOrThrow({ where: { id: pkg.id } });
+    expect(afterEdit.expiresAt.getTime()).toBe(expiresAt.getTime() + 6 * DAY);
+    const credits = await prisma.packagePauseCredit.findMany({
+      where: { packagePauseId: pause.id },
+    });
+    expect(credits).toHaveLength(1);
+    expect(Number(credits[0].grantedMs)).toBe(6 * DAY);
+  });
+
+  it("moving a RUNNING pause's start backward extends the package by the extra days and leaves attended sessions alone", async () => {
+    // "I was actually away from the 1st, not the 2nd." Widening the window
+    // backward grants credit for those past days too — the client really was
+    // away — while a class they already sat through stays booked, because the
+    // reservation sweep only touches sessions still ahead of now.
+    const seeded = await seed();
+    const expiresAt = new Date(nowMs() + 40 * DAY);
+    const pkg = await createPackage(seeded, {
+      startsAt: new Date(nowMs() - 30 * DAY),
+      expiresAt,
+    });
+    const attended = await createSession(seeded, new Date(nowMs() - 3 * DAY));
+    const attendedBooking = await prisma.booking.create({
+      data: {
+        sessionId: attended.id,
+        clientProfileId: seeded.clientProfile.id,
+        clientPackageId: pkg.id,
+      },
+    });
+
+    asAdmin(seeded);
+    const created = await POST_PAUSE(
+      pauseRequest({
+        clientProfileId: seeded.clientProfile.id,
+        startsAt: new Date(nowMs() - 2 * DAY).toISOString(),
+        endsAt: new Date(nowMs() + 8 * DAY).toISOString(),
+      }),
+    );
+    expect(created.status).toBe(201);
+    const { pause } = await created.json();
+    const afterCreate = await prisma.clientPackage.findUniqueOrThrow({ where: { id: pkg.id } });
+    expect(afterCreate.expiresAt.getTime()).toBe(expiresAt.getTime() + 10 * DAY);
+
+    const res = await PATCH_PAUSE(
+      updatePauseRequest(pause.id, {
+        startsAt: new Date(nowMs() - 4 * DAY).toISOString(),
+        endsAt: new Date(nowMs() + 8 * DAY).toISOString(),
+      }),
+      { id: pause.id },
+    );
+    expect(res.status).toBe(200);
+    expect((await res.json()).extendedPackages).toBe(1);
+
+    const row = await prisma.packagePause.findUniqueOrThrow({ where: { id: pause.id } });
+    expect(row.startsAt.getTime()).toBe(nowMs() - 4 * DAY);
+    expect(row.endsAt.getTime()).toBe(nowMs() + 8 * DAY);
+
+    // The whole 10-day grant went back and a 12-day one replaced it: the two
+    // extra days the client was away now count as frozen too.
+    const afterEdit = await prisma.clientPackage.findUniqueOrThrow({ where: { id: pkg.id } });
+    expect(afterEdit.expiresAt.getTime()).toBe(expiresAt.getTime() + 12 * DAY);
+    const credits = await prisma.packagePauseCredit.findMany({
+      where: { packagePauseId: pause.id },
+    });
+    expect(credits).toHaveLength(1);
+    expect(Number(credits[0].grantedMs)).toBe(12 * DAY);
+
+    // The class inside the widened window that has already happened is history.
+    const stillBooked = await prisma.booking.findUniqueOrThrow({
+      where: { id: attendedBooking.id },
+    });
+    expect(stillBooked.canceledAt).toBeNull();
+  });
+
+  it("cancels a booking the widened window now covers, with no forfeit", async () => {
+    const seeded = await seed();
+    const pkg = await createPackage(seeded, { sessionsRemaining: 6 });
+    const later = await createSession(seeded, new Date(nowMs() + 9 * DAY));
+    const booking = await prisma.booking.create({
+      data: {
+        sessionId: later.id,
+        clientProfileId: seeded.clientProfile.id,
+        clientPackageId: pkg.id,
+      },
+    });
+
+    asAdmin(seeded);
+    const created = await POST_PAUSE(
+      pauseRequest({
+        clientProfileId: seeded.clientProfile.id,
+        startsAt: now().toISOString(),
+        endsAt: new Date(nowMs() + 5 * DAY).toISOString(),
+      }),
+    );
+    expect((await created.clone().json()).canceledBookings).toBe(0);
+    const { pause } = await created.json();
+    expect(
+      (await prisma.booking.findUniqueOrThrow({ where: { id: booking.id } })).canceledAt,
+    ).toBeNull();
+
+    const res = await PATCH_PAUSE(
+      updatePauseRequest(pause.id, {
+        startsAt: now().toISOString(),
+        endsAt: new Date(nowMs() + 12 * DAY).toISOString(),
+      }),
+      { id: pause.id },
+    );
+    expect(res.status).toBe(200);
+    expect((await res.json()).canceledBookings).toBe(1);
+
+    const after = await prisma.booking.findUniqueOrThrow({ where: { id: booking.id } });
+    expect(after.canceledAt).not.toBeNull();
+    // A pause never charges a forfeit, whatever the late-cancel policy says.
+    expect(await prisma.sessionConsumption.count()).toBe(0);
+    const pack = await prisma.clientPackage.findUniqueOrThrow({ where: { id: pkg.id } });
+    expect(pack.sessionsRemaining).toBe(6);
+  });
+
+  it("releases waitlist seats the widened window now covers and promotes the next client", async () => {
+    const seeded = await seed();
+    const pkg = await createPackage(seeded);
+    const full = await createSession(seeded, new Date(nowMs() + 9 * DAY), 1);
+    await prisma.booking.create({
+      data: {
+        sessionId: full.id,
+        clientProfileId: seeded.clientProfile.id,
+        clientPackageId: pkg.id,
+      },
+    });
+    const other = await makeOtherClient(seeded, "nextup@pause.local");
+    await prisma.waitlistEntry.create({
+      data: { sessionId: full.id, clientProfileId: other.profile.id, position: 1 },
+    });
+
+    asAdmin(seeded);
+    const created = await POST_PAUSE(
+      pauseRequest({
+        clientProfileId: seeded.clientProfile.id,
+        startsAt: now().toISOString(),
+        endsAt: new Date(nowMs() + 5 * DAY).toISOString(),
+      }),
+    );
+    const { pause } = await created.json();
+
+    const res = await PATCH_PAUSE(
+      updatePauseRequest(pause.id, {
+        startsAt: now().toISOString(),
+        endsAt: new Date(nowMs() + 12 * DAY).toISOString(),
+      }),
+      { id: pause.id },
+    );
+    expect(res.status).toBe(200);
+
+    const promoted = await prisma.booking.findFirst({
+      where: { sessionId: full.id, clientProfileId: other.profile.id, canceledAt: null },
+    });
+    expect(promoted).not.toBeNull();
+  });
+
+  it("does NOT restore a booking the old window cancelled but the new one no longer covers", async () => {
+    // Same rule as ending a pause: the freed seat may be taken by now.
+    const seeded = await seed();
+    const pkg = await createPackage(seeded);
+    const session = await createSession(seeded, new Date(nowMs() + 9 * DAY));
+    const booking = await prisma.booking.create({
+      data: {
+        sessionId: session.id,
+        clientProfileId: seeded.clientProfile.id,
+        clientPackageId: pkg.id,
+      },
+    });
+
+    asAdmin(seeded);
+    const created = await POST_PAUSE(
+      pauseRequest({
+        clientProfileId: seeded.clientProfile.id,
+        startsAt: now().toISOString(),
+        endsAt: new Date(nowMs() + 12 * DAY).toISOString(),
+      }),
+    );
+    const { pause } = await created.json();
+
+    const res = await PATCH_PAUSE(
+      updatePauseRequest(pause.id, {
+        startsAt: now().toISOString(),
+        endsAt: new Date(nowMs() + 5 * DAY).toISOString(),
+      }),
+      { id: pause.id },
+    );
+    expect(res.status).toBe(200);
+
+    const after = await prisma.booking.findUniqueOrThrow({ where: { id: booking.id } });
+    expect(after.canceledAt).not.toBeNull();
+  });
+
+  it("updates the reason, and leaves it alone when the field is omitted", async () => {
+    const seeded = await seed();
+    asAdmin(seeded);
+    const created = await POST_PAUSE(
+      pauseRequest({
+        clientProfileId: seeded.clientProfile.id,
+        startsAt: new Date(nowMs() + 2 * DAY).toISOString(),
+        endsAt: new Date(nowMs() + 9 * DAY).toISOString(),
+        reason: "Odmor",
+      }),
+    );
+    const { pause } = await created.json();
+
+    const changed = await PATCH_PAUSE(
+      updatePauseRequest(pause.id, {
+        startsAt: new Date(nowMs() + 2 * DAY).toISOString(),
+        endsAt: new Date(nowMs() + 9 * DAY).toISOString(),
+        reason: "Povreda",
+      }),
+      { id: pause.id },
+    );
+    expect(changed.status).toBe(200);
+    expect((await changed.json()).pause.reason).toBe("Povreda");
+
+    const omitted = await PATCH_PAUSE(
+      updatePauseRequest(pause.id, {
+        startsAt: new Date(nowMs() + 2 * DAY).toISOString(),
+        endsAt: new Date(nowMs() + 10 * DAY).toISOString(),
+      }),
+      { id: pause.id },
+    );
+    expect(omitted.status).toBe(200);
+    expect((await omitted.json()).pause.reason).toBe("Povreda");
+
+    const cleared = await PATCH_PAUSE(
+      updatePauseRequest(pause.id, {
+        startsAt: new Date(nowMs() + 2 * DAY).toISOString(),
+        endsAt: new Date(nowMs() + 10 * DAY).toISOString(),
+        reason: null,
+      }),
+      { id: pause.id },
+    );
+    expect(cleared.status).toBe(200);
+    expect((await cleared.json()).pause.reason).toBeNull();
+  });
+
+  it("returns 409 when the new window overlaps ANOTHER pause", async () => {
+    const seeded = await seed();
+    asAdmin(seeded);
+    const first = await POST_PAUSE(
+      pauseRequest({
+        clientProfileId: seeded.clientProfile.id,
+        startsAt: new Date(nowMs() + 2 * DAY).toISOString(),
+        endsAt: new Date(nowMs() + 6 * DAY).toISOString(),
+      }),
+    );
+    const { pause } = await first.json();
+    const second = await POST_PAUSE(
+      pauseRequest({
+        clientProfileId: seeded.clientProfile.id,
+        startsAt: new Date(nowMs() + 10 * DAY).toISOString(),
+        endsAt: new Date(nowMs() + 14 * DAY).toISOString(),
+      }),
+    );
+    expect(second.status).toBe(201);
+
+    const res = await PATCH_PAUSE(
+      updatePauseRequest(pause.id, {
+        startsAt: new Date(nowMs() + 2 * DAY).toISOString(),
+        endsAt: new Date(nowMs() + 11 * DAY).toISOString(),
+      }),
+      { id: pause.id },
+    );
+    expect(res.status).toBe(409);
+    const row = await prisma.packagePause.findUniqueOrThrow({ where: { id: pause.id } });
+    expect(row.endsAt.getTime()).toBe(nowMs() + 6 * DAY);
+  });
+
+  it("allows a new window that only overlaps the pause's OWN old window", async () => {
+    const seeded = await seed();
+    asAdmin(seeded);
+    const created = await POST_PAUSE(
+      pauseRequest({
+        clientProfileId: seeded.clientProfile.id,
+        startsAt: new Date(nowMs() + 2 * DAY).toISOString(),
+        endsAt: new Date(nowMs() + 9 * DAY).toISOString(),
+      }),
+    );
+    const { pause } = await created.json();
+
+    const res = await PATCH_PAUSE(
+      updatePauseRequest(pause.id, {
+        startsAt: new Date(nowMs() + 3 * DAY).toISOString(),
+        endsAt: new Date(nowMs() + 8 * DAY).toISOString(),
+      }),
+      { id: pause.id },
+    );
+    expect(res.status).toBe(200);
+  });
+
+  it("returns 409 for a pause that already finished", async () => {
+    const seeded = await seed();
+    const finished = await prisma.packagePause.create({
+      data: {
+        clientProfileId: seeded.clientProfile.id,
+        startsAt: new Date(nowMs() - 20 * DAY),
+        endsAt: new Date(nowMs() - 10 * DAY),
+      },
+    });
+
+    asAdmin(seeded);
+    const res = await PATCH_PAUSE(
+      updatePauseRequest(finished.id, {
+        startsAt: new Date(nowMs() - 20 * DAY).toISOString(),
+        endsAt: new Date(nowMs() + 5 * DAY).toISOString(),
+      }),
+      { id: finished.id },
+    );
+    expect(res.status).toBe(409);
+  });
+
+  it("returns 400 when the new end is not in the future", async () => {
+    // Ending early is the end-pause route's job — an edit may not do it.
+    const seeded = await seed();
+    asAdmin(seeded);
+    const created = await POST_PAUSE(
+      pauseRequest({
+        clientProfileId: seeded.clientProfile.id,
+        startsAt: new Date(nowMs() - 2 * DAY).toISOString(),
+        endsAt: new Date(nowMs() + 5 * DAY).toISOString(),
+      }),
+    );
+    const { pause } = await created.json();
+
+    const res = await PATCH_PAUSE(
+      updatePauseRequest(pause.id, {
+        startsAt: new Date(nowMs() - 2 * DAY).toISOString(),
+        endsAt: new Date(nowMs() - DAY).toISOString(),
+      }),
+      { id: pause.id },
+    );
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 400 when endsAt is not after startsAt", async () => {
+    const seeded = await seed();
+    asAdmin(seeded);
+    const created = await POST_PAUSE(
+      pauseRequest({
+        clientProfileId: seeded.clientProfile.id,
+        startsAt: new Date(nowMs() + 2 * DAY).toISOString(),
+        endsAt: new Date(nowMs() + 9 * DAY).toISOString(),
+      }),
+    );
+    const { pause } = await created.json();
+
+    const res = await PATCH_PAUSE(
+      updatePauseRequest(pause.id, {
+        startsAt: new Date(nowMs() + 9 * DAY).toISOString(),
+        endsAt: new Date(nowMs() + 9 * DAY).toISOString(),
+      }),
+      { id: pause.id },
+    );
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 404 for an unknown pause", async () => {
+    const seeded = await seed();
+    asAdmin(seeded);
+    const missing = "00000000-0000-0000-0000-000000000000";
+    const res = await PATCH_PAUSE(
+      updatePauseRequest(missing, {
+        startsAt: new Date(nowMs() + 2 * DAY).toISOString(),
+        endsAt: new Date(nowMs() + 9 * DAY).toISOString(),
+      }),
+      { id: missing },
+    );
+    expect(res.status).toBe(404);
+  });
+
+  it("a trainer not linked to the client gets 403", async () => {
+    const seeded = await seed();
+    const pause = await prisma.packagePause.create({
+      data: {
+        clientProfileId: seeded.clientProfile.id,
+        startsAt: new Date(nowMs() + 2 * DAY),
+        endsAt: new Date(nowMs() + 9 * DAY),
+      },
+    });
+
+    asTrainer(seeded.trainerUser.id);
+    const res = await PATCH_PAUSE(
+      updatePauseRequest(pause.id, {
+        startsAt: new Date(nowMs() + 3 * DAY).toISOString(),
+        endsAt: new Date(nowMs() + 9 * DAY).toISOString(),
+      }),
+      { id: pause.id },
+    );
+    expect(res.status).toBe(403);
+    const row = await prisma.packagePause.findUniqueOrThrow({ where: { id: pause.id } });
+    expect(row.startsAt.getTime()).toBe(nowMs() + 2 * DAY);
+  });
+
+  it("notifies the client that the pause window moved", async () => {
+    const seeded = await seed();
+    const pkg = await createPackage(seeded, {
+      startsAt: new Date(nowMs() - 30 * DAY),
+      expiresAt: new Date(nowMs() + 40 * DAY),
+    });
+
+    asAdmin(seeded);
+    const created = await POST_PAUSE(
+      pauseRequest({
+        clientProfileId: seeded.clientProfile.id,
+        startsAt: new Date(nowMs() + 2 * DAY).toISOString(),
+        endsAt: new Date(nowMs() + 9 * DAY).toISOString(),
+      }),
+    );
+    const { pause } = await created.json();
+    createSystemNotificationMock.mockClear();
+
+    const res = await PATCH_PAUSE(
+      updatePauseRequest(pause.id, {
+        startsAt: new Date(nowMs() + 2 * DAY).toISOString(),
+        endsAt: new Date(nowMs() + 12 * DAY).toISOString(),
+      }),
+      { id: pause.id },
+    );
+    expect(res.status).toBe(200);
+
+    const clientCalls = createSystemNotificationMock.mock.calls.filter(
+      (call) => call[0] === seeded.clientUser.id && call[1] === "PACKAGE_PAUSE_UPDATED",
+    );
+    expect(clientCalls).toHaveLength(1);
+    expect(clientCalls[0][2]).toBe("GENERAL");
+    const updated = await prisma.clientPackage.findUniqueOrThrow({ where: { id: pkg.id } });
+    expect(clientCalls[0][3]).toMatchObject({
+      packagePauseId: pause.id,
+      canceledBookings: 0,
+      startsAt: new Date(nowMs() + 2 * DAY).toISOString(),
+      endsAt: new Date(nowMs() + 12 * DAY).toISOString(),
+      expiresAt: updated.expiresAt.toISOString(),
+    });
+    expect(
+      createSystemNotificationMock.mock.calls.filter((c) => c[0] === seeded.adminUser.id),
+    ).toEqual([]);
   });
 });

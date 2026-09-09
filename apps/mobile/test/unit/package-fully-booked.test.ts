@@ -62,6 +62,59 @@ describe("isActiveClientPackage", () => {
       ),
     ).toBe(true);
   });
+
+  it("is NOT active when startsAt is still in the future", () => {
+    // A package dated to start in November is upcoming, not current. Admin
+    // client-detail already excludes it; the client screens must agree, or the
+    // two surfaces contradict each other on the same package.
+    expect(
+      isActiveClientPackage(
+        { sessionsRemaining: 4, expiresAt: future, startsAt: future },
+        now,
+      ),
+    ).toBe(false);
+  });
+
+  it("is active once startsAt is in the past", () => {
+    expect(
+      isActiveClientPackage(
+        { sessionsRemaining: 4, expiresAt: future, startsAt: past },
+        now,
+      ),
+    ).toBe(true);
+  });
+
+  it("is active when startsAt is exactly now — it starts today", () => {
+    expect(
+      isActiveClientPackage(
+        {
+          sessionsRemaining: 4,
+          expiresAt: future,
+          startsAt: now.toISOString(),
+        },
+        now,
+      ),
+    ).toBe(true);
+  });
+
+  it("treats an absent startsAt as already started", () => {
+    // An older cached payload must not make a client's own package vanish.
+    expect(
+      isActiveClientPackage(
+        { sessionsRemaining: 4, expiresAt: future, startsAt: undefined },
+        now,
+      ),
+    ).toBe(true);
+  });
+
+  it("treats a null startsAt as already started", () => {
+    expect(
+      isActiveClientPackage(
+        { sessionsRemaining: 4, expiresAt: future, startsAt: null },
+        now,
+      ),
+    ).toBe(true);
+  });
 });
 
 describe("isFullyBookedActivePackage", () => {

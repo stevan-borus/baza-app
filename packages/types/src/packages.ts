@@ -71,6 +71,20 @@ export const packagePauseInputSchema = packagePauseFieldsSchema.pick({
   reason: z.string().max(300).optional(),
 });
 
+// PATCH /api/packages/pauses/[id] — move an existing pause's window. The
+// client is fixed (the pause already belongs to one), so only the window and
+// the reason travel. `reason` distinguishes absent (leave as-is) from null
+// (clear it), which is why it is nullish rather than merely optional.
+export const updatePackagePauseInputSchema = packagePauseFieldsSchema.pick({
+  startsAt: true,
+  endsAt: true,
+  reason: true,
+}).extend({
+  startsAt: z.coerce.date(),
+  endsAt: z.coerce.date(),
+  reason: z.string().max(300).nullish(),
+});
+
 export const createClientPackageInputSchema = clientPackageFieldsSchema.pick({
   clientProfileId: true,
   packageTypeId: true,
@@ -144,11 +158,12 @@ export const clientPackageSchema = z.object({
   // Set when an admin revoked the package (keep-the-trace semantics): the
   // row stays visible in history, marked "Opozvan", but grants no rights.
   revokedAt: z.string().nullable().optional(),
-  // CLIENT branch only: `heldCount` = future uncancelled bookings backed by
+  // Per-client branches only (the client's own list and the admin/trainer
+  // read of one client): `heldCount` = future uncancelled bookings backed by
   // this package + waitlist seats for its class type; `bookable` =
-  // max(0, sessionsRemaining - heldCount) — the number the client-facing UI
-  // shows as "left to book". Admin/trainer branches omit both on purpose:
-  // admin surfaces speak the raw-credit (sessionsRemaining) language.
+  // max(0, sessionsRemaining - heldCount) — "left to book". The admin
+  // list-all branch omits both: it pages across every client, and the extra
+  // per-row counting queries are not worth it for a list that shows credits.
   heldCount: z.number().optional(),
   bookable: z.number().optional(),
   // CLIENT branch only: true when this package's funding BillingRecord is
@@ -227,6 +242,23 @@ export const addSessionResponseSchema = z.object({
 // seats released, and how many packages had their expiry pushed out. The
 // counts let the admin UI confirm the blast radius without a refetch.
 export const packagePauseResponseSchema = z.object({
+  success: z.boolean(),
+  pause: z.object({
+    id: z.string(),
+    clientProfileId: z.string(),
+    startsAt: z.string(),
+    endsAt: z.string(),
+    reason: z.string().nullable(),
+  }),
+  canceledBookings: z.number(),
+  removedWaitlistEntries: z.number(),
+  extendedPackages: z.number(),
+});
+
+// PATCH /api/packages/pauses/[id] — same shape as creating a pause, because
+// an edit does the same work: the old grant is refunded, the new window is
+// granted, and reservations inside the NEW window are cancelled.
+export const updatePackagePauseResponseSchema = z.object({
   success: z.boolean(),
   pause: z.object({
     id: z.string(),

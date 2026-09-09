@@ -56,12 +56,24 @@ export async function GET(request: Request, { id }: RouteParams) {
           startsAt: { lte: currentInstant },
           endsAt: { gt: currentInstant },
         },
-        select: { id: true, startsAt: true, endsAt: true },
+        select: { id: true, startsAt: true, endsAt: true, reason: true },
         take: 1,
       },
     },
   });
   if (!clientProfile) return fail("Client not found", 404);
+
+  // The next pause that has not begun yet. It deliberately does NOT feed
+  // packageStatus — the client is training today — but the admin still needs
+  // to see and move it before it bites.
+  const upcomingPause = await prisma.packagePause.findFirst({
+    where: {
+      clientProfileId: clientProfile.id,
+      startsAt: { gt: currentInstant },
+    },
+    orderBy: { startsAt: "asc" },
+    select: { id: true, startsAt: true, endsAt: true, reason: true },
+  });
 
   // Trainers may only see clients they are linked to via active bookings.
   if (guard.user.role === UserRole.TRAINER) {
@@ -114,6 +126,15 @@ export async function GET(request: Request, { id }: RouteParams) {
             id: activePause.id,
             startsAt: activePause.startsAt.toISOString(),
             endsAt: activePause.endsAt.toISOString(),
+            reason: activePause.reason,
+          }
+        : null,
+      upcomingPause: upcomingPause
+        ? {
+            id: upcomingPause.id,
+            startsAt: upcomingPause.startsAt.toISOString(),
+            endsAt: upcomingPause.endsAt.toISOString(),
+            reason: upcomingPause.reason,
           }
         : null,
       user: {
