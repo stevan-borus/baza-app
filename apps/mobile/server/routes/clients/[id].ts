@@ -37,6 +37,7 @@ export async function GET(request: Request, { id }: RouteParams) {
           email: true,
           phone: true,
           isActive: true,
+          lockedUntil: true,
         },
       },
       // Same rule as the list endpoint: revoked packages don't drive the
@@ -121,6 +122,11 @@ export async function GET(request: Request, { id }: RouteParams) {
           clientProfile.user.firstName,
           clientProfile.user.lastName,
         ),
+        lockedUntil:
+          clientProfile.user.lockedUntil &&
+          clientProfile.user.lockedUntil > currentInstant
+            ? clientProfile.user.lockedUntil.toISOString()
+            : null,
       },
     },
   });

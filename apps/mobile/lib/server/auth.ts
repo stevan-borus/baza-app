@@ -1,11 +1,16 @@
 import { prismaAdapter } from "better-auth/adapters/prisma";
-import { createAuthMiddleware } from "better-auth/api";
+import { APIError, createAuthMiddleware, isAPIError } from "better-auth/api";
 import { betterAuth } from "better-auth";
 import { customSession } from "better-auth/plugins";
 import { expo } from "@better-auth/expo";
 import { prisma } from "@/lib/server/prisma";
 import { env } from "@/lib/server/env";
 import { hashPassword, verifyPassword } from "@/lib/server/password";
+import {
+  getActiveLock,
+  recordFailedSignIn,
+  recordSuccessfulSignIn,
+} from "@/lib/server/sign-in-lock";
 
 const trustedOrigins = [
   env.BASE_URL,
@@ -120,27 +125,56 @@ function createAuth() {
     verification: {
       modelName: "AuthVerification",
     },
+    // The sign-in lock is enforced here rather than in a route of ours because
+    // the app signs in through better-auth's own `/sign-in/email` endpoint —
+    // there is no handler of ours in that path to hang the check on.
     hooks: {
       before: createAuthMiddleware(async (ctx) => {
-        if (ctx.path === "/sign-in/email") {
-          const email =
-            typeof (ctx.body as { email?: string })?.email === "string"
-              ? (ctx.body as { email: string }).email
-              : "(missing)";
-          console.log("[better-auth] sign-in/email before – email:", email);
-        }
+        if (ctx.path !== "/sign-in/email") return;
+        const email = (ctx.body as { email?: string } | undefined)?.email;
+        if (typeof email !== "string") return;
+
+        const lock = await getActiveLock(email);
+        if (!lock) return;
+
+        throw new APIError("LOCKED", {
+          code: "ACCOUNT_LOCKED",
+          message: "Account temporarily locked",
+          lockedUntil: lock.lockedUntil.toISOString(),
+        });
       }),
       after: createAuthMiddleware(async (ctx) => {
-        if (ctx.path === "/sign-in/email") {
-          const user = (ctx as { context?: { user?: { email?: string } } }).context?.user?.email;
-          console.log(
-            "[better-auth] sign-in/email after – user in context:",
-            user ?? "(often empty here; success = 200 + token in body)"
-          );
+        if (ctx.path !== "/sign-in/email") return;
+        const returned: unknown = ctx.context.returned;
+
+        if (isAPIError(returned)) {
+          // Only a rejected password counts. The 423 thrown above is our own
+          // lock, and counting it would extend the lock on every retry.
+          if (returned.body?.code !== "INVALID_EMAIL_OR_PASSWORD") return;
+          const email = (ctx.body as { email?: string } | undefined)?.email;
+          if (typeof email === "string") await recordFailedSignIn(email);
+          return;
         }
+
+        const userId = (returned as { user?: { id?: string } } | undefined)?.user
+          ?.id;
+        if (typeof userId === "string") await recordSuccessfulSignIn(userId);
       }),
     },
+    // better-auth's default per-IP ceiling is 3 requests / 10s, which a studio
+    // on one shared Wi-Fi trips just by having two people sign in at once.
+    rateLimit: {
+      customRules: {
+        "/sign-in/email": { window: 60, max: 10 },
+      },
+    },
     advanced: {
+      // Fly terminates TLS and passes the caller's address as Fly-Client-IP;
+      // better-auth only reads x-forwarded-for by default, so per-IP limits
+      // would otherwise bucket the whole studio under the proxy's address.
+      ipAddress: {
+        ipAddressHeaders: ["fly-client-ip", "x-forwarded-for"],
+      },
       useSecureCookies: process.env.NODE_ENV === "production",
       defaultCookieAttributes: {
         httpOnly: true,

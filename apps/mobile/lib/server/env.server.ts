@@ -18,6 +18,18 @@ const serverSchema = z.object({
   BAZA_CONSENT_GATE_ENABLED: z
     .preprocess((v) => v === "true", z.boolean())
     .default(false),
+  // Per-IP API throttle. On by default in production only: Playwright runs
+  // many parallel workers against the dev server from a single loopback
+  // address, which looks exactly like one abusive client and trips the limit.
+  //
+  // No `.default()` here — zod applies a default to `undefined` BEFORE the
+  // preprocess runs, so the NODE_ENV branch below would be unreachable and
+  // production would silently ship with the throttle off.
+  BAZA_RATE_LIMIT_ENABLED: z.preprocess(
+    (v) =>
+      v === undefined ? process.env.NODE_ENV === "production" : v === "true",
+    z.boolean(),
+  ),
   // Server-side Sentry DSN (baza-server project). OPTIONAL — unset disables
   // reporting. The Express server (server/index.js) reads process.env directly
   // and inits before this schema loads; declared here so API-route code can
@@ -36,9 +48,12 @@ const source = {
   BASE_URL: process.env.BASE_URL,
   BETTER_AUTH_SECRET: process.env.BETTER_AUTH_SECRET,
   BAZA_CONSENT_GATE_ENABLED: process.env.BAZA_CONSENT_GATE_ENABLED,
+  BAZA_RATE_LIMIT_ENABLED: process.env.BAZA_RATE_LIMIT_ENABLED,
   SENTRY_DSN: process.env.SENTRY_DSN,
 };
 
 export const serverEnv = serverSchema.parse(source);
 
 export const consentGateEnabled = serverEnv.BAZA_CONSENT_GATE_ENABLED;
+
+export const rateLimitEnabled = serverEnv.BAZA_RATE_LIMIT_ENABLED;

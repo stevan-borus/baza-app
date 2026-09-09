@@ -83,6 +83,22 @@ const apiRequestMock = vi.fn(
     if (path === "/api/users/trainers") {
       return { success: true, users: [TRAINER] };
     }
+    // The roster reads the ADMIN staff endpoint (it also carries the sign-in
+    // lock); the rates screen still reads the trainer picker's list.
+    if (path === "/api/admin/users") {
+      return {
+        success: true,
+        users: [
+          {
+            ...TRAINER,
+            firstName: "Mila",
+            lastName: "Milić",
+            email: "mila@baza.test",
+            lockedUntil: null,
+          },
+        ],
+      };
+    }
     if (path === "/api/invites") {
       return { success: true, invites: [] };
     }

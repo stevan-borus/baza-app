@@ -61,6 +61,7 @@
     "submit": "Sign in",
     "signingIn": "Signing in...",
     "signInError": "Sign-in failed.",
+    "signInLocked": "Account temporarily locked after too many failed attempts. Try again in {{count}} min or reset your password.",
     "forgotPassword": "Forgot password?",
     "resetPasswordTitle": "Reset password",
     "resetPasswordHeading": "Password reset",
@@ -520,7 +521,8 @@
     "pickDate": "Pick a date",
     "pickTime": "Pick a time",
     "pickDateTime": "Pick date and time",
-    "back": "Back"
+    "back": "Back",
+    "tooManyRequests": "Too many requests. Wait a moment and try again."
   },
   "updates": {
     "otaReadyTitle": "Update ready",
@@ -758,7 +760,12 @@
       "invitesTitle": "Invites",
       "invitesEmpty": "No invites sent yet.",
       "inviteCtaA11y": "Invite a new trainer",
-      "percentPlaceholder": "Percentage (e.g. 40)"
+      "percentPlaceholder": "Percentage (e.g. 40)",
+      "adminsTitle": "Admins",
+      "lockedUntil": "Locked until {{time}}",
+      "unlock": "Unlock",
+      "unlockA11y": "Unlock sign-in for {{name}}",
+      "unlockError": "Unlock failed."
     },
     "clientDetail": {
       "title": "Client",
@@ -820,7 +827,11 @@
         "confirm": "Delete",
         "unknownTrainer": "Trainer"
       },
-      "canceledAtLine": "Canceled {{when}}"
+      "canceledAtLine": "Canceled {{when}}",
+      "lockedUntil": "Locked until {{time}}",
+      "unlock": "Unlock",
+      "unlockA11y": "Unlock sign-in",
+      "unlockError": "Unlock failed."
     },
     "packages": {
       "classType": "Class type",

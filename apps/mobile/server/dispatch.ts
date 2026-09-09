@@ -21,7 +21,7 @@ const patterns = Object.keys(routesRegistry).map(toRoutePattern);
  * Needed by the better-auth catch-all (app/api/auth/[...all]/+api.ts): expo-router
  * orders `/api/auth/[...all]` BEFORE `/api/[...rest]`, so EVERY `/api/auth/*`
  * request lands on the better-auth handler first — including our own moved auth
- * app-routes (`/api/auth/me`, `/api/auth/sign-in`, `/api/auth/sign-out`,
+ * app-routes (`/api/auth/me`, `/api/auth/sign-out`,
  * `/api/auth/complete-invite`, `/api/auth/reset-password`,
  * `/api/auth/request-password-reset`). Before consolidation those were specific
  * routes that beat `[...all]`; now the auth catch-all must hand them back to us

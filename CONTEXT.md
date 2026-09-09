@@ -22,6 +22,18 @@ _Avoid_: User, customer, member, account holder.
 A row in the auth table — has email, password, role (`ADMIN | TRAINER | CLIENT`). Every Client / Trainer / Admin is a User; the converse is true. A `ClientProfile` row hangs off Users with `role = CLIENT`.
 _Avoid_: Account.
 
+**Deactivated**:
+A User an Admin has removed from the studio. Hidden from every list, cannot sign in, and stays that way until an Admin reverses it. This is what "delete" (Obriši) means for a client.
+_Avoid_: Deleted, blocked, disabled.
+
+**Sign-in lock**:
+A temporary, automatic state a User enters after too many wrong passwords in a short span. A locked User is rejected at sign-in even with the correct password. It clears on its own after a fixed time, when the User completes a password reset, or when an Admin unlocks them. Independent of Deactivated: a locked User is still a member.
+_Avoid_: Blocked, banned, suspended, throttled.
+
+**Throttle**:
+A per-network-address ceiling on request volume applied to the whole API, unrelated to who the caller is. A throttled caller is asked to wait, nothing about their User changes.
+_Avoid_: Lock, block, ban.
+
 ### Catalog
 
 **ClassType**:

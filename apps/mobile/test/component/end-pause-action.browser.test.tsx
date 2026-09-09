@@ -46,6 +46,7 @@ function makeClient(
 ) {
   return {
     user: {
+      id: "user-1",
       fullName: "Marija Marković",
       email: "marija@e2e.test",
       phone: null,

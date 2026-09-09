@@ -61,6 +61,7 @@
     "submit": "Uloguj se",
     "signingIn": "Prijavljujem se...",
     "signInError": "Prijava nije uspela.",
+    "signInLocked": "Nalog je privremeno zaključan zbog previše neuspelih pokušaja. Pokušajte ponovo za {{count}} min ili resetujte lozinku.",
     "forgotPassword": "Zaboravljena lozinka?",
     "resetPasswordTitle": "Reset lozinke",
     "resetPasswordHeading": "Resetovanje lozinke",
@@ -524,7 +525,8 @@
     "pickDate": "Izaberi datum",
     "pickTime": "Izaberi vreme",
     "pickDateTime": "Izaberi datum i vreme",
-    "back": "Nazad"
+    "back": "Nazad",
+    "tooManyRequests": "Previše zahteva. Sačekajte malo pa pokušajte ponovo."
   },
   "updates": {
     "otaReadyTitle": "Ažuriranje je spremno",
@@ -762,7 +764,12 @@
       "invitesTitle": "Pozivnice",
       "invitesEmpty": "Nema poslatih pozivnica.",
       "inviteCtaA11y": "Pozovi novog trenera",
-      "percentPlaceholder": "Procenat (npr. 40)"
+      "percentPlaceholder": "Procenat (npr. 40)",
+      "adminsTitle": "Admini",
+      "lockedUntil": "Zaključan do {{time}}",
+      "unlock": "Otključaj",
+      "unlockA11y": "Otključaj prijavu za {{name}}",
+      "unlockError": "Otključavanje nije uspelo."
     },
     "clientDetail": {
       "title": "Klijent",
@@ -824,7 +831,11 @@
       "quickActions": {
         "title": "Brze akcije"
       },
-      "canceledAtLine": "Otkazano {{when}}"
+      "canceledAtLine": "Otkazano {{when}}",
+      "lockedUntil": "Zaključan do {{time}}",
+      "unlock": "Otključaj",
+      "unlockA11y": "Otključaj prijavu",
+      "unlockError": "Otključavanje nije uspelo."
     },
     "packages": {
       "classType": "Tip treninga",

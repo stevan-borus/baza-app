@@ -72,9 +72,18 @@ export function formatFullDayDate(date: DateInput, lang: DateLang): string {
   return `${d.format("dddd")} ${d.format("D.M.")}`;
 }
 
+/**
+ * "14:15" — a bare 24h clock. Both languages read 24h here; `lang` is taken
+ * for symmetry with the rest of the module (and so a caller never has to
+ * decide whether this one is the exception).
+ */
+export function formatTime(date: DateInput, _lang: DateLang): string {
+  return dayjs(date).format("HH:mm");
+}
+
 /** "Petak 28.8. 14:00" — the day band plus a 24h clock time. */
 export function formatFullDayDateTime(date: DateInput, lang: DateLang): string {
-  return `${formatFullDayDate(date, lang)} ${dayjs(date).format("HH:mm")}`;
+  return `${formatFullDayDate(date, lang)} ${formatTime(date, lang)}`;
 }
 
 /**

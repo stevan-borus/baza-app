@@ -10,7 +10,13 @@
  */
 import { test as base, expect } from "@playwright/test";
 
-export type { Page, APIResponse, Locator, BrowserContext } from "@playwright/test";
+export type {
+  Page,
+  APIResponse,
+  Locator,
+  Browser,
+  BrowserContext,
+} from "@playwright/test";
 
 /**
  * `playwright.config.ts` sets TEST_ANCHOR_TIME before any spec loads, so the

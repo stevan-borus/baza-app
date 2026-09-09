@@ -1,7 +1,13 @@
 import { useTranslation } from "react-i18next";
 import { Linking, Pressable, Text, View } from "react-native";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { GlassCard } from "@/components/ui/glass-card";
+import { ErrorState } from "@/components/ui/states";
 import { formatDateOfBirth, parseDateOfBirth } from "@/lib/date-of-birth";
+import { formatTime } from "@/lib/format-date";
+import { nowMs } from "@/lib/now";
+import { useUnlockUserMutation } from "@/lib/queries/admin-users-queries-factory";
 import { InitialsAvatar } from "@/components/admin/client-detail/InitialsAvatar";
 import { PackageStatusPill } from "@/components/admin/client-detail/PackageStatusPill";
 import {
@@ -10,7 +16,15 @@ import {
 } from "@/components/admin/client-flows/end-pause-sheet";
 
 type HeaderClient = {
-  user: { fullName: string; email: string; phone: string | null };
+  user: {
+    id: string;
+    fullName: string;
+    email: string;
+    phone: string | null;
+    /** Sign-in lock, independent of `isActive`. Optional so a payload cached
+     *  before the field shipped still renders — it just shows no lock. */
+    lockedUntil?: string | null;
+  };
   dateOfBirth: string | null;
   packageStatus: "active" | "expiring" | "paused" | "expired" | "none";
   /** The running PackagePause, or null. Optional so a payload cached before
@@ -26,6 +40,16 @@ export function ClientDetailHeaderCard({
   onPressPhone: () => void;
 }) {
   const { t, i18n } = useTranslation();
+  const lang = i18n.language === "sr" ? "sr" : "en";
+  const unlock = useUnlockUserMutation();
+
+  // Only a lock still ahead of us is a lock. The server already filters
+  // expired ones out, but a cached payload can outlive the deadline, and a
+  // padlock the admin cannot explain (sign-in already lets the client
+  // through) is worse than showing nothing.
+  const lockedUntil = client.user.lockedUntil;
+  const isLocked = lockedUntil != null && Date.parse(lockedUntil) > nowMs();
+
   return (
     <GlassCard size="md">
       <View className="flex-row items-center gap-3">
@@ -68,6 +92,33 @@ export function ClientDetailHeaderCard({
                 {client.user.phone}
               </Text>
             </Pressable>
+          ) : null}
+          {isLocked ? (
+            <View className="flex-row items-center gap-2 mt-1">
+              <Badge status="warning">
+                <Text testID="client-detail-locked-badge">
+                  {t("admin.clientDetail.lockedUntil", {
+                    time: formatTime(lockedUntil, lang),
+                  })}
+                </Text>
+              </Badge>
+              <Button
+                testID="client-detail-unlock-button"
+                variant="secondary"
+                size="small"
+                disabled={unlock.isPending}
+                accessibilityLabel={t("admin.clientDetail.unlockA11y")}
+                onPress={() => unlock.mutate({ id: client.user.id })}
+              >
+                {t("admin.clientDetail.unlock")}
+              </Button>
+            </View>
+          ) : null}
+          {unlock.isError ? (
+            <ErrorState
+              message={t("admin.clientDetail.unlockError")}
+              testID="client-detail-unlock-error"
+            />
           ) : null}
           {client.dateOfBirth ? (
             <View className="flex-row items-center gap-2">

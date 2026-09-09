@@ -395,6 +395,35 @@ describe("GET /api/clients/[id]", () => {
     expect(json.client.notes).toBe("Has tight hamstrings");
   });
 
+  it("reports a live sign-in lock as an ISO string and no lock as null", async () => {
+    const { admin, clientUser } = await seedForGet();
+    setMockUser({
+      id: admin.id,
+      role: "ADMIN",
+      email: admin.email,
+      isActive: true,
+      clientProfile: null,
+    });
+
+    const unlocked = await GET_BY_ID(buildRequest(clientUser.id), {
+      id: clientUser.id,
+    });
+    expect((await unlocked.json()).client.user.lockedUntil).toBeNull();
+
+    const lockedUntil = new Date(nowMs() + 15 * 60_000);
+    await prisma.user.update({
+      where: { id: clientUser.id },
+      data: { lockedUntil },
+    });
+
+    const locked = await GET_BY_ID(buildRequest(clientUser.id), {
+      id: clientUser.id,
+    });
+    expect((await locked.json()).client.user.lockedUntil).toBe(
+      lockedUntil.toISOString(),
+    );
+  });
+
   it("returns 200 when trainer is linked to the client via active booking", async () => {
     const { trainerLinked, clientUser } = await seedForGet();
     setMockUser({

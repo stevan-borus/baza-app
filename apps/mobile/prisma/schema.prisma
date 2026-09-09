@@ -107,6 +107,9 @@ model User {
   role         UserRole
   isActive     Boolean              @default(true)
   passwordHash String?
+  failedSignInCount  Int       @default(0)
+  lastFailedSignInAt DateTime?
+  lockedUntil        DateTime?
   createdAt    DateTime             @default(now())
   updatedAt    DateTime             @updatedAt
   clientProfile ClientProfile?
