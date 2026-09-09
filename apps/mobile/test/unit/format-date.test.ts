@@ -19,6 +19,7 @@ import {
   formatFullDayDate,
   formatFullDayDateTime,
   formatCancellationWhen,
+  formatTime,
 } from "@/lib/format-date";
 
 const originalTz = process.env.TZ;
@@ -197,5 +198,33 @@ describe("formatCancellationWhen", () => {
         new Date("2026-06-09T18:00:00.000Z"),
       ),
     ).not.toContain("14:30");
+  });
+});
+
+/**
+ * `formatTime` is the clock half of `formatFullDayDateTime`, pulled out so a
+ * caller that only needs "until 14:15" (the sign-in-lock badge) doesn't have
+ * to print a date it already knows is today.
+ */
+describe("formatTime", () => {
+  it("prints a 24h clock in Serbian", () => {
+    expect(formatTime("2026-06-12T14:15:00.000Z", "sr")).toBe("14:15");
+  });
+
+  it("prints the same 24h clock in English", () => {
+    // The studio reads 24h in both languages; no am/pm switch on language.
+    expect(formatTime("2026-06-12T14:15:00.000Z", "en")).toBe("14:15");
+  });
+
+  it("zero-pads the hour", () => {
+    expect(formatTime("2026-06-12T09:05:00.000Z", "sr")).toBe("09:05");
+  });
+
+  it("prints midnight as 00:00, not 24:00", () => {
+    expect(formatTime("2026-06-12T00:00:00.000Z", "sr")).toBe("00:00");
+  });
+
+  it("accepts a Date as readily as an ISO string", () => {
+    expect(formatTime(new Date("2026-06-12T21:45:00.000Z"), "sr")).toBe("21:45");
   });
 });

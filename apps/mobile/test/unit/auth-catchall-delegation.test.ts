@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 // expo-router routes ALL /api/auth/* to the better-auth catch-all
 // (app/api/auth/[...all]/+api.ts) because it's ordered before /api/[...rest].
 // So the auth catch-all must itself hand our moved auth app-routes
-// (/api/auth/me, /api/auth/sign-in, ...) back to the dispatcher, and only call
+// (/api/auth/me, /api/auth/sign-out, ...) back to the dispatcher, and only call
 // better-auth's handler for the paths better-auth owns. These tests pin that.
 
 const dispatch = vi.fn(async () => new Response("app-route", { status: 200 }));
@@ -12,7 +12,7 @@ const authHandler = vi.fn(async () => new Response("better-auth", { status: 200 
 // Our moved auth app-routes live in the registry; better-auth paths do not.
 const REGISTERED = new Set([
   "/api/auth/me",
-  "/api/auth/sign-in",
+  "/api/auth/sign-out",
   "/api/auth/sign-out",
   "/api/auth/complete-invite",
   "/api/auth/reset-password",
@@ -46,8 +46,8 @@ describe("auth catch-all — delegates moved app-routes to the dispatcher", () =
     expect(authHandler).not.toHaveBeenCalled();
   });
 
-  it("routes POST /api/auth/sign-in to the dispatcher", async () => {
-    const res = await route.POST(req("/api/auth/sign-in", "POST"));
+  it("routes POST /api/auth/sign-out to the dispatcher", async () => {
+    const res = await route.POST(req("/api/auth/sign-out", "POST"));
     expect(await res.text()).toBe("app-route");
     expect(dispatch).toHaveBeenCalledOnce();
     expect(authHandler).not.toHaveBeenCalled();

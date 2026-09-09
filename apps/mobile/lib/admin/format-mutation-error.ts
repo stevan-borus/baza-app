@@ -12,6 +12,7 @@
  * Currently produces a specific message for:
  *  - Schedule conflict (single occurrence) — POST/PATCH /sessions
  *  - Schedule conflict (recurring, list of occurrences) — POST /sessions/recurring
+ *  - Rate-limited (429) — any endpoint, via the API's per-IP throttle
  *
  * Everything else → the localized fallback. To give another failure its own
  * localized copy, add a recognizer + `t(...)` mapping here (like the conflict
@@ -95,6 +96,11 @@ export function formatMutationError(
     // reach the user under a non-English UI — return the caller's localized
     // fallback instead of leaking `error.message`.
     return fallback;
+  }
+  // Throttled by the API's per-IP limiter. The generic fallback would tell the
+  // user to try again, which is exactly what they must not do yet.
+  if (error.status === 429) {
+    return t("common.tooManyRequests");
   }
   // Recurring series — surface up to 3 occurrences with their reason.
   if (isRecurringConflictBody(error.body)) {

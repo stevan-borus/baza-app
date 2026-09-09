@@ -4,6 +4,7 @@ import { now } from "@/lib/now";
 import { respond, fail, parseBody } from "@/lib/server/http";
 import { hashPassword } from "@/lib/server/password";
 import { prisma } from "@/lib/server/prisma";
+import { signInLockResetData } from "@/lib/sign-in-lock-rules";
 import { hashToken } from "@/lib/server/tokens";
 
 export async function POST(request: Request) {
@@ -36,7 +37,10 @@ export async function POST(request: Request) {
   await prisma.$transaction([
     prisma.user.update({
       where: { id: resetToken.userId },
-      data: { passwordHash, emailVerified: true },
+      // Completing a reset clears any sign-in lock: whoever holds the mailbox
+      // has proven they own the account, so making them wait out the lock only
+      // punishes the person the lock exists to protect.
+      data: { passwordHash, emailVerified: true, ...signInLockResetData() },
     }),
     prisma.authAccount.updateMany({
       where: { userId: resetToken.userId, providerId: "credential" },

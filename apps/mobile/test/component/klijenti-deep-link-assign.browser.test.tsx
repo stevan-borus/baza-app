@@ -137,13 +137,19 @@ function renderScreen() {
         ...PAGE_2_CLIENT,
         dateOfBirth: "1990-05-11",
         activePause: null,
+        user: { ...PAGE_2_CLIENT.user, lockedUntil: null },
       },
     });
     // Same resolution path for an already-loaded row.
     for (const c of PAGE_1_CLIENTS) {
       client.setQueryData(clientsQueries.byId(c.user.id).queryKey, {
         success: true,
-        client: { ...c, dateOfBirth: null, activePause: null },
+        client: {
+          ...c,
+          dateOfBirth: null,
+          activePause: null,
+          user: { ...c.user, lockedUntil: null },
+        },
       });
       client.setQueryData(packagesQueries.clientPackages(c.id).queryKey, {
         success: true,

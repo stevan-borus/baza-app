@@ -1,11 +1,14 @@
 import { requestPasswordResetInputSchema } from "@baza/types/auth";
 import { successResponseSchema } from "@baza/types/common";
-import { now } from "@/lib/now";
+import { now, nowMs } from "@/lib/now";
 import { respond, parseBody } from "@/lib/server/http";
 import { prisma } from "@/lib/server/prisma";
 import { sendResetEmail } from "@/lib/server/resend";
 import { addMinutes, generateRawToken, hashToken } from "@/lib/server/tokens";
 import { env } from "@/lib/server/env";
+
+const MAX_RESET_REQUESTS_PER_WINDOW = 3;
+const RESET_REQUEST_WINDOW_MS = 60 * 60_000;
 
 export async function POST(request: Request) {
   const parsed = await parseBody(request, requestPasswordResetInputSchema);
@@ -19,6 +22,19 @@ export async function POST(request: Request) {
 
   // Intentionally avoid email-enumeration leaks.
   if (!user || !user.isActive) {
+    return respond(successResponseSchema, { success: true });
+  }
+
+  // Cap the emails one address can trigger. Beyond the cap the route still
+  // answers success — a different response here would confirm the address
+  // exists, which is exactly what the enumeration guard above avoids.
+  const recentRequests = await prisma.passwordResetToken.count({
+    where: {
+      userId: user.id,
+      createdAt: { gte: new Date(nowMs() - RESET_REQUEST_WINDOW_MS) },
+    },
+  });
+  if (recentRequests >= MAX_RESET_REQUESTS_PER_WINDOW) {
     return respond(successResponseSchema, { success: true });
   }
 

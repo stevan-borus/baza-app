@@ -114,6 +114,9 @@ export const clientByIdResponseSchema = z.object({
       email: z.email(),
       phone: z.nullable(z.string()),
       isActive: z.boolean(),
+      // Sign-in lock, independent of `isActive`. Only a lock still in the
+      // future; an expired one reads as null.
+      lockedUntil: z.nullable(z.string()),
     }),
   }),
 });

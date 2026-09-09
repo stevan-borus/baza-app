@@ -39,6 +39,14 @@ primary_region = "fra"
   # Keep one machine warm so the DB pool + first request aren't cold.
   min_machines_running = 1
 
+  # In-flight request ceiling. Past hard_limit the Fly proxy answers 503
+  # instead of piling requests onto the single 512MB machine until it OOMs.
+  # soft_limit only steers routing between machines, so it is inert with one.
+  [http_service.concurrency]
+    type = "requests"
+    soft_limit = 50
+    hard_limit = 100
+
   [[http_service.checks]]
     method = "GET"
     path = "/api/health"

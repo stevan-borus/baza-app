@@ -1,7 +1,8 @@
 import type { MiddlewareFunction } from "expo-router/server";
-import { consentGateEnabled } from "@/lib/server/env.server";
+import { consentGateEnabled, rateLimitEnabled } from "@/lib/server/env.server";
 import { getConsentStatus } from "@/lib/legal/consent-status";
 import { getRequestUser } from "@/lib/server/auth-guards";
+import { apiRateLimiter, clientIp, throttleResponse } from "@/lib/server/rate-limit";
 
 // Division of labour:
 //   • /api/[...path] — server enforces the gate here (defense in depth for
@@ -43,6 +44,24 @@ const middleware: MiddlewareFunction = async (request) => {
   const pathname = url.pathname;
   const search = url.search ? url.search : "";
   process.stderr.write(`[api] ${request.method} ${pathname}${search}\n`);
+
+  // The throttle sits here because the middleware is the only chokepoint every
+  // API path shares: it runs before both the better-auth catch-all and our
+  // dispatcher, so no route can be reached around it. /api/health is exempt —
+  // the Fly proxy probes it every 15s from its own address, and a machine that
+  // 429s its own health check drops out of rotation.
+  if (
+    rateLimitEnabled &&
+    pathname.startsWith("/api/") &&
+    pathname !== "/api/health"
+  ) {
+    const ip = clientIp(request as unknown as Request);
+    const { allowed, retryAfterSeconds } = apiRateLimiter.check(ip);
+    if (!allowed) {
+      process.stderr.write(`[throttle] 429 ip=${ip} path=${pathname}\n`);
+      return throttleResponse(retryAfterSeconds);
+    }
+  }
 
   if (!consentGateEnabled) return;
 

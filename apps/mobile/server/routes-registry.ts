@@ -11,12 +11,13 @@ import * as route_admin_clients_id_guardian_verified from "@/server/routes/admin
 import * as route_admin_clients_id_health from "@/server/routes/admin/clients/[id]/health";
 import * as route_admin_reservations from "@/server/routes/admin/reservations";
 import * as route_admin_reservations_cancel_bulk from "@/server/routes/admin/reservations/cancel-bulk";
+import * as route_admin_users from "@/server/routes/admin/users";
+import * as route_admin_users_id_unlock from "@/server/routes/admin/users/[id]/unlock";
 import * as route_app_version from "@/server/routes/app-version";
 import * as route_auth_complete_invite from "@/server/routes/auth/complete-invite";
 import * as route_auth_me from "@/server/routes/auth/me";
 import * as route_auth_request_password_reset from "@/server/routes/auth/request-password-reset";
 import * as route_auth_reset_password from "@/server/routes/auth/reset-password";
-import * as route_auth_sign_in from "@/server/routes/auth/sign-in";
 import * as route_auth_sign_out from "@/server/routes/auth/sign-out";
 import * as route_billing from "@/server/routes/billing";
 import * as route_billing_id from "@/server/routes/billing/[id]";
@@ -101,12 +102,13 @@ export const routesRegistry: Record<string, RouteModule> = {
   "admin/clients/[id]/health": route_admin_clients_id_health,
   "admin/reservations": route_admin_reservations,
   "admin/reservations/cancel-bulk": route_admin_reservations_cancel_bulk,
+  "admin/users": route_admin_users,
+  "admin/users/[id]/unlock": route_admin_users_id_unlock,
   "app-version": route_app_version,
   "auth/complete-invite": route_auth_complete_invite,
   "auth/me": route_auth_me,
   "auth/request-password-reset": route_auth_request_password_reset,
   "auth/reset-password": route_auth_reset_password,
-  "auth/sign-in": route_auth_sign_in,
   "auth/sign-out": route_auth_sign_out,
   billing: route_billing,
   "billing/[id]": route_billing_id,

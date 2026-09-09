@@ -20,7 +20,14 @@ import { Input, PasswordInput } from "@/components/ui/input";
 import { LinkText } from "@/components/ui/typography";
 import { StudioButton } from "@/components/ui/studio";
 import { authClient } from "@/lib/auth-client";
+import { nowMs } from "@/lib/now";
 import { authQueries } from "@/lib/queries/auth-queries-factory";
+import {
+  ACCOUNT_LOCKED,
+  lockMinutesRemaining,
+  SignInError,
+  toSignInError,
+} from "@/lib/sign-in-error";
 import { signInInputSchema } from "@baza/types/auth";
 import { validateForm, type FormErrors } from "@/lib/zod-form";
 
@@ -52,7 +59,7 @@ export default function SignInScreen() {
     mutationFn: async () => {
       const response = await authClient.signIn.email({ email, password });
       if (response.error) {
-        throw new Error(response.error.message || "Sign-in failed");
+        throw toSignInError(response.error);
       }
       return response.data;
     },
@@ -142,8 +149,19 @@ export default function SignInScreen() {
               transition={{ type: "timing", duration: 250 }}
               className="bg-danger-soft border border-danger rounded-lg px-3.5 py-2.5"
             >
-              <Text className="font-body-medium text-danger text-[13px]">
-                {t("auth.signInError")}
+              <Text
+                testID="auth-error-message"
+                className="font-body-medium text-danger text-[13px]"
+              >
+                {signInMutation.error instanceof SignInError &&
+                signInMutation.error.code === ACCOUNT_LOCKED
+                  ? t("auth.signInLocked", {
+                      count: lockMinutesRemaining(
+                        signInMutation.error.lockedUntil,
+                        nowMs(),
+                      ),
+                    })
+                  : t("auth.signInError")}
               </Text>
             </MotiView>
           ) : null}

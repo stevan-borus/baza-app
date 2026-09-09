@@ -90,6 +90,7 @@ describe("client-detail end-pause action", () => {
       <ClientDetailHeaderCard
         client={{
           user: {
+            id: "user-1",
             fullName: "Marija Marković",
             email: "marija@e2e.test",
             phone: null,

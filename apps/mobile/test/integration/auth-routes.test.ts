@@ -299,5 +299,107 @@ describe("auth routes", () => {
       );
       expect(response.status).toBe(404);
     });
+
+    it("clears an existing sign-in lock when the reset completes", async () => {
+      const { user, rawToken } = await seedUserWithResetToken();
+      await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          failedSignInCount: 4,
+          lastFailedSignInAt: now(),
+          lockedUntil: new Date(nowMs() + 15 * 60_000),
+        },
+      });
+
+      const response = await POST_RESET(
+        jsonRequest("http://test.local/api/auth/reset-password", {
+          token: rawToken,
+          password: "NewPassword456!",
+        }),
+      );
+      expect(response.status).toBe(200);
+
+      const after = await prisma.user.findUniqueOrThrow({
+        where: { id: user.id },
+      });
+      expect(after.lockedUntil).toBeNull();
+      expect(after.failedSignInCount).toBe(0);
+      expect(after.lastFailedSignInAt).toBeNull();
+    });
+  });
+
+  describe("POST /api/auth/request-password-reset — request cap", () => {
+    async function seedActiveUser() {
+      return prisma.user.create({
+        data: {
+          email: "cap@test.local",
+          firstName: "Cap",
+          lastName: "Limit",
+          role: "CLIENT",
+          isActive: true,
+          passwordHash: await hashPassword("OldPassword123!"),
+        },
+      });
+    }
+
+    function requestReset(email: string) {
+      return POST_REQ_RESET(
+        jsonRequest("http://test.local/api/auth/request-password-reset", {
+          email,
+        }),
+      );
+    }
+
+    it("sends an email for each of the first three requests within the hour", async () => {
+      const user = await seedActiveUser();
+
+      for (let attempt = 0; attempt < 3; attempt++) {
+        const response = await requestReset(user.email);
+        expect(response.status).toBe(200);
+      }
+
+      expect(sendResetEmailMock).toHaveBeenCalledTimes(3);
+      expect(
+        await prisma.passwordResetToken.count({ where: { userId: user.id } }),
+      ).toBe(3);
+    });
+
+    it("answers success but creates no token and sends no email on the fourth request within the hour", async () => {
+      const user = await seedActiveUser();
+      for (let attempt = 0; attempt < 3; attempt++) {
+        await requestReset(user.email);
+      }
+      sendResetEmailMock.mockClear();
+
+      const response = await requestReset(user.email);
+      // Success, deliberately: a different answer here would confirm the
+      // address exists to anyone probing it.
+      expect(response.status).toBe(200);
+      expect(await response.json()).toEqual({ success: true });
+
+      expect(sendResetEmailMock).not.toHaveBeenCalled();
+      expect(
+        await prisma.passwordResetToken.count({ where: { userId: user.id } }),
+      ).toBe(3);
+    });
+
+    it("counts only the last hour, so an older request does not consume the cap", async () => {
+      const user = await seedActiveUser();
+      for (let attempt = 0; attempt < 3; attempt++) {
+        await requestReset(user.email);
+      }
+      await prisma.passwordResetToken.updateMany({
+        where: { userId: user.id },
+        data: { createdAt: new Date(nowMs() - 61 * 60_000) },
+      });
+      sendResetEmailMock.mockClear();
+
+      const response = await requestReset(user.email);
+      expect(response.status).toBe(200);
+      expect(sendResetEmailMock).toHaveBeenCalledTimes(1);
+      expect(
+        await prisma.passwordResetToken.count({ where: { userId: user.id } }),
+      ).toBe(4);
+    });
   });
 });

@@ -1,4 +1,7 @@
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
+import i18next from "i18next";
+import en from "@/locales/en.json";
+import sr from "@/locales/sr.json";
 import type { TFunction } from "i18next";
 import { formatMutationError } from "@/lib/admin/format-mutation-error";
 import { ApiError } from "@/lib/api-error";
@@ -130,5 +133,63 @@ describe("formatMutationError", () => {
     expect(result).not.toBe(FALLBACK);
     // Built from the localized conflict keys (the stub echoes the key).
     expect(result).toContain("admin.errors.scheduleConflict");
+  });
+});
+
+// A 429 is the one status whose meaning the client can act on: the request was
+// fine, it just arrived too fast. The generic fallback ("something went wrong")
+// tells the user to retry immediately, which is the exact wrong advice.
+describe("formatMutationError — 429 throttle", () => {
+  it("returns the throttle key for a 429, not the caller's fallback", () => {
+    const err = new ApiError(
+      429,
+      { error: "Too many requests", retryAfterSeconds: 12 },
+      FALLBACK,
+    );
+    const result = formatMutationError(err, t, "sr", FALLBACK);
+    expect(result).toBe("common.tooManyRequests");
+    expect(result).not.toBe(FALLBACK);
+  });
+
+  it("returns the throttle key for a 429 with an unparseable body", () => {
+    const err = new ApiError(429, null, FALLBACK);
+    expect(formatMutationError(err, t, "en", FALLBACK)).toBe(
+      "common.tooManyRequests",
+    );
+  });
+});
+
+// The stub above only proves WHICH key is chosen. These pin the shipped copy
+// in both bundles, so a missing translation can't ship as a raw key.
+describe("formatMutationError — 429 copy against the real locale bundles", () => {
+  const i18nInstance = i18next.createInstance();
+
+  beforeAll(async () => {
+    await i18nInstance.init({
+      resources: { sr: { translation: sr }, en: { translation: en } },
+      lng: "sr",
+      fallbackLng: "sr",
+      supportedLngs: ["sr", "en"],
+      interpolation: { escapeValue: false },
+      compatibilityJSON: "v4",
+    });
+  });
+
+  function localized(lang: "sr" | "en"): string {
+    const err = new ApiError(429, { error: "Too many requests" }, FALLBACK);
+    const tt = i18nInstance.getFixedT(lang) as unknown as TFunction;
+    return formatMutationError(err, tt, lang, FALLBACK);
+  }
+
+  it("renders the Serbian throttle message", () => {
+    expect(localized("sr")).toBe(
+      "Previše zahteva. Sačekajte malo pa pokušajte ponovo.",
+    );
+  });
+
+  it("renders the English throttle message", () => {
+    expect(localized("en")).toBe(
+      "Too many requests. Wait a moment and try again.",
+    );
   });
 });
