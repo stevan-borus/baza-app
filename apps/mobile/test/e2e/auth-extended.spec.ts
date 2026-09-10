@@ -54,10 +54,9 @@ test.describe("auth extended (Serbian)", () => {
 
     // Desktop UA → no "Get the app" store banner (it's a mobile-web fallback).
     // Guards the Platform/SSR/UA gating in GetAppBanner.
-    await expect(page.getByTestId("invite-name-input")).toBeVisible();
+    await expect(page.getByTestId("invite-password-input")).toBeVisible();
     await expect(page.getByTestId("get-app-banner")).toHaveCount(0);
 
-    await page.getByTestId("invite-name-input").fill("New Client Invited");
     await page.getByTestId("invite-password-input").fill(NEW_PASSWORD);
     await page.getByTestId("invite-confirm-password-input").fill(NEW_PASSWORD);
     await page.getByTestId("invite-submit-button").click();
@@ -73,10 +72,10 @@ test.describe("auth extended (Serbian)", () => {
   test("invited client's first+last name carries through to the profile after activation", async ({
     page,
   }) => {
-    // The invite carries firstName/lastName (admin-entered); complete-invite
-    // ignores any name typed on the activation form and creates the user from
-    // the invite row. A MULTI-PART first name ("Ana Maria") is the regression
-    // case: the pre-split greeting heuristic would have dropped "Maria".
+    // The invite carries firstName/lastName (admin-entered); the activation
+    // form collects no name at all, so the user is created from the invite
+    // row. A MULTI-PART first name ("Ana Maria") is the regression case: the
+    // pre-split greeting heuristic would have dropped "Maria".
     const inviteEmail = "named.invite@e2e.test";
     const { rawToken } = await createInvite({
       email: inviteEmail,
@@ -85,7 +84,7 @@ test.describe("auth extended (Serbian)", () => {
     });
 
     await page.goto(`/accept-invite?token=${rawToken}`);
-    await page.getByTestId("invite-name-input").fill("ignored by server");
+    await expect(page.getByTestId("invite-password-input")).toBeVisible();
     await page.getByTestId("invite-password-input").fill(NEW_PASSWORD);
     await page.getByTestId("invite-confirm-password-input").fill(NEW_PASSWORD);
     await page.getByTestId("invite-submit-button").click();
@@ -112,7 +111,7 @@ test.describe("auth extended (Serbian)", () => {
 
     // Try to submit with valid form — server should reject because the token
     // is expired.
-    await page.getByTestId("invite-name-input").fill("Expired Invite Client");
+    await expect(page.getByTestId("invite-password-input")).toBeVisible();
     await page.getByTestId("invite-password-input").fill(NEW_PASSWORD);
     await page.getByTestId("invite-confirm-password-input").fill(NEW_PASSWORD);
     await page.getByTestId("invite-submit-button").click();
@@ -129,7 +128,7 @@ test.describe("auth extended (Serbian)", () => {
 
     await page.goto(`/accept-invite?token=${rawToken}`);
 
-    await page.getByTestId("invite-name-input").fill("Used Invite Client");
+    await expect(page.getByTestId("invite-password-input")).toBeVisible();
     await page.getByTestId("invite-password-input").fill(NEW_PASSWORD);
     await page.getByTestId("invite-confirm-password-input").fill(NEW_PASSWORD);
     await page.getByTestId("invite-submit-button").click();

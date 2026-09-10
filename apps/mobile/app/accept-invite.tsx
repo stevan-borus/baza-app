@@ -13,7 +13,7 @@ import { MotiView } from "@/components/ui/styled";
 import { AuthBackground } from "@/components/auth/auth-background";
 import { AuthLanguageToggle } from "@/components/auth/auth-language-toggle";
 import { GetAppBanner } from "@/components/auth/get-app-banner";
-import { Input, PasswordInput } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/input";
 import { LinkText } from "@/components/ui/typography";
 import { StudioButton } from "@/components/ui/studio";
 import { apiRequest } from "@/lib/api-request";
@@ -22,48 +22,27 @@ import { authQueries } from "@/lib/queries/auth-queries-factory";
 import { completeInviteResponseSchema } from "@baza/types/auth";
 import { validateForm, type FormErrors } from "@/lib/zod-form";
 
-function InviterBadge({ name }: { name: string }) {
-  const initial = name.charAt(0).toUpperCase();
-  return (
-    <View className="w-8 h-8 rounded-full bg-accent-soft items-center justify-center">
-      <Text className="font-body-semibold text-accent text-[13px]">
-        {initial}
-      </Text>
-    </View>
-  );
-}
-
 export default function AcceptInviteScreen() {
   const { t } = useTranslation();
   const router = useRouter();
   const queryClient = useQueryClient();
-  const params = useLocalSearchParams<{
-    token?: string;
-    email?: string;
-    name?: string;
-    invitedBy?: string;
-  }>();
+  // buildInviteUrl emits `?token=` and nothing else — the account's name and
+  // email live on the invite row the server reads, not in the link.
+  const params = useLocalSearchParams<{ token?: string }>();
 
   const token = typeof params.token === "string" ? params.token : "";
-  const prefillEmail = typeof params.email === "string" ? params.email : "";
-  const prefillName = typeof params.name === "string" ? params.name : "";
-  const invitedBy =
-    typeof params.invitedBy === "string" ? params.invitedBy : "";
 
-  const [name, setName] = useState(prefillName);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [errors, setErrors] = useState<FormErrors<{
-    name: string;
     password: string;
     confirmPassword: string;
   }>>({});
 
-  // Local schema — extends the wire schema with name + matching confirm.
+  // Local schema — extends the wire schema with a matching confirm.
   // Refines emit a "custom" issue we surface on `confirmPassword`.
   const formSchema = z
     .object({
-      name: z.string().min(2, t("validation.tooShort", { min: 2 })),
       password: z.string().min(6, t("validation.tooShort", { min: 6 })),
       confirmPassword: z.string().min(6, t("validation.tooShort", { min: 6 })),
     })
@@ -73,11 +52,7 @@ export default function AcceptInviteScreen() {
     });
 
   function handleSubmit() {
-    const result = validateForm(
-      formSchema,
-      { name, password, confirmPassword },
-      t,
-    );
+    const result = validateForm(formSchema, { password, confirmPassword }, t);
     if (!result.ok) {
       setErrors(result.errors);
       return;
@@ -93,7 +68,7 @@ export default function AcceptInviteScreen() {
     mutationFn: () =>
       apiRequest("/api/auth/complete-invite", {
         method: "POST",
-        body: { token, password, name },
+        body: { token, password },
         schema: completeInviteResponseSchema,
         errorMessage: "Failed",
       }),
@@ -157,7 +132,7 @@ export default function AcceptInviteScreen() {
           from={{ opacity: 0, scale: 0.96 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ type: "timing", duration: 250 }}
-          className="items-center mb-4"
+          className="items-center mb-10"
         >
           <Text
             className="font-body-bold text-foreground text-center"
@@ -170,57 +145,12 @@ export default function AcceptInviteScreen() {
           </Text>
         </MotiView>
 
-        {invitedBy ? (
-          <MotiView
-            from={{ opacity: 0, translateY: 8 }}
-            animate={{ opacity: 1, translateY: 0 }}
-            transition={{ type: "timing", duration: 300, delay: 150 }}
-            className="flex-row items-center justify-center gap-2 mb-6"
-          >
-            <InviterBadge name={invitedBy} />
-            <Text className="font-sans text-muted text-[13px]">
-              {t("auth.invitedBy", { name: invitedBy })}
-            </Text>
-          </MotiView>
-        ) : (
-          <View className="mb-6" />
-        )}
-
         <MotiView
           from={{ opacity: 0, translateY: 16 }}
           animate={{ opacity: 1, translateY: 0 }}
           transition={{ type: "timing", duration: 400, delay: 250 }}
           className="gap-3.5"
         >
-          {prefillEmail ? (
-            <Input
-              icon="envelope"
-              label={t("auth.email")}
-              value={prefillEmail}
-              editable={false}
-              style={{ opacity: 0.55 }}
-              autoCapitalize="none"
-              autoCorrect={false}
-              keyboardType="email-address"
-              textContentType="emailAddress"
-            />
-          ) : null}
-
-          <Input
-            testID="invite-name-input"
-            icon="user"
-            label={t("auth.yourName")}
-            autoCapitalize="words"
-            autoCorrect={false}
-            textContentType="name"
-            value={name}
-            onChangeText={(v) => {
-              setName(v);
-              if (errors.name) setErrors((e) => ({ ...e, name: undefined }));
-            }}
-            error={errors.name}
-          />
-
           <PasswordInput
             testID="invite-password-input"
             label={t("auth.createPassword")}

@@ -117,13 +117,10 @@ test.describe("trainer invite — full chain (send → accept → rate live)", (
 
     // ── 4. The trainer opens the deep link and sets a password ──────────────
     await page.goto(`/accept-invite?token=${rawToken}`);
-    await expect(page.getByTestId("invite-name-input")).toBeVisible({
+    await expect(page.getByTestId("invite-password-input")).toBeVisible({
       timeout: 15_000,
     });
 
-    await page
-      .getByTestId("invite-name-input")
-      .fill(`${TRAINER_FIRST} ${TRAINER_LAST}`);
     await page.getByTestId("invite-password-input").fill(TRAINER_PASSWORD);
     await page
       .getByTestId("invite-confirm-password-input")

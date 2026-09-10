@@ -83,8 +83,6 @@
     "passwordUpdatedDesc": "You can now sign in with your new password.",
     "welcomeInvite": "Welcome to Baza",
     "inviteSubtitle": "You've been invited",
-    "invitedBy": "Invited by {{name}}",
-    "yourName": "Your name",
     "createPassword": "Create password",
     "confirmPassword": "Confirm password",
     "passwordsMismatch": "Passwords don't match",
