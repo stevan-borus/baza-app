@@ -83,8 +83,6 @@
     "passwordUpdatedDesc": "Sada se možete prijaviti sa novom lozinkom.",
     "welcomeInvite": "Dobrodošli u Baza",
     "inviteSubtitle": "Pozvani ste",
-    "invitedBy": "Pozivnica od {{name}}",
-    "yourName": "Vaše ime",
     "createPassword": "Kreirajte lozinku",
     "confirmPassword": "Potvrdite lozinku",
     "passwordsMismatch": "Lozinke se ne podudaraju",
