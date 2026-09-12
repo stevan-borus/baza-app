@@ -206,7 +206,10 @@ export type AudienceMember = {
   firstName: string;
   lastName: string;
   email: string;
-  /** false = opted out of marketing; counted in reach but won't be messaged. */
+  /**
+   * true only if this client affirmatively opted in to marketing. Everyone
+   * else is counted in reach but won't be messaged.
+   */
   campaignsEnabled: boolean;
 };
 
@@ -236,7 +239,8 @@ export async function resolveCampaignAudienceMembers(
     firstName: u.firstName,
     lastName: u.lastName,
     email: u.email,
-    // No preference row → column default is true.
-    campaignsEnabled: u.notificationPreference?.campaignsEnabled ?? true,
+    // No preference row → never consented. Zakon o elektronskoj trgovini
+    // čl. 8 requires PRIOR consent, so silence is a no, not a yes.
+    campaignsEnabled: u.notificationPreference?.campaignsEnabled === true,
   }));
 }

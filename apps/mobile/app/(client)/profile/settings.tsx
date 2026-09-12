@@ -3,7 +3,8 @@
  *
  * State derives from the preferences query (no setup useEffect). The
  * bookingEmailsEnabled toggle is the courtesy opt-out for booking-change
- * emails; campaignsEnabled is the marketing opt-out (Promocije / novi programi).
+ * emails; campaignsEnabled is the marketing opt-IN (Promocije i novi programi)
+ * and is off until the client turns it on.
  */
 import { useQuery } from "@tanstack/react-query";
 import { ActivityIndicator, ScrollView, Switch, Text, View } from "react-native";
@@ -40,8 +41,11 @@ export default function NotificationSettings() {
   // The mutation writes the flipped value into the preferences cache
   // optimistically (see updatePreferencesMutationOptions), so reading straight
   // from the cache already shows the new position instantly and holds it across
-  // the settle→refetch window — no snap-back. Default ON only until prefs load.
+  // the settle→refetch window — no snap-back.
   function valueFor(key: PrefKey): boolean {
+    // Marketing is opt-in, so an unknown value is OFF; the transactional
+    // flags keep their opt-out default.
+    if (key === "campaignsEnabled") return prefs?.campaignsEnabled === true;
     return prefs?.[key] ?? true;
   }
 

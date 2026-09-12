@@ -35,6 +35,7 @@ import * as route_clients_id from "@/server/routes/clients/[id]";
 import * as route_clients_id_bookings from "@/server/routes/clients/[id]/bookings";
 import * as route_clients_me_packages from "@/server/routes/clients/me/packages";
 import * as route_consent_accept from "@/server/routes/consent/accept";
+import * as route_consent_marketing from "@/server/routes/consent/marketing";
 import * as route_consent_refuse from "@/server/routes/consent/refuse";
 import * as route_consent_social_media from "@/server/routes/consent/social-media";
 import * as route_consent_status from "@/server/routes/consent/status";
@@ -126,6 +127,7 @@ export const routesRegistry: Record<string, RouteModule> = {
   "clients/[id]/bookings": route_clients_id_bookings,
   "clients/me/packages": route_clients_me_packages,
   "consent/accept": route_consent_accept,
+  "consent/marketing": route_consent_marketing,
   "consent/refuse": route_consent_refuse,
   "consent/social-media": route_consent_social_media,
   "consent/status": route_consent_status,

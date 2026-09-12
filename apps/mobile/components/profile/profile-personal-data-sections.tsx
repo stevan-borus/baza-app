@@ -35,6 +35,7 @@ const LEGAL_DOC_LABEL_KEY: Record<ConsentDocumentKey, string> = {
   waiver_minor: "consent.documentWaiverMinor",
   social_media: "consent.documentTos", // unused here
   health_intake: "consent.documentTos", // unused here
+  marketing: "consent.documentTos", // unused here
 };
 
 export function ProfilePersonalDataSections() {

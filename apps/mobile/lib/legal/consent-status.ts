@@ -14,6 +14,8 @@ export type ConsentStatus = {
   guardianVerificationNeeded: boolean;
   socialMediaDecided: boolean;
   socialMediaLatestAccepted: boolean | null;
+  marketingDecided: boolean;
+  marketingLatestAccepted: boolean | null;
 };
 
 export async function getConsentStatus(userId: string): Promise<ConsentStatus> {
@@ -66,13 +68,24 @@ export async function getConsentStatus(userId: string): Promise<ConsentStatus> {
 
   const acceptedByKey = new Map(latestPerKey.map((r) => [r.documentKey, r.version]));
 
-  const socialMediaRecord = await prisma.consentRecord.findFirst({
-    where: { userId, documentKey: "social_media" },
-    orderBy: { acceptedAt: "desc" },
-    select: { accepted: true },
-  });
+  // ConsentRecord is append-only with no unique constraint, so "current
+  // answer" is the newest row for the key, not the only row.
+  const [socialMediaRecord, marketingRecord] = await Promise.all([
+    prisma.consentRecord.findFirst({
+      where: { userId, documentKey: "social_media" },
+      orderBy: { acceptedAt: "desc" },
+      select: { accepted: true },
+    }),
+    prisma.consentRecord.findFirst({
+      where: { userId, documentKey: "marketing" },
+      orderBy: { acceptedAt: "desc" },
+      select: { accepted: true },
+    }),
+  ]);
   const socialMediaDecided = socialMediaRecord !== null;
   const socialMediaLatestAccepted = socialMediaRecord?.accepted ?? null;
+  const marketingDecided = marketingRecord !== null;
+  const marketingLatestAccepted = marketingRecord?.accepted ?? null;
 
   const pending: PendingDoc[] = [];
   for (const key of requiredKeys) {
@@ -108,6 +121,8 @@ export async function getConsentStatus(userId: string): Promise<ConsentStatus> {
     guardianVerificationNeeded,
     socialMediaDecided,
     socialMediaLatestAccepted,
+    marketingDecided,
+    marketingLatestAccepted,
   };
 }
 

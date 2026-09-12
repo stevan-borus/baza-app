@@ -44,6 +44,8 @@ describe("Cat A — recordSocialMediaMutationOptions does not refetch on success
       guardianVerificationNeeded: false,
       socialMediaDecided: true,
       socialMediaLatestAccepted: false,
+      marketingDecided: true,
+      marketingLatestAccepted: false,
     });
   });
 

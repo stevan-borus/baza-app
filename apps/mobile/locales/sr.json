@@ -134,6 +134,16 @@
       "helper": "Vaš izbor možete promeniti u svakom trenutku iz profila.",
       "saveFailed": "Slanje izbora nije uspelo — pokušajte ponovo."
     },
+    "marketing": {
+      "question": "Želim da imejlom dobijam vesti o promocijama, novim programima i dešavanjima u Studiju.",
+      "toggleLabel": "Promocije i novi programi",
+      "yes": "Da",
+      "no": "Ne",
+      "helper": "Ovo nije uslov za korišćenje aplikacije ni za zakazivanje treninga. Odgovor možete promeniti u svakom trenutku u podešavanjima profila.",
+      "acceptA11y": "Da, želim da dobijam promotivne imejlove",
+      "declineA11y": "Ne, ne želim da dobijam promotivne imejlove",
+      "saveFailed": "Slanje izbora nije uspelo — pokušajte ponovo."
+    },
     "acceptToContinue": "Prihvatite sva dokumenta da biste nastavili."
   },
   "intake": {
@@ -390,7 +400,7 @@
       "navRow": "Podešavanja obaveštenja",
       "pushEnabled": "Push obaveštenja",
       "inAppEnabled": "Obaveštenja u aplikaciji",
-      "campaignsEnabled": "Promocije / novi programi",
+      "campaignsEnabled": "Promocije i novi programi",
       "bookingEmailsEnabled": "Email o izmenama rezervacija",
       "saveError": "Nije moguće sačuvati podešavanja."
     },
