@@ -3,6 +3,7 @@ import { consentGateEnabled, rateLimitEnabled } from "@/lib/server/env.server";
 import { getConsentStatus } from "@/lib/legal/consent-status";
 import { getRequestUser } from "@/lib/server/auth-guards";
 import { apiRateLimiter, clientIp, throttleResponse } from "@/lib/server/rate-limit";
+import { publicLegalPageResponse } from "@/lib/legal/public-page-response";
 
 // Division of labour:
 //   • /api/[...path] — server enforces the gate here (defense in depth for
@@ -15,12 +16,16 @@ export const unstable_settings = {
   matcher: {
     patterns: [
       "/api/[...path]",
+      "/legal/[key]",
       "/(client)/[...path]",
       "/(trainer)/[...path]",
       "/(admin)/[...path]",
     ],
   },
 };
+
+/** `/legal/privacy.html` -> `privacy`; the suffix-less path stays the in-app screen. */
+const LEGAL_PAGE_PATH = /^\/legal\/([a-z_]+)\.html$/;
 
 const ALLOWED_WITHOUT_CONSENT = [
   "/consent",
@@ -61,6 +66,17 @@ const middleware: MiddlewareFunction = async (request) => {
       process.stderr.write(`[throttle] 429 ip=${ip} path=${pathname}\n`);
       return throttleResponse(retryAfterSeconds);
     }
+  }
+
+  // Store listings link here. It must render for an anonymous, JS-less client,
+  // so it answers above the consent gate and before any auth lookup.
+  const legalPage = pathname.match(LEGAL_PAGE_PATH);
+  if (legalPage) {
+    const response = publicLegalPageResponse(
+      legalPage[1],
+      url.searchParams.get("locale"),
+    );
+    if (response) return response;
   }
 
   if (!consentGateEnabled) return;
