@@ -1199,6 +1199,7 @@
       "cancelTitle_few": "Otkaži {{count}} termina?",
       "cancelTitle_other": "Otkaži {{count}} termina?",
       "cancelConfirmCta": "Otkaži termin",
+      "confirmError": "Rezervacija nije uspela. Pokušaj ponovo.",
       "patternSkippedFull": "{{skipped}} od {{total}} termina je popunjeno i preskočeno",
       "pattern": {
         "weekly": "Svake nedelje",

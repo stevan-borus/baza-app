@@ -176,6 +176,100 @@ describe("POST /api/admin/reservations", () => {
     expect(body.skippedAlreadyBooked).toEqual([session.id]);
   });
 
+  // ── Re-reserving after a cancel ───────────────────────────────────────────
+  // The studio owner's report: reserve some sessions, cancel one (from either
+  // the admin bulk-cancel or the client's own cancel), then the reserve button
+  // does nothing for that client. `@@unique([sessionId, clientProfileId])`
+  // means the cancelled row still occupies the pair, so a bare `create` throws
+  // P2002 → 500 → the confirm sheet has no onError and just sits there.
+  it("re-reserves a session the client previously cancelled", async () => {
+    const { admin, trainer, clientProfile, reformer } = await seedBasics();
+    const session = await createSession({
+      classTypeId: reformer.id,
+      trainerUserId: trainer.id,
+      startsAt: new Date(nowMs() + 24 * 60 * 60 * 1000),
+    });
+    // A cancelled booking on the same (session, client) pair — exactly what
+    // both cancel paths leave behind (they stamp canceledAt, never delete).
+    const canceled = await prisma.booking.create({
+      data: {
+        sessionId: session.id,
+        clientProfileId: clientProfile.id,
+        canceledAt: new Date(nowMs() - 60 * 60 * 1000),
+      },
+    });
+    asAdmin(admin);
+
+    const res = await POST(
+      buildRequest({
+        clientProfileId: clientProfile.id,
+        sessionIds: [session.id],
+      }),
+    );
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.reserved).toBe(1);
+    expect(body.reservedSessionIds).toEqual([session.id]);
+    expect(body.skippedAlreadyBooked).toEqual([]);
+
+    // The revived row is the same row — the unique pair permits only one.
+    const bookings = await prisma.booking.findMany({
+      where: { sessionId: session.id, clientProfileId: clientProfile.id },
+    });
+    expect(bookings).toHaveLength(1);
+    expect(bookings[0]!.id).toBe(canceled.id);
+    expect(bookings[0]!.canceledAt).toBeNull();
+    expect(bookings[0]!.createdByUserId).toBe(admin.id);
+  });
+
+  // A cancelled row must not eat a seat: capacity counts only active bookings,
+  // and the revive has to respect that count at the moment it runs.
+  it("reports a full session as skippedFull even when the client's own cancelled row exists", async () => {
+    const { admin, trainer, clientProfile, reformer } = await seedBasics();
+    const session = await createSession({
+      classTypeId: reformer.id,
+      trainerUserId: trainer.id,
+      startsAt: new Date(nowMs() + 24 * 60 * 60 * 1000),
+      capacity: 1,
+    });
+    await prisma.booking.create({
+      data: {
+        sessionId: session.id,
+        clientProfileId: clientProfile.id,
+        canceledAt: new Date(nowMs() - 60 * 60 * 1000),
+      },
+    });
+    // Someone else took the freed seat.
+    const otherClient = await prisma.user.create({
+      data: { email: "taker@test.local", firstName: "Seat", lastName: "Taker", role: "CLIENT" },
+    });
+    const otherProfile = await prisma.clientProfile.create({
+      data: { userId: otherClient.id },
+    });
+    await prisma.booking.create({
+      data: { sessionId: session.id, clientProfileId: otherProfile.id },
+    });
+    asAdmin(admin);
+
+    const res = await POST(
+      buildRequest({
+        clientProfileId: clientProfile.id,
+        sessionIds: [session.id],
+      }),
+    );
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.reserved).toBe(0);
+    expect(body.skippedFull).toEqual([session.id]);
+
+    const mine = await prisma.booking.findFirst({
+      where: { sessionId: session.id, clientProfileId: clientProfile.id },
+    });
+    expect(mine?.canceledAt).not.toBeNull();
+  });
+
   it("forbids non-admin callers (403)", async () => {
     const { trainer, clientProfile, reformer } = await seedBasics();
     const session = await createSession({

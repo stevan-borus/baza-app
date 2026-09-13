@@ -1191,6 +1191,7 @@
       "cancelTitle_one": "Cancel this session?",
       "cancelTitle_other": "Cancel {{count}} sessions?",
       "cancelConfirmCta": "Cancel session",
+      "confirmError": "The reservation could not be saved. Please try again.",
       "patternSkippedFull": "{{skipped}} of {{total}} sessions were full and skipped",
       "pattern": {
         "weekly": "Every week",

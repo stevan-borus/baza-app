@@ -26,7 +26,8 @@ import { CapsLabel } from "@/components/ui/studio/typography";
 import { SessionCard } from "@/components/ui/session-card";
 import { StudioWeekStrip } from "@/components/ui/studio";
 import { ScreenContainerRaw, useTabBarBottomPadding } from "@/components/ui/screen-container";
-import { EmptyState } from "@/components/ui/states";
+import { EmptyState, ErrorState } from "@/components/ui/states";
+import { formatMutationError } from "@/lib/admin/format-mutation-error";
 import { Input } from "@/components/ui/input";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { FilterChip } from "@/components/ui/studio/filter-chip";
@@ -1173,7 +1174,8 @@ function ConfirmSheet({
   onDone: () => void;
   onCancel: () => void;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const lang = i18n.language === "en" ? "en" : "sr";
   const create = useCreateReservationsMutation();
   const packagesQ = useQuery(packagesQueries.clientPackages(clientProfileId));
   const pkgs = packagesQ.data?.packages ?? [];
@@ -1252,6 +1254,24 @@ function ConfirmSheet({
         >
           {t("admin.reservations.confirm", { defaultValue: "Rezerviši" })}
         </Button>
+        {/*
+          Without this the sheet swallowed every failure: `mutate` carried only
+          an onSuccess, so a rejected reserve flipped isPending back, left the
+          sheet open with the selection intact, and changed nothing on screen.
+          That is what made the re-reserve P2002 read as a dead button rather
+          than an error, and it would hide the next 4xx/5xx just as well.
+        */}
+        {create.isError ? (
+          <ErrorState
+            testID="reservation-confirm-error"
+            message={formatMutationError(
+              create.error,
+              t,
+              lang,
+              t("admin.reservations.confirmError"),
+            )}
+          />
+        ) : null}
         <Button variant="ghost" disabled={create.isPending} onPress={onCancel}>
           {t("common.close", { defaultValue: "Zatvori" })}
         </Button>

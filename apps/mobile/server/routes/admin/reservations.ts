@@ -59,11 +59,26 @@ export async function POST(request: Request) {
         skippedFull.push(sessionId);
         continue;
       }
-      await tx.booking.create({
-        data: {
+      // Upsert, not create: cancelling stamps `canceledAt` and leaves the row
+      // in place, but `@@unique([sessionId, clientProfileId])` only allows one
+      // row per pair — so a plain create on a re-reserve throws P2002. Revive
+      // the cancelled row instead, exactly as the client booking path does
+      // (`server/routes/bookings.ts`). `createdByUserId` is re-stamped so the
+      // audit names the admin who made the reservation that now stands.
+      await tx.booking.upsert({
+        where: { sessionId_clientProfileId: { sessionId, clientProfileId } },
+        create: {
           sessionId,
           clientProfileId,
           clientPackageId: null,
+          createdByUserId: guard.user.id,
+        },
+        update: {
+          canceledAt: null,
+          clientPackageId: null,
+          // A revived reservation is not a waived cancel — clear the stamp so
+          // a past waiver can't be read as applying to this booking.
+          waivedByUserId: null,
           createdByUserId: guard.user.id,
         },
       });
