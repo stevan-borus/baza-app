@@ -88,21 +88,23 @@ export function ClientLegalPanel({ clientUserId, clientFullName, lang }: Props) 
           <Text className="flex-1 text-[14px] text-foreground">
             {t("admin.client.socialMediaPanel")}
           </Text>
+          {/*
+            No record reads as "Ne", not as a third "not asked" state. The
+            consent gate makes this question mandatory (`app/consent.tsx` puts
+            `socialAnswered` in `canSubmit`), so a missing row only happens for
+            clients who predate the gate — and holding no consent is exactly
+            what "Ne" means here. Publishing a photo needs an affirmative yes,
+            so an unanswered client must never render as anything softer.
+          */}
           <Text
             className={`text-[12px] font-body-semibold ${
-              socialMedia === null
-                ? "text-muted"
-                : socialMedia.accepted
-                  ? "text-success"
-                  : "text-danger"
+              socialMedia?.accepted ? "text-success" : "text-danger"
             }`}
             testID={`social-media-status-${clientUserId}`}
           >
-            {socialMedia === null
-              ? t("admin.client.socialMediaUnknown")
-              : socialMedia.accepted
-                ? t("admin.client.socialMediaYes")
-                : t("admin.client.socialMediaNo")}
+            {socialMedia?.accepted
+              ? t("admin.client.socialMediaYes")
+              : t("admin.client.socialMediaNo")}
           </Text>
         </View>
 
