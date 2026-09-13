@@ -138,6 +138,7 @@ export async function GET(request: Request) {
         expiresAt: item.expiresAt,
         sessionsRemaining: item.sessionsRemaining,
         revokedAt: item.revokedAt,
+        isGift: item.isGift,
       }));
       const distinctClassTypeIds = Array.from(
         new Set(eligibilityPackages.flatMap((p) => p.classTypeIds)),

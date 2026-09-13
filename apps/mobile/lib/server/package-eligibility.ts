@@ -8,7 +8,7 @@ import type { ClientPackage, PackagePause } from "@/generated/prisma";
  */
 export type EligibilityPackage = Pick<
   ClientPackage,
-  "id" | "startsAt" | "expiresAt" | "sessionsRemaining" | "revokedAt"
+  "id" | "startsAt" | "expiresAt" | "sessionsRemaining" | "revokedAt" | "isGift"
 > & {
   classTypeIds: string[];
 };
@@ -23,6 +23,7 @@ export const ELIGIBILITY_PACKAGE_SELECT = {
   expiresAt: true,
   sessionsRemaining: true,
   revokedAt: true,
+  isGift: true,
   classTypes: { select: { classTypeId: true } },
 } as const;
 
@@ -58,19 +59,25 @@ export function clientOwnsPackageForClass(
  * Returns the pack the client should spend on a session at `at` whose class
  * is `classTypeId`. Eligible = ClassType set covers the class, started, has
  * sessions, `expiresAt` in the future, `at` not in a pause, and not revoked.
- * `revokedAt` is a REQUIRED input field on purpose — every call site must
- * select it, so a new query can't silently treat a revoked package as
- * bookable.
+ * `revokedAt` and `isGift` are REQUIRED input fields on purpose — every call
+ * site must select them, so a new query can neither silently treat a revoked
+ * package as bookable nor silently strand a gift by losing its spend order.
  *
  * `expiresAt` is read raw: the pause routes write the pause extension INTO
  * the column when the pause is created (and take the unused tail back when
  * one ends early), so re-deriving an extension here would double-count it.
  * `pauses` still gates booking — being inside a live pause blocks the spend.
  *
- * Spend priority when several packs are eligible (ADR-0010): the NARROWEST
- * ClassType set wins — a single-type pack is spent before a mix pack, so the
- * mix pack's flexibility survives — then the soonest expiry, so the dying
- * pack is burned first.
+ * Spend priority when several packs are eligible (ADR-0010, revised by
+ * ADR-0011), in order:
+ * 1. NARROWEST ClassType set — a single-type pack is spent before a mix pack,
+ *    so the mix pack's flexibility survives.
+ * 2. SOONEST expiry — the dying pack is burned first.
+ * 3. GIFT before paid. This is a preference, not an override: it only ever
+ *    decides a tie at step 2, so taking the gift can never burn past credits
+ *    the client paid for. A gift expiring later than a paid pack still loses.
+ * 4. `id`, so two otherwise-equal candidates resolve the same way on every
+ *    fetch rather than following whatever order the rows arrived in.
  */
 export function findEligibleClientPackage(
   packages: EligibilityPackage[],
@@ -83,7 +90,9 @@ export function findEligibleClientPackage(
     .sort(
       (a, b) =>
         a.classTypeIds.length - b.classTypeIds.length ||
-        a.expiresAt.getTime() - b.expiresAt.getTime(),
+        a.expiresAt.getTime() - b.expiresAt.getTime() ||
+        Number(b.isGift) - Number(a.isGift) ||
+        a.id.localeCompare(b.id),
     );
   for (const pkg of candidates) {
     if (pkg.revokedAt) continue;

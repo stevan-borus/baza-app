@@ -153,6 +153,7 @@ describe("client-packages gift class-type override", () => {
         expiresAt: true,
         sessionsRemaining: true,
         revokedAt: true,
+        isGift: true,
         classTypes: { select: { classTypeId: true } },
       },
     });
@@ -163,6 +164,7 @@ describe("client-packages gift class-type override", () => {
       expiresAt: created.expiresAt,
       sessionsRemaining: created.sessionsRemaining,
       revokedAt: created.revokedAt,
+      isGift: created.isGift,
     };
     const at = now();
     expect(
@@ -271,6 +273,7 @@ describe("client-packages gift class-type override", () => {
         expiresAt: true,
         sessionsRemaining: true,
         revokedAt: true,
+        isGift: true,
         classTypes: { select: { classTypeId: true } },
       },
     });
@@ -281,6 +284,7 @@ describe("client-packages gift class-type override", () => {
       expiresAt: created.expiresAt,
       sessionsRemaining: created.sessionsRemaining,
       revokedAt: created.revokedAt,
+      isGift: created.isGift,
     };
     const at = now();
     expect(
