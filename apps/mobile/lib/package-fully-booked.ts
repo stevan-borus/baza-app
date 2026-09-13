@@ -81,3 +81,67 @@ export function isActiveClientPackage(
   if (pkg.startsAt && new Date(pkg.startsAt) > now) return false;
   return new Date(pkg.expiresAt) > now;
 }
+
+/**
+ * Whether a package is bought-and-paid-for but NOT YET USABLE — assigned with
+ * a `startsAt` the studio dated into the future.
+ *
+ * This is the other half of `isActiveClientPackage`, and it exists because
+ * "not bookable yet" had been implemented as "does not exist". A client handed
+ * two Nadoknada packages, one starting today and one in five days, could see
+ * only the first: three separate client-side filters dropped anything with a
+ * future `startsAt` and no surface picked it back up. The credits were never
+ * lost server-side — they were simply unrenderable.
+ *
+ * The two predicates are mutually exclusive by construction and share every
+ * non-date gate, so a package is active, upcoming, or neither — never both:
+ *
+ * - `revokedAt` wins outright. A package the studio took back is not "coming";
+ *   announcing a start date for it would promise credits every booking 409s.
+ * - Zero `sessionsRemaining` is not coming either. A spent package with a
+ *   future start is an artefact, not an announcement.
+ * - Past `expiresAt` short-circuits the same way — nothing to look forward to.
+ *
+ * A missing or null `startsAt` counts as ALREADY STARTED, matching
+ * `isActiveClientPackage`. The field is required on the wire, so absence means
+ * an older cached payload, and a package must not migrate into the upcoming
+ * section merely because the cache predates the field.
+ */
+export function isUpcomingClientPackage(
+  pkg: {
+    sessionsRemaining: number;
+    expiresAt: string;
+    revokedAt?: string | null;
+    startsAt?: string | null;
+  },
+  now: Date,
+): boolean {
+  if (pkg.revokedAt) return false;
+  if (pkg.sessionsRemaining <= 0) return false;
+  if (new Date(pkg.expiresAt) <= now) return false;
+  return !!pkg.startsAt && new Date(pkg.startsAt) > now;
+}
+
+/**
+ * Every not-yet-started package, soonest start first.
+ *
+ * Ordering is by start date rather than expiry because the question this list
+ * answers is "when can I use something again" — the nearest start is the one
+ * both the admin and the client are waiting on. (The active lists order by
+ * soonest EXPIRY, which answers the opposite question: what to spend first.)
+ */
+export function upcomingClientPackages<
+  T extends {
+    sessionsRemaining: number;
+    expiresAt: string;
+    revokedAt?: string | null;
+    startsAt?: string | null;
+  },
+>(packages: T[], now: Date): T[] {
+  return packages
+    .filter((pkg) => isUpcomingClientPackage(pkg, now))
+    .sort(
+      (a, b) =>
+        new Date(a.startsAt ?? 0).getTime() - new Date(b.startsAt ?? 0).getTime(),
+    );
+}

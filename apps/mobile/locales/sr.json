@@ -274,7 +274,13 @@
       "noActiveContact": "Za kupovinu ili obnovu paketa javite nam se.",
       "allPackages": "Svi paketi",
       "packageName": "Paket",
-      "sessionsUntil": "Termini: {{count}} | Do: {{date}}"
+      "sessionsUntil": "Termini: {{count}} | Do: {{date}}",
+      "upcoming": "Uskoro",
+      "upcomingTitle": "Uskoro dostupan paket",
+      "upcomingTitlePlural": "Uskoro dostupni paketi",
+      "availableFrom": "Dostupan od {{date}}",
+      "upcomingHint": "Termini iz ovog paketa mogu da se zakazuju od tog datuma.",
+      "upcomingA11y": "{{name}}, dostupan od {{date}}. Još ne može da se zakazuje."
     },
     "renewal": {
       "message": "Vaš paket je iskorišćen ili je istekao. Javite nam se da obnovite paket i nastavite sa treninzima.",
@@ -848,7 +854,11 @@
       "lockedUntil": "Zaključan do {{time}}",
       "unlock": "Otključaj",
       "unlockA11y": "Otključaj prijavu",
-      "unlockError": "Otključavanje nije uspelo."
+      "unlockError": "Otključavanje nije uspelo.",
+      "upcomingPackage": "Uskoro dostupan paket",
+      "upcomingPackages": "Uskoro dostupni paketi",
+      "packageNotStartedYet": "Još nije aktivan",
+      "availableFrom": "Dostupan od {{date}}"
     },
     "packages": {
       "classType": "Tip treninga",

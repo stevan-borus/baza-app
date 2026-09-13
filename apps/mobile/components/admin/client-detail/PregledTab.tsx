@@ -4,6 +4,7 @@ import dayjs from "dayjs";
 import { EmptyState } from "@/components/ui/states";
 import { SkeletonCard } from "@/components/ui/skeleton";
 import { SectionLabel } from "@/components/ui/typography";
+import { Badge } from "@/components/ui/badge";
 import { type ClientPackage } from "@/lib/queries/packages-queries-factory";
 import { type ClientBooking } from "@/lib/queries/bookings-queries-factory";
 import { BookingRow } from "@/components/admin/booking-row";
@@ -68,8 +69,77 @@ function ActivePackageCard({
   );
 }
 
+/**
+ * A package the studio assigned with a future `startsAt`.
+ *
+ * Deliberately NOT an ActivePackageCard with a flag: the two carry different
+ * facts. An active card headlines what is bookable; this one headlines the day
+ * it becomes bookable, and prints no bookable count at all — a "Slobodno za
+ * zakazivanje" line on a package the server refuses to book is the exact
+ * mismatch that made the old behaviour tempting to just hide.
+ *
+ * Muted, not amber: nothing is wrong here. The studio assigned it on purpose
+ * and the date is the whole message.
+ */
+function UpcomingPackageCard({
+  pkg,
+  lang,
+}: {
+  pkg: ClientPackage;
+  lang: "sr" | "en";
+}) {
+  const { t } = useTranslation();
+  return (
+    <View
+      testID={`client-upcoming-package-${pkg.id}`}
+      className="bg-surface rounded-lg p-4 gap-1 opacity-80"
+    >
+      <View className="flex-row items-center justify-between gap-3">
+        <Text
+          className="text-foreground font-body-semibold flex-1"
+          style={{ fontSize: 15 }}
+          numberOfLines={1}
+        >
+          {pkg.packageType?.name ?? "—"}
+        </Text>
+        <Badge status="neutral">
+          {t("admin.clientDetail.packageNotStartedYet")}
+        </Badge>
+      </View>
+      {(pkg.classTypes ?? []).length > 0 ? (
+        <Text className="text-muted" style={{ fontSize: 13 }} numberOfLines={1}>
+          {formatClassTypeList((pkg.classTypes ?? []).map((ct) => ct.name))}
+        </Text>
+      ) : null}
+      {/* The actionable fact. Bookable counts are deliberately absent — there
+          is nothing to book until this date. */}
+      <Text
+        testID={`client-upcoming-package-${pkg.id}-starts`}
+        className="text-foreground font-body-medium"
+        style={{ fontSize: 13 }}
+      >
+        {t("admin.clientDetail.availableFrom", {
+          date: dayjs(pkg.startsAt).locale(lang).format("D.M.YYYY."),
+        })}
+      </Text>
+      <Text className="text-muted" style={{ fontSize: 13 }}>
+        {t("admin.clientDetail.sessionsRemaining", {
+          remaining: pkg.sessionsRemaining,
+          total: pkg.sessionsTotal ?? "—",
+        })}
+      </Text>
+      <Text className="text-muted" style={{ fontSize: 13 }}>
+        {t("admin.clientDetail.validUntil", {
+          date: dayjs(pkg.expiresAt).locale(lang).format("D.M.YYYY."),
+        })}
+      </Text>
+    </View>
+  );
+}
+
 export function PregledTab({
   activePackages,
+  upcomingPackages = [],
   packagesLoading,
   upcomingBookings,
   lang,
@@ -82,6 +152,13 @@ export function PregledTab({
 }: {
   /** Every package the client can book against now, soonest expiry first. */
   activePackages: ClientPackage[];
+  /**
+   * Assigned but not yet startable, soonest start first. Separate from
+   * `activePackages` on purpose: nothing here may be counted as bookable.
+   * Optional so a caller that has not computed it yet renders the tab exactly
+   * as before rather than crashing on an absent list.
+   */
+  upcomingPackages?: ClientPackage[];
   packagesLoading: boolean;
   upcomingBookings: ClientBooking[];
   lang: "sr" | "en";
@@ -151,6 +228,26 @@ export function PregledTab({
           <EmptyState title={t("admin.clientDetail.noActivePackage")} />
         )}
       </View>
+
+      {/* Its own section BELOW the current one, never merged into it. A client
+          whose only package starts later still gets "Nema aktivnog paketa."
+          above — nothing is bookable today — and now also sees what is coming
+          and when. These used to be dropped entirely: the studio assigned a
+          second Nadoknada starting in five days and nobody could see it. */}
+      {upcomingPackages.length > 0 ? (
+        <View className="gap-2">
+          <SectionLabel>
+            {t(
+              upcomingPackages.length > 1
+                ? "admin.clientDetail.upcomingPackages"
+                : "admin.clientDetail.upcomingPackage",
+            )}
+          </SectionLabel>
+          {upcomingPackages.map((pkg) => (
+            <UpcomingPackageCard key={pkg.id} pkg={pkg} lang={lang} />
+          ))}
+        </View>
+      ) : null}
 
       {upcomingBookings.length > 0 ? (
         <View className="gap-2">

@@ -46,6 +46,10 @@ import {
 } from "@/components/client/use-booking-sheet";
 import { useThemeTokens } from "@/components/ui/tokens";
 import { formatClassTypeList } from "@/lib/format";
+import {
+  isUpcomingClientPackage,
+  upcomingClientPackages,
+} from "@/lib/package-fully-booked";
 import { formatDayMonth, type DateLang } from "@/lib/format-date";
 
 dayjs.extend(relativeTime);
@@ -650,6 +654,100 @@ function PackageCard({
 }
 
 // ────────────────────────────────────────────────────────────────────────
+// Package — upcoming state: the studio assigned it with a start date that has
+// not arrived. It is NOT part of any spendable pool, so it never reaches
+// PackageCard and none of its credits appear in a headline count. The card
+// exists so the client learns it is coming and on what day — the old
+// behaviour dropped it from every surface, and a package nobody can see is
+// indistinguishable from one that was never assigned.
+//
+// Surface treatment is deliberately quieter than the green PackageCard: this
+// is information, not a balance, and never an error.
+
+function UpcomingPackageCard({
+  pkg,
+  lang,
+}: {
+  pkg: ClientPackage;
+  lang: DateLang;
+}) {
+  const { t } = useTranslation();
+  const tokens = useThemeTokens();
+  const name = pkg.packageType?.name ?? t("client.home.package");
+  // `D.M.YYYY.` rather than the sentence-form `formatDayMonth` used for expiry
+  // just below. An expiry is always within the current package's window, so
+  // "24. septembra" is unambiguous; a start date the studio set can sit months
+  // or a year out, and a year-less date there is a guess.
+  const startsOn = dayjs(pkg.startsAt).locale(lang).format("D.M.YYYY.");
+  return (
+    <View style={{ paddingHorizontal: 16 }}>
+      <View
+        testID={`home-upcoming-package-${pkg.id}`}
+        accessibilityLabel={t("client.package.upcomingA11y", {
+          name,
+          date: startsOn,
+        })}
+        style={{
+          backgroundColor: tokens.surface,
+          borderRadius: 8,
+          padding: 22,
+          gap: 8,
+        }}
+      >
+        <CapsLabel size={10} color={tokens.muted} tracking={2.2}>
+          {t("client.package.upcoming")}
+        </CapsLabel>
+        <Text
+          style={{
+            fontFamily: "AlbertSans-SemiBold",
+            fontSize: 16,
+            color: tokens.foreground,
+            letterSpacing: -0.2,
+          }}
+          numberOfLines={1}
+        >
+          {name}
+        </Text>
+        {(pkg.classTypes ?? []).length > 0 ? (
+          <Text
+            style={{
+              fontFamily: "AlbertSans-Regular",
+              fontSize: 12,
+              color: tokens.muted,
+            }}
+            numberOfLines={1}
+          >
+            {formatClassTypeList((pkg.classTypes ?? []).map((ct) => ct.name))}
+          </Text>
+        ) : null}
+        {/* The date IS the message. No credit count beside it — those credits
+            are not spendable yet, and a number here would read as a balance. */}
+        <Text
+          style={{
+            fontFamily: "AlbertSans-SemiBold",
+            fontSize: 13,
+            color: tokens.foreground,
+            letterSpacing: 0.1,
+          }}
+        >
+          {t("client.package.availableFrom", { date: startsOn })}
+        </Text>
+        <Text
+          style={{
+            fontFamily: "AlbertSans-Regular",
+            fontSize: 12,
+            lineHeight: 18,
+            color: tokens.muted,
+          }}
+        >
+          {t("client.package.upcomingHint")}
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+// ────────────────────────────────────────────────────────────────────────
 // Package — renewal state: the client HAD a package but it lapsed. The card
 // stays on the home screen (instead of silently disappearing) and tells them
 // exactly how to get back on the schedule.
@@ -745,18 +843,32 @@ export default function HomeStudio() {
   // booking), so a revoked-only client still falls through to the RenewalCard
   // exactly like a lapsed one.
   const packageGroups = summarizeActivePackages(packages, now());
+  // Assigned but not startable yet. Deliberately NOT fed through
+  // `summarizeActivePackages`: that function pools by covered ClassType set,
+  // so an upcoming Nadoknada sharing a set with the active 12-pack would merge
+  // straight into its headline and promise a 13th credit the server refuses.
+  // It renders in its own section, with a date instead of a count.
+  const upcomingPackages = upcomingClientPackages(packages, now());
   // Two cards, then a link. The third card would push the hero and the week
   // strip below the fold on the screen this was reported from, and only one of
   // the studio's clients holds a third pool. Moji paketi itemises all of them.
   const shownPackageGroups = packageGroups.slice(0, HOME_PACKAGE_CARDS);
   // No active package but a purchase history → renewal state. The most
   // recently expiring package names what the client would be renewing.
+  // An upcoming package is excluded from this pick: it has NOT lapsed, so
+  // naming it as the package to renew would be wrong twice over — it has the
+  // latest expiry of anything the client holds, so it would win this sort
+  // outright and headline the renewal card. The card itself still shows,
+  // because nothing is bookable today; the upcoming section below tells the
+  // client what is coming.
   const lastLapsedPackage = packageGroups.length > 0
     ? null
-    : ([...packages].sort(
-        (a: ClientPackage, b: ClientPackage) =>
-          new Date(b.expiresAt).getTime() - new Date(a.expiresAt).getTime(),
-      )[0] ?? null);
+    : ([...packages]
+        .filter((p: ClientPackage) => !isUpcomingClientPackage(p, now()))
+        .sort(
+          (a: ClientPackage, b: ClientPackage) =>
+            new Date(b.expiresAt).getTime() - new Date(a.expiresAt).getTime(),
+        )[0] ?? null);
   const sessions = availabilityQuery.data?.sessions ?? [];
 
   // First name only. Fall back to the email local-part if the profile has no
@@ -1011,6 +1123,25 @@ export default function HomeStudio() {
           <View>
             <SectionRow title={t("client.home.yourPackage")} />
             <RenewalCard pkg={lastLapsedPackage} />
+          </View>
+        ) : null}
+
+        {/* Below whichever of the two blocks above rendered, never instead of
+            one. A client whose only package starts next week still sees the
+            renewal card (they cannot book today) AND now learns that something
+            is coming — before this, that package was invisible everywhere. */}
+        {upcomingPackages.length > 0 ? (
+          <View style={{ gap: 12 }}>
+            <SectionRow
+              title={
+                upcomingPackages.length > 1
+                  ? t("client.package.upcomingTitlePlural")
+                  : t("client.package.upcomingTitle")
+              }
+            />
+            {upcomingPackages.map((pkg: ClientPackage) => (
+              <UpcomingPackageCard key={pkg.id} pkg={pkg} lang={lang} />
+            ))}
           </View>
         ) : null}
 
