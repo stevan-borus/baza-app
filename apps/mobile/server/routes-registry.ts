@@ -50,6 +50,7 @@ import * as route_invites_id_resend from "@/server/routes/invites/[id]/resend";
 import * as route_invites_id_revoke from "@/server/routes/invites/[id]/revoke";
 import * as route_legal_documents from "@/server/routes/legal/documents";
 import * as route_legal_documents_key from "@/server/routes/legal/documents/[key]";
+import * as route_legal_pages_key from "@/server/routes/legal/pages/[key]";
 import * as route_notifications from "@/server/routes/notifications";
 import * as route_notifications_id from "@/server/routes/notifications/[id]";
 import * as route_notifications_preferences from "@/server/routes/notifications/preferences";
@@ -141,6 +142,7 @@ export const routesRegistry: Record<string, RouteModule> = {
   "invites/[id]/revoke": route_invites_id_revoke,
   "legal/documents": route_legal_documents,
   "legal/documents/[key]": route_legal_documents_key,
+  "legal/pages/[key]": route_legal_pages_key,
   notifications: route_notifications,
   "notifications/[id]": route_notifications_id,
   "notifications/preferences": route_notifications_preferences,
