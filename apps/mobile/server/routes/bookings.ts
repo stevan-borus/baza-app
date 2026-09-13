@@ -16,14 +16,13 @@ import { respond, fail, parseBody } from "@/lib/server/http";
 import { shouldApplyLateCancelPenalty } from "@/lib/server/cancellation-policy";
 import { notifyClient } from "@/lib/server/notify-client";
 import { notifyOperators } from "@/lib/server/notify-operators";
-import { countHeldSessions } from "@/lib/server/booking-hold-count";
+import { resolvePoolBookingGate } from "@/lib/server/booking-pool-gate";
 import { isEmptySessionCutoffLocked } from "@/lib/server/booking-cutoff";
 import {
   ELIGIBILITY_PACKAGE_SELECT,
   findEligibleClientPackage,
   toEligibilityPackage,
 } from "@/lib/server/package-eligibility";
-import { canHoldAnotherBooking } from "@/lib/server/package-hold";
 import { prisma } from "@/lib/server/prisma";
 
 export async function POST(request: Request) {
@@ -101,8 +100,9 @@ export async function POST(request: Request) {
       }),
     ]);
 
+    const eligibilityPackages = clientPackages.map(toEligibilityPackage);
     const eligiblePackage = findEligibleClientPackage(
-      clientPackages.map(toEligibilityPackage),
+      eligibilityPackages,
       packagePauses,
       session.startsAt,
       session.classTypeId,
@@ -125,21 +125,27 @@ export async function POST(request: Request) {
     // Count holds + create the booking/waitlist atomically so two concurrent
     // requests can't both pass the overuse check on the last remaining session.
     const result = await prisma.$transaction(async (tx) => {
-      const heldCount = await countHeldSessions(tx, {
+      // Pool-scoped, and through the SAME helper the availability route uses
+      // to decide whether the row renders bookable — the two answers have to
+      // agree or the calendar shows rows that 409 on tap. No cache inside the
+      // transaction: the count must be fresh so two concurrent requests can't
+      // both claim the pool's last slot.
+      const gate = await resolvePoolBookingGate(tx, {
         clientProfileId,
-        classTypeIds: eligiblePackage.classTypeIds,
-        clientPackageId: eligiblePackage.id,
+        packages: eligibilityPackages,
+        spendPackage: eligiblePackage,
+        sessionInstant: session.startsAt,
         at: now(),
       });
 
-      if (
-        !canHoldAnotherBooking({
-          sessionsRemaining: eligiblePackage.sessionsRemaining,
-          heldCount,
-        })
-      ) {
+      if (!gate.canHoldAnotherBooking || !gate.packageToSpend) {
         return { state: "PACKAGE_EXHAUSTED" as const };
       }
+      // Spend priority is unchanged; this only redirects off a pool member
+      // whose own credits are already committed, so consumption (which
+      // decrements the booking's own package and no-ops at zero) can't lose a
+      // paid credit.
+      const packageToSpend = gate.packageToSpend;
 
       const [activeBookingsCount, waitlistCount] = await Promise.all([
         tx.booking.count({ where: { sessionId, canceledAt: null } }),
@@ -175,9 +181,9 @@ export async function POST(request: Request) {
         create: {
           sessionId,
           clientProfileId,
-          clientPackageId: eligiblePackage.id,
+          clientPackageId: packageToSpend.id,
         },
-        update: { canceledAt: null, clientPackageId: eligiblePackage.id },
+        update: { canceledAt: null, clientPackageId: packageToSpend.id },
       });
       await tx.waitlistEntry.deleteMany({
         where: { sessionId, clientProfileId },

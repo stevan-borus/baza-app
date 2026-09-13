@@ -7,7 +7,10 @@ import { UserRole } from "@/generated/prisma";
 import { now } from "@/lib/now";
 import { requireRole } from "@/lib/server/auth-guards";
 import { isEmptySessionCutoffLocked } from "@/lib/server/booking-cutoff";
-import { countHeldSessions } from "@/lib/server/booking-hold-count";
+import {
+  resolvePoolBookingGate,
+  type PoolHoldCounts,
+} from "@/lib/server/booking-pool-gate";
 import { respond, fail } from "@/lib/server/http";
 import {
   classifyRenewalLockReason,
@@ -16,7 +19,6 @@ import {
   findEligibleClientPackage,
   toEligibilityPackage,
 } from "@/lib/server/package-eligibility";
-import { canHoldAnotherBooking, isLastBookableSlot } from "@/lib/server/package-hold";
 import { prisma } from "@/lib/server/prisma";
 
 function getMonthRange(month: string) {
@@ -170,9 +172,10 @@ export async function GET(request: Request) {
       );
 
       // Bookability + last-slot flag per session. Held-slot counts are
-      // memoized per package: a month of sessions typically resolves to the
-      // same one or two packages.
-      const heldCountByPackageId = new Map<string, number>();
+      // memoized per POOL (covered ClassType set), not per package: a month of
+      // sessions typically resolves to the same one or two pools, and the pool
+      // is the unit the gate measures anyway.
+      const heldCountByPoolKey = new Map<string, PoolHoldCounts>();
       const at = now();
       for (const session of visibleSessions) {
         // Checked before the package lookup: this lock is absolute, not
@@ -216,27 +219,29 @@ export async function GET(request: Request) {
           });
           continue;
         }
-        let heldCount = heldCountByPackageId.get(eligible.id);
-        if (heldCount === undefined) {
-          heldCount = await countHeldSessions(prisma, {
-            clientProfileId,
-            classTypeIds: eligible.classTypeIds,
-            clientPackageId: eligible.id,
-            at,
-          });
-          heldCountByPackageId.set(eligible.id, heldCount);
-        }
-        // Eligible on paper, but every remaining session is already committed
-        // to a future booking/waitlist hold — the book call would 409. Mark it
-        // locked with its own reason so the UI can explain (the pilot incident:
-        // a client at her hold limit saw normal bookable rows, got rejected,
-        // and had no idea why).
-        if (
-          !canHoldAnotherBooking({
-            sessionsRemaining: eligible.sessionsRemaining,
-            heldCount,
-          })
-        ) {
+        // Measured against the whole spendable pool, not just the package
+        // spend priority picked. A client holding a 9-session Reformer pack
+        // beside a 1-session makeup package of the same scope has ten bookable
+        // sessions: the makeup package wins priority on expiry, so per-package
+        // math warned "last session" on every booking and locked them out
+        // entirely once the makeup package alone was held.
+        //
+        // Same helper the booking route's 409 runs through, so a row that
+        // renders bookable here cannot be rejected on tap.
+        const gate = await resolvePoolBookingGate(prisma, {
+          clientProfileId,
+          packages: clientPackages,
+          spendPackage: eligible,
+          sessionInstant: session.startsAt,
+          at,
+          heldCountCache: heldCountByPoolKey,
+        });
+        // Eligible on paper, but every remaining session in the pool is already
+        // committed to a future booking/waitlist hold — the book call would
+        // 409. Mark it locked with its own reason so the UI can explain (the
+        // pilot incident: a client at her hold limit saw normal bookable rows,
+        // got rejected, and had no idea why).
+        if (!gate.canHoldAnotherBooking) {
           sessionBookingFlags.set(session.id, {
             bookable: false,
             lockReason: "FULLY_HELD",
@@ -246,10 +251,7 @@ export async function GET(request: Request) {
         }
         sessionBookingFlags.set(session.id, {
           bookable: true,
-          lastBookableSlot: isLastBookableSlot({
-            sessionsRemaining: eligible.sessionsRemaining,
-            heldCount,
-          }),
+          lastBookableSlot: gate.lastBookableSlot,
         });
       }
     }
