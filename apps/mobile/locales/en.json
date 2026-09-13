@@ -636,7 +636,6 @@
       "socialMediaPanel": "Photo/video consent",
       "socialMediaYes": "Yes",
       "socialMediaNo": "No",
-      "socialMediaUnknown": "Not asked",
       "socialMediaSince": "Last changed: {{date}}",
       "healthSection": "Health information",
       "healthNone": "No information recorded.",
