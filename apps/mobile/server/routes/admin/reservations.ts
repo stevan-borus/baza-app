@@ -76,8 +76,13 @@ export async function POST(request: Request) {
         update: {
           canceledAt: null,
           clientPackageId: null,
-          // A revived reservation is not a waived cancel — clear the stamp so
-          // a past waiver can't be read as applying to this booking.
+          // Audit hygiene, not behaviour: `waivedByUserId` records WHO forgave
+          // a specific late-cancel charge, and `canceledAt` is its "when"
+          // (ADR-0008). Clearing that timestamp without this would leave a
+          // waiver stamped on a booking with no cancellation to belong to.
+          // Nothing reads the field to make a decision — a waiver's real
+          // effect is the SessionConsumption row it never wrote, which this
+          // does not touch (see `routes/clients/[id]/bookings.ts`).
           waivedByUserId: null,
           createdByUserId: guard.user.id,
         },

@@ -223,6 +223,43 @@ describe("POST /api/admin/reservations", () => {
     expect(bookings[0]!.createdByUserId).toBe(admin.id);
   });
 
+  it("clears the charge waiver when reviving a booking whose cancel was waived", async () => {
+    const { admin, trainer, clientProfile, reformer } = await seedBasics();
+    const session = await createSession({
+      classTypeId: reformer.id,
+      trainerUserId: trainer.id,
+      startsAt: new Date(nowMs() + 24 * 60 * 60 * 1000),
+    });
+    // A late cancel an admin forgave: canceledAt plus the waiver stamp naming
+    // who forgave it (what cancel-bulk writes on result === "WAIVED").
+    const waived = await prisma.booking.create({
+      data: {
+        sessionId: session.id,
+        clientProfileId: clientProfile.id,
+        canceledAt: new Date(nowMs() - 60 * 60 * 1000),
+        waivedByUserId: admin.id,
+      },
+    });
+    asAdmin(admin);
+
+    const res = await POST(
+      buildRequest({
+        clientProfileId: clientProfile.id,
+        sessionIds: [session.id],
+      }),
+    );
+
+    expect(res.status).toBe(200);
+
+    // `waivedByUserId` records who forgave a specific cancellation and
+    // `canceledAt` is its "when" (ADR-0008). Reviving clears the timestamp, so
+    // leaving the stamp would strand a waiver on a booking that is no longer
+    // cancelled at all.
+    const revived = await prisma.booking.findUnique({ where: { id: waived.id } });
+    expect(revived?.canceledAt).toBeNull();
+    expect(revived?.waivedByUserId).toBeNull();
+  });
+
   // A cancelled row must not eat a seat: capacity counts only active bookings,
   // and the revive has to respect that count at the moment it runs.
   it("reports a full session as skippedFull even when the client's own cancelled row exists", async () => {
