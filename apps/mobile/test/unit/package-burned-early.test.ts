@@ -27,6 +27,7 @@ describe("a package burned through before its days run out", () => {
     expiresAt,
     sessionsRemaining: 0,
     revokedAt: null,
+    isGift: false,
   };
 
   it("stops being bookable the moment sessions hit zero, with days still left", () => {
@@ -65,6 +66,7 @@ describe("a package burned through before its days run out", () => {
       expiresAt: computePackageExpiresAt(studioDayStartFor(dayTwentyOne), 30),
       sessionsRemaining: 12,
       revokedAt: null,
+      isGift: false,
     };
     // 06:30 on day 21 — the first class of the day the pack starts. The
     // 05:00 opening exists precisely so this books.
@@ -84,6 +86,7 @@ describe("a package burned through before its days run out", () => {
       expiresAt: computePackageExpiresAt(studioDayStartFor(dayTwentyOne), 30),
       sessionsRemaining: 12,
       revokedAt: null,
+      isGift: false,
     };
     const at = new Date("2026-07-25T10:00:00.000Z");
     expect(findEligibleClientPackage([spent, fresh], [], at, REFORMER)?.id).toBe(

@@ -254,7 +254,7 @@ When writing a date-relative test, match the anchor of the layer you're in.
 ## Example dialogue
 
 > **Dev:** "When a **Client** books a **Session**, which **ClientPackage** gets decremented?"
-> **Domain expert:** "Whichever active, non-expired **ClientPackage** they own whose ClassType set includes the **Session**'s **ClassType**. If they have multiple eligible ones: the **narrowest ClassType set wins** (a Reformer-only pack is spent before a Reformer+Energy **mix package**, preserving the mix pack's flexibility); within the same set size, the one with the **soonest effective expiry**. If none — 409, the booking is rejected."
+> **Domain expert:** "Whichever active, non-expired **ClientPackage** they own whose ClassType set includes the **Session**'s **ClassType**. If they have multiple eligible ones: the **narrowest ClassType set wins** (a Reformer-only pack is spent before a Reformer+Energy **mix package**, preserving the mix pack's flexibility); within the same set size, the one with the **soonest effective expiry**; and on the same expiry, a **gift** (**Poklon paket** / birthday gift) before a paid pack, so the gift doesn't sit there until it lapses. That last rule is only ever a tie-break — a gift that outlives a paid pack is never spent first, because that would forfeit credits the client paid for. If none — 409, the booking is rejected."
 > **Dev:** "And the package's **late-cancel cutoff** — does that come from the current **PackageType** or the **ClientPackage** itself?"
 > **Domain expert:** "The **ClientPackage** — it snapshots `lateCancelHours` at purchase time. If the studio later edits the **PackageType**'s window, in-flight **ClientPackages** keep their original window."
 

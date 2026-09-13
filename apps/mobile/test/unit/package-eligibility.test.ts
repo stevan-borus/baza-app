@@ -18,6 +18,7 @@ function makePackage(overrides: Partial<{
   expiresAt: Date;
   sessionsRemaining: number;
   revokedAt: Date | null;
+  isGift: boolean;
 }>) {
   return {
     id: overrides.id ?? "pkg-1",
@@ -26,6 +27,7 @@ function makePackage(overrides: Partial<{
     expiresAt: overrides.expiresAt ?? new Date("2026-06-01T00:00:00Z"),
     sessionsRemaining: overrides.sessionsRemaining ?? 5,
     revokedAt: overrides.revokedAt ?? null,
+    isGift: overrides.isGift ?? false,
   };
 }
 
@@ -110,6 +112,7 @@ describe("findEligibleClientPackage class-scoped behaviour", () => {
       expiresAt: new Date("2026-06-01T00:00:00Z"),
       sessionsRemaining: 5,
       revokedAt: null,
+      isGift: false,
     };
     expect(
       findEligibleClientPackage([mix], [], baseAt, ENERGY_CLASS_TYPE_ID)?.id,
@@ -373,6 +376,219 @@ describe("findEligibleClientPackage class-scoped behaviour", () => {
       REFORMER_CLASS_TYPE_ID,
     );
     expect(result?.id).toBe("reformer");
+  });
+});
+
+// Gift packages used to get stranded: spend priority was width-then-expiry
+// only, so a client could burn a whole paid pack while a Poklon paket /
+// birthday gift sat unused until it lapsed. Gift-first is now a PREFERENCE,
+// deliberately bounded by soonest-expiry so it can never forfeit credits the
+// client paid for. See ADR-0011.
+describe("findEligibleClientPackage gift-first spend order", () => {
+  it("spends the gift when nothing else expires sooner", () => {
+    const gift = makePackage({
+      id: "gift",
+      isGift: true,
+      expiresAt: new Date("2026-10-01T00:00:00Z"),
+    });
+    const paid = makePackage({
+      id: "paid",
+      expiresAt: new Date("2026-12-01T00:00:00Z"),
+    });
+    expect(
+      findEligibleClientPackage(
+        [paid, gift],
+        [],
+        baseAt,
+        REFORMER_CLASS_TYPE_ID,
+      )?.id,
+    ).toBe("gift");
+  });
+
+  it("does NOT burn the gift past a paid pack that expires sooner", () => {
+    // The value-destroying case the preference is bounded for: taking the
+    // gift here would leave the paid pack to lapse in weeks with credits the
+    // client actually bought still on it.
+    const gift = makePackage({
+      id: "gift",
+      isGift: true,
+      expiresAt: new Date("2026-12-01T00:00:00Z"),
+    });
+    const paidExpiringSoon = makePackage({
+      id: "paid-expiring-soon",
+      expiresAt: new Date("2026-10-01T00:00:00Z"),
+    });
+    expect(
+      findEligibleClientPackage(
+        [gift, paidExpiringSoon],
+        [],
+        baseAt,
+        REFORMER_CLASS_TYPE_ID,
+      )?.id,
+    ).toBe("paid-expiring-soon");
+  });
+
+  it("breaks a same-expiry tie toward the gift", () => {
+    const sameDay = new Date("2026-11-01T00:00:00Z");
+    const gift = makePackage({ id: "gift", isGift: true, expiresAt: sameDay });
+    const paid = makePackage({ id: "paid", expiresAt: sameDay });
+    // Order in, order out: the preference must not depend on input order.
+    expect(
+      findEligibleClientPackage(
+        [paid, gift],
+        [],
+        baseAt,
+        REFORMER_CLASS_TYPE_ID,
+      )?.id,
+    ).toBe("gift");
+    expect(
+      findEligibleClientPackage(
+        [gift, paid],
+        [],
+        baseAt,
+        REFORMER_CLASS_TYPE_ID,
+      )?.id,
+    ).toBe("gift");
+  });
+
+  it("keeps narrowest-set ahead of the gift preference", () => {
+    // ADR-0010 still outranks ADR-0011: spending a gifted MIX pack while a
+    // single-type pack could cover the class would burn the flexibility the
+    // width rule exists to protect.
+    const giftMix = makePackage({
+      id: "gift-mix",
+      isGift: true,
+      classTypeIds: [REFORMER_CLASS_TYPE_ID, ENERGY_CLASS_TYPE_ID],
+      expiresAt: new Date("2026-05-25T00:00:00Z"),
+    });
+    const paidReformerOnly = makePackage({
+      id: "paid-reformer-only",
+      expiresAt: new Date("2026-06-01T00:00:00Z"),
+    });
+    expect(
+      findEligibleClientPackage(
+        [giftMix, paidReformerOnly],
+        [],
+        baseAt,
+        REFORMER_CLASS_TYPE_ID,
+      )?.id,
+    ).toBe("paid-reformer-only");
+  });
+
+  it("falls through to id so equal candidates never flip between fetches", () => {
+    // Two gifts, same width, same expiry — the chosen pack must be stable
+    // across fetches whose row order differs.
+    const expiresAt = new Date("2026-11-01T00:00:00Z");
+    const first = makePackage({ id: "aaa", isGift: true, expiresAt });
+    const second = makePackage({ id: "bbb", isGift: true, expiresAt });
+    expect(
+      findEligibleClientPackage(
+        [second, first],
+        [],
+        baseAt,
+        REFORMER_CLASS_TYPE_ID,
+      )?.id,
+    ).toBe("aaa");
+    expect(
+      findEligibleClientPackage(
+        [first, second],
+        [],
+        baseAt,
+        REFORMER_CLASS_TYPE_ID,
+      )?.id,
+    ).toBe("aaa");
+  });
+
+  it("skips a revoked gift and spends the paid pack instead", () => {
+    const revokedGift = makePackage({
+      id: "revoked-gift",
+      isGift: true,
+      expiresAt: new Date("2026-05-20T00:00:00Z"),
+      revokedAt: new Date("2026-05-14T00:00:00Z"),
+    });
+    const paid = makePackage({ id: "paid" });
+    expect(
+      findEligibleClientPackage(
+        [revokedGift, paid],
+        [],
+        baseAt,
+        REFORMER_CLASS_TYPE_ID,
+      )?.id,
+    ).toBe("paid");
+  });
+
+  it("skips a used-up gift and spends the paid pack instead", () => {
+    const usedUpGift = makePackage({
+      id: "used-up-gift",
+      isGift: true,
+      sessionsRemaining: 0,
+      expiresAt: new Date("2026-05-20T00:00:00Z"),
+    });
+    const paid = makePackage({ id: "paid" });
+    expect(
+      findEligibleClientPackage(
+        [usedUpGift, paid],
+        [],
+        baseAt,
+        REFORMER_CLASS_TYPE_ID,
+      )?.id,
+    ).toBe("paid");
+  });
+
+  it("skips a not-yet-started gift and spends the paid pack instead", () => {
+    const futureGift = makePackage({
+      id: "future-gift",
+      isGift: true,
+      startsAt: new Date("2026-06-01T00:00:00Z"),
+      expiresAt: new Date("2026-07-01T00:00:00Z"),
+    });
+    const paid = makePackage({ id: "paid" });
+    expect(
+      findEligibleClientPackage(
+        [futureGift, paid],
+        [],
+        baseAt,
+        REFORMER_CLASS_TYPE_ID,
+      )?.id,
+    ).toBe("paid");
+  });
+
+  it("skips an expired gift and spends the paid pack instead", () => {
+    const expiredGift = makePackage({
+      id: "expired-gift",
+      isGift: true,
+      startsAt: new Date("2026-04-01T00:00:00Z"),
+      expiresAt: new Date("2026-05-01T00:00:00Z"),
+    });
+    const paid = makePackage({ id: "paid" });
+    expect(
+      findEligibleClientPackage(
+        [expiredGift, paid],
+        [],
+        baseAt,
+        REFORMER_CLASS_TYPE_ID,
+      )?.id,
+    ).toBe("paid");
+  });
+
+  it("returns null for a gift inside a live pause window", () => {
+    // A pause blocks the spend outright — gift preference must not smuggle a
+    // paused client past the gate.
+    const gift = makePackage({ id: "gift", isGift: true });
+    const pauses = [
+      {
+        startsAt: new Date("2026-05-10T00:00:00Z"),
+        endsAt: new Date("2026-05-20T00:00:00Z"),
+      },
+    ];
+    expect(
+      findEligibleClientPackage(
+        [gift],
+        pauses,
+        baseAt,
+        REFORMER_CLASS_TYPE_ID,
+      ),
+    ).toBeNull();
   });
 });
 
