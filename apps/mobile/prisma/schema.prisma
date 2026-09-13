@@ -94,6 +94,7 @@ enum ConsentDocumentKey {
   waiver_minor
   social_media
   health_intake
+  marketing
 }
 
 model User {
@@ -604,7 +605,7 @@ model NotificationPreference {
   userId           String   @unique
   pushEnabled      Boolean  @default(true)
   inAppEnabled     Boolean  @default(true)
-  campaignsEnabled    Boolean @default(true)   // marketing opt-out (Promocije / novi programi)
+  campaignsEnabled    Boolean @default(false)  // marketing opt-IN — Zakon o elektronskoj trgovini, čl. 8
   bookingEmailsEnabled Boolean @default(true)  // courtesy opt-out for booking-change emails
   preferredLocale  AppLocale?  // null => default "sr" for notifications
   createdAt        DateTime @default(now())

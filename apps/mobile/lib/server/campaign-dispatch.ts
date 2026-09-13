@@ -53,7 +53,7 @@ async function deliverToRecipient(
 
 /**
  * Resolves the campaign's audience AT DISPATCH TIME, filters to clients with
- * campaignsEnabled, fans out in-app + push + email (each gated), stamps SENT
+ * campaignsEnabled (opt-in), fans out in-app + push + email (each gated), stamps SENT
  * with recipientCount.
  *
  * Idempotency is enforced HERE, not left to callers: the first thing we do is
@@ -87,9 +87,12 @@ export async function dispatchCampaign(campaignId: string) {
   const spec = campaignAudienceSpecSchema.parse(campaign.audienceSpec);
   const candidateIds = await resolveCampaignAudience(spec);
 
-  // Marketing opt-out is mandatory: only campaignsEnabled clients receive
-  // ANYTHING. createAndDispatchUserNotification gates push on pushEnabled but
-  // knows nothing about campaignsEnabled, so filter here first. preferredLocale
+  // Marketing is opt-in: only clients who affirmatively set campaignsEnabled
+  // receive ANYTHING. `is:` also excludes clients with no preference row at
+  // all, which is the point — Zakon o elektronskoj trgovini čl. 8 requires
+  // prior consent, and no row means none was given.
+  // createAndDispatchUserNotification gates push on pushEnabled but knows
+  // nothing about campaignsEnabled, so filter here first. preferredLocale
   // rides along so the per-recipient email chrome localizes with no extra query.
   const recipients = await prisma.user.findMany({
     where: { id: { in: candidateIds }, notificationPreference: { is: { campaignsEnabled: true } } },

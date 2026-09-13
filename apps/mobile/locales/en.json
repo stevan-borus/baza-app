@@ -134,6 +134,16 @@
       "helper": "You can change your choice at any time from your profile.",
       "saveFailed": "Saving your choice failed — please try again."
     },
+    "marketing": {
+      "question": "I want to receive news about promotions, new programs and studio events by email.",
+      "toggleLabel": "Promotions and new programs",
+      "yes": "Yes",
+      "no": "No",
+      "helper": "This is not a condition for using the app or booking sessions. You can change your answer at any time in profile settings.",
+      "acceptA11y": "Yes, I want to receive promotional emails",
+      "declineA11y": "No, I do not want to receive promotional emails",
+      "saveFailed": "Saving your choice failed — please try again."
+    },
     "acceptToContinue": "Accept all documents to continue."
   },
   "intake": {
@@ -388,7 +398,7 @@
       "navRow": "Notification settings",
       "pushEnabled": "Push notifications",
       "inAppEnabled": "In-app notifications",
-      "campaignsEnabled": "Promotions / new programs",
+      "campaignsEnabled": "Promotions and new programs",
       "bookingEmailsEnabled": "Booking-change emails",
       "saveError": "Could not save settings."
     },

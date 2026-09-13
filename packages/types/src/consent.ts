@@ -8,6 +8,7 @@ export const consentDocumentKeySchema = z.enum([
   "waiver_minor",
   "social_media",
   "health_intake",
+  "marketing",
 ]);
 export type ConsentDocumentKey = z.infer<typeof consentDocumentKeySchema>;
 
@@ -23,6 +24,8 @@ export const consentStatusResponseSchema = z.object({
   guardianVerificationNeeded: z.boolean(),
   socialMediaDecided: z.boolean(),
   socialMediaLatestAccepted: z.boolean().nullable(),
+  marketingDecided: z.boolean(),
+  marketingLatestAccepted: z.boolean().nullable(),
 });
 export type ConsentStatusResponse = z.infer<typeof consentStatusResponseSchema>;
 
@@ -53,6 +56,17 @@ export const socialMediaConsentInputSchema = z.object({
 });
 export type SocialMediaConsentInput = z.infer<typeof socialMediaConsentInputSchema>;
 
+/**
+ * Marketing consent. Deliberately a discrete accepted:boolean rather than a
+ * "subscribe" call: Zakon o elektronskoj trgovini čl. 8 st. 2 requires the
+ * provider to accept a withdrawal, so a recorded `false` is as meaningful as
+ * a recorded `true` and both belong in the audit trail.
+ */
+export const marketingConsentInputSchema = z.object({
+  accepted: z.boolean(),
+});
+export type MarketingConsentInput = z.infer<typeof marketingConsentInputSchema>;
+
 // POST /api/consent/accept — echo of the just-created ConsentRecord.
 export const consentAcceptResponseSchema = z.object({
   success: z.literal(true),
@@ -66,6 +80,16 @@ export const consentAcceptResponseSchema = z.object({
 
 // POST /api/consent/social-media — echo of the recorded Da/Ne decision.
 export const socialMediaConsentResponseSchema = z.object({
+  success: z.literal(true),
+  record: z.object({
+    id: z.string(),
+    accepted: z.boolean(),
+    acceptedAt: z.string(), // ISO date string when JSON-serialized
+  }),
+});
+
+// POST /api/consent/marketing — echo of the recorded Da/Ne decision.
+export const marketingConsentResponseSchema = z.object({
   success: z.literal(true),
   record: z.object({
     id: z.string(),

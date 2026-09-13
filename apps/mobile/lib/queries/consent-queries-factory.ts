@@ -1,8 +1,9 @@
 import { queryOptions, useMutation, useQueryClient, type QueryClient } from "@tanstack/react-query";
-import { consentStatusResponseSchema, consentAcceptInputSchema, socialMediaConsentInputSchema, type ConsentStatusResponse, type ConsentAcceptInput, type SocialMediaConsentInput } from "@baza/types/consent";
+import { consentStatusResponseSchema, consentAcceptInputSchema, socialMediaConsentInputSchema, marketingConsentInputSchema, type ConsentStatusResponse, type ConsentAcceptInput, type SocialMediaConsentInput, type MarketingConsentInput } from "@baza/types/consent";
 import { apiRequest } from "@/lib/api-request";
 import { authQueries } from "@/lib/queries/auth-queries-factory";
 import { clientsQueries } from "@/lib/queries/clients-queries-factory";
+import { notificationsQueries } from "@/lib/queries/notifications-queries-factory";
 
 const consentAll = ["consent"] as const;
 
@@ -104,4 +105,49 @@ export function recordSocialMediaMutationOptions(queryClient: QueryClient) {
 export function useRecordSocialMediaMutation() {
   const queryClient = useQueryClient();
   return useMutation(recordSocialMediaMutationOptions(queryClient));
+}
+
+/**
+ * Optimistic options for the marketing-consent decision.
+ *
+ * Mirrors the social-media shape, plus one extra invalidation: the POST also
+ * flips NotificationPreference.campaignsEnabled server-side, so the profile
+ * settings toggle would otherwise keep showing the stale position.
+ */
+export function recordMarketingConsentMutationOptions(queryClient: QueryClient) {
+  const statusKey = consentQueries.status().queryKey;
+  return {
+    mutationKey: [...consentAll, "marketing"] as const,
+    mutationFn: (input: MarketingConsentInput) =>
+      apiRequest("/api/consent/marketing", {
+        method: "POST",
+        body: marketingConsentInputSchema.parse(input),
+        errorMessage: "Record failed",
+      }),
+    onMutate: async (input: MarketingConsentInput) => {
+      await queryClient.cancelQueries({ queryKey: statusKey });
+      const previous = queryClient.getQueryData<ConsentStatusResponse>(statusKey);
+      if (previous) {
+        queryClient.setQueryData<ConsentStatusResponse>(statusKey, {
+          ...previous,
+          marketingDecided: true,
+          marketingLatestAccepted: input.accepted,
+        });
+      }
+      return { previous };
+    },
+    onError: (_err: unknown, _input: MarketingConsentInput, context?: { previous?: ConsentStatusResponse }) => {
+      if (context?.previous) {
+        queryClient.setQueryData(statusKey, context.previous);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: notificationsQueries.preferences().queryKey });
+    },
+  };
+}
+
+export function useRecordMarketingConsentMutation() {
+  const queryClient = useQueryClient();
+  return useMutation(recordMarketingConsentMutationOptions(queryClient));
 }

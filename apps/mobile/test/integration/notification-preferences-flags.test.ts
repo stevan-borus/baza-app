@@ -32,12 +32,15 @@ describe("notification preferences flags", () => {
     await prisma.$disconnect();
   });
 
-  it("GET returns both new flags defaulting to true", async () => {
+  // campaignsEnabled defaults to FALSE — marketing is opt-in (Zakon o
+  // elektronskoj trgovini čl. 8). bookingEmailsEnabled is transactional and
+  // keeps its opt-out default.
+  it("GET defaults campaigns off and booking emails on", async () => {
     await seedClient();
     const res = await GET(new Request("http://test.local/api/notifications/preferences"));
     expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body.preferences.campaignsEnabled).toBe(true);
+    expect(body.preferences.campaignsEnabled).toBe(false);
     expect(body.preferences.bookingEmailsEnabled).toBe(true);
   });
 
@@ -47,11 +50,20 @@ describe("notification preferences flags", () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.preferences.bookingEmailsEnabled).toBe(false);
+    expect(body.preferences.campaignsEnabled).toBe(false);
+  });
+
+  it("PATCH persists campaignsEnabled=true as an explicit opt-in", async () => {
+    await seedClient();
+    const res = await PATCH(patchReq({ campaignsEnabled: true }));
+    expect(res.status).toBe(200);
+    const body = await res.json();
     expect(body.preferences.campaignsEnabled).toBe(true);
   });
 
   it("PATCH persists campaignsEnabled=false", async () => {
     await seedClient();
+    await PATCH(patchReq({ campaignsEnabled: true }));
     const res = await PATCH(patchReq({ campaignsEnabled: false }));
     expect(res.status).toBe(200);
     const body = await res.json();

@@ -9,12 +9,14 @@ import { authQueries } from "@/lib/queries/auth-queries-factory";
 import {
   consentQueries,
   useAcceptConsentMutation,
+  useRecordMarketingConsentMutation,
   useRecordSocialMediaMutation,
   useRefuseConsentMutation,
 } from "@/lib/queries/consent-queries-factory";
 import { signOutWithPushCleanup } from "@/lib/sign-out";
 import { useSessionAuth } from "@/lib/session-auth";
 import { SocialMediaQuestion } from "@/components/consent/social-media-question";
+import { MarketingConsentQuestion } from "@/components/consent/marketing-consent-question";
 import { GuardianBlock, type GuardianFields } from "@/components/consent/guardian-block";
 import { DocumentSheet } from "@/components/consent/document-sheet";
 import { Button } from "@/components/ui/button";
@@ -46,6 +48,7 @@ export default function ConsentScreen() {
   const acceptMutation = useAcceptConsentMutation();
   const refuseMutation = useRefuseConsentMutation();
   const socialMutation = useRecordSocialMediaMutation();
+  const marketingMutation = useRecordMarketingConsentMutation();
 
   const pending = status.data?.pending ?? [];
   const isReConsent = pending.some((p) => p.reason === "outdated");
@@ -54,6 +57,8 @@ export default function ConsentScreen() {
   const isClient = role === "CLIENT";
   const socialDecided = status.data?.socialMediaDecided ?? false;
   const socialLatest = status.data?.socialMediaLatestAccepted ?? null;
+  const marketingDecided = status.data?.marketingDecided ?? false;
+  const marketingLatest = status.data?.marketingLatestAccepted ?? null;
 
   const [accepted, setAccepted] = useState<Partial<Record<ConsentDocumentKey, boolean>>>({});
   const [guardian, setGuardian] = useState<GuardianFields>({ name: "", relation: "parent" });
@@ -62,14 +67,20 @@ export default function ConsentScreen() {
   const [socialChoice, setSocialChoice] = useState<"yes" | "no" | null>(
     socialDecided ? (socialLatest ? "yes" : "no") : null,
   );
+  // Undecided until the client picks. Never seeded to `true`: a pre-selected
+  // Da is the pre-ticked box ZZPL čl. 4(1)(12) rules out.
+  const [marketingChoice, setMarketingChoice] = useState<boolean | null>(
+    marketingDecided ? marketingLatest : null,
+  );
   const [openDoc, setOpenDoc] = useState<ConsentDocumentKey | null>(null);
   const [refused, setRefused] = useState(false);
 
   const allAccepted = pending.every((p) => accepted[p.key]);
   const guardianOk = !hasMinorWaiver || guardian.name.trim().length > 0;
   const socialAnswered = !isClient || socialChoice !== null;
+  const marketingAnswered = !isClient || marketingChoice !== null;
   const canSubmit =
-    allAccepted && guardianOk && socialAnswered && !submitting;
+    allAccepted && guardianOk && socialAnswered && marketingAnswered && !submitting;
 
   // Navigate to /sign-in once the session has cleared after refuse. The
   // session signal propagates asynchronously, so wait for confirmation
@@ -85,6 +96,15 @@ export default function ConsentScreen() {
     setSocialChoice(next);
     try {
       await socialMutation.mutateAsync({ accepted: next === "yes" });
+    } catch {
+      /* error surface deferred to submit time */
+    }
+  }
+
+  async function handleMarketingChoice(next: boolean) {
+    setMarketingChoice(next);
+    try {
+      await marketingMutation.mutateAsync({ accepted: next });
     } catch {
       /* error surface deferred to submit time */
     }
@@ -229,6 +249,19 @@ export default function ConsentScreen() {
               value={socialChoice}
               onChange={handleSocialChoice}
               disabled={socialMutation.isPending}
+            />
+          </View>
+        ) : null}
+
+        {/* Marketing consent — its own card, deliberately NOT a row in the
+            documents card: ZZPL čl. 15 requires it to be distinguishable
+            from the terms the client is accepting. */}
+        {isClient ? (
+          <View className="px-6">
+            <MarketingConsentQuestion
+              value={marketingChoice}
+              onChange={handleMarketingChoice}
+              disabled={marketingMutation.isPending}
             />
           </View>
         ) : null}

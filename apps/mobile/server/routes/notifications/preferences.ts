@@ -14,6 +14,8 @@ export async function GET(request: Request) {
   if (!guard.ok) return guard.response;
 
   // Ensure preference row exists; GET returns defaults for new users.
+  // campaignsEnabled defaults to false at the column — materializing the row
+  // must never be what opts somebody in.
   const preference = await prisma.notificationPreference.upsert({
     where: { userId: guard.user.id },
     create: { userId: guard.user.id },
@@ -47,7 +49,9 @@ export async function PATCH(request: Request) {
       userId: guard.user.id,
       pushEnabled: parsed.data.pushEnabled ?? true,
       inAppEnabled: parsed.data.inAppEnabled ?? true,
-      campaignsEnabled: parsed.data.campaignsEnabled ?? true,
+      // Marketing is opt-in: a PATCH that doesn't mention campaignsEnabled
+      // must not enable it as a side effect of creating the row.
+      campaignsEnabled: parsed.data.campaignsEnabled ?? false,
       bookingEmailsEnabled: parsed.data.bookingEmailsEnabled ?? true,
       preferredLocale: parsed.data.preferredLocale ?? null,
     },
