@@ -51,11 +51,11 @@ export function coveredSetKeyOf(pkg: Pick<PoolPackage, "classTypeIds">): string 
  * pause check, so a pause is already excluded upstream by the time a spend
  * package exists.
  */
-export function poolMembers(
-  packages: PoolPackage[],
+export function poolMembers<T extends PoolPackage>(
+  packages: T[],
   spendPackage: Pick<PoolPackage, "classTypeIds">,
   at: Date,
-): PoolPackage[] {
+): T[] {
   const key = coveredSetKeyOf(spendPackage);
   return packages.filter(
     (pkg) =>
