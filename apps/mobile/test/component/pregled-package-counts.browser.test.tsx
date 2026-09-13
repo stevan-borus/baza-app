@@ -9,6 +9,7 @@
  * that returns if someone collapses this back to remaining.
  */
 import { describe, it, expect, vi } from "vitest";
+import dayjs from "dayjs";
 import React from "react";
 import "@/lib/i18n";
 import { renderWithQueryClient } from "./helpers";
@@ -20,6 +21,7 @@ vi.mock("@/lib/api-request", () => ({
 
 import { PregledTab } from "@/components/admin/client-detail/PregledTab";
 import { activePackages } from "@/components/admin/client-detail";
+import { upcomingClientPackages } from "@/lib/package-fully-booked";
 import { PaketiTab } from "@/components/admin/client-detail/PaketiTab";
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -45,6 +47,7 @@ function renderPregled(active: ClientPackage | ClientPackage[] | null) {
   return renderWithQueryClient(
     <PregledTab
       activePackages={activePackages(all)}
+      upcomingPackages={upcomingClientPackages(all, new Date())}
       packagesLoading={false}
       upcomingBookings={[]}
       lang="sr"
@@ -198,7 +201,7 @@ describe("Trenutni paketi — every active package, none that has not started", 
     );
   });
 
-  it("excludes a package whose startsAt is still in the future", () => {
+  it("keeps a package whose startsAt is still in the future OUT of the current cards", () => {
     const screen = renderPregled([
       makePackage({
         id: "pkg-started",
@@ -212,12 +215,17 @@ describe("Trenutni paketi — every active package, none that has not started", 
       }),
     ]);
     expect(screen.container.textContent).toContain("Reformer 12");
-    expect(screen.container.textContent).not.toContain("Decembarski paket");
+    // Singular label: the current-packages section still counts ONE package.
     expect(screen.container.textContent).toContain("Trenutni paket");
     expect(screen.container.textContent).not.toContain("Trenutni paketi");
+    // ...but it is no longer invisible — it moved to its own section.
+    expect(screen.getByTestId("client-upcoming-package-pkg-future")).toBeTruthy();
   });
 
-  it("shows the empty state when the only package has not started yet", () => {
+  it("shows the empty state AND the upcoming section when the only package has not started", () => {
+    // The reported bug: the studio assigned a second Nadoknada starting in five
+    // days and nobody could see it existed. The current-package empty state is
+    // still correct (nothing is bookable today) — but the package must show.
     const screen = renderPregled([
       makePackage({
         id: "pkg-future",
@@ -226,8 +234,8 @@ describe("Trenutni paketi — every active package, none that has not started", 
         packageType: { name: "Decembarski paket", sessionCount: 8, validityDays: 60 },
       }),
     ]);
-    expect(screen.container.textContent).not.toContain("Decembarski paket");
     expect(screen.container.textContent).toContain("Nema aktivnog paketa.");
+    expect(screen.container.textContent).toContain("Decembarski paket");
   });
 
   it("orders the cards by soonest expiry — that is the one to spend first", () => {
@@ -246,5 +254,73 @@ describe("Trenutni paketi — every active package, none that has not started", 
     const text = screen.container.textContent ?? "";
     expect(text.indexOf("Raniji paket")).toBeGreaterThan(-1);
     expect(text.indexOf("Raniji paket")).toBeLessThan(text.indexOf("Kasniji paket"));
+  });
+});
+
+describe("Uskoro dostupni paketi — a future-dated package is visible, not bookable", () => {
+  it("renders the upcoming package with its start date", () => {
+    const startsAt = new Date(Date.now() + 5 * DAY);
+    const screen = renderPregled([
+      makePackage({
+        id: "pkg-nadoknada-2",
+        startsAt: startsAt.toISOString(),
+        expiresAt: new Date(Date.now() + 40 * DAY).toISOString(),
+        sessionsRemaining: 1,
+        sessionsTotal: 1,
+        packageType: { name: "Nadoknada", sessionCount: 1, validityDays: 30 },
+      }),
+    ]);
+    const card = screen.getByTestId("client-upcoming-package-pkg-nadoknada-2");
+    expect(card.textContent).toContain("Nadoknada");
+    expect(screen.container.textContent).toContain("Uskoro dostupan paket");
+    expect(card.textContent).toContain(
+      `Dostupan od ${dayjs(startsAt).format("D.M.YYYY.")}`,
+    );
+  });
+
+  it("marks the upcoming card so it cannot be read as bookable", () => {
+    const screen = renderPregled([
+      makePackage({
+        id: "pkg-active",
+        packageType: { name: "Reformer 12", sessionCount: 12, validityDays: 60 },
+        heldCount: 0,
+        bookable: 8,
+      }),
+      makePackage({
+        id: "pkg-future",
+        startsAt: new Date(Date.now() + 5 * DAY).toISOString(),
+        expiresAt: new Date(Date.now() + 40 * DAY).toISOString(),
+        bookable: 8,
+        packageType: { name: "Nadoknada", sessionCount: 1, validityDays: 30 },
+      }),
+    ]);
+    const upcoming = screen.getByTestId("client-upcoming-package-pkg-future");
+    // The badge is what distinguishes it from the active card above.
+    expect(upcoming.textContent).toContain("Još nije aktivan");
+    // The bookable line belongs to the active card only — an upcoming package
+    // has nothing to book, so printing a bookable count invites the 409.
+    expect(upcoming.textContent).not.toContain("Slobodno za zakazivanje");
+    expect(
+      screen.getByTestId("client-package-bookable").textContent,
+    ).toContain("Slobodno za zakazivanje: 8/8");
+  });
+
+  it("renders no upcoming section when nothing is upcoming", () => {
+    const screen = renderPregled([makePackage()]);
+    expect(screen.container.textContent).not.toContain("Uskoro dostupni paket");
+  });
+
+  it("does not announce a revoked package that would have started later", () => {
+    const screen = renderPregled([
+      makePackage({
+        id: "pkg-revoked",
+        startsAt: new Date(Date.now() + 5 * DAY).toISOString(),
+        expiresAt: new Date(Date.now() + 40 * DAY).toISOString(),
+        revokedAt: new Date(Date.now() - DAY).toISOString(),
+        packageType: { name: "Opozvani paket", sessionCount: 8, validityDays: 60 },
+      }),
+    ]);
+    expect(screen.container.textContent).not.toContain("Uskoro dostupni paket");
+    expect(screen.container.textContent).not.toContain("Opozvani paket");
   });
 });

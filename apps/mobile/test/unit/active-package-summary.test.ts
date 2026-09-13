@@ -79,6 +79,38 @@ describe("summarizeActivePackages — which packages are eligible at all", () =>
     ).toEqual([]);
   });
 
+  it("does NOT inflate an active pool with an upcoming package that shares its covered set", () => {
+    // The trap this guards: an upcoming Nadoknada covering the SAME class-type
+    // set as the active 12-pack would merge into that pool under the grouping
+    // rules and silently add +1 to a headline the client cannot spend yet.
+    const groups = summarizeActivePackages(
+      [
+        pkg({
+          id: "active-12",
+          sessionsRemaining: 10,
+          sessionsTotal: 12,
+          bookable: 10,
+          classTypes: [REFORMER],
+        }),
+        pkg({
+          id: "upcoming-nadoknada",
+          sessionsRemaining: 1,
+          sessionsTotal: 1,
+          bookable: 1,
+          startsAt: "2026-05-14T00:00:00Z",
+          expiresAt: "2026-07-01T00:00:00Z",
+          classTypes: [REFORMER],
+        }),
+      ],
+      NOW,
+    );
+    expect(groups).toHaveLength(1);
+    expect(groups[0]!.remaining).toBe(10);
+    expect(groups[0]!.total).toBe(12);
+    expect(groups[0]!.activeCount).toBe(1);
+    expect(groups[0]!.packages.map((p) => p.id)).toEqual(["active-12"]);
+  });
+
   it("drops a revoked package from a group without dropping the group", () => {
     const groups = summarizeActivePackages(
       [

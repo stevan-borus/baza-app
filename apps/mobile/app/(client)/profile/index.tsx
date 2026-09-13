@@ -16,6 +16,7 @@
  *
  * Settings + Sign out live in the ProfileSheet (header avatar tap).
  */
+import dayjs from "dayjs";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { useState } from "react";
@@ -43,6 +44,7 @@ import { packagesQueries, type ClientPackage } from "@/lib/queries/packages-quer
 import {
   isActiveClientPackage,
   packageUsedFraction,
+  upcomingClientPackages,
 } from "@/lib/package-fully-booked";
 import { ProfilePersonalDataSections } from "@/components/profile/profile-personal-data-sections";
 import { formatClassTypeList } from "@/lib/format";
@@ -84,6 +86,12 @@ export default function ClientProfile() {
   const activePackages = packages.filter((pkg: ClientPackage) =>
     isActiveClientPackage(pkg, now()),
   );
+  // Assigned but not startable yet. A separate list, not a flag on the one
+  // above: everything in `activePackages` is rendered with a bookable count
+  // and a usage bar, and neither means anything for a package that has not
+  // begun. These used to be filtered out here and picked up nowhere, which is
+  // how a client could be handed a package and never see it.
+  const upcomingPackages = upcomingClientPackages(packages, now());
   const userEmail = meQuery.data?.user.email ?? "";
   const userName = displayName(meQuery.data?.user);
   const initials = userEmail ? getInitials(userEmail) : "?";
@@ -357,6 +365,52 @@ export default function ClientProfile() {
                 </View>
               );
             })}
+            {/* Upcoming cards trail the active ones in the SAME list: same
+                surface, same "Moji paketi" heading, visibly different content.
+                They carry no count and no usage bar — a bar for a package with
+                nothing booked yet would read as a full balance — just the date
+                it starts working. The "Nema aktivnog paketa." block above is
+                untouched and still shows when nothing is bookable today. */}
+            {upcomingPackages.map((pkg: ClientPackage) => (
+              <View
+                key={pkg.id}
+                testID={`profile-upcoming-package-${pkg.id}`}
+                accessibilityLabel={t("client.package.upcomingA11y", {
+                  name: pkg.packageType?.name ?? t("client.package.packageName"),
+                  date: dayjs(pkg.startsAt).locale(lang).format("D.M.YYYY."),
+                })}
+                className="bg-surface rounded-lg p-4 gap-2"
+              >
+                <CapsLabel size={10} tracking={1.6} className="text-muted">
+                  {t("client.package.upcoming")}
+                </CapsLabel>
+                <Text
+                  className="font-body-semibold text-foreground"
+                  style={{ fontSize: 17, letterSpacing: -0.3 }}
+                  numberOfLines={1}
+                >
+                  {pkg.packageType?.name ?? t("client.package.packageName")}
+                </Text>
+                {(pkg.classTypes ?? []).length > 0 ? (
+                  <Text className="text-muted text-[12px]" numberOfLines={1}>
+                    {formatClassTypeList(
+                      (pkg.classTypes ?? []).map((ct) => ct.name),
+                    )}
+                  </Text>
+                ) : null}
+                <Text className="font-body-medium text-foreground text-[13px]">
+                  {t("client.package.availableFrom", {
+                    date: dayjs(pkg.startsAt).locale(lang).format("D.M.YYYY."),
+                  })}
+                </Text>
+                <Text
+                  className="text-muted text-[12px]"
+                  style={{ lineHeight: 18 }}
+                >
+                  {t("client.package.upcomingHint")}
+                </Text>
+              </View>
+            ))}
           </View>
           <View className="mx-4 mt-1">
             <Pressable

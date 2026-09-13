@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   isActiveClientPackage,
+  isUpcomingClientPackage,
+  upcomingClientPackages,
   isFullyBookedActivePackage,
   packageUsedFraction,
 } from "@/lib/package-fully-booked";
@@ -161,5 +163,168 @@ describe("packageUsedFraction", () => {
     expect(packageUsedFraction(15, 12)).toBe(0);
     // bookable < 0 → used > total → clamp to full.
     expect(packageUsedFraction(-3, 12)).toBe(1);
+  });
+});
+
+describe("isUpcomingClientPackage", () => {
+  // Same reference instant the screens pass in.
+  const now = new Date("2026-07-13T12:00:00.000Z");
+  const future = "2026-08-13T12:00:00.000Z";
+  const farFuture = "2026-12-13T12:00:00.000Z";
+  const past = "2026-06-13T12:00:00.000Z";
+
+  it("is upcoming when startsAt is still ahead", () => {
+    // The reported bug: the studio assigned a second Nadoknada starting in
+    // five days and it was invisible to both the admin and the client. It is
+    // not active — it is UPCOMING, and it has to render somewhere.
+    expect(
+      isUpcomingClientPackage(
+        { sessionsRemaining: 1, expiresAt: farFuture, startsAt: future },
+        now,
+      ),
+    ).toBe(true);
+  });
+
+  it("is NOT upcoming once startsAt has passed — that package is active", () => {
+    expect(
+      isUpcomingClientPackage(
+        { sessionsRemaining: 4, expiresAt: future, startsAt: past },
+        now,
+      ),
+    ).toBe(false);
+  });
+
+  it("is NOT upcoming when startsAt is exactly now — it starts today", () => {
+    // Mirrors isActiveClientPackage: the two predicates must never both claim
+    // the same package, and never both disown it.
+    expect(
+      isUpcomingClientPackage(
+        { sessionsRemaining: 4, expiresAt: future, startsAt: now.toISOString() },
+        now,
+      ),
+    ).toBe(false);
+  });
+
+  it("treats an absent startsAt as already started, so it is not upcoming", () => {
+    // Cached-payload tolerance, same as the active predicate: absence means an
+    // older payload, and a package must not migrate into the upcoming section
+    // just because the field is missing.
+    expect(
+      isUpcomingClientPackage(
+        { sessionsRemaining: 4, expiresAt: future, startsAt: undefined },
+        now,
+      ),
+    ).toBe(false);
+  });
+
+  it("treats a null startsAt as already started", () => {
+    expect(
+      isUpcomingClientPackage(
+        { sessionsRemaining: 4, expiresAt: future, startsAt: null },
+        now,
+      ),
+    ).toBe(false);
+  });
+
+  it("is NOT upcoming when revoked — revoked wins over a future start", () => {
+    // A revoked package the studio took back is not "coming"; announcing it
+    // would promise credits the server 409s.
+    expect(
+      isUpcomingClientPackage(
+        {
+          sessionsRemaining: 4,
+          expiresAt: farFuture,
+          startsAt: future,
+          revokedAt: "2026-07-01T00:00:00.000Z",
+        },
+        now,
+      ),
+    ).toBe(false);
+  });
+
+  it("is NOT upcoming with zero credits — a spent package is not coming", () => {
+    expect(
+      isUpcomingClientPackage(
+        { sessionsRemaining: 0, expiresAt: farFuture, startsAt: future },
+        now,
+      ),
+    ).toBe(false);
+  });
+
+  it("is NOT upcoming when it expires before it starts", () => {
+    // Defensive: a package whose expiry already passed has nothing to announce
+    // no matter what its startsAt says.
+    expect(
+      isUpcomingClientPackage(
+        { sessionsRemaining: 4, expiresAt: past, startsAt: future },
+        now,
+      ),
+    ).toBe(false);
+  });
+
+  it("never overlaps isActiveClientPackage for the same package", () => {
+    const cases = [
+      { sessionsRemaining: 4, expiresAt: future, startsAt: past },
+      { sessionsRemaining: 4, expiresAt: farFuture, startsAt: future },
+      { sessionsRemaining: 0, expiresAt: future, startsAt: past },
+      { sessionsRemaining: 4, expiresAt: past, startsAt: past },
+      { sessionsRemaining: 4, expiresAt: future, startsAt: null },
+    ];
+    for (const c of cases) {
+      expect(
+        isActiveClientPackage(c, now) && isUpcomingClientPackage(c, now),
+      ).toBe(false);
+    }
+  });
+});
+
+describe("upcomingClientPackages", () => {
+  const now = new Date("2026-07-13T12:00:00.000Z");
+
+  type Pkg = {
+    id: string;
+    sessionsRemaining: number;
+    expiresAt: string;
+    revokedAt?: string | null;
+    startsAt?: string | null;
+  };
+
+  function pkg(over: Partial<Pkg> & { id: string }): Pkg {
+    return {
+      sessionsRemaining: 4,
+      expiresAt: "2026-12-13T12:00:00.000Z",
+      ...over,
+    };
+  }
+
+  it("returns only the packages that have not started yet", () => {
+    const list = upcomingClientPackages(
+      [
+        pkg({ id: "active", startsAt: "2026-07-01T00:00:00.000Z" }),
+        pkg({ id: "later", startsAt: "2026-07-18T00:00:00.000Z" }),
+      ],
+      now,
+    );
+    expect(list.map((p) => p.id)).toEqual(["later"]);
+  });
+
+  it("orders by SOONEST start — the one the client can use first", () => {
+    const list = upcomingClientPackages(
+      [
+        pkg({ id: "august", startsAt: "2026-08-01T00:00:00.000Z" }),
+        pkg({ id: "in-five-days", startsAt: "2026-07-18T00:00:00.000Z" }),
+      ],
+      now,
+    );
+    expect(list.map((p) => p.id)).toEqual(["in-five-days", "august"]);
+  });
+
+  it("returns an empty list when nothing is upcoming", () => {
+    expect(
+      upcomingClientPackages(
+        [pkg({ id: "active", startsAt: "2026-07-01T00:00:00.000Z" })],
+        now,
+      ),
+    ).toEqual([]);
   });
 });

@@ -159,3 +159,99 @@ describe("client home — a card per package scope", () => {
     expect(screen.container.textContent).not.toContain("Imate još");
   });
 });
+
+/**
+ * A package the studio dated to start later must be VISIBLE and clearly not
+ * bookable yet.
+ *
+ * The reported bug: a client was assigned two Nadoknada packages, one starting
+ * today and one in five days, and the second was invisible to everyone. The
+ * data was always on the wire — three client-side filters dropped it and no
+ * surface picked it up. It now gets its own muted section that states the day
+ * it becomes usable, while every bookable number on the screen stays untouched.
+ */
+const UPCOMING_NADOKNADA = pkg({
+  id: "nadoknada-later",
+  sessionsRemaining: 1,
+  sessionsTotal: 1,
+  bookable: 1,
+  startsAt: "2026-05-14T00:00:00.000Z",
+  expiresAt: "2026-06-14T00:00:00.000Z",
+  classTypes: [REFORMER],
+  packageType: { name: "Nadoknada", sessionCount: 1, validityDays: 30 },
+});
+
+describe("client home — an upcoming package is visible but not bookable", () => {
+  beforeEach(() => {
+    process.env.TEST_ANCHOR_TIME = ANCHOR;
+    routerCalls.length = 0;
+  });
+  afterEach(() => {
+    delete process.env.TEST_ANCHOR_TIME;
+  });
+
+  it("shows the upcoming package with the date it becomes usable", () => {
+    const screen = renderWithQueryClient(
+      <HomeStudio />,
+      seed([UPCOMING_NADOKNADA]),
+    );
+    const card = screen.getByTestId("home-upcoming-package-nadoknada-later");
+    expect(card.textContent).toContain("Nadoknada");
+    expect(card.textContent).toContain("Dostupan od 14.5.2026.");
+    expect(screen.getByText("Uskoro")).toBeTruthy();
+  });
+
+  it("does not add the upcoming package's credits to an active pool", () => {
+    // Same covered set as the active 12-pack, so merging is exactly what the
+    // grouping rules would do if the filter ever slipped. The headline must
+    // stay 12 — the 13th credit is not spendable until the 14th.
+    const active = pkg({
+      id: "reformer-12",
+      sessionsRemaining: 12,
+      sessionsTotal: 12,
+      bookable: 12,
+      classTypes: [REFORMER],
+      packageType: { name: "Reformer 12", sessionCount: 12, validityDays: 30 },
+    });
+    const screen = renderWithQueryClient(
+      <HomeStudio />,
+      seed([active, UPCOMING_NADOKNADA]),
+    );
+    const counts = screen
+      .getAllByTestId("package-sessions-remaining")
+      .map((n) => n.textContent);
+    expect(counts).toEqual(["12"]);
+    // One bookable pool, so the header stays singular even with the upcoming
+    // package on screen.
+    expect(screen.getByText("Tvoj paket")).toBeTruthy();
+    expect(
+      screen.getByTestId("home-upcoming-package-nadoknada-later"),
+    ).toBeTruthy();
+  });
+
+  it("keeps the renewal card when the ONLY package is upcoming", () => {
+    // Nothing is bookable today, so the renewal fall-through is still correct.
+    // The client now also learns something is on the way.
+    const lapsed = pkg({
+      id: "lapsed",
+      sessionsRemaining: 0,
+      sessionsTotal: 12,
+      expiresAt: "2026-05-01T00:00:00.000Z",
+      packageType: { name: "Reformer 12", sessionCount: 12, validityDays: 30 },
+    });
+    const screen = renderWithQueryClient(
+      <HomeStudio />,
+      seed([lapsed, UPCOMING_NADOKNADA]),
+    );
+    expect(screen.getByTestId("home-renewal-card")).toBeTruthy();
+    expect(
+      screen.getByTestId("home-upcoming-package-nadoknada-later").textContent,
+    ).toContain("Dostupan od 14.5.2026.");
+    expect(screen.queryAllByTestId("package-sessions-remaining")).toHaveLength(0);
+  });
+
+  it("renders no upcoming section when every package has already started", () => {
+    const screen = renderWithQueryClient(<HomeStudio />, seed(TWO_SCOPES));
+    expect(screen.container.textContent).not.toContain("Uskoro");
+  });
+});

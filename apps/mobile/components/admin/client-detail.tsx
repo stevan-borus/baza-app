@@ -47,7 +47,11 @@ import {
 } from "@/components/admin/client-flows/edit-pause-sheet";
 import { AssignPackageSheetContent } from "@/components/admin/assign-package-sheet-content";
 import { ReturnToPill } from "@/components/admin/return-to-pill";
-import { nowMs } from "@/lib/now";
+import { now } from "@/lib/now";
+import {
+  isActiveClientPackage,
+  upcomingClientPackages,
+} from "@/lib/package-fully-booked";
 import {
   ClientDetailTabBar,
   type ClientDetailTab,
@@ -69,18 +73,16 @@ import { BeleskeTab } from "@/components/admin/client-detail/BeleskeTab";
 // all three — the two surfaces disagreeing is what got reported. And it never
 // looked at `startsAt`, so a package that begins in December counted as
 // current today.
+//
+// The eligibility test itself now lives in `lib/package-fully-booked.ts`, the
+// same predicate the client home and Moji paketi call. It used to be copied
+// here field for field, which is how admin and client drifted apart on
+// `revokedAt` once already; a future-dated package is exactly the kind of edge
+// two copies disagree about.
 export function activePackages(packages: ClientPackage[]): ClientPackage[] {
-  const msNow = nowMs();
+  const at = now();
   return packages
-    .filter((p) => {
-      if (p.revokedAt) return false;
-      if (p.sessionsRemaining <= 0) return false;
-      if (new Date(p.expiresAt).getTime() < msNow) return false;
-      // A payload cached before `startsAt` shipped has none; treat it as
-      // already started so an old cache never blanks the card.
-      if (p.startsAt && new Date(p.startsAt).getTime() > msNow) return false;
-      return true;
-    })
+    .filter((p) => isActiveClientPackage(p, at))
     .sort(
       (a, b) => new Date(a.expiresAt).getTime() - new Date(b.expiresAt).getTime(),
     );
@@ -128,6 +130,10 @@ export function ClientDetail({ id }: { id: string }) {
 
   const allPackages = packagesQuery.data?.packages ?? [];
   const currentPackages = activePackages(allPackages);
+  // Assigned but not yet startable. Kept in its OWN list rather than folded
+  // into `currentPackages`, so nothing downstream can count it as bookable —
+  // the Pregled cards, their labels and their counts all read the active list.
+  const notYetStartedPackages = upcomingClientPackages(allPackages, now());
 
   // Treninzi tab + Pregled-preview both read from the same infinite query.
   // Pregled shows the first three; Treninzi shows the full paginated list.
@@ -245,6 +251,7 @@ export function ClientDetail({ id }: { id: string }) {
             {activeTab === "pregled" ? (
               <PregledTab
                 activePackages={currentPackages}
+                upcomingPackages={notYetStartedPackages}
                 packagesLoading={packagesQuery.isLoading}
                 upcomingBookings={upcomingBookings.slice(0, 1)}
                 lang={lang}

@@ -284,7 +284,13 @@
       "noActiveContact": "To buy or renew a package, get in touch with us.",
       "allPackages": "All packages",
       "packageName": "Package",
-      "sessionsUntil": "Sessions: {{count}} | Until: {{date}}"
+      "sessionsUntil": "Sessions: {{count}} | Until: {{date}}",
+      "upcoming": "Upcoming",
+      "upcomingTitle": "Upcoming package",
+      "upcomingTitlePlural": "Upcoming packages",
+      "availableFrom": "Available from {{date}}",
+      "upcomingHint": "Sessions from this package can be booked from that date.",
+      "upcomingA11y": "{{name}}, available from {{date}}. Cannot be booked yet."
     },
     "renewal": {
       "message": "Your package is used up or has expired. Get in touch to renew it and keep training.",
@@ -853,7 +859,11 @@
       "lockedUntil": "Locked until {{time}}",
       "unlock": "Unlock",
       "unlockA11y": "Unlock sign-in",
-      "unlockError": "Unlock failed."
+      "unlockError": "Unlock failed.",
+      "upcomingPackage": "Upcoming package",
+      "upcomingPackages": "Upcoming packages",
+      "packageNotStartedYet": "Not active yet",
+      "availableFrom": "Available from {{date}}"
     },
     "packages": {
       "classType": "Class type",
