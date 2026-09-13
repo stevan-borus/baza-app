@@ -49,3 +49,8 @@ yarn-error.log*
 
 # Playwright MCP browser artifacts (screenshots / snapshots / console logs)
 .playwright-mcp/
+
+# Store-submission credentials. The Play service-account JSON grants publishing
+# rights to the app — it must never be committed. eas.json points at
+# secrets/play-service-account.json; keep the whole directory out.
+secrets/

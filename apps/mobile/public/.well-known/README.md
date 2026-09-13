@@ -36,6 +36,29 @@ Both files now carry the real production identities:
   key and the Play-managed app-signing key fingerprints (Play Console → App
   integrity).
 
+### Play App Signing adds a SECOND fingerprint, after the first upload
+
+The single fingerprint in `assetlinks.json` today is the EAS **upload** key. When
+the app ships through Play, Google re-signs it with its own **app-signing** key,
+so a Play-installed app presents a certificate this file doesn't list and Android
+silently stops opening `/accept-invite` and `/reset-password` links. Links keep
+working on directly-installed APKs, so this breaks in production while testing
+clean — verify on a build installed *from Play*, not a sideloaded APK.
+
+Google's fingerprint doesn't exist until the app has been uploaded once, so this
+is necessarily two passes:
+
+1. Build and upload the first AAB (`eas build --profile production --platform
+   android`, then submit or upload by hand).
+2. Play Console → the app → **Test and release → Setup → App integrity → App
+   signing**. Copy the SHA-256 under *App signing key certificate* (the *Upload
+   key certificate* on the same screen is the one already in this file).
+3. Add it to `sha256_cert_fingerprints` **alongside** the existing value — both
+   must stay. Keep the upload key so internal-track and EAS-installed builds go
+   on working.
+4. Deploy the server so the updated file is live, then re-verify with Tier 2
+   below. Android caches verification, so reinstall the app to force a recheck.
+
 ## Tier 1 — verify in development (real device, no publish, no prod domain)
 
 Per [Expo iOS Universal Links](https://docs.expo.dev/linking/ios-universal-links/)

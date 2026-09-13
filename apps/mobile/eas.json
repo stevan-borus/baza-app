@@ -39,7 +39,7 @@
       "autoIncrement": true,
       "channel": "production",
       "android": {
-        "buildType": "apk"
+        "buildType": "app-bundle"
       },
       "env": {
         "EXPO_PUBLIC_API_URL": "https://baza-pilates-prod.fly.dev",
@@ -56,6 +56,16 @@
         "ascAppId": "6784695171"
       }
     },
-    "production": {}
+    "production": {
+      "ios": {
+        "appName": "Baza Pilates",
+        "ascAppId": "6784695171"
+      },
+      "android": {
+        "serviceAccountKeyPath": "../../secrets/play-service-account.json",
+        "track": "internal",
+        "releaseStatus": "draft"
+      }
+    }
   }
 }
