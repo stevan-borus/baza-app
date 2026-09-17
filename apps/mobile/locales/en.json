@@ -536,7 +536,8 @@
     "pickTime": "Pick a time",
     "pickDateTime": "Pick date and time",
     "back": "Back",
-    "tooManyRequests": "Too many requests. Wait a moment and try again."
+    "tooManyRequests": "Too many requests. Wait a moment and try again.",
+    "retry": "Try again"
   },
   "updates": {
     "otaReadyTitle": "Update ready",

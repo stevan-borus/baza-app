@@ -195,3 +195,61 @@ describe("NotificationsInbox — loading and error", () => {
     ).toBeTruthy();
   });
 });
+
+describe("NotificationsInbox — refresh on focus", () => {
+  it("renders the seeded rows on mount", async () => {
+    const screen = renderInbox([
+      makeNotification({ id: "f1", title: "Postojeće obaveštenje" }),
+    ]);
+
+    expect(await screen.findByText("Postojeće obaveštenje")).toBeTruthy();
+  });
+
+  it("marks the notifications cache invalidated when the screen gains focus", async () => {
+    // Tab screens stay mounted, so returning to Obaveštenja never remounts the
+    // list. Without this invalidation the inbox shows whatever it had cached
+    // and the newest push is missing until the app is killed and reopened.
+    const screen = renderInbox([makeNotification({ id: "f2", title: "Staro" })]);
+    await screen.findByText("Staro");
+
+    const state = screen.client.getQueryState(
+      notificationsQueries.listInfinite().queryKey,
+    );
+    expect(state?.isInvalidated).toBe(true);
+  });
+
+  it("paints a notification written into the cache after the first render", async () => {
+    // What a completed focus refetch does: new page data lands in the cache and
+    // the mounted list must repaint with the new row rather than stay blank.
+    const screen = renderInbox([makeNotification({ id: "f3", title: "Staro" })]);
+    await screen.findByText("Staro");
+
+    screen.client.setQueryData(notificationsQueries.listInfinite().queryKey, {
+      pages: [
+        {
+          success: true,
+          notifications: [
+            makeNotification({ id: "f4", title: "Novo obaveštenje" }),
+            makeNotification({ id: "f3", title: "Staro" }),
+          ],
+          nextCursor: null,
+        },
+      ],
+      pageParams: [null],
+    });
+
+    expect(await screen.findByText("Novo obaveštenje")).toBeTruthy();
+    expect(screen.getByText("Staro")).toBeTruthy();
+  });
+});
+
+describe("NotificationsInbox — error retry", () => {
+  it("offers a retry action instead of a dead-end error", async () => {
+    const screen = renderWithQueryClient(<NotificationsInbox context="client" />);
+
+    expect(
+      await screen.findByText("Pokušaj ponovo", undefined, { timeout: 5000 }),
+    ).toBeTruthy();
+    expect(screen.getByText("Nije moguće učitati obaveštenja.")).toBeTruthy();
+  });
+});

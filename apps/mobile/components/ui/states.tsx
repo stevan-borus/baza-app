@@ -70,9 +70,13 @@ export function EmptyState({
 export function ErrorState({
   message,
   testID,
+  retryLabel,
+  onRetry,
 }: {
   message: string;
   testID?: string;
+  retryLabel?: string;
+  onRetry?: () => void;
 }) {
   const tokens = useThemeTokens();
   const shakeX = useSharedValue(0);
@@ -101,6 +105,11 @@ export function ErrorState({
       <Text className="font-body-medium text-base text-center flex-1 text-danger">
         {message}
       </Text>
+      {retryLabel && onRetry ? (
+        <Button variant="secondary" size="small" onPress={onRetry}>
+          {retryLabel}
+        </Button>
+      ) : null}
     </AnimatedView>
   );
 }

@@ -540,7 +540,8 @@
     "pickTime": "Izaberi vreme",
     "pickDateTime": "Izaberi datum i vreme",
     "back": "Nazad",
-    "tooManyRequests": "Previše zahteva. Sačekajte malo pa pokušajte ponovo."
+    "tooManyRequests": "Previše zahteva. Sačekajte malo pa pokušajte ponovo.",
+    "retry": "Pokušaj ponovo"
   },
   "updates": {
     "otaReadyTitle": "Ažuriranje je spremno",
