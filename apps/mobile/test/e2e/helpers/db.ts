@@ -58,6 +58,9 @@ type CreateInviteInput = {
   lastName?: string;
   expiresAt?: Date;
   status?: "PENDING" | "COMPLETED" | "EXPIRED" | "REVOKED";
+  /** Adult by default. Redemption copies this onto the ClientProfile, and the
+   *  consent gate throws on a CLIENT with no dateOfBirth. */
+  dateOfBirth?: Date;
 };
 
 /**
@@ -78,6 +81,7 @@ export async function createInvite(input: CreateInviteInput) {
       firstName: inviteFirstName,
       lastName: inviteLastName,
       role: "CLIENT",
+      dateOfBirth: input.dateOfBirth ?? new Date("1990-04-12"),
       tokenHash,
       status: input.status ?? "PENDING",
       expiresAt,
@@ -1135,6 +1139,21 @@ export async function findPackagePausesFor(clientEmail: string) {
  *  schedule's `bookedCount/capacity` chip is rendered from. */
 export async function countActiveBookingsOnSession(sessionId: string) {
   return db().booking.count({ where: { sessionId, canceledAt: null } });
+}
+
+/** The client's marketing-notifications preference. `null` until the app has
+ *  created a NotificationPreference row for them. */
+export async function getCampaignsEnabledFor(userEmail: string) {
+  const user = await db().user.findUnique({
+    where: { email: userEmail.toLowerCase() },
+    select: { id: true },
+  });
+  if (!user) return null;
+  const prefs = await db().notificationPreference.findUnique({
+    where: { userId: user.id },
+    select: { campaignsEnabled: true },
+  });
+  return prefs?.campaignsEnabled ?? null;
 }
 
 export async function disconnect() {
