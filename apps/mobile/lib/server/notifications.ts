@@ -33,7 +33,7 @@ export async function createSystemNotification(
   messageKey: NotificationMessageKey,
   type: NotificationType,
   payload: Record<string, unknown>,
-  options?: { dedupeKey?: string; skipPush?: boolean },
+  options?: { dedupeKey?: string },
 ) {
   const locale = await getPreferredLocale(userId);
   // Pass the payload as interpolation vars so server-rendered notification
@@ -53,7 +53,6 @@ export async function createSystemNotification(
     body,
     payload: { ...payload, messageKey: messageI18nKey },
     dedupeKey: options?.dedupeKey,
-    skipPush: options?.skipPush,
   });
 }
 
@@ -66,12 +65,6 @@ type NotificationPayload = {
   body: string;
   payload?: Record<string, unknown>;
   dedupeKey?: string;
-  /**
-   * When true, persist the NotificationLog but skip the Expo push dispatch.
-   * Used for low-priority alerts (e.g., routine early cancellations) where
-   * we want in-app visibility without a phone buzz.
-   */
-  skipPush?: boolean;
   /** Links this log to the Campaign it was dispatched from (history + audit). */
   campaignId?: string;
 };
@@ -260,7 +253,7 @@ async function dispatchPushToUser(input: NotificationPayload): Promise<PushDispa
  * Persists notification state and optionally dispatches push delivery.
  *
  * The two preferences are independent channels: `inAppEnabled` decides whether
- * a NotificationLog row exists at all, `pushEnabled` (and `skipPush`) whether
+ * a NotificationLog row exists at all, `pushEnabled` whether
  * the device buzzes. With the inbox off and push on there is no row to stamp,
  * so the push goes out without pushSent/pushStatus bookkeeping and the return
  * value is null.
@@ -285,7 +278,7 @@ export async function createAndDispatchUserNotification(input: NotificationPaylo
     },
   });
 
-  const pushWanted = preference.pushEnabled && !input.skipPush;
+  const pushWanted = preference.pushEnabled;
 
   if (!preference.inAppEnabled) {
     if (pushWanted) await tryCatch(dispatchPushToUser(input));
@@ -320,7 +313,7 @@ export async function createAndDispatchUserNotification(input: NotificationPaylo
   });
 
   if (!pushWanted) {
-    // Keep in-app history when push is disabled OR explicitly silenced.
+    // Keep in-app history when the recipient disabled push.
     return log;
   }
 
