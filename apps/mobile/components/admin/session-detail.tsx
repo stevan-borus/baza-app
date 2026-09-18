@@ -6,6 +6,7 @@ import { router, type Href } from "expo-router";
 import dayjs from "dayjs";
 import { Icon } from "@/components/ui/icon";
 import { GlassCard } from "@/components/ui/glass-card";
+import { Badge } from "@/components/ui/badge";
 import { IntermediateBadge } from "@/components/ui/intermediate-badge";
 import { MixedGroupBadge } from "@/components/ui/mixed-group-badge";
 import { ErrorState, EmptyState } from "@/components/ui/states";
@@ -148,6 +149,15 @@ export function SessionDetail({
                   </Text>
                   <IntermediateBadge isIntermediate={session.isIntermediate} size="detail" />
                   <MixedGroupBadge isMixedGroup={session.isMixedGroup} size="detail" />
+                  {/* "Vidljivo klijentima" off — staff see the session, clients
+                      never do, and nothing else on this screen says so. */}
+                  {session.isActive === false ? (
+                    <View testID="session-detail-hidden-badge">
+                      <Badge status="neutral">
+                        {t("admin.schedule.hiddenFromClients")}
+                      </Badge>
+                    </View>
+                  ) : null}
                 </View>
                 {/* Trainer and room are free text and can be long; the
                     booked/capacity count is what staff read off this card, so

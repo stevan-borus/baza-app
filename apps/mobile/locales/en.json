@@ -901,6 +901,7 @@
       "hideBlockedSession": "Can't hide: this session already has {{count}} bookings.",
       "hideBlockedSeries": "Can't hide: the series already has {{count}} bookings.",
       "hiddenBadge": "Hidden",
+      "hiddenFromClients": "Hidden from clients",
       "emptyClassTypes": "No class types available",
       "emptyRooms": "No rooms available",
       "emptyTrainers": "No trainers available",
