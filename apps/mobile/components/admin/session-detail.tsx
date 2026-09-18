@@ -133,7 +133,7 @@ export function SessionDetail({
 
         {session ? (
           <>
-            <GlassCard size="md">
+            <GlassCard size="md" testID="session-detail-header-card">
               <View style={{ gap: 8 }}>
                 <Text
                   className="text-foreground font-body-bold"
@@ -149,22 +149,70 @@ export function SessionDetail({
                   <IntermediateBadge isIntermediate={session.isIntermediate} size="detail" />
                   <MixedGroupBadge isMixedGroup={session.isMixedGroup} size="detail" />
                 </View>
-                <View style={{ flexDirection: "row", gap: 16, marginTop: 4 }}>
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                {/* Trainer and room are free text and can be long; the
+                    booked/capacity count is what staff read off this card, so
+                    it never shrinks and never wraps mid-item. */}
+                <View
+                  style={{
+                    flexDirection: "row",
+                    flexWrap: "wrap",
+                    gap: 16,
+                    marginTop: 4,
+                  }}
+                >
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 6,
+                      flexShrink: 1,
+                      minWidth: 0,
+                    }}
+                  >
                     <Icon name="user" size={13} color={tokens.muted} />
-                    <Text className="text-muted" style={{ fontSize: 13 }}>
+                    <Text
+                      testID="session-detail-trainer"
+                      className="text-muted"
+                      style={{ fontSize: 13, flexShrink: 1, minWidth: 0 }}
+                      numberOfLines={1}
+                    >
                       {session.trainer?.fullName ?? "—"}
                     </Text>
                   </View>
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 6,
+                      flexShrink: 1,
+                      minWidth: 0,
+                    }}
+                  >
                     <Icon name="home" size={13} color={tokens.muted} />
-                    <Text className="text-muted" style={{ fontSize: 13 }}>
+                    <Text
+                      testID="session-detail-room"
+                      className="text-muted"
+                      style={{ fontSize: 13, flexShrink: 1, minWidth: 0 }}
+                      numberOfLines={1}
+                    >
                       {session.room?.name ?? "—"}
                     </Text>
                   </View>
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                  <View
+                    testID="session-detail-capacity-item"
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 6,
+                      flexShrink: 0,
+                    }}
+                  >
                     <Icon name="users" size={13} color={tokens.muted} />
-                    <Text className="text-muted" style={{ fontSize: 13 }}>
+                    <Text
+                      testID="session-detail-capacity"
+                      className="text-muted"
+                      style={{ fontSize: 13 }}
+                    >
                       {bookedCount}/{capacity}
                     </Text>
                   </View>

@@ -289,16 +289,24 @@ export default function AdminPackages() {
                   >
                     <SessionCountIcon count={pt.sessionCount} />
                     <View className="flex-1 gap-0.5">
+                      {/* The badge is what identifies the birthday SKU, so
+                          it holds its width and the name yields — minWidth 0
+                          is what lets a flex item shrink below its content. */}
                       <View className="flex-row items-center gap-2">
                         <Text
+                          testID={`package-type-name-${pt.id}`}
                           className="text-foreground font-body-semibold"
-                          style={{ fontSize: 15 }}
+                          style={{ fontSize: 15, flexShrink: 1, minWidth: 0 }}
                           numberOfLines={1}
                         >
                           {pt.name}
                         </Text>
                         {pt.isBirthdayGift ? (
-                          <Badge status="success">
+                          <Badge
+                            status="success"
+                            testID={`package-type-birthday-badge-${pt.id}`}
+                            style={{ flexShrink: 0 }}
+                          >
                             🎂 {t("admin.manage.birthdayGiftBadge")}
                           </Badge>
                         ) : null}

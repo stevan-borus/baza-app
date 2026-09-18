@@ -81,11 +81,41 @@ vi.mock("@/lib/api-request", () => ({
   apiRequest: async () => ({ success: true }),
 }));
 
+function bookingRow(n: number) {
+  return {
+    id: `b${n}`,
+    clientProfileId: `cp${n}`,
+    createdAt: "2026-06-01T00:00:00.000Z",
+    client: {
+      id: `c${n}`,
+      fullName: `Klijent ${n}`,
+      email: `c${n}@test.local`,
+    },
+    consentFlags: {
+      showFirstPilatesHint: false,
+      conditions: [] as string[],
+      conditionsOther: null,
+      additionalNotes: null,
+      intakeRecorded: true,
+      intakeWithdrawn: false,
+      socialMediaAccepted: true,
+    },
+  };
+}
+
 function sessionDetail(opts: {
   emptyCutoffLocked: boolean;
   bookedCount?: number;
+  capacity?: number;
+  roomName?: string;
+  trainerFullName?: string;
 }) {
   const bookedCount = opts.bookedCount ?? 0;
+  // The header count is `bookings.length`, not the payload field, so a roster
+  // has to be real for the capacity to read anything but 0/N.
+  const bookings = Array.from({ length: bookedCount }, (_, i) =>
+    bookingRow(i + 1),
+  );
   return {
     success: true,
     session: {
@@ -93,20 +123,20 @@ function sessionDetail(opts: {
       startsAt: "2026-06-10T18:00:00.000Z",
       endsAt: "2026-06-10T18:50:00.000Z",
       status: "SCHEDULED" as const,
-      capacity: 6,
+      capacity: opts.capacity ?? 6,
       isActive: true,
       classTypeId: "ct1",
       roomId: "r1",
       trainerUserId: "t1",
       recurringScheduleId: null,
       classType: { id: "ct1", name: "Reformer pilates" },
-      room: { id: "r1", name: "Sala 1" },
-      trainer: { id: "t1", fullName: "Trainer T" },
+      room: { id: "r1", name: opts.roomName ?? "Sala 1" },
+      trainer: { id: "t1", fullName: opts.trainerFullName ?? "Trainer T" },
       bookedCount,
       seriesBookedCount: bookedCount,
       emptyCutoffLocked: opts.emptyCutoffLocked,
       emptyBookingCutoffHours: 4,
-      bookings: [],
+      bookings,
       waitlist: [],
     },
   };
@@ -154,5 +184,64 @@ describe("SessionDetail empty-cutoff notice", () => {
     const screen = renderDetail(sessionDetail({ emptyCutoffLocked: false }));
 
     expect(screen.queryByTestId("session-detail-empty-cutoff")).toBeNull();
+  });
+});
+
+/**
+ * Header meta row with a long room name.
+ *
+ * The three meta items (trainer · room · booked/capacity) sat on one
+ * non-wrapping row of unshrinkable children. "Reformer room 1 (dugačko ime
+ * sale)" pushed the capacity item past the card's right edge, where it got
+ * clipped — the studio saw "3/" and nothing else. Capacity is the item staff
+ * actually read off this card, so it must hold its width while the two text
+ * items yield.
+ */
+function longRoomSessionDetail() {
+  return sessionDetail({
+    emptyCutoffLocked: false,
+    bookedCount: 3,
+    capacity: 8,
+    roomName: "Reformer room 1 (dugačko ime sale)",
+    trainerFullName: "Aleksandra Petrović-Jovanović",
+  });
+}
+
+describe("SessionDetail header with a long room name", () => {
+  it("keeps the capacity inside the header card", () => {
+    const screen = renderDetail(longRoomSessionDetail());
+
+    const capacity = screen.getByTestId("session-detail-capacity");
+    expect(capacity.textContent).toContain("3/8");
+
+    const card = screen
+      .getByTestId("session-detail-header-card")
+      .getBoundingClientRect();
+    const box = capacity.getBoundingClientRect();
+
+    // Sub-pixel rounding from react-native-web's layout makes an exact
+    // compare flaky, hence the 1px slack (same tolerance as the hero specs).
+    expect(box.right).toBeLessThanOrEqual(card.right + 1);
+    expect(box.left).toBeGreaterThanOrEqual(card.left - 1);
+    expect(box.width).toBeGreaterThan(0);
+  });
+
+  it("lets the text meta items shrink and pins the capacity", () => {
+    const screen = renderDetail(longRoomSessionDetail());
+
+    const room = screen.getByTestId("session-detail-room");
+    const trainer = screen.getByTestId("session-detail-trainer");
+    const capacityItem = screen.getByTestId("session-detail-capacity-item");
+
+    // minWidth:0 is the load-bearing half — without it a flex item's
+    // min-width is its content and it refuses to shrink at all.
+    for (const text of [room, trainer]) {
+      expect(text.style.flexShrink).toBe("1");
+      expect(text.style.minWidth).toBe("0px");
+      expect(text.parentElement!.style.flexShrink).toBe("1");
+      expect(text.parentElement!.style.minWidth).toBe("0px");
+    }
+
+    expect(capacityItem.style.flexShrink).toBe("0");
   });
 });
