@@ -42,7 +42,7 @@ import {
   POST,
   PATCH as PATCH_COLLECTION,
 } from "@/server/routes/notifications";
-import { PATCH } from "@/server/routes/notifications/[id]";
+import { DELETE, PATCH } from "@/server/routes/notifications/[id]";
 import { prisma } from "@/lib/server/prisma";
 import { now, nowMs } from "@/lib/now";
 
@@ -383,5 +383,94 @@ describe("notifications API", () => {
     authAs(me);
     const res = await patchBatch({ ids: [] });
     expect(res.status).toBe(400);
+  });
+
+  it("DELETE /:id dismisses the caller's notification and drops it from GET", async () => {
+    const me = await makeUser({ email: "dismiss1@test.local" });
+    const kept = await prisma.notificationLog.create({
+      data: { userId: me.id, type: "GENERAL", title: "kept", body: "x", payload: {} },
+    });
+    const doomed = await prisma.notificationLog.create({
+      data: { userId: me.id, type: "GENERAL", title: "doomed", body: "x", payload: {} },
+    });
+    authAs(me);
+
+    const response = await DELETE(
+      new Request(`http://test.local/api/notifications/${doomed.id}`, { method: "DELETE" }),
+      { id: doomed.id },
+    );
+    expect(response.status).toBe(200);
+
+    // Soft delete: the row survives for campaign/push audit, the inbox hides it.
+    const reloaded = await prisma.notificationLog.findUnique({ where: { id: doomed.id } });
+    expect(reloaded).not.toBeNull();
+    expect(reloaded?.dismissedAt).not.toBeNull();
+
+    const listed = await GET(new Request("http://test.local/api/notifications?take=10"));
+    const body = (await listed.json()) as { notifications: { id: string }[] };
+    expect(body.notifications.map((n) => n.id)).toEqual([kept.id]);
+  });
+
+  it("DELETE /:id is idempotent — a second dismiss keeps the first instant", async () => {
+    const me = await makeUser({ email: "dismiss2@test.local" });
+    const notif = await prisma.notificationLog.create({
+      data: { userId: me.id, type: "GENERAL", title: "x", body: "x", payload: {} },
+    });
+    authAs(me);
+
+    await DELETE(
+      new Request(`http://test.local/api/notifications/${notif.id}`, { method: "DELETE" }),
+      { id: notif.id },
+    );
+    const first = (await prisma.notificationLog.findUnique({ where: { id: notif.id } }))!
+      .dismissedAt!;
+
+    await new Promise((r) => setTimeout(r, 10));
+
+    const second = await DELETE(
+      new Request(`http://test.local/api/notifications/${notif.id}`, { method: "DELETE" }),
+      { id: notif.id },
+    );
+    expect(second.status).toBe(200);
+    const after = (await prisma.notificationLog.findUnique({ where: { id: notif.id } }))!
+      .dismissedAt!;
+    expect(after.getTime()).toBe(first.getTime());
+  });
+
+  it("DELETE /:id returns 404 for another user's notification and leaves it untouched", async () => {
+    const me = await makeUser({ email: "dismiss3@test.local" });
+    const other = await makeUser({ email: "dismiss3-other@test.local" });
+    const theirs = await prisma.notificationLog.create({
+      data: { userId: other.id, type: "GENERAL", title: "theirs", body: "x", payload: {} },
+    });
+    authAs(me);
+
+    const response = await DELETE(
+      new Request(`http://test.local/api/notifications/${theirs.id}`, { method: "DELETE" }),
+      { id: theirs.id },
+    );
+    expect(response.status).toBe(404);
+
+    const reloaded = await prisma.notificationLog.findUnique({ where: { id: theirs.id } });
+    expect(reloaded?.dismissedAt).toBeNull();
+  });
+
+  it("batch PATCH skips dismissed rows", async () => {
+    const me = await makeUser({ email: "dismiss4@test.local" });
+    const dismissed = await prisma.notificationLog.create({
+      data: {
+        userId: me.id,
+        type: "GENERAL",
+        title: "gone",
+        body: "x",
+        payload: {},
+        dismissedAt: now(),
+      },
+    });
+    authAs(me);
+
+    const res = await patchBatch({ ids: [dismissed.id] });
+    const body = (await res.json()) as { count: number };
+    expect(body.count).toBe(0);
   });
 });

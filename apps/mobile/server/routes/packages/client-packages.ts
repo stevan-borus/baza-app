@@ -326,6 +326,13 @@ export async function POST(request: Request) {
   if (!isGift && parsed.data.sessionsGranted !== undefined) {
     return fail("sessionsGranted is only valid for a gift", 400);
   }
+  const giftMessage = parsed.data.giftMessage ?? null;
+  if (!isGift && giftMessage !== null) {
+    return fail("giftMessage is only valid for a gift", 400);
+  }
+  if (!isGift && parsed.data.occasion != null) {
+    return fail("occasion is only valid for a gift", 400);
+  }
   const sessionsGranted = isGift ? (parsed.data.sessionsGranted ?? 1) : undefined;
   if (sessionsGranted !== undefined && sessionsGranted > packageType.sessionCount) {
     return fail(
@@ -354,9 +361,16 @@ export async function POST(request: Request) {
     // to someone who was just given a birthday present. The legacy gift SKUs
     // still count while they exist.
     if (isGift || packageType.isBirthdayGift) {
+      // Birthday wording only when the assignment really came from the
+      // birthday prompt (the sheet sends occasion) or a legacy 🎂 SKU. Every
+      // other gift — graduation, apology, promo — gets the generic copy.
+      const isBirthday =
+        parsed.data.occasion === "BIRTHDAY" || packageType.isBirthdayGift;
       void createSystemNotification(
         clientProfile.user.id,
-        NOTIFICATION_MESSAGE_KEYS.BIRTHDAY_CLIENT_GIFT,
+        isBirthday
+          ? NOTIFICATION_MESSAGE_KEYS.BIRTHDAY_CLIENT_GIFT
+          : NOTIFICATION_MESSAGE_KEYS.GIFT_PACKAGE,
         "BIRTHDAY_CLIENT_GIFT",
         {
           clientPackageId: clientPackage.id,
@@ -365,7 +379,11 @@ export async function POST(request: Request) {
           classTypeIds: clientPackage.classTypeIds,
           packageTypeName: packageType.name,
           expiresAt: clientPackage.expiresAt.toISOString(),
+          sessionsGranted: clientPackage.sessionsGranted ?? sessionsGranted ?? 1,
+          ...(giftMessage ? { giftMessage } : {}),
         },
+        // Admin free text: appended as its own sentence, never interpolated.
+        { appendBody: giftMessage },
       );
     } else {
       // Non-gift assign (comp / manual) — tell the client a package landed.

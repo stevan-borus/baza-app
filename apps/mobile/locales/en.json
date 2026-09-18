@@ -8,6 +8,14 @@
       "title": "Session updated",
       "body": "The session has been updated."
     },
+    "session_details_updated": {
+      "title": "Your session changed",
+      "body": "{{classTypeName}} {{sessionWhen}} — room: {{roomName}}, trainer: {{trainerFullName}}."
+    },
+    "session_rescheduled": {
+      "title": "Your session moved",
+      "body": "{{classTypeName}} moved from {{oldSessionWhen}} to {{sessionWhen}} — room: {{roomName}}, trainer: {{trainerFullName}}."
+    },
     "trainer_note": {
       "title": "Trainer note",
       "body": "Your trainer left a note."
@@ -31,6 +39,10 @@
     "package_paused": {
       "title": "Package paused",
       "body": "Your package has been paused and your reservations in that period were canceled. Your package validity was extended by the length of the pause."
+    },
+    "gift_package": {
+      "title": "🎁 A gift for you",
+      "body": "We're gifting you {{sessionsGranted}} {{sessionsLabel}} from the \"{{packageTypeName}}\" package."
     },
     "session_reminder": {
       "title": "Session reminder",
@@ -486,10 +498,6 @@
       "settings": "Settings",
       "error": "Unable to load notifications.",
       "empty": "You have no new notifications.",
-      "settingsTitle": "Notification settings",
-      "pushEnabled": "Push notifications",
-      "inAppEnabled": "In-app notifications",
-      "loadingPrefs": "Loading settings...",
       "typeBooking": "Booking",
       "typeSession": "Session",
       "typeNote": "Note",
@@ -536,7 +544,8 @@
     "pickTime": "Pick a time",
     "pickDateTime": "Pick date and time",
     "back": "Back",
-    "tooManyRequests": "Too many requests. Wait a moment and try again."
+    "tooManyRequests": "Too many requests. Wait a moment and try again.",
+    "retry": "Try again"
   },
   "updates": {
     "otaReadyTitle": "Update ready",
@@ -763,7 +772,9 @@
       "giftToggleHint": "The client doesn't pay, but the trainer is paid at the package rate.",
       "giftSessionsLabel": "Gifted sessions",
       "giftSessionsHint": "At most {{count}} (what the package holds).",
-      "giftSessionsHintNoPackage": "Pick a package first."
+      "giftSessionsHintNoPackage": "Pick a package first.",
+      "giftMessageLabel": "Gift message (optional)",
+      "giftMessageHint": "Shown to the client in the notification."
     },
     "trainers": {
       "screenTitle": "Trainers",
@@ -890,6 +901,7 @@
       "hideBlockedSession": "Can't hide: this session already has {{count}} bookings.",
       "hideBlockedSeries": "Can't hide: the series already has {{count}} bookings.",
       "hiddenBadge": "Hidden",
+      "hiddenFromClients": "Hidden from clients",
       "emptyClassTypes": "No class types available",
       "emptyRooms": "No rooms available",
       "emptyTrainers": "No trainers available",
@@ -1323,7 +1335,9 @@
       "openSettings": "Open settings",
       "dismiss": "Not now"
     },
-    "noDetails": "No further details."
+    "noDetails": "No further details.",
+    "delete": "Delete",
+    "deleteA11y": "Delete notification"
   },
   "notif": {
     "consentRefused": {
