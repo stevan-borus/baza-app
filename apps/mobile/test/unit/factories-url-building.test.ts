@@ -42,6 +42,9 @@ describe("reports factory URLs", () => {
       totalSessions: 0,
       revenue: 0,
       totalPayments: 0,
+      clientsWithActivePackage: 0,
+      newClients: 0,
+      attendanceRate: null,
     },
   };
 

@@ -32,6 +32,10 @@
       "title": "Paket je pauziran",
       "body": "Vaš paket je pauziran, a rezervacije u tom periodu su otkazane. Trajanje paketa je produženo za dužinu pauze."
     },
+    "gift_package": {
+      "title": "🎁 Poklon za tebe",
+      "body": "Poklanjamo ti {{sessionsGranted}} {{sessionsLabel}} iz paketa \"{{packageTypeName}}\"."
+    },
     "session_reminder": {
       "title": "Podsetnik",
       "body": "Imate zakazan termin uskoro."
@@ -490,10 +494,6 @@
       "settings": "Podešavanja",
       "error": "Nije moguće učitati obaveštenja.",
       "empty": "Nemate novih obaveštenja.",
-      "settingsTitle": "Podešavanja obaveštenja",
-      "pushEnabled": "Push obaveštenja",
-      "inAppEnabled": "In-app obaveštenja",
-      "loadingPrefs": "Učitavam podešavanja...",
       "typeBooking": "Rezervacija",
       "typeSession": "Termin",
       "typeNote": "Beleška",
@@ -768,7 +768,9 @@
       "giftToggleHint": "Klijent ne plaća, ali se treneru obračunava po ceni paketa.",
       "giftSessionsLabel": "Broj termina na poklon",
       "giftSessionsHint": "Najviše {{count}} (koliko paket ima).",
-      "giftSessionsHintNoPackage": "Prvo izaberite paket."
+      "giftSessionsHintNoPackage": "Prvo izaberite paket.",
+      "giftMessageLabel": "Poruka uz poklon (opciono)",
+      "giftMessageHint": "Klijent će je videti u obaveštenju."
     },
     "trainers": {
       "screenTitle": "Treneri",
@@ -884,8 +886,8 @@
       "error": "Nije moguće učitati raspored.",
       "sheetRecurring": "Ponavljajući termini",
       "sheetNew": "Novi termin",
-      "once": "Jednokratna",
-      "recurring": "Ponavljajuća",
+      "once": "Jednokratan",
+      "recurring": "Ponavljajući",
       "classType": "Tip treninga",
       "room": "Sala",
       "roomCap": "{{name}} (kap. {{capacity}})",

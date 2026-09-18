@@ -321,7 +321,7 @@ describe("POST /api/bookings cancel", () => {
       createSystemNotificationMock.mockClear();
     });
 
-    it("late cancel produces skipPush=false for the trainer", async () => {
+    it("late cancel notifies the trainer", async () => {
       const baseline = await seedBaseline();
       const session = await createFutureSession({
         classTypeId: baseline.reformer.id,
@@ -341,7 +341,6 @@ describe("POST /api/bookings cancel", () => {
       const res = await POST(buildClientCancelRequest(session.id));
       expect(res.status).toBe(200);
 
-      // Trainer should get a push (push not skipped).
       // Fan-out is fire-and-forget; wait for the trainer call to land.
       await vi.waitFor(() => {
         const found = createSystemNotificationMock.mock.calls.find(
@@ -353,43 +352,54 @@ describe("POST /api/bookings cancel", () => {
         (call) => call[0] === baseline.trainer.id && call[2] === "BOOKING_CANCELED_TRAINER",
       );
       expect(trainerCall).toBeDefined();
-      // "always" events don't set skipPush at all — absence means "push".
-      expect(trainerCall![4]?.skipPush).not.toBe(true);
     });
 
-    it("early cancel still produces skipPush=false for the trainer (every client cancel pushes)", async () => {
+    it("early cancel notifies nobody — not the trainer, not admins", async () => {
       const baseline = await seedBaseline();
-      const session = await createFutureSession({
-        classTypeId: baseline.reformer.id,
-        trainerUserId: baseline.trainer.id,
-        startsAtMsFromNow: 48 * HOUR_MS, // far before cutoff = early
+      const admin = await prisma.user.create({
+        data: { email: "admin-early@test.local", firstName: "Admin", lastName: "Early", role: "ADMIN" },
       });
-      await prisma.booking.create({
-        data: {
-          sessionId: session.id,
-          clientProfileId: baseline.clientProfile.id,
-          clientPackageId: baseline.clientPackage.id,
-        },
-      });
+      const bookSession = async (startsAtMsFromNow: number) => {
+        const session = await createFutureSession({
+          classTypeId: baseline.reformer.id,
+          trainerUserId: baseline.trainer.id,
+          startsAtMsFromNow,
+        });
+        await prisma.booking.create({
+          data: {
+            sessionId: session.id,
+            clientProfileId: baseline.clientProfile.id,
+            clientPackageId: baseline.clientPackage.id,
+          },
+        });
+        return session;
+      };
+      const early = await bookSession(48 * HOUR_MS); // far before cutoff
+      const late = await bookSession(2 * HOUR_MS); // <12h cutoff
       asClient({ id: baseline.client.id, profileId: baseline.clientProfile.id, email: baseline.client.email });
 
       createSystemNotificationMock.mockClear();
-      const res = await POST(buildClientCancelRequest(session.id));
-      expect(res.status).toBe(200);
+      expect((await POST(buildClientCancelRequest(early.id))).status).toBe(200);
+      expect((await POST(buildClientCancelRequest(late.id))).status).toBe(200);
 
+      // The fan-out is fire-and-forget: wait for the late cancel's dispatch,
+      // which orders after the early one, then assert the early one produced
+      // nothing for either operator.
       await vi.waitFor(() => {
-        const found = createSystemNotificationMock.mock.calls.find(
-          (call) => call[0] === baseline.trainer.id && call[2] === "BOOKING_CANCELED_TRAINER",
+        const lateCalls = createSystemNotificationMock.mock.calls.filter(
+          (call) => (call[3] as { sessionId?: string }).sessionId === late.id,
         );
-        expect(found).toBeDefined();
+        expect(lateCalls).toHaveLength(2); // trainer + admin
       });
-      const trainerCall = createSystemNotificationMock.mock.calls.find(
-        (call) => call[0] === baseline.trainer.id && call[2] === "BOOKING_CANCELED_TRAINER",
+      const earlyCalls = createSystemNotificationMock.mock.calls.filter(
+        (call) => (call[3] as { sessionId?: string }).sessionId === early.id,
       );
-      expect(trainerCall).toBeDefined();
-      // BOOKING_CANCELED now pushes on every client cancellation, not just late
-      // ones — "always" events don't set skipPush at all, so absence means "push".
-      expect(trainerCall![4]?.skipPush).not.toBe(true);
+      expect(earlyCalls).toEqual([]);
+      expect(
+        createSystemNotificationMock.mock.calls.filter(
+          (call) => call[0] === baseline.trainer.id || call[0] === admin.id,
+        ),
+      ).toHaveLength(2);
     });
 
     it("every active admin receives BOOKING_CANCELED_ADMIN", async () => {
