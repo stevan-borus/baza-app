@@ -17,6 +17,7 @@ import { useThemePreference } from "@/lib/theme-preference";
 import { notificationsQueries, type Notification } from "@/lib/queries/notifications-queries-factory";
 import { useNotificationTapHandler } from "@/lib/notification-tap";
 import { shouldOpenDetailSheet } from "@/lib/notification-detail-sheet";
+import { formatSessionWhen } from "@/lib/format-session-when";
 import { clearAppBadge } from "@/lib/badge";
 import { PushPermissionBanner } from "@/components/notifications/push-permission-banner";
 import dayjs from "dayjs";
@@ -184,6 +185,16 @@ function payloadInterpolation(
   safe("classTypeName");
   safe("trainerFullName");
   safe("userName");
+  safe("roomName");
+  // Session-change times ride as raw ISO and are formatted HERE, so the row
+  // follows the DEVICE language — the server-rendered copy is written in the
+  // recipient's STORED locale, and the two can differ.
+  const whenFromIso = (key: string, out_key: string) => {
+    const iso = (payload as Record<string, unknown>)[key];
+    if (typeof iso === "string") out[out_key] = formatSessionWhen(iso, lang);
+  };
+  whenFromIso("sessionStartsAtIso", "sessionWhen");
+  whenFromIso("oldSessionStartsAtIso", "oldSessionWhen");
   // sessionStartsAt is ISO; render as HH:mm (or HH:mm D.M. if not today).
   const startsAt = (payload as Record<string, unknown>).sessionStartsAt;
   if (typeof startsAt === "string") {

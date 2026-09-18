@@ -8,6 +8,14 @@
       "title": "Termin ažuriran",
       "body": "Termin je ažuriran."
     },
+    "session_details_updated": {
+      "title": "Termin je izmenjen",
+      "body": "{{classTypeName}} {{sessionWhen}} — sala: {{roomName}}, trener: {{trainerFullName}}."
+    },
+    "session_rescheduled": {
+      "title": "Termin je pomeren",
+      "body": "{{classTypeName}} je pomeren sa {{oldSessionWhen}} na {{sessionWhen}} — sala: {{roomName}}, trener: {{trainerFullName}}."
+    },
     "trainer_note": {
       "title": "Beleška trenera",
       "body": "Trener je ostavio belešku."

@@ -11,11 +11,20 @@ describe("CLIENT_EVENT_CHANNELS registry", () => {
     });
   });
 
-  it("SESSION_UPDATED fans to both in-app and email", () => {
+  it("SESSION_UPDATED fans to both in-app and email with the details-updated copy", () => {
     const ch = CLIENT_EVENT_CHANNELS.SESSION_UPDATED;
     expect(ch.email).toBe("SESSION_UPDATED");
     expect(ch.inApp).toEqual({
-      messageKey: "SESSION_UPDATED",
+      messageKey: "SESSION_DETAILS_UPDATED",
+      type: "SESSION_UPDATED",
+    });
+  });
+
+  it("SESSION_RESCHEDULED shares the email kind and type but carries the moved-time copy", () => {
+    const ch = CLIENT_EVENT_CHANNELS.SESSION_RESCHEDULED;
+    expect(ch.email).toBe("SESSION_UPDATED");
+    expect(ch.inApp).toEqual({
+      messageKey: "SESSION_RESCHEDULED",
       type: "SESSION_UPDATED",
     });
   });

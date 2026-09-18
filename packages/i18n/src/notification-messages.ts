@@ -15,6 +15,8 @@ export function resolveLocale(
 export type NotificationMessageKey =
   | "BOOKING_CONFIRMED"
   | "SESSION_UPDATED"
+  | "SESSION_DETAILS_UPDATED"
+  | "SESSION_RESCHEDULED"
   | "TRAINER_NOTE"
   | "GENERAL"
   | "SPOT_OPENED_FROM_WAITLIST"
@@ -38,6 +40,8 @@ export type NotificationMessageKey =
 export const NOTIFICATION_MESSAGE_KEYS = {
   BOOKING_CONFIRMED: "BOOKING_CONFIRMED",
   SESSION_UPDATED: "SESSION_UPDATED",
+  SESSION_DETAILS_UPDATED: "SESSION_DETAILS_UPDATED",
+  SESSION_RESCHEDULED: "SESSION_RESCHEDULED",
   TRAINER_NOTE: "TRAINER_NOTE",
   GENERAL: "GENERAL",
   SPOT_OPENED_FROM_WAITLIST: "SPOT_OPENED_FROM_WAITLIST",
@@ -67,9 +71,36 @@ const messages: Record<
     sr: { title: "Rezervacija potvrđena", body: "Vaša rezervacija je potvrđena." },
     en: { title: "Booking confirmed", body: "Your booking has been confirmed." },
   },
+  // Operator-facing (trainer roster heads-up). Placeholder-free on purpose:
+  // notifyOperators passes only sessionId/status, so any {{var}} here would
+  // reach a trainer unfilled. The client-facing variants are the two below.
   SESSION_UPDATED: {
     sr: { title: "Termin ažuriran", body: "Termin je ažuriran." },
     en: { title: "Session updated", body: "The session has been updated." },
+  },
+  // Client-facing edit where the START did NOT move. States the complete new
+  // arrangement rather than a diff, so the row is readable on its own.
+  SESSION_DETAILS_UPDATED: {
+    sr: {
+      title: "Termin je izmenjen",
+      body: "{{classTypeName}} {{sessionWhen}} — sala: {{roomName}}, trener: {{trainerFullName}}.",
+    },
+    en: {
+      title: "Your session changed",
+      body: "{{classTypeName}} {{sessionWhen}} — room: {{roomName}}, trainer: {{trainerFullName}}.",
+    },
+  },
+  // Client-facing edit where the START moved. The old time is the one detail
+  // worth naming against the new one — it is what the client had in their day.
+  SESSION_RESCHEDULED: {
+    sr: {
+      title: "Termin je pomeren",
+      body: "{{classTypeName}} je pomeren sa {{oldSessionWhen}} na {{sessionWhen}} — sala: {{roomName}}, trener: {{trainerFullName}}.",
+    },
+    en: {
+      title: "Your session moved",
+      body: "{{classTypeName}} moved from {{oldSessionWhen}} to {{sessionWhen}} — room: {{roomName}}, trainer: {{trainerFullName}}.",
+    },
   },
   TRAINER_NOTE: {
     sr: { title: "Beleška trenera", body: "{{trainerFullName}} je ostavio/la belešku." },
@@ -295,11 +326,22 @@ export type BookingEmailKind =
 // The per-kind copy table carries subject/heading/body; the footer is locale-
 // shared and merged in by getBookingEmailContent.
 type EmailCopy = { subject: string; heading: string; body: string };
-type EmailContent = EmailCopy & { footer: string };
+type EmailContent = EmailCopy & {
+  footer: string;
+  /** Every paragraph of the email, in order — body, then any detail lines. */
+  lines: string[];
+};
 
 // The opt-out footer is the same line on every booking-change email, but it
 // MUST follow the recipient's locale — an en client was getting an sr footer
 // because the template hardcoded it.
+// Closing reassurance on the cancellation emails. Kept out of the body so a
+// bulk cancel can slot the per-session list between the count and this line.
+const CONTACT_STUDIO_LINE: Record<NotificationLocale, string> = {
+  sr: "Ako misliš da je ovo greška, javi se studiju.",
+  en: "If you think this is a mistake, please contact the studio.",
+};
+
 const BOOKING_EMAIL_FOOTER: Record<NotificationLocale, string> = {
   sr: "Ovaj email možeš isključiti u podešavanjima obaveštenja u aplikaciji.",
   en: "You can turn this email off in the app's notification settings.",
@@ -325,51 +367,67 @@ const BOOKING_EMAIL_CONTENT: Record<
     sr: {
       subject: "Tvoja rezervacija je otkazana",
       heading: "Tvoja rezervacija je otkazana",
-      body: "Tvoj termin je otkazan. Ako misliš da je ovo greška, javi se studiju.",
+      body: "Tvoj termin {{classTypeName}} ({{sessionWhen}}) je otkazan. Ako misliš da je ovo greška, javi se studiju.",
     },
     en: {
       subject: "Your booking was canceled",
       heading: "Your booking was canceled",
-      body: "Your session has been canceled. If you think this is a mistake, please contact the studio.",
+      body: "Your {{classTypeName}} session ({{sessionWhen}}) has been canceled. If you think this is a mistake, please contact the studio.",
     },
   },
   BULK_CANCEL: {
     sr: {
       subject: "Tvoje rezervacije su otkazane",
       heading: "Tvoje rezervacije su otkazane",
-      body: "Otkazano je {{count}} tvojih termina. Ako misliš da je ovo greška, javi se studiju.",
+      body: "Otkazano je {{count}} tvojih termina:",
     },
     en: {
       subject: "Your reservations were canceled",
       heading: "Your reservations were canceled",
-      body: "{{count}} of your sessions have been canceled. If you think this is a mistake, please contact the studio.",
+      body: "{{count}} of your sessions have been canceled:",
     },
   },
   SESSION_UPDATED: {
     sr: {
       subject: "Tvoj termin je izmenjen",
       heading: "Tvoj termin je izmenjen",
-      body: "Detalji tvog termina su izmenjeni (vreme, sala ili trener). Otvori aplikaciju da vidiš najnovije.",
+      body: "Tvoj termin {{classTypeName}} sada je {{sessionWhen}} — sala: {{roomName}}, trener: {{trainerFullName}}.",
     },
     en: {
       subject: "Your session was updated",
       heading: "Your session was updated",
-      body: "The details of your session changed (time, room, or trainer). Open the app to see the latest.",
+      body: "Your {{classTypeName}} session is now {{sessionWhen}} — room: {{roomName}}, trainer: {{trainerFullName}}.",
     },
   },
 };
 
-/** Resolves the localized, client-voiced email subject + heading + body. */
+/**
+ * Extra paragraphs an email kind can contribute beyond the body — e.g. the
+ * per-session list on a bulk cancellation. Passed as its own array, NOT as a
+ * `{{var}}`, so each entry stays a separate paragraph instead of collapsing
+ * into one run-on line.
+ */
+export type BookingEmailExtras = { details?: string[] };
+
+/** Resolves the localized, client-voiced email subject + heading + lines. */
 export function getBookingEmailContent(
   kind: BookingEmailKind,
   locale: NotificationLocale = "sr",
   vars?: Record<string, string | number | undefined>,
+  extras?: BookingEmailExtras,
 ): EmailContent {
   const content = BOOKING_EMAIL_CONTENT[kind][locale] ?? BOOKING_EMAIL_CONTENT[kind].sr;
+  const body = interpolate(content.body, vars);
+  const details = extras?.details ?? [];
+  const closing =
+    kind === "BULK_CANCEL"
+      ? [CONTACT_STUDIO_LINE[locale] ?? CONTACT_STUDIO_LINE.sr]
+      : [];
   return {
     subject: interpolate(content.subject, vars),
     heading: interpolate(content.heading, vars),
-    body: interpolate(content.body, vars),
+    body,
+    lines: body ? [body, ...details, ...closing] : [...details, ...closing],
     footer: BOOKING_EMAIL_FOOTER[locale] ?? BOOKING_EMAIL_FOOTER.sr,
   };
 }
