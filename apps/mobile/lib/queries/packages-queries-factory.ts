@@ -1,7 +1,6 @@
 import {
   queryOptions,
   mutationOptions,
-  infiniteQueryOptions,
   useMutation,
   useQueryClient,
   type QueryClient,
@@ -47,38 +46,6 @@ export const packagesQueries = {
           schema: clientPackagesResponseSchema,
           errorMessage: "Unable to load packages",
         }),
-      staleTime: 30_000,
-    }),
-
-  /**
-   * Cursor-paginated admin list of every ClientPackage in the studio with
-   * optional server-side substring search (matches client fullName or email).
-   *
-   * Mirrors the clients-list infinite-query shape: page param is the opaque
-   * nextCursor returned by the API (the last clientPackage.id on the page);
-   * `null` means "first page". The consumer wires onScroll + fetchNextPage
-   * and uses useDeferredValue to batch search keystrokes.
-   */
-  clientPackagesAdminList: (params?: { search?: string; take?: number }) =>
-    infiniteQueryOptions({
-      queryKey: [
-        ...packagesAll,
-        "client-packages",
-        "admin",
-        { search: params?.search ?? "", take: params?.take ?? 20 },
-      ] as const,
-      queryFn: ({ pageParam }) =>
-        apiRequest("/api/packages/client-packages", {
-          params: {
-            cursor: pageParam,
-            search: params?.search,
-            take: params?.take ?? 20,
-          },
-          schema: clientPackagesResponseSchema,
-          errorMessage: "Unable to load assignments",
-        }),
-      initialPageParam: null as string | null,
-      getNextPageParam: (last) => last.nextCursor ?? null,
       staleTime: 30_000,
     }),
 

@@ -144,8 +144,8 @@ describe("notifications dispatch — real module + stubbed Expo HTTP", () => {
       data: { sessionId: "abc-123", state: "BOOKED" },
       sound: "default",
     });
-    expect(log.pushSent).toBe(true);
-    expect(log.pushStatus).toBe("DELIVERED");
+    expect(log!.pushSent).toBe(true);
+    expect(log!.pushStatus).toBe("DELIVERED");
   });
 
   it("includes the recipient's unread notification count as the badge field", async () => {
@@ -204,6 +204,32 @@ describe("notifications dispatch — real module + stubbed Expo HTTP", () => {
     });
 
     // 0 read rows + 1 new = badge of 1.
+    expect(captured[0].body[0].badge).toBe(1);
+  });
+
+  it("badge ignores notifications the user swiped away", async () => {
+    const user = await makeUser("badge-dismissed@test.local");
+    await registerToken(user.id);
+
+    // Unread but dismissed: it is gone from the inbox, so counting it would
+    // leave an app-icon badge the user cannot clear by opening the app.
+    await prisma.notificationLog.create({
+      data: {
+        userId: user.id,
+        type: "GENERAL",
+        title: "swiped away",
+        body: "",
+        dismissedAt: new Date(),
+      },
+    });
+
+    await createAndDispatchUserNotification({
+      userId: user.id,
+      type: "GENERAL",
+      title: "new",
+      body: "",
+    });
+
     expect(captured[0].body[0].badge).toBe(1);
   });
 
@@ -267,7 +293,7 @@ describe("notifications dispatch — real module + stubbed Expo HTTP", () => {
       { dedupeKey: "session-reminder:s-1:user:2026-07-15" },
     );
 
-    expect(first.id).toBe(second.id);
+    expect(first!.id).toBe(second!.id);
     const logs = await prisma.notificationLog.findMany({
       where: { userId: user.id },
     });
@@ -288,7 +314,7 @@ describe("notifications dispatch — real module + stubbed Expo HTTP", () => {
     });
 
     const persisted = await prisma.notificationLog.findUnique({
-      where: { id: log.id },
+      where: { id: log!.id },
     });
     expect(persisted).not.toBeNull();
     expect(persisted?.title).toBe("muted");
@@ -306,7 +332,7 @@ describe("notifications dispatch — real module + stubbed Expo HTTP", () => {
     });
     expect(captured).toHaveLength(0);
     const persisted = await prisma.notificationLog.findUnique({
-      where: { id: log.id },
+      where: { id: log!.id },
     });
     expect(persisted?.pushSent).toBe(false);
     expect(persisted?.pushStatus).toBe("NO_ACTIVE_PUSH_TOKENS");
@@ -435,7 +461,7 @@ describe("per-token delivery accounting + dead-token deactivation", () => {
     expect(dead?.isActive).toBe(false);
 
     // A partial delivery must not read as a clean DELIVERED.
-    const persisted = await prisma.notificationLog.findUnique({ where: { id: log.id } });
+    const persisted = await prisma.notificationLog.findUnique({ where: { id: log!.id } });
     expect(persisted?.pushSent).toBe(true);
     expect(persisted?.pushStatus).not.toBe("DELIVERED");
     expect(persisted?.pushStatus).toMatch(/1\/2|PARTIAL/i);
@@ -456,7 +482,7 @@ describe("per-token delivery accounting + dead-token deactivation", () => {
       body: "y",
     });
 
-    const persisted = await prisma.notificationLog.findUnique({ where: { id: log.id } });
+    const persisted = await prisma.notificationLog.findUnique({ where: { id: log!.id } });
     expect(persisted?.pushSent).toBe(false);
     expect(persisted?.pushStatus).toContain("MismatchSenderId");
   });
@@ -497,8 +523,186 @@ describe("per-token delivery accounting + dead-token deactivation", () => {
       body: "y",
     });
 
-    const persisted = await prisma.notificationLog.findUnique({ where: { id: log.id } });
+    const persisted = await prisma.notificationLog.findUnique({ where: { id: log!.id } });
     expect(persisted?.pushSent).toBe(true);
     expect(persisted?.pushStatus).toBe("DELIVERED");
+  });
+});
+
+/**
+ * inAppEnabled gating.
+ *
+ * The preference was loaded and then never read, so turning the in-app inbox
+ * off still wrote a NotificationLog row for every event.
+ */
+describe("inAppEnabled gating", () => {
+  beforeEach(async () => {
+    await resetDb();
+    captured = [];
+    installFetchStub();
+  });
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
+  });
+  afterAll(async () => {
+    await resetDb();
+    await prisma.$disconnect();
+  });
+
+  async function makeGatedUser(
+    email: string,
+    prefs: { inAppEnabled: boolean; pushEnabled: boolean },
+  ) {
+    const user = await prisma.user.create({
+      data: { email, firstName: email, lastName: "Test", role: "CLIENT" },
+    });
+    await prisma.notificationPreference.create({
+      data: { userId: user.id, ...prefs },
+    });
+    return user;
+  }
+
+  it("inAppEnabled=false + pushEnabled=true writes no log row but still pushes", async () => {
+    const user = await makeGatedUser("inapp-off-push-on@test.local", {
+      inAppEnabled: false,
+      pushEnabled: true,
+    });
+    await registerToken(user.id, { deviceId: "buzz-1" });
+
+    const result = await createSystemNotification(
+      user.id,
+      "BOOKING_CONFIRMED",
+      "BOOKING_CONFIRMED",
+      { sessionId: "s-1" },
+    );
+
+    expect(result).toBeNull();
+    expect(
+      await prisma.notificationLog.findMany({ where: { userId: user.id } }),
+    ).toHaveLength(0);
+
+    expect(captured).toHaveLength(1);
+    expect(captured[0].body.map((m) => m.to)).toEqual(["ExpoPushToken[buzz-1]"]);
+  });
+
+  it("inAppEnabled=false + pushEnabled=false writes no log row and calls no Expo endpoint", async () => {
+    const user = await makeGatedUser("all-off@test.local", {
+      inAppEnabled: false,
+      pushEnabled: false,
+    });
+    await registerToken(user.id, { deviceId: "silent-1" });
+
+    const result = await createAndDispatchUserNotification({
+      userId: user.id,
+      type: "GENERAL",
+      title: "silent",
+      body: "nothing should happen",
+    });
+
+    expect(result).toBeNull();
+    expect(
+      await prisma.notificationLog.findMany({ where: { userId: user.id } }),
+    ).toHaveLength(0);
+    expect(captured).toHaveLength(0);
+  });
+
+  it("inAppEnabled=false badge counts the existing unread rows, with no +1 for the unwritten row", async () => {
+    const user = await makeGatedUser("inapp-off-badge@test.local", {
+      inAppEnabled: false,
+      pushEnabled: true,
+    });
+    await registerToken(user.id, { deviceId: "badge-1" });
+    await prisma.notificationLog.create({
+      data: { userId: user.id, type: "GENERAL", title: "older unread", body: "" },
+    });
+
+    await createAndDispatchUserNotification({
+      userId: user.id,
+      type: "GENERAL",
+      title: "pushed only",
+      body: "",
+    });
+
+    expect(captured[0].body[0].badge).toBe(1);
+  });
+
+  it("inAppEnabled=true still writes the log row (unchanged behaviour)", async () => {
+    const user = await makeGatedUser("inapp-on@test.local", {
+      inAppEnabled: true,
+      pushEnabled: true,
+    });
+    await registerToken(user.id, { deviceId: "on-1" });
+
+    const log = await createAndDispatchUserNotification({
+      userId: user.id,
+      type: "GENERAL",
+      title: "kept",
+      body: "in the inbox",
+    });
+
+    expect(log).not.toBeNull();
+    const persisted = await prisma.notificationLog.findUnique({
+      where: { id: log!.id },
+    });
+    expect(persisted?.title).toBe("kept");
+  });
+
+  it("inAppEnabled=false still retires a token Expo reports as DeviceNotRegistered", async () => {
+    const user = await makeGatedUser("inapp-off-dead-token@test.local", {
+      inAppEnabled: false,
+      pushEnabled: true,
+    });
+    await registerToken(user.id, { deviceId: "dead-off" });
+
+    globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = typeof input === "string" ? input : input.toString();
+      if (!url.startsWith("https://exp.host/")) return originalFetch(input, init);
+      const body = init?.body ? (JSON.parse(init.body as string) as ExpoPushMessage[]) : [];
+      captured.push({ url, method: init?.method ?? "GET", headers: {}, body });
+      return new Response(
+        JSON.stringify({
+          data: body.map(() => ({
+            status: "error",
+            details: { error: "DeviceNotRegistered" },
+          })),
+        }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      );
+    }) as typeof fetch;
+
+    await createAndDispatchUserNotification({
+      userId: user.id,
+      type: "GENERAL",
+      title: "x",
+      body: "y",
+    });
+
+    const token = await prisma.pushToken.findUnique({
+      where: { expoPushToken: "ExpoPushToken[dead-off]" },
+    });
+    expect(token?.isActive).toBe(false);
+  });
+
+  it("inAppEnabled=false resolves (never rejects) when Expo itself fails", async () => {
+    const user = await makeGatedUser("inapp-off-expo-down@test.local", {
+      inAppEnabled: false,
+      pushEnabled: true,
+    });
+    await registerToken(user.id, { deviceId: "down-1" });
+
+    globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = typeof input === "string" ? input : input.toString();
+      if (!url.startsWith("https://exp.host/")) return originalFetch(input, init);
+      throw new Error("expo unreachable");
+    }) as typeof fetch;
+
+    await expect(
+      createAndDispatchUserNotification({
+        userId: user.id,
+        type: "GENERAL",
+        title: "x",
+        body: "y",
+      }),
+    ).resolves.toBeNull();
   });
 });

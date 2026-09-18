@@ -658,52 +658,6 @@ export async function seedExtraClients(count: number) {
 }
 
 /**
- * Insert N additional ClientPackages on top of whatever the rich seed already
- * produced. Reuses `seedExtraClients` to mint fresh ClientProfile parents so
- * we don't perturb the seeded matrix, then attaches each to the first
- * available PackageType + ClassType. Used by the active-assignments
- * pagination spec — the rich seed only produces a handful of ClientPackages
- * so we need to push past the default page size of 20.
- */
-export async function seedExtraClientPackages(count: number) {
-  const profiles = await seedExtraClients(count);
-  const packageType = await db().packageType.findFirst({
-    select: {
-      id: true,
-      sessionCount: true,
-      validityDays: true,
-      lateCancelHours: true,
-      classTypes: { select: { classTypeId: true } },
-    },
-  });
-  if (!packageType) throw new Error("No PackageType in seed");
-  const packageClassTypeId = packageType.classTypes[0]?.classTypeId;
-  if (!packageClassTypeId) throw new Error("Seed PackageType has no ClassType");
-  const startsAt = now();
-  const expiresAt = new Date(
-    startsAt.getTime() + packageType.validityDays * 24 * 60 * 60 * 1000,
-  );
-  const created: { id: string; clientProfileId: string }[] = [];
-  for (const p of profiles) {
-    const pkg = await db().clientPackage.create({
-      data: {
-        clientProfileId: p.profileId,
-        packageTypeId: packageType.id,
-        classTypes: { create: { classTypeId: packageClassTypeId } },
-        lateCancelHours: packageType.lateCancelHours,
-        startsAt,
-        expiresAt,
-        sessionsRemaining: packageType.sessionCount,
-        sessionsGranted: packageType.sessionCount,
-      },
-      select: { id: true, clientProfileId: true },
-    });
-    created.push(pkg);
-  }
-  return created;
-}
-
-/**
  * Insert N additional BillingRecord rows for an existing seeded client.
  * Used by the Naplata sticky-header spec — the rich seed only produces a
  * handful of billing rows, which doesn't reliably overflow a desktop

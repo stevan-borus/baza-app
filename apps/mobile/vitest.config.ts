@@ -59,6 +59,13 @@ export default defineConfig({
               ),
             },
             {
+              find: /^react-native-gesture-handler\/ReanimatedSwipeable$/,
+              replacement: path.resolve(
+                __dirname,
+                "test/component/stubs/reanimated-swipeable.tsx",
+              ),
+            },
+            {
               find: "react-native-reanimated",
               replacement: path.resolve(
                 __dirname,

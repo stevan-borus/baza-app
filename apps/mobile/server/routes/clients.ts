@@ -1,13 +1,14 @@
 import { formatFullName } from "@baza/types/common";
-import { clientsResponseSchema } from "@baza/types/clients";
-import { type ClientPackageStatus } from "@baza/types/packages";
+import { clientsQuerySchema, clientsResponseSchema } from "@baza/types/clients";
 import { UserRole } from "@/generated/prisma";
 import { now } from "@/lib/now";
 import { requireRole } from "@/lib/server/auth-guards";
-import { respond } from "@/lib/server/http";
+import {
+  deriveClientPackageStatus,
+  expiringThresholdFrom,
+} from "@/lib/server/client-package-status";
+import { fail, respond } from "@/lib/server/http";
 import { prisma } from "@/lib/server/prisma";
-
-const EXPIRING_WINDOW_DAYS = 14;
 
 export async function GET(request: Request) {
   const guard = await requireRole(request, [UserRole.ADMIN, UserRole.TRAINER]);
@@ -30,6 +31,12 @@ export async function GET(request: Request) {
     ? Math.min(Math.max(parsedTake, 1), 100)
     : 20;
   const q = url.searchParams.get("q")?.trim() || undefined;
+
+  const parsedQuery = clientsQuerySchema.safeParse({
+    status: url.searchParams.get("status") ?? undefined,
+  });
+  if (!parsedQuery.success) return fail("Invalid status filter", 400);
+  const status = parsedQuery.data.status ?? undefined;
 
   // The trainer scope (linked-via-active-booking) is preserved as-is; the
   // search filter (built below) is layered on top via AND so trainers also
@@ -76,106 +83,116 @@ export async function GET(request: Request) {
     AND: [activeWhere, ...(baseWhere ? [baseWhere] : []), ...(searchWhere ? [searchWhere] : [])],
   };
 
-  // Fetch take+1 so we can tell whether there's another page without a
-  // separate count query, and count the full matching set for the tab badge.
-  // `total` uses the SAME `where`, so it follows the q-search and trainer
-  // scope — the badge shows "matches for the current view", not the loaded
-  // page count (which used to sit at the page size until the admin scrolled).
-  // Both hit Postgres, so run them concurrently rather than back-to-back.
-  const [clients, total] = await Promise.all([
-    prisma.clientProfile.findMany({
-      where,
+  const clientSelect = {
+    id: true,
+    notes: true,
+    user: {
       select: {
         id: true,
-        notes: true,
-        user: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
-            phone: true,
-            isActive: true,
-            createdAt: true,
-          },
-        },
-        packages: {
-          // Revoked packages grant nothing — they must not paint the client
-          // chip "active" (or even "expired": the studio pulled the package,
-          // the client didn't run it down).
-          where: { revokedAt: null },
-          select: {
-            sessionsRemaining: true,
-            expiresAt: true,
-          },
-        },
-        // Half-open [startsAt, endsAt) — same bound as the detail route, so a
-        // pause truncated to exactly now stops counting on BOTH surfaces at
-        // once and the list chip can't disagree with the detail pill.
-        packagePauses: {
-          where: {
-            startsAt: { lte: currentInstant },
-            endsAt: { gt: currentInstant },
-          },
-          select: { id: true },
-          take: 1,
-        },
+        firstName: true,
+        lastName: true,
+        email: true,
+        phone: true,
+        isActive: true,
+        createdAt: true,
       },
-      take: take + 1,
-      ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
-      orderBy: { id: "asc" },
-    }),
-    prisma.clientProfile.count({ where }),
-  ]);
+    },
+    packages: {
+      // Revoked packages grant nothing — they must not paint the client
+      // chip "active" (or even "expired": the studio pulled the package,
+      // the client didn't run it down).
+      where: { revokedAt: null },
+      select: {
+        sessionsRemaining: true,
+        expiresAt: true,
+      },
+    },
+    // Half-open [startsAt, endsAt) — same bound as the detail route, so a
+    // pause truncated to exactly now stops counting on BOTH surfaces at
+    // once and the list chip can't disagree with the detail pill.
+    packagePauses: {
+      where: {
+        startsAt: { lte: currentInstant },
+        endsAt: { gt: currentInstant },
+      },
+      select: { id: true },
+      take: 1,
+    },
+  } as const;
 
-  const hasMore = clients.length > take;
-  const pageClients = hasMore ? clients.slice(0, take) : clients;
-  const nextCursor = hasMore
-    ? pageClients[pageClients.length - 1]?.id ?? null
-    : null;
+  const expiringThreshold = expiringThresholdFrom(currentInstant);
 
-  const expiringThreshold = new Date(
-    currentInstant.getTime() + EXPIRING_WINDOW_DAYS * 24 * 60 * 60 * 1000,
-  );
+  type ClientRow = Awaited<
+    ReturnType<typeof prisma.clientProfile.findMany<{ select: typeof clientSelect }>>
+  >[number];
 
-  // Compute the most meaningful package status per client.
-  // Priority: paused (overrides) > active > expiring > expired > none.
-  const withStatus = pageClients.map(({ packages, packagePauses, user, ...rest }) => {
-    const userWithName = {
-      ...user,
-      fullName: formatFullName(user.firstName, user.lastName),
+  function shape(row: ClientRow) {
+    const { packages, packagePauses, user, ...rest } = row;
+    return {
+      ...rest,
+      user: { ...user, fullName: formatFullName(user.firstName, user.lastName) },
+      packageStatus: deriveClientPackageStatus({
+        packages,
+        hasActivePause: packagePauses.length > 0,
+        at: currentInstant,
+        expiringThreshold,
+      }),
     };
-    if (packagePauses.length > 0) {
-      return {
-        ...rest,
-        user: userWithName,
-        packageStatus: "paused" as ClientPackageStatus,
-      };
-    }
+  }
 
-    let status: ClientPackageStatus = "none";
-    let hasExpired = false;
+  let pageClients: ReturnType<typeof shape>[];
+  let nextCursor: string | null;
+  let total: number;
 
-    for (const p of packages) {
-      const isExpired = p.expiresAt < currentInstant || p.sessionsRemaining <= 0;
-      if (isExpired) {
-        hasExpired = true;
-        continue;
-      }
-      if (p.expiresAt <= expiringThreshold) {
-        if (status !== "active") status = "expiring";
-      } else {
-        status = "active";
-      }
-    }
-
-    if (status === "none" && hasExpired) status = "expired";
-    return { ...rest, user: userWithName, packageStatus: status };
-  });
+  if (status) {
+    // `packageStatus` is derived in JS, so Postgres can't filter or count it.
+    // The studio has under a hundred clients, so loading the whole matching
+    // set and paging it in memory is cheaper than the query gymnastics — and
+    // it makes "Istekli" mean every expired client, not just the ones that
+    // happened to land in the first page.
+    const all = await prisma.clientProfile.findMany({
+      where,
+      select: clientSelect,
+      orderBy: { id: "asc" },
+    });
+    const matching = all.map(shape).filter((c) => c.packageStatus === status);
+    total = matching.length;
+    const offset = cursor
+      ? matching.findIndex((c) => c.id === cursor) + 1
+      : 0;
+    const slice = matching.slice(offset, offset + take);
+    pageClients = slice;
+    nextCursor =
+      offset + take < matching.length
+        ? (slice[slice.length - 1]?.id ?? null)
+        : null;
+  } else {
+    // Fetch take+1 so we can tell whether there's another page without a
+    // separate count query, and count the full matching set for the tab badge.
+    // `total` uses the SAME `where`, so it follows the q-search and trainer
+    // scope — the badge shows "matches for the current view", not the loaded
+    // page count (which used to sit at the page size until the admin scrolled).
+    // Both hit Postgres, so run them concurrently rather than back-to-back.
+    const [rows, count] = await Promise.all([
+      prisma.clientProfile.findMany({
+        where,
+        select: clientSelect,
+        take: take + 1,
+        ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+        orderBy: { id: "asc" },
+      }),
+      prisma.clientProfile.count({ where }),
+    ]);
+    const hasMore = rows.length > take;
+    const page = hasMore ? rows.slice(0, take) : rows;
+    pageClients = page.map(shape);
+    nextCursor = hasMore ? (page[page.length - 1]?.id ?? null) : null;
+    total = count;
+  }
 
   return respond(clientsResponseSchema, {
     success: true,
-    clients: withStatus,
+    clients: pageClients,
     nextCursor,
     total,
   });

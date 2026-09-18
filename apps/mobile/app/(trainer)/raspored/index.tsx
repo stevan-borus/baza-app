@@ -206,6 +206,9 @@ export default function TrainerSchedule() {
                         isIntermediate: s.isIntermediate,
                         isMixedGroup: s.isMixedGroup,
                         emptyCutoffLocked: s.emptyCutoffLocked,
+                        // Staff-only marker; `isActive` here already folds in
+                        // the recurring series' flag (see availability route).
+                        hiddenFromClients: s.isActive === false,
                         status:
                           s.availableSlots > 0 ? "available" : "full",
                       }),

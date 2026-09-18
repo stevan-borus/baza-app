@@ -10,6 +10,7 @@ import {
   promoteNextWaitlistEntry,
 } from "@/lib/server/booking-cancellation";
 import { respond, parseBody } from "@/lib/server/http";
+import { formatSessionWhen } from "@/lib/format-session-when";
 import { notifyClient } from "@/lib/server/notify-client";
 import {
   coalesceTrainerCancelCounts,
@@ -149,10 +150,29 @@ export async function POST(request: Request) {
       // count. (There is no separate single-cancel route — one cancel arrives
       // here with count===1 — so this is where the singular case is handled.)
       const count = bucket.bookings.length;
+      // Earliest first: the list reads as the client's own calendar, so the
+      // session they lose soonest is the one they see first.
+      const ordered = [...bucket.bookings].sort(
+        (a, b) => a.session.startsAt.getTime() - b.session.startsAt.getTime(),
+      );
       void notifyClient({
         userId: clientUserId,
         event: count === 1 ? "ADMIN_CANCEL" : "BULK_CANCEL",
-        vars: { count },
+        vars: { count, classTypeName: ordered[0].session.classType.name },
+        localizedVars: (locale) => ({
+          sessionWhen: formatSessionWhen(ordered[0].session.startsAt, locale),
+        }),
+        // The per-session list is an email-only detail — the in-app side of a
+        // bulk cancel is the bookings disappearing from their schedule.
+        emailExtras: (locale) =>
+          count === 1
+            ? {}
+            : {
+                details: ordered.map(
+                  (b) =>
+                    `${b.session.classType.name} — ${formatSessionWhen(b.session.startsAt, locale)}`,
+                ),
+              },
         recipient: bucket.recipient,
       });
       // Operator fan-out, coalesced: one notification per affected trainer
