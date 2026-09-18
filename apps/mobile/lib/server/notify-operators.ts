@@ -10,8 +10,8 @@
  *     (`excludeUserId`);
  *   - a Trainer who is also an Admin receives only the Trainer-flavored
  *     notification;
- *   - push-vs-silent is an event rule carried by the registry (a client
- *     cancellation always pushes; some events push only when late).
+ *   - whether an event notifies at all is a registry rule (a client
+ *     cancellation only reaches operators when it is late).
  *
  * Call sites use `void notifyOperators(...)` fire-and-forget — a notification
  * failure must never break the request path. Sends are sequential (trainers
@@ -41,11 +41,11 @@ type OperatorChannelSpec = {
   /** Flavor sent to every active Admin, if any. */
   admins?: OperatorFlavor;
   /**
-   * "always" pushes (subject to the recipient's own preferences);
-   * "when-late" pushes only when the dispatch carries `isLate: true` —
-   * early cancellations stay silent in-app.
+   * "always" notifies on every dispatch; "when-late" notifies only when the
+   * dispatch carries `isLate: true` — an early cancellation writes no
+   * NotificationLog row and sends no push.
    */
-  push: "always" | "when-late";
+  deliver: "always" | "when-late";
 };
 
 export const OPERATOR_EVENT_CHANNELS: Record<OperatorEvent, OperatorChannelSpec> = {
@@ -59,7 +59,7 @@ export const OPERATOR_EVENT_CHANNELS: Record<OperatorEvent, OperatorChannelSpec>
       messageKey: NOTIFICATION_MESSAGE_KEYS.BOOKING_CANCELED_ADMIN,
       type: "BOOKING_CANCELED_ADMIN",
     },
-    push: "always",
+    deliver: "when-late",
   },
   // An admin canceled N of one client's reservations in a single action.
   // The fan-out collapses to one notification per recipient with a count.
@@ -72,7 +72,7 @@ export const OPERATOR_EVENT_CHANNELS: Record<OperatorEvent, OperatorChannelSpec>
       messageKey: NOTIFICATION_MESSAGE_KEYS.BULK_RESERVATION_CANCEL_ADMIN,
       type: "BULK_RESERVATION_CANCEL_ADMIN",
     },
-    push: "always",
+    deliver: "always",
   },
   // A session's details changed (or it was canceled) — keep the assigned
   // trainer's roster accurate. Booked clients are notified via notifyClient;
@@ -82,7 +82,7 @@ export const OPERATOR_EVENT_CHANNELS: Record<OperatorEvent, OperatorChannelSpec>
       messageKey: NOTIFICATION_MESSAGE_KEYS.SESSION_UPDATED,
       type: "SESSION_UPDATED",
     },
-    push: "always",
+    deliver: "always",
   },
   // cron:sessions resolved no eligible package for a completed booking — the
   // client attended unbacked; admins decide whether to sell/comp/cancel.
@@ -91,7 +91,7 @@ export const OPERATOR_EVENT_CHANNELS: Record<OperatorEvent, OperatorChannelSpec>
       messageKey: NOTIFICATION_MESSAGE_KEYS.RESERVATION_UNBACKED_ATTENDANCE,
       type: "RESERVATION_UNBACKED_ATTENDANCE",
     },
-    push: "always",
+    deliver: "always",
   },
   // An unverified minor completed their first session — the studio must
   // collect the guardian's wet signature.
@@ -100,7 +100,7 @@ export const OPERATOR_EVENT_CHANNELS: Record<OperatorEvent, OperatorChannelSpec>
       messageKey: NOTIFICATION_MESSAGE_KEYS.MINOR_PAPER_NEEDED,
       type: "MINOR_PAPER_NEEDED",
     },
-    push: "always",
+    deliver: "always",
   },
   // A client's birthday is today — prompt admins to send the gift package.
   BIRTHDAY_ADMIN_PROMPT: {
@@ -108,7 +108,7 @@ export const OPERATOR_EVENT_CHANNELS: Record<OperatorEvent, OperatorChannelSpec>
       messageKey: NOTIFICATION_MESSAGE_KEYS.BIRTHDAY_ADMIN_PROMPT,
       type: "BIRTHDAY_ADMIN_PROMPT",
     },
-    push: "always",
+    deliver: "always",
   },
 };
 
@@ -135,7 +135,7 @@ export async function notifyOperators(input: {
   /** The initiating operator — never notified about their own action. */
   excludeUserId?: string;
   payload: Record<string, unknown>;
-  /** Push decision input for `push: "when-late"` events; ignored otherwise. */
+  /** Delivery input for `deliver: "when-late"` events; ignored otherwise. */
   isLate?: boolean;
   /**
    * Per-recipient dedupe key — makes a retried cron dispatch resolve to the
@@ -144,13 +144,10 @@ export async function notifyOperators(input: {
   dedupeKey?: (recipientUserId: string) => string;
 }): Promise<void> {
   const spec = OPERATOR_EVENT_CHANNELS[input.event];
+  if (spec.deliver === "when-late" && input.isLate !== true) return;
 
-  const optionsFor = (recipientUserId: string) => {
-    const options: { dedupeKey?: string; skipPush?: boolean } = {};
-    if (input.dedupeKey) options.dedupeKey = input.dedupeKey(recipientUserId);
-    if (spec.push === "when-late") options.skipPush = !input.isLate;
-    return Object.keys(options).length > 0 ? options : undefined;
-  };
+  const optionsFor = (recipientUserId: string) =>
+    input.dedupeKey ? { dedupeKey: input.dedupeKey(recipientUserId) } : undefined;
 
   const trainers = input.trainers ?? [];
   if (spec.trainer) {
