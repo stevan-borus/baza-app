@@ -504,6 +504,14 @@
       "groupYesterday": "Juče",
       "groupEarlier": "Ranije",
       "inbox": "Sandučić"
+    },
+    "campaignsOptIn": {
+      "title": "Želiš li da ti javljamo o novostima?",
+      "body": "Povremeno šaljemo promocije i najave novih programa. Uključi ako želiš da ih primaš — možeš to promeniti bilo kada u podešavanjima.",
+      "accept": "Uključi",
+      "decline": "Ne sada",
+      "acceptA11y": "Uključi obaveštenja o promocijama i novim programima",
+      "declineA11y": "Ne sada, ne primaj obaveštenja o promocijama"
     }
   },
   "settings": {
