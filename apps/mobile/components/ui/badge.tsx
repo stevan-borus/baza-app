@@ -1,11 +1,13 @@
 import React from "react";
-import { Text, View } from "react-native";
+import { Text, View, type StyleProp, type ViewStyle } from "react-native";
 
 type Status = "success" | "warning" | "danger" | "neutral";
 
 type BadgeProps = {
   status?: Status;
   children: React.ReactNode;
+  testID?: string;
+  style?: StyleProp<ViewStyle>;
 };
 
 const bgClass: Record<Status, string> = {
@@ -22,9 +24,18 @@ const fgClass: Record<Status, string> = {
   neutral: "text-muted",
 };
 
-export function Badge({ status = "neutral", children }: BadgeProps) {
+export function Badge({
+  status = "neutral",
+  children,
+  testID,
+  style,
+}: BadgeProps) {
   return (
-    <View className={`px-2.5 py-1 rounded-full ${bgClass[status]}`}>
+    <View
+      testID={testID}
+      style={style}
+      className={`px-2.5 py-1 rounded-full ${bgClass[status]}`}
+    >
       <Text className={`text-xs font-body-semibold ${fgClass[status]}`}>
         {children}
       </Text>
