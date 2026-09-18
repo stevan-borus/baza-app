@@ -158,8 +158,13 @@ describe("PaginatedList — end-reached pagination", () => {
       (el) => el.scrollHeight > el.clientHeight && el.clientHeight > 0,
     );
     if (!scroller) throw new Error("no scrollable element found");
-    scroller.scrollTop = scroller.scrollHeight;
-    scroller.dispatchEvent(new Event("scroll", { bubbles: true }));
+    // Two steps, like a real scroll: LegendList 3.3 marks the start edge as
+    // reached on mount and only re-arms end-reached once the position has
+    // passed through the middle. A single jump from top to bottom never does.
+    for (const top of [scroller.scrollHeight / 2, scroller.scrollHeight]) {
+      scroller.scrollTop = top;
+      scroller.dispatchEvent(new Event("scroll", { bubbles: true }));
+    }
   }
 
   it("fetches the next page when scrolled to the end and one exists", async () => {

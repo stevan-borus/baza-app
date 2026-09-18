@@ -18,6 +18,7 @@
 import { test, expect } from "./helpers/fixtures";
 import { TRAINER_EMAIL, signInAs } from "./helpers/auth";
 import { waitForStableBoundingBox } from "./helpers/interactions";
+import { scrollListToBottom } from "./helpers/scroll";
 import {
   disconnect,
   resetAndSeed,
@@ -59,26 +60,9 @@ test.describe.serial("trainer clients sticky header", () => {
     // ~4px drift still slipped through intermittently.
     const beforeBox = await waitForStableBoundingBox(search);
 
-    // Scroll the inner list to the bottom — walk up from a row to find the
-    // scrollable ancestor. Same pattern as clients-pagination.spec.ts.
-    await page.evaluate(() => {
-      const row = document.querySelector(
-        '[data-testid^="trainer-client-row-"]',
-      );
-      if (!row) return;
-      let node: HTMLElement | null = row as HTMLElement;
-      while (node && node !== document.body) {
-        const cs = getComputedStyle(node);
-        if (
-          /(auto|scroll)/.test(cs.overflowY) &&
-          node.scrollHeight > node.clientHeight
-        ) {
-          node.scrollTop = node.scrollHeight;
-          return;
-        }
-        node = node.parentElement;
-      }
-    });
+    // Scroll the inner list to the bottom — see helpers/scroll.ts for why it
+    // steps through the middle instead of jumping.
+    await scrollListToBottom(page, '[data-testid^="trainer-client-row-"]');
 
     // Wait for the search input's Y to stabilize after the post-scroll reflow
     // (state, not a fixed sleep — see waitForStableBoundingBox).
