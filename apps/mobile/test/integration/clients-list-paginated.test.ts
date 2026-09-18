@@ -6,6 +6,7 @@ vi.mock("@/lib/server/auth-guards", async () => (await import("./auth-mock")).au
 
 import { GET } from "@/server/routes/clients";
 import { prisma } from "@/lib/server/prisma";
+import { now } from "@/lib/now";
 
 function asAdmin() {
   setMockUser({
@@ -70,6 +71,7 @@ type ClientResponse = {
   clients: Array<{
     id: string;
     user: { email: string; fullName: string };
+    packageStatus: string;
   }>;
   nextCursor: string | null;
   total: number;
@@ -499,5 +501,237 @@ describe("clients API — pagination & search", () => {
     const body = (await res.json()) as ClientResponse;
     expect(body.clients).toHaveLength(1);
     expect(body.clients[0].user.email).toBe("linked-ar@test.local");
+  });
+});
+
+// ─── Status-filter fixtures ───────────────────────────────────────────────────
+// `packageStatus` is derived in JS from the client's packages + pauses, so the
+// filter can't be a plain Prisma where — these seed one client per status.
+
+async function seedPackageType() {
+  const classType = await prisma.classType.create({
+    data: { name: "Reformer", maxClients: 6, durationMins: 60 },
+  });
+  return prisma.packageType.create({
+    data: {
+      name: "Reformer 12",
+      sessionCount: 12,
+      validityDays: 30,
+      lateCancelHours: 12,
+      classTypes: { create: { classTypeId: classType.id } },
+    },
+  });
+}
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+async function seedStatusFixtures() {
+  const packageType = await seedPackageType();
+  const at = now();
+
+  async function withPackage(
+    email: string,
+    lastName: string,
+    pkg: { sessionsRemaining: number; expiresAt: Date } | null,
+  ) {
+    const { profile } = await seedNamedClient({
+      email,
+      firstName: "Status",
+      lastName,
+    });
+    if (pkg) {
+      await prisma.clientPackage.create({
+        data: {
+          clientProfileId: profile.id,
+          packageTypeId: packageType.id,
+          lateCancelHours: 12,
+          sessionsGranted: 12,
+          sessionsRemaining: pkg.sessionsRemaining,
+          startsAt: new Date(at.getTime() - DAY_MS),
+          expiresAt: pkg.expiresAt,
+        },
+      });
+    }
+    return profile;
+  }
+
+  // active: sessions left, expiry well outside the 14-day window.
+  await withPackage("status-active@test.local", "Active", {
+    sessionsRemaining: 5,
+    expiresAt: new Date(at.getTime() + 60 * DAY_MS),
+  });
+  // expiring: sessions left, expiry inside the window.
+  await withPackage("status-expiring@test.local", "Expiring", {
+    sessionsRemaining: 5,
+    expiresAt: new Date(at.getTime() + 3 * DAY_MS),
+  });
+  // expired: past its expiry.
+  await withPackage("status-expired@test.local", "Expired", {
+    sessionsRemaining: 5,
+    expiresAt: new Date(at.getTime() - 3 * DAY_MS),
+  });
+  // none: no packages at all.
+  await withPackage("status-none@test.local", "None", null);
+  // paused: a live package, but a pause covering now outranks it.
+  const pausedProfile = await withPackage("status-paused@test.local", "Paused", {
+    sessionsRemaining: 5,
+    expiresAt: new Date(at.getTime() + 60 * DAY_MS),
+  });
+  await prisma.packagePause.create({
+    data: {
+      clientProfileId: pausedProfile.id,
+      startsAt: new Date(at.getTime() - DAY_MS),
+      endsAt: new Date(at.getTime() + DAY_MS),
+    },
+  });
+}
+
+describe("clients API — ?status= package-status filter", () => {
+  beforeEach(async () => {
+    await resetDb();
+  });
+  afterAll(async () => {
+    await resetDb();
+    await prisma.$disconnect();
+  });
+
+  it.each([
+    ["active", "status-active@test.local"],
+    ["expiring", "status-expiring@test.local"],
+    ["paused", "status-paused@test.local"],
+    ["expired", "status-expired@test.local"],
+    ["none", "status-none@test.local"],
+  ])("?status=%s returns only that client", async (status, email) => {
+    await seedStatusFixtures();
+    asAdmin();
+
+    const res = await GET(
+      new Request(`http://test.local/api/clients?status=${status}`),
+    );
+    const body = (await res.json()) as ClientResponse;
+
+    expect(body.clients.map((c) => c.user.email)).toEqual([email]);
+    expect(body.clients[0].packageStatus).toBe(status);
+    expect(body.total).toBe(1);
+  });
+
+  it("omitting status returns every client, unfiltered", async () => {
+    await seedStatusFixtures();
+    asAdmin();
+
+    const res = await GET(new Request("http://test.local/api/clients"));
+    const body = (await res.json()) as ClientResponse;
+
+    expect(body.clients).toHaveLength(5);
+    expect(body.total).toBe(5);
+  });
+
+  it("total is the FILTERED count, not the page size, with take=1", async () => {
+    await seedStatusFixtures();
+    // Three more expired clients, so the filtered set (4) outruns take=1 and
+    // the old loaded-pages badge would have read 1.
+    const packageType = await seedPackageType();
+    const at = now();
+    for (const n of ["A", "B", "C"]) {
+      const { profile } = await seedNamedClient({
+        email: `extra-expired-${n}@test.local`,
+        firstName: "Extra",
+        lastName: n,
+      });
+      await prisma.clientPackage.create({
+        data: {
+          clientProfileId: profile.id,
+          packageTypeId: packageType.id,
+          lateCancelHours: 12,
+          sessionsGranted: 12,
+          sessionsRemaining: 5,
+          startsAt: new Date(at.getTime() - 10 * DAY_MS),
+          expiresAt: new Date(at.getTime() - 3 * DAY_MS),
+        },
+      });
+    }
+    asAdmin();
+
+    const res = await GET(
+      new Request("http://test.local/api/clients?status=expired&take=1"),
+    );
+    const body = (await res.json()) as ClientResponse;
+
+    expect(body.clients).toHaveLength(1);
+    expect(body.total).toBe(4);
+    expect(body.nextCursor).not.toBeNull();
+  });
+
+  it("paging a filtered list walks the whole filtered set, no overlap", async () => {
+    await seedStatusFixtures();
+    const packageType = await seedPackageType();
+    const at = now();
+    for (const n of ["A", "B", "C"]) {
+      const { profile } = await seedNamedClient({
+        email: `page-expired-${n}@test.local`,
+        firstName: "Paged",
+        lastName: n,
+      });
+      await prisma.clientPackage.create({
+        data: {
+          clientProfileId: profile.id,
+          packageTypeId: packageType.id,
+          lateCancelHours: 12,
+          sessionsGranted: 12,
+          sessionsRemaining: 5,
+          startsAt: new Date(at.getTime() - 10 * DAY_MS),
+          expiresAt: new Date(at.getTime() - 3 * DAY_MS),
+        },
+      });
+    }
+    asAdmin();
+
+    const first = (await (
+      await GET(
+        new Request("http://test.local/api/clients?status=expired&take=2"),
+      )
+    ).json()) as ClientResponse;
+    const second = (await (
+      await GET(
+        new Request(
+          `http://test.local/api/clients?status=expired&take=2&cursor=${first.nextCursor}`,
+        ),
+      )
+    ).json()) as ClientResponse;
+
+    expect(first.clients).toHaveLength(2);
+    expect(second.clients).toHaveLength(2);
+    expect(second.nextCursor).toBeNull();
+    const emails = [...first.clients, ...second.clients].map(
+      (c) => c.user.email,
+    );
+    expect(new Set(emails).size).toBe(4);
+    for (const c of [...first.clients, ...second.clients]) {
+      expect(c.packageStatus).toBe("expired");
+    }
+  });
+
+  it("status ANDs with ?q= rather than replacing it", async () => {
+    await seedStatusFixtures();
+    asAdmin();
+
+    const res = await GET(
+      new Request("http://test.local/api/clients?status=expired&q=Expiring"),
+    );
+    const body = (await res.json()) as ClientResponse;
+
+    // "Expiring" matches one client, but that client is not expired.
+    expect(body.clients).toHaveLength(0);
+    expect(body.total).toBe(0);
+  });
+
+  it("rejects an unknown status with 400", async () => {
+    asAdmin();
+
+    const res = await GET(
+      new Request("http://test.local/api/clients?status=bogus"),
+    );
+
+    expect(res.status).toBe(400);
   });
 });

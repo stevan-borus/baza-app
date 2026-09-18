@@ -211,3 +211,20 @@ export function sortedByMetricDesc<T>(
 export function roundedRatio(numerator: number, denominator: number): number {
   return denominator > 0 ? Number((numerator / denominator).toFixed(4)) : 0;
 }
+
+/**
+ * Kept reservations as a whole-number percentage of all reservations.
+ *
+ * The data model has no no-show flag, so "attended" is "reserved and did not
+ * cancel". Returns null when nothing was reserved — 0/0 is no rate, not 0%,
+ * and the tile renders a placeholder instead.
+ */
+export function attendanceRatePercent(
+  kept: number,
+  canceled: number,
+): number | null {
+  if (kept < 0 || canceled < 0) return null;
+  const total = kept + canceled;
+  if (total <= 0) return null;
+  return Math.round((kept / total) * 100);
+}

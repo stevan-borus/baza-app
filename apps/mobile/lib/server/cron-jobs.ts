@@ -12,6 +12,14 @@
  * CRON_*_INTERVAL_MS *intentions* into real wall-clock times rather than
  * loops: daily digests early-morning, campaign dispatch every 30 min.
  */
+/**
+ * Lookback window the consumption route uses in `scheduled` mode. Must exceed
+ * the gap between two runs of the `session-consumption` cron below (daily), or
+ * sessions ending outside the window are never charged. Re-processing is
+ * idempotent via the SessionConsumption (clientProfileId, sessionId) unique.
+ */
+export const SCHEDULED_CONSUMPTION_LOOKBACK_HOURS = 48;
+
 export type CronJob = {
   name: string;
   endpointPath: string;
@@ -38,7 +46,10 @@ export const CRON_JOBS: CronJob[] = [
     name: "session-consumption",
     endpointPath: "/api/cron/sessions/consumption",
     schedule: "0 7 * * *",
-    rationale: "Daily 07:00 UTC — reconcile attended sessions against packages.",
+    rationale:
+      "Daily 07:00 UTC — reconcile attended sessions against packages. Pairs with " +
+      `SCHEDULED_CONSUMPTION_LOOKBACK_HOURS=${SCHEDULED_CONSUMPTION_LOOKBACK_HOURS}h, ` +
+      "which covers the full day plus slack so a late or missed run still catches up.",
   },
   {
     name: "birthdays",

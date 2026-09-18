@@ -71,6 +71,28 @@ describe("clientsQueries.list — URL building", () => {
     expect(url).toContain("take=50");
   });
 
+  it("includes status when provided", async () => {
+    const opts = clientsQueries.list({ status: "expired" });
+    await opts.queryFn!({ pageParam: null } as never);
+    const url = fetchMock.mock.calls[0][0] as string;
+    expect(url).toContain("status=expired");
+  });
+
+  it("omits status when the chip is Svi", async () => {
+    const opts = clientsQueries.list();
+    await opts.queryFn!({ pageParam: null } as never);
+    const url = fetchMock.mock.calls[0][0] as string;
+    expect(url).not.toContain("status=");
+  });
+
+  it("queryKey distinguishes by status", () => {
+    const a = clientsQueries.list({ status: "expired" }).queryKey;
+    const b = clientsQueries.list({ status: "paused" }).queryKey;
+    const none = clientsQueries.list().queryKey;
+    expect(a).not.toEqual(b);
+    expect(a).not.toEqual(none);
+  });
+
   it("queryKey distinguishes by q and take", () => {
     const a = clientsQueries.list({ q: "alice", take: 20 }).queryKey;
     const b = clientsQueries.list({ q: "bob", take: 20 }).queryKey;

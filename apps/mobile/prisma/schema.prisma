@@ -639,12 +639,16 @@ model NotificationLog {
   pushSent    Boolean          @default(false)
   pushStatus  String?
   readAt      DateTime?
+  // Set when the user swipes the row away. Soft delete: campaign history and
+  // push audit still read these rows, so the inbox filters instead of deleting.
+  dismissedAt DateTime?
   campaignId  String?
   createdAt   DateTime         @default(now())
   user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   campaign    Campaign?        @relation(fields: [campaignId], references: [id], onDelete: SetNull)
 
   @@index([userId, createdAt])
+  @@index([userId, dismissedAt])
   @@index([campaignId])
 }
 

@@ -8,6 +8,14 @@
       "title": "Termin ažuriran",
       "body": "Termin je ažuriran."
     },
+    "session_details_updated": {
+      "title": "Termin je izmenjen",
+      "body": "{{classTypeName}} {{sessionWhen}} — sala: {{roomName}}, trener: {{trainerFullName}}."
+    },
+    "session_rescheduled": {
+      "title": "Termin je pomeren",
+      "body": "{{classTypeName}} je pomeren sa {{oldSessionWhen}} na {{sessionWhen}} — sala: {{roomName}}, trener: {{trainerFullName}}."
+    },
     "trainer_note": {
       "title": "Beleška trenera",
       "body": "Trener je ostavio belešku."
@@ -31,6 +39,10 @@
     "package_paused": {
       "title": "Paket je pauziran",
       "body": "Vaš paket je pauziran, a rezervacije u tom periodu su otkazane. Trajanje paketa je produženo za dužinu pauze."
+    },
+    "gift_package": {
+      "title": "🎁 Poklon za tebe",
+      "body": "Poklanjamo ti {{sessionsGranted}} {{sessionsLabel}} iz paketa \"{{packageTypeName}}\"."
     },
     "session_reminder": {
       "title": "Podsetnik",
@@ -490,10 +502,6 @@
       "settings": "Podešavanja",
       "error": "Nije moguće učitati obaveštenja.",
       "empty": "Nemate novih obaveštenja.",
-      "settingsTitle": "Podešavanja obaveštenja",
-      "pushEnabled": "Push obaveštenja",
-      "inAppEnabled": "In-app obaveštenja",
-      "loadingPrefs": "Učitavam podešavanja...",
       "typeBooking": "Rezervacija",
       "typeSession": "Termin",
       "typeNote": "Beleška",
@@ -504,6 +512,14 @@
       "groupYesterday": "Juče",
       "groupEarlier": "Ranije",
       "inbox": "Sandučić"
+    },
+    "campaignsOptIn": {
+      "title": "Želiš li da ti javljamo o novostima?",
+      "body": "Povremeno šaljemo promocije i najave novih programa. Uključi ako želiš da ih primaš — možeš to promeniti bilo kada u podešavanjima.",
+      "accept": "Uključi",
+      "decline": "Ne sada",
+      "acceptA11y": "Uključi obaveštenja o promocijama i novim programima",
+      "declineA11y": "Ne sada, ne primaj obaveštenja o promocijama"
     }
   },
   "settings": {
@@ -540,7 +556,8 @@
     "pickTime": "Izaberi vreme",
     "pickDateTime": "Izaberi datum i vreme",
     "back": "Nazad",
-    "tooManyRequests": "Previše zahteva. Sačekajte malo pa pokušajte ponovo."
+    "tooManyRequests": "Previše zahteva. Sačekajte malo pa pokušajte ponovo.",
+    "retry": "Pokušaj ponovo"
   },
   "updates": {
     "otaReadyTitle": "Ažuriranje je spremno",
@@ -767,7 +784,9 @@
       "giftToggleHint": "Klijent ne plaća, ali se treneru obračunava po ceni paketa.",
       "giftSessionsLabel": "Broj termina na poklon",
       "giftSessionsHint": "Najviše {{count}} (koliko paket ima).",
-      "giftSessionsHintNoPackage": "Prvo izaberite paket."
+      "giftSessionsHintNoPackage": "Prvo izaberite paket.",
+      "giftMessageLabel": "Poruka uz poklon (opciono)",
+      "giftMessageHint": "Klijent će je videti u obaveštenju."
     },
     "trainers": {
       "screenTitle": "Treneri",
@@ -883,8 +902,8 @@
       "error": "Nije moguće učitati raspored.",
       "sheetRecurring": "Ponavljajući termini",
       "sheetNew": "Novi termin",
-      "once": "Jednokratna",
-      "recurring": "Ponavljajuća",
+      "once": "Jednokratan",
+      "recurring": "Ponavljajući",
       "classType": "Tip treninga",
       "room": "Sala",
       "roomCap": "{{name}} (kap. {{capacity}})",
@@ -894,6 +913,7 @@
       "hideBlockedSession": "Ne može da se sakrije: ovaj termin već ima {{count}} rezervacija.",
       "hideBlockedSeries": "Ne može da se sakrije: serija već ima {{count}} rezervacija.",
       "hiddenBadge": "Skriveno",
+      "hiddenFromClients": "Skriveno od klijenata",
       "emptyClassTypes": "Nema dostupnih tipova treninga",
       "emptyRooms": "Nema dostupnih sala",
       "emptyTrainers": "Nema dostupnih trenera",
@@ -959,7 +979,6 @@
       "newPackageType": "+ Novi tip paketa",
       "packagesError": "Nije moguće učitati pakete.",
       "packagesEmpty": "Nema definisanih tipova paketa.",
-      "assignmentsEmpty": "Nema dodeljenih paketa.",
       "emptyClients": "Nema klijenata. Dodajte klijenta sa stranice klijenata.",
       "sessionsDays": "{{count}} termina | {{days}} dana",
       "lateCancel": "Kasno otkazivanje: {{hours}}h unapred",
@@ -991,7 +1010,6 @@
       "confirmPaymentError": "Potvrda uplate nije uspela. Pokušaj ponovo.",
       "revokePackageAction": "Klijent nije platio — opozovi paket",
       "revokePackageCaption": "Budući termini se otkazuju, a neplaćena uplata se stornira.",
-      "filterAll": "Sve",
       "filterClientPlaceholder": "Filter po klijentu",
       "filterClientEmpty": "Nema klijenata",
       "sheetNewPayment": "Nova uplata",
@@ -1033,16 +1051,7 @@
       "utilizationEmpty": "Nema podataka o iskorišćenosti.",
       "bookingsEmpty": "Nema podataka o rezervacijama.",
       "packageTypes": "Tipovi paketa",
-      "activeAssignments": "Aktivne dodele",
-      "activeAssignmentsLinkLabel": "Sve aktivne dodele",
-      "activeAssignmentsLinkHint": "Pretraga po klijentu, filter po statusu",
-      "assignmentsError": "Nije moguće učitati aktivne dodele.",
-      "searchAssignmentsPlaceholder": "Pretraga po imenu ili email-u klijenta…",
       "searchPlaceholder": "Pretraži uplate…",
-      "filterExpiring": "Uskoro ističe",
-      "filterExpired": "Istekao",
-      "sessionsRemaining": "{{count}} termina preostalo",
-      "expiresOn": "Ističe {{date}}",
       "periodWeek": "Nedelja",
       "periodMonth": "Mesec",
       "periodQuarter": "Kvartal",
@@ -1094,8 +1103,6 @@
       },
       "paketi": {
         "title": "Paketi",
-        "activeAssignmentsLink": "Aktivne dodele",
-        "newAssignment": "Nova dodela",
         "flow": {
           "pickClient": "Izaberi klijenta",
           "pickMode": "Tip dodele",
@@ -1344,7 +1351,9 @@
       "openSettings": "Otvori podešavanja",
       "dismiss": "Ne sada"
     },
-    "noDetails": "Nema dodatnih detalja."
+    "noDetails": "Nema dodatnih detalja.",
+    "delete": "Obriši",
+    "deleteA11y": "Obriši obaveštenje"
   },
   "notif": {
     "consentRefused": {

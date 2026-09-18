@@ -10,6 +10,11 @@ import { now, nowMs } from "@/lib/now";
 import { requireRole } from "@/lib/server/auth-guards";
 import { isEmptySessionCutoffLocked } from "@/lib/server/booking-cutoff";
 import { notifyClient } from "@/lib/server/notify-client";
+import { formatSessionWhen } from "@/lib/format-session-when";
+import {
+  describeSessionChanges,
+  varsForLocale,
+} from "@/lib/server/session-change-summary";
 import { notifyOperators } from "@/lib/server/notify-operators";
 import { respond, fail, parseBody } from "@/lib/server/http";
 import { maybeNotifyMinorPaperNeeded } from "@/lib/server/minor-paper-needed";
@@ -283,6 +288,11 @@ export async function PATCH(request: Request, { id }: RouteParams) {
       roomId: true,
       isActive: true,
       recurringScheduleId: true,
+      // Names, not just ids: the client-facing change copy has to say
+      // "sala: Sala 1 → Sala 2", and after the update the old row is gone.
+      classType: { select: { name: true } },
+      room: { select: { name: true } },
+      trainer: { select: { firstName: true, lastName: true } },
       bookings: {
         where: { canceledAt: null },
         select: {
@@ -405,6 +415,7 @@ export async function PATCH(request: Request, { id }: RouteParams) {
         classTypeId: true,
         classType: { select: { id: true, name: true } },
         room: { select: { id: true, name: true } },
+        trainer: { select: { firstName: true, lastName: true } },
       },
     });
 
@@ -444,7 +455,32 @@ export async function PATCH(request: Request, { id }: RouteParams) {
       existing.trainerUserId !== session.trainerUserId);
 
   if (becameCanceled || detailsEdited) {
-    const clientEvent = becameCanceled ? "ADMIN_CANCEL" : "SESSION_UPDATED";
+    // What the client is told hinges on WHICH details moved, so the diff is
+    // described once here and rendered per recipient locale by the dispatcher.
+    const changes = describeSessionChanges(
+      {
+        startsAt: existing.startsAt,
+        roomName: existing.room?.name ?? null,
+        trainerFullName: existing.trainer
+          ? formatFullName(existing.trainer.firstName, existing.trainer.lastName)
+          : null,
+        capacity: existing.capacity,
+      },
+      {
+        startsAt: session.startsAt,
+        roomName: session.room?.name ?? null,
+        trainerFullName: session.trainer
+          ? formatFullName(session.trainer.firstName, session.trainer.lastName)
+          : null,
+        capacity: session.capacity,
+      },
+    );
+    const classTypeName = session.classType?.name ?? existing.classType?.name ?? "";
+    const clientEvent = becameCanceled
+      ? "ADMIN_CANCEL"
+      : changes.rescheduled
+        ? "SESSION_RESCHEDULED"
+        : "SESSION_UPDATED";
     // Booked clients: fan across their enabled channels (in-app + email) via
     // one dispatcher. The recipient's email/locale/flag is already loaded in
     // the `existing.bookings` select above, so no extra per-client query.
@@ -453,7 +489,17 @@ export async function PATCH(request: Request, { id }: RouteParams) {
       void notifyClient({
         userId: booking.clientProfile.userId,
         event: clientEvent,
-        vars: { sessionId: session.id },
+        vars: {
+          sessionId: session.id,
+          classTypeName,
+          ...(becameCanceled ? {} : changes.isoVars),
+        },
+        // A cancellation states the session as it STOOD when booked, so it
+        // reads against the time the client had in their calendar.
+        localizedVars: (locale) =>
+          becameCanceled
+            ? { sessionWhen: formatSessionWhen(existing.startsAt, locale) }
+            : varsForLocale(changes, locale),
         recipient: {
           email: profileUser.email,
           bookingEmailsEnabled:

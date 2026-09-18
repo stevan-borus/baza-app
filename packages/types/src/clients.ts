@@ -17,6 +17,12 @@ export const updateClientInputSchema = z.object({
   dateOfBirth: dateOfBirthSchema.nullable().optional(),
 });
 
+// GET /api/clients query params. `status` filters on the derived package chip
+// (Svi / Aktivni / Isticu / Pauzirani / Istekli). Absent means "no filter".
+export const clientsQuerySchema = z.object({
+  status: clientPackageStatusSchema.nullish(),
+});
+
 export const clientsResponseSchema = z.object({
   success: z.boolean(),
   clients: z.array(

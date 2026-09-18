@@ -48,6 +48,20 @@ pnpm --filter mobile exec tsx scripts/gen-fly-crons.ts \
 Each line POSTs its endpoint with `x-cron-token: $CRON_TOKEN` and `curl -fsS`,
 so a non-2xx fails the run and shows up in supercronic's logs.
 
+## Consumption lookback window
+
+The generated crontab POSTs `?mode=scheduled` and nothing else, so
+`/api/cron/sessions/consumption` falls back to its scheduled-mode default:
+`SCHEDULED_CONSUMPTION_LOOKBACK_HOURS` in
+[`lib/server/cron-jobs.ts`](../lib/server/cron-jobs.ts), currently 48h. It has
+to outlast the 24h gap between two runs, with slack for a late or missed one —
+a window narrower than the cadence silently skips every session that ended
+outside it. Re-processing is safe: `SessionConsumption` is unique on
+`(clientProfileId, sessionId)`, so a second pass reports `ALREADY_CONSUMED`.
+
+Pass `?lookbackHours=N` to widen it for a manual backfill, or `?mode=immediate`
+for the 30-day window.
+
 ## Required header
 
 Every cron request must include `x-cron-token: <API_ADMIN_BOOTSTRAP_TOKEN>`.

@@ -6,14 +6,14 @@
  *   - recipients are "all active Admins" and/or "the Session's assigned Trainer"
  *   - the initiating operator is never notified about their own action
  *   - a Trainer who is also an Admin receives only the Trainer flavor
- *   - in-app NotificationLog always; push per event rule (late-cancel push,
- *     early-cancel silent)
+ *   - delivery is an event rule: BOOKING_CANCELED only notifies when the
+ *     cancel is late; an early cancel writes nothing at all
  *   - bulk actions coalesce to one notification per recipient with a count
  *
  * No push tokens are seeded, so a push-attempted log lands with
- * pushStatus="NO_ACTIVE_PUSH_TOKENS" while a silenced (skipPush) log keeps
- * pushStatus=null — that difference is how the push-vs-silent decision is
- * observed without network.
+ * pushStatus="NO_ACTIVE_PUSH_TOKENS" while a log whose recipient disabled push
+ * keeps pushStatus=null — that difference is how the push decision is observed
+ * without network.
  */
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { resetDb } from "./setup-db";
@@ -102,8 +102,18 @@ describe("notifyOperators", () => {
     ).toBe(0);
   });
 
-  it("both late and early cancels push (BOOKING_CANCELED always pushes)", async () => {
+  it("a late cancel notifies and pushes; an early cancel writes nothing", async () => {
+    const admin = await seedUser("ADMIN", "a1@test.local");
     const trainer = await seedUser("TRAINER", "t1@test.local");
+
+    await notifyOperators({
+      event: "BOOKING_CANCELED",
+      trainers: [{ userId: trainer.id }],
+      isLate: false,
+      payload: { sessionId: "early" },
+    });
+    // An early cancel is not operator news — no row for anyone.
+    expect(await prisma.notificationLog.count()).toBe(0);
 
     await notifyOperators({
       event: "BOOKING_CANCELED",
@@ -111,26 +121,52 @@ describe("notifyOperators", () => {
       isLate: true,
       payload: { sessionId: "late" },
     });
+
+    const logs = await prisma.notificationLog.findMany({
+      select: { userId: true, payload: true, pushStatus: true },
+    });
+    expect(logs).toHaveLength(2);
+    expect(logs.map((l) => l.userId).sort()).toEqual([admin.id, trainer.id].sort());
+    for (const log of logs) {
+      expect((log.payload as { sessionId: string }).sessionId).toBe("late");
+      // No tokens seeded — a recorded attempt is how "pushed" is observed.
+      expect(log.pushStatus).toBe("NO_ACTIVE_PUSH_TOKENS");
+    }
+  });
+
+  it("an early cancel is silent for admins and the trainer alike", async () => {
+    const adminA = await seedUser("ADMIN", "a1@test.local");
+    const adminB = await seedUser("ADMIN", "a2@test.local");
+    const trainer = await seedUser("TRAINER", "t1@test.local");
+
     await notifyOperators({
       event: "BOOKING_CANCELED",
       trainers: [{ userId: trainer.id }],
       isLate: false,
-      payload: { sessionId: "early" },
+      payload: { sessionId: "s1", clientFullName: "Marko Petrović" },
     });
 
-    const logs = await prisma.notificationLog.findMany({
-      where: { userId: trainer.id },
-      select: { payload: true, pushStatus: true },
-    });
-    const late = logs.find((l) => (l.payload as { sessionId: string }).sessionId === "late");
-    const early = logs.find((l) => (l.payload as { sessionId: string }).sessionId === "early");
-    // Every client cancellation now attempts a push (no tokens seeded → recorded
-    // attempt), whether it lands inside the late window or not.
-    expect(late?.pushStatus).toBe("NO_ACTIVE_PUSH_TOKENS");
-    expect(early?.pushStatus).toBe("NO_ACTIVE_PUSH_TOKENS");
+    for (const user of [adminA, adminB, trainer]) {
+      expect(
+        await prisma.notificationLog.count({ where: { userId: user.id } }),
+      ).toBe(0);
+    }
   });
 
-  it("an on-time cancel pushes to the trainer and every active admin, still honoring pushEnabled", async () => {
+  it("an omitted isLate is treated as early — no notification", async () => {
+    const admin = await seedUser("ADMIN", "a1@test.local");
+
+    await notifyOperators({
+      event: "BOOKING_CANCELED",
+      payload: { sessionId: "s1" },
+    });
+
+    expect(
+      await prisma.notificationLog.count({ where: { userId: admin.id } }),
+    ).toBe(0);
+  });
+
+  it("a late cancel pushes to the trainer and every active admin, still honoring pushEnabled", async () => {
     const pushingAdmin = await seedUser("ADMIN", "a1@test.local");
     const mutedAdmin = await seedUser("ADMIN", "muted@test.local");
     await prisma.notificationPreference.create({
@@ -141,7 +177,7 @@ describe("notifyOperators", () => {
     await notifyOperators({
       event: "BOOKING_CANCELED",
       trainers: [{ userId: trainer.id }],
-      isLate: false,
+      isLate: true,
       payload: { sessionId: "s1" },
     });
 
@@ -150,7 +186,7 @@ describe("notifyOperators", () => {
     });
     expect(logs).toHaveLength(3);
     const statusFor = (id: string) => logs.find((l) => l.userId === id)?.pushStatus;
-    // Trainer and the opted-in admin get a push attempt even though it's on time.
+    // Trainer and the opted-in admin get a push attempt.
     expect(statusFor(trainer.id)).toBe("NO_ACTIVE_PUSH_TOKENS");
     expect(statusFor(pushingAdmin.id)).toBe("NO_ACTIVE_PUSH_TOKENS");
     // The admin who disabled push is still logged in-app but never push-attempted.
