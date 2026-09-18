@@ -16,6 +16,7 @@ import { POST as cancelBulkPOST } from "@/server/routes/admin/reservations/cance
 import { PATCH as sessionPATCH } from "@/server/routes/sessions/[id]";
 import { POST as bookingsPOST } from "@/server/routes/bookings";
 import { nowMs } from "@/lib/now";
+import { formatSessionWhen } from "@/lib/format-session-when";
 
 // The email gate's own contract (flag-off suppression, locale resolution,
 // default-on when no preference row, BULK count interpolation) is covered at
@@ -275,6 +276,229 @@ describe("booking-change emails — integration points", () => {
     const recipients = sendSpy.mock.calls.map((c) => c[0].to);
     expect(recipients).toContain("klijent@test.local");
     expect(recipients).not.toContain("trainer@test.local");
+  });
+
+  it("bulk cancel lists every cancelled session with its class type and start time", async () => {
+    const { admin, clientProfile, trainer, reformer } = await seedAdminAndClient();
+    const bookings = [];
+    const sessions = [];
+    for (let i = 1; i <= 2; i++) {
+      const s = await makeSession(reformer.id, trainer.id, i + 6);
+      sessions.push(s);
+      bookings.push(
+        await prisma.booking.create({
+          data: { sessionId: s.id, clientProfileId: clientProfile.id, createdByUserId: admin.id },
+        }),
+      );
+    }
+    const req = new Request("http://test.local/api/admin/reservations/cancel-bulk", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ bookingIds: bookings.map((b) => b.id) }),
+    });
+    await cancelBulkPOST(req);
+    await waitFor(() => sendSpy.mock.calls.length >= 1);
+
+    const arg = sendSpy.mock.calls[0][0];
+    // Each cancelled session is its own paragraph, earliest first.
+    for (const s of sessions) {
+      const when = formatSessionWhen(s.startsAt, "sr");
+      expect(arg.lines).toContain(`Reformer — ${when}`);
+    }
+    const first = arg.lines.indexOf(`Reformer — ${formatSessionWhen(sessions[0].startsAt, "sr")}`);
+    const second = arg.lines.indexOf(`Reformer — ${formatSessionWhen(sessions[1].startsAt, "sr")}`);
+    expect(first).toBeLessThan(second);
+    expect(arg.lines.join(" ")).not.toContain("{{");
+  });
+
+  it("a SINGLE cancel names the class type and the start time of the cancelled session", async () => {
+    const { admin, clientProfile, trainer, reformer } = await seedAdminAndClient();
+    const s = await makeSession(reformer.id, trainer.id, 7);
+    const booking = await prisma.booking.create({
+      data: { sessionId: s.id, clientProfileId: clientProfile.id, createdByUserId: admin.id },
+    });
+    const req = new Request("http://test.local/api/admin/reservations/cancel-bulk", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ bookingIds: [booking.id] }),
+    });
+    await cancelBulkPOST(req);
+    await waitFor(() => sendSpy.mock.calls.length >= 1);
+
+    const body = sendSpy.mock.calls[0][0].lines.join(" ");
+    expect(body).toContain("Reformer");
+    expect(body).toContain(formatSessionWhen(s.startsAt, "sr"));
+    expect(body).not.toContain("{{");
+  });
+
+  it("a studio cancel via PATCH names the session the client is losing", async () => {
+    const { admin, clientProfile, trainer, reformer } = await seedAdminAndClient();
+    const startsAt = new Date(nowMs() + 9 * 24 * 60 * 60 * 1000);
+    const session = await prisma.session.create({
+      data: {
+        classTypeId: reformer.id,
+        trainerUserId: trainer.id,
+        startsAt,
+        endsAt: new Date(startsAt.getTime() + 60 * 60 * 1000),
+        capacity: 6,
+      },
+    });
+    await prisma.booking.create({
+      data: { sessionId: session.id, clientProfileId: clientProfile.id, createdByUserId: admin.id },
+    });
+
+    const req = new Request(`http://test.local/api/sessions/${session.id}`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ status: "CANCELED" }),
+    });
+    await sessionPATCH(req, { id: session.id });
+    await waitFor(() => sendSpy.mock.calls.length >= 1);
+
+    const arg = sendSpy.mock.calls.find((c) => c[0].to === "klijent@test.local")?.[0];
+    const body = arg?.lines.join(" ") ?? "";
+    expect(body).toContain("Reformer");
+    expect(body).toContain(formatSessionWhen(startsAt, "sr"));
+    expect(body).not.toContain("{{");
+  });
+
+  it("a MOVED start tells the client the old time and the new one, in-app and by email", async () => {
+    const { admin, clientUser, clientProfile, trainer, reformer } = await seedAdminAndClient();
+    const room = await prisma.studioRoom.create({ data: { name: "Sala 1", capacity: 8 } });
+    const startsAt = new Date(nowMs() + 9 * 24 * 60 * 60 * 1000);
+    const session = await prisma.session.create({
+      data: {
+        classTypeId: reformer.id,
+        trainerUserId: trainer.id,
+        roomId: room.id,
+        startsAt,
+        endsAt: new Date(startsAt.getTime() + 60 * 60 * 1000),
+        capacity: 6,
+      },
+    });
+    await prisma.booking.create({
+      data: { sessionId: session.id, clientProfileId: clientProfile.id, createdByUserId: admin.id },
+    });
+
+    const newStart = new Date(startsAt.getTime() + 30 * 60 * 1000);
+    const req = new Request(`http://test.local/api/sessions/${session.id}`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        startsAt: newStart.toISOString(),
+        endsAt: new Date(newStart.getTime() + 60 * 60 * 1000).toISOString(),
+      }),
+    });
+    const res = await sessionPATCH(req, { id: session.id });
+    expect(res.status).toBe(200);
+    await waitFor(
+      async () =>
+        (await prisma.notificationLog.count({ where: { userId: clientUser.id } })) > 0 &&
+        sendSpy.mock.calls.length >= 1,
+    );
+
+    const oldWhen = formatSessionWhen(startsAt, "sr");
+    const newWhen = formatSessionWhen(newStart, "sr");
+
+    const log = await prisma.notificationLog.findFirst({ where: { userId: clientUser.id } });
+    expect(log?.body).toContain(oldWhen);
+    expect(log?.body).toContain(newWhen);
+    expect(log?.body).toContain("Reformer");
+    expect(log?.body).not.toContain("{{");
+    expect((log?.payload as Record<string, unknown> | undefined)?.sessionStartsAtIso).toBe(
+      newStart.toISOString(),
+    );
+
+    const email = sendSpy.mock.calls.find((c) => c[0].to === "klijent@test.local")?.[0];
+    const emailBody = email?.lines.join(" ") ?? "";
+    expect(emailBody).toContain(newWhen);
+    expect(emailBody).toContain("Sala 1");
+    expect(emailBody).not.toContain("{{");
+  });
+
+  it("a ROOM-only change states the new room and keeps the unchanged time, without an old-time line", async () => {
+    const { admin, clientUser, clientProfile, trainer, reformer } = await seedAdminAndClient();
+    const roomA = await prisma.studioRoom.create({ data: { name: "Sala 1", capacity: 8 } });
+    const roomB = await prisma.studioRoom.create({ data: { name: "Sala 2", capacity: 8 } });
+    const startsAt = new Date(nowMs() + 9 * 24 * 60 * 60 * 1000);
+    const session = await prisma.session.create({
+      data: {
+        classTypeId: reformer.id,
+        trainerUserId: trainer.id,
+        roomId: roomA.id,
+        startsAt,
+        endsAt: new Date(startsAt.getTime() + 60 * 60 * 1000),
+        capacity: 6,
+      },
+    });
+    await prisma.booking.create({
+      data: { sessionId: session.id, clientProfileId: clientProfile.id, createdByUserId: admin.id },
+    });
+
+    const req = new Request(`http://test.local/api/sessions/${session.id}`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ roomId: roomB.id }),
+    });
+    await sessionPATCH(req, { id: session.id });
+    await waitFor(
+      async () =>
+        (await prisma.notificationLog.count({ where: { userId: clientUser.id } })) > 0 &&
+        sendSpy.mock.calls.length >= 1,
+    );
+
+    const log = await prisma.notificationLog.findFirst({ where: { userId: clientUser.id } });
+    expect(log?.body).toContain("Sala 2");
+    expect(log?.body).toContain(formatSessionWhen(startsAt, "sr"));
+    expect(log?.body).not.toContain("pomeren");
+    expect(log?.body).not.toContain("{{");
+
+    const email = sendSpy.mock.calls.find((c) => c[0].to === "klijent@test.local")?.[0];
+    expect(email?.lines.join(" ")).toContain("Sala 2");
+  });
+
+  it("an en client gets the English formatted time while an sr client gets the Serbian one", async () => {
+    const { admin, clientProfile, trainer, reformer } = await seedAdminAndClient();
+    const enUser = await prisma.user.create({
+      data: { email: "en@test.local", firstName: "En", lastName: "Client", role: "CLIENT" },
+    });
+    await prisma.notificationPreference.create({
+      data: { userId: enUser.id, bookingEmailsEnabled: true, preferredLocale: "en" },
+    });
+    const enProfile = await prisma.clientProfile.create({ data: { userId: enUser.id } });
+    const startsAt = new Date(nowMs() + 9 * 24 * 60 * 60 * 1000);
+    const session = await prisma.session.create({
+      data: {
+        classTypeId: reformer.id,
+        trainerUserId: trainer.id,
+        startsAt,
+        endsAt: new Date(startsAt.getTime() + 60 * 60 * 1000),
+        capacity: 6,
+      },
+    });
+    for (const profileId of [clientProfile.id, enProfile.id]) {
+      await prisma.booking.create({
+        data: { sessionId: session.id, clientProfileId: profileId, createdByUserId: admin.id },
+      });
+    }
+
+    const newStart = new Date(startsAt.getTime() + 45 * 60 * 1000);
+    const req = new Request(`http://test.local/api/sessions/${session.id}`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        startsAt: newStart.toISOString(),
+        endsAt: new Date(newStart.getTime() + 60 * 60 * 1000).toISOString(),
+      }),
+    });
+    await sessionPATCH(req, { id: session.id });
+    await waitFor(() => sendSpy.mock.calls.length >= 2);
+
+    const srEmail = sendSpy.mock.calls.find((c) => c[0].to === "klijent@test.local")?.[0];
+    const enEmail = sendSpy.mock.calls.find((c) => c[0].to === "en@test.local")?.[0];
+    expect(srEmail?.lines.join(" ")).toContain(formatSessionWhen(newStart, "sr"));
+    expect(enEmail?.lines.join(" ")).toContain(formatSessionWhen(newStart, "en"));
+    expect(enEmail?.subject).toBe("Your session was updated");
   });
 
   it("waitlist auto-promotion emails the promoted client, not the self-canceler", async () => {

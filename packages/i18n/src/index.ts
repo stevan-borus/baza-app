@@ -8,4 +8,5 @@ export {
   type NotificationMessageKey,
   type NotificationLocale,
   type BookingEmailKind,
+  type BookingEmailExtras,
 } from "./notification-messages";

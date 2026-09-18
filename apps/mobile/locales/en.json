@@ -8,6 +8,14 @@
       "title": "Session updated",
       "body": "The session has been updated."
     },
+    "session_details_updated": {
+      "title": "Your session changed",
+      "body": "{{classTypeName}} {{sessionWhen}} — room: {{roomName}}, trainer: {{trainerFullName}}."
+    },
+    "session_rescheduled": {
+      "title": "Your session moved",
+      "body": "{{classTypeName}} moved from {{oldSessionWhen}} to {{sessionWhen}} — room: {{roomName}}, trainer: {{trainerFullName}}."
+    },
     "trainer_note": {
       "title": "Trainer note",
       "body": "Your trainer left a note."

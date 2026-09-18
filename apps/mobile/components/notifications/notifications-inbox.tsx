@@ -20,6 +20,7 @@ import {
 } from "@/lib/queries/notifications-queries-factory";
 import { useNotificationTapHandler } from "@/lib/notification-tap";
 import { shouldOpenDetailSheet } from "@/lib/notification-detail-sheet";
+import { formatSessionWhen } from "@/lib/format-session-when";
 import { clearAppBadge } from "@/lib/badge";
 import { PushPermissionBanner } from "@/components/notifications/push-permission-banner";
 import { serbianSessionsLabel } from "@baza/i18n";
@@ -177,6 +178,16 @@ function payloadInterpolation(
   safe("classTypeName");
   safe("trainerFullName");
   safe("userName");
+  safe("roomName");
+  // Session-change times ride as raw ISO and are formatted HERE, so the row
+  // follows the DEVICE language — the server-rendered copy is written in the
+  // recipient's STORED locale, and the two can differ.
+  const whenFromIso = (key: string, out_key: string) => {
+    const iso = (payload as Record<string, unknown>)[key];
+    if (typeof iso === "string") out[out_key] = formatSessionWhen(iso, lang);
+  };
+  whenFromIso("sessionStartsAtIso", "sessionWhen");
+  whenFromIso("oldSessionStartsAtIso", "oldSessionWhen");
   safe("packageTypeName");
   safe("sessionsGranted");
   // Serbian needs three plural forms for "termin"; the app re-renders the

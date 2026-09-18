@@ -7,6 +7,7 @@
  * locale before calling here, so this function does NOT re-check the flag.
  */
 import {
+  type BookingEmailExtras,
   type BookingEmailKind,
   getBookingEmailContent,
   type NotificationLocale,
@@ -18,17 +19,14 @@ export async function sendBookingChangeEmailToRecipient(input: {
   kind: BookingEmailKind;
   locale: NotificationLocale;
   vars?: Record<string, string | number | undefined>;
+  /** Extra paragraphs (e.g. the per-session list on a bulk cancellation). */
+  extras?: BookingEmailExtras;
 }) {
-  const { subject, heading, body, footer } = getBookingEmailContent(
+  const { subject, heading, lines, footer } = getBookingEmailContent(
     input.kind,
     input.locale,
     input.vars,
+    input.extras,
   );
-  await sendBookingChangeEmail({
-    to: input.to,
-    subject,
-    heading,
-    lines: body ? [body] : [],
-    footer,
-  });
+  await sendBookingChangeEmail({ to: input.to, subject, heading, lines, footer });
 }
