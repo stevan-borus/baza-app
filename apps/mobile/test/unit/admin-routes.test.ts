@@ -26,7 +26,6 @@ const required = [
   "izvestaji/iskoriscenost/index.tsx",
   "izvestaji/rezervacije/index.tsx",
   "izvestaji/paketi/index.tsx",
-  "izvestaji/paketi/aktivne-dodele.tsx",
   "katalog/_layout.tsx",
   "katalog/index.tsx",
   "katalog/tipovi-treninga.tsx",

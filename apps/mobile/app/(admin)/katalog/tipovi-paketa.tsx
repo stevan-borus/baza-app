@@ -22,7 +22,6 @@ import { ScreenContainerRaw, useTabBarBottomPadding } from "@/components/ui/scre
 import { HeaderIconButton } from "@/components/ui/app-header";
 import { useThemeTokens } from "@/components/ui/tokens";
 import { FilterChip } from "@/components/ui/studio";
-import { useRouter } from "expo-router";
 import {
   packagesQueries,
   createPackageTypeMutationOptions,
@@ -131,10 +130,6 @@ function AssignmentAvatar({ name }: { name: string }) {
   );
 }
 
-// ─── Filter type ──────────────────────────────────────────────────────────────
-
-type AssignmentFilter = "all" | "expiring" | "expired";
-
 // ─── Main screen ──────────────────────────────────────────────────────────────
 
 export default function AdminPackages() {
@@ -144,7 +139,6 @@ export default function AdminPackages() {
   const tokens = useThemeTokens();
   const bottomPad = useTabBarBottomPadding();
   const [refreshing, setRefreshing] = useState(false);
-  const [assignmentFilter, setAssignmentFilter] = useState<AssignmentFilter>("all");
 
   async function handleRefresh() {
     setRefreshing(true);
@@ -155,8 +149,6 @@ export default function AdminPackages() {
     ]);
     setRefreshing(false);
   }
-
-  const router = useRouter();
   const typesQuery = useQuery(packagesQueries.types());
   const classTypesQuery = useQuery(trainingsQueries.classTypes());
 
@@ -210,12 +202,6 @@ export default function AdminPackages() {
 
   const createFieldErrors = fieldErrorsFromApiError(crud.createMutation.error);
   const editFieldErrors = fieldErrorsFromApiError(crud.updateMutation.error);
-
-  const FILTERS: { key: AssignmentFilter; labelKey: string }[] = [
-    { key: "all", labelKey: "admin.manage.filterAll" },
-    { key: "expiring", labelKey: "admin.manage.filterExpiring" },
-    { key: "expired", labelKey: "admin.manage.filterExpired" },
-  ];
 
   return (
     <ScreenContainerRaw
@@ -346,42 +332,6 @@ export default function AdminPackages() {
               ))}
             </View>
           ) : null}
-        </MotiView>
-
-        {/* ── Link to standalone Aktivne dodele page ─────────────────────────── */}
-        <MotiView
-          from={{ opacity: 0, translateY: -4 }}
-          animate={{ opacity: 1, translateY: 0 }}
-          transition={{ type: "timing", duration: 300, delay: 160 }}
-          style={{ gap: 10 }}
-        >
-          <SectionLabel>{t("admin.manage.activeAssignments")}</SectionLabel>
-          <Pressable
-            testID="active-assignments-link"
-            onPress={() => router.push("/(admin)/katalog/aktivne-dodele")}
-            android_ripple={null}
-            style={{ borderRadius: 14 }}
-          >
-            <GlassCard size="md">
-              <View className="flex-row items-center gap-3">
-                <View className="items-center justify-center w-10 h-10 rounded-full bg-accent-soft">
-                  <Icon name="users" size={16} color={tokens.accent} />
-                </View>
-                <View className="flex-1">
-                  <Text
-                    className="text-foreground font-body-semibold"
-                    style={{ fontSize: 15 }}
-                  >
-                    {t("admin.manage.activeAssignmentsLinkLabel")}
-                  </Text>
-                  <Text className="text-muted" style={{ fontSize: 12 }}>
-                    {t("admin.manage.activeAssignmentsLinkHint")}
-                  </Text>
-                </View>
-                <Icon name="chevron-right" size={18} color={tokens.muted} />
-              </View>
-            </GlassCard>
-          </Pressable>
         </MotiView>
 
         {/* ═══════════════════════════════════════════════════════════════════

@@ -368,36 +368,6 @@ export default function IzvestajiPaketi() {
             </View>
           </GlassCard>
         </MotiView>
-
-        {/* "Aktivne dodele" link — kept from P3-1 scaffold for admins who
-            want the full filterable assignment list. */}
-        <MotiView
-          from={{ opacity: 0, translateY: 12 }}
-          animate={{ opacity: 1, translateY: 0 }}
-          transition={{ type: "timing", duration: 350, delay: 300 }}
-        >
-          <Pressable
-            testID="paketi-active-assignments-link"
-            onPress={() => router.push("/(admin)/izvestaji/paketi/aktivne-dodele")}
-            android_ripple={null}
-            style={{ borderRadius: 14 }}
-          >
-            <GlassCard size="md">
-              <View className="flex-row items-center gap-3">
-                <View className="items-center justify-center w-10 h-10 rounded-full bg-accent-soft">
-                  <Icon name="users" size={16} color={tokens.accent} />
-                </View>
-                <Text
-                  className="flex-1 text-foreground font-body-semibold"
-                  style={{ fontSize: 15 }}
-                >
-                  {t("admin.izvestaji.paketi.activeAssignmentsLink")}
-                </Text>
-                <Icon name="chevron-right" size={16} color={tokens.faint} />
-              </View>
-            </GlassCard>
-          </Pressable>
-        </MotiView>
       </ScrollView>
     </ScreenContainerRaw>
   );

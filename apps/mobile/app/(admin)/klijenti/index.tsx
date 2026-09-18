@@ -247,7 +247,10 @@ export default function AdminClients() {
   // renders — it still hits the API every letter).
   const deferredSearch = useDebouncedValue(searchQuery.trim());
   const clientsQuery = useInfiniteQuery(
-    clientsQueries.list({ q: deferredSearch || undefined }),
+    clientsQueries.list({
+      q: deferredSearch || undefined,
+      status: filter === "all" ? undefined : filter,
+    }),
   );
   const invitesQuery = useQuery(invitesQueries.list());
 
@@ -292,16 +295,6 @@ export default function AdminClients() {
     enabled: !!assignFor?.clientUserId,
   });
   const assignClient = assignFor ? (assignClientQuery.data?.client ?? null) : null;
-
-  // ── Status filter (q is already server-side) ──────────────────────────────
-  // The package-status chip still narrows client-side — applying it as
-  // another server filter would require extending the API and most users
-  // toggle it across the current view, not "show me ALL paused" globally.
-  // When this matters we can lift it to the server.
-  const filteredClients =
-    filter === "all"
-      ? clients
-      : clients.filter((c) => c.packageStatus === filter);
 
   // ── Refresh ───────────────────────────────────────────────────────────────
   // Behavior preserved verbatim: pull-to-refresh invalidates both clients
@@ -431,15 +424,13 @@ export default function AdminClients() {
         </View>
 
         {/* ── List body ─────────────────────────────────────────────────────
-            Filter chips narrow client-side over already-loaded pages —
-            same trade-off as ActiveAssignments. Lifting `filter` to the
-            API would require extending the endpoint; most admins toggle
-            chips across the current view rather than asking for "ALL
-            paused" globally. */}
+            Both the search box and the filter chips run in Postgres, so
+            "Istekli" means every expired client, not just the expired ones
+            inside the pages loaded so far. */}
         {tab === "clients" ? (
           <PaginatedList<ClientListItem>
             query={clientsQuery}
-            data={filteredClients}
+            data={clients}
             keyExtractor={(client) => client.id}
             renderItem={({ item }) => (
               <ClientRow
