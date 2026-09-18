@@ -7,6 +7,7 @@ import {
   useQueryClient,
   type QueryClient,
 } from "@tanstack/react-query";
+import { type ClientPackageStatus } from "@baza/types/packages";
 import { adminClientConsentRecordsResponseSchema, adminClientHealthResponseSchema, clientByIdResponseSchema, clientsResponseSchema } from "@baza/types/clients";
 import { ApiError } from "@/lib/api-error";
 import { apiRequest } from "@/lib/api-request";
@@ -27,7 +28,8 @@ export const clientsQueries = {
   all: clientsAll,
 
   /**
-   * Cursor-paginated client list with optional server-side substring search.
+   * Cursor-paginated client list with optional server-side substring search
+   * and package-status filter (the Klijenti chips).
    *
    * Why this shape: every consumer of the old `useQuery(clientsQueries.list())`
    * rendered all rows in one ScrollView and filtered client-side. With ~1000
@@ -38,16 +40,27 @@ export const clientsQueries = {
    * Page params are the opaque `nextCursor` returned by the API (the last
    * clientProfile.id on the page). `null` means "first page".
    */
-  list: (opts: { q?: string; take?: number } = {}) =>
+  list: (
+    opts: { q?: string; take?: number; status?: ClientPackageStatus } = {},
+  ) =>
     infiniteQueryOptions({
       queryKey: [
         ...clientsAll,
         "list",
-        { q: opts.q ?? "", take: opts.take ?? DEFAULT_TAKE },
+        {
+          q: opts.q ?? "",
+          take: opts.take ?? DEFAULT_TAKE,
+          status: opts.status ?? "",
+        },
       ] as const,
       queryFn: ({ pageParam }) =>
         apiRequest("/api/clients", {
-          params: { cursor: pageParam, q: opts.q, take: opts.take ?? DEFAULT_TAKE },
+          params: {
+            cursor: pageParam,
+            q: opts.q,
+            status: opts.status,
+            take: opts.take ?? DEFAULT_TAKE,
+          },
           schema: clientsResponseSchema,
           errorMessage: "Unable to load clients",
         }),

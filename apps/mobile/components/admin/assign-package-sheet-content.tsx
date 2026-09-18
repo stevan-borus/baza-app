@@ -93,6 +93,10 @@ export function AssignPackageSheetContent({
   // Gifting "Reformer 12" must not hand over all twelve sessions, so a gift
   // defaults to one and the admin can raise it.
   const [giftSessions, setGiftSessions] = useState("1");
+  // Optional note the client sees in the gift notification. Without it every
+  // gift reads as a birthday present, which is wrong for a graduation or an
+  // apology.
+  const [giftMessage, setGiftMessage] = useState("");
 
   // Paid-mode-only fields. Initialised regardless so the hook order is
   // stable across mode flips (the parent always remounts on sheet open, but
@@ -192,7 +196,14 @@ export function AssignPackageSheetContent({
           // A gift keeps the real (priced) package so payroll can value its
           // sessions, but grants only the few the admin is actually giving.
           ...(isGift
-            ? { isGift: true, sessionsGranted: Number(giftSessions) }
+            ? {
+                isGift: true,
+                sessionsGranted: Number(giftSessions),
+                // Only a birthday deep-link keeps the birthday wording; the
+                // server can't tell the occasions apart from the SKU alone.
+                occasion: initialClassTypeId ? ("BIRTHDAY" as const) : ("OTHER" as const),
+                ...(giftMessage.trim() ? { giftMessage: giftMessage.trim() } : {}),
+              }
             : {}),
         },
         { onSuccess },
@@ -349,6 +360,19 @@ export function AssignPackageSheetContent({
                       count: selectedType.sessionCount,
                     })
                   : t("admin.clients.giftSessionsHintNoPackage")}
+              </Text>
+
+              <SectionLabel>{t("admin.clients.giftMessageLabel")}</SectionLabel>
+              <Input
+                testID="assign-gift-message"
+                value={giftMessage}
+                onChangeText={setGiftMessage}
+                multiline
+                maxLength={200}
+                placeholder=""
+              />
+              <Text className="text-muted" style={{ fontSize: 12 }}>
+                {t("admin.clients.giftMessageHint")}
               </Text>
             </View>
           ) : null}

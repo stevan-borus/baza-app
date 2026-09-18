@@ -3,7 +3,6 @@ import {
   createClientPackageInputSchema,
   createClientPackageResponseSchema,
 } from "@baza/types/packages";
-import { formatFullName } from "@baza/types/common";
 import { NOTIFICATION_MESSAGE_KEYS } from "@baza/i18n";
 import { UserRole } from "@/generated/prisma";
 import { now } from "@/lib/now";
@@ -162,88 +161,9 @@ export async function GET(request: Request) {
     });
   }
 
-  // Admins may list all client packages across the studio when no clientProfileId
-  // is supplied (used by /(admin)/izvestaji/paketi/aktivne-dodele assignment list).
+  // Every non-client caller addresses one client at a time.
   if (!clientProfileId) {
-    if (guard.user.role !== UserRole.ADMIN) {
-      return fail("clientProfileId query param is required", 400);
-    }
-    // Cursor-based pagination over a stable id ordering. We keep
-    // `startsAt: desc` for the primary visible sort and add `id: asc` as the
-    // tiebreaker so cursors stay deterministic across pages even when many
-    // rows share the same startsAt instant (seed data does this).
-    const search = url.searchParams.get("search")?.trim();
-    const rawTake = url.searchParams.get("take");
-    const parsedTake = rawTake ? parseInt(rawTake, 10) : 20;
-    const take = Number.isFinite(parsedTake)
-      ? Math.min(Math.max(parsedTake, 1), 100)
-      : 20;
-    const cursor = url.searchParams.get("cursor") ?? undefined;
-
-    // Tokenize the query on whitespace and require EACH token to match in
-    // firstName OR lastName OR email (case-insensitive), then AND the tokens
-    // together — the same pattern as /api/clients. A single-string `contains`
-    // across the three columns never matched "First Last" queries (e.g.
-    // "Pagi Client 007") because the whole string was tested against each
-    // single column; after the fullName→first/last split there is no column
-    // holding the joined name. Per-token AND lets a full-name query land while
-    // a single-token query (one token, e.g. an email substring) behaves as
-    // before.
-    const searchTokens = search ? search.split(/\s+/).filter(Boolean) : [];
-    const packages = await prisma.clientPackage.findMany({
-      where:
-        searchTokens.length > 0
-          ? {
-              clientProfile: {
-                user: {
-                  AND: searchTokens.map((token) => ({
-                    OR: [
-                      { firstName: { contains: token, mode: "insensitive" } },
-                      { lastName: { contains: token, mode: "insensitive" } },
-                      { email: { contains: token, mode: "insensitive" } },
-                    ],
-                  })),
-                },
-              },
-            }
-          : undefined,
-      orderBy: [{ startsAt: "desc" }, { id: "asc" }],
-      take: take + 1,
-      ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
-      include: {
-        packageType: {
-          select: { name: true, sessionCount: true, validityDays: true },
-        },
-        ...PACKAGE_TYPE_CLASS_TYPES_SELECT,
-        clientProfile: {
-          select: {
-            user: { select: { id: true, firstName: true, lastName: true, email: true } },
-          },
-        },
-      },
-    });
-    const hasMore = packages.length > take;
-    const pagePackages = hasMore ? packages.slice(0, take) : packages;
-    const nextCursor = hasMore
-      ? pagePackages[pagePackages.length - 1]?.id ?? null
-      : null;
-    const shaped = pagePackages.map((p) => ({
-      ...p,
-      classTypes: p.classTypes.map((link) => link.classType),
-      sessionsTotal: packageSessionsTotal(p),
-      client: {
-        ...p.clientProfile.user,
-        fullName: formatFullName(
-          p.clientProfile.user.firstName,
-          p.clientProfile.user.lastName,
-        ),
-      },
-    }));
-    return respond(clientPackagesResponseSchema, {
-      success: true,
-      packages: shaped,
-      nextCursor,
-    });
+    return fail("clientProfileId query param is required", 400);
   }
 
   // Trainers may only view packages for clients they are linked to.
@@ -406,6 +326,13 @@ export async function POST(request: Request) {
   if (!isGift && parsed.data.sessionsGranted !== undefined) {
     return fail("sessionsGranted is only valid for a gift", 400);
   }
+  const giftMessage = parsed.data.giftMessage ?? null;
+  if (!isGift && giftMessage !== null) {
+    return fail("giftMessage is only valid for a gift", 400);
+  }
+  if (!isGift && parsed.data.occasion != null) {
+    return fail("occasion is only valid for a gift", 400);
+  }
   const sessionsGranted = isGift ? (parsed.data.sessionsGranted ?? 1) : undefined;
   if (sessionsGranted !== undefined && sessionsGranted > packageType.sessionCount) {
     return fail(
@@ -434,9 +361,16 @@ export async function POST(request: Request) {
     // to someone who was just given a birthday present. The legacy gift SKUs
     // still count while they exist.
     if (isGift || packageType.isBirthdayGift) {
+      // Birthday wording only when the assignment really came from the
+      // birthday prompt (the sheet sends occasion) or a legacy 🎂 SKU. Every
+      // other gift — graduation, apology, promo — gets the generic copy.
+      const isBirthday =
+        parsed.data.occasion === "BIRTHDAY" || packageType.isBirthdayGift;
       void createSystemNotification(
         clientProfile.user.id,
-        NOTIFICATION_MESSAGE_KEYS.BIRTHDAY_CLIENT_GIFT,
+        isBirthday
+          ? NOTIFICATION_MESSAGE_KEYS.BIRTHDAY_CLIENT_GIFT
+          : NOTIFICATION_MESSAGE_KEYS.GIFT_PACKAGE,
         "BIRTHDAY_CLIENT_GIFT",
         {
           clientPackageId: clientPackage.id,
@@ -445,7 +379,11 @@ export async function POST(request: Request) {
           classTypeIds: clientPackage.classTypeIds,
           packageTypeName: packageType.name,
           expiresAt: clientPackage.expiresAt.toISOString(),
+          sessionsGranted: clientPackage.sessionsGranted ?? sessionsGranted ?? 1,
+          ...(giftMessage ? { giftMessage } : {}),
         },
+        // Admin free text: appended as its own sentence, never interpolated.
+        { appendBody: giftMessage },
       );
     } else {
       // Non-gift assign (comp / manual) — tell the client a package landed.

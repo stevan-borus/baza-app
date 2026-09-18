@@ -73,6 +73,14 @@ function buildCronRequest(token: string | null) {
   );
 }
 
+/** What the generated Fly crontab actually sends: mode=scheduled, no lookbackHours. */
+function buildScheduledCronRequest(token: string) {
+  return new Request(
+    "http://test.local/api/cron/sessions/consumption?mode=scheduled",
+    { method: "POST", headers: { "content-type": "application/json", "x-cron-token": token } },
+  );
+}
+
 describe("POST /api/cron/sessions/consumption", () => {
   beforeEach(async () => {
     await resetDb();
@@ -191,5 +199,42 @@ describe("POST /api/cron/sessions/consumption", () => {
       where: { id: clientPackage.id },
     });
     expect(updatedPack?.sessionsRemaining).toBe(7);
+  });
+
+  it("consumes a session that ended 20 hours ago in scheduled mode with no lookbackHours", async () => {
+    const { trainer, clientProfile, reformer, clientPackage } = await seed();
+    const session = await createPastSession({
+      classTypeId: reformer.id,
+      trainerUserId: trainer.id,
+      endedHoursAgo: 20,
+    });
+    await prisma.booking.create({
+      data: {
+        sessionId: session.id,
+        clientProfileId: clientProfile.id,
+        clientPackageId: clientPackage.id,
+      },
+    });
+
+    const response = await POST(buildScheduledCronRequest(TEST_BOOTSTRAP_TOKEN));
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as { consumed: number; lookbackHours: number };
+    expect(body.lookbackHours).toBeGreaterThanOrEqual(24);
+    expect(body.consumed).toBe(1);
+
+    const updatedPack = await prisma.clientPackage.findUnique({
+      where: { id: clientPackage.id },
+    });
+    expect(updatedPack?.sessionsRemaining).toBe(7);
+
+    const consumption = await prisma.sessionConsumption.findUnique({
+      where: {
+        clientProfileId_sessionId: {
+          clientProfileId: clientProfile.id,
+          sessionId: session.id,
+        },
+      },
+    });
+    expect(consumption).not.toBeNull();
   });
 });

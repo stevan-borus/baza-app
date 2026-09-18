@@ -1,5 +1,9 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { PropsWithChildren, useState } from "react";
+import { QueryClient, QueryClientProvider, focusManager } from "@tanstack/react-query";
+import { PropsWithChildren, useEffect, useState } from "react";
+import {
+  shouldBridgeAppStateFocus,
+  subscribeFocusToAppState,
+} from "@/lib/query-focus";
 
 export function Providers({
   children,
@@ -26,6 +30,12 @@ export function Providers({
         },
       }),
   );
+
+  // Subscribing to an external system (RN AppState) — the one effect this file needs.
+  useEffect(() => {
+    if (!shouldBridgeAppStateFocus()) return;
+    focusManager.setEventListener(subscribeFocusToAppState);
+  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>

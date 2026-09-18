@@ -214,41 +214,14 @@ describe("packages/client-packages", () => {
     expect(response.status).toBe(403);
   });
 
-  it("GET as admin without clientProfileId returns every client package", async () => {
-    const { reformer, packageType } = await seedReformerWithPackageType();
-    const a = await makeClient("a@test.local");
-    const b = await makeClient("b@test.local");
-    await prisma.clientPackage.create({
-      data: {
-        clientProfileId: a.profile.id,
-        packageTypeId: packageType.id,
-        classTypes: { create: { classTypeId: reformer.id } },
-        lateCancelHours: 12,
-        startsAt: now(),
-        expiresAt: new Date(nowMs() + 30 * DAY_MS),
-        sessionsRemaining: 12,
-        sessionsGranted: 12,
-      },
-    });
-    await prisma.clientPackage.create({
-      data: {
-        clientProfileId: b.profile.id,
-        packageTypeId: packageType.id,
-        classTypes: { create: { classTypeId: reformer.id } },
-        lateCancelHours: 12,
-        startsAt: now(),
-        expiresAt: new Date(nowMs() + 30 * DAY_MS),
-        sessionsRemaining: 12,
-        sessionsGranted: 12,
-      },
-    });
-
+  // The studio-wide list-all branch went away with the "Sve aktivne dodele"
+  // screen; every caller, admin included, must name the client.
+  it("GET as admin without clientProfileId is rejected", async () => {
     asAdmin();
     const response = await GET(
       new Request("http://test.local/api/packages/client-packages"),
     );
-    const body = (await response.json()) as { packages: { id: string }[] };
-    expect(body.packages).toHaveLength(2);
+    expect(response.status).toBe(400);
   });
 
   // The admin package row used to speak raw credits only, so it showed "8

@@ -211,4 +211,18 @@ describe("klijenti deep-link → assign-package sheet", () => {
       queryByTestId(`assign-package-option-${REFORMER_12.id}`),
     ).toBeNull();
   });
+
+  // The status chips moved from a client-side `clients.filter` to a `status`
+  // query param, so the chips themselves must still be on screen (and still
+  // carry the shipped Serbian copy) after that rewiring.
+  it("still renders the five status chips", async () => {
+    const { getByText } = renderScreen();
+
+    await waitFor(() => {
+      expect(getByText("Svi")).toBeTruthy();
+    });
+    for (const label of ["Aktivni", "Ističu", "Pauzirani", "Istekli"]) {
+      expect(getByText(label)).toBeTruthy();
+    }
+  });
 });

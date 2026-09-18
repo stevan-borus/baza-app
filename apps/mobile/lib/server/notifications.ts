@@ -33,7 +33,15 @@ export async function createSystemNotification(
   messageKey: NotificationMessageKey,
   type: NotificationType,
   payload: Record<string, unknown>,
-  options?: { dedupeKey?: string; skipPush?: boolean },
+  options?: {
+    dedupeKey?: string;
+    /**
+     * Free text appended to the rendered body as its own sentence. Used for
+     * admin-authored notes: they are user input, so they are concatenated
+     * verbatim rather than interpolated into a template the admin controls.
+     */
+    appendBody?: string | null;
+  },
 ) {
   const locale = await getPreferredLocale(userId);
   // Pass the payload as interpolation vars so server-rendered notification
@@ -44,7 +52,9 @@ export async function createSystemNotification(
   for (const [k, v] of Object.entries(payload)) {
     if (typeof v === "string" || typeof v === "number") interpVars[k] = v;
   }
-  const { title, body } = getNotificationMessage(messageKey, locale, interpVars);
+  const { title, body: baseBody } = getNotificationMessage(messageKey, locale, interpVars);
+  const appended = options?.appendBody?.trim();
+  const body = appended ? `${baseBody}\n\n${appended}` : baseBody;
   const messageI18nKey = NOTIFICATION_MESSAGE_I18N_KEYS[messageKey];
   return createAndDispatchUserNotification({
     userId,
@@ -53,7 +63,6 @@ export async function createSystemNotification(
     body,
     payload: { ...payload, messageKey: messageI18nKey },
     dedupeKey: options?.dedupeKey,
-    skipPush: options?.skipPush,
   });
 }
 
@@ -66,12 +75,6 @@ type NotificationPayload = {
   body: string;
   payload?: Record<string, unknown>;
   dedupeKey?: string;
-  /**
-   * When true, persist the NotificationLog but skip the Expo push dispatch.
-   * Used for low-priority alerts (e.g., routine early cancellations) where
-   * we want in-app visibility without a phone buzz.
-   */
-  skipPush?: boolean;
   /** Links this log to the Campaign it was dispatched from (history + audit). */
   campaignId?: string;
 };
@@ -203,10 +206,71 @@ async function sendExpoPushNotifications(
   };
 }
 
+const LOG_SELECT = {
+  id: true,
+  userId: true,
+  type: true,
+  title: true,
+  body: true,
+  payload: true,
+  pushSent: true,
+  pushStatus: true,
+  readAt: true,
+  createdAt: true,
+} as const;
+
+/**
+ * Resolves the user's live devices and unread badge, sends, and retires any
+ * token Expo reports as dead. Deliberately knows nothing about NotificationLog
+ * so it works for a user whose inbox is switched off and has no row to update.
+ */
+async function dispatchPushToUser(input: NotificationPayload): Promise<PushDispatchResult> {
+  const [tokens, unreadCount] = await Promise.all([
+    prisma.pushToken.findMany({
+      where: { userId: input.userId, isActive: true },
+      select: { expoPushToken: true },
+    }),
+    // Counts rows already in the inbox. When in-app is on, the row created by
+    // the caller is among them (readAt is null), which gives the iOS-correct
+    // "post-delivery" badge; when in-app is off there is no row to add.
+    prisma.notificationLog.count({
+      where: { userId: input.userId, readAt: null, dismissedAt: null },
+    }),
+  ]);
+
+  const result = await sendExpoPushNotifications(
+    tokens.map((token: { expoPushToken: string }) => token.expoPushToken),
+    input.title,
+    input.body,
+    input.payload,
+    input.type,
+    unreadCount,
+  );
+
+  // Retire tokens Expo reported as dead so they stop being retried on
+  // every future notification (and stop dragging the batch into PARTIAL).
+  if (result.deadTokens.length > 0) {
+    await prisma.pushToken.updateMany({
+      where: { expoPushToken: { in: result.deadTokens } },
+      data: { isActive: false },
+    });
+  }
+
+  return result;
+}
+
 /**
  * Persists notification state and optionally dispatches push delivery.
  *
+ * The two preferences are independent channels: `inAppEnabled` decides whether
+ * a NotificationLog row exists at all, `pushEnabled` whether
+ * the device buzzes. With the inbox off and push on there is no row to stamp,
+ * so the push goes out without pushSent/pushStatus bookkeeping and the return
+ * value is null.
+ *
  * Uses `dedupeKey` to avoid duplicate records for scheduled jobs.
+ *
+ * Callers fire this `void` (fire-and-forget), so it must NEVER reject.
  */
 export async function createAndDispatchUserNotification(input: NotificationPayload) {
   const jsonPayload =
@@ -224,6 +288,13 @@ export async function createAndDispatchUserNotification(input: NotificationPaylo
     },
   });
 
+  const pushWanted = preference.pushEnabled;
+
+  if (!preference.inAppEnabled) {
+    if (pushWanted) await tryCatch(dispatchPushToUser(input));
+    return null;
+  }
+
   if (input.dedupeKey) {
     // Scheduled jobs can safely retry because they resolve to one log row.
     const existing = await prisma.notificationLog.findUnique({
@@ -233,18 +304,7 @@ export async function createAndDispatchUserNotification(input: NotificationPaylo
     if (existing) {
       return prisma.notificationLog.findUniqueOrThrow({
         where: { id: existing.id },
-        select: {
-          id: true,
-          userId: true,
-          type: true,
-          title: true,
-          body: true,
-          payload: true,
-          pushSent: true,
-          pushStatus: true,
-          readAt: true,
-          createdAt: true,
-        },
+        select: LOG_SELECT,
       });
     }
   }
@@ -259,85 +319,34 @@ export async function createAndDispatchUserNotification(input: NotificationPaylo
       payload: jsonPayload,
       campaignId: input.campaignId,
     },
-    select: {
-      id: true,
-      userId: true,
-      type: true,
-      title: true,
-      body: true,
-      payload: true,
-      pushSent: true,
-      pushStatus: true,
-      readAt: true,
-      createdAt: true,
-    },
+    select: LOG_SELECT,
   });
 
-  if (!preference.pushEnabled || input.skipPush) {
-    // Keep in-app history when push is disabled OR explicitly silenced.
+  if (!pushWanted) {
+    // Keep in-app history when the recipient disabled push.
     return log;
   }
 
   const dispatchResult = await tryCatch(
     (async () => {
-      const [tokens, unreadCount] = await Promise.all([
-        prisma.pushToken.findMany({
-          where: { userId: input.userId, isActive: true },
-          select: { expoPushToken: true },
-        }),
-        // Includes the row just created above (readAt is null), so this
-        // gives the iOS-correct "post-delivery" badge.
-        prisma.notificationLog.count({
-          where: { userId: input.userId, readAt: null },
-        }),
-      ]);
-      const result = await sendExpoPushNotifications(
-        tokens.map((token: { expoPushToken: string }) => token.expoPushToken),
-        input.title,
-        input.body,
-        input.payload,
-        input.type,
-        unreadCount,
-      );
-
-      // Retire tokens Expo reported as dead so they stop being retried on
-      // every future notification (and stop dragging the batch into PARTIAL).
-      if (result.deadTokens.length > 0) {
-        await prisma.pushToken.updateMany({
-          where: { expoPushToken: { in: result.deadTokens } },
-          data: { isActive: false },
-        });
-      }
-
+      const result = await dispatchPushToUser(input);
       return prisma.notificationLog.update({
         where: { id: log.id },
         data: {
           pushSent: result.sent,
           pushStatus: result.status,
         },
-        select: {
-          id: true,
-          userId: true,
-          type: true,
-          title: true,
-          body: true,
-          payload: true,
-          pushSent: true,
-          pushStatus: true,
-          readAt: true,
-          createdAt: true,
-        },
+        select: LOG_SELECT,
       });
     })(),
   );
 
   if (dispatchResult.error) {
-    // Best-effort status write. This is fire-and-forget at the call site
-    // (`void notifyClient(...)`), so it must NEVER reject: if the log row was
-    // deleted mid-dispatch (a concurrent reset/cleanup — which the e2e stack
-    // does), the update throws P2025 and, unhandled, crashes the whole server
-    // process. Swallow it and fall back to the in-memory log so callers still
-    // get a value.
+    // Best-effort status write. Fire-and-forget callers mean a rejection here
+    // surfaces as an UNHANDLED rejection and crashes the server process: if the
+    // log row was deleted mid-dispatch (a concurrent reset/cleanup — which the
+    // e2e stack does), the update throws P2025. Swallow it and fall back to the
+    // in-memory log so callers still get a value.
     const recorded = await tryCatch(
       prisma.notificationLog.update({
         where: { id: log.id },
@@ -345,18 +354,7 @@ export async function createAndDispatchUserNotification(input: NotificationPaylo
           pushSent: false,
           pushStatus: "DISPATCH_ERROR",
         },
-        select: {
-          id: true,
-          userId: true,
-          type: true,
-          title: true,
-          body: true,
-          payload: true,
-          pushSent: true,
-          pushStatus: true,
-          readAt: true,
-          createdAt: true,
-        },
+        select: LOG_SELECT,
       }),
     );
     return recorded.data ?? log;
