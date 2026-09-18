@@ -14,6 +14,7 @@
 import { test, expect } from "./helpers/fixtures";
 import { signInAs } from "./helpers/auth";
 import { waitForStableBoundingBox } from "./helpers/interactions";
+import { scrollListToBottom } from "./helpers/scroll";
 import {
   disconnect,
   resetAndSeed,
@@ -57,19 +58,7 @@ test.describe.serial("naplata sticky header (admin)", () => {
 
     // Scroll to load more pages — the count must not change (it was already
     // the full total, not a running tally).
-    await page.evaluate(() => {
-      const row = document.querySelector('[data-testid^="billing-row-"]');
-      if (!row) return;
-      let node: HTMLElement | null = row as HTMLElement;
-      while (node && node !== document.body) {
-        const cs = getComputedStyle(node);
-        if (/(auto|scroll)/.test(cs.overflowY) && node.scrollHeight > node.clientHeight) {
-          node.scrollTop = node.scrollHeight;
-          return;
-        }
-        node = node.parentElement;
-      }
-    });
+    await scrollListToBottom(page, '[data-testid^="billing-row-"]');
     await expect.poll(() => rows.count()).toBeGreaterThan(firstPageCount);
     expect(await parseCount()).toBe(totalBeforeScroll);
   });
@@ -91,24 +80,9 @@ test.describe.serial("naplata sticky header (admin)", () => {
     // scroll even though nothing moved. Same guard as the trainer spec.
     const beforeBox = await waitForStableBoundingBox(search);
 
-    // Scroll the inner list to the bottom — walk up from a row to find the
-    // scrollable ancestor. Same pattern as clients-pagination.spec.ts.
-    await page.evaluate(() => {
-      const row = document.querySelector('[data-testid^="billing-row-"]');
-      if (!row) return;
-      let node: HTMLElement | null = row as HTMLElement;
-      while (node && node !== document.body) {
-        const cs = getComputedStyle(node);
-        if (
-          /(auto|scroll)/.test(cs.overflowY) &&
-          node.scrollHeight > node.clientHeight
-        ) {
-          node.scrollTop = node.scrollHeight;
-          return;
-        }
-        node = node.parentElement;
-      }
-    });
+    // Scroll the inner list to the bottom — see helpers/scroll.ts for why it
+    // steps through the middle instead of jumping.
+    await scrollListToBottom(page, '[data-testid^="billing-row-"]');
 
     // Wait for the post-scroll reflow to settle (state, not a fixed sleep).
     const afterBox = await waitForStableBoundingBox(search);

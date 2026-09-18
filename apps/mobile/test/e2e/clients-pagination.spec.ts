@@ -13,6 +13,7 @@
 import { test, expect } from "./helpers/fixtures";
 import { signInAs } from "./helpers/auth";
 import { waitForStableBoundingBox } from "./helpers/interactions";
+import { scrollListToBottom } from "./helpers/scroll";
 import {
   disconnect,
   resetAndSeed,
@@ -45,41 +46,16 @@ test.describe.serial("klijenti pagination (admin)", () => {
     expect(firstPageCount).toBeLessThanOrEqual(20);
     expect(firstPageCount).toBeGreaterThan(0);
 
-    // Scroll the inner ScrollView (not the window) until fetchNextPage
-    // fires. React Native Web's ScrollView is a div with overflow:auto;
-    // walk up from a row to find its scrollable ancestor and drive that.
-    await page.evaluate(() => {
-      const row = document.querySelector('[data-testid^="client-row-"]');
-      if (!row) return;
-      let node: HTMLElement | null = row as HTMLElement;
-      while (node && node !== document.body) {
-        const cs = getComputedStyle(node);
-        if (/(auto|scroll)/.test(cs.overflowY) && node.scrollHeight > node.clientHeight) {
-          node.scrollTop = node.scrollHeight;
-          return;
-        }
-        node = node.parentElement;
-      }
-    });
+    // Drive the inner ScrollView (not the window) until fetchNextPage fires —
+    // see helpers/scroll.ts for why it steps through the middle.
+    await scrollListToBottom(page, '[data-testid^="client-row-"]');
     // Give the next page a beat to arrive. Re-scroll while polling — RN-Web
     // throttles onScroll, so one event may not be enough to cross the
     // 200px threshold guard in the component.
     await expect
       .poll(
         async () => {
-          await page.evaluate(() => {
-            const row = document.querySelector('[data-testid^="client-row-"]');
-            if (!row) return;
-            let node: HTMLElement | null = row as HTMLElement;
-            while (node && node !== document.body) {
-              const cs = getComputedStyle(node);
-              if (/(auto|scroll)/.test(cs.overflowY) && node.scrollHeight > node.clientHeight) {
-                node.scrollTop = node.scrollHeight;
-                return;
-              }
-              node = node.parentElement;
-            }
-          });
+          await scrollListToBottom(page, '[data-testid^="client-row-"]');
           return await rows.count();
         },
         { timeout: 15_000, intervals: [500, 1000] },
@@ -126,19 +102,7 @@ test.describe.serial("klijenti pagination (admin)", () => {
 
     // Scroll to load more pages — the count must NOT change (it was already
     // the true total, not a running tally of loaded rows).
-    await page.evaluate(() => {
-      const row = document.querySelector('[data-testid^="client-row-"]');
-      if (!row) return;
-      let node: HTMLElement | null = row as HTMLElement;
-      while (node && node !== document.body) {
-        const cs = getComputedStyle(node);
-        if (/(auto|scroll)/.test(cs.overflowY) && node.scrollHeight > node.clientHeight) {
-          node.scrollTop = node.scrollHeight;
-          return;
-        }
-        node = node.parentElement;
-      }
-    });
+    await scrollListToBottom(page, '[data-testid^="client-row-"]');
     await expect.poll(() => rows.count()).toBeGreaterThan(firstPageCount);
     // Same total after more rows loaded.
     expect(await parseCount()).toBe(totalBeforeScroll);
@@ -161,24 +125,9 @@ test.describe.serial("klijenti pagination (admin)", () => {
     // scroll even though nothing moved. Same guard as the trainer spec.
     const beforeBox = await waitForStableBoundingBox(search);
 
-    // Scroll the inner list to the bottom — same pattern as the pagination
+    // Scroll the inner list to the bottom — same helper as the pagination
     // test above. The sticky header MUST stay at the same Y coordinate.
-    await page.evaluate(() => {
-      const row = document.querySelector('[data-testid^="client-row-"]');
-      if (!row) return;
-      let node: HTMLElement | null = row as HTMLElement;
-      while (node && node !== document.body) {
-        const cs = getComputedStyle(node);
-        if (
-          /(auto|scroll)/.test(cs.overflowY) &&
-          node.scrollHeight > node.clientHeight
-        ) {
-          node.scrollTop = node.scrollHeight;
-          return;
-        }
-        node = node.parentElement;
-      }
-    });
+    await scrollListToBottom(page, '[data-testid^="client-row-"]');
 
     // Wait for the post-scroll reflow to settle (state, not a fixed sleep).
     const afterBox = await waitForStableBoundingBox(search);

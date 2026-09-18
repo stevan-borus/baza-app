@@ -10,6 +10,7 @@
  */
 import { test, expect } from "./helpers/fixtures";
 import { signInAs } from "./helpers/auth";
+import { scrollListToBottom } from "./helpers/scroll";
 import {
   disconnect,
   resetAndSeed,
@@ -55,24 +56,10 @@ test.describe.serial("active-assignments pagination (admin)", () => {
     await expect
       .poll(
         async () => {
-          await page.evaluate(() => {
-            const row = document.querySelector(
-              '[data-testid^="active-assignment-row-"]',
-            );
-            if (!row) return;
-            let node: HTMLElement | null = row as HTMLElement;
-            while (node && node !== document.body) {
-              const cs = getComputedStyle(node);
-              if (
-                /(auto|scroll)/.test(cs.overflowY) &&
-                node.scrollHeight > node.clientHeight
-              ) {
-                node.scrollTop = node.scrollHeight;
-                return;
-              }
-              node = node.parentElement;
-            }
-          });
+          await scrollListToBottom(
+            page,
+            '[data-testid^="active-assignment-row-"]',
+          );
           return await rows.count();
         },
         { timeout: 15_000, intervals: [500, 1000] },
