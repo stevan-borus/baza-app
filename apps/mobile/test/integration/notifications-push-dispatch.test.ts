@@ -207,6 +207,32 @@ describe("notifications dispatch — real module + stubbed Expo HTTP", () => {
     expect(captured[0].body[0].badge).toBe(1);
   });
 
+  it("badge ignores notifications the user swiped away", async () => {
+    const user = await makeUser("badge-dismissed@test.local");
+    await registerToken(user.id);
+
+    // Unread but dismissed: it is gone from the inbox, so counting it would
+    // leave an app-icon badge the user cannot clear by opening the app.
+    await prisma.notificationLog.create({
+      data: {
+        userId: user.id,
+        type: "GENERAL",
+        title: "swiped away",
+        body: "",
+        dismissedAt: new Date(),
+      },
+    });
+
+    await createAndDispatchUserNotification({
+      userId: user.id,
+      type: "GENERAL",
+      title: "new",
+      body: "",
+    });
+
+    expect(captured[0].body[0].badge).toBe(1);
+  });
+
   it("includes only active push tokens — deactivated devices are skipped", async () => {
     const user = await makeUser("active-only@test.local");
     await registerToken(user.id, { deviceId: "active-1", isActive: true });

@@ -288,7 +288,7 @@ export async function createAndDispatchUserNotification(input: NotificationPaylo
         // Includes the row just created above (readAt is null), so this
         // gives the iOS-correct "post-delivery" badge.
         prisma.notificationLog.count({
-          where: { userId: input.userId, readAt: null },
+          where: { userId: input.userId, readAt: null, dismissedAt: null },
         }),
       ]);
       const result = await sendExpoPushNotifications(

@@ -1,5 +1,6 @@
 import { queryOptions, mutationOptions, infiniteQueryOptions, useMutation, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import {
+  dismissNotificationResponseSchema,
   notificationPreferencesResponseSchema,
   notificationsResponseSchema,
   type NotificationPreferencesResponse,
@@ -45,6 +46,17 @@ export const notificationsQueries = {
         apiRequest(`/api/notifications/${id}`, {
           method: "PATCH",
           errorMessage: "Unable to mark notification as read",
+        }),
+    }),
+
+  dismiss: () =>
+    mutationOptions({
+      mutationKey: [...notificationsAll, "dismiss"] as const,
+      mutationFn: (id: string) =>
+        apiRequest(`/api/notifications/${id}`, {
+          method: "DELETE",
+          schema: dismissNotificationResponseSchema,
+          errorMessage: "Unable to delete notification",
         }),
     }),
 
@@ -167,4 +179,72 @@ export function updatePreferencesMutationOptions(queryClient: QueryClient) {
 export function useUpdatePreferencesMutation() {
   const queryClient = useQueryClient();
   return useMutation(updatePreferencesMutationOptions(queryClient));
+}
+
+type InfinitePages = {
+  pages: NotificationsResponse[];
+  pageParams: unknown[];
+};
+
+/**
+ * Optimistic dismiss: drop the row from every cached notifications list the
+ * moment the swipe lands, restore the pre-mutation snapshots if the DELETE
+ * fails. Both list shapes live under `notificationsQueries.all` — the infinite
+ * inbox and the plain `list(cursor)` queries the bell reads.
+ */
+export function dismissNotificationMutationOptions(queryClient: QueryClient) {
+  const infiniteKey = notificationsQueries.listInfinite().queryKey;
+  const listFilter = { queryKey: [...notificationsAll, "list"] as const };
+
+  return {
+    ...notificationsQueries.dismiss(),
+    onMutate: async (id: string) => {
+      await queryClient.cancelQueries({ queryKey: notificationsAll });
+
+      const previousInfinite = queryClient.getQueryData<InfinitePages>(infiniteKey);
+      if (previousInfinite) {
+        queryClient.setQueryData<InfinitePages>(infiniteKey, {
+          ...previousInfinite,
+          pages: previousInfinite.pages.map((page) => ({
+            ...page,
+            notifications: page.notifications.filter((n) => n.id !== id),
+          })),
+        });
+      }
+
+      const previousLists = queryClient.getQueriesData<NotificationsResponse>(listFilter);
+      for (const [key, data] of previousLists) {
+        if (!data?.notifications) continue;
+        queryClient.setQueryData<NotificationsResponse>(key, {
+          ...data,
+          notifications: data.notifications.filter((n) => n.id !== id),
+        });
+      }
+
+      return { previousInfinite, previousLists };
+    },
+    onError: (
+      _err: unknown,
+      _id: string,
+      context?: {
+        previousInfinite?: InfinitePages;
+        previousLists?: Array<[readonly unknown[], NotificationsResponse | undefined]>;
+      },
+    ) => {
+      if (context?.previousInfinite) {
+        queryClient.setQueryData(infiniteKey, context.previousInfinite);
+      }
+      for (const [key, data] of context?.previousLists ?? []) {
+        if (data) queryClient.setQueryData(key, data);
+      }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: notificationsAll });
+    },
+  };
+}
+
+export function useDismissNotificationMutation() {
+  const queryClient = useQueryClient();
+  return useMutation(dismissNotificationMutationOptions(queryClient));
 }

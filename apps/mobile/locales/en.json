@@ -1337,7 +1337,9 @@
       "openSettings": "Open settings",
       "dismiss": "Not now"
     },
-    "noDetails": "No further details."
+    "noDetails": "No further details.",
+    "delete": "Delete",
+    "deleteA11y": "Delete notification"
   },
   "notif": {
     "consentRefused": {

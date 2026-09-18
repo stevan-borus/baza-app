@@ -111,6 +111,12 @@ export const markNotificationReadResponseSchema = z.object({
   }),
 });
 
+// DELETE /api/notifications/[id] — soft delete (dismissedAt). Idempotent:
+// dismissing an already-dismissed row keeps the original instant.
+export const dismissNotificationResponseSchema = z.object({
+  success: z.boolean(),
+});
+
 export const notificationPreferencesSchema = z.object({
   pushEnabled: z.boolean(),
   inAppEnabled: z.boolean(),

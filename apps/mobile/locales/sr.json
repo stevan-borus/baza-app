@@ -1345,7 +1345,9 @@
       "openSettings": "Otvori podešavanja",
       "dismiss": "Ne sada"
     },
-    "noDetails": "Nema dodatnih detalja."
+    "noDetails": "Nema dodatnih detalja.",
+    "delete": "Obriši",
+    "deleteA11y": "Obriši obaveštenje"
   },
   "notif": {
     "consentRefused": {
