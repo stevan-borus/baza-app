@@ -1,5 +1,8 @@
 import { describe, expect, test } from "vitest";
-import { CRON_JOBS } from "@/lib/server/cron-jobs";
+import {
+  CRON_JOBS,
+  SCHEDULED_CONSUMPTION_LOOKBACK_HOURS,
+} from "@/lib/server/cron-jobs";
 
 describe("CRON_JOBS manifest", () => {
   test("covers every /api/cron endpoint that runs on a schedule", () => {
@@ -42,5 +45,21 @@ describe("CRON_JOBS manifest", () => {
     const [minute, hour] = birthdays!.schedule.trim().split(/\s+/);
     expect(hour).toMatch(/^\d+$/);
     expect(minute).toMatch(/^\d+$/);
+  });
+
+  test("session-consumption lookback outlasts the gap between two runs", () => {
+    // A 6h window under a daily cron only ever caught sessions ending between
+    // 01:00 and 07:00 UTC; every daytime session went unconsumed.
+    const consumption = CRON_JOBS.find((job) => job.name === "session-consumption");
+    expect(consumption).toBeDefined();
+    const [minute, hour, dayOfMonth, month, dayOfWeek] = consumption!.schedule
+      .trim()
+      .split(/\s+/);
+    // Fixed minute + fixed hour + wildcard date fields = fires once every 24h.
+    expect(minute).toMatch(/^\d+$/);
+    expect(hour).toMatch(/^\d+$/);
+    expect([dayOfMonth, month, dayOfWeek]).toEqual(["*", "*", "*"]);
+    const gapHours = 24;
+    expect(SCHEDULED_CONSUMPTION_LOOKBACK_HOURS).toBeGreaterThanOrEqual(gapHours + 24);
   });
 });
