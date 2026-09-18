@@ -1,10 +1,8 @@
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { useFocusEffect } from "expo-router";
 import { useMutation, useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { ActivityIndicator, Pressable, Text, View, type TextLayoutEventData, type NativeSyntheticEvent } from "react-native";
-import { MotiView } from "@/components/ui/styled";
-import { LegendList } from "@legendapp/list/react-native";
+import { ActivityIndicator, FlatList, Pressable, Text, View, type TextLayoutEventData, type NativeSyntheticEvent } from "react-native";
 import { BottomSheetScrollView } from "@gorhom/bottom-sheet";
 import { GlassCard } from "@/components/ui/glass-card";
 import { Icon } from "@/components/ui/icon";
@@ -42,20 +40,6 @@ type ListItem =
   | { kind: "row"; notification: Notification };
 
 /**
- * LegendList item type for a row. The list is heterogeneous — ~30pt group
- * headers interleaved with ~90pt+ GlassCards whose height varies with body
- * length and avatar presence. LegendList keys both its recycling pool and
- * its running average-size map by this value, so returning a distinct type
- * per kind lets it estimate each independently. With one flat
- * `estimatedItemSize` across both kinds it sizes every container by a single
- * blended average, which mis-positions cells during scroll and paints them
- * blank until the list is rebuilt (the reported "blank cards until I reload").
- */
-export function notificationItemType(item: ListItem): "header" | "row" {
-  return item.kind;
-}
-
-/**
  * Returns the body to display, or null when there is nothing worth rendering.
  *
  * Bodies reach a row from two places and either can be empty:
@@ -78,27 +62,14 @@ export function resolveDisplayBody(
 }
 
 /**
- * Group headers are a fixed-height label row (`px-6 pt-4 pb-1` around an
- * 11pt caps label), so their size is known exactly rather than estimated.
- */
-const HEADER_ITEM_SIZE = 34;
-
-/**
- * First-render estimate for a notification card. LegendList replaces this
- * with the measured per-type average once rows have laid out; it only needs
- * to be close enough for the initial frame.
- */
-const ROW_ITEM_SIZE = 96;
-
-/**
  * Below this length a 13px body cannot reach a third line at any supported
  * width, so the hidden truncation-measuring Text is skipped entirely.
  */
 const BODY_TRUNCATION_PROBE_MIN_CHARS = 60;
 
 // Stable viewabilityConfig reference — recreating this object on each render
-// would cause LegendList (like RN FlatList) to throw "Changing onViewableItemsChanged
-// on the fly is not supported" warnings and may drop events.
+// makes FlatList throw "Changing onViewableItemsChanged on the fly is not
+// supported" and can drop events.
 const VIEWABILITY_CONFIG = {
   itemVisiblePercentThreshold: 50,
   minimumViewTime: 300,
@@ -256,10 +227,8 @@ export function NotificationsInbox({ context, bottomPad = 0 }: Props) {
   } | null>(null);
 
   const notificationsQuery = useInfiniteQuery(notificationsQueries.listInfinite());
-  const allNotifications = useMemo(
-    () => notificationsQuery.data?.pages.flatMap((p) => p.notifications) ?? [],
-    [notificationsQuery.data?.pages],
-  );
+  const allNotifications =
+    notificationsQuery.data?.pages.flatMap((p) => p.notifications) ?? [];
 
   const markManyReadMutation = useMutation({
     ...notificationsQueries.markManyRead(),
@@ -270,25 +239,36 @@ export function NotificationsInbox({ context, bottomPad = 0 }: Props) {
   // batching them into a single request every ~500ms avoids hammering the API.
   const pendingIdsRef = useRef<Set<string>>(new Set());
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const flushMarkRead = useCallback(() => {
+  function flushMarkRead() {
     const ids = Array.from(pendingIdsRef.current);
     pendingIdsRef.current.clear();
     debounceRef.current = null;
     if (ids.length > 0) markManyReadMutation.mutate(ids);
-  }, [markManyReadMutation]);
+  }
 
-  const onViewableItemsChanged = useCallback(
-    ({ viewableItems }: { viewableItems: Array<{ item: ListItem }> }) => {
-      for (const v of viewableItems) {
-        if (v.item.kind === "row" && !v.item.notification.readAt) {
-          pendingIdsRef.current.add(v.item.notification.id);
-        }
+  function handleViewableItemsChanged({
+    viewableItems,
+  }: {
+    viewableItems: Array<{ item: ListItem }>;
+  }) {
+    for (const v of viewableItems) {
+      if (v.item.kind === "row" && !v.item.notification.readAt) {
+        pendingIdsRef.current.add(v.item.notification.id);
       }
-      if (pendingIdsRef.current.size === 0) return;
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-      debounceRef.current = setTimeout(flushMarkRead, 500);
-    },
-    [flushMarkRead],
+    }
+    if (pendingIdsRef.current.size === 0) return;
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(flushMarkRead, 500);
+  }
+
+  // FlatList throws "Changing onViewableItemsChanged on the fly is not
+  // supported" if the prop identity moves between renders, so the list gets a
+  // fixed wrapper that forwards to the current render's handler.
+  const viewableItemsHandlerRef = useRef(handleViewableItemsChanged);
+  viewableItemsHandlerRef.current = handleViewableItemsChanged;
+  const onViewableItemsChangedRef = useRef(
+    (info: { viewableItems: Array<{ item: ListItem }> }) =>
+      viewableItemsHandlerRef.current(info),
   );
 
   // When the inbox screen comes into focus, mark every currently-loaded
@@ -301,8 +281,19 @@ export function NotificationsInbox({ context, bottomPad = 0 }: Props) {
   // re-subscribe on every notifications refetch.
   const allNotificationsRef = useRef(allNotifications);
   allNotificationsRef.current = allNotifications;
+  // Same for the mutation: `useMutation` returns a fresh object every render,
+  // so keeping it in the dependency list would re-run the focus effect on
+  // every render — and now that the effect invalidates, that is an endless
+  // invalidate → refetch → render loop.
+  const markManyReadRef = useRef(markManyReadMutation);
+  markManyReadRef.current = markManyReadMutation;
   useFocusEffect(
     useCallback(() => {
+      // Tab screens stay mounted, so coming back to this tab neither remounts
+      // the list nor refetches it — the newest notification stayed missing
+      // until the app was killed. Invalidating the whole `notifications` key
+      // refreshes the list and the unread badge together.
+      queryClient.invalidateQueries({ queryKey: notificationsQueries.all });
       // Opening the inbox is the user acknowledging the badge — clear the
       // OS-level app icon badge immediately, even if their unread rows
       // haven't yet been written to the server.
@@ -311,10 +302,10 @@ export function NotificationsInbox({ context, bottomPad = 0 }: Props) {
         const unreadIds = allNotificationsRef.current
           .filter((n) => !n.readAt)
           .map((n) => n.id);
-        if (unreadIds.length > 0) markManyReadMutation.mutate(unreadIds);
+        if (unreadIds.length > 0) markManyReadRef.current.mutate(unreadIds);
       }, 600);
       return () => clearTimeout(timeout);
-    }, [markManyReadMutation]),
+    }, [queryClient]),
   );
 
   function handleEndReached() {
@@ -344,12 +335,12 @@ export function NotificationsInbox({ context, bottomPad = 0 }: Props) {
 
   return (
     <View style={{ flex: 1 }}>
-      <MotiView
-        from={{ opacity: 0, translateY: -8 }}
-        animate={{ opacity: 1, translateY: 0 }}
-        transition={{ type: "timing", duration: 350, delay: 100 }}
-        style={{ flex: 1 }}
-      >
+      {/*
+        No entrance animation around the list: an opacity-0 → 1 fade over the
+        whole inbox is one more way for the screen to stay blank if the
+        animation never settles, and the reported failure mode is an empty page.
+      */}
+      <View style={{ flex: 1 }}>
         {/*
           Sits above the list rather than inside it: someone looking at an
           empty inbox because push was declined needs to see the fix first.
@@ -359,13 +350,19 @@ export function NotificationsInbox({ context, bottomPad = 0 }: Props) {
         {notificationsQuery.isLoading ? (
           <View className="px-6 pt-4"><SkeletonList count={3} /></View>
         ) : notificationsQuery.isError ? (
-          <View className="px-6 pt-4"><ErrorState message={t(errorKey)} /></View>
+          <View className="px-6 pt-4">
+            <ErrorState
+              message={t(errorKey)}
+              retryLabel={t("common.retry")}
+              onRetry={() => notificationsQuery.refetch()}
+            />
+          </View>
         ) : listData.length === 0 ? (
           <View className="px-6 pt-8"><EmptyState title={t(emptyKey)} /></View>
         ) : null}
 
         {!notificationsQuery.isLoading && (
-          <LegendList
+          <FlatList
             data={listData}
             keyExtractor={(item) => (item.kind === "header" ? `header-${item.groupKey}` : item.notification.id)}
             contentContainerStyle={{ paddingTop: 12, paddingBottom: bottomPad }}
@@ -514,33 +511,14 @@ export function NotificationsInbox({ context, bottomPad = 0 }: Props) {
             }}
             onEndReached={handleEndReached}
             onEndReachedThreshold={0.5}
-            onViewableItemsChanged={onViewableItemsChanged}
+            onViewableItemsChanged={onViewableItemsChangedRef.current}
             viewabilityConfig={VIEWABILITY_CONFIG}
             ListFooterComponent={
               notificationsQuery.isFetchingNextPage ? <ActivityIndicator style={{ padding: 16 }} /> : null
             }
-            /*
-              Heterogeneous list: ~30pt group headers interleaved with ~90pt+
-              notification cards. `getItemType` gives LegendList a separate
-              recycling pool AND a separate running average-size per kind, so
-              a header container is never sized by a card's average (and vice
-              versa) — the mis-sizing that left recycled cells blank mid-scroll.
-            */
-            getItemType={notificationItemType}
-            /*
-              Explicitly false: rows own per-item refs (the truncation probe
-              writes into `truncatedIdsRef` keyed by notification id), so
-              remount-on-reuse is the semantics we want. Left implicit,
-              LegendList warns and the intent reads as an oversight.
-            */
-            recycleItems={false}
-            getFixedItemSize={(item) =>
-              item.kind === "header" ? HEADER_ITEM_SIZE : undefined
-            }
-            estimatedItemSize={ROW_ITEM_SIZE}
           />
         )}
-      </MotiView>
+      </View>
 
       {/*
         Full-text detail sheet for clamped, destination-less notifications.
