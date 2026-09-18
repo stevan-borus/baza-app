@@ -28,7 +28,7 @@ export async function GET(request: Request) {
 
   // Cursor-based pagination; users see only their own notifications.
   const notifications = await prisma.notificationLog.findMany({
-    where: { userId: guard.user.id },
+    where: { userId: guard.user.id, dismissedAt: null },
     orderBy: { createdAt: "desc" },
     ...(parsedQuery.data.cursor
       ? { cursor: { id: parsedQuery.data.cursor }, skip: 1 }
@@ -112,6 +112,7 @@ export async function PATCH(request: Request) {
       id: { in: parsed.data.ids },
       userId: guard.user.id,
       readAt: null,
+      dismissedAt: null,
     },
     data: { readAt: now() },
   });

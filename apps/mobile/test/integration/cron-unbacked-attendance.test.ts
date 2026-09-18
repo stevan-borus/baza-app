@@ -10,7 +10,7 @@ type NotifyArgs = [
   messageKey: string,
   type: string,
   payload: Record<string, unknown>,
-  options?: { dedupeKey?: string; skipPush?: boolean },
+  options?: { dedupeKey?: string },
 ];
 const createSystemNotificationMock = vi.fn(async (..._args: NotifyArgs) => {
   return undefined as unknown;

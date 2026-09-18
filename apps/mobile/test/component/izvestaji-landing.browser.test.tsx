@@ -51,6 +51,9 @@ function renderScreen() {
         totalSessions: 42,
         revenue: 125000,
         totalPayments: 30,
+        clientsWithActivePackage: 14,
+        newClients: 4,
+        attendanceRate: 91,
       },
     });
     client.setQueryData(

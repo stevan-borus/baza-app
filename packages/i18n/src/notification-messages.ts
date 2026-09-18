@@ -30,6 +30,7 @@ export type NotificationMessageKey =
   | "MINOR_PAPER_NEEDED"
   | "BIRTHDAY_ADMIN_PROMPT"
   | "BIRTHDAY_CLIENT_GIFT"
+  | "GIFT_PACKAGE"
   | "RESERVATION_UNBACKED_ATTENDANCE"
   | "BULK_RESERVATION_CANCEL_ADMIN"
   | "BULK_RESERVATION_CANCEL_TRAINER"
@@ -55,6 +56,7 @@ export const NOTIFICATION_MESSAGE_KEYS = {
   MINOR_PAPER_NEEDED: "MINOR_PAPER_NEEDED",
   BIRTHDAY_ADMIN_PROMPT: "BIRTHDAY_ADMIN_PROMPT",
   BIRTHDAY_CLIENT_GIFT: "BIRTHDAY_CLIENT_GIFT",
+  GIFT_PACKAGE: "GIFT_PACKAGE",
   RESERVATION_UNBACKED_ATTENDANCE: "RESERVATION_UNBACKED_ATTENDANCE",
   BULK_RESERVATION_CANCEL_ADMIN: "BULK_RESERVATION_CANCEL_ADMIN",
   BULK_RESERVATION_CANCEL_TRAINER: "BULK_RESERVATION_CANCEL_TRAINER",
@@ -214,6 +216,20 @@ const messages: Record<
       body: "We're gifting you a free \"{{packageTypeName}}\" session.",
     },
   },
+  // Default gift copy. Birthday wording is reserved for an assignment that
+  // actually came from the birthday prompt — a graduation or apology gift
+  // used to wish the client a happy birthday. Serbian needs three plural
+  // forms, so the count word arrives as {{sessionsLabel}}.
+  GIFT_PACKAGE: {
+    sr: {
+      title: "🎁 Poklon za tebe",
+      body: "Poklanjamo ti {{sessionsGranted}} {{sessionsLabel}} iz paketa \"{{packageTypeName}}\".",
+    },
+    en: {
+      title: "🎁 A gift for you",
+      body: "We're gifting you {{sessionsGranted}} {{sessionsLabel}} from the \"{{packageTypeName}}\" package.",
+    },
+  },
   RESERVATION_UNBACKED_ATTENDANCE: {
     sr: {
       title: "Klijent bez paketa",
@@ -291,6 +307,25 @@ export const NOTIFICATION_MESSAGE_I18N_KEYS: Record<
   Object.keys(messages).map((key) => [key, `notification.${key.toLowerCase()}`]),
 ) as Record<NotificationMessageKey, string>;
 
+/**
+ * Serbian plural form for "termin": 1 → termin, 2–4 → termina, 5+ → termina.
+ * The teens (11–14) take the 5+ form even though they end in 1–4, which is
+ * why the check is on the last two digits before the last one.
+ */
+export function serbianSessionsLabel(count: number): string {
+  const n = Math.abs(Math.trunc(count));
+  const last = n % 10;
+  const lastTwo = n % 100;
+  if (lastTwo >= 11 && lastTwo <= 14) return "termina";
+  if (last === 1) return "termin";
+  return "termina";
+}
+
+/** English is the simple two-form case. */
+function englishSessionsLabel(count: number): string {
+  return Math.abs(count) === 1 ? "session" : "sessions";
+}
+
 function interpolate(template: string, vars?: Record<string, string | number | undefined>): string {
   if (!vars) return template;
   return template.replace(/\{\{(\w+)\}\}/g, (match, name) => {
@@ -305,9 +340,20 @@ export function getNotificationMessage(
   vars?: Record<string, string | number | undefined>,
 ): { title: string; body: string } {
   const template = messages[key]?.[locale] ?? messages[key]?.sr ?? { title: "", body: "" };
+  // Derive the plural count word so callers pass only the number; Serbian has
+  // three forms and getting it wrong is what a bare "{{count}} termina" does.
+  const count = Number(vars?.sessionsGranted);
+  const resolved: Record<string, string | number | undefined> | undefined =
+    Number.isFinite(count)
+      ? {
+          ...vars,
+          sessionsLabel:
+            locale === "en" ? englishSessionsLabel(count) : serbianSessionsLabel(count),
+        }
+      : vars;
   return {
-    title: interpolate(template.title, vars),
-    body: interpolate(template.body, vars),
+    title: interpolate(template.title, resolved),
+    body: interpolate(template.body, resolved),
   };
 }
 

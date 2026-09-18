@@ -22,6 +22,7 @@ import { loadStoredLocale } from "@/lib/i18n";
 import { initSentry } from "@/lib/sentry";
 import { usePushRegistration } from "@/lib/push-registration";
 import { usePushTapListener } from "@/lib/push-tap-listener";
+import { usePushReceivedListener } from "@/lib/push-received-listener";
 import { Providers } from "@/lib/providers";
 import { useSessionAuth } from "@/lib/session-auth";
 import { useColorScheme } from "@/components/useColorScheme";
@@ -143,6 +144,7 @@ function AppNavigator({ isDark }: { isDark: boolean }) {
   // which left the new account with no push token row at all.
   usePushRegistration({ isAuthenticated, userId: session.data?.user?.id ?? null });
   usePushTapListener({ isAuthenticated });
+  usePushReceivedListener({ isAuthenticated });
 
   if (session.isPending) {
     return (

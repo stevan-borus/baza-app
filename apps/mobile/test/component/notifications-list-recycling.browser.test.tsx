@@ -1,27 +1,22 @@
 /**
- * Heterogeneous-list sizing tests for the notifications inbox.
+ * Mixed header/row rendering for the notifications inbox.
  *
- * The inbox feeds LegendList a mixed list: short `{kind:"header"}` group
- * labels (~30pt) interleaved with tall `{kind:"row"}` GlassCards (~90pt+).
- * A single flat `estimatedItemSize` makes the virtualizer size every
- * container by one average, which is the classic cause of cells painting
- * blank while recycling during scroll — exactly the "blank cards until I
- * reload" the studio reported.
+ * The inbox feeds its list a heterogeneous array: short `{kind:"header"}`
+ * group labels interleaved with taller `{kind:"row"}` GlassCards. It used to
+ * run on LegendList, whose per-type size estimates had to be configured by
+ * hand or cells painted blank mid-scroll — the "blank cards until I reload"
+ * the studio reported. The inbox now uses RN's FlatList, which measures cells
+ * rather than estimating them, so the sizing configuration is gone.
  *
- * LegendList v3.1.1 solves this with `getItemType`: it keys its running
- * average-size map (and its view pool) per item type, so headers and rows
- * are estimated independently. These tests pin that the inbox declares a
- * type per item and that a mixed list renders every item.
+ * What still has to hold, and what these tests pin: every header and every
+ * row of a mixed-height list paints, and the keys stay stable per item.
  */
 import { describe, it, expect } from "vitest";
 import React from "react";
 import "@/lib/i18n";
 import { notificationsQueries } from "@/lib/queries/notifications-queries-factory";
 import type { Notification } from "@/lib/queries/notifications-queries-factory";
-import {
-  NotificationsInbox,
-  notificationItemType,
-} from "@/components/notifications/notifications-inbox";
+import { NotificationsInbox } from "@/components/notifications/notifications-inbox";
 import { renderWithQueryClient } from "./helpers";
 
 function makeNotification(overrides: Partial<Notification> = {}): Notification {
@@ -48,40 +43,6 @@ function renderInbox(notifications: Notification[]) {
     },
   );
 }
-
-describe("notificationItemType — LegendList item-type key", () => {
-  it("gives group headers and notification rows DIFFERENT types", () => {
-    // Distinct types are the whole point: LegendList keeps one average size
-    // (and one recycling pool) per type. Same type = one blended average =
-    // mis-sized containers = blank cells.
-    const header = notificationItemType({
-      kind: "header",
-      groupKey: "today",
-      labelKey: "notifications.groupToday",
-    });
-    const row = notificationItemType({
-      kind: "row",
-      notification: makeNotification(),
-    });
-
-    expect(header).not.toBe(row);
-  });
-
-  it("returns a stable type for the same kind of item", () => {
-    // An unstable type would defeat pooling entirely.
-    const a = notificationItemType({
-      kind: "row",
-      notification: makeNotification({ id: "a", body: "short" }),
-    });
-    const b = notificationItemType({
-      kind: "row",
-      notification: makeNotification({ id: "b", body: "a much longer body" }),
-    });
-
-    expect(a).toBe(b);
-    expect(typeof a).toBe("string");
-  });
-});
 
 describe("NotificationsInbox — mixed header/row list", () => {
   it("renders every header and every row of a multi-group list", async () => {
@@ -124,5 +85,24 @@ describe("NotificationsInbox — mixed header/row list", () => {
     for (const title of ["Kratak", "Dugačak", "Opet kratak", "Bez teksta"]) {
       expect(screen.getByText(title)).toBeTruthy();
     }
+  });
+});
+
+describe("NotificationsInbox — list keys", () => {
+  it("keys every header and row distinctly, so no cell is reused for another", async () => {
+    const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const screen = renderInbox([
+      makeNotification({ id: "k1", title: "Prva" }),
+      makeNotification({ id: "k2", title: "Druga" }),
+      makeNotification({ id: "k3", title: "Treća", createdAt: yesterday.toISOString() }),
+    ]);
+
+    await screen.findByText("Danas");
+    const rowIds = ["k1", "k2", "k3"].map(
+      (id) => screen.getByTestId(`notification-row-${id}-unread`),
+    );
+    expect(new Set(rowIds).size).toBe(3);
+    // Both group headers survive alongside the rows.
+    expect(screen.getByText("Juče")).toBeTruthy();
   });
 });
