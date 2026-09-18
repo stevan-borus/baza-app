@@ -15,6 +15,8 @@ export function resolveLocale(
 export type NotificationMessageKey =
   | "BOOKING_CONFIRMED"
   | "SESSION_UPDATED"
+  | "SESSION_DETAILS_UPDATED"
+  | "SESSION_RESCHEDULED"
   | "TRAINER_NOTE"
   | "GENERAL"
   | "SPOT_OPENED_FROM_WAITLIST"
@@ -28,6 +30,7 @@ export type NotificationMessageKey =
   | "MINOR_PAPER_NEEDED"
   | "BIRTHDAY_ADMIN_PROMPT"
   | "BIRTHDAY_CLIENT_GIFT"
+  | "GIFT_PACKAGE"
   | "RESERVATION_UNBACKED_ATTENDANCE"
   | "BULK_RESERVATION_CANCEL_ADMIN"
   | "BULK_RESERVATION_CANCEL_TRAINER"
@@ -38,6 +41,8 @@ export type NotificationMessageKey =
 export const NOTIFICATION_MESSAGE_KEYS = {
   BOOKING_CONFIRMED: "BOOKING_CONFIRMED",
   SESSION_UPDATED: "SESSION_UPDATED",
+  SESSION_DETAILS_UPDATED: "SESSION_DETAILS_UPDATED",
+  SESSION_RESCHEDULED: "SESSION_RESCHEDULED",
   TRAINER_NOTE: "TRAINER_NOTE",
   GENERAL: "GENERAL",
   SPOT_OPENED_FROM_WAITLIST: "SPOT_OPENED_FROM_WAITLIST",
@@ -51,6 +56,7 @@ export const NOTIFICATION_MESSAGE_KEYS = {
   MINOR_PAPER_NEEDED: "MINOR_PAPER_NEEDED",
   BIRTHDAY_ADMIN_PROMPT: "BIRTHDAY_ADMIN_PROMPT",
   BIRTHDAY_CLIENT_GIFT: "BIRTHDAY_CLIENT_GIFT",
+  GIFT_PACKAGE: "GIFT_PACKAGE",
   RESERVATION_UNBACKED_ATTENDANCE: "RESERVATION_UNBACKED_ATTENDANCE",
   BULK_RESERVATION_CANCEL_ADMIN: "BULK_RESERVATION_CANCEL_ADMIN",
   BULK_RESERVATION_CANCEL_TRAINER: "BULK_RESERVATION_CANCEL_TRAINER",
@@ -67,9 +73,36 @@ const messages: Record<
     sr: { title: "Rezervacija potvrđena", body: "Vaša rezervacija je potvrđena." },
     en: { title: "Booking confirmed", body: "Your booking has been confirmed." },
   },
+  // Operator-facing (trainer roster heads-up). Placeholder-free on purpose:
+  // notifyOperators passes only sessionId/status, so any {{var}} here would
+  // reach a trainer unfilled. The client-facing variants are the two below.
   SESSION_UPDATED: {
     sr: { title: "Termin ažuriran", body: "Termin je ažuriran." },
     en: { title: "Session updated", body: "The session has been updated." },
+  },
+  // Client-facing edit where the START did NOT move. States the complete new
+  // arrangement rather than a diff, so the row is readable on its own.
+  SESSION_DETAILS_UPDATED: {
+    sr: {
+      title: "Termin je izmenjen",
+      body: "{{classTypeName}} {{sessionWhen}} — sala: {{roomName}}, trener: {{trainerFullName}}.",
+    },
+    en: {
+      title: "Your session changed",
+      body: "{{classTypeName}} {{sessionWhen}} — room: {{roomName}}, trainer: {{trainerFullName}}.",
+    },
+  },
+  // Client-facing edit where the START moved. The old time is the one detail
+  // worth naming against the new one — it is what the client had in their day.
+  SESSION_RESCHEDULED: {
+    sr: {
+      title: "Termin je pomeren",
+      body: "{{classTypeName}} je pomeren sa {{oldSessionWhen}} na {{sessionWhen}} — sala: {{roomName}}, trener: {{trainerFullName}}.",
+    },
+    en: {
+      title: "Your session moved",
+      body: "{{classTypeName}} moved from {{oldSessionWhen}} to {{sessionWhen}} — room: {{roomName}}, trainer: {{trainerFullName}}.",
+    },
   },
   TRAINER_NOTE: {
     sr: { title: "Beleška trenera", body: "{{trainerFullName}} je ostavio/la belešku." },
@@ -183,6 +216,20 @@ const messages: Record<
       body: "We're gifting you a free \"{{packageTypeName}}\" session.",
     },
   },
+  // Default gift copy. Birthday wording is reserved for an assignment that
+  // actually came from the birthday prompt — a graduation or apology gift
+  // used to wish the client a happy birthday. Serbian needs three plural
+  // forms, so the count word arrives as {{sessionsLabel}}.
+  GIFT_PACKAGE: {
+    sr: {
+      title: "🎁 Poklon za tebe",
+      body: "Poklanjamo ti {{sessionsGranted}} {{sessionsLabel}} iz paketa \"{{packageTypeName}}\".",
+    },
+    en: {
+      title: "🎁 A gift for you",
+      body: "We're gifting you {{sessionsGranted}} {{sessionsLabel}} from the \"{{packageTypeName}}\" package.",
+    },
+  },
   RESERVATION_UNBACKED_ATTENDANCE: {
     sr: {
       title: "Klijent bez paketa",
@@ -260,6 +307,25 @@ export const NOTIFICATION_MESSAGE_I18N_KEYS: Record<
   Object.keys(messages).map((key) => [key, `notification.${key.toLowerCase()}`]),
 ) as Record<NotificationMessageKey, string>;
 
+/**
+ * Serbian plural form for "termin": 1 → termin, 2–4 → termina, 5+ → termina.
+ * The teens (11–14) take the 5+ form even though they end in 1–4, which is
+ * why the check is on the last two digits before the last one.
+ */
+export function serbianSessionsLabel(count: number): string {
+  const n = Math.abs(Math.trunc(count));
+  const last = n % 10;
+  const lastTwo = n % 100;
+  if (lastTwo >= 11 && lastTwo <= 14) return "termina";
+  if (last === 1) return "termin";
+  return "termina";
+}
+
+/** English is the simple two-form case. */
+function englishSessionsLabel(count: number): string {
+  return Math.abs(count) === 1 ? "session" : "sessions";
+}
+
 function interpolate(template: string, vars?: Record<string, string | number | undefined>): string {
   if (!vars) return template;
   return template.replace(/\{\{(\w+)\}\}/g, (match, name) => {
@@ -274,9 +340,20 @@ export function getNotificationMessage(
   vars?: Record<string, string | number | undefined>,
 ): { title: string; body: string } {
   const template = messages[key]?.[locale] ?? messages[key]?.sr ?? { title: "", body: "" };
+  // Derive the plural count word so callers pass only the number; Serbian has
+  // three forms and getting it wrong is what a bare "{{count}} termina" does.
+  const count = Number(vars?.sessionsGranted);
+  const resolved: Record<string, string | number | undefined> | undefined =
+    Number.isFinite(count)
+      ? {
+          ...vars,
+          sessionsLabel:
+            locale === "en" ? englishSessionsLabel(count) : serbianSessionsLabel(count),
+        }
+      : vars;
   return {
-    title: interpolate(template.title, vars),
-    body: interpolate(template.body, vars),
+    title: interpolate(template.title, resolved),
+    body: interpolate(template.body, resolved),
   };
 }
 
@@ -295,11 +372,22 @@ export type BookingEmailKind =
 // The per-kind copy table carries subject/heading/body; the footer is locale-
 // shared and merged in by getBookingEmailContent.
 type EmailCopy = { subject: string; heading: string; body: string };
-type EmailContent = EmailCopy & { footer: string };
+type EmailContent = EmailCopy & {
+  footer: string;
+  /** Every paragraph of the email, in order — body, then any detail lines. */
+  lines: string[];
+};
 
 // The opt-out footer is the same line on every booking-change email, but it
 // MUST follow the recipient's locale — an en client was getting an sr footer
 // because the template hardcoded it.
+// Closing reassurance on the cancellation emails. Kept out of the body so a
+// bulk cancel can slot the per-session list between the count and this line.
+const CONTACT_STUDIO_LINE: Record<NotificationLocale, string> = {
+  sr: "Ako misliš da je ovo greška, javi se studiju.",
+  en: "If you think this is a mistake, please contact the studio.",
+};
+
 const BOOKING_EMAIL_FOOTER: Record<NotificationLocale, string> = {
   sr: "Ovaj email možeš isključiti u podešavanjima obaveštenja u aplikaciji.",
   en: "You can turn this email off in the app's notification settings.",
@@ -325,51 +413,67 @@ const BOOKING_EMAIL_CONTENT: Record<
     sr: {
       subject: "Tvoja rezervacija je otkazana",
       heading: "Tvoja rezervacija je otkazana",
-      body: "Tvoj termin je otkazan. Ako misliš da je ovo greška, javi se studiju.",
+      body: "Tvoj termin {{classTypeName}} ({{sessionWhen}}) je otkazan. Ako misliš da je ovo greška, javi se studiju.",
     },
     en: {
       subject: "Your booking was canceled",
       heading: "Your booking was canceled",
-      body: "Your session has been canceled. If you think this is a mistake, please contact the studio.",
+      body: "Your {{classTypeName}} session ({{sessionWhen}}) has been canceled. If you think this is a mistake, please contact the studio.",
     },
   },
   BULK_CANCEL: {
     sr: {
       subject: "Tvoje rezervacije su otkazane",
       heading: "Tvoje rezervacije su otkazane",
-      body: "Otkazano je {{count}} tvojih termina. Ako misliš da je ovo greška, javi se studiju.",
+      body: "Otkazano je {{count}} tvojih termina:",
     },
     en: {
       subject: "Your reservations were canceled",
       heading: "Your reservations were canceled",
-      body: "{{count}} of your sessions have been canceled. If you think this is a mistake, please contact the studio.",
+      body: "{{count}} of your sessions have been canceled:",
     },
   },
   SESSION_UPDATED: {
     sr: {
       subject: "Tvoj termin je izmenjen",
       heading: "Tvoj termin je izmenjen",
-      body: "Detalji tvog termina su izmenjeni (vreme, sala ili trener). Otvori aplikaciju da vidiš najnovije.",
+      body: "Tvoj termin {{classTypeName}} sada je {{sessionWhen}} — sala: {{roomName}}, trener: {{trainerFullName}}.",
     },
     en: {
       subject: "Your session was updated",
       heading: "Your session was updated",
-      body: "The details of your session changed (time, room, or trainer). Open the app to see the latest.",
+      body: "Your {{classTypeName}} session is now {{sessionWhen}} — room: {{roomName}}, trainer: {{trainerFullName}}.",
     },
   },
 };
 
-/** Resolves the localized, client-voiced email subject + heading + body. */
+/**
+ * Extra paragraphs an email kind can contribute beyond the body — e.g. the
+ * per-session list on a bulk cancellation. Passed as its own array, NOT as a
+ * `{{var}}`, so each entry stays a separate paragraph instead of collapsing
+ * into one run-on line.
+ */
+export type BookingEmailExtras = { details?: string[] };
+
+/** Resolves the localized, client-voiced email subject + heading + lines. */
 export function getBookingEmailContent(
   kind: BookingEmailKind,
   locale: NotificationLocale = "sr",
   vars?: Record<string, string | number | undefined>,
+  extras?: BookingEmailExtras,
 ): EmailContent {
   const content = BOOKING_EMAIL_CONTENT[kind][locale] ?? BOOKING_EMAIL_CONTENT[kind].sr;
+  const body = interpolate(content.body, vars);
+  const details = extras?.details ?? [];
+  const closing =
+    kind === "BULK_CANCEL"
+      ? [CONTACT_STUDIO_LINE[locale] ?? CONTACT_STUDIO_LINE.sr]
+      : [];
   return {
     subject: interpolate(content.subject, vars),
     heading: interpolate(content.heading, vars),
-    body: interpolate(content.body, vars),
+    body,
+    lines: body ? [body, ...details, ...closing] : [...details, ...closing],
     footer: BOOKING_EMAIL_FOOTER[locale] ?? BOOKING_EMAIL_FOOTER.sr,
   };
 }

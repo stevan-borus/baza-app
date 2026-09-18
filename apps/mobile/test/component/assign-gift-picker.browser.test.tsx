@@ -161,6 +161,53 @@ describe("AssignPackageSheetContent gifting", () => {
     expect(postCall()).toBeFalsy();
   });
 
+  it("shows the gift message input only while the toggle is on", () => {
+    const screen = renderSheet();
+    fireEvent.click(screen.getByTestId("assign-package-option-pt-reformer"));
+    expect(screen.queryByTestId("assign-gift-message")).toBeNull();
+
+    fireEvent.click(screen.getByTestId("assign-gift-toggle"));
+    expect(screen.queryByTestId("assign-gift-message")).toBeTruthy();
+
+    fireEvent.click(screen.getByTestId("assign-gift-toggle"));
+    expect(screen.queryByTestId("assign-gift-message")).toBeNull();
+  });
+
+  it("sends the typed message and marks a plain gift as OTHER", async () => {
+    const screen = renderSheet();
+    fireEvent.click(screen.getByTestId("assign-package-option-pt-reformer"));
+    fireEvent.click(screen.getByTestId("assign-gift-toggle"));
+    fireEvent.change(screen.getByTestId("assign-gift-message"), {
+      target: { value: "  Čestitamo na diplomi!  " },
+    });
+
+    fireEvent.click(screen.getByTestId("assign-package-submit"));
+    await waitFor(() => expect(postCall()).toBeTruthy());
+
+    const body = postCall()![1] as {
+      body: { giftMessage?: string; occasion?: string };
+    };
+    expect(body.body.giftMessage).toBe("Čestitamo na diplomi!");
+    // Not a birthday deep link, so the client must not be wished many happy
+    // returns for a graduation gift.
+    expect(body.body.occasion).toBe("OTHER");
+  });
+
+  it("omits an empty message", async () => {
+    const screen = renderSheet();
+    fireEvent.click(screen.getByTestId("assign-package-option-pt-reformer"));
+    fireEvent.click(screen.getByTestId("assign-gift-toggle"));
+    fireEvent.change(screen.getByTestId("assign-gift-message"), {
+      target: { value: "   " },
+    });
+
+    fireEvent.click(screen.getByTestId("assign-package-submit"));
+    await waitFor(() => expect(postCall()).toBeTruthy());
+
+    const body = postCall()![1] as { body: Record<string, unknown> };
+    expect(body.body.giftMessage).toBeUndefined();
+  });
+
   it("opens with the gift toggle on for a birthday deep link", async () => {
     // A BIRTHDAY_ADMIN_PROMPT tap is by definition a gift.
     const screen = renderSheet("ct-reformer");
@@ -169,7 +216,9 @@ describe("AssignPackageSheetContent gifting", () => {
     fireEvent.click(screen.getByTestId("assign-package-submit"));
     await waitFor(() => expect(postCall()).toBeTruthy());
 
-    const body = postCall()![1] as { body: { isGift: boolean } };
+    const body = postCall()![1] as { body: { isGift: boolean; occasion?: string } };
     expect(body.body.isGift).toBe(true);
+    // The prompt is the ONLY path that keeps the birthday wording.
+    expect(body.body.occasion).toBe("BIRTHDAY");
   });
 });

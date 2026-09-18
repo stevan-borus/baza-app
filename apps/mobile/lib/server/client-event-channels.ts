@@ -20,6 +20,7 @@ import type { NotificationType } from "@/generated/prisma";
 export type ClientEvent =
   | "WAITLIST_PROMOTED"
   | "SESSION_UPDATED"
+  | "SESSION_RESCHEDULED"
   | "ADMIN_CANCEL"
   | "BULK_CANCEL"
   | "PACKAGE_PURCHASED"
@@ -38,10 +39,19 @@ export const CLIENT_EVENT_CHANNELS: Record<ClientEvent, ChannelSpec> = {
     email: "WAITLIST_PROMOTED",
     inApp: { messageKey: "SPOT_OPENED_FROM_WAITLIST", type: "BOOKING_CONFIRMED" },
   },
-  // A session they hold changed (time / room / trainer / capacity).
+  // A session they hold changed, but the START did not move (room / trainer /
+  // capacity). The copy states the complete new arrangement.
   SESSION_UPDATED: {
     email: "SESSION_UPDATED",
-    inApp: { messageKey: "SESSION_UPDATED", type: "SESSION_UPDATED" },
+    inApp: { messageKey: "SESSION_DETAILS_UPDATED", type: "SESSION_UPDATED" },
+  },
+  // Same edit, but the start time moved — the client has to change their day,
+  // so the copy names the old time alongside the new one. Shares the email
+  // kind (which always states the new full arrangement) and the DB
+  // NotificationType; only the in-app copy differs.
+  SESSION_RESCHEDULED: {
+    email: "SESSION_UPDATED",
+    inApp: { messageKey: "SESSION_RESCHEDULED", type: "SESSION_UPDATED" },
   },
   // A single booking was canceled by the studio. Email-only: the client's
   // in-app cancellation visibility is handled by the booking record itself.

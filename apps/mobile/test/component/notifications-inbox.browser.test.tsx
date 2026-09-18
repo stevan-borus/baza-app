@@ -14,6 +14,7 @@ import "@/lib/i18n";
 import { notificationsQueries } from "@/lib/queries/notifications-queries-factory";
 import type { Notification } from "@/lib/queries/notifications-queries-factory";
 import { NotificationsInbox } from "@/components/notifications/notifications-inbox";
+import { fireEvent, waitFor } from "@testing-library/react";
 import { renderWithQueryClient } from "./helpers";
 
 function makeNotification(overrides: Partial<Notification> = {}): Notification {
@@ -193,5 +194,97 @@ describe("NotificationsInbox — loading and error", () => {
         timeout: 5000,
       }),
     ).toBeTruthy();
+  });
+});
+
+describe("NotificationsInbox — refresh on focus", () => {
+  it("renders the seeded rows on mount", async () => {
+    const screen = renderInbox([
+      makeNotification({ id: "f1", title: "Postojeće obaveštenje" }),
+    ]);
+
+    expect(await screen.findByText("Postojeće obaveštenje")).toBeTruthy();
+  });
+
+  it("marks the notifications cache invalidated when the screen gains focus", async () => {
+    // Tab screens stay mounted, so returning to Obaveštenja never remounts the
+    // list. Without this invalidation the inbox shows whatever it had cached
+    // and the newest push is missing until the app is killed and reopened.
+    const screen = renderInbox([makeNotification({ id: "f2", title: "Staro" })]);
+    await screen.findByText("Staro");
+
+    const state = screen.client.getQueryState(
+      notificationsQueries.listInfinite().queryKey,
+    );
+    expect(state?.isInvalidated).toBe(true);
+  });
+
+  it("paints a notification written into the cache after the first render", async () => {
+    // What a completed focus refetch does: new page data lands in the cache and
+    // the mounted list must repaint with the new row rather than stay blank.
+    const screen = renderInbox([makeNotification({ id: "f3", title: "Staro" })]);
+    await screen.findByText("Staro");
+
+    screen.client.setQueryData(notificationsQueries.listInfinite().queryKey, {
+      pages: [
+        {
+          success: true,
+          notifications: [
+            makeNotification({ id: "f4", title: "Novo obaveštenje" }),
+            makeNotification({ id: "f3", title: "Staro" }),
+          ],
+          nextCursor: null,
+        },
+      ],
+      pageParams: [null],
+    });
+
+    expect(await screen.findByText("Novo obaveštenje")).toBeTruthy();
+    expect(screen.getByText("Staro")).toBeTruthy();
+  });
+});
+
+describe("NotificationsInbox — error retry", () => {
+  it("offers a retry action instead of a dead-end error", async () => {
+    const screen = renderWithQueryClient(<NotificationsInbox context="client" />);
+
+    expect(
+      await screen.findByText("Pokušaj ponovo", undefined, { timeout: 5000 }),
+    ).toBeTruthy();
+    expect(screen.getByText("Nije moguće učitati obaveštenja.")).toBeTruthy();
+  });
+});
+
+describe("NotificationsInbox — swipe to delete", () => {
+  it("exposes a delete action per row", async () => {
+    const screen = renderInbox([
+      makeNotification({ id: "d1", title: "Prva" }),
+      makeNotification({ id: "d2", title: "Druga" }),
+    ]);
+
+    await screen.findByText("Prva");
+    expect(screen.getByTestId("notification-delete-d1")).toBeTruthy();
+    expect(screen.getByTestId("notification-delete-d2")).toBeTruthy();
+  });
+
+  it("labels the action with the shipped sr copy", async () => {
+    const screen = renderInbox([makeNotification({ id: "d3", title: "Prva" })]);
+
+    const action = await screen.findByTestId("notification-delete-d3");
+    expect(action.textContent).toContain("Obriši");
+    expect(action.getAttribute("aria-label")).toBe("Obriši obaveštenje");
+  });
+
+  it("removes the pressed row and leaves the others", async () => {
+    const screen = renderInbox([
+      makeNotification({ id: "d4", title: "Ostaje" }),
+      makeNotification({ id: "d5", title: "Nestaje" }),
+    ]);
+
+    await screen.findByText("Nestaje");
+    fireEvent.click(screen.getByTestId("notification-delete-d5"));
+
+    await waitFor(() => expect(screen.queryByText("Nestaje")).toBeNull());
+    expect(screen.getByText("Ostaje")).toBeTruthy();
   });
 });
