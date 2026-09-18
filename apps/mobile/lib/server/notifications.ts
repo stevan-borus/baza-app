@@ -33,7 +33,16 @@ export async function createSystemNotification(
   messageKey: NotificationMessageKey,
   type: NotificationType,
   payload: Record<string, unknown>,
-  options?: { dedupeKey?: string; skipPush?: boolean },
+  options?: {
+    dedupeKey?: string;
+    skipPush?: boolean;
+    /**
+     * Free text appended to the rendered body as its own sentence. Used for
+     * admin-authored notes: they are user input, so they are concatenated
+     * verbatim rather than interpolated into a template the admin controls.
+     */
+    appendBody?: string | null;
+  },
 ) {
   const locale = await getPreferredLocale(userId);
   // Pass the payload as interpolation vars so server-rendered notification
@@ -44,7 +53,9 @@ export async function createSystemNotification(
   for (const [k, v] of Object.entries(payload)) {
     if (typeof v === "string" || typeof v === "number") interpVars[k] = v;
   }
-  const { title, body } = getNotificationMessage(messageKey, locale, interpVars);
+  const { title, body: baseBody } = getNotificationMessage(messageKey, locale, interpVars);
+  const appended = options?.appendBody?.trim();
+  const body = appended ? `${baseBody}\n\n${appended}` : baseBody;
   const messageI18nKey = NOTIFICATION_MESSAGE_I18N_KEYS[messageKey];
   return createAndDispatchUserNotification({
     userId,

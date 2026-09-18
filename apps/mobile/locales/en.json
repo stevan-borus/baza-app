@@ -32,6 +32,10 @@
       "title": "Package paused",
       "body": "Your package has been paused and your reservations in that period were canceled. Your package validity was extended by the length of the pause."
     },
+    "gift_package": {
+      "title": "🎁 A gift for you",
+      "body": "We're gifting you {{sessionsGranted}} {{sessionsLabel}} from the \"{{packageTypeName}}\" package."
+    },
     "session_reminder": {
       "title": "Session reminder",
       "body": "You have an upcoming session."
@@ -763,7 +767,9 @@
       "giftToggleHint": "The client doesn't pay, but the trainer is paid at the package rate.",
       "giftSessionsLabel": "Gifted sessions",
       "giftSessionsHint": "At most {{count}} (what the package holds).",
-      "giftSessionsHintNoPackage": "Pick a package first."
+      "giftSessionsHintNoPackage": "Pick a package first.",
+      "giftMessageLabel": "Gift message (optional)",
+      "giftMessageHint": "Shown to the client in the notification."
     },
     "trainers": {
       "screenTitle": "Trainers",
