@@ -79,9 +79,11 @@ export type NotificationsResponse = z.infer<typeof notificationsResponseSchema>;
 // POST /api/notifications — the NotificationLog row as created/dispatched.
 // `payload` values are arbitrary JSON here (unlike the inbox schema above)
 // because the input schema accepts z.unknown() record values.
+// `notification` is null when the recipient has their in-app inbox switched
+// off: the push (if any) still went out, but no row was written.
 export const createNotificationResponseSchema = z.object({
   success: z.boolean(),
-  notification: z.object({
+  notification: z.nullable(z.object({
     id: z.string(),
     userId: z.string(),
     type: notificationTypeSchema,
@@ -92,7 +94,7 @@ export const createNotificationResponseSchema = z.object({
     pushStatus: z.string().nullable(),
     readAt: z.string().nullable(),
     createdAt: z.string(),
-  }),
+  })),
 });
 
 // PATCH /api/notifications — bulk mark-as-read; count of rows flipped.

@@ -266,8 +266,8 @@ export async function POST(request: Request) {
   );
 
   if (activeBooking && !activeBooking.canceledAt) {
-    // Fan-out: notify admins + trainer. Late cancels push, early cancels are
-    // silent in-app (the registry's push rule).
+    // Fan-out: only a late cancel reaches admins + trainer (in-app + push).
+    // An early cancel notifies nobody — the registry's delivery rule.
     // Fire-and-forget: do not block the response on email/push delivery.
     const isLate = shouldApplyLateCancelPenalty(
       session.startsAt,

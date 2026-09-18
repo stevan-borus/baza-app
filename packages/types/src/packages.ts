@@ -105,6 +105,20 @@ export const createClientPackageInputSchema = clientPackageFieldsSchema.pick({
   // gifting "Reformer 12" must not hand over all twelve. Capped at the SKU's
   // own sessionCount (checked server-side, where the SKU is known).
   sessionsGranted: z.number().int().min(1).optional(),
+  // Why the gift is being given. Only "BIRTHDAY" keeps the birthday wording —
+  // everything else gets the generic gift copy, so an apology or promo gift
+  // stops wishing the client a happy birthday. Sent explicitly by the sheet
+  // rather than inferred from the SKU, which cannot tell the two apart.
+  occasion: z.enum(["BIRTHDAY", "OTHER"]).nullish(),
+  // Admin free text appended to the notification as its own sentence. Stored
+  // in the payload and rendered verbatim — never fed through {{}}, since the
+  // admin would otherwise control a template.
+  giftMessage: z
+    .string()
+    .max(200)
+    .transform((v) => v.trim())
+    .transform((v) => (v.length > 0 ? v : null))
+    .nullish(),
 });
 
 // ─── GET /api/packages/client-packages ───────────────────────────────────────
