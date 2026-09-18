@@ -2,7 +2,8 @@
  * E2E: Consent gate flow.
  *
  * Tests the full consent-gate lifecycle for a first-time client:
- *   1. Happy path — sign in, get redirected to /consent, accept all docs, land on home.
+ *   1. Happy path — sign in, get redirected to /consent, accept all docs plus
+ *      the social-media and marketing questions, land on home.
  *   2. Refusal flow — sign in, refuse, get routed to /sign-in, admin gets notification.
  *   3. Language toggle — /consent renders in SR by default; toggling switches to EN.
  *
@@ -29,6 +30,7 @@ import {
 } from "./helpers/db";
 import { t, t_en } from "./helpers/locales";
 import { ADMIN_EMAIL, SEED_PASSWORD } from "./helpers/auth";
+import { completeClientConsent } from "./helpers/consent";
 
 const CLIENT_EMAIL = "client.unconsented@e2e.test";
 
@@ -46,20 +48,6 @@ async function signInAsUnconsented(page: Page) {
   await expect(page.getByTestId("consent-submit-button")).toBeVisible({
     timeout: 15_000,
   });
-}
-
-/**
- * Accept all pending documents on the /consent screen by toggling each Switch.
- * For an adult client the keys are: tos, privacy, waiver_adult.
- */
-async function acceptAllDocuments(page: Page) {
-  const keys = ["tos", "privacy", "waiver_adult"] as const;
-  for (const key of keys) {
-    const toggle = page.getByTestId(`document-card-accept-${key}`);
-    await expect(toggle).toBeVisible({ timeout: 8_000 });
-    // Switches start unchecked; click to check.
-    await toggle.click();
-  }
 }
 
 test.describe("consent gate", () => {
@@ -81,22 +69,13 @@ test.describe("consent gate", () => {
     // Verify we're on the consent screen (SR by default).
     await expect(page.getByText(t.consent.welcomeTitle)).toBeVisible();
 
-    // Accept every document.
-    await acceptAllDocuments(page);
-
-    // Answer the social-media Da/Ne question — both choices unblock Continue;
-    // the gate just requires a recorded decision.
-    await page.getByTestId("social-media-yes").click();
-
     // The /consent screen no longer asks for health intake — it must not
     // render the intake form at all. Clients add health info later, from
     // the profile sheet's Health info row. See profile/health.tsx.
     await expect(page.getByTestId("health-intake-form")).toHaveCount(0);
 
-    // Submit button should now be enabled.
-    const submitBtn = page.getByTestId("consent-submit-button");
-    await expect(submitBtn).toBeEnabled({ timeout: 5_000 });
-    await submitBtn.click();
+    // Accept every document, answer both Da/Ne questions, submit.
+    await completeClientConsent(page);
 
     // After accept + redirect, we should land on the client home tab.
     await expect(page.getByTestId("tab-index")).toBeVisible({ timeout: 20_000 });

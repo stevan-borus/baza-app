@@ -10,6 +10,7 @@ import {
 } from "./helpers/db";
 import { t } from "./helpers/locales";
 import { signInAs } from "./helpers/auth";
+import { completeClientConsent } from "./helpers/consent";
 import { pickInviteDob } from "./helpers/forms";
 
 const NEW_PASSWORD = "NewPassword456!";
@@ -61,10 +62,12 @@ test.describe("auth extended (Serbian)", () => {
     await page.getByTestId("invite-confirm-password-input").fill(NEW_PASSWORD);
     await page.getByTestId("invite-submit-button").click();
 
-    // Successful redemption signs the user in and lands them in the app —
-    // no detour through /sign-in with the credentials they just created.
+    // Successful redemption signs the user in — no detour through /sign-in
+    // with the credentials they just created — but a brand-new client has no
+    // consent records, so the gate takes them to /consent first.
+    await completeClientConsent(page);
     await expect(page.getByTestId("tab-index")).toBeVisible({
-      timeout: 15_000,
+      timeout: 20_000,
     });
     expect(page.url()).not.toMatch(/\/sign-in/);
   });
@@ -89,9 +92,12 @@ test.describe("auth extended (Serbian)", () => {
     await page.getByTestId("invite-confirm-password-input").fill(NEW_PASSWORD);
     await page.getByTestId("invite-submit-button").click();
 
-    // Redemption auto-signs-in and lands in the app.
-    await expect(page.getByTestId("tab-index")).toBeVisible({ timeout: 15_000 });
+    // Redemption auto-signs-in; the gate is the new client's first screen.
+    await completeClientConsent(page);
+    await expect(page.getByTestId("tab-index")).toBeVisible({ timeout: 20_000 });
 
+    // Marketing was answered at consent, so the campaigns opt-in sheet must
+    // not be over the screen — this tap landing is the proof.
     // The profile sheet renders the derived full name — not the email-local
     // part — and preserves the full multi-part first name.
     await page.getByTestId("open-profile-sheet").click();

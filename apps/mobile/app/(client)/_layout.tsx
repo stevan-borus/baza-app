@@ -12,6 +12,7 @@ import {
 import { notificationsQueries } from "@/lib/queries/notifications-queries-factory";
 import { authQueries } from "@/lib/queries/auth-queries-factory";
 import { ConsentGateRedirect } from "@/components/consent/consent-gate-redirect";
+import { consentQueries } from "@/lib/queries/consent-queries-factory";
 import { CampaignsOptInSheet } from "@/components/notifications/campaigns-opt-in-sheet";
 import {
   markCampaignsOptInSeen,
@@ -21,14 +22,18 @@ import {
 /**
  * Asks the client once whether they want marketing notifications. Serbia
  * requires opt-IN, so campaignsEnabled defaults to false and nobody is ever
- * asked; this prompt is the ask. Mounted inside the consent gate so it can
- * never appear over the legal-consent screen.
+ * asked; this prompt is the ask. Asked once, and never if they already
+ * answered the marketing question on /consent. Mounted inside the consent gate
+ * so it can never appear over the legal-consent screen — which also means the
+ * status query below is already cached by ConsentGateRedirect.
  */
 function CampaignsOptInPrompt() {
   const meQuery = useQuery(authQueries.me());
   const prefsQuery = useQuery(notificationsQueries.preferences());
+  const consentQuery = useQuery(consentQueries.status());
   const userId = meQuery.data?.user.id;
   const campaignsEnabled = prefsQuery.data?.preferences.campaignsEnabled;
+  const marketingDecided = consentQuery.data?.marketingDecided;
 
   const [open, setOpen] = useState(false);
 
@@ -36,7 +41,7 @@ function CampaignsOptInPrompt() {
   // effect subscribes to that external store. No other effects here.
   useEffect(() => {
     let active = true;
-    shouldShowCampaignsOptIn({ userId, campaignsEnabled })
+    shouldShowCampaignsOptIn({ userId, campaignsEnabled, marketingDecided })
       .then((show) => {
         if (active && show) setOpen(true);
       })
@@ -46,7 +51,7 @@ function CampaignsOptInPrompt() {
     return () => {
       active = false;
     };
-  }, [userId, campaignsEnabled]);
+  }, [userId, campaignsEnabled, marketingDecided]);
 
   if (!userId) return null;
 

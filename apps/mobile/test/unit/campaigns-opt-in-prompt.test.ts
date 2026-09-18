@@ -2,9 +2,10 @@
  * The one-time marketing opt-in prompt's visibility rule.
  *
  * Serbian law requires marketing opt-IN, so `campaignsEnabled` defaults to
- * false and nobody is ever asked. The prompt asks once: only while the
- * preference is still off, and never again after the client answers or
- * dismisses it.
+ * false and nobody is ever asked. The prompt asks once, and never if they
+ * already answered at consent: only while the preference is still off and the
+ * marketing question on /consent went unanswered, and never again after the
+ * client answers or dismisses it.
  */
 import { beforeEach, describe, expect, it } from "vitest";
 import {
@@ -36,6 +37,7 @@ describe("shouldShowCampaignsOptIn", () => {
       shouldShowCampaignsOptIn({
         userId: "user-1",
         campaignsEnabled: false,
+        marketingDecided: false,
         storage,
       }),
     ).resolves.toBe(true);
@@ -46,6 +48,7 @@ describe("shouldShowCampaignsOptIn", () => {
       shouldShowCampaignsOptIn({
         userId: "user-1",
         campaignsEnabled: true,
+        marketingDecided: false,
         storage,
       }),
     ).resolves.toBe(false);
@@ -58,6 +61,7 @@ describe("shouldShowCampaignsOptIn", () => {
       shouldShowCampaignsOptIn({
         userId: "user-1",
         campaignsEnabled: false,
+        marketingDecided: false,
         storage,
       }),
     ).resolves.toBe(false);
@@ -70,6 +74,7 @@ describe("shouldShowCampaignsOptIn", () => {
       shouldShowCampaignsOptIn({
         userId: "user-2",
         campaignsEnabled: false,
+        marketingDecided: false,
         storage,
       }),
     ).resolves.toBe(true);
@@ -85,6 +90,7 @@ describe("shouldShowCampaignsOptIn", () => {
       shouldShowCampaignsOptIn({
         userId: undefined,
         campaignsEnabled: false,
+        marketingDecided: false,
         storage,
       }),
     ).resolves.toBe(false);
@@ -92,6 +98,7 @@ describe("shouldShowCampaignsOptIn", () => {
       shouldShowCampaignsOptIn({
         userId: "user-1",
         campaignsEnabled: undefined,
+        marketingDecided: false,
         storage,
       }),
     ).resolves.toBe(false);
@@ -109,8 +116,42 @@ describe("shouldShowCampaignsOptIn", () => {
       shouldShowCampaignsOptIn({
         userId: "user-1",
         campaignsEnabled: false,
+        marketingDecided: false,
         storage: broken,
       }),
     ).resolves.toBe(false);
+  });
+
+  it("stays hidden when the client already answered marketing at consent", async () => {
+    await expect(
+      shouldShowCampaignsOptIn({
+        userId: "user-1",
+        campaignsEnabled: false,
+        marketingDecided: true,
+        storage,
+      }),
+    ).resolves.toBe(false);
+  });
+
+  it("stays hidden while the consent status is still loading", async () => {
+    await expect(
+      shouldShowCampaignsOptIn({
+        userId: "user-1",
+        campaignsEnabled: false,
+        marketingDecided: undefined,
+        storage,
+      }),
+    ).resolves.toBe(false);
+  });
+
+  it("shows when consent recorded no marketing answer at all", async () => {
+    await expect(
+      shouldShowCampaignsOptIn({
+        userId: "user-1",
+        campaignsEnabled: false,
+        marketingDecided: false,
+        storage,
+      }),
+    ).resolves.toBe(true);
   });
 });

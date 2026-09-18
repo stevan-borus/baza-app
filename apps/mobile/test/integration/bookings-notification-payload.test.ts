@@ -148,12 +148,14 @@ describe("POST /api/bookings — notification payload", () => {
     // dispatches for the trainer and (no separate admin in this minimal
     // fixture set), so we check at least the trainer call.
     const { admin, trainer, client, clientProfile, reformer, room, pkg } = await fixtures();
-    // Session 4 days out so cancellation is *not* late (lateCancelHours=8).
+    // Session 2 hours out so the cancel is LATE (lateCancelHours=8): only a
+    // late cancel reaches operators at all, so that is the only case with a
+    // payload to inspect.
     const session = await bookableSession({
       classTypeId: reformer.id,
       roomId: room.id,
       trainerUserId: trainer.id,
-      startsAt: new Date(nowMs() + 4 * DAY_MS),
+      startsAt: new Date(nowMs() + 2 * 60 * 60 * 1000),
     });
     // Existing booking before we test cancel.
     await prisma.booking.create({
@@ -193,7 +195,7 @@ describe("POST /api/bookings — notification payload", () => {
     expect(payload.clientFullName).toBe("Marko Petrović");
     expect(payload.classTypeName).toBe("Reformer pilates");
     expect(typeof payload.sessionStartsAt).toBe("string");
-    expect(payload.isLate).toBe(false);
+    expect(payload.isLate).toBe(true);
 
     const adminPayload = adminCall![3] as Record<string, unknown>;
     expect(adminPayload.clientFullName).toBe("Marko Petrović");

@@ -3,8 +3,10 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 /**
  * Serbia requires marketing opt-IN, so `NotificationPreference.campaignsEnabled`
  * defaults to false and nothing ever asks. This module decides whether to ask
- * once: on the first client session where the preference is still off, and
- * never again after the client answers either way or dismisses the prompt.
+ * once, and never if they already answered at consent: the prompt appears on
+ * the first client session where the preference is still off AND the client
+ * never answered the marketing question on /consent, and never again after
+ * they answer either way or dismiss it.
  *
  * The seen flag is per user per device, so a shared device asks each account.
  */
@@ -24,14 +26,19 @@ export function campaignsOptInStorageKey(userId: string): string {
 export async function shouldShowCampaignsOptIn({
   userId,
   campaignsEnabled,
+  marketingDecided,
   storage = defaultOptInStorage,
 }: {
   userId: string | undefined;
   campaignsEnabled: boolean | undefined;
+  /** From consent status. `undefined` while loading — never ask on a guess. */
+  marketingDecided: boolean | undefined;
   storage?: OptInStorage;
 }): Promise<boolean> {
-  // Either input still loading, or the client already opted in.
+  // Any input still loading, the client already opted in, or they already
+  // answered the same question on /consent.
   if (!userId || campaignsEnabled !== false) return false;
+  if (marketingDecided !== false) return false;
 
   try {
     const seen = await storage.getItem(campaignsOptInStorageKey(userId));

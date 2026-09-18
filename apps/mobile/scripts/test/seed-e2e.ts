@@ -131,6 +131,16 @@ const USERS = {
     role: UserRole.CLIENT,
     dateOfBirth: "1993-09-12", // adult
   },
+  // Subject of campaigns-opt-in-prompt.spec.ts. Consented to the gate docs
+  // and social media, but deliberately WITHOUT a marketing record — the only
+  // seeded client the one-time opt-in sheet still has a question for.
+  promptClient: {
+    email: "client.prompt@e2e.test",
+    firstName: "Prompt",
+    lastName: "Optin Client",
+    role: UserRole.CLIENT,
+    dateOfBirth: "1994-02-18", // adult
+  },
   minorBooking: {
     email: "client.minor-booking@e2e.test",
     firstName: "Minor",
@@ -1037,6 +1047,9 @@ async function seedBookings(opts: {
  * Users that receive pre-seeded consent rows:
  *   - admin + both trainers  (tos / privacy / eula)
  *   - all clients EXCEPT unconsented  (tos / privacy / eula + waiver_adult)
+ *   - every onboarded client also answered social_media, and answered
+ *     marketing "Ne" — except promptClient, who has no marketing record so
+ *     the one-time campaigns opt-in sheet still has a question to ask.
  *
  * unconsented (client.unconsented@e2e.test) is intentionally left without
  * consent records so the consent-gate spec can exercise the first-time flow.
@@ -1070,7 +1083,14 @@ async function seedConsentRecords(opts: {
     "future",
     "empty",
     "multiPartName",
+    "promptClient",
   ];
+  // Everyone onboarded before the marketing question shipped answered "Ne",
+  // so campaignsEnabled stays false — except promptClient, who has no
+  // marketing record at all and is therefore still owed the one-time prompt.
+  const marketingAnswered = alreadyOnboardedClients.filter(
+    (key) => key !== "promptClient",
+  );
   // Minor user pre-onboarded for the booking-guardian-gate spec. Seeded
   // with waiver_minor so the legal gate doesn't intercept; the spec sets
   // up the second-booking guardian gate via direct prisma writes.
@@ -1125,6 +1145,37 @@ async function seedConsentRecords(opts: {
         },
       });
     }
+  }
+
+  // Non-legal questions the gate also records. social_media is answered by
+  // every onboarded client; marketing is answered by all of them but
+  // promptClient.
+  for (const key of [...alreadyOnboardedClients, ...alreadyOnboardedMinors]) {
+    const { user } = opts.seeded.get(key)!;
+    await prisma.consentRecord.create({
+      data: {
+        userId: user.id,
+        documentKey: "social_media",
+        version: 1,
+        accepted: false,
+        acceptedAt,
+        locale: "sr",
+      },
+    });
+  }
+
+  for (const key of [...marketingAnswered, ...alreadyOnboardedMinors]) {
+    const { user } = opts.seeded.get(key)!;
+    await prisma.consentRecord.create({
+      data: {
+        userId: user.id,
+        documentKey: "marketing",
+        version: 1,
+        accepted: false,
+        acceptedAt,
+        locale: "sr",
+      },
+    });
   }
 }
 
