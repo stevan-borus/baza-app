@@ -3,6 +3,7 @@ import { cronSessionsConsumptionResponseSchema } from "@baza/types/cron";
 import { now } from "@/lib/now";
 import { chargeNoShowConsumption } from "@/lib/server/booking-cancellation";
 import { requireCronAuth } from "@/lib/server/cron-auth";
+import { SCHEDULED_CONSUMPTION_LOOKBACK_HOURS } from "@/lib/server/cron-jobs";
 import { respond } from "@/lib/server/http";
 import { notifyOperators } from "@/lib/server/notify-operators";
 import { prisma } from "@/lib/server/prisma";
@@ -26,7 +27,9 @@ export async function POST(request: Request) {
       ? lookbackHoursRaw
       : mode === "immediate"
         ? 24 * 30
-        : 6;
+        // Scheduled runs are daily (cron-jobs.ts `session-consumption`), so the
+        // window must span a day plus slack for a late or missed run.
+        : SCHEDULED_CONSUMPTION_LOOKBACK_HOURS;
   const dryRun = url.searchParams.get("dryRun") === "true";
 
   const currentInstant = now();
