@@ -234,7 +234,7 @@ async function dispatchPushToUser(input: NotificationPayload): Promise<PushDispa
     // the caller is among them (readAt is null), which gives the iOS-correct
     // "post-delivery" badge; when in-app is off there is no row to add.
     prisma.notificationLog.count({
-      where: { userId: input.userId, readAt: null },
+      where: { userId: input.userId, readAt: null, dismissedAt: null },
     }),
   ]);
 

@@ -14,6 +14,7 @@ import "@/lib/i18n";
 import { notificationsQueries } from "@/lib/queries/notifications-queries-factory";
 import type { Notification } from "@/lib/queries/notifications-queries-factory";
 import { NotificationsInbox } from "@/components/notifications/notifications-inbox";
+import { fireEvent, waitFor } from "@testing-library/react";
 import { renderWithQueryClient } from "./helpers";
 
 function makeNotification(overrides: Partial<Notification> = {}): Notification {
@@ -251,5 +252,39 @@ describe("NotificationsInbox — error retry", () => {
       await screen.findByText("Pokušaj ponovo", undefined, { timeout: 5000 }),
     ).toBeTruthy();
     expect(screen.getByText("Nije moguće učitati obaveštenja.")).toBeTruthy();
+  });
+});
+
+describe("NotificationsInbox — swipe to delete", () => {
+  it("exposes a delete action per row", async () => {
+    const screen = renderInbox([
+      makeNotification({ id: "d1", title: "Prva" }),
+      makeNotification({ id: "d2", title: "Druga" }),
+    ]);
+
+    await screen.findByText("Prva");
+    expect(screen.getByTestId("notification-delete-d1")).toBeTruthy();
+    expect(screen.getByTestId("notification-delete-d2")).toBeTruthy();
+  });
+
+  it("labels the action with the shipped sr copy", async () => {
+    const screen = renderInbox([makeNotification({ id: "d3", title: "Prva" })]);
+
+    const action = await screen.findByTestId("notification-delete-d3");
+    expect(action.textContent).toContain("Obriši");
+    expect(action.getAttribute("aria-label")).toBe("Obriši obaveštenje");
+  });
+
+  it("removes the pressed row and leaves the others", async () => {
+    const screen = renderInbox([
+      makeNotification({ id: "d4", title: "Ostaje" }),
+      makeNotification({ id: "d5", title: "Nestaje" }),
+    ]);
+
+    await screen.findByText("Nestaje");
+    fireEvent.click(screen.getByTestId("notification-delete-d5"));
+
+    await waitFor(() => expect(screen.queryByText("Nestaje")).toBeNull());
+    expect(screen.getByText("Ostaje")).toBeTruthy();
   });
 });

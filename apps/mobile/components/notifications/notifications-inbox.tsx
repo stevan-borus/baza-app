@@ -4,6 +4,7 @@ import { useMutation, useInfiniteQuery, useQueryClient } from "@tanstack/react-q
 import { useTranslation } from "react-i18next";
 import { ActivityIndicator, FlatList, Pressable, Text, View, type TextLayoutEventData, type NativeSyntheticEvent } from "react-native";
 import { BottomSheetScrollView } from "@gorhom/bottom-sheet";
+import ReanimatedSwipeable from "react-native-gesture-handler/ReanimatedSwipeable";
 import { GlassCard } from "@/components/ui/glass-card";
 import { Icon } from "@/components/ui/icon";
 import { AppSheet } from "@/components/ui/sheet";
@@ -12,7 +13,11 @@ import { SkeletonList } from "@/components/ui/skeleton";
 import { SectionLabel } from "@/components/ui/typography";
 import { useThemeTokens } from "@/components/ui/tokens";
 import { useThemePreference } from "@/lib/theme-preference";
-import { notificationsQueries, type Notification } from "@/lib/queries/notifications-queries-factory";
+import {
+  notificationsQueries,
+  useDismissNotificationMutation,
+  type Notification,
+} from "@/lib/queries/notifications-queries-factory";
 import { useNotificationTapHandler } from "@/lib/notification-tap";
 import { shouldOpenDetailSheet } from "@/lib/notification-detail-sheet";
 import { clearAppBadge } from "@/lib/badge";
@@ -197,6 +202,56 @@ function payloadInterpolation(
   return out;
 }
 
+/**
+ * Swipe-left-to-delete wrapper for one inbox row.
+ *
+ * Full swipe past the threshold dismisses; so does tapping the red panel.
+ * `onSwipeableOpen` handles both because a full swipe settles the panel open.
+ */
+function SwipeToDeleteRow({
+  notificationId,
+  onDelete,
+  children,
+}: {
+  notificationId: string;
+  onDelete: () => void;
+  children: React.ReactNode;
+}) {
+  const { t } = useTranslation();
+  const tokens = useThemeTokens();
+
+  return (
+    <ReanimatedSwipeable
+      friction={2}
+      rightThreshold={56}
+      overshootRight={false}
+      onSwipeableOpen={(direction) => {
+        if (direction === "right") onDelete();
+      }}
+      renderRightActions={() => (
+        <Pressable
+          testID={`notification-delete-${notificationId}`}
+          onPress={onDelete}
+          accessibilityRole="button"
+          accessibilityLabel={t("notifications.deleteA11y")}
+          className="justify-center items-center px-6 my-1 mr-6 rounded-2xl"
+          style={{ backgroundColor: tokens.danger }}
+        >
+          <Icon name="trash" size={18} color={tokens.background} />
+          <Text
+            className="mt-1 text-[11px] font-body-bold"
+            style={{ color: tokens.background }}
+          >
+            {t("notifications.delete")}
+          </Text>
+        </Pressable>
+      )}
+    >
+      {children}
+    </ReanimatedSwipeable>
+  );
+}
+
 export function NotificationsInbox({ context, bottomPad = 0 }: Props) {
   const queryClient = useQueryClient();
   const { t, i18n } = useTranslation();
@@ -229,6 +284,8 @@ export function NotificationsInbox({ context, bottomPad = 0 }: Props) {
   const notificationsQuery = useInfiniteQuery(notificationsQueries.listInfinite());
   const allNotifications =
     notificationsQuery.data?.pages.flatMap((p) => p.notifications) ?? [];
+
+  const dismissMutation = useDismissNotificationMutation();
 
   const markManyReadMutation = useMutation({
     ...notificationsQueries.markManyRead(),
@@ -405,6 +462,10 @@ export function NotificationsInbox({ context, bottomPad = 0 }: Props) {
               // read, so they stay recognizable as "from Baza" in the list.
               const isCampaign = n.type === "CAMPAIGN";
               return (
+                <SwipeToDeleteRow
+                  notificationId={n.id}
+                  onDelete={() => dismissMutation.mutate(n.id)}
+                >
                 <Pressable
                   testID={`notification-row-${n.id}-${isUnread ? "unread" : "read"}`}
                   className="px-6 py-1 active:opacity-70"
@@ -507,6 +568,7 @@ export function NotificationsInbox({ context, bottomPad = 0 }: Props) {
                     </View>
                   </GlassCard>
                 </Pressable>
+                </SwipeToDeleteRow>
               );
             }}
             onEndReached={handleEndReached}
