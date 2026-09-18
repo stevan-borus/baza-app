@@ -508,6 +508,14 @@
       "groupYesterday": "Yesterday",
       "groupEarlier": "Earlier",
       "inbox": "Inbox"
+    },
+    "campaignsOptIn": {
+      "title": "Want to hear about what's new?",
+      "body": "We occasionally send promotions and announcements of new programs. Turn this on if you'd like to receive them — you can change it any time in settings.",
+      "accept": "Turn on",
+      "decline": "Not now",
+      "acceptA11y": "Turn on notifications about promotions and new programs",
+      "declineA11y": "Not now, don't receive promotion notifications"
     }
   },
   "settings": {
