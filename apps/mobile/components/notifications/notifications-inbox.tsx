@@ -22,6 +22,7 @@ import { useNotificationTapHandler } from "@/lib/notification-tap";
 import { shouldOpenDetailSheet } from "@/lib/notification-detail-sheet";
 import { clearAppBadge } from "@/lib/badge";
 import { PushPermissionBanner } from "@/components/notifications/push-permission-banner";
+import { serbianSessionsLabel } from "@baza/i18n";
 import dayjs from "dayjs";
 
 type NotificationsInboxContext = "client" | "admin" | "trainer";
@@ -145,6 +146,22 @@ function initialsFromName(name: string): string {
  * Whitelist only safe scalar fields — we don't want random server payload
  * keys to land inside translation strings.
  */
+/**
+ * Appends the admin-authored gift note to the body. `resolveDisplayBody`
+ * prefers the translated template, which cannot carry free text, so without
+ * this the note the admin typed would never reach the client's inbox.
+ */
+export function appendGiftMessage(
+  body: string | null,
+  payload: Notification["payload"],
+): string | null {
+  if (!payload || typeof payload !== "object") return body;
+  const note = (payload as Record<string, unknown>).giftMessage;
+  if (typeof note !== "string" || note.trim().length === 0) return body;
+  const base = body?.trim() ?? "";
+  return base.length > 0 ? `${base}\n\n${note.trim()}` : note.trim();
+}
+
 function payloadInterpolation(
   payload: Notification["payload"],
   lang: "sr" | "en",
@@ -160,6 +177,20 @@ function payloadInterpolation(
   safe("classTypeName");
   safe("trainerFullName");
   safe("userName");
+  safe("packageTypeName");
+  safe("sessionsGranted");
+  // Serbian needs three plural forms for "termin"; the app re-renders the
+  // body from the locale file, so it derives the count word the same way the
+  // server does rather than trusting a stored string.
+  const granted = Number((payload as Record<string, unknown>).sessionsGranted);
+  if (Number.isFinite(granted)) {
+    out.sessionsLabel =
+      lang === "en"
+        ? Math.abs(granted) === 1
+          ? "session"
+          : "sessions"
+        : serbianSessionsLabel(granted);
+  }
   // sessionStartsAt is ISO; render as HH:mm (or HH:mm D.M. if not today).
   const startsAt = (payload as Record<string, unknown>).sessionStartsAt;
   if (typeof startsAt === "string") {
@@ -419,7 +450,12 @@ export function NotificationsInbox({ context, bottomPad = 0 }: Props) {
                 translatedTitle && translatedTitle !== titleKey
                   ? translatedTitle
                   : n.title;
-              const displayBody = resolveDisplayBody(translatedBody, bodyKey, n.body);
+              // The admin's gift note is free text, so it is not part of the
+              // translated template — append it verbatim to whichever body won.
+              const displayBody = appendGiftMessage(
+                resolveDisplayBody(translatedBody, bodyKey, n.body),
+                n.payload,
+              );
               const personName = personNameFromPayload(n.payload);
               // Campaigns are studio broadcasts, not transactional pings — they
               // carry a megaphone badge and keep the green accent rail even once
