@@ -28,7 +28,6 @@ import {
 import { sessionsQueries } from "@/lib/queries/sessions-queries-factory";
 import { reportsQueries } from "@/lib/queries/reports-queries-factory";
 import { currentStudioMonthWindow } from "@/lib/admin/studio-month-window";
-import { activeClientRate } from "@/lib/format";
 import { useWeekNavigation, weekRangeLabel } from "@/lib/use-week-navigation";
 
 /**
@@ -55,16 +54,14 @@ export default function AdminSchedule() {
   const availabilityQuery = useQuery(
     sessionsQueries.availabilityByMonth(month),
   );
-  // Two summaries on purpose. The unscoped one is all-time (the route drops
-  // its time filter when no range is sent) and feeds the client tiles, whose
-  // meaning has been all-time since they shipped. The revenue hero is labelled
-  // "this month", so it gets its own month-scoped window — it was reading the
-  // unscoped query and showing lifetime revenue under a month label.
-  const summaryQuery = useQuery(reportsQueries.summary());
+  // Everything on this screen is labelled "this month", so one month-scoped
+  // summary feeds all of it. The tiles used to read an unscoped (all-time)
+  // summary, where `activeClients` is the `isActive` soft-delete flag — i.e.
+  // the entire directory — and the "attendance rate" was clients over clients.
   const monthSummaryQuery = useQuery(
     reportsQueries.summary(currentStudioMonthWindow()),
   );
-  const summary = summaryQuery.data?.summary;
+  const summary = monthSummaryQuery.data?.summary;
 
   const sessions = availabilityQuery.data?.sessions ?? [];
 
@@ -92,15 +89,11 @@ export default function AdminSchedule() {
     router.push(`/(admin)/pregled/sessions/${session.id}`);
   }
 
-  const revenueValue = monthSummaryQuery.data?.summary.revenue ?? 0;
-  const attendanceRate = summary
-    ? activeClientRate(summary.activeClients, summary.totalClients)
-    : undefined;
+  const revenueValue = summary?.revenue ?? 0;
+  const attendanceRate = summary?.attendanceRate ?? undefined;
 
   const isDashboardLoading =
-    summaryQuery.isLoading ||
-    monthSummaryQuery.isLoading ||
-    availabilityQuery.isLoading;
+    monthSummaryQuery.isLoading || availabilityQuery.isLoading;
 
   if (isDashboardLoading) {
     return (
@@ -177,13 +170,13 @@ export default function AdminSchedule() {
               },
               {
                 label: t("admin.dashboard.activeClients"),
-                value: summary?.activeClients,
+                value: summary?.clientsWithActivePackage,
+                testID: "pregled-stat-active-clients",
               },
               {
                 label: t("admin.dashboard.newClientsMonth"),
-                value: summary
-                  ? summary.totalClients - summary.inactiveClients
-                  : undefined,
+                value: summary?.newClients,
+                testID: "pregled-stat-new-clients",
               },
               {
                 label: t("admin.dashboard.attendanceRate"),
@@ -192,6 +185,7 @@ export default function AdminSchedule() {
                     ? undefined
                     : `${attendanceRate}%`,
                 accent: true,
+                testID: "pregled-stat-attendance-rate",
               },
             ]}
           />

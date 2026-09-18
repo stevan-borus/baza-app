@@ -9,6 +9,22 @@ export const reportsSummaryResponseSchema = z.object({
     totalSessions: z.number(),
     revenue: z.number(),
     totalPayments: z.number(),
+    /**
+     * Clients holding a package that is usable at this instant: started, not
+     * expired, sessions left, not revoked, not inside a pause. Always "now",
+     * never scoped by from/to — `activeClients` above is a different number
+     * (the `isActive` soft-delete flag, i.e. the whole directory).
+     */
+    clientsWithActivePackage: z.number().int(),
+    /** ClientProfiles created inside from/to; all-time when no range is sent. */
+    newClients: z.number().int(),
+    /**
+     * Kept reservations as a percentage of all reservations on sessions that
+     * already started. There is no no-show flag in the data model, so
+     * "attended" means "reserved and did not cancel". Null when nothing in
+     * the window was reserved.
+     */
+    attendanceRate: z.number().int().nullable(),
   }),
 });
 export type ReportsSummaryResponse = z.infer<
