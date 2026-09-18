@@ -156,3 +156,61 @@ describe("SessionDetail empty-cutoff notice", () => {
     expect(screen.queryByTestId("session-detail-empty-cutoff")).toBeNull();
   });
 });
+
+/**
+ * Hidden-from-clients marker. A session with "Vidljivo klijentima" off (or one
+ * belonging to an inactive series) looked identical to a visible one on both
+ * staff surfaces, so an admin had no way to tell what clients could see.
+ */
+function hiddenDayViewSession(isHidden: boolean) {
+  return { ...dayViewSession(false), hiddenFromClients: isHidden };
+}
+
+describe("TimeAxisDayView hidden-from-clients pill", () => {
+  it("marks a block clients cannot see", () => {
+    const screen = render(
+      <TimeAxisDayView
+        date="2026-06-10"
+        sessions={[hiddenDayViewSession(true)]}
+        onSessionPress={noop}
+      />,
+    );
+
+    expect(screen.getByTestId("session-block-hidden-s1")).toBeTruthy();
+    expect(screen.getByText("Skriveno od klijenata")).toBeTruthy();
+  });
+
+  it("leaves a visible block unmarked", () => {
+    const screen = render(
+      <TimeAxisDayView
+        date="2026-06-10"
+        sessions={[hiddenDayViewSession(false)]}
+        onSessionPress={noop}
+      />,
+    );
+
+    expect(screen.queryByTestId("session-block-hidden-s1")).toBeNull();
+    expect(screen.queryByText("Skriveno od klijenata")).toBeNull();
+  });
+});
+
+describe("SessionDetail hidden-from-clients badge", () => {
+  beforeEach(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  });
+
+  it("badges a session clients cannot see", () => {
+    const data = sessionDetail({ emptyCutoffLocked: false });
+    data.session.isActive = false;
+    const screen = renderDetail(data);
+
+    expect(screen.getByTestId("session-detail-hidden-badge")).toBeTruthy();
+    expect(screen.getByText("Skriveno od klijenata")).toBeTruthy();
+  });
+
+  it("shows no badge when the session is visible to clients", () => {
+    const screen = renderDetail(sessionDetail({ emptyCutoffLocked: false }));
+
+    expect(screen.queryByTestId("session-detail-hidden-badge")).toBeNull();
+  });
+});

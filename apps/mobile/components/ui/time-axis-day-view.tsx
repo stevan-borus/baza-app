@@ -45,6 +45,11 @@ type SessionBlock = {
    * Absent (older cached payloads) reads as open.
    */
   emptyCutoffLocked?: boolean;
+  /**
+   * Staff-only: "Vidljivo klijentima" is off for this occurrence (or its
+   * series), so clients never receive it. Absent reads as visible.
+   */
+  hiddenFromClients?: boolean;
   status?: "available" | "full" | "booked" | "waitlisted";
 };
 
@@ -163,6 +168,20 @@ export function TimeAxisDayView({
                   accessibilityLabel: t("admin.dayView.emptyCutoffChipA11y"),
                 }
               : {};
+            // Never shrinks: the pill is the whole point of the marker, so a
+            // long class name ellipsizes before the pill gives up a pixel.
+            const hiddenPill = s.hiddenFromClients ? (
+              <View
+                testID={`session-block-hidden-${s.id}`}
+                className="flex-row items-center gap-1"
+                style={{ flexShrink: 0 }}
+              >
+                <Icon name="eye-off" size={11} color={tokens.muted} strokeWidth={2.5} />
+                <Text className="text-xs text-muted" numberOfLines={1}>
+                  {t("admin.schedule.hiddenFromClients")}
+                </Text>
+              </View>
+            ) : null;
             return (
               <Pressable
                 key={s.id}
@@ -189,6 +208,19 @@ export function TimeAxisDayView({
                     borderLeftWidth: 4,
                     borderLeftColor: color,
                     backgroundColor: tintBg(color, tokens.background),
+                    // Hidden from clients: dashed muted outline + a washed-out
+                    // fill, so the block reads as "draft" against its solid
+                    // neighbours before any label is read.
+                    ...(s.hiddenFromClients
+                      ? {
+                          borderTopWidth: 1,
+                          borderRightWidth: 1,
+                          borderBottomWidth: 1,
+                          borderStyle: "dashed" as const,
+                          borderColor: tokens.muted,
+                          opacity: 0.6,
+                        }
+                      : {}),
                   }}
                 >
                   <View className="px-2.5 flex-row items-center gap-2">
@@ -224,6 +256,7 @@ export function TimeAxisDayView({
                               isIntermediate={s.isIntermediate}
                             />
                             <MixedGroupBadge isMixedGroup={s.isMixedGroup} />
+                            {hiddenPill}
                           </>
                         ) : null}
                       </View>
@@ -243,6 +276,7 @@ export function TimeAxisDayView({
                           </Text>
                           <IntermediateBadge isIntermediate={s.isIntermediate} />
                           <MixedGroupBadge isMixedGroup={s.isMixedGroup} />
+                          {hiddenPill}
                         </View>
                       )}
                     </View>

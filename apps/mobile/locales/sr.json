@@ -894,6 +894,7 @@
       "hideBlockedSession": "Ne može da se sakrije: ovaj termin već ima {{count}} rezervacija.",
       "hideBlockedSeries": "Ne može da se sakrije: serija već ima {{count}} rezervacija.",
       "hiddenBadge": "Skriveno",
+      "hiddenFromClients": "Skriveno od klijenata",
       "emptyClassTypes": "Nema dostupnih tipova treninga",
       "emptyRooms": "Nema dostupnih sala",
       "emptyTrainers": "Nema dostupnih trenera",
