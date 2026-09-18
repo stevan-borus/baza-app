@@ -91,9 +91,14 @@ export async function dispatchCampaign(campaignId: string) {
   // receive ANYTHING. `is:` also excludes clients with no preference row at
   // all, which is the point — Zakon o elektronskoj trgovini čl. 8 requires
   // prior consent, and no row means none was given.
-  // createAndDispatchUserNotification gates push on pushEnabled but knows
-  // nothing about campaignsEnabled, so filter here first. preferredLocale
-  // rides along so the per-recipient email chrome localizes with no extra query.
+  // createAndDispatchUserNotification gates push on pushEnabled and the inbox
+  // row on inAppEnabled but knows nothing about campaignsEnabled, so filter
+  // here first. The three are independent: campaignsEnabled decides whether
+  // this client hears from marketing at all, the other two which channels
+  // carry it. recipientCount is the audience that was dispatched to — email
+  // goes out regardless of the in-app switch, so it stays the audience size.
+  // preferredLocale rides along so the per-recipient email chrome localizes
+  // with no extra query.
   const recipients = await prisma.user.findMany({
     where: { id: { in: candidateIds }, notificationPreference: { is: { campaignsEnabled: true } } },
     select: {
