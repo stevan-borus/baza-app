@@ -1,12 +1,14 @@
 /**
- * Admin dashboard revenue hero.
+ * Admin dashboard revenue hero and client tiles.
  *
  * The hero is labelled "Prihod ovog meseca" but used to read an UNSCOPED
  * /api/reports/summary, which the route answers with all-time totals — so
- * the studio saw lifetime revenue under a month label. These tests seed the
- * unscoped summary and the current-studio-month summary with DIFFERENT
- * revenue and pin that the hero shows the month one, while the client tiles
- * keep reading the unscoped (all-time) query.
+ * the studio saw lifetime revenue under a month label. The three client tiles
+ * had the same shape of bug: they read the all-time query, where
+ * `activeClients` is really `isActive` (the soft-delete flag) and the
+ * "attendance rate" was clients divided by clients. Both now read the
+ * month-scoped summary, so these tests seed the two windows with DIFFERENT
+ * numbers and pin that nothing on the screen shows the all-time ones.
  */
 import { describe, it, expect } from "vitest";
 import React from "react";
@@ -23,8 +25,18 @@ import AdminPregled from "@/app/(admin)/pregled/index";
 
 const ALL_TIME_REVENUE = 987_000;
 const THIS_MONTH_REVENUE = 123_000;
+const MONTH_ACTIVE_PACKAGES = 17;
+const MONTH_NEW_CLIENTS = 3;
+const MONTH_ATTENDANCE_RATE = 82;
 
-function summaryPayload(revenue: number) {
+function summaryPayload(
+  revenue: number,
+  tiles?: {
+    clientsWithActivePackage?: number;
+    newClients?: number;
+    attendanceRate?: number | null;
+  },
+) {
   return {
     success: true as const,
     summary: {
@@ -34,6 +46,10 @@ function summaryPayload(revenue: number) {
       totalSessions: 120,
       revenue,
       totalPayments: 55,
+      clientsWithActivePackage: tiles?.clientsWithActivePackage ?? 0,
+      newClients: tiles?.newClients ?? 0,
+      attendanceRate:
+        tiles?.attendanceRate === undefined ? null : tiles.attendanceRate,
     },
   };
 }
@@ -62,7 +78,11 @@ function renderDashboard() {
     // The current studio month, computed with the same helper the screen uses.
     client.setQueryData(
       reportsQueries.summary(currentStudioMonthWindow()).queryKey,
-      summaryPayload(THIS_MONTH_REVENUE),
+      summaryPayload(THIS_MONTH_REVENUE, {
+        clientsWithActivePackage: MONTH_ACTIVE_PACKAGES,
+        newClients: MONTH_NEW_CLIENTS,
+        attendanceRate: MONTH_ATTENDANCE_RATE,
+      }),
     );
     const monthKey = monthKeyFromDate(dayjs(now()));
     client.setQueryData(
@@ -87,12 +107,15 @@ describe("Admin dashboard — revenue hero", () => {
     );
   });
 
-  it("keeps the client tiles on the unscoped (all-time) summary", () => {
+  it("reads the client tiles from the month-scoped summary", () => {
     const screen = renderDashboard();
 
-    // activeClients + (totalClients - inactiveClients) come from the
-    // all-time query; scoping them would change what the tiles mean.
-    expect(screen.getByText("31")).toBeTruthy();
+    // This used to read the unscoped query's `activeClients` (31) — the
+    // soft-delete count, i.e. the whole directory under an "active" label.
+    expect(
+      screen.getByTestId("pregled-stat-active-clients").textContent,
+    ).toBe(String(MONTH_ACTIVE_PACKAGES));
+    expect(screen.queryByText("31")).toBeNull();
   });
 });
 
@@ -112,5 +135,35 @@ describe("currentStudioMonthWindow", () => {
       hour12: false,
     }).format(fromDate);
     expect(belgradeFrom).toBe("1, 05");
+  });
+});
+
+describe("Admin dashboard — client tiles", () => {
+  it("counts clients with a usable package, not the whole directory", () => {
+    const screen = renderDashboard();
+
+    expect(screen.getByText("Aktivni klijenti")).toBeTruthy();
+    expect(
+      screen.getByTestId("pregled-stat-active-clients").textContent,
+    ).toBe(String(MONTH_ACTIVE_PACKAGES));
+    // 31 is the all-time payload's `activeClients` — the soft-delete count
+    // the tile used to show.
+    expect(screen.queryByText("31")).toBeNull();
+  });
+
+  it("shows the month's new clients", () => {
+    const screen = renderDashboard();
+
+    expect(screen.getByTestId("pregled-stat-new-clients").textContent).toBe(
+      String(MONTH_NEW_CLIENTS),
+    );
+  });
+
+  it("shows the kept-reservation rate as a percentage", () => {
+    const screen = renderDashboard();
+
+    expect(
+      screen.getByTestId("pregled-stat-attendance-rate").textContent,
+    ).toBe(`${MONTH_ATTENDANCE_RATE}%`);
   });
 });

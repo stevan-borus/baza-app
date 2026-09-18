@@ -17,13 +17,16 @@
  * the push dispatch must never reject the others or surface as an unhandled
  * rejection.
  */
-import type { NotificationLocale } from "@baza/i18n";
+import type { BookingEmailExtras, NotificationLocale } from "@baza/i18n";
 import {
   CLIENT_EVENT_CHANNELS,
   type ClientEvent,
 } from "@/lib/server/client-event-channels";
 import { sendBookingChangeEmailToRecipient } from "@/lib/server/booking-emails";
-import { createSystemNotification } from "@/lib/server/notifications";
+import {
+  createSystemNotification,
+  getPreferredLocale,
+} from "@/lib/server/notifications";
 import { prisma } from "@/lib/server/prisma";
 import { tryCatch } from "@/lib/server/try-catch";
 
@@ -66,6 +69,16 @@ export async function notifyClient(input: {
   userId: string;
   event: ClientEvent;
   vars?: Record<string, string | number | undefined>;
+  /**
+   * Vars whose VALUE depends on the recipient's locale — a formatted date, a
+   * localized change summary. Merged over `vars` once the locale is known, so
+   * one fan-out can address an sr and an en client with the same call.
+   */
+  localizedVars?: (
+    locale: NotificationLocale,
+  ) => Record<string, string | number | undefined>;
+  /** Extra email paragraphs, resolved per recipient locale. */
+  emailExtras?: (locale: NotificationLocale) => BookingEmailExtras;
   /** Pre-fetched recipient facts — skips the email/pref lookup when provided. */
   recipient?: PrefetchedRecipient;
 }): Promise<void> {
@@ -76,9 +89,18 @@ export async function notifyClient(input: {
   // error-tolerant, but wrap it so it can't reject the email side.
   if (channels.inApp) {
     const inApp = channels.inApp;
+    // The in-app row is rendered server-side in the recipient's stored locale
+    // (createSystemNotification resolves it), and the app re-renders it from
+    // the payload — so the payload must carry the locale-shaped vars too.
+    const inAppLocale = input.recipient
+      ? input.recipient.preferredLocale === "en"
+        ? "en"
+        : "sr"
+      : await getPreferredLocale(input.userId);
     await tryCatch(
       createSystemNotification(input.userId, inApp.messageKey, inApp.type, {
         ...input.vars,
+        ...input.localizedVars?.(inAppLocale),
       }),
     );
   }
@@ -95,7 +117,8 @@ export async function notifyClient(input: {
           to: recipient.email,
           kind: channels.email,
           locale,
-          vars: input.vars,
+          vars: { ...input.vars, ...input.localizedVars?.(locale) },
+          extras: input.emailExtras?.(locale),
         }),
       );
     }
