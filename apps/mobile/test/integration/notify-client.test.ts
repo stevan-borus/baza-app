@@ -7,6 +7,23 @@ vi.mock("@/lib/server/resend", () => ({
   sendBookingChangeEmail: (params: SentEmail) => sendSpy(params),
 }));
 
+// Partial mock: the real createSystemNotification still writes the in-app row
+// to the DB; only getPreferredLocale is routed through a spy so a test can make
+// the locale lookup reject. Unset, the spy delegates to the real lookup.
+// vi.hoisted: the mock factory runs before module-level consts initialize, so
+// the spy has to be created in the hoisted block to be visible inside it.
+const { localeSpy } = vi.hoisted(() => ({
+  localeSpy: vi.fn<(userId: string) => Promise<"sr" | "en">>(),
+}));
+vi.mock("@/lib/server/notifications", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("@/lib/server/notifications")>();
+  // Default to the real lookup so every other test in this file is unaffected;
+  // only the fallback tests override it.
+  localeSpy.mockImplementation(actual.getPreferredLocale);
+  return { ...actual, getPreferredLocale: localeSpy };
+});
+
 import { notifyClient } from "@/lib/server/notify-client";
 import { prisma } from "@/lib/server/prisma";
 
@@ -125,5 +142,39 @@ describe("notifyClient", () => {
     await expect(
       notifyClient({ userId: user.id, event: "ADMIN_CANCEL", vars: {} }),
     ).resolves.toBeUndefined();
+  });
+
+  it("does not reject — and still emails — when the locale lookup throws", async () => {
+    const user = await seedClient();
+    localeSpy.mockRejectedValueOnce(new Error("locale boom"));
+
+    // WAITLIST_PROMOTED fans out to both channels, so a throw on the in-app
+    // side must neither escape nor skip the email.
+    await expect(
+      notifyClient({ userId: user.id, event: "WAITLIST_PROMOTED", vars: {} }),
+    ).resolves.toBeUndefined();
+    expect(sendSpy).toHaveBeenCalledTimes(1);
+    expect(sendSpy.mock.calls[0][0].to).toBe("mara@test.local");
+  });
+
+  it("falls back to the sr default for localizedVars when the lookup throws", async () => {
+    const user = await seedClient({ preferredLocale: "en" });
+    localeSpy.mockRejectedValueOnce(new Error("locale boom"));
+    const localizedVars = vi.fn((locale: "sr" | "en") => ({ locale }));
+
+    await notifyClient({
+      userId: user.id,
+      event: "PACKAGE_ASSIGNED",
+      vars: {},
+      localizedVars,
+    });
+
+    expect(localizedVars).toHaveBeenCalledWith("sr");
+    // The in-app row is still written — a failed locale lookup degrades the
+    // copy, it does not drop the notification.
+    const logs = await prisma.notificationLog.count({
+      where: { userId: user.id },
+    });
+    expect(logs).toBe(1);
   });
 });
