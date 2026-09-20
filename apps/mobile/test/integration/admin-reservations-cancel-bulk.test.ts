@@ -14,9 +14,13 @@ type NotifyArgs = [
 const createSystemNotificationMock = vi.fn(async (..._args: NotifyArgs) => {
   return undefined as unknown;
 });
+// This file keeps its own factory (rather than notifications-mock.ts) for the
+// typed NotifyArgs spy; getPreferredLocale still has to be stubbed because
+// notifyClient reads it from the same module. Serbian is the default.
 vi.mock("@/lib/server/notifications", () => ({
   createSystemNotification: (...args: NotifyArgs) =>
     createSystemNotificationMock(...args),
+  getPreferredLocale: async (): Promise<"sr" | "en"> => "sr",
 }));
 
 import { POST } from "@/server/routes/admin/reservations/cancel-bulk";

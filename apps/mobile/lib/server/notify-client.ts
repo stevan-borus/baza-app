@@ -92,11 +92,16 @@ export async function notifyClient(input: {
     // The in-app row is rendered server-side in the recipient's stored locale
     // (createSystemNotification resolves it), and the app re-renders it from
     // the payload — so the payload must carry the locale-shaped vars too.
-    const inAppLocale = input.recipient
-      ? input.recipient.preferredLocale === "en"
-        ? "en"
-        : "sr"
-      : await getPreferredLocale(input.userId);
+    // The lookup is wrapped too: a rejection here would otherwise escape
+    // notifyClient entirely and skip the email side below. A failed lookup
+    // degrades the copy to the sr default, it never drops the notification.
+    let inAppLocale: NotificationLocale = "sr";
+    if (input.recipient) {
+      inAppLocale = input.recipient.preferredLocale === "en" ? "en" : "sr";
+    } else {
+      const locale = await tryCatch(getPreferredLocale(input.userId));
+      if (!locale.error) inAppLocale = locale.data;
+    }
     await tryCatch(
       createSystemNotification(input.userId, inApp.messageKey, inApp.type, {
         ...input.vars,
