@@ -110,3 +110,22 @@ an update and the build it lands on can't disagree.
 OTA only ships JavaScript. A change to `app.json`, `app.config.ts`,
 `package.json`, the lockfile, `android/`, or `ios/` needs a new native build —
 check those paths before assuming an OTA is enough.
+
+### Android push (FCM)
+
+`apps/mobile/google-services.json` is gitignored. EAS builds read it from a
+file-type project secret, created once by the owner:
+
+```sh
+cd apps/mobile
+pnpm dlx eas-cli secret:create --scope project --name GOOGLE_SERVICES_JSON --type file --value ./google-services.json
+```
+
+EAS writes the file outside the project and sets `GOOGLE_SERVICES_JSON` to its
+absolute path; `app.config.ts` prefers that path and falls back to the relative
+one in `app.json` for local builds. Without the secret, an Android build has no
+FCM sender ID and `getExpoPushTokenAsync` fails at runtime — the build itself
+still succeeds, so you only find out when no device registers.
+
+This is baked into the native binary. Rotating the file or changing the secret
+needs a new Android build; an OTA cannot ship it.
