@@ -6,9 +6,7 @@ vi.mock("@/lib/server/auth-guards", async () => (await import("./auth-mock")).au
 vi.mock("@/lib/server/cron-auth", () => ({
   requireCronAuth: (_req: Request) => ({ ok: true as const }),
 }));
-vi.mock("@/lib/server/notifications", () => ({
-  createSystemNotification: async () => undefined as unknown,
-}));
+vi.mock("@/lib/server/notifications", async () => (await import("./notifications-mock")).notificationsMock());
 
 import { POST as CONFIRM_TRIAL } from "@/server/routes/bookings/[id]/confirm-trial";
 import { POST as RUN_CONSUMPTION_CRON } from "@/server/routes/cron/sessions/consumption";

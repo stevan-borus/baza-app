@@ -6,9 +6,13 @@ vi.mock("@/lib/server/auth-guards", async () => (await import("./auth-mock")).au
 
 const createSystemNotificationMock =
   vi.fn<(...args: unknown[]) => Promise<void>>(async () => undefined);
+// This file keeps its own factory (rather than notifications-mock.ts) for the
+// spy asserted below; getPreferredLocale still has to be stubbed because
+// notifyClient reads it from the same module. Serbian is the default.
 vi.mock("@/lib/server/notifications", () => ({
   createSystemNotification: (...args: unknown[]) =>
     createSystemNotificationMock(...args),
+  getPreferredLocale: async (): Promise<"sr" | "en"> => "sr",
 }));
 
 import { GET, POST } from "@/server/routes/trainer-notes";
