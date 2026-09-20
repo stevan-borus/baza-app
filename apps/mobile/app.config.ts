@@ -22,7 +22,17 @@ const LINK_HOST = (process.env.EXPO_PUBLIC_LINK_HOST ?? "").trim();
 const LINK_PATHS = ["/accept-invite", "/reset-password"];
 
 export default ({ config }: ConfigContext): ExpoConfig => {
-  const base = config as ExpoConfig;
+  const base: ExpoConfig = {
+    ...(config as ExpoConfig),
+    android: {
+      ...config.android,
+      // EAS writes the GOOGLE_SERVICES_JSON file secret outside the project and
+      // exports its absolute path, so it has to win over app.json's relative
+      // fallback (which is what a local build with your own copy uses).
+      googleServicesFile:
+        process.env.GOOGLE_SERVICES_JSON ?? config.android?.googleServicesFile,
+    },
+  };
 
   if (!LINK_HOST) return base;
 

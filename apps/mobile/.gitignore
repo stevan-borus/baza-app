@@ -33,6 +33,12 @@ yarn-error.*
 # local env files
 .env*.local
 
+# Firebase Android config. Holds the FCM sender/app IDs for com.bazapilates.app,
+# so it stays out of git. EAS builds get it from the file-type project secret
+# GOOGLE_SERVICES_JSON; locally you need your own copy from the Firebase console.
+# See AGENTS.md -> Deploying -> Android push (FCM).
+google-services.json
+
 # typescript
 *.tsbuildinfo
 

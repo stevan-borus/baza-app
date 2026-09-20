@@ -37,7 +37,8 @@
         "backgroundColor": "#2e5b42"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.bazapilates.app"
+      "package": "com.bazapilates.app",
+      "googleServicesFile": "./google-services.json"
     },
     "web": {
       "bundler": "metro",
