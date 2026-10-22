@@ -3,6 +3,13 @@
   "version": "1.0.0",
   "private": true,
   "main": "expo-router/entry",
+  "expo": {
+    "install": {
+      "exclude": [
+        "react-native-reanimated"
+      ]
+    }
+  },
   "scripts": {
     "dev": "(xcrun simctl launch booted com.bazapilates.app || true) && expo start --dev-client --port 8090",
     "start": "expo start --dev-client --port 8090",
@@ -112,7 +119,7 @@
     "react-native-keyboard-controller": "1.21.6",
     "react-native-markdown-display": "^7.0.2",
     "react-native-modal-datetime-picker": "^18.0.0",
-    "react-native-reanimated": "~4.3.1",
+    "react-native-reanimated": "~4.3.4",
     "react-native-safe-area-context": "~5.7.0",
     "react-native-screens": "~4.25.2",
     "react-native-svg": "15.15.4",
