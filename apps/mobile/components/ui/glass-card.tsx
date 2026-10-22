@@ -3,8 +3,8 @@ import { View, Platform, type ViewProps } from "react-native";
 import { BlurView } from "expo-blur";
 import { useThemeTokens } from "./tokens";
 import { useThemePreference } from "@/lib/theme-preference";
+import { glassCardEdgeStyle, type AccentBorder } from "./glass-card-edge-style";
 
-type AccentBorder = "left" | "top";
 type CardSize = "sm" | "md" | "lg";
 
 export type GlassCardProps = ViewProps & {
@@ -61,13 +61,6 @@ export function GlassCard({
 
   const webExtra = isWeb ? { backdropFilter: "blur(12px)" } : {};
 
-  const accentBorderStyle =
-    accentBorder === "left"
-      ? { borderLeftWidth: 3, borderLeftColor: accentBorderColor }
-      : accentBorder === "top"
-        ? { borderTopWidth: 3, borderTopColor: accentBorderColor }
-        : {};
-
   return (
     <View
       style={[
@@ -80,7 +73,11 @@ export function GlassCard({
           position: "relative",
           backgroundColor: platformBg,
           ...webExtra,
-          ...accentBorderStyle,
+          ...glassCardEdgeStyle(
+            accentBorder,
+            accentBorderColor,
+            tokens.glassBorder,
+          ),
         },
         style,
       ]}
