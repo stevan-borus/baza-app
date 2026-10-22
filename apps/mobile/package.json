@@ -145,7 +145,7 @@
     "babel-preset-expo": "~56.0.21",
     "dotenv": "18.0.9",
     "prisma": "^7.10.1",
-    "prisma-zod-generator": "^2.1.4",
+    "prisma-zod-generator": "^3.3.1",
     "react-test-renderer": "19.2.3",
     "tsx": "^4.23.15",
     "vitest": "^4.1.12"
