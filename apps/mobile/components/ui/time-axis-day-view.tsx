@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Icon } from "@/components/ui/icon";
 import { IntermediateBadge } from "@/components/ui/intermediate-badge";
 import { MixedGroupBadge } from "@/components/ui/mixed-group-badge";
+import { sessionBlockStyle } from "@/components/ui/session-block-style";
 import { useThemeTokens } from "@/components/ui/tokens";
 import {
   HOUR_START,
@@ -203,24 +204,12 @@ export function TimeAxisDayView({
                 <View
                   className="flex-1 rounded-xl overflow-hidden justify-center"
                   style={{
-                    // 4px colored spine. overflow-hidden + rounded-xl clips its
-                    // outer corners to match the card radius automatically.
-                    borderLeftWidth: 4,
-                    borderLeftColor: color,
                     backgroundColor: tintBg(color, tokens.background),
-                    // Hidden from clients: dashed muted outline + a washed-out
-                    // fill, so the block reads as "draft" against its solid
-                    // neighbours before any label is read.
-                    ...(s.hiddenFromClients
-                      ? {
-                          borderTopWidth: 1,
-                          borderRightWidth: 1,
-                          borderBottomWidth: 1,
-                          borderStyle: "dashed" as const,
-                          borderColor: tokens.muted,
-                          opacity: 0.6,
-                        }
-                      : {}),
+                    ...sessionBlockStyle(
+                      s.hiddenFromClients,
+                      color,
+                      tokens.muted,
+                    ),
                   }}
                 >
                   <View className="px-2.5 flex-row items-center gap-2">
