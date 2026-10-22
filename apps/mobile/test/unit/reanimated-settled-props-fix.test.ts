@@ -10,18 +10,40 @@ const { version } = require("react-native-reanimated/package.json") as {
   version: string;
 };
 
-function parseVersion(v: string): number[] {
-  return v.split("-")[0].split(".").map(Number);
+const SEMVER =
+  /^(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?(?:\+[0-9A-Za-z.-]+)?$/;
+
+function parseVersion(v: string): { core: number[]; prerelease?: string } {
+  const match = SEMVER.exec(v);
+  if (!match) throw new Error(`unparseable version "${v}"`);
+  return { core: match.slice(1, 4).map(Number), prerelease: match[4] };
 }
 
+// Build metadata is ignored. A prerelease sorts before its own release, so
+// 4.3.3-rc.0 is older than 4.3.3, but 4.4.0-nightly is still newer.
 function isAtLeast(actual: string, minimum: string): boolean {
   const a = parseVersion(actual);
   const m = parseVersion(minimum);
   for (let i = 0; i < 3; i++) {
-    if (a[i] !== m[i]) return a[i] > m[i];
+    if (a.core[i] !== m.core[i]) return a.core[i] > m.core[i];
   }
-  return true;
+  return a.prerelease === undefined;
 }
+
+describe("isAtLeast", () => {
+  it.each([
+    ["4.3.4", true],
+    ["4.3.3", true],
+    ["4.3.2", false],
+    ["4.3.3-rc.0", false],
+    ["4.3.3+build.1", true],
+    ["4.4.0-nightly-20261021-63aa14096", true],
+    ["5.0.0", true],
+    ["4.2.9", false],
+  ])("%s >= 4.3.3 is %s", (actual, expected) => {
+    expect(isAtLeast(actual, "4.3.3")).toBe(expected);
+  });
+});
 
 describe("react-native-reanimated version", () => {
   it("includes the settled-props eviction fix (>= 4.3.3)", () => {
