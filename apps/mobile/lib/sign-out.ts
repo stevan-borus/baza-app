@@ -30,4 +30,7 @@ export async function signOutWithPushCleanup() {
   // on native) instead of waiting on the post-sign-out refetch.
   const session: WritableSessionAtom = authClient.$store.atoms.session;
   session.set({ ...session.get(), data: null, error: null, isPending: false });
+  // Starting a fetch aborts any get-session still in flight from before
+  // sign-out, which would otherwise write the old session back.
+  void session.get().refetch();
 }
