@@ -27,7 +27,10 @@ export function readSessionRole(user: unknown): AppRole | null {
 export function useSessionAuth() {
   const session = authClient.useSession();
   const role = readSessionRole(session.data?.user);
-  return { ...session, role };
+  // Ignores `error`: a network failure keeps the last known session, and a
+  // real 401 already clears `data`.
+  const isAuthenticated = !!session.data?.session && !!role;
+  return { ...session, role, isAuthenticated };
 }
 
 /** The fields of better-auth's session atom state `confirmSession` reads. */
@@ -43,6 +46,11 @@ type SessionState = {
 export type SessionAtom = {
   get(): SessionState;
   listen(listener: (state: SessionState) => void): () => void;
+};
+
+/** The session atom with `set`, for code that clears it. */
+export type WritableSessionAtom = SessionAtom & {
+  set(state: SessionState): void;
 };
 
 const RETRY_DELAYS_MS = [500, 1000, 2000] as const;
@@ -85,7 +93,10 @@ export async function confirmSession({
     // An aborted refetch resolves while the fetch that replaced it is still
     // in flight, so wait for the atom itself to settle.
     const state = await settled(atom);
-    if (state.data?.session) return true;
+    // A failed fetch keeps the previous data (e.g. the SecureStore cache).
+    // The guards keep that last known session through network errors, but
+    // confirming a sign-in needs a fresh, error-free fetch.
+    if (state.data?.session && !state.error) return true;
     if (state.error?.status === 401) return false;
     if (attempt >= retryDelaysMs.length) return false;
     await delay(retryDelaysMs[attempt]);

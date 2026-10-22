@@ -137,8 +137,7 @@ function RootLayoutNav() {
 
 function AppNavigator({ isDark }: { isDark: boolean }) {
   const session = useSessionAuth();
-  const isAuthenticated =
-    !session.error && !!session.data?.session && !!session.role;
+  const { isAuthenticated } = session;
   // Pass the user id so an account switch on a shared device re-registers:
   // isAuthenticated stays true across sign-out → sign-in as a different user,
   // which left the new account with no push token row at all.

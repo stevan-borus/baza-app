@@ -14,7 +14,8 @@ vi.mock("@/lib/auth-client", () => ({ authClient: {} }));
 import { confirmSession, type SessionAtom } from "@/lib/session-auth";
 
 type State = ReturnType<SessionAtom["get"]>;
-type Outcome = Pick<State, "data" | "error">;
+/** An outcome without `data` keeps whatever the atom already holds. */
+type Outcome = Partial<Pick<State, "data">> & Pick<State, "error">;
 
 const SIGNED_IN: Outcome = { data: { session: { id: "s1" } }, error: null };
 const NETWORK_DOWN: Outcome = {
@@ -22,6 +23,10 @@ const NETWORK_DOWN: Outcome = {
   error: { status: undefined },
 };
 const UNAUTHORIZED: Outcome = { data: null, error: { status: 401 } };
+/** better-auth's catch on a thrown fetch: `{ data: latest.data, error }`. */
+const NETWORK_DOWN_KEEPING_DATA: Outcome = { error: { status: undefined } };
+/** What @better-auth/expo hydrates from SecureStore on a cold start. */
+const CACHED_SESSION = { session: { id: "previous-user" } };
 
 const NO_WAIT = [0, 0, 0];
 
@@ -29,11 +34,14 @@ const NO_WAIT = [0, 0, 0];
 const NEVER = [60_000, 60_000, 60_000];
 
 /**
- * A settled, signed-out session atom that answers each `refetch` with the
- * next scripted outcome (NETWORK_DOWN once the script runs out). Records how
- * many get-session requests it made.
+ * A settled session atom (signed out unless `initial` says otherwise) that
+ * answers each `refetch` with the next scripted outcome (NETWORK_DOWN once
+ * the script runs out). Records how many get-session requests it made.
  */
-function fakeAtom(refetchOutcomes: Outcome[] = []) {
+function fakeAtom(
+  refetchOutcomes: Outcome[] = [],
+  initial: Pick<State, "data" | "error"> = { data: null, error: null },
+) {
   const listeners = new Set<(state: State) => void>();
   let requests = 0;
   let state: State;
@@ -54,8 +62,7 @@ function fakeAtom(refetchOutcomes: Outcome[] = []) {
   }
 
   state = {
-    data: null,
-    error: null,
+    ...initial,
     isPending: false,
     isRefetching: false,
     refetch,
@@ -102,5 +109,28 @@ describe("confirmSession", () => {
       false,
     );
     expect(requests()).toBe(1);
+  });
+
+  it("does not confirm cached session data the failed refetch left behind", async () => {
+    const attempts = 1 + NO_WAIT.length;
+    const { atom, requests } = fakeAtom(
+      Array.from({ length: attempts }, () => NETWORK_DOWN_KEEPING_DATA),
+      { data: CACHED_SESSION, error: { status: undefined } },
+    );
+    await expect(confirmSession({ atom, retryDelaysMs: NO_WAIT })).resolves.toBe(
+      false,
+    );
+    expect(requests()).toBe(attempts);
+  });
+
+  it("retries past cached data and a network error to a clean session", async () => {
+    const { atom, requests } = fakeAtom(
+      [NETWORK_DOWN_KEEPING_DATA, SIGNED_IN],
+      { data: CACHED_SESSION, error: { status: undefined } },
+    );
+    await expect(confirmSession({ atom, retryDelaysMs: NO_WAIT })).resolves.toBe(
+      true,
+    );
+    expect(requests()).toBe(2);
   });
 });
