@@ -73,6 +73,7 @@
     "submit": "Uloguj se",
     "signingIn": "Prijavljujem se...",
     "signInError": "Prijava nije uspela.",
+    "signInSessionError": "Prijava nije završena. Proverite internet vezu i pokušajte ponovo.",
     "signInLocked": "Nalog je privremeno zaključan zbog previše neuspelih pokušaja. Pokušajte ponovo za {{count}} min ili resetujte lozinku.",
     "forgotPassword": "Zaboravljena lozinka?",
     "resetPasswordTitle": "Reset lozinke",

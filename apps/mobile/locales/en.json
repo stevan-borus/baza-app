@@ -73,6 +73,7 @@
     "submit": "Sign in",
     "signingIn": "Signing in...",
     "signInError": "Sign-in failed.",
+    "signInSessionError": "Couldn't finish signing in. Check your connection and try again.",
     "signInLocked": "Account temporarily locked after too many failed attempts. Try again in {{count}} min or reset your password.",
     "forgotPassword": "Forgot password?",
     "resetPasswordTitle": "Reset password",
