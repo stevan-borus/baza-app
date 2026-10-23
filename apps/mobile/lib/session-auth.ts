@@ -1,8 +1,19 @@
+import type { Href } from "expo-router";
 import { authClient } from "@/lib/auth-client";
 
 export const APP_ROLES = ["ADMIN", "TRAINER", "CLIENT"] as const;
 
 export type AppRole = (typeof APP_ROLES)[number];
+
+const ROLE_HOME_HREFS = {
+  ADMIN: "/(admin)/pregled",
+  TRAINER: "/(trainer)/raspored",
+  CLIENT: "/(client)",
+} as const satisfies Record<AppRole, Href>;
+
+export function getRoleHomeHref(role: AppRole | null): Href {
+  return role ? ROLE_HOME_HREFS[role] : "/sign-in";
+}
 
 type SessionUser = {
   role?: string | null;

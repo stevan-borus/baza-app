@@ -14,7 +14,7 @@ import {
   useRefuseConsentMutation,
 } from "@/lib/queries/consent-queries-factory";
 import { signOutWithPushCleanup } from "@/lib/sign-out";
-import { useSessionAuth } from "@/lib/session-auth";
+import { getRoleHomeHref, useSessionAuth } from "@/lib/session-auth";
 import { SocialMediaQuestion } from "@/components/consent/social-media-question";
 import { MarketingConsentQuestion } from "@/components/consent/marketing-consent-question";
 import { GuardianBlock, type GuardianFields } from "@/components/consent/guardian-block";
@@ -125,7 +125,7 @@ export default function ConsentScreen() {
         });
       }
       await queryClient.refetchQueries({ queryKey: consentQueries.status().queryKey });
-      router.replace("/");
+      router.replace(getRoleHomeHref(role));
     } catch {
       setSubmitError(t("consent.errorSubmit"));
       setSubmitting(false);

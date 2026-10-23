@@ -34,6 +34,19 @@ test.describe("auth extended (Serbian)", () => {
     page,
   }) => {
     await signInAs(page, "admin");
+    await expect(page).toHaveURL(/\/pregled(?:[?#]|$)/);
+
+    await page.getByTestId("open-profile-sheet").click();
+    await page.getByTestId("profile-sign-out-button").click();
+
+    await expect(page).toHaveURL(/\/sign-in/);
+    await expect(page.getByTestId("auth-email-input")).toBeVisible();
+  });
+
+  test("signed-in client signs out and lands back on /sign-in", async ({
+    page,
+  }) => {
+    await signInAs(page, "client.active.reformer@e2e.test");
 
     await page.getByTestId("open-profile-sheet").click();
     await page.getByTestId("profile-sign-out-button").click();
