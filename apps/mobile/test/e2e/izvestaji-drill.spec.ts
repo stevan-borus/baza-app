@@ -125,7 +125,12 @@ test.describe.serial("izveštaji → naplata drill (admin)", () => {
       month: "short",
       timeZone: "Europe/Belgrade",
     }).format(new Date(from!));
-    expect(fundedBarLabel?.endsWith(` ${day}`)).toBe(true);
+    const chartDay = new Intl.DateTimeFormat("sr-RS", {
+      day: "numeric",
+      month: "short",
+      timeZone: "Europe/Belgrade",
+    }).format(new Date(from!));
+    expect(fundedBarLabel?.endsWith(` ${chartDay}`)).toBe(true);
     // A studio day ends at 05:00 the next morning. Its range label repeats
     // the start day, rather than formatting the end's calendar date.
     const rangeLabel = `${day} – ${day}`;
