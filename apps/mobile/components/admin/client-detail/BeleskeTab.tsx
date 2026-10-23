@@ -44,7 +44,6 @@ export function BeleskeTab({
           <Pressable
             testID={`beleske-row-${item.id}`}
             onPress={() => setPendingDelete(item)}
-            android_ripple={null}
             className="bg-surface rounded-lg overflow-hidden active:opacity-80"
             style={{ marginBottom: 8, padding: 14 }}
           >

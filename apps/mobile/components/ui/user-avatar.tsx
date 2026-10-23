@@ -27,7 +27,6 @@ export function UserAvatar() {
       testID="open-profile-sheet"
       onPress={open}
       hitSlop={12}
-      android_ripple={null}
       className="active:opacity-80"
       accessibilityRole="button"
       accessibilityLabel="Open profile menu"

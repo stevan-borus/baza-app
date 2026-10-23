@@ -1,10 +1,15 @@
+import { createRequire } from "node:module";
 import path from "node:path";
 import { defineConfig } from "vitest/config";
 import { playwright } from "@vitest/browser-playwright";
 
+const expoRouterDir = path.dirname(
+  createRequire(import.meta.url).resolve("expo-router/package.json"),
+);
+
 export default defineConfig({
-  esbuild: {
-    jsx: "automatic",
+  oxc: {
+    jsx: { runtime: "automatic" },
   },
   resolve: {
     alias: {
@@ -21,6 +26,12 @@ export default defineConfig({
           name: "unit",
           include: ["test/unit/**/*.test.{ts,tsx}"],
           environment: "node",
+          // AsyncStorage 3 ships ESM with extensionless relative imports so
+          // Metro can pick its .native files; Node's loader can't resolve
+          // them, so Vite resolves the package instead.
+          server: {
+            deps: { inline: ["@react-native-async-storage/async-storage"] },
+          },
         },
       },
       {
@@ -108,6 +119,12 @@ export default defineConfig({
               ),
             },
             {
+              // The root HTML document (app/+html.tsx) is ours and renders
+              // real, so its document API skips the router stub below.
+              find: /^expo-router\/(?:build\/)?(html|server\/ServerDocument)$/,
+              replacement: path.join(expoRouterDir, "build/$1.js"),
+            },
+            {
               find: "expo-router",
               replacement: path.resolve(
                 __dirname,
@@ -187,7 +204,7 @@ export default defineConfig({
           },
           deps: {
             optimizer: {
-              web: {
+              client: {
                 // These RN libraries deep-import react-native internals in
                 // their .js files but ship .web.js siblings; the optimizer's
                 // resolver ignores our .web-first extensions, so serve them

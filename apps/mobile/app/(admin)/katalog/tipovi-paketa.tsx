@@ -270,7 +270,6 @@ export default function AdminPackages() {
                   <Pressable
                     testID={`package-type-row-${pt.id}`}
                     onPress={() => crud.openEdit(pt)}
-                    android_ripple={null}
                     className="flex-row items-center gap-3 px-4 py-3 active:opacity-70"
                   >
                     <SessionCountIcon count={pt.sessionCount} />

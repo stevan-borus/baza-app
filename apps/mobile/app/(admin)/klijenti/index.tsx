@@ -115,7 +115,6 @@ function ClientRow({
     <Pressable
       testID={`client-row-${client.id}`}
       onPress={onPress}
-      android_ripple={null}
       className="flex-row items-center gap-3 py-3 active:opacity-70"
     >
       <InitialsAvatar name={client.user.fullName} />
@@ -144,7 +143,6 @@ function ClientRow({
         testID={`client-pencil-${client.user.id}`}
         onPress={onPressActions}
         hitSlop={12}
-        android_ripple={null}
         accessibilityRole="button"
         accessibilityLabel={t("admin.clients.openActions")}
         className="w-8 h-8 items-center justify-center -mr-1 active:opacity-60"

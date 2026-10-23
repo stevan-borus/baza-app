@@ -67,7 +67,6 @@ export function MonthView({
         <Pressable
           onPress={onPrevMonth}
           hitSlop={12}
-          android_ripple={null}
           className="active:opacity-60 w-9 h-9 items-center justify-center"
           accessibilityRole="button"
           accessibilityLabel="Previous month"
@@ -80,7 +79,6 @@ export function MonthView({
         <Pressable
           onPress={onNextMonth}
           hitSlop={12}
-          android_ripple={null}
           className="active:opacity-60 w-9 h-9 items-center justify-center"
           accessibilityRole="button"
           accessibilityLabel="Next month"
@@ -139,7 +137,6 @@ export function MonthView({
                   key={dateKey}
                   testID={`month-day-${dateKey}`}
                   onPress={() => onSelectDate(dateKey)}
-                  android_ripple={null}
                   className={`flex-1 items-center justify-center rounded ${containerCls}`}
                   accessibilityRole="button"
                   accessibilityState={{ selected: isSelected }}

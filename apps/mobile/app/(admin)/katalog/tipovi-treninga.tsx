@@ -167,7 +167,6 @@ export default function AdminSettingsClassTypes() {
           <Pressable
             testID={`class-type-row-${ct.id}`}
             onPress={() => crud.openEdit(ct)}
-            android_ripple={null}
             className="active:opacity-70"
           >
             <GlassCard style={{ padding: 0, borderRadius: 16, overflow: "hidden" }}>

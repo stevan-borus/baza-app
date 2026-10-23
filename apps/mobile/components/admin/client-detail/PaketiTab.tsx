@@ -110,7 +110,6 @@ export function PaketiTab({
                         testID={`package-history-row-${p.id}-add-session`}
                         onPress={() => setAddSessionTarget(p)}
                         hitSlop={8}
-                        android_ripple={null}
                         className="active:opacity-60"
                         accessibilityRole="button"
                         accessibilityLabel={t("admin.clientDetail.addSessionAction")}
@@ -128,7 +127,6 @@ export function PaketiTab({
                         testID={`package-history-row-${p.id}-revoke`}
                         onPress={() => setRevokeTarget(p)}
                         hitSlop={8}
-                        android_ripple={null}
                         className="active:opacity-60"
                         accessibilityRole="button"
                         accessibilityLabel={t("admin.clientDetail.revokeAction")}

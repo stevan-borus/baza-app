@@ -2,7 +2,7 @@ import { useCallback, useRef, useState } from "react";
 import { useFocusEffect } from "expo-router";
 import { useMutation, useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { ActivityIndicator, FlatList, Pressable, Text, View, type TextLayoutEventData, type NativeSyntheticEvent } from "react-native";
+import { ActivityIndicator, FlatList, Pressable, Text, View, type TextLayoutEvent } from "react-native";
 import { BottomSheetScrollView } from "@gorhom/bottom-sheet";
 import ReanimatedSwipeable from "react-native-gesture-handler/ReanimatedSwipeable";
 import { GlassCard } from "@/components/ui/glass-card";
@@ -565,7 +565,7 @@ export function NotificationsInbox({ context, bottomPad = 0 }: Props) {
                                 pointerEvents="none"
                                 accessibilityElementsHidden
                                 importantForAccessibility="no-hide-descendants"
-                                onTextLayout={(e: NativeSyntheticEvent<TextLayoutEventData>) => {
+                                onTextLayout={(e: TextLayoutEvent) => {
                                   if (e.nativeEvent.lines.length > 2) truncatedIdsRef.current.add(n.id);
                                   else truncatedIdsRef.current.delete(n.id);
                                 }}
@@ -587,7 +587,7 @@ export function NotificationsInbox({ context, bottomPad = 0 }: Props) {
             onViewableItemsChanged={onViewableItemsChangedRef.current}
             viewabilityConfig={VIEWABILITY_CONFIG}
             ListFooterComponent={
-              notificationsQuery.isFetchingNextPage ? <ActivityIndicator style={{ padding: 16 }} /> : null
+              notificationsQuery.isFetchingNextPage ? <ActivityIndicator style={{ padding: 16 }} /> : undefined
             }
           />
         )}

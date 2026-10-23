@@ -184,7 +184,6 @@ export default function HonorariTrainerDetail() {
                     key={session.sessionId}
                     testID={`honorari-session-${session.sessionId}`}
                     accessibilityRole="button"
-                    android_ripple={null}
                     className="active:opacity-70"
                     onPress={() =>
                       router.push({

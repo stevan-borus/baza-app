@@ -3,6 +3,8 @@
  * Several expo-* packages import it package-to-package where our per-package
  * stubs can't intervene; this cuts the whole native graph off at its root.
  */
+import { createRef, useState, type RefObject } from "react";
+
 export class EventEmitter {
   addListener(_event: string, _listener: (...args: unknown[]) => void) {
     return { remove() {} };
@@ -99,3 +101,23 @@ export function createPermissionHook() {
 export async function reloadAppAsync(_reason?: string) {}
 
 export function installOnUIRuntime() {}
+
+export function createSnapshotFriendlyRef<T>(): RefObject<T | null> {
+  return createRef<T>();
+}
+
+// Shared objects are native-backed; nothing here releases, so the hooks just
+// keep the first object the factory returns.
+export function useReleasingSharedObject<T>(
+  factory: () => T,
+  _dependencies: readonly unknown[],
+): T {
+  return useState(factory)[0];
+}
+
+export function useReleasingSharedObjectWithLifecycle<T>(
+  lifecycle: { factory: () => T },
+  _dependencies: readonly unknown[],
+): T {
+  return useState(lifecycle.factory)[0];
+}

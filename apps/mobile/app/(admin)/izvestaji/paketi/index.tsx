@@ -308,7 +308,6 @@ export default function IzvestajiPaketi() {
                   key={row.clientPackageId}
                   testID={`paketi-recent-${row.clientPackageId}`}
                   onPress={() => drillToClient(row.clientUserId)}
-                  android_ripple={null}
                   className="active:opacity-70"
                   style={{
                     paddingVertical: 10,

@@ -246,7 +246,6 @@ export default function AdminBilling() {
               <Pressable
                 onPress={() => navigateBillingMonth(-1)}
                 hitSlop={12}
-                android_ripple={null}
                 className="active:opacity-60 w-9 h-9 items-center justify-center"
               >
                 <Icon name="chevron-left" size={20} color={tokens.foreground} />
@@ -257,7 +256,6 @@ export default function AdminBilling() {
               <Pressable
                 onPress={() => navigateBillingMonth(1)}
                 hitSlop={12}
-                android_ripple={null}
                 className="active:opacity-60 w-9 h-9 items-center justify-center"
               >
                 <Icon name="chevron-right" size={20} color={tokens.foreground} />
@@ -758,7 +756,7 @@ function BillingClientPickerSheet({
       ListFooterComponent={
         clientsQ.isFetchingNextPage ? (
           <ActivityIndicator style={{ padding: 16 }} />
-        ) : null
+        ) : undefined
       }
       onEndReachedThreshold={0.4}
       onEndReached={() => {
@@ -772,7 +770,6 @@ function BillingClientPickerSheet({
           <Pressable
             testID={`billing-client-option-${c.user.id}`}
             onPress={() => onPick({ userId: c.user.id, fullName: c.user.fullName })}
-            android_ripple={null}
             className="flex-row items-center gap-3 py-3 active:opacity-70"
             accessibilityRole="button"
             accessibilityState={{ selected: isSelected }}
@@ -879,7 +876,6 @@ function BillingRow({
     <Pressable
       testID={`billing-row-pending-${item.id}`}
       onPress={() => onPressPending(item)}
-      android_ripple={null}
       className="active:opacity-70"
       accessibilityRole="button"
       accessibilityLabel={t("admin.manage.confirmPaymentTitle")}

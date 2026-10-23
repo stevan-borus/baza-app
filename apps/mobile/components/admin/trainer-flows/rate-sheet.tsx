@@ -265,7 +265,6 @@ export function RateSheet({
             accessibilityRole="button"
             testID={`procenti-revert-${scope.classTypeId}`}
             onPress={() => onRevert(scope)}
-            android_ripple={null}
             className="active:opacity-70"
           >
             <View className="items-center py-1">

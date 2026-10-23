@@ -192,7 +192,8 @@ describe("the bottom tab bar exposes real tab semantics", () => {
         isDark={false}
         state={{ routes, index: focusedIndex } as never}
         descriptors={descriptors as never}
-        navigation={{ emit: () => ({ defaultPrevented: false }), navigate: () => {} } as never}
+        emitter={{ emit: () => ({ defaultPrevented: false }) } as never}
+        navigateToTab={() => {}}
         insets={{ top: 0, right: 0, bottom: 0, left: 0 } as never}
       />,
     );

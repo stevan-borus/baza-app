@@ -71,7 +71,6 @@ export function AuthBackground({
               <Pressable
                 onPress={onBack ?? (() => router.back())}
                 hitSlop={12}
-                android_ripple={null}
                 className="absolute left-0 top-0 bottom-0 justify-center active:opacity-60"
               >
                 <Icon name="chevron-left" size={26} color={tokens.foreground} />

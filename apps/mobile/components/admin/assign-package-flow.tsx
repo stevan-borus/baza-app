@@ -202,7 +202,7 @@ function ClientPickerStep({
       ListFooterComponent={
         clientsQuery.isFetchingNextPage ? (
           <ActivityIndicator style={{ padding: 16 }} />
-        ) : null
+        ) : undefined
       }
       onEndReached={() => {
         if (clientsQuery.hasNextPage && !clientsQuery.isFetchingNextPage) {
@@ -223,7 +223,6 @@ function ClientPickerStep({
               },
             })
           }
-          android_ripple={null}
           className="flex-row items-center gap-3 py-3 active:opacity-70"
         >
           <PickerAvatar name={c.user.fullName} />
@@ -339,7 +338,6 @@ function SheetHeader({
       <Pressable
         onPress={onBack}
         hitSlop={12}
-        android_ripple={null}
         className="active:opacity-60 w-8 h-8 items-center justify-center"
         accessibilityRole="button"
         accessibilityLabel="Back"

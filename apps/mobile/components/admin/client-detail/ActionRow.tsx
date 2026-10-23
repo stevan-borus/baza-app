@@ -20,7 +20,6 @@ export function ActionRow({
     <Pressable
       testID={testID}
       onPress={onPress}
-      android_ripple={null}
       className="flex-row items-center gap-3 py-3.5 active:opacity-70"
     >
       <Icon

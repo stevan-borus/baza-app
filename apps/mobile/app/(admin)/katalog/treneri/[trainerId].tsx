@@ -151,7 +151,6 @@ export default function TrainerRates() {
               })}
               testID="procenti-default-row"
               onPress={() => openRate(null)}
-              android_ripple={null}
               className="active:opacity-70"
             >
               <GlassCard style={{ padding: 0, borderRadius: 16, overflow: "hidden" }}>
@@ -237,7 +236,6 @@ export default function TrainerRates() {
                     })}
                     testID={`procenti-class-type-row-${classType.id}`}
                     onPress={() => openRate(scope)}
-                    android_ripple={null}
                     className="active:opacity-70"
                   >
                     <View className="flex-row items-center gap-3.5 px-4 py-3.5">

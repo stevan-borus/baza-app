@@ -40,7 +40,6 @@ export function SheetHeader({
       <Pressable
         onPress={onBack}
         hitSlop={12}
-        android_ripple={null}
         className="active:opacity-60 w-8 h-8 items-center justify-center"
         accessibilityRole="button"
         accessibilityLabel="Back"

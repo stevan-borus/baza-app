@@ -95,7 +95,6 @@ export function BookingRow({
       <Pressable
         testID={`booking-row-${booking.id}`}
         onPress={onPress}
-        android_ripple={null}
         accessibilityRole="button"
         accessibilityLabel={accessibilityLabel}
         className="flex-row items-start gap-3 px-4 py-3 active:opacity-60"

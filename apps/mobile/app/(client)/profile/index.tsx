@@ -156,7 +156,6 @@ export default function ClientProfile() {
             <Pressable
               onPress={handlePickAvatar}
               hitSlop={8}
-              android_ripple={null}
               className="active:opacity-80"
               accessibilityRole="button"
               accessibilityLabel={t("client.profileTab.changePhoto")}
@@ -416,7 +415,6 @@ export default function ClientProfile() {
             <Pressable
               testID="client-profile-packages-row"
               onPress={() => router.push("/(client)/profile/packages")}
-              android_ripple={null}
               className="flex-row items-center justify-between py-3 active:opacity-60"
               accessibilityRole="button"
               accessibilityLabel={t("client.clientPackages.viewAll")}
@@ -444,7 +442,6 @@ export default function ClientProfile() {
             <Pressable
               testID="client-profile-upcoming-row"
               onPress={() => router.push("/(client)/profile/upcoming")}
-              android_ripple={null}
               className="flex-row items-center justify-between py-4 active:opacity-60"
             >
               <Text
@@ -458,7 +455,6 @@ export default function ClientProfile() {
             <Pressable
               testID="client-profile-history-row"
               onPress={() => router.push("/(client)/profile/history")}
-              android_ripple={null}
               className="flex-row items-center justify-between border-t border-glass-border py-4 active:opacity-60"
             >
               <Text
@@ -483,7 +479,6 @@ export default function ClientProfile() {
             <Pressable
               testID="client-profile-settings-row"
               onPress={() => router.push("/(client)/profile/settings")}
-              android_ripple={null}
               className="flex-row items-center justify-between py-4 active:opacity-60"
               accessibilityRole="button"
               accessibilityLabel={t("client.notificationSettings.navRow")}

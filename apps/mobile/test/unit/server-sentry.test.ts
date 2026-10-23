@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
+import { URL } from "node:url";
 import { runInNewContext } from "node:vm";
 import { describe, expect, test, vi } from "vitest";
 import { resolveSentryConfig } from "@/server/sentry";

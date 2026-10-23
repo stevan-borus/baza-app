@@ -219,7 +219,7 @@ function FreePicker(props: FreeProps) {
               <View style={{ padding: 12, alignItems: "center" }}>
                 <ActivityIndicator />
               </View>
-            ) : null
+            ) : undefined
           }
           onEndReachedThreshold={0.4}
           onEndReached={() => {

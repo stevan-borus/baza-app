@@ -32,7 +32,6 @@ export function ReturnToPill({ testID = "return-to-pill" }: { testID?: string } 
           router.replace(returnTo.path as Parameters<typeof router.replace>[0])
         }
         hitSlop={8}
-        android_ripple={null}
         className="self-start active:opacity-60 rounded-full border border-glass-border bg-glass px-3 py-1.5"
       >
         <Text className="text-foreground font-body-semibold" style={{ fontSize: 12 }}>

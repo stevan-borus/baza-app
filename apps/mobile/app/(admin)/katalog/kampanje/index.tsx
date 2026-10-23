@@ -78,7 +78,6 @@ export default function CampaignsHistory() {
             reset();
             setComposeOpen(true);
           }}
-          android_ripple={null}
           hitSlop={12}
           className="w-9 h-9 items-center justify-center active:opacity-60"
           accessibilityRole="button"
@@ -111,7 +110,6 @@ export default function CampaignsHistory() {
                 onPress={() =>
                   router.push(`/(admin)/katalog/kampanje/${c.id}` as const)
                 }
-                android_ripple={null}
                 className="active:opacity-70"
                 accessibilityRole="button"
                 accessibilityLabel={c.title}

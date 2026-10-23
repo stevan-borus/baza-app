@@ -118,7 +118,6 @@ function ProfileSheetContent({ open, onOpenChange }: Props) {
           <Pressable
             onPress={handlePickAvatar}
             hitSlop={6}
-            android_ripple={null}
             className="active:opacity-80"
             accessibilityRole="button"
             accessibilityLabel={t("client.profileTab.changePhoto")}

@@ -187,7 +187,6 @@ function BlackPill({
   return (
     <Pressable
       onPress={onPress}
-      android_ripple={null}
       style={({ pressed }) => ({
         backgroundColor: resolvedFill,
         opacity: pressed ? 0.85 : 1,

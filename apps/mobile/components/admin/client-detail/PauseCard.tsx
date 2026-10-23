@@ -73,7 +73,6 @@ export function PauseCard({
             testID="client-edit-pause-button"
             onPress={() => onEditPause(pause, kind)}
             hitSlop={8}
-            android_ripple={null}
             className="active:opacity-60"
             accessibilityRole="button"
             accessibilityLabel={t("admin.clientDetail.editPauseAction")}

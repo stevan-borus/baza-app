@@ -202,7 +202,6 @@ export default function Treneri() {
                       params: { trainerId: trainer.id },
                     })
                   }
-                  android_ripple={null}
                   className="active:opacity-70"
                 >
                   <GlassCard style={{ padding: 0, borderRadius: 16, overflow: "hidden" }}>
