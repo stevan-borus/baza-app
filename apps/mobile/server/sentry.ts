@@ -22,8 +22,8 @@ export type SentryServerConfig = {
    * irrelevant and traces are useful.
    */
   performanceInstrumentation: boolean;
-  /** Sentry log buffering — off on the server (memory cost, no pilot value). */
-  enableLogs: boolean;
+  /** Drop server logs before buffering (memory cost, no pilot value). */
+  beforeSendLog: (log: unknown) => null;
 };
 
 export function resolveSentryConfig({
@@ -46,6 +46,6 @@ export function resolveSentryConfig({
     environment,
     tracesSampleRate,
     performanceInstrumentation: isDev,
-    enableLogs: false,
+    beforeSendLog: () => null,
   };
 }
