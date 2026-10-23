@@ -3,4 +3,5 @@ packages:
   - "packages/*"
 
 patchedDependencies:
+  '@legendapp/list@3.6.0': patches/@legendapp__list@3.6.0.patch
   dayjs@1.11.23: patches/dayjs@1.11.23.patch
