@@ -1,14 +1,9 @@
-// Moti 0.30 builds its animatable transform keys (`translateY`, `scale`, …)
-// from per-transform types that React Native's strict TypeScript API, the
-// default since 0.88, no longer exports. Missing, they resolve to `any`, which
-// widens every Moti `transition` prop to an index signature that rejects
-// `type: "timing"`. Declare them again, derived from RN's own `transform` entry.
+// Restore Moti 0.30's transform aliases from React Native 0.88's public style type.
 import type { TransformsStyle } from "react-native";
 
-type TransformEntry = Exclude<
-  NonNullable<TransformsStyle["transform"]>,
-  string
->[number];
+type TransformEntry = NonNullable<
+  Exclude<NonNullable<TransformsStyle["transform"]>, string>[number]
+>;
 
 type SingleTransform<K extends keyof TransformEntry> = {
   [P in K]: NonNullable<TransformEntry[P]>;
