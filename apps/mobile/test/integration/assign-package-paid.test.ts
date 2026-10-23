@@ -200,10 +200,7 @@ describe("assign-package paid mode (POST /api/billing)", () => {
       clientProfile: null,
     });
 
-    // 1) Paid package — goes through POST /api/billing with
-    //    activatePackageOnConfirm: true. The server uses now() for both
-    //    the BillingRecord.createdAt and the ClientPackage.startsAt, so
-    //    they share a logical clock tick and are the first of each type.
+    // 1) Paid activation links its BillingRecord through clientPackageId.
     const paidRes = await POST(
       buildJsonRequest({
         clientUserId: clientUser.id,
@@ -214,12 +211,11 @@ describe("assign-package paid mode (POST /api/billing)", () => {
       }),
     );
     expect(paidRes.status).toBe(201);
+    const paidBody = (await paidRes.json()) as { clientPackage: { id: string } };
+    const paidPackId = paidBody.clientPackage.id;
 
-    // 2) Comp package — created later (startsAt one hour ahead) via the
-    //    plain POST /api/packages/client-packages, no billing row. After
-    //    chronological zipping the paid package (older startsAt) pairs
-    //    with the only BillingRecord; the comp package (newer startsAt,
-    //    no record at index 1) stays unpaired.
+    // 2) The comp package has no billing row. Both startsAt values normalize
+    //    to the same studio day, so identify each package by its creation ID.
     const compRes = await POST_CLIENT_PACKAGE(
       new Request("http://test.local/api/packages/client-packages", {
         method: "POST",
@@ -232,14 +228,12 @@ describe("assign-package paid mode (POST /api/billing)", () => {
       }),
     );
     expect(compRes.status).toBe(201);
+    const compBody = (await compRes.json()) as { clientPackage: { id: string } };
+    const compPackId = compBody.clientPackage.id;
 
-    // Sanity: two ClientPackages, one BillingRecord.
-    const allPacks = await prisma.clientPackage.findMany({
-      orderBy: { startsAt: "asc" },
-    });
+    // Sanity: two ClientPackages.
+    const allPacks = await prisma.clientPackage.findMany();
     expect(allPacks).toHaveLength(2);
-    const paidPackId = allPacks[0]!.id;
-    const compPackId = allPacks[1]!.id;
 
     // Hit the GET endpoint and inspect billingRecord per package.
     const getRes = await GET_CLIENT_PACKAGES(
