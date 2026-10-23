@@ -5,6 +5,7 @@
   },
   "build": {
     "development": {
+      "node": "24.22.1",
       "developmentClient": true,
       "distribution": "internal",
       "android": {
@@ -15,6 +16,7 @@
       }
     },
     "preview": {
+      "node": "24.22.1",
       "distribution": "internal",
       "channel": "preview",
       "android": {
@@ -36,6 +38,7 @@
       }
     },
     "production": {
+      "node": "24.22.1",
       "autoIncrement": true,
       "channel": "production",
       "android": {

@@ -8,7 +8,7 @@
 #   deps   — install the full workspace once (cached on lockfile changes)
 #   build  — prisma generate + `expo export -p web` → apps/mobile/dist
 #   runtime— prod-only deps + the export output; boots with `migrate deploy`
-ARG NODE_VERSION=22
+ARG NODE_VERSION=24.22.1
 
 # ---- deps -------------------------------------------------------------------
 FROM node:${NODE_VERSION}-slim AS deps

@@ -14,7 +14,7 @@ concurrency:
 env:
   # Pin the toolchain to what the repo declares (package.json packageManager + engines).
   PNPM_VERSION: "10.28.0"
-  NODE_VERSION: "22"
+  NODE_VERSION: "24.22.1"
 
 jobs:
   # Fast, DB-free gate on every PR: style, types, logic. Integration + e2e are
