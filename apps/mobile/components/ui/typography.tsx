@@ -60,7 +60,6 @@ export function LinkText({
       <Pressable
         onPress={onPress}
         hitSlop={6}
-        android_ripple={null}
         className="active:opacity-60"
       >
         {text}

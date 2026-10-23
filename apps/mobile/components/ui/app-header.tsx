@@ -98,7 +98,6 @@ export function BackButton() {
     <Pressable
       onPress={() => router.back()}
       hitSlop={12}
-      android_ripple={null}
       className="active:opacity-60"
       accessibilityRole="button"
       accessibilityLabel="Go back"
@@ -127,7 +126,6 @@ export function HeaderIconButton({
     <Pressable
       onPress={onPress}
       hitSlop={12}
-      android_ripple={null}
       className="active:opacity-60"
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}

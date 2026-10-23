@@ -110,7 +110,6 @@ export default function AdminSettingsRooms() {
           <Pressable
             testID={`room-row-${room.id}`}
             onPress={() => crud.openEdit(room)}
-            android_ripple={null}
             className="active:opacity-70"
           >
             <GlassCard style={{ padding: 0, borderRadius: 16, overflow: "hidden" }}>

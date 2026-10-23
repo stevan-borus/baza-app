@@ -11,22 +11,22 @@
     "check-types": "turbo run check-types"
   },
   "devDependencies": {
-    "lefthook": "^2.1.9",
-    "oxfmt": "^0.33.0",
-    "oxlint": "1.48.0",
-    "turbo": "^2.9.18",
-    "typescript": "^5.9.3"
+    "lefthook": "^2.2.2",
+    "oxfmt": "^0.74.0",
+    "oxlint": "1.89.0",
+    "turbo": "^2.11.10",
+    "typescript": "^7.0.2"
   },
   "pnpm": {
     "overrides": {
-      "oxlint": "1.48.0"
+      "oxlint": "1.89.0"
     },
     "onlyBuiltDependencies": [
       "@sentry/cli"
     ]
   },
   "engines": {
-    "node": ">=22"
+    "node": ">=22.13"
   },
   "packageManager": "pnpm@10.28.0"
 }

@@ -27,7 +27,6 @@ export function TreninziSubTab({
     <Pressable
       testID={testID}
       onPress={onPress}
-      android_ripple={null}
       className="active:opacity-70"
       style={{
         paddingVertical: 10,

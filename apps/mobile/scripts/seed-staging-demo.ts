@@ -653,7 +653,7 @@ function generate(catalog: Catalog, passwordHash: string) {
       passwordHash,
       createdAt: new Date(ANCHOR.getTime() - 60 * DAY_MS),
     });
-    authAccounts.push({ userId: id, providerId: "credential", accountId: email, password: passwordHash });
+    authAccounts.push({ userId: id, providerId: "credential", accountId: id, password: passwordHash });
   }
 
   const clientState = clientSpecs.map((spec) => {
@@ -674,7 +674,7 @@ function generate(catalog: Catalog, passwordHash: string) {
       createdAt: joinedAt,
     });
     profiles.push({ id: clientProfileId, userId, dateOfBirth: spec.dob, createdAt: joinedAt });
-    authAccounts.push({ userId, providerId: "credential", accountId: spec.email, password: passwordHash });
+    authAccounts.push({ userId, providerId: "credential", accountId: userId, password: passwordHash });
     return { spec, userId, clientProfileId, joinedAt };
   });
 

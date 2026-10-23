@@ -74,8 +74,22 @@ describe("cronRemindersResponseSchema", () => {
         window,
         sent: 5,
         sessionsChecked: 3,
+        trainerDigestsSent: 2,
       }).success,
     ).toBe(true);
+  });
+  it("rejects a summary without the trainer digest count", () => {
+    expect(
+      cronRemindersResponseSchema.safeParse({
+        success: true,
+        mode: "immediate",
+        dryRun: true,
+        windowMinutes: 180,
+        window,
+        sent: 5,
+        sessionsChecked: 3,
+      }).success,
+    ).toBe(false);
   });
 });
 

@@ -70,10 +70,14 @@ async function seedUsers() {
       create: { email: u.email, firstName: u.firstName, lastName: u.lastName, role: u.role, isActive: true, passwordHash: hash },
     });
 
+    await prisma.authAccount.updateMany({
+      where: { userId: user.id, providerId: "credential" },
+      data: { accountId: user.id },
+    });
     await prisma.authAccount.upsert({
-      where: { providerId_accountId: { providerId: "credential", accountId: user.email } },
+      where: { providerId_accountId: { providerId: "credential", accountId: user.id } },
       update: { userId: user.id, password: hash },
-      create: { userId: user.id, providerId: "credential", accountId: user.email, password: hash },
+      create: { userId: user.id, providerId: "credential", accountId: user.id, password: hash },
     });
 
     if (u.role === UserRole.CLIENT) {

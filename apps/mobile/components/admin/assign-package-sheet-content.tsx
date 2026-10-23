@@ -265,7 +265,6 @@ export function AssignPackageSheetContent({
               accessibilityRole="button"
               accessibilityState={{ selected }}
               aria-pressed={selected}
-              android_ripple={null}
               onPress={() => {
                 setPackageTypeId(pt.id);
                 // Prefill from the catalog price (still editable). Never
@@ -325,7 +324,6 @@ export function AssignPackageSheetContent({
             accessibilityRole="switch"
             accessibilityState={{ checked: giftMode }}
             aria-checked={giftMode}
-            android_ripple={null}
             onPress={() => setGiftMode((prev) => !prev)}
             className="active:opacity-70"
           >

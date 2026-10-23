@@ -53,7 +53,6 @@ export function StudioScreen({
               <Pressable
                 onPress={() => router.push("/(client)/profile")}
                 hitSlop={8}
-                android_ripple={null}
                 className="w-9 h-9 rounded-full bg-foreground items-center justify-center active:opacity-80"
                 accessibilityRole="button"
                 accessibilityLabel={t("common.a11yOpenProfile")}
@@ -66,7 +65,6 @@ export function StudioScreen({
               <Pressable
                 onPress={onBack ?? (() => router.back())}
                 hitSlop={12}
-                android_ripple={null}
                 className="w-9 h-9 items-start justify-center active:opacity-60"
                 accessibilityRole="button"
                 accessibilityLabel={t("common.a11yGoBack")}

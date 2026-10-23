@@ -52,7 +52,6 @@ export default function KatalogLanding() {
             <Pressable
               testID="katalog-novi-termin"
               onPress={() => setShowCreate(true)}
-              android_ripple={null}
               className="flex-row items-center gap-3 active:opacity-60"
               accessibilityRole="button"
               accessibilityLabel={t("admin.katalog.noviTermin")}
@@ -84,7 +83,6 @@ export default function KatalogLanding() {
           <Pressable
             testID="katalog-row-class-types"
             onPress={() => router.push("/(admin)/katalog/tipovi-treninga")}
-            android_ripple={null}
             className="flex-row items-center justify-between py-4 active:opacity-60"
           >
             <View className="flex-row items-center gap-3 flex-1">
@@ -102,7 +100,6 @@ export default function KatalogLanding() {
           <Pressable
             testID="katalog-row-rooms"
             onPress={() => router.push("/(admin)/katalog/sale")}
-            android_ripple={null}
             className="flex-row items-center justify-between py-4 active:opacity-60"
           >
             <View className="flex-row items-center gap-3 flex-1">
@@ -120,7 +117,6 @@ export default function KatalogLanding() {
           <Pressable
             testID="katalog-row-package-types"
             onPress={() => router.push("/(admin)/katalog/tipovi-paketa")}
-            android_ripple={null}
             className="flex-row items-center justify-between py-4 active:opacity-60"
           >
             <View className="flex-row items-center gap-3 flex-1">
@@ -138,7 +134,6 @@ export default function KatalogLanding() {
           <Pressable
             testID="katalog-row-campaigns"
             onPress={() => router.push("/(admin)/katalog/kampanje")}
-            android_ripple={null}
             className="flex-row items-center justify-between py-4 active:opacity-60"
           >
             <View className="flex-row items-center gap-3 flex-1">
@@ -156,7 +151,6 @@ export default function KatalogLanding() {
           <Pressable
             testID="katalog-row-treneri"
             onPress={() => router.push("/(admin)/katalog/treneri")}
-            android_ripple={null}
             className="flex-row items-center justify-between py-4 active:opacity-60"
           >
             <View className="flex-row items-center gap-3 flex-1">

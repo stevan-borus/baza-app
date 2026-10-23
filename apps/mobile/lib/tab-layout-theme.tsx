@@ -38,7 +38,7 @@ const HIDDEN_TAB_ROUTES = new Set([
 export function FloatingTabBar(
   props: FloatingTabBarProps & { isDark: boolean },
 ) {
-  const { state, descriptors, navigation } = props;
+  const { state, descriptors, emitter, navigateToTab } = props;
   const insets = useSafeAreaInsets();
   const tokens = useThemeTokens();
   const { resolvedTheme } = useThemePreference();
@@ -112,13 +112,13 @@ export function FloatingTabBar(
               aria-selected={isFocused}
               accessibilityLabel={label}
               onPress={() => {
-                const event = navigation.emit({
+                const event = emitter.emit({
                   type: "tabPress",
                   target: route.key,
                   canPreventDefault: true,
                 });
                 if (!isFocused && !event.defaultPrevented) {
-                  navigation.navigate(route.name, route.params);
+                  navigateToTab(route.key);
                 }
               }}
               style={{

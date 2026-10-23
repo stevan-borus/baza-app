@@ -101,7 +101,6 @@ export function ProfilePersonalDataSections() {
           <Pressable
             testID="profile-health-row"
             onPress={() => router.push("/(client)/profile/health")}
-            android_ripple={null}
             className="flex-row items-center justify-between py-4 active:opacity-60"
           >
             <Text
@@ -128,7 +127,6 @@ export function ProfilePersonalDataSections() {
                 key={key}
                 testID={`profile-legal-${key}`}
                 onPress={() => setOpenDoc(key)}
-                android_ripple={null}
                 className="flex-row items-center justify-between py-4 border-b border-glass-border active:opacity-60"
               >
                 <Text

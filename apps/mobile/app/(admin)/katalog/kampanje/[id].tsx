@@ -133,7 +133,6 @@ export default function CampaignDetail() {
               <Pressable
                 testID="campaign-detail-view-clients"
                 onPress={() => setClientsOpen(true)}
-                android_ripple={null}
                 className="active:opacity-60 self-start pt-1"
                 accessibilityRole="button"
               >

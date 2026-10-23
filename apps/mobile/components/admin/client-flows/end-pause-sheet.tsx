@@ -63,7 +63,6 @@ export function EndPauseAction({
         testID="client-end-pause-button"
         onPress={() => setConfirming(true)}
         hitSlop={8}
-        android_ripple={null}
         className="active:opacity-60"
         accessibilityRole="button"
         accessibilityLabel={t(copy.action)}

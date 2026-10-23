@@ -36,18 +36,15 @@ async function main() {
 
   let created = 0;
   for (const user of users) {
-    // Composite unique is (providerId, accountId), and accountId is the email
-    // better-auth signed the account up with — which is why this upserts on the
-    // pair rather than on userId.
     const existing = await prisma.authAccount.findFirst({
       where: { userId: user.id, providerId: "credential" },
       select: { id: true },
     });
     if (existing) {
-      await prisma.authAccount.update({ where: { id: existing.id }, data: { password: hash } });
+      await prisma.authAccount.update({ where: { id: existing.id }, data: { accountId: user.id, password: hash } });
     } else {
       await prisma.authAccount.create({
-        data: { userId: user.id, providerId: "credential", accountId: user.email, password: hash },
+        data: { userId: user.id, providerId: "credential", accountId: user.id, password: hash },
       });
       created++;
     }

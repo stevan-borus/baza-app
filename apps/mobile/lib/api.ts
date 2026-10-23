@@ -12,7 +12,7 @@ export async function apiFetch(
   if (Platform.OS === "web") {
     return fetch(input, { ...init, credentials: "include" });
   }
-  const cookie = authClient.getCookie();
+  const cookie = await authClient.getCookie();
   const headers = new Headers(init?.headers);
   if (cookie) {
     headers.set("Cookie", cookie);

@@ -9,17 +9,24 @@
  * views degrade to a plain ScrollView and the rest are inert.
  */
 import React from "react";
-import { ScrollView, View, type ScrollViewProps, type ViewProps } from "react-native";
+import {
+  ScrollView,
+  View,
+  type ScrollViewInstance,
+  type ScrollViewProps,
+  type ViewInstance,
+  type ViewProps,
+} from "react-native";
 
 /** Drops the keyboard-only props RN-Web's ScrollView doesn't understand. */
 export const KeyboardAwareScrollView = React.forwardRef<
-  ScrollView,
+  ScrollViewInstance,
   ScrollViewProps & { bottomOffset?: number; mode?: string }
 >(function KeyboardAwareScrollView({ bottomOffset, mode, ...props }, ref) {
   return <ScrollView ref={ref} {...props} />;
 });
 
-export const KeyboardAvoidingView = React.forwardRef<View, ViewProps>(
+export const KeyboardAvoidingView = React.forwardRef<ViewInstance, ViewProps>(
   function KeyboardAvoidingView(props, ref) {
     return <View ref={ref} {...props} />;
   },

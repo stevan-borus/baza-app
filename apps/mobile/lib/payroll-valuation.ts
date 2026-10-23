@@ -185,12 +185,14 @@ export function studioMonthRange(
   year: number,
   month: number,
 ): { from: Date; to: Date } {
-  const from = dayjs
-    .tz(
-      `${year}-${String(month).padStart(2, "0")}-01 ${String(STUDIO_DAY_START_HOUR).padStart(2, "0")}:00:00`,
-      STUDIO_TIMEZONE,
-    )
-    .toDate();
-  const to = dayjs(from).tz(STUDIO_TIMEZONE).add(1, "month").toDate();
+  const monthStart = (boundaryYear: number, boundaryMonth: number): Date =>
+    dayjs
+      .tz(
+        `${boundaryYear}-${String(boundaryMonth).padStart(2, "0")}-01 ${String(STUDIO_DAY_START_HOUR).padStart(2, "0")}:00:00`,
+        STUDIO_TIMEZONE,
+      )
+      .toDate();
+  const from = monthStart(year, month);
+  const to = monthStart(month === 12 ? year + 1 : year, month === 12 ? 1 : month + 1);
   return { from, to };
 }

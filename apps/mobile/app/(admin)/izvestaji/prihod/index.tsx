@@ -232,7 +232,6 @@ export default function IzvestajiPrihod() {
                         testID={`prihod-bar-${idx}`}
                         onPress={() => drillToBucket(b.bucketStart, b.bucketEnd)}
                         hitSlop={6}
-                        android_ripple={null}
                         accessibilityLabel={`${formatRsd(b.revenue)} ${new Date(
                           b.bucketStart,
                         ).toLocaleDateString(dateLocale, {
@@ -475,7 +474,6 @@ export default function IzvestajiPrihod() {
                   key={p.id}
                   testID={`prihod-recent-${p.id}`}
                   onPress={drillToRecent}
-                  android_ripple={null}
                   className="active:opacity-70"
                   style={{
                     paddingVertical: 8,

@@ -342,7 +342,6 @@ function ClientRow({
       testID={testID}
       onPress={onPress}
       onLongPress={onLongPress}
-      android_ripple={null}
       className="active:opacity-70"
     >
       <GlassCard size="md">

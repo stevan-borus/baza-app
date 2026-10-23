@@ -24,7 +24,7 @@ import { usePushRegistration } from "@/lib/push-registration";
 import { usePushTapListener } from "@/lib/push-tap-listener";
 import { usePushReceivedListener } from "@/lib/push-received-listener";
 import { Providers } from "@/lib/providers";
-import { useSessionAuth } from "@/lib/session-auth";
+import { getRoleHomeHref, useSessionAuth } from "@/lib/session-auth";
 import { useColorScheme } from "@/components/useColorScheme";
 import { ThemePreferenceProvider } from "@/lib/theme-preference";
 import { ProfileSheetProvider } from "@/components/ui/profile-sheet";
@@ -165,16 +165,19 @@ function AppNavigator({ isDark }: { isDark: boolean }) {
         contentStyle: { backgroundColor: isDark ? BG_DARK : BG_LIGHT },
       }}
     >
-      <Stack.Protected guard={session.role === "ADMIN"}>
+      <Stack.Protected guard={session.role === "ADMIN"} redirectTo="/sign-in">
         <Stack.Screen name="(admin)" />
       </Stack.Protected>
-      <Stack.Protected guard={session.role === "TRAINER"}>
+      <Stack.Protected guard={session.role === "TRAINER"} redirectTo="/sign-in">
         <Stack.Screen name="(trainer)" />
       </Stack.Protected>
-      <Stack.Protected guard={session.role === "CLIENT"}>
+      <Stack.Protected guard={session.role === "CLIENT"} redirectTo="/sign-in">
         <Stack.Screen name="(client)" />
       </Stack.Protected>
-      <Stack.Protected guard={!isAuthenticated}>
+      <Stack.Protected
+        guard={!isAuthenticated}
+        redirectTo={getRoleHomeHref(session.role)}
+      >
         <Stack.Screen name="sign-in" />
         <Stack.Screen name="reset-password" />
       </Stack.Protected>

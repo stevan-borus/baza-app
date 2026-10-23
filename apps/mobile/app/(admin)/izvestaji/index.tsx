@@ -234,7 +234,6 @@ function LandingCard({
     <Pressable
       testID={testID}
       onPress={() => router.push(target)}
-      android_ripple={null}
       className="active:opacity-60 bg-surface"
       style={{
         aspectRatio: 1,

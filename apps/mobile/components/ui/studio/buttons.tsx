@@ -146,12 +146,9 @@ export function StudioGhostButton({
   underline?: boolean;
 }) {
   return (
-    // android_ripple={null} disables the default platform ripple square so
-    // text-only links don't render a rectangular highlight on press.
     <Pressable
       onPress={onPress}
       hitSlop={8}
-      android_ripple={null}
       className="active:opacity-60"
     >
       <Text

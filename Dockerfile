@@ -19,6 +19,7 @@ WORKDIR /repo
 
 # Workspace manifests first so the install layer caches across source edits.
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json .npmrc ./
+COPY patches ./patches
 COPY apps/mobile/package.json apps/mobile/
 COPY packages/types/package.json packages/types/
 COPY packages/i18n/package.json packages/i18n/
@@ -97,8 +98,9 @@ WORKDIR /repo
 # install drops the prisma devDep, and re-adding it afterwards conflicts with the
 # prod-only modules dir (ERR_PNPM_INCLUDED_DEPS_CONFLICT) — and any standalone CLI
 # can't resolve `prisma.config.ts`'s local imports. Copying the build modules keeps
-# `migrate deploy` working with the exact same CLI/client version (7.8.0).
+# `migrate deploy` working with the exact same CLI/client version.
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json .npmrc ./
+COPY patches ./patches
 COPY apps/mobile/package.json apps/mobile/
 COPY packages/types/package.json packages/types/
 COPY packages/i18n/package.json packages/i18n/

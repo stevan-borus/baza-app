@@ -1,5 +1,11 @@
 import React, { useEffect, useRef } from "react";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import {
+  Pressable,
+  ScrollView,
+  Text,
+  View,
+  type ScrollViewInstance,
+} from "react-native";
 import { useTranslation } from "react-i18next";
 import dayjs from "dayjs";
 import { Badge } from "@/components/ui/badge";
@@ -81,7 +87,7 @@ export function TimeAxisDayView({
   showNowLine,
   embedded = false,
 }: Props) {
-  const scrollRef = useRef<ScrollView>(null);
+  const scrollRef = useRef<ScrollViewInstance>(null);
   const { t } = useTranslation();
   const tokens = useThemeTokens();
   const now = dayjs();

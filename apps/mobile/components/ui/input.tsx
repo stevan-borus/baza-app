@@ -4,6 +4,7 @@ import {
   TextInput,
   View,
   Text,
+  type TextInputInstance,
   type TextInputProps,
   Pressable,
 } from "react-native";
@@ -44,7 +45,7 @@ export function Input({
 }: InputProps) {
   const tokens = useThemeTokens();
   const [focused, setFocused] = useState(false);
-  const inputRef = useRef<TextInput>(null);
+  const inputRef = useRef<TextInputInstance>(null);
   const active = focused || (typeof value === "string" && value.length > 0);
   const iconName = leftIcon ?? icon;
   const hasLabel = !!label;
@@ -198,7 +199,6 @@ export function PasswordInput(props: PasswordInputProps) {
         <Pressable
           onPress={() => setHidden((h) => !h)}
           hitSlop={12}
-          android_ripple={null}
           className="active:opacity-60"
         >
           <Icon

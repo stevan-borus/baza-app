@@ -349,7 +349,6 @@ export function CampaignComposeSheetContent({
           <Pressable
             testID="campaign-view-clients"
             onPress={() => onViewClients(spec)}
-            android_ripple={null}
             className="active:opacity-60 self-start pt-1"
             accessibilityRole="button"
           >
@@ -469,7 +468,6 @@ function ChipGroup({
               key={o.id}
               testID={o.testID}
               onPress={() => onSelect(o.id)}
-              android_ripple={null}
               accessibilityRole="button"
               accessibilityState={{ selected }}
               aria-pressed={selected}
@@ -508,7 +506,6 @@ function SwitchRow({
     <Pressable
       testID={testID}
       onPress={onToggle}
-      android_ripple={null}
       accessibilityRole="switch"
       accessibilityState={{ checked }}
       aria-checked={checked}

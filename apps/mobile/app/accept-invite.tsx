@@ -19,6 +19,7 @@ import { StudioButton } from "@/components/ui/studio";
 import { apiRequest } from "@/lib/api-request";
 import { authClient } from "@/lib/auth-client";
 import { authQueries } from "@/lib/queries/auth-queries-factory";
+import { confirmSession, getRoleHomeHref, readSessionRole } from "@/lib/session-auth";
 import { completeInviteResponseSchema } from "@baza/types/auth";
 import { validateForm, type FormErrors } from "@/lib/zod-form";
 
@@ -82,7 +83,7 @@ export default function AcceptInviteScreen() {
         email: data.user.email,
         password,
       });
-      if (signIn.error) {
+      if (signIn.error || !(await confirmSession())) {
         // Account creation succeeded but sign-in didn't — fall back to the
         // sign-in screen rather than surfacing a misleading invite error
         // (retrying the invite would 410 on the consumed token).
@@ -90,7 +91,7 @@ export default function AcceptInviteScreen() {
         return;
       }
       await queryClient.refetchQueries({ queryKey: authQueries.me().queryKey });
-      router.replace("/");
+      router.replace(getRoleHomeHref(readSessionRole(data.user)));
     },
   });
 

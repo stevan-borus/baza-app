@@ -1,0 +1,22 @@
+diff --git a/react-native.mjs b/react-native.mjs
+index a3d8d9a3939b11d410dbc04d5bc54df820a90534..39cdde2158d0aa7431f41d27f258d52d0bbee0a8 100644
+--- a/react-native.mjs
++++ b/react-native.mjs
+@@ -1,7 +1,6 @@
+ import * as React2 from 'react';
+ import { useReducer, useEffect, createContext, useRef, useMemo, useCallback, useLayoutEffect, useImperativeHandle, useState, useContext } from 'react';
+-import * as ReactNative from 'react-native';
+-import { Animated, Platform as Platform$1, View as View$1, Text as Text$1, PixelRatio as PixelRatio$1, StyleSheet as StyleSheet$1, RefreshControl, Dimensions, I18nManager } from 'react-native';
++import { Animated, Platform as Platform$1, View as View$1, Text as Text$1, PixelRatio as PixelRatio$1, StyleSheet as StyleSheet$1, RefreshControl, Dimensions, I18nManager, unstable_batchedUpdates } from 'react-native';
+ import { useSyncExternalStore } from 'use-sync-external-store/shim';
+ 
+ // src/components/LegendList.tsx
+@@ -3995,7 +3994,7 @@ function maybeUpdateViewabilityCallback(ctx, configId, containerId, viewToken) {
+   const cb = ctx.mapViewabilityCallbacks.get(key);
+   cb == null ? void 0 : cb(viewToken);
+ }
+-var unstableBatchedUpdates = ReactNative.unstable_batchedUpdates;
++var unstableBatchedUpdates = unstable_batchedUpdates;
+ var batchedUpdates = typeof unstableBatchedUpdates === "function" ? unstableBatchedUpdates : (fn) => fn();
+ 
+ // src/utils/containerPool.ts

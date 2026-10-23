@@ -134,12 +134,12 @@ export function ReservationMode() {
   // Keep state in sync if the route params change (e.g. opening from a
   // different client profile without remount).
   useEffect(() => {
-    if (params.clientProfileId && params.clientProfileId !== clientProfileId) {
+    if (params.clientProfileId) {
       setClientProfileId(params.clientProfileId);
       setClientUserId(params.clientUserId ?? null);
       setClientFullName(params.clientFullName ?? null);
     }
-  }, [params.clientProfileId, params.clientUserId, params.clientFullName, clientProfileId]);
+  }, [params.clientProfileId, params.clientUserId, params.clientFullName]);
 
   const nav = useWeekNavigation();
   const { selectedDate, weekStart, month } = nav;

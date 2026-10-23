@@ -1,6 +1,6 @@
 import { Redirect } from "expo-router";
 import { ActivityIndicator, View } from "react-native";
-import { useSessionAuth } from "@/lib/session-auth";
+import { getRoleHomeHref, useSessionAuth } from "@/lib/session-auth";
 import { ACCENT } from "@/components/ui/tokens";
 
 /**
@@ -18,12 +18,7 @@ export default function RootIndex() {
     );
   }
 
-  if (!session.isAuthenticated || !session.role) {
-    return <Redirect href="/sign-in" />;
-  }
-  const role = session.role;
-
-  if (role === "ADMIN") return <Redirect href="/(admin)/pregled" />;
-  if (role === "TRAINER") return <Redirect href="/(trainer)/raspored" />;
-  return <Redirect href="/(client)" />;
+  return (
+    <Redirect href={getRoleHomeHref(session.isAuthenticated ? session.role : null)} />
+  );
 }

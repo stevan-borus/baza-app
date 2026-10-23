@@ -370,7 +370,6 @@ export default function IzvestajiRezervacije() {
                   key={s.sessionId}
                   testID={`rezervacije-top-${s.sessionId}`}
                   onPress={() => drillToSession(s.sessionId)}
-                  android_ripple={null}
                   className="active:opacity-70"
                   style={{
                     paddingVertical: 8,
