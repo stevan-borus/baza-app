@@ -1,3 +1,6 @@
 packages:
   - "apps/*"
   - "packages/*"
+
+patchedDependencies:
+  dayjs@1.11.23: patches/dayjs@1.11.23.patch
