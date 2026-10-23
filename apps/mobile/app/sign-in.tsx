@@ -22,9 +22,11 @@ import { StudioButton } from "@/components/ui/studio";
 import { authClient } from "@/lib/auth-client";
 import { nowMs } from "@/lib/now";
 import { authQueries } from "@/lib/queries/auth-queries-factory";
+import { confirmSession } from "@/lib/session-auth";
 import {
   ACCOUNT_LOCKED,
   lockMinutesRemaining,
+  SESSION_UNCONFIRMED,
   SignInError,
   toSignInError,
 } from "@/lib/sign-in-error";
@@ -57,22 +59,36 @@ export default function SignInScreen() {
 
   const signInMutation = useMutation({
     mutationFn: async () => {
-      const response = await authClient.signIn.email({ email, password });
+      // confirmSession fetches the session itself, so the library's own
+      // post-sign-in session signal is switched off.
+      const response = await authClient.signIn.email({
+        email,
+        password,
+        fetchOptions: { disableSignal: true },
+      });
       if (response.error) {
         throw toSignInError(response.error);
+      }
+      if (!(await confirmSession())) {
+        throw new SignInError(
+          "Session could not be confirmed",
+          SESSION_UNCONFIRMED,
+          null,
+        );
       }
       return response.data;
     },
     onSuccess: async () => {
       await queryClient.refetchQueries({ queryKey: authQueries.me().queryKey });
+      // No default replace("/"): confirmSession put the session in the atom,
+      // so the Stack.Protected guards have already landed the user on their
+      // home, and a late replace would reset a tab they tapped since.
       if (
         redirectTo &&
         redirectTo.startsWith("/") &&
         !redirectTo.startsWith("//")
       ) {
         router.replace(redirectTo as Parameters<typeof router.replace>[0]);
-      } else {
-        router.replace("/");
       }
     },
   });
@@ -161,7 +177,10 @@ export default function SignInScreen() {
                         nowMs(),
                       ),
                     })
-                  : t("auth.signInError")}
+                  : signInMutation.error instanceof SignInError &&
+                      signInMutation.error.code === SESSION_UNCONFIRMED
+                    ? t("auth.signInSessionError")
+                    : t("auth.signInError")}
               </Text>
             </MotiView>
           ) : null}

@@ -7,7 +7,7 @@ import {
 import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { ActivityIndicator, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -137,8 +137,7 @@ function RootLayoutNav() {
 
 function AppNavigator({ isDark }: { isDark: boolean }) {
   const session = useSessionAuth();
-  const isAuthenticated =
-    !session.error && !!session.data?.session && !!session.role;
+  const { isAuthenticated } = session;
   // Pass the user id so an account switch on a shared device re-registers:
   // isAuthenticated stays true across sign-out → sign-in as a different user,
   // which left the new account with no push token row at all.
@@ -146,7 +145,12 @@ function AppNavigator({ isDark }: { isDark: boolean }) {
   usePushTapListener({ isAuthenticated });
   usePushReceivedListener({ isAuthenticated });
 
-  if (session.isPending) {
+  // Spinner only until the first session check settles. Later refetches
+  // (sign-in, sign-out) must not unmount the Stack and the screen inside it.
+  const [booted, setBooted] = useState(false);
+  if (!booted && !session.isPending) setBooted(true);
+
+  if (!booted) {
     return (
       <View className="flex-1 bg-background items-center justify-center">
         <ActivityIndicator size="large" color={ACCENT} />
