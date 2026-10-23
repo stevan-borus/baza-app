@@ -298,4 +298,18 @@ describe("studioMonthRange", () => {
     const january = studioMonthRange(2026, 1);
     expect(january.from.toISOString()).toBe("2026-01-01T04:00:00.000Z");
   });
+
+  it("keeps March boundaries at 05:00 across the switch to summer time", () => {
+    const range = studioMonthRange(2026, 3);
+
+    expect(range.from.toISOString()).toBe("2026-03-01T04:00:00.000Z");
+    expect(range.to.toISOString()).toBe("2026-04-01T03:00:00.000Z");
+  });
+
+  it("keeps October boundaries at 05:00 across the switch to winter time", () => {
+    const range = studioMonthRange(2026, 10);
+
+    expect(range.from.toISOString()).toBe("2026-10-01T03:00:00.000Z");
+    expect(range.to.toISOString()).toBe("2026-11-01T04:00:00.000Z");
+  });
 });
