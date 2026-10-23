@@ -19,9 +19,9 @@
  *
  * Naplata prints the active window in its period label (a range for a drill,
  * "Maj 2026" for the month default), which is what both tests read. The
- * expected range is recomputed here from the params the app actually put on
- * the URL, via the same `formatDateRange` the screen renders with, so the
- * assertion tracks the real window rather than a date baked into the spec.
+ * expected range repeats the funded bucket's single Serbian day, formatted
+ * independently from the URL's start date and checked against the tapped
+ * bar's label.
  */
 import dayjs from "dayjs";
 // The month label is dayjs-formatted in Serbian; register the locale here
@@ -33,19 +33,7 @@ import { signInAs } from "./helpers/auth";
 import { disconnect, resetAndSeed } from "./helpers/db";
 import { pressRNW } from "./helpers/interactions";
 import { t } from "./helpers/locales";
-import { formatDateRange } from "../../lib/format";
-import { getDateLocale } from "../../lib/i18n";
 import { now } from "../../lib/now";
-
-/**
- * Naplata's period label, rebuilt exactly as `app/(admin)/naplata/index.tsx`
- * builds it: `formatDateRange(from, to, getDateLocale())` for a drill window,
- * `dayjs(...).locale(lang).format("MMMM YYYY")` for the month fallback. The
- * spec runs under the default (Serbian) locale, so `lang` is "sr".
- */
-function expectedRangeLabel(from: string, to: string): string {
-  return formatDateRange(from, to, getDateLocale());
-}
 
 function expectedMonthLabel(instant: string | Date): string {
   return dayjs(instant).locale("sr").format("MMMM YYYY");
@@ -108,6 +96,7 @@ test.describe.serial("izveštaji → naplata drill (admin)", () => {
       .locator('[data-testid^="prihod-bar-"]:not([aria-label^="0 RSD"])')
       .first();
     await expect(fundedBar).toBeVisible();
+    const fundedBarLabel = await fundedBar.getAttribute("aria-label");
     // `pressRNW`, not `click()`: the bar reports visible/enabled/stable, but a
     // full-bleed ancestor sits over the chart and intercepts pointer events, so
     // a real click never lands (verified: 110 retries, then timeout). The
@@ -126,7 +115,20 @@ test.describe.serial("izveštaji → naplata drill (admin)", () => {
     expect(from).toBeTruthy();
     expect(to).toBeTruthy();
 
-    const rangeLabel = expectedRangeLabel(from!, to!);
+    // The default chart uses single-day buckets. Allow the clock change on
+    // DST days, but reject a drill that accidentally sends a wider window.
+    const spanHours =
+      (new Date(to!).getTime() - new Date(from!).getTime()) / 3_600_000;
+    expect([23, 24, 25]).toContain(spanHours);
+    const day = new Intl.DateTimeFormat("sr-Latn-RS", {
+      day: "numeric",
+      month: "short",
+      timeZone: "Europe/Belgrade",
+    }).format(new Date(from!));
+    expect(fundedBarLabel?.endsWith(` ${day}`)).toBe(true);
+    // A studio day ends at 05:00 the next morning. Its range label repeats
+    // the start day, rather than formatting the end's calendar date.
+    const rangeLabel = `${day} – ${day}`;
     // The bucket is a single day, so the month fallback label can never equal
     // the range label. Assert that outright: if the two ever collided, the
     // "not the month" assertion below would pass vacuously.
