@@ -272,7 +272,7 @@ async function seedUser(
     data: {
       userId: user.id,
       providerId: "credential",
-      accountId: user.email,
+      accountId: user.id,
       password: hash,
     },
   });

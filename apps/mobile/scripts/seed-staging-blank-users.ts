@@ -76,10 +76,14 @@ async function main() {
       create: { email: spec.email, ...fields },
     });
 
+    await prisma.authAccount.updateMany({
+      where: { userId: user.id, providerId: "credential" },
+      data: { accountId: user.id },
+    });
     await prisma.authAccount.upsert({
-      where: { providerId_accountId: { providerId: "credential", accountId: spec.email } },
+      where: { providerId_accountId: { providerId: "credential", accountId: user.id } },
       update: { userId: user.id, password: passwordHash },
-      create: { userId: user.id, providerId: "credential", accountId: spec.email, password: passwordHash },
+      create: { userId: user.id, providerId: "credential", accountId: user.id, password: passwordHash },
     });
 
     if (spec.role === UserRole.CLIENT) {

@@ -29,7 +29,7 @@ async function createSignInUser(email = EMAIL) {
     data: {
       userId: user.id,
       providerId: "credential",
-      accountId: user.email,
+      accountId: user.id,
       password,
     },
   });
