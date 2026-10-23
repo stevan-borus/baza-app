@@ -23,13 +23,21 @@
 
 export const ACCOUNT_LOCKED = "ACCOUNT_LOCKED";
 
+/**
+ * The credentials were accepted but the session could not be confirmed
+ * afterwards (get-session kept failing on the network).
+ */
+export const SESSION_UNCONFIRMED = "SESSION_UNCONFIRMED";
+
+type SignInErrorCode = typeof ACCOUNT_LOCKED | typeof SESSION_UNCONFIRMED;
+
 export class SignInError extends Error {
-  readonly code: typeof ACCOUNT_LOCKED | null;
+  readonly code: SignInErrorCode | null;
   readonly lockedUntil: string | null;
 
   constructor(
     message: string,
-    code: typeof ACCOUNT_LOCKED | null,
+    code: SignInErrorCode | null,
     lockedUntil: string | null,
   ) {
     super(message);

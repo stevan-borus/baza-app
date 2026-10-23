@@ -18,7 +18,7 @@ export default function RootIndex() {
     );
   }
 
-  if (session.error || !session.data?.session || !session.role) {
+  if (!session.isAuthenticated || !session.role) {
     return <Redirect href="/sign-in" />;
   }
   const role = session.role;
